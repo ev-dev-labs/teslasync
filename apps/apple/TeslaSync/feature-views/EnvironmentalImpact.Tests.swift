@@ -61,6 +61,7 @@ private final class RecordingLocalizer: @unchecked Sendable {
 
 // MARK: - Adapter: state / resolve / connection
 
+@MainActor
 final class EnvironmentalImpactProjectionTests: XCTestCase {
     func testStateFromCoreStatsMirrorsWebConditional() {
         XCTAssertEqual(EnvironmentalImpactProjection.state(from: nil), .empty)
@@ -126,6 +127,7 @@ final class EnvironmentalImpactProjectionTests: XCTestCase {
 
 // MARK: - Number formatting (web `fmtNumber`)
 
+@MainActor
 final class EnvironmentalImpactFormatTests: XCTestCase {
     func testFixedPrecisionAndGrouping() {
         XCTAssertEqual(EnvironmentalImpactFormat.number(1284.6, decimals: 1, locale: Fixture.locale), "1,284.6")
@@ -144,6 +146,7 @@ final class EnvironmentalImpactFormatTests: XCTestCase {
 
 // MARK: - Stat tiles (web primary + secondary figures)
 
+@MainActor
 final class EnvironmentalImpactStatTests: XCTestCase {
     func testPrimaryStats() {
         let stats = EnvironmentalImpactProjection.primaryStats(Fixture.sample, locale: Fixture.locale)
@@ -172,6 +175,7 @@ final class EnvironmentalImpactStatTests: XCTestCase {
 
 // MARK: - Description sentence (web interpolated `<p>`)
 
+@MainActor
 final class EnvironmentalImpactDescriptionTests: XCTestCase {
     func testDescriptionSegments() {
         let desc = EnvironmentalImpactDescription.build(
@@ -223,6 +227,7 @@ final class EnvironmentalImpactDescriptionTests: XCTestCase {
 
 // MARK: - Freshness chip
 
+@MainActor
 final class EnvironmentalFreshnessChipTests: XCTestCase {
     func testChipProjection() {
         XCTAssertNil(EnvironmentalFreshnessChip.project(.live))
@@ -244,6 +249,7 @@ final class EnvironmentalFreshnessChipTests: XCTestCase {
 
 // MARK: - Accessibility + i18n key parity
 
+@MainActor
 final class EnvironmentalImpactAccessibilityTests: XCTestCase {
     func testStatLabelComposesValueAndLabel() {
         let stats = EnvironmentalImpactProjection.primaryStats(Fixture.sample, locale: Fixture.locale)
@@ -284,6 +290,7 @@ final class EnvironmentalImpactAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
+@MainActor
 final class EnvironmentalImpactTelemetryTests: XCTestCase {
     private final class Recorder: EnvironmentalImpactTelemetry, @unchecked Sendable {
         private let lock = NSLock()

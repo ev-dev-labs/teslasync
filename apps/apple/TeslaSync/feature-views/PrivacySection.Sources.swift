@@ -103,7 +103,7 @@ public final class InMemoryConsentStore: ConsentStore {
 
 /// In-memory confirm-silence store for previews + tests.
 @MainActor
-public final class InMemoryConfirmSilenceStore: ConfirmSilenceStore {
+public final class PrivacySectionInMemoryConfirmSilenceStore: ConfirmSilenceStore {
     private var silenced: Set<String>
 
     public init(silenced: Set<String> = []) {

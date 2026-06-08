@@ -23,6 +23,7 @@ import XCTest
 
 // MARK: - Adapter: charger category + projection
 
+@MainActor
 final class SessionListProjectionTests: XCTestCase {
     private func item(
         id: Int,
@@ -149,6 +150,7 @@ final class SessionListProjectionTests: XCTestCase {
 
 // MARK: - Adapter: pagination + export + numeric
 
+@MainActor
 final class SessionListCoreTests: XCTestCase {
     func testPageWindowMath() {
         let window = SessionPage(page: 1, pageSize: 10, total: 25)
@@ -221,6 +223,7 @@ final class SpySessionListDeleter: SessionListDeleter {
 
 // MARK: - Accessibility
 
+@MainActor
 final class SessionListAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

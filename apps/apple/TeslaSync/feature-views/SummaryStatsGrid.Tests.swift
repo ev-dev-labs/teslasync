@@ -38,6 +38,7 @@ private let populatedValues = SummaryStatsGridValues(
 
 // MARK: - Number formatting (port of numberFormat.ts + useFormatting.ts)
 
+@MainActor
 final class SummaryStatsGridFormatTests: XCTestCase {
     func testIntegerRoundsAndGroups() {
         XCTAssertEqual(SummaryStatsGridFormat.decimal(12345.6, fractionDigits: 0, locale: enUS), "12,346")
@@ -65,6 +66,7 @@ final class SummaryStatsGridFormatTests: XCTestCase {
 
 // MARK: - useFormatting mirror (symbol + precision)
 
+@MainActor
 final class SummaryStatsGridFormattingTests: XCTestCase {
     func testIntegerNumberAndCurrency() {
         let fmt = usdFormatting()
@@ -93,6 +95,7 @@ final class SummaryStatsGridFormattingTests: XCTestCase {
 
 // MARK: - Responsive column math (web grid-cols-2 / lg:3 / xl:6)
 
+@MainActor
 final class SummaryStatsGridLayoutTests: XCTestCase {
     func testColumnsAtBreakpoints() {
         XCTAssertEqual(SummaryStatsGridLayout.columnCount(forWidth: 320), 2)
@@ -106,6 +109,7 @@ final class SummaryStatsGridLayoutTests: XCTestCase {
 
 // MARK: - Projection: branches + card wiring
 
+@MainActor
 final class SummaryStatsGridProjectionTests: XCTestCase {
     func testLoadingBranchNullsEveryCardValue() {
         let resolved = SummaryStatsGridProjection.resolve(
@@ -166,6 +170,7 @@ final class SummaryStatsGridProjectionTests: XCTestCase {
 
 // MARK: - Card facade resolution
 
+@MainActor
 final class SummaryStatsGridCardTests: XCTestCase {
     func testResolvedLabelAndUnitFallThroughToEnglish() {
         let card = SummaryStatsGridCard(
@@ -195,6 +200,7 @@ final class SummaryStatsGridCardTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class SummaryStatsGridAccessibilityTests: XCTestCase {
     func testCardLabelWithUnit() {
         XCTAssertEqual(
@@ -217,6 +223,7 @@ final class SummaryStatsGridAccessibilityTests: XCTestCase {
 
 // MARK: - i18n facade
 
+@MainActor
 final class SummaryStatsGridStringsTests: XCTestCase {
     func testUnitSymbolsResolveToFallback() {
         XCTAssertEqual(SSGStrings.string("charging.curve.unit.kwh", "kWh"), "kWh")

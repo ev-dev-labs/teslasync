@@ -79,6 +79,7 @@ import SwiftUI
         return model
     }
 
+    @MainActor
     private func previewShell(_ section: OptimizerSection) -> some View {
         ScrollView {
             section.padding(TSSpacing.lg)

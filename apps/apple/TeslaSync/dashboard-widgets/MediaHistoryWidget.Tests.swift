@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web feed build)
 
+@MainActor
 final class MediaHistoryAdapterTests: XCTestCase {
     func testSourceLabelSpecialCasesUSB() {
         XCTAssertEqual(MediaHistoryBuilder.sourceLabel("usb"), "USB")
@@ -170,6 +171,7 @@ final class MediaHistoryModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class MediaHistoryRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MediaHistoryWidget.registration
@@ -199,6 +201,7 @@ final class MediaHistoryRegistryTests: XCTestCase {
 
 // MARK: - Accessibility + relative-time copy
 
+@MainActor
 final class MediaHistoryAccessibilityTests: XCTestCase {
     func testRowLabelIncludesTrackSourceAndPlaying() {
         let track = MediaHistoryBuilder.makeTrack(

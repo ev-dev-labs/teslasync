@@ -15,10 +15,10 @@ import Foundation
 /// projection. No SwiftUI / transport here — this is the unit-tested core.
 public enum TwinStateBuilder {
     /// Parses the compound DoorState signal (web `parseDoorState`).
-    public static func parseDoorState(_ signal: TwinDoorSignal) -> TwinDoorStates {
+    public static func parseDoorState(_ signal: TwinDoorSignal) -> DigitalTwinWidgetTwinDoorStates {
         switch signal {
         case let .fields(fields):
-            TwinDoorStates(
+            DigitalTwinWidgetTwinDoorStates(
                 driverFront: boolField(fields, "DriverFront", "driver_front"),
                 passengerFront: boolField(fields, "PassengerFront", "passenger_front"),
                 driverRear: boolField(fields, "DriverRear", "driver_rear"),
@@ -33,13 +33,13 @@ public enum TwinStateBuilder {
         }
     }
 
-    private static func parseDoorText(_ raw: String) -> TwinDoorStates {
+    private static func parseDoorText(_ raw: String) -> DigitalTwinWidgetTwinDoorStates {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return .unknown }
         let lower = trimmed.lowercased()
 
         if ["closedall", "closed", "none", "[]", "0", "false"].contains(lower) {
-            return TwinDoorStates(
+            return DigitalTwinWidgetTwinDoorStates(
                 driverFront: false,
                 passengerFront: false,
                 driverRear: false,
@@ -50,7 +50,7 @@ public enum TwinStateBuilder {
         }
 
         if let object = jsonObject(trimmed) {
-            return TwinDoorStates(
+            return DigitalTwinWidgetTwinDoorStates(
                 driverFront: jsonBool(object, "DriverFront", "driver_front"),
                 passengerFront: jsonBool(object, "PassengerFront", "passenger_front"),
                 driverRear: jsonBool(object, "DriverRear", "driver_rear"),
@@ -67,7 +67,7 @@ public enum TwinStateBuilder {
         let passengerRear = (lower.contains("passenger") && lower.contains("rear")) || lower.contains("passengerrear")
         let frunk = lower.contains("frunk") || lower.contains("fronttrunk")
             || lower.contains("front_trunk") || lower.contains("trunkfront") || lower.contains("trunk_front")
-        return TwinDoorStates(
+        return DigitalTwinWidgetTwinDoorStates(
             driverFront: driverFront ? true : nil,
             passengerFront: passengerFront ? true : nil,
             driverRear: driverRear ? true : nil,
@@ -85,7 +85,7 @@ public enum TwinStateBuilder {
     }
 
     /// Normalizes a Tesla window enum value to display state (web `parseWindowState`).
-    public static func parseWindowState(_ raw: String?) -> TwinWindowState? {
+    public static func parseWindowState(_ raw: String?) -> DigitalTwinWidgetTwinWindowState? {
         guard let value = nonEmpty(raw) else { return nil }
         let lower = value.lowercased()
         if lower.contains("closed") || lower == "0" { return .closed }
@@ -166,7 +166,7 @@ public enum TwinStateBuilder {
         return normalized == "charging" || normalized == "starting"
     }
 
-    private static func parseWindowOpenSummary(_ windowsOpen: String?, _ aliases: [String]) -> TwinWindowState? {
+    private static func parseWindowOpenSummary(_ windowsOpen: String?, _ aliases: [String]) -> DigitalTwinWidgetTwinWindowState? {
         guard let value = nonEmpty(windowsOpen) else { return nil }
         let normalized = value.lowercased()
         if ["closed", "none", "[]", "false"].contains(normalized) { return .closed }

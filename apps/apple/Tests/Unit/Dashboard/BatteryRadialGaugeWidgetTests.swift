@@ -11,6 +11,7 @@ import XCTest
 
 // MARK: - Color band thresholds (web getBatteryColor)
 
+@MainActor
 final class BatteryGaugeBandTests: XCTestCase {
     func testThresholdsMatchWebGetBatteryColor() {
         XCTAssertEqual(BatteryGaugeBand.forLevel(100, hasState: true), .high)
@@ -29,6 +30,7 @@ final class BatteryGaugeBandTests: XCTestCase {
 
 // MARK: - Display projection + stats
 
+@MainActor
 final class BatteryGaugeProjectionTests: XCTestCase {
     func testLevelIsClampedToGaugeDomain() {
         XCTAssertEqual(
@@ -86,6 +88,7 @@ final class BatteryGaugeProjectionTests: XCTestCase {
 
 // MARK: - Load error classification
 
+@MainActor
 final class BatteryGaugeLoadErrorTests: XCTestCase {
     func testRetryability() {
         XCTAssertTrue(BatteryGaugeLoadError.offline.isRetryable)
@@ -96,6 +99,7 @@ final class BatteryGaugeLoadErrorTests: XCTestCase {
 
 // MARK: - Render-state derivation (every visual branch)
 
+@MainActor
 final class BatteryRadialGaugeRenderStateTests: XCTestCase {
     private let projection = BatteryGaugeProjection(batteryLevel: 55, chargeLimitSoc: nil, isCharging: false)
 
@@ -167,6 +171,7 @@ final class BatteryRadialGaugeRenderStateTests: XCTestCase {
 
 // MARK: - Size + registry metadata
 
+@MainActor
 final class TSDashboardWidgetSizeTests: XCTestCase {
     func testCompactAndExpandedClassification() {
         XCTAssertTrue(TSDashboardWidgetSize(cols: 1, rows: 1).isCompact)
@@ -177,6 +182,7 @@ final class TSDashboardWidgetSizeTests: XCTestCase {
     }
 }
 
+@MainActor
 final class BatteryRadialGaugeMetadataTests: XCTestCase {
     func testMetadataMatchesRegistry() {
         let meta = BatteryRadialGaugeWidget.metadata

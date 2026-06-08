@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 
 #if DEBUG
+    @MainActor
     private func previewModel(_ update: DigitalTwinUpdate) -> DigitalTwinModel {
         let source = InMemoryDigitalTwinSource(initial: update)
         let model = DigitalTwinModel(source: source)
@@ -17,7 +18,7 @@ import SwiftUI
         return model
     }
 
-    private let previewVehicle = TwinVehicle(id: 1, displayName: "Model Y", vin: "5YJYG", exteriorColor: "blue")
+    private let previewVehicle = DigitalTwinWidgetTwinVehicle(id: 1, displayName: "Model Y", vin: "5YJYG", exteriorColor: "blue")
 
     #Preview("Content") {
         DigitalTwinWidget(

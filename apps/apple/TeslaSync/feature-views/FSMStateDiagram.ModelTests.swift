@@ -14,6 +14,8 @@
 
 import Foundation
 import XCTest
+@testable import TeslaSync
+ import TeslaSync
 
 @MainActor
 final class FSMStateDiagramModelTests: XCTestCase {

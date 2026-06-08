@@ -40,7 +40,7 @@ public enum CostPerKwhNumeric {
 
 /// One raw trend sample as delivered by the bound source — the native parity of a
 /// web `data[i]` entry (`{ date: string; costPerKwh: number }`). Projected into a
-/// plotted `CostPerKwhPoint` (with a stable index) by `CostPerKwhProjection`.
+/// plotted `CostPerKwhChartPoint` (with a stable index) by `CostPerKwhProjection`.
 public struct CostPerKwhSample: Sendable, Equatable {
     /// The category label plotted on the X axis (web `dataKey="date"`).
     public var date: String
@@ -59,7 +59,7 @@ public struct CostPerKwhSample: Sendable, Equatable {
 /// `Identifiable` id + tie-break), the X-axis date label, and the sanitized
 /// Y-axis rate. The index keeps `ForEach` / selection stable even when two
 /// samples share a `date` string (which the web category axis would also merge).
-public struct CostPerKwhPoint: Sendable, Equatable, Identifiable {
+public struct CostPerKwhChartPoint: Sendable, Equatable, Identifiable {
     /// Input order — the `Identifiable` id and the deterministic plot order.
     public var index: Int
     /// The category label plotted on the X axis (web `date`).
@@ -144,9 +144,9 @@ public enum CostPerKwhProjection {
     /// Ordered plotted points from the raw samples. Input order is preserved (the
     /// web trusts the upstream order); each `costPerKwh` is sanitized through
     /// `safe` so a non-finite rate never reaches the plot.
-    public static func points(from samples: [CostPerKwhSample]) -> [CostPerKwhPoint] {
+    public static func points(from samples: [CostPerKwhSample]) -> [CostPerKwhChartPoint] {
         samples.enumerated().map { offset, sample in
-            CostPerKwhPoint(
+            CostPerKwhChartPoint(
                 index: offset,
                 date: sample.date,
                 costPerKwh: CostPerKwhNumeric.safe(sample.costPerKwh)
@@ -168,7 +168,7 @@ public enum CostPerKwhProjection {
     }
 
     /// Descriptive statistics over the points, or `nil` when there are none.
-    public static func stats(_ points: [CostPerKwhPoint]) -> CostPerKwhStats? {
+    public static func stats(_ points: [CostPerKwhChartPoint]) -> CostPerKwhStats? {
         guard let firstPoint = points.first, let lastPoint = points.last else { return nil }
         let values = points.map(\.costPerKwh)
         let total = values.reduce(0, +)
@@ -186,13 +186,13 @@ public enum CostPerKwhProjection {
     /// does not crowd the axis (the native parity of Recharts' automatic tick
     /// thinning). Always includes the first and last sample; returns at most
     /// `maxTicks` unique labels in input order.
-    public static func axisTicks(_ points: [CostPerKwhPoint], maxTicks: Int = 6) -> [String] {
+    public static func axisTicks(_ points: [CostPerKwhChartPoint], maxTicks: Int = 6) -> [String] {
         guard !points.isEmpty else { return [] }
         let limit = Swift.max(1, maxTicks)
         guard points.count > limit else { return orderedUniqueDates(points) }
 
         let stride = Int((Double(points.count - 1) / Double(limit - 1)).rounded(.up))
-        var picked: [CostPerKwhPoint] = []
+        var picked: [CostPerKwhChartPoint] = []
         var offset = 0
         while offset < points.count {
             picked.append(points[offset])
@@ -206,7 +206,7 @@ public enum CostPerKwhProjection {
 
     /// The date labels in order, de-duplicated (keeping first appearance) so an
     /// axis-tick set never contains a repeated category.
-    private static func orderedUniqueDates(_ points: [CostPerKwhPoint]) -> [String] {
+    private static func orderedUniqueDates(_ points: [CostPerKwhChartPoint]) -> [String] {
         var seen = Set<String>()
         var result: [String] = []
         for point in points where seen.insert(point.date).inserted {
@@ -234,7 +234,7 @@ public enum CostPerKwhAccessibility {
     /// The chart-level summary: title + sample count + latest / range / average,
     /// or the friendly `noData` message when the trend is empty.
     public static func chartSummary(
-        _ points: [CostPerKwhPoint],
+        _ points: [CostPerKwhChartPoint],
         localize: (String, String) -> String,
         formatCurrency: (Double) -> String
     ) -> String {
@@ -254,13 +254,13 @@ public enum CostPerKwhAccessibility {
     }
 
     /// One vertex's VoiceOver label: the date category (web X value).
-    public static func pointLabel(_ point: CostPerKwhPoint) -> String {
+    public static func pointLabel(_ point: CostPerKwhChartPoint) -> String {
         point.date
     }
 
     /// One vertex's VoiceOver value: the formatted rate (web Y value).
     public static func pointValue(
-        _ point: CostPerKwhPoint,
+        _ point: CostPerKwhChartPoint,
         formatCurrency: (Double) -> String
     ) -> String {
         formatCurrency(point.costPerKwh)

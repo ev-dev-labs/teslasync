@@ -189,13 +189,13 @@ public extension NotificationLog {
 /// Parses the API's ISO-8601 `created_at` strings, tolerating the fractional
 /// seconds TimescaleDB sometimes emits.
 public enum NotificationLogTime {
-    private static let withFraction: ISO8601DateFormatter = {
+    private nonisolated(unsafe) static let withFraction: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
     }()
 
-    private static let plain: ISO8601DateFormatter = {
+    private nonisolated(unsafe) static let plain: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         return formatter

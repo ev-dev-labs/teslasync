@@ -4,6 +4,7 @@ import XCTest
 
 /// Token storage contract: the in-memory store (deterministic) and a real
 /// Keychain round-trip (skipped where the environment provides no keychain).
+@MainActor
 final class KeychainTokenStoreTests: XCTestCase {
     func testInMemoryRoundTrip() throws {
         let store = InMemoryTokenStore()

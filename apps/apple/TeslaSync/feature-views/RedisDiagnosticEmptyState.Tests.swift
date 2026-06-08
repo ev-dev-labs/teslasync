@@ -24,6 +24,7 @@ private let fallbackLocalize: @Sendable (String, String) -> String = { _, fallba
 
 // MARK: - Projection: the nine-branch ladder
 
+@MainActor
 final class RedisDiagnosticProjectionTests: XCTestCase {
     private func resolve(
         meta: RedisSignalsMeta? = nil,
@@ -168,6 +169,7 @@ final class RedisDiagnosticProjectionTests: XCTestCase {
 
 // MARK: - Other-vehicle key filtering (web `filter(id !== self && field_count > 0)`)
 
+@MainActor
 final class RedisDiagnosticOtherKeysTests: XCTestCase {
     func testFiltersSelfAndZeroFieldCounts() {
         let keys = [
@@ -183,6 +185,7 @@ final class RedisDiagnosticOtherKeysTests: XCTestCase {
 
 // MARK: - Chips-phase resolution (model seam)
 
+@MainActor
 final class RedisDiagnosticChipsPhaseTests: XCTestCase {
     private let metaFallthrough = RedisSignalsMeta(
         liveSignalStoreMode: .hybrid, redisKey: "k", redisFieldCount: 0, l1SignalCount: 0, vehicleVin: ""
@@ -234,6 +237,7 @@ final class RedisDiagnosticChipsPhaseTests: XCTestCase {
 
 // MARK: - Adapter helpers: chip name / format / docs URL / interpolation
 
+@MainActor
 final class RedisDiagnosticAdapterTests: XCTestCase {
     func testChipNamePrefersDisplayNameThenVINThenFallback() {
         let named = RedisSignalKeyEntry(vehicleId: 3, fieldCount: 1, vehicleVin: "VINX", displayName: "Falcon")
@@ -341,6 +345,7 @@ final class RedisDiagnosticModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class RedisDiagnosticAccessibilityTests: XCTestCase {
     func testBannerSummaryCombinesTitleAndBody() {
         let summary = RedisDiagnosticAccessibility.bannerSummary(title: "Redis is unreachable", body: "Check the pod.")

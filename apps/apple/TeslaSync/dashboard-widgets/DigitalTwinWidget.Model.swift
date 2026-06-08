@@ -59,7 +59,7 @@ public enum TwinConnection: Sendable, Equatable {
 public struct DigitalTwinUpdate: Sendable, Equatable {
     public var status: TwinLoadStatus
     public var connection: TwinConnection
-    public var vehicle: TwinVehicle?
+    public var vehicle: DigitalTwinWidgetTwinVehicle?
     public var security: TwinSecurityInput?
     public var vehicleState: TwinVehicleStateInput?
     public var charging: TwinChargingInput?
@@ -68,7 +68,7 @@ public struct DigitalTwinUpdate: Sendable, Equatable {
     public init(
         status: TwinLoadStatus = .loading,
         connection: TwinConnection = .live,
-        vehicle: TwinVehicle? = nil,
+        vehicle: DigitalTwinWidgetTwinVehicle? = nil,
         security: TwinSecurityInput? = nil,
         vehicleState: TwinVehicleStateInput? = nil,
         charging: TwinChargingInput? = nil,
@@ -114,7 +114,7 @@ public final class DigitalTwinModel {
     public private(set) var phase: Phase = .loading
     public private(set) var connection: TwinConnection = .live
     public private(set) var twin: VehicleTwinState = .empty
-    public private(set) var vehicle: TwinVehicle?
+    public private(set) var vehicle: DigitalTwinWidgetTwinVehicle?
     public private(set) var updatedAt: Date?
 
     @ObservationIgnored private let source: any DigitalTwinSource
@@ -218,36 +218,7 @@ public final class InMemoryDigitalTwinSource: DigitalTwinSource {
 
 // MARK: - Registry metadata (canonical: registry/vehicle.ts → "vehicle-twin")
 
-/// A dashboard grid size in (columns × rows), matching the web `WidgetSize`.
-public struct DashboardWidgetSize: Sendable, Equatable {
-    public var cols: Int
-    public var rows: Int
 
-    public init(cols: Int, rows: Int) {
-        self.cols = cols
-        self.rows = rows
-    }
-}
-
-/// The dashboard registration for a draggable widget surface (web `WidgetDef`).
-public struct DashboardWidgetRegistration: Sendable {
-    public let id: String
-    public let nameKey: String
-    public let descriptionKey: String
-    public let category: String
-    public let defaultSize: DashboardWidgetSize
-    public let minSize: DashboardWidgetSize
-    public let maxSize: DashboardWidgetSize
-
-    /// Clamps a requested grid size into the surface's `min…max` envelope, so the
-    /// native grid honors the same constraints as the web registry.
-    public func clamp(_ size: DashboardWidgetSize) -> DashboardWidgetSize {
-        DashboardWidgetSize(
-            cols: min(max(size.cols, minSize.cols), maxSize.cols),
-            rows: min(max(size.rows, minSize.rows), maxSize.rows)
-        )
-    }
-}
 
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 

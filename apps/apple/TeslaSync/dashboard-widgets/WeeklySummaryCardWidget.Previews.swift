@@ -19,7 +19,7 @@ import SwiftUI
         return model
     }
 
-    private let weeklySampleDigest = WeeklyDigestDTO(
+    private let weeklySampleDigest = WeeklySummaryCardWidgetDigestDTO(
         drives: 8,
         distanceKm: 5000,
         energyKwh: 20,

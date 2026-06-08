@@ -19,6 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
+@MainActor
 final class LifetimeStatsAdapterTests: XCTestCase {
     private let sample = LifetimeStatsDTO(
         totalDrives: 1234,
@@ -107,6 +108,7 @@ final class LifetimeStatsAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
+@MainActor
 final class LifetimeStatsPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(LifetimeStatsModel.resolvePhase(status: .loading, hasData: false), .loading)
@@ -213,6 +215,7 @@ final class LifetimeStatsModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class LifetimeStatsRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = LifetimeStatsWidget.registration
@@ -240,6 +243,7 @@ final class LifetimeStatsRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class LifetimeStatsAccessibilityTests: XCTestCase {
     private let projection = LifetimeStatsProjector.project(
         stats: LifetimeStatsDTO(

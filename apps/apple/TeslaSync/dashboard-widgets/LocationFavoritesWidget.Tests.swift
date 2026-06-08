@@ -35,6 +35,7 @@ private func daysBefore(_ days: Int) -> Date {
 
 // MARK: - Adapter: cached DTO → projection (parity with the web source)
 
+@MainActor
 final class LocationFavoritesProjectionTests: XCTestCase {
     func testPresencePrecedenceMatchesWeb() {
         let both = LocationFavoritesSnapshot(locatedAtHome: true, locatedAtWork: true)
@@ -245,6 +246,7 @@ final class LocationFavoritesModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class LocationFavoritesRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = LocationFavoritesWidget.registration
@@ -275,6 +277,7 @@ final class LocationFavoritesRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class LocationFavoritesAccessibilityTests: XCTestCase {
     func testSummaryIncludesPresenceDestinationAndCount() {
         let summary = LocationFavoritesAccessibility.summary(

@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: conversion / projection / phase (web parity)
 
+@MainActor
 final class OverviewAdapterTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -157,6 +158,7 @@ final class OverviewAdapterTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class OverviewAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

@@ -54,7 +54,7 @@ public enum RequestBuilderStrings {
 
     /// The destructive-confirm sentence with the method interpolated (web i18next
     /// `{{method}}` interpolation).
-    public static func confirmMessage(method: HTTPMethod) -> String {
+    public static func confirmMessage(method: RequestBuilderHTTPMethod) -> String {
         let format = string(
             "playground.confirmDestructive",
             "This is a %@ request. Are you sure you want to send it?"
@@ -68,11 +68,11 @@ public enum RequestBuilderStrings {
 /// The request the host should issue (web `onSend(url, method, body?, headers)`).
 public struct SendRequest: Sendable, Equatable {
     public let url: String
-    public let method: HTTPMethod
+    public let method: RequestBuilderHTTPMethod
     public let body: String?
     public let headers: [String: String]
 
-    public init(url: String, method: HTTPMethod, body: String?, headers: [String: String]) {
+    public init(url: String, method: RequestBuilderHTTPMethod, body: String?, headers: [String: String]) {
         self.url = url
         self.method = method
         self.body = body
@@ -90,7 +90,7 @@ public struct SendRequest: Sendable, Equatable {
 @Observable
 public final class RequestBuilderModel {
     /// The endpoint being composed (web `endpoint` prop).
-    public private(set) var endpoint: ParsedEndpoint
+    public private(set) var endpoint: RequestBuilderParsedEndpoint
 
     /// Current path/query parameter values (web `params`).
     public var params: [String: String]
@@ -112,7 +112,7 @@ public final class RequestBuilderModel {
     @ObservationIgnored private var started = false
 
     public init(
-        endpoint: ParsedEndpoint,
+        endpoint: RequestBuilderParsedEndpoint,
         loading: Bool = false,
         telemetry: any RequestBuilderTelemetry = OSLogRequestBuilderTelemetry(),
         onSend: @escaping (SendRequest) -> Void = { _ in }
@@ -130,7 +130,7 @@ public final class RequestBuilderModel {
     /// Web "reset state when endpoint changes" effect: re-seed params + body and drop
     /// the confirm step. The API key is intentionally preserved (the web effect does
     /// not clear it).
-    public func apply(endpoint: ParsedEndpoint) {
+    public func apply(endpoint: RequestBuilderParsedEndpoint) {
         self.endpoint = endpoint
         params = RequestBuilderAdapter.defaultParameters(for: endpoint)
         body = RequestBuilderAdapter.seedBody(for: endpoint.requestBody)

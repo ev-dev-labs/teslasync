@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web derive block)
 
+@MainActor
 final class SpeedProfileAdapterTests: XCTestCase {
     func testConvertSpeedFromSIUsesExactFactors() {
         XCTAssertEqual(SpeedProfileBuilder.convertSpeedFromSI(1, to: .kilometersPerHour), 3.6, accuracy: 1e-9)
@@ -221,6 +222,7 @@ final class SpeedProfileModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class SpeedProfileRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SpeedProfileWidget.registration
@@ -250,6 +252,7 @@ final class SpeedProfileRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class SpeedProfileAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryStatLabelAndUnit() throws {
         let input = SpeedProfileInput(

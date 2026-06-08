@@ -17,17 +17,17 @@ import Foundation
 /// The user's speed display unit, mirroring the web `SpeedUnitPref`
 /// (`'km/h' | 'mph'`). Carries the SI divisor used by `convertSpeedFromSI`
 /// (`mps * 3600 / metersPerUnit`) so the heatmap math agrees with the web.
-public enum SpeedUnit: String, Sendable, Equatable, CaseIterable {
+public enum SpeedHeatmapWidgetUnit: String, Sendable, Equatable, CaseIterable {
     case kilometersPerHour = "km/h"
     case milesPerHour = "mph"
 
     /// Resolves a stored preference label (`"km/h"`, `"mph"`) to a unit,
     /// defaulting to km/h (metric) for unknown labels — matching the metric
     /// default the shared `UnitPref` falls back to.
-    public static func fromLabel(_ label: String?) -> SpeedUnit {
+    public static func fromLabel(_ label: String?) -> SpeedHeatmapWidgetUnit {
         guard let label else { return .kilometersPerHour }
         let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return SpeedUnit(rawValue: trimmed) ?? .kilometersPerHour
+        return SpeedHeatmapWidgetUnit(rawValue: trimmed) ?? .kilometersPerHour
     }
 
     /// Meters per one distance unit of the speed (`METERS_PER_KM` /

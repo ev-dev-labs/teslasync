@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: formatting (web parity)
 
+@MainActor
 final class HealthGaugeFormatTests: XCTestCase {
     func testNumberGroupsAndFixesFractionDigits() {
         XCTAssertEqual(HealthGaugeFormat.number(1234.0, decimals: 1), "1,234.0")
@@ -59,6 +60,7 @@ final class HealthGaugeFormatTests: XCTestCase {
 
 // MARK: - Adapter: SI converters (web parity)
 
+@MainActor
 final class HealthGaugeConverterTests: XCTestCase {
     func testDistanceConverterMatchesWebConstants() {
         XCTAssertEqual(convertHealthDistanceFromSI(1000, to: .kilometers), 1, accuracy: 1e-9)
@@ -76,6 +78,7 @@ final class HealthGaugeConverterTests: XCTestCase {
 
 // MARK: - Adapter: projector (web parity)
 
+@MainActor
 final class HealthGaugeGridProjectorTests: XCTestCase {
     private func row(_ id: String, in rows: [HealthDetailRow]?) -> HealthDetailRow? {
         rows?.first { $0.id == id }
@@ -91,7 +94,7 @@ final class HealthGaugeGridProjectorTests: XCTestCase {
     }
 
     private func sample(
-        health: DrivetrainHealthStatus = .good,
+        health: HealthGaugeGridDrivetrainHealthStatus = .good,
         score: Double = 95,
         includeStats: Bool = true
     ) -> DrivetrainHealthInput {
@@ -309,6 +312,7 @@ final class HealthGaugeGridModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class HealthGaugeGridAccessibilityTests: XCTestCase {
     private func data(includeStats: Bool) -> DrivetrainHealthInput {
         DrivetrainHealthInput(

@@ -66,7 +66,7 @@ public enum HealthGaugeConnection: Sendable, Equatable {
 /// renders the value capitalized inline (`overallHealth.charAt(0).toUpperCase() + slice(1)`);
 /// the native surface routes it through the P1/S10 facade so the same English text stays
 /// localizable. The status → token tint mapping lives in HealthGaugeGrid.Views.swift.
-public enum DrivetrainHealthStatus: String, Sendable, Equatable, CaseIterable {
+public enum HealthGaugeGridDrivetrainHealthStatus: String, Sendable, Equatable, CaseIterable {
     case good
     case warning
     case critical
@@ -87,8 +87,8 @@ public enum DrivetrainHealthStatus: String, Sendable, Equatable, CaseIterable {
 
     /// Resolves a status from the web union string, defaulting to `.good` for any
     /// unrecognized value (the optimistic default the web score map implies).
-    public static func from(raw: String) -> DrivetrainHealthStatus {
-        DrivetrainHealthStatus(rawValue: raw) ?? .good
+    public static func from(raw: String) -> HealthGaugeGridDrivetrainHealthStatus {
+        HealthGaugeGridDrivetrainHealthStatus(rawValue: raw) ?? .good
     }
 }
 
@@ -180,14 +180,14 @@ public struct DriveStatsInput: Sendable, Equatable {
 /// null).length` (the source counts live sensors before pushing). `stats` is optional: a
 /// `nil` value reproduces the web `stats ? <KVList/> : <Skeleton/>` per-panel branch.
 public struct DrivetrainHealthInput: Sendable, Equatable {
-    public var overallHealth: DrivetrainHealthStatus
+    public var overallHealth: HealthGaugeGridDrivetrainHealthStatus
     public var healthScore: Double
     public var motorStatus: String
     public var activeSensorCount: Int
     public var stats: DriveStatsInput?
 
     public init(
-        overallHealth: DrivetrainHealthStatus,
+        overallHealth: HealthGaugeGridDrivetrainHealthStatus,
         healthScore: Double,
         motorStatus: String,
         activeSensorCount: Int,

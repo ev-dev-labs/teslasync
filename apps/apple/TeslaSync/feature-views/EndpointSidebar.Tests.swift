@@ -42,6 +42,7 @@ private enum EndpointFixtures {
 
 // MARK: - Adapter: search → filter → group (web view-local parity)
 
+@MainActor
 final class EndpointSidebarBuilderTests: XCTestCase {
     func testEmptyQueryReturnsAllEndpoints() {
         XCTAssertEqual(EndpointSidebarBuilder.filter(EndpointFixtures.catalog, query: "").count, 5)
@@ -215,6 +216,7 @@ final class EndpointSidebarModelTests: XCTestCase {
 
 // MARK: - HTTP method token / parse / tone
 
+@MainActor
 final class EndpointMethodTests: XCTestCase {
     func testTokenIsAlwaysUpperCased() {
         XCTAssertEqual(HTTPMethod.get.token, "GET")
@@ -240,6 +242,7 @@ final class EndpointMethodTests: XCTestCase {
 
 // MARK: - Accessibility label content
 
+@MainActor
 final class EndpointSidebarAccessibilityTests: XCTestCase {
     func testRowLabelIncludesMethodPathAndSummary() {
         let endpoint = EndpointFixtures.make(.get, "/vehicles", tag: "Vehicles", summary: "List vehicles")

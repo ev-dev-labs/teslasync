@@ -12,9 +12,9 @@ import SwiftUI
 
 #if DEBUG
     @MainActor
-    private func previewModel(_ update: VehicleHeroUpdate) -> VehicleHeroModel {
-        let source = InMemoryVehicleHeroSource(initial: update)
-        let model = VehicleHeroModel(source: source)
+    private func previewModel(_ update: VehicleHeroWidgetUpdate) -> VehicleHeroWidgetModel {
+        let source = VehicleHeroWidgetInMemoryVehicleHeroSource(initial: update)
+        let model = VehicleHeroWidgetModel(source: source)
         model.start()
         return model
     }
@@ -51,10 +51,10 @@ import SwiftUI
 
     private func update(
         _ state: VehicleStateInput?,
-        status: VehicleHeroLoadStatus = .loaded,
-        connection: VehicleHeroConnection = .live
-    ) -> VehicleHeroUpdate {
-        VehicleHeroUpdate(
+        status: VehicleHeroWidgetLoadStatus = .loaded,
+        connection: VehicleHeroWidgetConnection = .live
+    ) -> VehicleHeroWidgetUpdate {
+        VehicleHeroWidgetUpdate(
             status: status, connection: connection, vehicle: previewVehicle, state: state,
             liveVersion: state?.softwareVersion, prefs: previewPrefs, updatedAt: Date()
         )
@@ -86,19 +86,19 @@ import SwiftUI
 
     #Preview("Loading") {
         frame(VehicleHeroWidget(model: previewModel(
-            VehicleHeroUpdate(status: .loading, vehicle: nil, prefs: previewPrefs)
+            VehicleHeroWidgetUpdate(status: .loading, vehicle: nil, prefs: previewPrefs)
         )))
     }
 
     #Preview("Empty (no vehicle)") {
         frame(VehicleHeroWidget(model: previewModel(
-            VehicleHeroUpdate(status: .empty, vehicle: nil, prefs: previewPrefs)
+            VehicleHeroWidgetUpdate(status: .empty, vehicle: nil, prefs: previewPrefs)
         )))
     }
 
     #Preview("Error") {
         frame(VehicleHeroWidget(model: previewModel(
-            VehicleHeroUpdate(status: .failed("Network unavailable"), vehicle: nil, prefs: previewPrefs)
+            VehicleHeroWidgetUpdate(status: .failed("Network unavailable"), vehicle: nil, prefs: previewPrefs)
         )))
     }
 

@@ -23,10 +23,10 @@ import SwiftUI
                 ChargerBrandDatum(brand: "EVgo", count: 121)
             ],
             chargerTypes: [
-                ChargerTypeDatum(type: "Supercharger", count: 980),
-                ChargerTypeDatum(type: "Level 2", count: 410),
-                ChargerTypeDatum(type: "CHAdeMO", count: 60),
-                ChargerTypeDatum(type: "Level 1", count: 22)
+                ChargingDetailSectionChargerTypeDatum(type: "Supercharger", count: 980),
+                ChargingDetailSectionChargerTypeDatum(type: "Level 2", count: 410),
+                ChargingDetailSectionChargerTypeDatum(type: "CHAdeMO", count: 60),
+                ChargingDetailSectionChargerTypeDatum(type: "Level 1", count: 22)
             ],
             monthlyTrend: [
                 MonthlyChargePoint(month: "Jan", energy: 312, avgPower: 48, sessions: 22, cost: 41.2),
@@ -48,6 +48,7 @@ import SwiftUI
         return model
     }
 
+    @MainActor
     private func previewShell(_ section: ChargingDetailSection) -> some View {
         ScrollView {
             section.padding(TSSpacing.lg)

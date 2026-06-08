@@ -23,6 +23,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guard (port of `safe`)
 
+@MainActor
 final class ChargerTypeNumericTests: XCTestCase {
     func testSafeReturnsFiniteValues() {
         XCTAssertEqual(ChargerTypeNumeric.safe(42.5), 42.5)
@@ -40,6 +41,7 @@ final class ChargerTypeNumericTests: XCTestCase {
 
 // MARK: - Adapter: breakdown rows (port of `data.map`)
 
+@MainActor
 final class ChargerTypeProjectionTests: XCTestCase {
     private let data = [
         ChargerTypeDatum(name: "A", cost: 75, energy: 100, sessions: 10),
@@ -106,6 +108,7 @@ final class ChargerTypeProjectionTests: XCTestCase {
 
 // MARK: - Formatting: web `formatCurrency` / `fmtInt` / `fmtNumber` / `fmtWithUnit`
 
+@MainActor
 final class ChargerTypeFormattingTests: XCTestCase {
     private let formatting = DefaultChargerTypeFormatting()
 
@@ -147,6 +150,7 @@ final class ChargerTypeFormattingTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class ChargerTypeAccessibilityTests: XCTestCase {
     private let formatting = DefaultChargerTypeFormatting()
     private let labels = ChargerTypeRowLabels(

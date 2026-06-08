@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guards (port of `safe`)
 
+@MainActor
 final class CostNumericTests: XCTestCase {
     func testSafeReturnsFiniteValues() {
         XCTAssertEqual(CostNumeric.safe(42.5), 42.5)
@@ -48,6 +49,7 @@ final class CostNumericTests: XCTestCase {
 
 // MARK: - Adapter: the two render gates (web hasForecast / hasCostPerKwhTrend)
 
+@MainActor
 final class CostForecastGateTests: XCTestCase {
     private func historical(_ count: Int) -> [CostHistoricalMonth] {
         (0 ..< count).map { CostHistoricalMonth(month: "M\($0)", cost: Double($0), costPerKwh: 0.1) }
@@ -85,6 +87,7 @@ final class CostForecastGateTests: XCTestCase {
 
 // MARK: - Adapter: composed forecast chart projection
 
+@MainActor
 final class ForecastChartProjectionTests: XCTestCase {
     private let data = CostForecastData(
         historical: [
@@ -156,6 +159,7 @@ final class ForecastChartProjectionTests: XCTestCase {
 
 // MARK: - Adapter: cost-per-kWh trend projection
 
+@MainActor
 final class CostPerKwhProjectionTests: XCTestCase {
     func testPointsMapHistoricalRates() {
         let data = CostForecastData(historical: [
@@ -179,6 +183,7 @@ final class CostPerKwhProjectionTests: XCTestCase {
 
 // MARK: - Formatting: web `formatCurrency` / `$` axis parity
 
+@MainActor
 final class CostForecastFormattingTests: XCTestCase {
     private let formatting = DefaultCostForecastFormatting()
 
@@ -204,6 +209,7 @@ final class CostForecastFormattingTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class CostForecastAccessibilityTests: XCTestCase {
     private let formatting = DefaultCostForecastFormatting()
     private var currency: (Double) -> String {

@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: catalog parity (port of useToolList)
 
+@MainActor
 final class ClientUtilitiesCatalogTests: XCTestCase {
     /// English-fallback localizer (bundle-free) mirroring the display boundary.
     private let echo: (String, String) -> String = { _, fallback in fallback }
@@ -76,6 +77,7 @@ final class ClientUtilitiesCatalogTests: XCTestCase {
 
 // MARK: - Adapter: search filter (port of `filtered`)
 
+@MainActor
 final class ToolFilterTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private var tools: [ToolDescriptor] {
@@ -108,6 +110,7 @@ final class ToolFilterTests: XCTestCase {
 
 // MARK: - Adapter: single-open accordion (port of `setExpandedId`)
 
+@MainActor
 final class ToolDisclosureTests: XCTestCase {
     func testSelectingFromNoneOpensThatTool() {
         XCTAssertEqual(ToolDisclosure.toggled(current: nil, selecting: "vin"), "vin")
@@ -255,6 +258,7 @@ final class ClientUtilitiesModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class ClientUtilitiesAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

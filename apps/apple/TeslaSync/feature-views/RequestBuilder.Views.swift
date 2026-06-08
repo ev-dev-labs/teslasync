@@ -50,7 +50,7 @@ private struct RequestFieldChrome: ViewModifier {
 /// The colored monospaced method chip (web `MethodBadge`), tinted by the method's
 /// accent role.
 struct RequestMethodBadge: View {
-    let method: HTTPMethod
+    let method: RequestBuilderHTTPMethod
 
     private var accessibilityText: String {
         let prefix = RequestBuilderStrings.string("a11y.requestBuilder.method", "Method")
@@ -77,7 +77,7 @@ struct RequestMethodBadge: View {
 /// The top row: the method badge, the scrollable `/api/v1…` code, and the send
 /// control whose label flips to "Sending…" while a request is in flight.
 struct RequestURLBar: View {
-    let method: HTTPMethod
+    let method: RequestBuilderHTTPMethod
     let displayURL: String
     let isLoading: Bool
     let onSend: () -> Void
@@ -133,7 +133,7 @@ struct RequestURLBar: View {
 
 /// The amber confirmation row shown before a non-GET request is sent.
 struct RequestConfirmBanner: View {
-    let method: HTTPMethod
+    let method: RequestBuilderHTTPMethod
     let onConfirm: () -> Void
     let onCancel: () -> Void
 

@@ -57,7 +57,7 @@ public enum HeroGaugesFormat {
     }
 
     /// SI m/s → the user's display speed (`convertSpeedFromSI`).
-    public static func convertSpeedFromSI(_ mps: Double, to unit: SpeedUnit) -> Double {
+    public static func convertSpeedFromSI(_ mps: Double, to unit: HeroGaugesSpeedUnit) -> Double {
         switch unit {
         case .kmh: (mps * secondsPerHour) / metersPerKm
         case .mph: (mps * secondsPerHour) / metersPerMile

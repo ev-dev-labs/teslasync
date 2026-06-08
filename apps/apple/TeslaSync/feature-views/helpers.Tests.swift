@@ -23,6 +23,7 @@ private let enUS = Locale(identifier: "en_US")
 
 // MARK: - Classification (web getStatusColor / statusTextClass / getStatusIcon)
 
+@MainActor
 final class StatusKindTests: XCTestCase {
     func testSuccessTokens() {
         for token in ["healthy", "ok", "online", "connected", "ready", "sent", "completed"] {
@@ -70,6 +71,7 @@ final class StatusKindTests: XCTestCase {
 
 // MARK: - Badge classification (web statusToBadgeVariant — the "connected" divergence)
 
+@MainActor
 final class StatusBadgeKindTests: XCTestCase {
     func testBadgeSuccessTokens() {
         for token in ["healthy", "ok", "online", "ready", "sent", "completed"] {
@@ -99,6 +101,7 @@ final class StatusBadgeKindTests: XCTestCase {
 
 // MARK: - Uptime formatting (port of formatUptime)
 
+@MainActor
 final class StatusFormatUptimeTests: XCTestCase {
     func testDaysHoursMinutes() {
         XCTAssertEqual(StatusFormat.formatUptime(93784), "1d 2h 3m")
@@ -126,6 +129,7 @@ final class StatusFormatUptimeTests: XCTestCase {
 
 // MARK: - Byte formatting (port of formatBytes)
 
+@MainActor
 final class StatusFormatBytesTests: XCTestCase {
     func testZeroIsBytes() {
         XCTAssertEqual(StatusFormat.formatBytes(0, locale: enUS), "0 B")
@@ -160,6 +164,7 @@ final class StatusFormatBytesTests: XCTestCase {
 
 // MARK: - Legend rows (web classification applied per sample)
 
+@MainActor
 final class StatusHelpersRowsTests: XCTestCase {
     func testRowsCarryKindBadgeAndKey() {
         let rows = StatusHelpersRows.rows(for: ["Healthy", "connected", "boom"])
@@ -183,6 +188,7 @@ final class StatusHelpersRowsTests: XCTestCase {
 
 // MARK: - Projection (P4 leaf contract)
 
+@MainActor
 final class StatusHelpersProjectionTests: XCTestCase {
     private let samples = ["healthy", "offline"]
 
@@ -313,6 +319,7 @@ final class StatusHelpersModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class StatusHelpersAccessibilityTests: XCTestCase {
     func testLegendRowLabelJoinsParts() {
         XCTAssertEqual(

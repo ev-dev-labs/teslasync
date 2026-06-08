@@ -1,6 +1,6 @@
 //
-//  Stepper.Previews.swift
-//  TeslaSync — P4 feature view · 0195 · Stepper (Apple)
+//  OnboardingStepper.Previews.swift
+//  TeslaSync — P4 feature view · 0195 · OnboardingStepper (Apple)
 //
 //  Xcode previews for the step list + each P4 state (loading / empty / error /
 //  stale / offline). DEBUG-only; compiled by the app targets and skipped by the
@@ -21,7 +21,7 @@ import SwiftUI
     @MainActor
     private func previewSurface(_ input: StepperInput) -> some View {
         ScrollView {
-            Stepper(model: previewModel(input))
+            OnboardingStepper(model: previewModel(input))
                 .padding()
         }
         .background(Color.TS.bg)

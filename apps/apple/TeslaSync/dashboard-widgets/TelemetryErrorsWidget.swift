@@ -4,7 +4,7 @@
 //
 //  The composable Telemetry Errors dashboard surface — SwiftUI parity of
 //  features/dashboard/widgets/TelemetryErrorsWidget.tsx. Binds through
-//  `TelemetryErrorsModel` (no networking in the view); renders every state
+//  `TelemetryErrorsWidgetModel` (no networking in the view); renders every state
 //  (loading / empty / error / content) with a live/fetching/stale/offline/error
 //  freshness chip, and the responsive compact (1×2) vs standard (2×4) layouts
 //  from the web source.
@@ -17,7 +17,7 @@ import SwiftUI
 /// The composable Telemetry Errors dashboard widget — the SwiftUI parity of
 /// `features/dashboard/widgets/TelemetryErrorsWidget.tsx`. Renders every state
 /// from the web source inside a glass widget shell, binding through
-/// `TelemetryErrorsModel` (P1/S8). No networking lives here.
+/// `TelemetryErrorsWidgetModel` (P1/S8). No networking lives here.
 public struct TelemetryErrorsWidget: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
     public static let surfaceSlug = "TelemetryErrorsWidget"
@@ -33,12 +33,12 @@ public struct TelemetryErrorsWidget: View {
         maxSize: DashboardWidgetSize(cols: 4, rows: 40)
     )
 
-    @State private var model: TelemetryErrorsModel
+    @State private var model: TelemetryErrorsWidgetModel
     private let size: DashboardWidgetSize
     private let onOpen: (() -> Void)?
 
     public init(
-        model: TelemetryErrorsModel,
+        model: TelemetryErrorsWidgetModel,
         size: DashboardWidgetSize = TelemetryErrorsWidget.registration.defaultSize,
         onOpen: (() -> Void)? = nil
     ) {
@@ -48,7 +48,7 @@ public struct TelemetryErrorsWidget: View {
     }
 
     private var isCompact: Bool {
-        TelemetryErrorsModel.isCompact(size)
+        TelemetryErrorsWidgetModel.isCompact(size)
     }
 
     public var body: some View {
@@ -203,7 +203,7 @@ extension TelemetryErrorsWidget {
     private var compactContent: some View {
         VStack(spacing: TSSpacing.xs) {
             Spacer(minLength: 0)
-            Text(verbatim: TelemetryErrorsFormat.int(model.activeVINCount))
+            Text(verbatim: TelemetryErrorsWidgetFormat.int(model.activeVINCount))
                 .font(Font.TS.title)
                 .fontWeight(.bold)
                 .monospacedDigit()
@@ -218,7 +218,7 @@ extension TelemetryErrorsWidget {
         }
         .frame(maxWidth: .infinity, minHeight: 44, maxHeight: .infinity)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: TelemetryErrorsAccessibility.summary(
+        .accessibilityLabel(Text(verbatim: TelemetryErrorsWidgetAccessibility.summary(
             activeVINCount: model.activeVINCount,
             status: model.status
         )))
@@ -242,7 +242,7 @@ extension TelemetryErrorsWidget {
                 TelemetryStatusBadge(status: model.status)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text(verbatim: TelemetryErrorsAccessibility.summary(
+            .accessibilityLabel(Text(verbatim: TelemetryErrorsWidgetAccessibility.summary(
                 activeVINCount: model.activeVINCount,
                 status: model.status
             )))

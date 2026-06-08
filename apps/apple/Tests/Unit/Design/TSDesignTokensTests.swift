@@ -3,6 +3,7 @@ import XCTest
 
 /// Design-token presence + drift tests: assert the generated `Tokens.swift`
 /// stays in sync with `apps/design/tokens.json` and exposes a usable scale.
+@MainActor
 final class TSDesignTokensTests: XCTestCase {
     private struct ChartTokens: Decodable { let categorical: [String] }
     private struct TokenFile: Decodable { let chart: ChartTokens }

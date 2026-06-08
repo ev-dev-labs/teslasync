@@ -15,9 +15,9 @@ import SwiftUI
         /// DC + AC fixtures that produce a full set of metrics: avg10to80 over the
         /// 8%→82% and 5%→85% sessions, avg20to80 adding the 15%→90% session, a
         /// fastest (≈91 kWh/h) and slowest (60 kWh/h) rate, and a two-year trend.
-        static func sessions() -> [ChargingSessionSummary] {
+        static func sessions() -> [TimeToChargeSectionChargingSessionSummary] {
             [
-                ChargingSessionSummary(
+                TimeToChargeSectionChargingSessionSummary(
                     id: 101,
                     startedAt: "2025-11-10T08:00:00Z",
                     endedAt: "2025-11-10T08:35:00Z",
@@ -27,7 +27,7 @@ import SwiftUI
                     peakPowerW: 120_000,
                     chargerType: "Tesla"
                 ),
-                ChargingSessionSummary(
+                TimeToChargeSectionChargingSessionSummary(
                     id: 102,
                     startedAt: "2026-02-02T09:00:00Z",
                     endedAt: "2026-02-02T09:50:00Z",
@@ -37,7 +37,7 @@ import SwiftUI
                     peakPowerW: 90000,
                     chargerType: "CCS"
                 ),
-                ChargingSessionSummary(
+                TimeToChargeSectionChargingSessionSummary(
                     id: 103,
                     startedAt: "2026-02-15T22:00:00Z",
                     endedAt: "2026-02-15T22:25:00Z",
@@ -47,7 +47,7 @@ import SwiftUI
                     peakPowerW: 150_000,
                     chargerType: "Tesla"
                 ),
-                ChargingSessionSummary(
+                TimeToChargeSectionChargingSessionSummary(
                     id: 104,
                     startedAt: "2026-03-01T19:00:00Z",
                     endedAt: "2026-03-01T23:00:00Z",
@@ -63,7 +63,7 @@ import SwiftUI
 
     @MainActor
     private func previewModel(
-        _ state: TimeToChargeLoadState<[ChargingSessionSummary]>
+        _ state: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]>
     ) -> TimeToChargeModel {
         TimeToChargeModel(previewState: state, locale: Locale(identifier: "en_US"))
     }

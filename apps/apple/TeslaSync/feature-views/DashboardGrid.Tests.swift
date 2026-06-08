@@ -46,6 +46,7 @@ private enum Fixture {
 
 // MARK: - Breakpoint (web GRID_BREAKPOINTS / getBreakpointFromWidth)
 
+@MainActor
 final class DashboardBreakpointTests: XCTestCase {
     func testResolvePicksLargestThresholdAtOrBelowWidth() {
         XCTAssertEqual(DashboardBreakpoint.resolve(width: 1300), .lg)
@@ -80,6 +81,7 @@ final class DashboardBreakpointTests: XCTestCase {
 
 // MARK: - Layout projections (getWidgetSizeLive / orderedWidgets / placements / contexts)
 
+@MainActor
 final class DashboardLayoutMathTests: XCTestCase {
     private func layouts() -> DashboardGridLayouts {
         DashboardGridLayouts([
@@ -243,6 +245,7 @@ final class DashboardLayoutMathTests: XCTestCase {
 
 // MARK: - Placement geometry (native equivalent of RGL x/y/w/h)
 
+@MainActor
 final class DashboardGridPlacementTests: XCTestCase {
     func testColumnWidth() {
         XCTAssertEqual(
@@ -293,6 +296,7 @@ final class DashboardGridPlacementTests: XCTestCase {
 
 // MARK: - Kiosk boost (web kioskPanelStyle)
 
+@MainActor
 final class DashboardKioskStyleTests: XCTestCase {
     func testNilOpacityYieldsNoStyle() {
         XCTAssertNil(DashboardKioskStyle.resolve(opacity: nil))
@@ -311,6 +315,7 @@ final class DashboardKioskStyleTests: XCTestCase {
 
 // MARK: - Freshness chip + connection gating
 
+@MainActor
 final class DashboardFreshnessTests: XCTestCase {
     func testChipProjection() {
         XCTAssertNil(DashboardGridFreshnessChip.project(.live))
@@ -338,6 +343,7 @@ final class DashboardFreshnessTests: XCTestCase {
 
 // MARK: - Render state
 
+@MainActor
 final class DashboardGridStateTests: XCTestCase {
     func testDashboardAccessor() {
         let data = DashboardGridData(id: "d", name: "n", widgets: [], layouts: DashboardGridLayouts())
@@ -350,6 +356,7 @@ final class DashboardGridStateTests: XCTestCase {
 
 // MARK: - Accessibility + i18n key parity
 
+@MainActor
 final class DashboardGridAccessibilityTests: XCTestCase {
     private let echo = DashboardGridLocalizer.echo
 
@@ -372,6 +379,7 @@ final class DashboardGridAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
+@MainActor
 final class DashboardGridTelemetryTests: XCTestCase {
     private final class Recorder: DashboardGridTelemetry, @unchecked Sendable {
         private let lock = NSLock()

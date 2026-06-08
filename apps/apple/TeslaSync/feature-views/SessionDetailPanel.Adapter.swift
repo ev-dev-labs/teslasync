@@ -18,7 +18,7 @@ import Foundation
 /// The three charger classes the web `getChargerLabel` resolves. The raw value is the
 /// i18n key suffix and `labelFallback` is the web English default the helper returns
 /// verbatim — routed through the P1/S10 facade here so the native view holds no literal.
-public enum ChargerKind: String, Sendable, Equatable, CaseIterable {
+public enum SessionDetailPanelChargerKind: String, Sendable, Equatable, CaseIterable {
     case supercharger
     case dcFast
     case homeAc
@@ -166,7 +166,7 @@ public enum SessionDetailProjection {
     /// is DC Fast; an absent type with peak power over the DC threshold is DC Fast; otherwise
     /// Home / AC. An empty-string type is falsy in the web source, so it falls through to the
     /// power check exactly as it does here.
-    public static func chargerKind(for session: ChargingSessionSnapshot) -> ChargerKind {
+    public static func chargerKind(for session: ChargingSessionSnapshot) -> SessionDetailPanelChargerKind {
         if let type = session.chargerType {
             if type == "Tesla" || type.lowercased().contains("tesla") {
                 return .supercharger

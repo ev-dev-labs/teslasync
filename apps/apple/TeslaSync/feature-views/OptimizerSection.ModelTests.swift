@@ -12,6 +12,7 @@ import XCTest
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class OptimizerAccessibilityTests: XCTestCase {
     private let formatting = DefaultOptimizerFormatting()
 

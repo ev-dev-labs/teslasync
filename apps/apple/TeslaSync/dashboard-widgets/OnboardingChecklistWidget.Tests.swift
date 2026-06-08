@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached inputs → projection (port of useChecklistTasks)
 
+@MainActor
 final class OnboardingChecklistBuilderTests: XCTestCase {
     func testCatalogShapeMatchesWebOrder() {
         let tasks = ChecklistBuilder.catalog(for: ChecklistInputs())
@@ -275,6 +276,7 @@ final class OnboardingChecklistRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class OnboardingChecklistAccessibilityTests: XCTestCase {
     func testSummaryIncludesProgressAndTaskStatuses() {
         let projection = ChecklistBuilder.buildProjection(

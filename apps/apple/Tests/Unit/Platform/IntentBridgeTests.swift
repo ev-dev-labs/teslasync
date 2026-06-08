@@ -2,6 +2,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Round-trip + privacy tests for the cross-process intent bridge.
+@MainActor
 final class IntentBridgeTests: XCTestCase {
     private func freshBridge() -> IntentBridge {
         let defaults = UserDefaults(suiteName: "test.bridge.\(UUID().uuidString)")!

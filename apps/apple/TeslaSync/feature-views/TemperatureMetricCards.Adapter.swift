@@ -35,7 +35,7 @@ public enum TemperatureMetricsPhase: Equatable, Sendable {
 /// The user's temperature display preference, mirroring the web `TemperatureUnitPref` resolved
 /// by `useUnits()` (`unitPrefs.temperature`, derived from `settings.unit_of_temp`). Stored as
 /// the symbol the web converter switches on (`'°C'` / `'°F'`).
-public enum DrivetrainTemperatureUnit: String, Sendable, Equatable, CaseIterable {
+public enum TemperatureMetricCardsDrivetrainTemperatureUnit: String, Sendable, Equatable, CaseIterable {
     case celsius = "°C"
     case fahrenheit = "°F"
 
@@ -46,8 +46,8 @@ public enum DrivetrainTemperatureUnit: String, Sendable, Equatable, CaseIterable
 
     /// Resolves the unit from the web preference symbol, defaulting to Celsius (the SI display
     /// floor) for any unrecognized value.
-    public static func from(symbol: String) -> DrivetrainTemperatureUnit {
-        DrivetrainTemperatureUnit(rawValue: symbol) ?? .celsius
+    public static func from(symbol: String) -> TemperatureMetricCardsDrivetrainTemperatureUnit {
+        TemperatureMetricCardsDrivetrainTemperatureUnit(rawValue: symbol) ?? .celsius
     }
 }
 
@@ -57,7 +57,7 @@ public enum DrivetrainTemperatureUnit: String, Sendable, Equatable, CaseIterable
 /// (`'good' | 'warning' | 'critical'`). Carries the canonical health score (web `HEALTH_SCORE`)
 /// and the Health-Score card accent (web `overallHealth === 'good' ? 'green' : overallHealth
 /// === 'warning' ? 'amber' : 'red'`).
-public enum DrivetrainHealthStatus: String, Sendable, Equatable, CaseIterable {
+public enum TemperatureMetricCardsDrivetrainHealthStatus: String, Sendable, Equatable, CaseIterable {
     case good
     case warning
     case critical
@@ -152,7 +152,7 @@ public struct TemperatureMetricsInput: Sendable, Equatable {
     public var rearMotorTempC: Double?
     public var inverterTempC: Double?
     public var batteryTempC: Double?
-    public var overallHealth: DrivetrainHealthStatus
+    public var overallHealth: TemperatureMetricCardsDrivetrainHealthStatus
     public var healthScore: Int
     /// Peak drive power in kilowatts (web `peakPower`, already kW — the page divides the SI
     /// watts by 1000 before passing it down).
@@ -163,8 +163,8 @@ public struct TemperatureMetricsInput: Sendable, Equatable {
         rearMotorTempC: Double? = nil,
         inverterTempC: Double? = nil,
         batteryTempC: Double? = nil,
-        overallHealth: DrivetrainHealthStatus = .good,
-        healthScore: Int = DrivetrainHealthStatus.good.score,
+        overallHealth: TemperatureMetricCardsDrivetrainHealthStatus = .good,
+        healthScore: Int = TemperatureMetricCardsDrivetrainHealthStatus.good.score,
         peakPowerKw: Double = 0
     ) {
         self.frontMotorTempC = frontMotorTempC
@@ -181,7 +181,7 @@ public struct TemperatureMetricsInput: Sendable, Equatable {
 /// directly; the source resolves these and pushes them with each snapshot so the same
 /// preference the web `useUnits` hook applies is honored at the native render boundary.
 public struct TemperatureMetricsUnitPrefs: Sendable, Equatable {
-    public var temperature: DrivetrainTemperatureUnit
+    public var temperature: TemperatureMetricCardsDrivetrainTemperatureUnit
     public var localeIdentifier: String
     /// Fraction digits for the inline temperature value. `nil` uses the web temperature default
     /// of 1 (web `DEFAULT_PRECISION.temperature`); a value mirrors a user
@@ -189,7 +189,7 @@ public struct TemperatureMetricsUnitPrefs: Sendable, Equatable {
     public var precision: Int?
 
     public init(
-        temperature: DrivetrainTemperatureUnit = .celsius,
+        temperature: TemperatureMetricCardsDrivetrainTemperatureUnit = .celsius,
         localeIdentifier: String = "en_US",
         precision: Int? = nil
     ) {
@@ -215,7 +215,7 @@ public enum TemperatureMetricsMath {
 
     /// Web `convertTempFromSI(celsius, to)`: Celsius passes through; Fahrenheit is
     /// `c * 9 / 5 + 32`.
-    public static func convertTemperatureFromSI(_ celsius: Double, to unit: DrivetrainTemperatureUnit) -> Double {
+    public static func convertTemperatureFromSI(_ celsius: Double, to unit: TemperatureMetricCardsDrivetrainTemperatureUnit) -> Double {
         switch unit {
         case .celsius: celsius
         case .fahrenheit: celsius * 9 / 5 + 32
@@ -249,7 +249,7 @@ public enum TemperatureMetricsMath {
     /// for an absent / non-finite reading (web `displayTemp` null guard + `isFiniteNumber`).
     public static func temperatureInline(
         _ celsius: Double?,
-        unit: DrivetrainTemperatureUnit,
+        unit: TemperatureMetricCardsDrivetrainTemperatureUnit,
         precision: Int?,
         localeIdentifier: String
     ) -> String {

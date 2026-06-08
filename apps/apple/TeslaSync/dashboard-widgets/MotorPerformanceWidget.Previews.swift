@@ -18,7 +18,7 @@ import SwiftUI
         return model
     }
 
-    private let previewSnapshot = MotorSnapshotInput(
+    private let previewSnapshot = MotorPerformanceWidgetSnapshotInput(
         diTorque: 312,
         diStatorTemp: 78,
         motorTempCFront: 64,

@@ -18,6 +18,7 @@ import XCTest
 
 // MARK: - Adapter: input → result (port parity with btoa / atob)
 
+@MainActor
 final class Base64CodecTests: XCTestCase {
     func testEmptyInputIsEmptyForBothModes() {
         XCTAssertEqual(Base64Codec.transform("", mode: .encode), .empty)
@@ -109,6 +110,7 @@ final class Base64ToolModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summary
 
+@MainActor
 final class Base64AccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

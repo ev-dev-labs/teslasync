@@ -19,6 +19,7 @@ import XCTest
 
 // MARK: - Conversion: SI kilopascals → display unit (port of convertPressureFromSI)
 
+@MainActor
 final class TirePressureConvertTests: XCTestCase {
     func testKilopascalIdentity() throws {
         XCTAssertEqual(try XCTUnwrap(TirePressureConvert.fromSI(250, .kpa)), 250, accuracy: 0.0001)
@@ -49,6 +50,7 @@ final class TirePressureConvertTests: XCTestCase {
 
 // MARK: - Adapter: cached rows → projection (port of buildChartData)
 
+@MainActor
 final class TirePressureAdapterTests: XCTestCase {
     private func snap(
         _ timestamp: String?,
@@ -156,6 +158,7 @@ final class TirePressureAdapterTests: XCTestCase {
 
 // MARK: - Display formatting (port of formatPressure)
 
+@MainActor
 final class TirePressureFormatTests: XCTestCase {
     func testNilRendersEmDash() {
         XCTAssertEqual(TirePressureNumberFormat.pressure(nil), "—")
@@ -274,6 +277,7 @@ final class TirePressureRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class TirePressureAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryCorner() {
         let row = TirePressureSnapshotInput(

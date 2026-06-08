@@ -1,6 +1,6 @@
 //
-//  Stepper.Views.swift
-//  TeslaSync — P4 feature view · 0195 · Stepper (Apple)
+//  OnboardingStepper.Views.swift
+//  TeslaSync — P4 feature view · 0195 · OnboardingStepper (Apple)
 //
 //  The presentational core composed by the surface: the indicator circle (web
 //  `<Check/>` / `<Loader2 animate-spin/>` / numeric `<span>`), the connector

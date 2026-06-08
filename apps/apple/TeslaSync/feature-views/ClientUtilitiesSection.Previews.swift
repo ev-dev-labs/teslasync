@@ -27,6 +27,7 @@ import SwiftUI
 
     private let previewTools = ClientUtilitiesCatalog.defaultTools
 
+    @MainActor
     private func previewShell(_ section: ClientUtilitiesSection) -> some View {
         ScrollView {
             section.padding(TSSpacing.lg)

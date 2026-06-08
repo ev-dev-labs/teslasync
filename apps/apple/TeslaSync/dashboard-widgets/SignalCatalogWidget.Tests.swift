@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection
 
+@MainActor
 final class SignalCatalogAdapterTests: XCTestCase {
     private func entry(
         _ name: String,
@@ -285,6 +286,7 @@ final class SignalCatalogModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class SignalCatalogRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SignalCatalogWidget.registration
@@ -318,6 +320,7 @@ final class SignalCatalogRegistryTests: XCTestCase {
 
 // MARK: - Accessibility copy
 
+@MainActor
 final class SignalCatalogAccessibilityTests: XCTestCase {
     func testRowLabelIncludesNameUnitAndCount() {
         let row = SignalCatalogRow(name: "ChargeRate", unit: "W", observationCount: 128)

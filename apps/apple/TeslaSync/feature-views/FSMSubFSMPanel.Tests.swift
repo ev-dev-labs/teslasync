@@ -25,6 +25,7 @@ private let utc = TimeZone(identifier: "UTC") ?? TimeZone(secondsFromGMT: 0)!
 
 // MARK: - Timestamp parsing (port of `new Date(iso)` acceptance)
 
+@MainActor
 final class FSMSubFSMTimestampParseTests: XCTestCase {
     func testParsesPlainInternetDateTime() {
         XCTAssertNotNil(FSMSubFSMTimestamp.parse("2026-06-07T19:30:00Z"))
@@ -42,6 +43,7 @@ final class FSMSubFSMTimestampParseTests: XCTestCase {
 
 // MARK: - Relative time (port of dateFormat.ts `formatRelative`)
 
+@MainActor
 final class FSMSubFSMRelativeTimeTests: XCTestCase {
     private let base = FSMSubFSMTimestamp.parse("2026-06-07T12:00:00Z")!
 
@@ -95,6 +97,7 @@ final class FSMSubFSMRelativeTimeTests: XCTestCase {
 
 // MARK: - Semantic variant table (port of the FSM registries + `getStateColor`)
 
+@MainActor
 final class FSMSubFSMStateVariantTests: XCTestCase {
     func testDriveStateVariants() {
         XCTAssertEqual(FSMSubFSMStateModel.variant(for: .drive, state: "pending"), .warning)
@@ -125,6 +128,7 @@ final class FSMSubFSMStateVariantTests: XCTestCase {
 
 // MARK: - Terminal / active rule (port of `!terminalStates.includes(sub.state)`)
 
+@MainActor
 final class FSMSubFSMActiveStateTests: XCTestCase {
     func testDriveActiveStates() {
         XCTAssertTrue(FSMSubFSMStateModel.isActive(kind: .drive, state: "pending"))
@@ -151,6 +155,7 @@ final class FSMSubFSMActiveStateTests: XCTestCase {
 
 // MARK: - Applicability guard (web `isVehicleView`)
 
+@MainActor
 final class FSMSubFSMApplicabilityTests: XCTestCase {
     func testVehicleAndAllAreApplicable() {
         XCTAssertTrue(FSMSubFSMApplicability.isVehicleView("vehicle"))
@@ -166,6 +171,7 @@ final class FSMSubFSMApplicabilityTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
+@MainActor
 final class FSMSubFSMProjectionTests: XCTestCase {
     private var subs: [FSMSubFSMEntry] {
         [
@@ -336,6 +342,7 @@ final class FSMSubFSMModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class FSMSubFSMAccessibilityTests: XCTestCase {
     func testRowLabelJoinsParts() {
         XCTAssertEqual(

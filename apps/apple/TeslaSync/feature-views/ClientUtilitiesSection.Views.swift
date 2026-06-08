@@ -122,7 +122,7 @@ struct ToolGrid: View {
     var body: some View {
         LazyVGrid(columns: ToolGridLayout.columns, alignment: .leading, spacing: TSSpacing.lg) {
             ForEach(tools) { tool in
-                ToolCard(
+                ClientUtilitiesSectionToolCard(
                     tool: tool,
                     expanded: tool.id == expandedID,
                     onToggle: { onToggle(tool.id) },
@@ -138,7 +138,7 @@ struct ToolGrid: View {
 /// One expandable tool card — the native port of the web `ExpandableToolCard`. The
 /// header is a single tap target (icon box + name + description + rotating
 /// chevron); expanding reveals the injected tool body or the built-in descriptor.
-struct ToolCard: View {
+struct ClientUtilitiesSectionToolCard: View {
     let tool: ToolDescriptor
     let expanded: Bool
     let onToggle: () -> Void

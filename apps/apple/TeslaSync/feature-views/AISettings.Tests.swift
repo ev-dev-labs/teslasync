@@ -24,6 +24,7 @@ private let enUS = Locale(identifier: "en_US_POSIX")
 
 // MARK: - AiMode (web `isAiMode` parse + canonical set)
 
+@MainActor
 final class AiModeTests: XCTestCase {
     func testParseCanonicalValues() {
         XCTAssertEqual(AiMode.parse("off"), .off)
@@ -44,6 +45,7 @@ final class AiModeTests: XCTestCase {
 
 // MARK: - Mode catalogue (web `<ModeRadio>` × 3)
 
+@MainActor
 final class AiModeCatalogTests: XCTestCase {
     func testOrderMatchesWebSource() {
         XCTAssertEqual(AiModeCatalog.options.map(\.mode), [.off, .local, .cloud])
@@ -67,6 +69,7 @@ final class AiModeCatalogTests: XCTestCase {
 
 // MARK: - Dollar formatting (port of web `toFixed(2)`)
 
+@MainActor
 final class HelixFormatTests: XCTestCase {
     func testFixedTwoFractionDigits() {
         XCTAssertEqual(HelixFormat.fixed2(2, locale: enUS), "2.00")
@@ -87,6 +90,7 @@ final class HelixFormatTests: XCTestCase {
 
 // MARK: - Cost-cap math (port of `AICostCapSpendBar`)
 
+@MainActor
 final class HelixCostCapTests: XCTestCase {
     func testInformationalBelowEightyPercent() {
         let cap = HelixCostCap.compute(todayMicroCents: 2_000_000, capCents: 500)
@@ -137,6 +141,7 @@ final class HelixCostCapTests: XCTestCase {
 
 // MARK: - Projection (web render gate + P4 leaf contract)
 
+@MainActor
 final class AiSettingsProjectionTests: XCTestCase {
     func testErrorTakesPrecedence() {
         let resolved = AiSettingsProjection.resolve(
@@ -338,6 +343,7 @@ final class AiSettingsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class AiSettingsAccessibilityTests: XCTestCase {
     func testCostCapValueJoinsParts() {
         XCTAssertEqual(

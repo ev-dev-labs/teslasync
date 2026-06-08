@@ -4,7 +4,7 @@
 //
 //  The state-holder seam (P1/S8) + telemetry seam (P1/S11) + dashboard registry
 //  primitives + the SwiftUI half of the P1/S10 i18n facade. The view binds
-//  through `TelemetryErrorsModel`; no networking lives in the view.
+//  through `TelemetryErrorsWidgetModel`; no networking lives in the view.
 //
 
 import Foundation
@@ -19,14 +19,14 @@ import SwiftUI
 /// injects an adapter that forwards to the shared core
 /// `Telemetry.track(.screenView(screen:…))` (ADR-016 §5), which is consent-gated
 /// and redacted there.
-public protocol TelemetryErrorsTelemetry: Sendable {
+public protocol TelemetryErrorsWidgetTelemetry: Sendable {
     func viewOpened(surface: String)
 }
 
 /// `os.Logger`-backed default that records the surface open as a `screen_view`.
 /// Bridges 1:1 to the shared `Telemetry.track(.screenView(screen: surface, …))`
 /// at the composition root.
-public struct OSLogTelemetryErrorsTelemetry: TelemetryErrorsTelemetry {
+public struct TelemetryErrorsWidgetOSLogTelemetryErrorsTelemetry: TelemetryErrorsWidgetTelemetry {
     private let logger: Logger
 
     public init() {
@@ -60,7 +60,7 @@ public enum TelemetryErrorsFreshness: Sendable, Equatable {
     case error
 }
 
-/// One coalesced snapshot pushed by a `TelemetryErrorsSource`: the cached error
+/// One coalesced snapshot pushed by a `TelemetryErrorsWidgetSource`: the cached error
 /// VIN + error lists plus the load/freshness status. The model turns this into
 /// the projection.
 public struct TelemetryErrorsUpdate: Sendable, Equatable {
@@ -90,9 +90,9 @@ public struct TelemetryErrorsUpdate: Sendable, Equatable {
 /// over the KMP `TelemetryStore`, polling `/tesla/fleet-telemetry/error-vins`
 /// and `/tesla/fleet-telemetry/errors` on the web `STALE_TIMES.STANDARD`
 /// cadence and coalescing them); previews and tests use
-/// `InMemoryTelemetryErrorsSource`. The view never talks to the network.
+/// `TelemetryErrorsWidgetInMemoryTelemetryErrorsSource`. The view never talks to the network.
 @MainActor
-public protocol TelemetryErrorsSource: AnyObject {
+public protocol TelemetryErrorsWidgetSource: AnyObject {
     /// Set by the model; invoked on the main actor for every coalesced snapshot.
     var onUpdate: (@MainActor (TelemetryErrorsUpdate) -> Void)? { get set }
     func start()
@@ -100,12 +100,12 @@ public protocol TelemetryErrorsSource: AnyObject {
     func refresh()
 }
 
-/// The widget's observable view-model. Subscribes to a `TelemetryErrorsSource`,
+/// The widget's observable view-model. Subscribes to a `TelemetryErrorsWidgetSource`,
 /// recomputes the aggregation + status projection, and exposes a render `Phase`
 /// + freshness for SwiftUI to switch over.
 @MainActor
 @Observable
-public final class TelemetryErrorsModel {
+public final class TelemetryErrorsWidgetModel {
     /// The mutually-exclusive render branches (web shell loading / error / shown
     /// / empty).
     public enum Phase: Equatable {
@@ -128,13 +128,13 @@ public final class TelemetryErrorsModel {
         TelemetryErrorsStatus.resolve(activeVINCount: activeVINCount)
     }
 
-    @ObservationIgnored private let source: any TelemetryErrorsSource
-    @ObservationIgnored private let telemetry: any TelemetryErrorsTelemetry
+    @ObservationIgnored private let source: any TelemetryErrorsWidgetSource
+    @ObservationIgnored private let telemetry: any TelemetryErrorsWidgetTelemetry
     @ObservationIgnored private var started = false
 
     public init(
-        source: any TelemetryErrorsSource,
-        telemetry: any TelemetryErrorsTelemetry = OSLogTelemetryErrorsTelemetry()
+        source: any TelemetryErrorsWidgetSource,
+        telemetry: any TelemetryErrorsWidgetTelemetry = TelemetryErrorsWidgetOSLogTelemetryErrorsTelemetry()
     ) {
         self.source = source
         self.telemetry = telemetry
@@ -172,9 +172,9 @@ public final class TelemetryErrorsModel {
         vins = update.vins
         errors = update.errors
         updatedAt = update.updatedAt
-        activeVINCount = TelemetryErrorsProjection.activeVINCount(update.vins)
+        activeVINCount = TelemetryErrorsWidgetProjection.activeVINCount(update.vins)
         let unknownLabel = TelemetryErrorsStrings.string("widget.telemetryErrors.unknown", "Unknown")
-        aggregates = TelemetryErrorsProjection.aggregate(update.errors, unknownLabel: unknownLabel)
+        aggregates = TelemetryErrorsWidgetProjection.aggregate(update.errors, unknownLabel: unknownLabel)
         phase = Self.resolvePhase(update)
     }
 
@@ -185,7 +185,7 @@ public final class TelemetryErrorsModel {
     /// error). A hard failure with no cached data surfaces the error state with a
     /// retry.
     static func resolvePhase(_ update: TelemetryErrorsUpdate) -> Phase {
-        let hasData = TelemetryErrorsProjection.hasData(vins: update.vins, errors: update.errors)
+        let hasData = TelemetryErrorsWidgetProjection.hasData(vins: update.vins, errors: update.errors)
         switch update.status {
         case .loading:
             return hasData ? .content : .loading
@@ -201,7 +201,7 @@ public final class TelemetryErrorsModel {
 
 /// In-memory source for previews + unit/UI tests. Drive it with `push(_:)`.
 @MainActor
-public final class InMemoryTelemetryErrorsSource: TelemetryErrorsSource {
+public final class TelemetryErrorsWidgetInMemoryTelemetryErrorsSource: TelemetryErrorsWidgetSource {
     public var onUpdate: (@MainActor (TelemetryErrorsUpdate) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
@@ -234,54 +234,7 @@ public final class InMemoryTelemetryErrorsSource: TelemetryErrorsSource {
 
 // MARK: - Registry metadata (canonical: registry/system.ts → "telemetry-errors")
 
-/// A dashboard grid size in (columns × rows), matching the web `WidgetSize`.
-public struct DashboardWidgetSize: Sendable, Equatable {
-    public var cols: Int
-    public var rows: Int
 
-    public init(cols: Int, rows: Int) {
-        self.cols = cols
-        self.rows = rows
-    }
-}
-
-/// The dashboard registration for a draggable widget surface (web `WidgetDef`).
-public struct DashboardWidgetRegistration: Sendable {
-    public let id: String
-    public let nameKey: String
-    public let descriptionKey: String
-    public let category: String
-    public let defaultSize: DashboardWidgetSize
-    public let minSize: DashboardWidgetSize
-    public let maxSize: DashboardWidgetSize
-
-    public init(
-        id: String,
-        nameKey: String,
-        descriptionKey: String,
-        category: String,
-        defaultSize: DashboardWidgetSize,
-        minSize: DashboardWidgetSize,
-        maxSize: DashboardWidgetSize
-    ) {
-        self.id = id
-        self.nameKey = nameKey
-        self.descriptionKey = descriptionKey
-        self.category = category
-        self.defaultSize = defaultSize
-        self.minSize = minSize
-        self.maxSize = maxSize
-    }
-
-    /// Clamps a requested grid size into the surface's `min…max` envelope, so the
-    /// native grid honors the same constraints as the web registry.
-    public func clamp(_ size: DashboardWidgetSize) -> DashboardWidgetSize {
-        DashboardWidgetSize(
-            cols: min(max(size.cols, minSize.cols), maxSize.cols),
-            rows: min(max(size.rows, minSize.rows), maxSize.rows)
-        )
-    }
-}
 
 // MARK: - Localization facade (P1/S10) — SwiftUI half
 

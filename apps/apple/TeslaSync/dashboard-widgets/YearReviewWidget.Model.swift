@@ -153,7 +153,7 @@ public struct YearReviewUnitPrefs: Sendable, Equatable {
     }
 }
 
-/// One coalesced snapshot pushed by a `YearReviewSource`: the cached DTO + display prefs + the
+/// One coalesced snapshot pushed by a `YearReviewWidgetSource`: the cached DTO + display prefs + the
 /// recap year plus their load/connection status. The model turns this into the projection. The
 /// `year` mirrors the web `new Date().getFullYear()` the source resolves for both the query and
 /// the title/caption.
@@ -193,9 +193,9 @@ public struct YearReviewUpdate: Sendable, Equatable {
 /// The seam the view binds through. The production app implements this over the shared P1/S8 state
 /// holders (`StateHolderModel<LoadableState<…>>` from the KMP `AnalyticsStore.yearReview` +
 /// `VehicleStore` first-vehicle fallback + `SettingsStore` units); previews and tests use
-/// `InMemoryYearReviewSource`. The view never talks to the network directly.
+/// `YearReviewWidgetInMemoryYearReviewSource`. The view never talks to the network directly.
 @MainActor
-public protocol YearReviewSource: AnyObject {
+public protocol YearReviewWidgetSource: AnyObject {
     /// Set by the model; invoked on the main actor for every coalesced snapshot.
     var onUpdate: (@MainActor (YearReviewUpdate) -> Void)? { get set }
     func start()
@@ -203,7 +203,7 @@ public protocol YearReviewSource: AnyObject {
     func refresh()
 }
 
-/// The widget's observable view-model. Subscribes to a `YearReviewSource`, recomputes the
+/// The widget's observable view-model. Subscribes to a `YearReviewWidgetSource`, recomputes the
 /// `YearReviewProjection` via `YearReviewProjector`, and exposes a render `Phase` + freshness for
 /// SwiftUI to switch over.
 @MainActor
@@ -225,12 +225,12 @@ public final class YearReviewModel {
     public private(set) var year = YearReviewUpdate.currentYear
     public private(set) var updatedAt: Date?
 
-    @ObservationIgnored private let source: any YearReviewSource
+    @ObservationIgnored private let source: any YearReviewWidgetSource
     @ObservationIgnored private let telemetry: any YearReviewTelemetry
     @ObservationIgnored private var started = false
 
     public init(
-        source: any YearReviewSource,
+        source: any YearReviewWidgetSource,
         telemetry: any YearReviewTelemetry = OSLogYearReviewTelemetry()
     ) {
         self.source = source
@@ -298,7 +298,7 @@ public final class YearReviewModel {
 
 /// In-memory source for previews + unit/UI tests. Drive it with `push(_:)`.
 @MainActor
-public final class InMemoryYearReviewSource: YearReviewSource {
+public final class YearReviewWidgetInMemoryYearReviewSource: YearReviewWidgetSource {
     public var onUpdate: (@MainActor (YearReviewUpdate) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0

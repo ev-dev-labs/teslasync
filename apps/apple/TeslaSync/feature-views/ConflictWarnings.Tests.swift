@@ -27,13 +27,14 @@ private func makeConflict(
     id: Int = 1,
     name: String = "Morning Charge",
     reason: String = "Overlaps with Nightly Precondition",
-    severity: AutomationConflictSeverity = .warning
+    severity: ConflictWarningsAutomationConflictSeverity = .warning
 ) -> AutomationConflict {
     AutomationConflict(automationId: id, automationName: name, reason: reason, severity: severity)
 }
 
 // MARK: - Projection
 
+@MainActor
 final class ConflictWarningsProjectionTests: XCTestCase {
     func testRowsPreserveOrderAndStableKeysForRepeatedIds() {
         let conflicts = [
@@ -72,23 +73,25 @@ final class ConflictWarningsProjectionTests: XCTestCase {
 
 // MARK: - Severity decode
 
+@MainActor
 final class AutomationConflictSeverityTests: XCTestCase {
     func testKnownWireValues() {
-        XCTAssertEqual(AutomationConflictSeverity(wire: "warning"), .warning)
-        XCTAssertEqual(AutomationConflictSeverity(wire: "info"), .info)
+        XCTAssertEqual(ConflictWarningsAutomationConflictSeverity(wire: "warning"), .warning)
+        XCTAssertEqual(ConflictWarningsAutomationConflictSeverity(wire: "info"), .info)
     }
 
     func testUnknownWireValueDefaultsToInfo() {
         // Web: `severity === 'warning' ? 'warning' : 'info'` — anything not exactly
         // "warning" falls through to the info variant.
-        XCTAssertEqual(AutomationConflictSeverity(wire: "critical"), .info)
-        XCTAssertEqual(AutomationConflictSeverity(wire: ""), .info)
-        XCTAssertEqual(AutomationConflictSeverity(wire: "Warning"), .info)
+        XCTAssertEqual(ConflictWarningsAutomationConflictSeverity(wire: "critical"), .info)
+        XCTAssertEqual(ConflictWarningsAutomationConflictSeverity(wire: ""), .info)
+        XCTAssertEqual(ConflictWarningsAutomationConflictSeverity(wire: "Warning"), .info)
     }
 }
 
 // MARK: - Render resolution
 
+@MainActor
 final class ConflictWarningsRenderTests: XCTestCase {
     func testLoadingPhase() {
         XCTAssertEqual(ConflictWarningsModel.render(for: .loading), .loading)
@@ -113,6 +116,7 @@ final class ConflictWarningsRenderTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class ConflictWarningsAccessibilityTests: XCTestCase {
     func testBannerSummaryComposesTitleSeverityAndDetail() {
         let summary = ConflictWarningsAccessibility.bannerSummary(
@@ -126,6 +130,7 @@ final class ConflictWarningsAccessibilityTests: XCTestCase {
 
 // MARK: - Copy catalog
 
+@MainActor
 final class ConflictWarningsCopyTests: XCTestCase {
     func testCatalogKeysAndFallbacksNonEmpty() {
         XCTAssertFalse(CWCopy.all.isEmpty)

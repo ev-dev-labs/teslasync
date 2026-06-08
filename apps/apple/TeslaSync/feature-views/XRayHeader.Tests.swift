@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Window enum (web `IngestXRayWindow` + `WINDOW_LABEL`)
 
+@MainActor
 final class XRayHeaderWindowTests: XCTestCase {
     func testWireRoundTripForEveryCase() {
         for window in IngestXRayWindow.allCases {
@@ -51,6 +52,7 @@ final class XRayHeaderWindowTests: XCTestCase {
 
 // MARK: - Adapter: cached summary → projection (parity with the web header)
 
+@MainActor
 final class XRayHeaderAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the projection tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }

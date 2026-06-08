@@ -19,6 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (parity with the web memos)
 
+@MainActor
 final class PowerFlowBuilderTests: XCTestCase {
     private func arrow(_ arrows: [PowerFlowArrow], _ from: PowerFlowNodeID, _ to: PowerFlowNodeID) -> PowerFlowArrow? {
         arrows.first { $0.from == from && $0.to == to }
@@ -217,6 +218,7 @@ final class LivePowerFlowModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class LivePowerFlowRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = LivePowerFlowWidget.registration
@@ -243,6 +245,7 @@ final class LivePowerFlowRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class LivePowerFlowAccessibilityTests: XCTestCase {
     func testSummaryListsEveryNodeWithValueAndUnit() {
         let live = PowerFlowLiveStatus(solarPowerW: 4000, batteryPowerW: 1500, loadPowerW: 2000, gridPowerW: -500)

@@ -18,7 +18,7 @@ import Foundation
 /// and the duration math parses exactly as the source does. Energy/power values
 /// are SI (Wh, W) per the Phase-48 canonical contract; conversion to a display
 /// unit happens at the projection edge, never on disk.
-public struct ChargingSessionSummary: Identifiable, Equatable, Sendable {
+public struct TimeToChargeSectionChargingSessionSummary: Identifiable, Equatable, Sendable {
     public let id: Int
     public let startedAt: String
     public let endedAt: String?

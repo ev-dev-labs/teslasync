@@ -46,6 +46,7 @@ private enum SummaryFixture {
 
 // MARK: - Adapter
 
+@MainActor
 final class SummarySlideAdapterTests: XCTestCase {
     func testDecodeParsesSnakeCase() {
         let json = #"""
@@ -99,6 +100,7 @@ final class SummarySlideAdapterTests: XCTestCase {
 
 // MARK: - Projection
 
+@MainActor
 final class SummarySlideProjectionTests: XCTestCase {
     private func project(
         _ summary: YearReviewSummary,
@@ -167,6 +169,7 @@ final class SummarySlideProjectionTests: XCTestCase {
 
 // MARK: - Presentation resolver (every state)
 
+@MainActor
 final class SummarySlidePresentationTests: XCTestCase {
     private func resolve(
         _ state: SummarySlideLoadState<YearReviewSummary>,
@@ -248,6 +251,7 @@ final class SummarySlidePresentationTests: XCTestCase {
 
 // MARK: - Telemetry + model
 
+@MainActor
 final class SummarySlideModelTests: XCTestCase {
     func testViewOpenedEventCarriesSurfaceSlug() {
         XCTAssertEqual(SummarySlide.surfaceSlug, "SummarySlide")
@@ -309,6 +313,7 @@ final class SummarySlideModelTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class SummarySlideAccessibilityTests: XCTestCase {
     func testCardSummaryReadsHeaderStatsAndSavings() {
         let projection = SummaryProjection.make(

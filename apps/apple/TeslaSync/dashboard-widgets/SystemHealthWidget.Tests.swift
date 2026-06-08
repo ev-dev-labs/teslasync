@@ -15,6 +15,7 @@ private let enUS = Locale(identifier: "en_US")
 
 // MARK: - Adapter: cached payload → projection (port parity with the web body)
 
+@MainActor
 final class SystemHealthProjectionTests: XCTestCase {
     private func snapshot(
         status: String = "healthy", components: [String: String] = [:],
@@ -132,6 +133,7 @@ final class SystemHealthProjectionTests: XCTestCase {
 
 // MARK: - Service status normalization
 
+@MainActor
 final class SystemHealthServiceStatusTests: XCTestCase {
     func testRawNormalization() {
         XCTAssertEqual(SystemHealthServiceStatus(raw: "ok"), .ok)
@@ -151,6 +153,7 @@ final class SystemHealthServiceStatusTests: XCTestCase {
 
 // MARK: - Formatters: fmtInt + cell strings
 
+@MainActor
 final class SystemHealthFormatTests: XCTestCase {
     func testIntGrouping() {
         XCTAssertEqual(SystemHealthFormat.int(18234, locale: enUS), "18,234")
@@ -194,6 +197,7 @@ final class SystemHealthFormatTests: XCTestCase {
 
 // MARK: - Overall labelling
 
+@MainActor
 final class SystemHealthOverallTests: XCTestCase {
     func testLabelKeyMapping() {
         XCTAssertEqual(SystemHealthOverall.labelKey(for: "healthy").fallback, "Healthy")
@@ -326,6 +330,7 @@ final class SystemHealthModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class SystemHealthRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SystemHealthWidget.registration
@@ -352,6 +357,7 @@ final class SystemHealthRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class SystemHealthAccessibilityTests: XCTestCase {
     func testSummaryIncludesOverallServicesAndStats() {
         let vitals = SystemHealthProjection.vitals(from: SystemHealthSnapshot(

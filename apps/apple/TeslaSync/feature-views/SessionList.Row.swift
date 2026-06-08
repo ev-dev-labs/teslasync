@@ -141,7 +141,9 @@ struct ChatSessionRenameField: View {
             .focused($focused)
             .submitLabel(.done)
             .onSubmit { model.commitRename() }
-            .onExitCommand { model.cancelRename() }
+            #if os(macOS)
+                .onExitCommand { model.cancelRename() }
+            #endif
             .onChange(of: focused) { _, isFocused in
                 if !isFocused { model.commitRename() }
             }

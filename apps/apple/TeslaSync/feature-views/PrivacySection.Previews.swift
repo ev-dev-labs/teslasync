@@ -32,7 +32,7 @@ import SwiftUI
                 updatedAt: Date()
             )
         )
-        let silenceStore = InMemoryConfirmSilenceStore(
+        let silenceStore = PrivacySectionInMemoryConfirmSilenceStore(
             silenced: silenced ? [PrivacyModel.confirmSilenceKey] : []
         )
         let model = PrivacyModel(
@@ -46,6 +46,7 @@ import SwiftUI
         return model
     }
 
+    @MainActor
     private func previewShell(_ section: PrivacySection) -> some View {
         ScrollView {
             section.padding(TSSpacing.lg)

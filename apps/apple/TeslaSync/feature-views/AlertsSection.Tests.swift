@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: projection (alertsByType / alertPieData consumer parity)
 
+@MainActor
 final class AlertsProjectionTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -206,6 +207,7 @@ final class AlertsSectionModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class AlertsAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

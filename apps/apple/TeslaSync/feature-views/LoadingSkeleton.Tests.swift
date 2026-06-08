@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Layout projection (adapter "snapshot" — web dimensions, 1:1)
 
+@MainActor
 final class LoadingSkeletonLayoutTests: XCTestCase {
     private let layout = LoadingSkeletonLayout.chargingCurve
 
@@ -105,6 +106,7 @@ final class LoadingSkeletonLayoutTests: XCTestCase {
 
 // MARK: - Responsive columns (web base / lg / xl → width bucket)
 
+@MainActor
 final class LoadingSkeletonResponsiveColumnsTests: XCTestCase {
     private let layout = LoadingSkeletonLayout.chargingCurve
 
@@ -138,6 +140,7 @@ final class LoadingSkeletonResponsiveColumnsTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
+@MainActor
 final class LoadingSkeletonTelemetryTests: XCTestCase {
     func testReportOpenEmitsSurfaceSlug() {
         let spy = SpyLoadingSkeletonTelemetry()
@@ -159,11 +162,12 @@ final class LoadingSkeletonTelemetryTests: XCTestCase {
 
 // MARK: - Localization facade (P1/S10)
 
+@MainActor
 final class LoadingSkeletonLocalizationTests: XCTestCase {
     func testAccessibilityLabelResolvesToFallback() {
         // With no catalog at unit-test time, NSLocalizedString returns the
         // `value` fallback — proving the key + English default are wired.
-        let resolved = LSStrings.string(
+        let resolved = LoadingSkeletonLSStrings.string(
             LoadingSkeletonStringsKey.accessibilityLabel,
             LoadingSkeletonStringsKey.accessibilityLabelFallback
         )
@@ -172,7 +176,7 @@ final class LoadingSkeletonLocalizationTests: XCTestCase {
     }
 
     func testStringsTableIsSurfaceScoped() {
-        XCTAssertEqual(LSStrings.table, "LoadingSkeleton")
+        XCTAssertEqual(LoadingSkeletonLSStrings.table, "LoadingSkeleton")
     }
 
     func testAccessibilityLabelKeyIsStable() {

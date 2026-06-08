@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: inbound location → navigation target (port parity with the web source)
 
+@MainActor
 final class LegacyAlertStudioRedirectResolverTests: XCTestCase {
     func testDestinationTargetsStudioAndPreservesSearchVerbatim() {
         let location = RedirectLocation(path: "/alert-studio", rawQuery: "draft=42&utm_source=email")
@@ -82,6 +83,7 @@ final class LegacyAlertStudioRedirectResolverTests: XCTestCase {
 
 // MARK: - Query parsing
 
+@MainActor
 final class LegacyAlertStudioRedirectQueryTests: XCTestCase {
     func testParseSplitsPairs() {
         XCTAssertEqual(RedirectQuery.parse("draft=42&utm_source=email"), [
@@ -278,6 +280,7 @@ final class LegacyAlertStudioRedirectModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class LegacyAlertStudioRedirectAccessibilityTests: XCTestCase {
     private let passthrough: (String, String) -> String = { _, value in value }
 

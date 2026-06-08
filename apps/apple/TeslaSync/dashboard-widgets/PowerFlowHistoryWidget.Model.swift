@@ -42,7 +42,7 @@ public struct OSLogPowerFlowTelemetry: PowerFlowTelemetry {
 /// The aggregate load lifecycle the web widget derives from its two queries
 /// (`isLoading = sitesLoading || (siteId && historyLoading)`, `error`, success).
 /// The source coalesces the sites + history `Resource<T>` states into one value.
-public enum PowerFlowLoadStatus: Sendable, Equatable {
+public enum PowerFlowHistoryWidgetLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case failed(String)
@@ -50,7 +50,7 @@ public enum PowerFlowLoadStatus: Sendable, Equatable {
 
 /// Live-stream freshness, mirroring `LiveConnectionState` (ADR-013). Drives the
 /// header freshness chip (web `DataFreshness` live / stale / offline).
-public enum PowerFlowConnection: Sendable, Equatable {
+public enum PowerFlowHistoryWidgetConnection: Sendable, Equatable {
     case live
     case stale
     case offline
@@ -103,15 +103,15 @@ public struct PowerFlowHistoryEntryInput: Sendable, Equatable {
 /// history plus their aggregate load/connection status. The model turns this into
 /// the `PowerFlowPoint`/`PowerFlowSummary` projection + a render `Phase`.
 public struct PowerFlowUpdate: Sendable, Equatable {
-    public var status: PowerFlowLoadStatus
-    public var connection: PowerFlowConnection
+    public var status: PowerFlowHistoryWidgetLoadStatus
+    public var connection: PowerFlowHistoryWidgetConnection
     public var site: PowerFlowSiteInput?
     public var history: [PowerFlowHistoryEntryInput]
     public var updatedAt: Date?
 
     public init(
-        status: PowerFlowLoadStatus = .loading,
-        connection: PowerFlowConnection = .live,
+        status: PowerFlowHistoryWidgetLoadStatus = .loading,
+        connection: PowerFlowHistoryWidgetConnection = .live,
         site: PowerFlowSiteInput? = nil,
         history: [PowerFlowHistoryEntryInput] = [],
         updatedAt: Date? = nil
@@ -150,7 +150,7 @@ public final class PowerFlowModel {
     }
 
     public private(set) var phase: Phase = .loading
-    public private(set) var connection: PowerFlowConnection = .live
+    public private(set) var connection: PowerFlowHistoryWidgetConnection = .live
     public private(set) var points: [PowerFlowPoint] = []
     public private(set) var summary: PowerFlowSummary = .zero
     public private(set) var emptyReason: PowerFlowEmptyReason? = .noData
@@ -188,9 +188,9 @@ public final class PowerFlowModel {
     private func apply(_ update: PowerFlowUpdate) {
         connection = update.connection
         updatedAt = update.updatedAt
-        let projected = PowerFlowProjection.points(from: update.history)
+        let projected = PowerFlowHistoryWidgetProjection.points(from: update.history)
         points = projected
-        summary = PowerFlowProjection.summary(for: projected)
+        summary = PowerFlowHistoryWidgetProjection.summary(for: projected)
         emptyReason = Self.resolveEmptyReason(site: update.site, points: projected)
         phase = Self.resolvePhase(status: update.status, hasContent: !projected.isEmpty)
     }
@@ -200,7 +200,7 @@ public final class PowerFlowModel {
     /// skeleton shows only on the initial fetch with nothing cached; otherwise the
     /// content shell renders (and shows its own friendly empty surface when there
     /// is no site or no data).
-    public static func resolvePhase(status: PowerFlowLoadStatus, hasContent: Bool) -> Phase {
+    public static func resolvePhase(status: PowerFlowHistoryWidgetLoadStatus, hasContent: Bool) -> Phase {
         switch status {
         case let .failed(message):
             .error(message)
@@ -218,7 +218,7 @@ public final class PowerFlowModel {
         points: [PowerFlowPoint]
     ) -> PowerFlowEmptyReason? {
         guard site != nil else { return .noSite }
-        return PowerFlowProjection.hasData(points) ? nil : .noData
+        return PowerFlowHistoryWidgetProjection.hasData(points) ? nil : .noData
     }
 }
 

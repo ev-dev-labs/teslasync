@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: projection (web SOCRouteChart body parity)
 
+@MainActor
 final class SOCRouteChartProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
@@ -198,6 +199,7 @@ final class SOCRouteChartProjectionTests: XCTestCase {
 
 // MARK: - Formatting
 
+@MainActor
 final class SOCRouteChartFormatTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
@@ -230,6 +232,7 @@ final class SOCRouteChartFormatTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class SOCRouteChartAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

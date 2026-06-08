@@ -28,7 +28,7 @@ public enum SpeedHeatmapBuilder {
 
     /// Converts SI meters-per-second to the user's display unit
     /// (`mps * 3600 / metersPerUnit`).
-    public static func convertSpeedFromSI(_ mps: Double, to unit: SpeedUnit) -> Double {
+    public static func convertSpeedFromSI(_ mps: Double, to unit: SpeedHeatmapWidgetUnit) -> Double {
         let value = mps.isFinite ? mps : 0
         return (value * secondsPerHour) / unit.metersPerUnit
     }
@@ -43,7 +43,7 @@ public enum SpeedHeatmapBuilder {
     /// `getDay()/getHours()` the web uses.
     public static func buildHeatmap(
         drives: [SpeedHeatmapDrive],
-        speedUnit: SpeedUnit,
+        speedUnit: SpeedHeatmapWidgetUnit,
         calendar: Calendar = .current
     ) -> [[HeatCell]] {
         var totals = Array(repeating: Array(repeating: 0.0, count: cols), count: rows)

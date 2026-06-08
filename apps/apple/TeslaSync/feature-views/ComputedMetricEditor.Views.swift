@@ -295,13 +295,13 @@ struct CMEOperatorField: View {
         .accessibilityLabel(CMEView.text(ComputedMetricEditorAdapter.Text.op))
     }
 
-    private var options: [TSSelectOption<ComputedMetricOp>] {
+    private var options: [TSSelectOption<ComputedMetricEditorOp>] {
         ComputedMetricEditorAdapter.ops(for: selected).map { op in
             TSSelectOption(op, CMEView.key(ComputedMetricEditorAdapter.opText(op)))
         }
     }
 
-    private var selectionBinding: Binding<ComputedMetricOp> {
+    private var selectionBinding: Binding<ComputedMetricEditorOp> {
         Binding(
             get: { value.metricOp },
             set: { value.metricOp = $0 }

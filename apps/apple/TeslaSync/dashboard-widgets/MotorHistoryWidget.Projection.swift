@@ -15,7 +15,7 @@ import Foundation
 /// One cached `/motor` row the state holder hands the surface. Mirrors the subset
 /// of the web `MotorSnapshot` the chart consumes (everything on disk is SI:
 /// torque in Nm, stator/motor temp in °C, accelerations in g).
-public struct MotorSnapshotInput: Equatable, Sendable {
+public struct MotorHistoryWidgetSnapshotInput: Equatable, Sendable {
     public var ts: String?
     public var createdAt: String?
     public var diTorque: Double?
@@ -167,12 +167,12 @@ public struct MotorHistoryProjection: Equatable, Sendable {
     }
 }
 
-/// Pure adapter: cached `MotorSnapshotInput[]` + measurement system → projection.
+/// Pure adapter: cached `MotorHistoryWidgetSnapshotInput[]` + measurement system → projection.
 /// A faithful port of the web `buildChartData` + the widget's `useMemo` derivations
 /// (latest values, danger threshold, temp-axis max).
 public enum MotorHistoryProjectionBuilder {
     public static func build(
-        snapshots: [MotorSnapshotInput],
+        snapshots: [MotorHistoryWidgetSnapshotInput],
         measurement: MeasurementSystem
     ) -> MotorHistoryProjection {
         let data = chartData(from: snapshots, measurement: measurement)
@@ -196,7 +196,7 @@ public enum MotorHistoryProjectionBuilder {
     /// Port of `buildChartData`: drop rows without a timestamp, convert stator temp
     /// to the display unit, and sort ascending by time.
     static func chartData(
-        from snapshots: [MotorSnapshotInput],
+        from snapshots: [MotorHistoryWidgetSnapshotInput],
         measurement: MeasurementSystem
     ) -> [MotorChartDatum] {
         snapshots

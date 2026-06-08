@@ -17,6 +17,7 @@ import XCTest
 
 // MARK: - Adapter: generation rules (parity with lib/safeUUID.ts + slice(0, 10))
 
+@MainActor
 final class UuidGenerationTests: XCTestCase {
     func testPrependPutsNewestFirst() {
         var entries: [UuidEntry] = []
@@ -91,6 +92,7 @@ final class UuidGeneratorModelTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class UuidGeneratorAccessibilityTests: XCTestCase {
     func testRowLabelIncludesPositionAndValue() {
         let label = UuidGeneratorAccessibility.rowLabel(index: 2, total: 5, value: "abc-123")

@@ -223,7 +223,7 @@ public enum ChargerTypeLoadStatus: Sendable, Equatable {
 
 /// Live-stream freshness (ADR-013): drives the freshness chip + the cached-data
 /// banner so cached columns are clearly labeled while reconnecting / offline.
-public enum ChargerTypeConnection: Sendable, Equatable {
+public enum ChargerTypeChartConnection: Sendable, Equatable {
     case live
     case stale
     case offline

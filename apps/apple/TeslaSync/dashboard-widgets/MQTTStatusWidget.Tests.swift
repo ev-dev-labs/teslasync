@@ -22,6 +22,7 @@ private let enUS = Locale(identifier: "en_US")
 
 // MARK: - Adapter: cached payload → projection (port parity with the web useMemo)
 
+@MainActor
 final class MQTTStatusProjectionTests: XCTestCase {
     func testEmptyVehiclesYieldsZeros() {
         let stats = MQTTStatusProjection.stats(from: MQTTStatusData(connected: true, broker: "b", vehicles: []))
@@ -78,6 +79,7 @@ final class MQTTStatusProjectionTests: XCTestCase {
 
 // MARK: - Formatters: fmtNumber / fmtInt / formatRelative parity
 
+@MainActor
 final class MQTTStatusFormatTests: XCTestCase {
     func testNumberFixedDecimalsAndGrouping() {
         XCTAssertEqual(MQTTStatusFormat.number(1234.56, decimals: 1, locale: enUS), "1,234.6")
@@ -216,6 +218,7 @@ final class MQTTStatusModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class MQTTStatusRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MQTTStatusWidget.registration
@@ -242,6 +245,7 @@ final class MQTTStatusRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class MQTTStatusAccessibilityTests: XCTestCase {
     func testSummaryIncludesStatusAndCounts() {
         let summary = MQTTStatusAccessibility.summary(

@@ -99,8 +99,8 @@ public struct RequestBuilder: View {
     /// `model.params` (the web `params[p.name]` controlled inputs).
     private func parameterRows(
         _ parameters: [EndpointParameter],
-        required: (EndpointParameter) -> Bool,
-        prompt: (EndpointParameter) -> String
+        required: @escaping (EndpointParameter) -> Bool,
+        prompt: @escaping (EndpointParameter) -> String
     ) -> some View {
         ForEach(parameters) { parameter in
             RequestParameterRow(

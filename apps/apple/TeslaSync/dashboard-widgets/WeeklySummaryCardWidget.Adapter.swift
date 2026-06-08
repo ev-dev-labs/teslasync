@@ -2,7 +2,7 @@
 //  WeeklySummaryCardWidget.Adapter.swift
 //  TeslaSync — P4 dashboard widget · 0117 · WeeklySummaryCardWidget (Apple)
 //
-//  Pure (Foundation-only) projection: cached `WeeklyDigestDTO` + `WeeklyUnitPrefs`
+//  Pure (Foundation-only) projection: cached `WeeklySummaryCardWidgetDigestDTO` + `WeeklyUnitPrefs`
 //  → display strings + week-over-week trend chips, reproducing the web source's
 //  numeric pipeline VERBATIM so the native surface shows the exact same values
 //  as features/dashboard/widgets/WeeklySummaryCardWidget.tsx.
@@ -52,7 +52,7 @@ public enum WeeklySummaryBuilder {
     /// into display-unit numbers. Distance is `distanceKm * KM_TO_MI` fed through
     /// `convertDistanceFromSI`; efficiency is `efficiency * MI_TO_KM` then, for
     /// the mile preference, `* 1.609344`.
-    public static func metrics(from dto: WeeklyDigestDTO, units: WeeklyUnitPrefs) -> WeeklyMetrics {
+    public static func metrics(from dto: WeeklySummaryCardWidgetDigestDTO, units: WeeklyUnitPrefs) -> WeeklyMetrics {
         let unit = units.distance
 
         // distMi = (distanceKm) * KM_TO_MI ; distance = convertDistanceFromSI(distMi, unit)
@@ -109,7 +109,7 @@ public enum WeeklySummaryBuilder {
     /// Builds the formatted projection from the cached digest. Returns `nil`
     /// when there is no cached snapshot (the web renders its empty state when
     /// `metrics` — i.e. `data` — is absent).
-    public static func project(_ dto: WeeklyDigestDTO?, units: WeeklyUnitPrefs) -> WeeklySummaryProjection? {
+    public static func project(_ dto: WeeklySummaryCardWidgetDigestDTO?, units: WeeklyUnitPrefs) -> WeeklySummaryProjection? {
         guard let dto else { return nil }
         let metrics = metrics(from: dto, units: units)
         let locale = units.localeIdentifier

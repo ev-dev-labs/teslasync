@@ -45,7 +45,7 @@ struct PowerFlowStatRow: View {
 
     private func statCell(_ stat: PowerFlowStatItem) -> some View {
         let label = PowerFlowStrings.string(stat.labelKey, stat.fallback)
-        let value = PowerFlowFormat.kilowatts(stat.valueKw)
+        let value = PowerFlowHistoryWidgetFormat.kilowatts(stat.valueKw)
         let unit = PowerFlowStrings.string("widget.powerFlowHistory.unitKw", "kW")
         return VStack(alignment: .leading, spacing: 2) {
             Text(verbatim: label)
@@ -79,7 +79,7 @@ struct PowerFlowAreaChart: View {
     let isWide: Bool
 
     private var samples: [PowerFlowChartSample] {
-        PowerFlowProjection.samples(for: points)
+        PowerFlowHistoryWidgetProjection.samples(for: points)
     }
 
     private var seriesNames: [String] {
@@ -110,7 +110,7 @@ struct PowerFlowAreaChart: View {
                 AxisGridLine().foregroundStyle(Color.TS.border.opacity(0.25))
                 AxisValueLabel {
                     if let date = value.as(Date.self) {
-                        Text(verbatim: PowerFlowFormat.shortTime(date))
+                        Text(verbatim: PowerFlowHistoryWidgetFormat.shortTime(date))
                             .foregroundStyle(Color.TS.textMuted)
                     }
                 }
@@ -121,7 +121,7 @@ struct PowerFlowAreaChart: View {
                 AxisGridLine().foregroundStyle(Color.TS.border.opacity(0.25))
                 AxisValueLabel {
                     if let number = value.as(Double.self) {
-                        Text(verbatim: PowerFlowFormat.kilowatts(number))
+                        Text(verbatim: PowerFlowHistoryWidgetFormat.kilowatts(number))
                             .foregroundStyle(Color.TS.textMuted)
                     }
                 }
@@ -130,7 +130,7 @@ struct PowerFlowAreaChart: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement()
         .accessibilityLabel(Text(verbatim: PowerFlowAccessibility.chartSummary(
-            summary: PowerFlowProjection.summary(for: points),
+            summary: PowerFlowHistoryWidgetProjection.summary(for: points),
             localize: PowerFlowStrings.string
         )))
     }

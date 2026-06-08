@@ -53,7 +53,7 @@ private enum DrivingSectionFixture {
         DrivingSectionProjector.project(data: data, copy: .fallback, localeIdentifier: "en_US", timeZone: utc)
     }
 
-    static func stat(_ projection: DrivingSectionProjection, _ kind: DrivingStatKind) -> DrivingStat {
+    static func stat(_ projection: DrivingSectionProjection, _ kind: DrivingStatKind) -> DrivingSectionStat {
         projection.stats.first { $0.kind == kind }!
     }
 
@@ -64,6 +64,7 @@ private enum DrivingSectionFixture {
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web source)
 
+@MainActor
 final class DrivingSectionAdapterTests: XCTestCase {
     func testStatsProjectionMatchesWeb() {
         let projection = DrivingSectionFixture.project(DrivingSectionFixture.worsening)
@@ -214,6 +215,7 @@ final class DrivingSectionAdapterTests: XCTestCase {
 
 // MARK: - State holder: phase resolution
 
+@MainActor
 final class DrivingSectionPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         // Web parent precedence: loading and error short-circuit BEFORE the body (error wins over cache).
@@ -334,6 +336,7 @@ final class DrivingSectionModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class DrivingSectionAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 

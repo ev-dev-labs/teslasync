@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guards (port of `safe`)
 
+@MainActor
 final class ChargingNumericTests: XCTestCase {
     func testSafeReturnsFiniteValues() {
         XCTAssertEqual(ChargingNumeric.safe(42.5), 42.5)
@@ -45,6 +46,7 @@ final class ChargingNumericTests: XCTestCase {
 
 // MARK: - Adapter: charger-brand leaderboard (port of `brandLeaderboard`)
 
+@MainActor
 final class BrandLeaderboardTests: XCTestCase {
     func testEmptyBrandsProduceNoRows() {
         XCTAssertTrue(ChargingProjection.brandLeaderboard([]).isEmpty)
@@ -83,6 +85,7 @@ final class BrandLeaderboardTests: XCTestCase {
 
 // MARK: - Adapter: charger-type shares (port of `chargerTypes.map`)
 
+@MainActor
 final class ChargerTypeShareTests: XCTestCase {
     func testEmptyTypesProduceNoShares() {
         XCTAssertTrue(ChargingProjection.chargerTypeShares([]).isEmpty)
@@ -90,8 +93,8 @@ final class ChargerTypeShareTests: XCTestCase {
 
     func testFractionPercentAndColorIndex() {
         let types = [
-            ChargerTypeDatum(type: "Supercharger", count: 75),
-            ChargerTypeDatum(type: "Level 2", count: 25)
+            ChargingDetailSectionChargerTypeDatum(type: "Supercharger", count: 75),
+            ChargingDetailSectionChargerTypeDatum(type: "Level 2", count: 25)
         ]
         let shares = ChargingProjection.chargerTypeShares(types)
         XCTAssertEqual(shares.map(\.colorIndex), [0, 1])
@@ -103,8 +106,8 @@ final class ChargerTypeShareTests: XCTestCase {
 
     func testZeroTotalYieldsZeroFractions() {
         let types = [
-            ChargerTypeDatum(type: "A", count: 0),
-            ChargerTypeDatum(type: "B", count: 0)
+            ChargingDetailSectionChargerTypeDatum(type: "A", count: 0),
+            ChargingDetailSectionChargerTypeDatum(type: "B", count: 0)
         ]
         let shares = ChargingProjection.chargerTypeShares(types)
         XCTAssertEqual(shares.map(\.fraction), [0, 0])
@@ -114,6 +117,7 @@ final class ChargerTypeShareTests: XCTestCase {
 
 // MARK: - Adapter: monthly-trend dual-axis scale
 
+@MainActor
 final class MonthlyTrendScaleTests: XCTestCase {
     private let points = [
         MonthlyChargePoint(month: "Jan", energy: 300, avgPower: 50, sessions: 20),
@@ -152,6 +156,7 @@ final class MonthlyTrendScaleTests: XCTestCase {
 
 // MARK: - Formatting: web `formatCurrency` / `fmtInt` parity
 
+@MainActor
 final class ChargingFormattingTests: XCTestCase {
     private let formatting = DefaultChargingDetailFormatting()
 
@@ -178,6 +183,7 @@ final class ChargingFormattingTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class ChargingAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let formatting = DefaultChargingDetailFormatting()
@@ -250,7 +256,7 @@ final class ChargingDetailModelTests: XCTestCase {
     private var sample: ChargingAnalytics {
         ChargingAnalytics(
             brands: [ChargerBrandDatum(brand: "Tesla", count: 100)],
-            chargerTypes: [ChargerTypeDatum(type: "Supercharger", count: 80)],
+            chargerTypes: [ChargingDetailSectionChargerTypeDatum(type: "Supercharger", count: 80)],
             monthlyTrend: [MonthlyChargePoint(month: "Jan", energy: 300, avgPower: 50, sessions: 20)],
             costStats: CostStats(min: 1, avg: 5, median: 4, max: 9)
         )

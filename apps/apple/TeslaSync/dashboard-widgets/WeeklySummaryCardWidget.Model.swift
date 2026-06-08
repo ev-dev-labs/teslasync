@@ -66,7 +66,7 @@ public struct WeeklySummaryUpdate: Sendable, Equatable {
     public var status: WeeklyLoadStatus
     public var connection: WeeklyConnection
     public var isFetching: Bool
-    public var digest: WeeklyDigestDTO?
+    public var digest: WeeklySummaryCardWidgetDigestDTO?
     public var units: WeeklyUnitPrefs
     public var vehicle: WeeklyVehicleRef?
     public var updatedAt: Date?
@@ -75,7 +75,7 @@ public struct WeeklySummaryUpdate: Sendable, Equatable {
         status: WeeklyLoadStatus = .loading,
         connection: WeeklyConnection = .live,
         isFetching: Bool = false,
-        digest: WeeklyDigestDTO? = nil,
+        digest: WeeklySummaryCardWidgetDigestDTO? = nil,
         units: WeeklyUnitPrefs = WeeklyUnitPrefs(),
         vehicle: WeeklyVehicleRef? = nil,
         updatedAt: Date? = nil
@@ -235,57 +235,7 @@ public final class InMemoryWeeklySummarySource: WeeklySummarySource {
 
 // MARK: - Dashboard grid primitives (web `WidgetSize` / `WidgetDef`)
 
-/// A dashboard grid size in (columns × rows), matching the web `WidgetSize`.
-public struct DashboardWidgetSize: Sendable, Equatable {
-    public var cols: Int
-    public var rows: Int
 
-    public init(cols: Int, rows: Int) {
-        self.cols = cols
-        self.rows = rows
-    }
-}
-
-/// The dashboard registration for a draggable widget surface (web `WidgetDef`).
-public struct DashboardWidgetRegistration: Sendable {
-    public let id: String
-    public let nameKey: String
-    public let descriptionKey: String
-    public let category: String
-    public let defaultSize: DashboardWidgetSize
-    public let minSize: DashboardWidgetSize
-    public let maxSize: DashboardWidgetSize
-
-    public init(
-        id: String,
-        nameKey: String,
-        descriptionKey: String,
-        category: String,
-        defaultSize: DashboardWidgetSize,
-        minSize: DashboardWidgetSize,
-        maxSize: DashboardWidgetSize
-    ) {
-        self.id = id
-        self.nameKey = nameKey
-        self.descriptionKey = descriptionKey
-        self.category = category
-        self.defaultSize = defaultSize
-        self.minSize = minSize
-        self.maxSize = maxSize
-    }
-
-    /// Clamps a requested grid size into the surface's `min…max` envelope, so the
-    /// native grid host honors the same constraints as the web registry. The
-    /// surface view itself lays out responsively to whatever size it is handed
-    /// (mirroring the web component, which reads the raw `size` prop); the host
-    /// applies this clamp before placement.
-    public func clamp(_ size: DashboardWidgetSize) -> DashboardWidgetSize {
-        DashboardWidgetSize(
-            cols: min(max(size.cols, minSize.cols), maxSize.cols),
-            rows: min(max(size.rows, minSize.rows), maxSize.rows)
-        )
-    }
-}
 
 // MARK: - Registry metadata (canonical: registry/analytics.ts → "weekly-summary-card")
 

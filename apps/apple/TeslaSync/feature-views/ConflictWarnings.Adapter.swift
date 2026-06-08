@@ -25,14 +25,14 @@ import Foundation
 /// `'warning' | 'info'`). The web picks the warning variant only on an exact
 /// `=== 'warning'` match and falls through to info for everything else, so any
 /// unrecognized wire value decodes to `.info` to preserve that behavior.
-public enum AutomationConflictSeverity: String, Sendable, Equatable, CaseIterable {
+public enum ConflictWarningsAutomationConflictSeverity: String, Sendable, Equatable, CaseIterable {
     case warning
     case info
 
     /// Maps a raw wire string to a severity, defaulting unknowns to `.info`
     /// (the web `severity === 'warning' ? 'warning' : 'info'` else branch).
     public init(wire: String) {
-        self = AutomationConflictSeverity(rawValue: wire) ?? .info
+        self = ConflictWarningsAutomationConflictSeverity(rawValue: wire) ?? .info
     }
 
     /// SF Symbol parity with the web lucide icon (`AlertTriangle` / `Info`).
@@ -50,7 +50,7 @@ public struct AutomationConflict: Sendable, Equatable, Identifiable {
     public var automationId: Int
     public var automationName: String
     public var reason: String
-    public var severity: AutomationConflictSeverity
+    public var severity: ConflictWarningsAutomationConflictSeverity
 
     public var id: Int {
         automationId
@@ -60,7 +60,7 @@ public struct AutomationConflict: Sendable, Equatable, Identifiable {
         automationId: Int,
         automationName: String,
         reason: String,
-        severity: AutomationConflictSeverity
+        severity: ConflictWarningsAutomationConflictSeverity
     ) {
         self.automationId = automationId
         self.automationName = automationName
@@ -76,13 +76,13 @@ public struct AutomationConflict: Sendable, Equatable, Identifiable {
 /// the pre-composed `"{name}": {reason}` detail the banner body renders verbatim.
 public struct ConflictWarningRow: Sendable, Equatable, Identifiable {
     public let id: String
-    public let severity: AutomationConflictSeverity
+    public let severity: ConflictWarningsAutomationConflictSeverity
     public let automationName: String
     public let reason: String
 
     public init(
         id: String,
-        severity: AutomationConflictSeverity,
+        severity: ConflictWarningsAutomationConflictSeverity,
         automationName: String,
         reason: String
     ) {
@@ -166,7 +166,7 @@ public enum CWCopy {
     ]
 
     /// The localized severity word for a row's VoiceOver summary.
-    public static func severityWord(for severity: AutomationConflictSeverity) -> CWText {
+    public static func severityWord(for severity: ConflictWarningsAutomationConflictSeverity) -> CWText {
         switch severity {
         case .warning: severityWarning
         case .info: severityInfo

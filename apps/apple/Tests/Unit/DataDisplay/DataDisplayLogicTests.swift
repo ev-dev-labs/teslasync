@@ -2,6 +2,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Pure-logic tests for data-display formatters + helpers (no rendering needed).
+@MainActor
 final class DataDisplayLogicTests: XCTestCase {
     func testPercentageFormatting() {
         XCTAssertEqual(TSPercentage.format(0.5), "50%")

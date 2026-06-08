@@ -3,7 +3,7 @@
 //  TeslaSync — P4 dashboard widget · 0102 · TirePressureVisualWidget (Apple)
 //
 //  The testable projection core: cached TPMS readings → the view-ready
-//  `TirePressureProjection` (four corner readings + aggregate status + latest
+//  `TirePressureVisualWidgetProjection` (four corner readings + aggregate status + latest
 //  reading time), the green/amber/red thresholding (1:1 port of the web
 //  `getPressureStatus`), the SI→preference pressure conversion (port of
 //  `convertPressureFromSI`), the 1-decimal value formatter (port of
@@ -100,7 +100,7 @@ public enum TirePressureClassifier {
 /// `PressureUnitPref` (`'kPa' | 'psi' | 'bar'`). `convert(fromKilopascals:)`
 /// reproduces `convertPressureFromSI` with the same NIST/BIPM constants so the
 /// number shown matches the web byte-for-byte.
-public enum TirePressureUnit: String, Sendable, CaseIterable {
+public enum TirePressureVisualWidgetUnit: String, Sendable, CaseIterable {
     case kilopascals
     case psi
     case bar
@@ -130,7 +130,7 @@ public enum TirePressureUnit: String, Sendable, CaseIterable {
 
     /// Maps a shared `UnitPreferences.pressure` label to this enum, defaulting to
     /// bar (the backend `unit_of_pressure` default) for unknown labels.
-    public static func from(label: String) -> TirePressureUnit {
+    public static func from(label: String) -> TirePressureVisualWidgetUnit {
         switch label.lowercased() {
         case "kpa": .kilopascals
         case "psi": .psi
@@ -143,7 +143,7 @@ public enum TirePressureUnit: String, Sendable, CaseIterable {
 
 /// One of the four wheel positions, carrying its i18n key + English fallback so
 /// the view localizes the corner abbreviation through the P1/S10 facade.
-public enum TireCorner: String, Sendable, CaseIterable {
+public enum TirePressureVisualWidgetCorner: String, Sendable, CaseIterable {
     case frontLeft
     case frontRight
     case rearLeft
@@ -173,7 +173,7 @@ public enum TireCorner: String, Sendable, CaseIterable {
 /// One corner's projected reading — the native port of the web `TireInfo`,
 /// carrying the SI value (kPa), the derived status, and its corner identity.
 public struct TireReading: Identifiable, Equatable, Sendable {
-    public let corner: TireCorner
+    public let corner: TirePressureVisualWidgetCorner
     public let kilopascals: Double?
     public let status: TirePressureStatus
 
@@ -181,7 +181,7 @@ public struct TireReading: Identifiable, Equatable, Sendable {
         corner.rawValue
     }
 
-    public init(corner: TireCorner, kilopascals: Double?) {
+    public init(corner: TirePressureVisualWidgetCorner, kilopascals: Double?) {
         self.corner = corner
         self.kilopascals = kilopascals
         status = TirePressureClassifier.status(forKilopascals: kilopascals)
@@ -191,7 +191,7 @@ public struct TireReading: Identifiable, Equatable, Sendable {
 /// The view-ready projection: the four readings in FL/FR/RL/RR order, the
 /// aggregate `allNormal` / `hasWarning` flags (web `tires.every` / `tires.some`),
 /// and the most recent reading time across the four corners (web `latestReading`).
-public struct TirePressureProjection: Equatable, Sendable {
+public struct TirePressureVisualWidgetProjection: Equatable, Sendable {
     public let frontLeft: TireReading
     public let frontRight: TireReading
     public let rearLeft: TireReading
@@ -228,14 +228,14 @@ public struct TirePressureProjection: Equatable, Sendable {
     }
 
     /// Projects the cached corner DTO into the view projection.
-    public static func project(from reading: TirePressureReading) -> TirePressureProjection {
+    public static func project(from reading: TirePressureReading) -> TirePressureVisualWidgetProjection {
         let candidates = [
             reading.lastSeenFrontLeft,
             reading.lastSeenFrontRight,
             reading.lastSeenRearLeft,
             reading.lastSeenRearRight
         ].compactMap(\.self)
-        return TirePressureProjection(
+        return TirePressureVisualWidgetProjection(
             frontLeft: TireReading(corner: .frontLeft, kilopascals: reading.frontLeftKilopascals),
             frontRight: TireReading(corner: .frontRight, kilopascals: reading.frontRightKilopascals),
             rearLeft: TireReading(corner: .rearLeft, kilopascals: reading.rearLeftKilopascals),
@@ -255,7 +255,7 @@ public enum TirePressureFormatter {
 
     public static func format(
         kilopascals kpa: Double?,
-        unit: TirePressureUnit,
+        unit: TirePressureVisualWidgetUnit,
         locale: Locale = .current
     ) -> String {
         guard let value = unit.convert(fromKilopascals: kpa) else { return missingValue }
@@ -298,8 +298,8 @@ public enum TireReadingTime {
 /// spoken content unit-tests without rendering the view.
 public enum TirePressureAccessibility {
     public static func summary(
-        for projection: TirePressureProjection,
-        unit: TirePressureUnit,
+        for projection: TirePressureVisualWidgetProjection,
+        unit: TirePressureVisualWidgetUnit,
         locale: Locale = .current,
         localize: (String, String) -> String
     ) -> String {

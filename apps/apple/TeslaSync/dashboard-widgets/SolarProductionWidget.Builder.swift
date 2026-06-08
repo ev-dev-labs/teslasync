@@ -21,7 +21,7 @@ public enum SolarProductionBuilder {
 
     /// A UTC `yyyy-MM-dd` formatter — matches the web `Date.toISOString().slice(0,10)`
     /// used for both `todayKey()` and the 30-day `since` window.
-    private static let utcDayFormatter: DateFormatter = {
+    private nonisolated(unsafe) static let utcDayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(identifier: "UTC")

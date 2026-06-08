@@ -23,6 +23,7 @@ import XCTest
 
 // MARK: - Adapter: conversion
 
+@MainActor
 final class TemperatureTrendConversionTests: XCTestCase {
     func testCelsiusIsIdentity() {
         XCTAssertEqual(convertTemperatureTrendFromSI(0, to: .celsius), 0, accuracy: 0.0001)
@@ -54,6 +55,7 @@ final class TemperatureTrendConversionTests: XCTestCase {
 
 // MARK: - Adapter: projection
 
+@MainActor
 final class TemperatureTrendProjectorTests: XCTestCase {
     private let samples: [TemperatureTrendSample] = [
         TemperatureTrendSample(date: "Jun 1", outsideTempC: 20),
@@ -132,6 +134,7 @@ final class TemperatureTrendProjectorTests: XCTestCase {
 
 // MARK: - Formatting
 
+@MainActor
 final class TemperatureTrendFormatTests: XCTestCase {
     private let posix = "en_US_POSIX"
 
@@ -279,6 +282,7 @@ final class TemperatureTrendChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class TemperatureTrendAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

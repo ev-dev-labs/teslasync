@@ -41,7 +41,7 @@ public enum DrivingStatKind: String, Sendable, Equatable, CaseIterable {
 
 /// One projected mini-stat tile (web `MiniStat`): a label, a formatted value, and — for the
 /// efficiency-change tile only — the trend arrow direction + tone.
-public struct DrivingStat: Sendable, Equatable, Identifiable {
+public struct DrivingSectionStat: Sendable, Equatable, Identifiable {
     public var kind: DrivingStatKind
     public var label: String
     public var value: String
@@ -105,10 +105,10 @@ public struct DrivingTopDriveCard: Sendable, Equatable {
 /// `EmptyState`.
 public struct DrivingSectionProjection: Sendable, Equatable {
     public var bars: [DrivingDistanceBar]
-    public var stats: [DrivingStat]
+    public var stats: [DrivingSectionStat]
     public var topDrive: DrivingTopDriveCard?
 
-    public init(bars: [DrivingDistanceBar], stats: [DrivingStat], topDrive: DrivingTopDriveCard?) {
+    public init(bars: [DrivingDistanceBar], stats: [DrivingSectionStat], topDrive: DrivingTopDriveCard?) {
         self.bars = bars
         self.stats = stats
         self.topDrive = topDrive

@@ -5,6 +5,7 @@ import XCTest
 
 // MARK: - Pure adapter (cached → projection)
 
+@MainActor
 final class DigitalTwinMiniAdapterTests: XCTestCase {
     func testAllSourcesAbsentReturnsNil() {
         XCTAssertNil(DigitalTwinMiniAdapter.project(DigitalTwinMiniInputs()))
@@ -127,6 +128,7 @@ final class DigitalTwinMiniAdapterTests: XCTestCase {
 
 // MARK: - Badge mapping (accessibility labels present + correct tone)
 
+@MainActor
 final class DigitalTwinMiniBadgeTests: XCTestCase {
     func testLockUnlocked() {
         let spec = DigitalTwinMiniBadges.lock(locked: false)
@@ -158,6 +160,7 @@ final class DigitalTwinMiniBadgeTests: XCTestCase {
 
 // MARK: - Registry descriptor parity
 
+@MainActor
 final class DigitalTwinMiniDescriptorTests: XCTestCase {
     func testDescriptorMatchesWebRegistry() {
         let descriptor = DigitalTwinMiniWidget.descriptor
@@ -362,6 +365,7 @@ final class DigitalTwinMiniRenderTests: XCTestCase {
 
 // MARK: - Exterior color resolution
 
+@MainActor
 final class DigitalTwinMiniColorTests: XCTestCase {
     func testHexAndNamedColorsResolve() {
         // Pure resolution must not crash and must return a usable color for each branch.

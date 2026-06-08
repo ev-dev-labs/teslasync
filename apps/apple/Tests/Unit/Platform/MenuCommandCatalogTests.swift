@@ -3,6 +3,7 @@ import XCTest
 
 /// Tests the menu catalogue: completeness across all seven categories, keyboard
 /// shortcut uniqueness, and shortcut rendering.
+@MainActor
 final class MenuCommandCatalogTests: XCTestCase {
     func testCoversAllSevenCategories() {
         XCTAssertEqual(AppMenuCategory.allCases.count, 7)

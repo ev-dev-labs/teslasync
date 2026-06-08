@@ -43,6 +43,7 @@ private enum JwtDecoderSample {
 
 // MARK: - Adapter: decode pipeline
 
+@MainActor
 final class JwtDecoderAdapterTests: XCTestCase {
     func testEmptyOrWhitespaceInputIsIdle() {
         XCTAssertEqual(JwtDecoderAdapter.decode(""), .idle)
@@ -98,6 +99,7 @@ final class JwtDecoderAdapterTests: XCTestCase {
 
 // MARK: - JSON formatter (parity with JSON.stringify(_, null, 2))
 
+@MainActor
 final class JwtDecoderFormatterTests: XCTestCase {
     private func format(_ json: String) throws -> String {
         let object = try JSONSerialization.jsonObject(with: Data(json.utf8), options: [.fragmentsAllowed])
@@ -188,6 +190,7 @@ final class JwtDecoderModelTests: XCTestCase {
 
 // MARK: - i18n facade
 
+@MainActor
 final class JwtDecoderStringsTests: XCTestCase {
     func testFacadeResolvesWebFallbacks() {
         // The per-surface table is folded in at integration; in the test bundle

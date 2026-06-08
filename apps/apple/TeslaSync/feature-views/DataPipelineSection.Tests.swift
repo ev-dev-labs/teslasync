@@ -46,6 +46,7 @@ private func job(
 
 // MARK: - Number formatting (port of numberFormat.ts fmtNumber / fmtPercent / fmtInt)
 
+@MainActor
 final class DataPipelineFormatNumberTests: XCTestCase {
     func testNumberGroupsAndFixesTwoDecimals() {
         XCTAssertEqual(DataPipelineFormat.number(1000, locale: enUS), "1,000.00")
@@ -73,6 +74,7 @@ final class DataPipelineFormatNumberTests: XCTestCase {
 
 // MARK: - Byte ladder (port of helpers.tsx formatBytes)
 
+@MainActor
 final class DataPipelineFormatBytesTests: XCTestCase {
     func testZeroAndNonPositiveYieldZeroBytes() {
         XCTAssertEqual(DataPipelineFormat.bytes(0, locale: enUS), "0 B")
@@ -93,6 +95,7 @@ final class DataPipelineFormatBytesTests: XCTestCase {
 
 // MARK: - Date formatting (port of dateFormat.ts formatDateTime)
 
+@MainActor
 final class DataPipelineFormatDateTests: XCTestCase {
     func testNilYieldsDash() {
         XCTAssertEqual(DataPipelineFormat.dateTime(nil, locale: enUS, timeZone: nyTimeZone), "—")
@@ -120,6 +123,7 @@ final class DataPipelineFormatDateTests: XCTestCase {
 
 // MARK: - Status classification (web getStatusIcon / statusToBadgeVariant)
 
+@MainActor
 final class DataPipelineStatusKindTests: XCTestCase {
     func testClassifiesKnownStatesCaseInsensitively() {
         XCTAssertEqual(DataPipelineStatusKind(raw: "queued"), .queued)
@@ -158,6 +162,7 @@ final class DataPipelineStatusKindTests: XCTestCase {
 
 // MARK: - Queue counts (web filter().length tallies)
 
+@MainActor
 final class DataPipelineCountsTests: XCTestCase {
     func testTalliesByStatus() {
         let counts = DataPipelineCounts.tally([
@@ -184,6 +189,7 @@ final class DataPipelineCountsTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
+@MainActor
 final class DataPipelineProjectionTests: XCTestCase {
     private let compression = CompressionSnapshot(
         savingsPercent: 62.4,
@@ -235,6 +241,7 @@ final class DataPipelineProjectionTests: XCTestCase {
 
 // MARK: - Resolved derivations (gauge fraction + header badge flags)
 
+@MainActor
 final class DataPipelineResolvedTests: XCTestCase {
     private func resolved(_ input: DataPipelineInput) -> DataPipelineResolved {
         DataPipelineProjection.resolve(input)
@@ -362,6 +369,7 @@ final class DataPipelineModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class DataPipelineAccessibilityTests: XCTestCase {
     func testRowLabelJoinsParts() {
         XCTAssertEqual(

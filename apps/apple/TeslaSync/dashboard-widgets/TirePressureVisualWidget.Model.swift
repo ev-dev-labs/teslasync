@@ -41,7 +41,7 @@ public struct OSLogTirePressureTelemetry: TirePressureTelemetry {
 
 /// The load lifecycle for the widget's data, mirroring the shared `LoadableState`
 /// cases the production source projects from the TPMS `Resource<T>` query.
-public enum TirePressureLoadStatus: Sendable, Equatable {
+public enum TirePressureVisualWidgetLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case empty
@@ -49,7 +49,7 @@ public enum TirePressureLoadStatus: Sendable, Equatable {
 }
 
 /// Live-stream freshness, mirroring `LiveConnectionState` (ADR-013).
-public enum TirePressureConnection: Sendable, Equatable {
+public enum TirePressureVisualWidgetConnection: Sendable, Equatable {
     case live
     case stale
     case offline
@@ -93,20 +93,20 @@ public struct TirePressureReading: Sendable, Equatable {
 
 /// One coalesced snapshot pushed by a `TirePressureSource`: the cached reading +
 /// the user's pressure preference + load/connection status. The model turns this
-/// into the `TirePressureProjection`.
+/// into the `TirePressureVisualWidgetProjection`.
 public struct TirePressureUpdate: Sendable, Equatable {
-    public var status: TirePressureLoadStatus
-    public var connection: TirePressureConnection
+    public var status: TirePressureVisualWidgetLoadStatus
+    public var connection: TirePressureVisualWidgetConnection
     public var reading: TirePressureReading?
-    public var unit: TirePressureUnit
+    public var unit: TirePressureVisualWidgetUnit
     public var localeIdentifier: String?
     public var updatedAt: Date?
 
     public init(
-        status: TirePressureLoadStatus = .loading,
-        connection: TirePressureConnection = .live,
+        status: TirePressureVisualWidgetLoadStatus = .loading,
+        connection: TirePressureVisualWidgetConnection = .live,
         reading: TirePressureReading? = nil,
-        unit: TirePressureUnit = .bar,
+        unit: TirePressureVisualWidgetUnit = .bar,
         localeIdentifier: String? = nil,
         updatedAt: Date? = nil
     ) {
@@ -132,7 +132,7 @@ public protocol TirePressureSource: AnyObject {
 }
 
 /// The widget's observable view-model. Subscribes to a `TirePressureSource`,
-/// recomputes the `TirePressureProjection`, and exposes a render `Phase` +
+/// recomputes the `TirePressureVisualWidgetProjection`, and exposes a render `Phase` +
 /// freshness for SwiftUI to switch over.
 @MainActor
 @Observable
@@ -146,9 +146,9 @@ public final class TirePressureModel {
     }
 
     public private(set) var phase: Phase = .loading
-    public private(set) var connection: TirePressureConnection = .live
-    public private(set) var projection: TirePressureProjection?
-    public private(set) var unit: TirePressureUnit = .bar
+    public private(set) var connection: TirePressureVisualWidgetConnection = .live
+    public private(set) var projection: TirePressureVisualWidgetProjection?
+    public private(set) var unit: TirePressureVisualWidgetUnit = .bar
     public private(set) var locale: Locale = .current
     public private(set) var updatedAt: Date?
 
@@ -189,7 +189,7 @@ public final class TirePressureModel {
         updatedAt = update.updatedAt
         unit = update.unit
         locale = update.localeIdentifier.map(Locale.init(identifier:)) ?? .current
-        projection = update.reading.map(TirePressureProjection.project(from:))
+        projection = update.reading.map(TirePressureVisualWidgetProjection.project(from:))
         phase = Self.resolvePhase(update)
     }
 

@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: persisted ids → projection (port parity with the web source)
 
+@MainActor
 final class AdvancedSettingsAdapterTests: XCTestCase {
     func testLabelMapsKnownKeysAndFallsBackToRawKey() {
         XCTAssertEqual(AdvancedSettingsProjector.label(for: "discard-draft"), "Discard unsaved draft")
@@ -172,6 +173,7 @@ final class AdvancedSettingsModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class AdvancedSettingsAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 

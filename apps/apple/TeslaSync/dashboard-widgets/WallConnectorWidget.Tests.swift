@@ -49,6 +49,7 @@ private enum WCFixture {
 
 // MARK: - Adapter: cached DTO → projection (parity with web chartData/summary)
 
+@MainActor
 final class WallConnectorAdapterTests: XCTestCase {
     private let enUS = Locale(identifier: "en_US")
 
@@ -340,6 +341,7 @@ final class WallConnectorRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class WallConnectorAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let enUS = Locale(identifier: "en_US")

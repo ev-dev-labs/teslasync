@@ -44,7 +44,7 @@ struct TirePressureChip: View {
 /// The header freshness indicator — a tinted dot + label reflecting the bound
 /// source's live-state (web `WidgetShell` freshness intent).
 struct TireFreshnessChip: View {
-    let connection: TirePressureConnection
+    let connection: TirePressureVisualWidgetConnection
 
     var body: some View {
         let tone: Color
@@ -74,7 +74,7 @@ struct TireFreshnessChip: View {
 /// The stale/offline banner shown above the content when the bound source is not
 /// live, so cached values are clearly labeled.
 struct TireConnectivityBanner: View {
-    let connection: TirePressureConnection
+    let connection: TirePressureVisualWidgetConnection
 
     var body: some View {
         let isOffline = connection == .offline
@@ -104,7 +104,7 @@ struct TireConnectivityBanner: View {
 /// (trailing) and right (leading) columns, matching the web layout.
 struct TireValueCell: View {
     let reading: TireReading
-    let unit: TirePressureUnit
+    let unit: TirePressureVisualWidgetUnit
     let locale: Locale
     let alignment: HorizontalAlignment
 
@@ -133,7 +133,7 @@ struct TireValueCell: View {
 struct TireValueColumn: View {
     let top: TireReading
     let bottom: TireReading
-    let unit: TirePressureUnit
+    let unit: TirePressureVisualWidgetUnit
     let locale: Locale
     let alignment: HorizontalAlignment
 
@@ -156,7 +156,7 @@ struct TireValueColumn: View {
 /// the parent's combined summary (the diagram itself is decorative, matching the
 /// web `aria-hidden`).
 struct TireCarDiagram: View {
-    let projection: TirePressureProjection
+    let projection: TirePressureVisualWidgetProjection
 
     /// Web SVG viewBox dimensions.
     private let viewBox = CGSize(width: 120, height: 180)
@@ -223,7 +223,7 @@ struct TireCarDiagram: View {
     }
 
     /// Top-left anchor (viewBox units) for each tire (web `tirePositions`).
-    private func position(for corner: TireCorner) -> CGPoint {
+    private func position(for corner: TirePressureVisualWidgetCorner) -> CGPoint {
         switch corner {
         case .frontLeft: CGPoint(x: 14, y: 28)
         case .frontRight: CGPoint(x: 90, y: 28)

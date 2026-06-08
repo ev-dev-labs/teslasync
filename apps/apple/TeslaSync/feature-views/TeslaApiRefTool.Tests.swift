@@ -23,6 +23,7 @@ import XCTest
 
 // MARK: - Adapter: filter / tone / phase / freshness / format
 
+@MainActor
 final class TeslaApiRefBuilderTests: XCTestCase {
     private var catalog: [TeslaApiEndpoint] {
         TeslaApiCatalog.endpoints
@@ -112,6 +113,7 @@ final class TeslaApiRefBuilderTests: XCTestCase {
 
 // MARK: - Catalog parity (port of the web `TESLA_ENDPOINTS`)
 
+@MainActor
 final class TeslaApiCatalogTests: XCTestCase {
     func testCatalogMatchesWebConstant() {
         let endpoints = TeslaApiCatalog.endpoints
@@ -213,6 +215,7 @@ final class TeslaApiRefModelTests: XCTestCase {
 
 // MARK: - Accessibility label content
 
+@MainActor
 final class TeslaApiRefAccessibilityTests: XCTestCase {
     func testRowLabelIncludesMethodPathAndDescription() {
         let endpoint = TeslaApiEndpoint(method: "GET", path: "/api/1/vehicles", desc: "List vehicles")

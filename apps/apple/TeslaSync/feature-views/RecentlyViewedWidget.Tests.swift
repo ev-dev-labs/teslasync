@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: kind resolution
 
+@MainActor
 final class RecentlyViewedKindTests: XCTestCase {
     func testParseKnownAndUnknown() {
         XCTAssertEqual(RecentPageKind.parse("vehicle"), .vehicle)
@@ -52,6 +53,7 @@ final class RecentlyViewedKindTests: XCTestCase {
 
 // MARK: - Adapter: path classification (web classifyPath)
 
+@MainActor
 final class RecentlyViewedClassifyTests: XCTestCase {
     func testEveryPatternCapturesRef() {
         XCTAssertEqual(
@@ -97,6 +99,7 @@ final class RecentlyViewedClassifyTests: XCTestCase {
 
 // MARK: - Adapter: relative-time bucketing + formatting (web formatRelative)
 
+@MainActor
 final class RecentlyViewedRelativeTimeTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
@@ -132,6 +135,7 @@ final class RecentlyViewedRelativeTimeTests: XCTestCase {
 
 // MARK: - Adapter: row projection + accessibility summary
 
+@MainActor
 final class RecentlyViewedAdapterTests: XCTestCase {
     private func entry(
         _ path: String,
@@ -189,6 +193,7 @@ final class RecentlyViewedAdapterTests: XCTestCase {
 
 // MARK: - Projection: phase resolution across every branch
 
+@MainActor
 final class RecentlyViewedProjectionTests: XCTestCase {
     private var sample: [RecentlyViewedEntry] {
         [RecentlyViewedEntry(path: "/vehicles/1", title: "Model 3", kind: .vehicle, visitedAt: Date())]

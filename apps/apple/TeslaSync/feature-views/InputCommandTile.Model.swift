@@ -62,7 +62,7 @@ public enum InputCommandConnection: String, Sendable, Equatable, CaseIterable {
 /// (`def`, `loading`, `lastStatus`, `isFavorite`) plus the parent surface's
 /// lifecycle (`isLoading`, an error message) and the connectivity axis.
 public struct InputCommandTileInput: Sendable, Equatable {
-    public var def: CommandTileDef?
+    public var def: InputCommandTileCommandTileDef?
     public var isLoading: Bool
     public var isExecuting: Bool
     public var errorMessage: String?
@@ -71,7 +71,7 @@ public struct InputCommandTileInput: Sendable, Equatable {
     public var connection: InputCommandConnection
 
     public init(
-        def: CommandTileDef? = nil,
+        def: InputCommandTileCommandTileDef? = nil,
         isLoading: Bool = false,
         isExecuting: Bool = false,
         errorMessage: String? = nil,
@@ -103,7 +103,7 @@ public struct InputCommandTileResolved: Sendable, Equatable {
     }
 
     public let phase: Phase
-    public let def: CommandTileDef?
+    public let def: InputCommandTileCommandTileDef?
     public let status: CommandTileStatus?
     public let isExecuting: Bool
     public let isFavorite: Bool
@@ -112,7 +112,7 @@ public struct InputCommandTileResolved: Sendable, Equatable {
 
     public init(
         phase: Phase,
-        def: CommandTileDef?,
+        def: InputCommandTileCommandTileDef?,
         status: CommandTileStatus?,
         isExecuting: Bool,
         isFavorite: Bool,

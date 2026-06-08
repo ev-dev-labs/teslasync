@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 
 #if DEBUG
+    @MainActor
     private func previewModel(_ update: VampireDrainUpdate) -> VampireDrainModel {
         let source = InMemoryVampireDrainSource(initial: update)
         let model = VampireDrainModel(source: source)

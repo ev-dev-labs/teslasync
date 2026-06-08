@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: formatting / projection (web parity)
 
+@MainActor
 final class TitleSlideAdapterTests: XCTestCase {
     func testYearGroupsLikeWebFmtNumber() {
         // Web `<AnimatedNumber value={data.year} />` → fmtNumber(year, 0) → grouped in en-US.
@@ -180,6 +181,7 @@ final class TitleSlideModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class TitleSlideAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

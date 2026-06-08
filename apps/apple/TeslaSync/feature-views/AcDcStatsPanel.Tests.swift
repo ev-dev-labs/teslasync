@@ -60,6 +60,7 @@ private func sampleBreakdown(
 
 // MARK: - Number formatting (port of numberFormat.ts fmtNumber / fmtPercent / fmtWithUnit)
 
+@MainActor
 final class AcDcFormatNumberTests: XCTestCase {
     func testNumberGroupsAndFixesTwoDecimals() {
         XCTAssertEqual(AcDcFormat.number(1000, locale: enUS), "1,000.00")
@@ -86,6 +87,7 @@ final class AcDcFormatNumberTests: XCTestCase {
 
 // MARK: - Energy scaling (web `value >= 1000 ? MWh : kWh`)
 
+@MainActor
 final class AcDcFormatEnergyTests: XCTestCase {
     func testBelowThresholdStaysKWh() {
         XCTAssertEqual(AcDcFormat.energyScaled(999.5, locale: enUS), "999.50 kWh")
@@ -101,6 +103,7 @@ final class AcDcFormatEnergyTests: XCTestCase {
 
 // MARK: - Duration (port of dateFormat.ts formatDurationMinutes)
 
+@MainActor
 final class AcDcFormatDurationTests: XCTestCase {
     func testSubHourRendersMinutesOnly() {
         XCTAssertEqual(AcDcFormat.duration(45, locale: enUS), "45m")
@@ -125,6 +128,7 @@ final class AcDcFormatDurationTests: XCTestCase {
 
 // MARK: - Energy split fractions (web grid `templateColumns`)
 
+@MainActor
 final class AcDcSplitTests: XCTestCase {
     func testProportionalShares() {
         let split = AcDcSplit.fractions(ac: 4500, dc: 8200, total: 12700)
@@ -153,6 +157,7 @@ final class AcDcSplitTests: XCTestCase {
 
 // MARK: - Per-type rows (web `[ac, dc].filter(count > 0)`)
 
+@MainActor
 final class AcDcRowsTests: XCTestCase {
     func testKeepsBothTypesWhenBothHaveSessions() {
         let breakdown = sampleBreakdown(ac: sampleBucket(count: 30), dc: sampleBucket(count: 12))
@@ -178,6 +183,7 @@ final class AcDcRowsTests: XCTestCase {
 
 // MARK: - Row-derived values (web averages + `$/kWh`)
 
+@MainActor
 final class AcDcTableRowTests: XCTestCase {
     private let row = AcDcTableRow(
         id: "ac",
@@ -217,6 +223,7 @@ final class AcDcTableRowTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
+@MainActor
 final class AcDcStatsProjectionTests: XCTestCase {
     private var dataBreakdown: AcDcBreakdown {
         sampleBreakdown(
@@ -361,6 +368,7 @@ final class AcDcStatsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class AcDcAccessibilityTests: XCTestCase {
     func testRowLabelJoinsParts() {
         XCTAssertEqual(

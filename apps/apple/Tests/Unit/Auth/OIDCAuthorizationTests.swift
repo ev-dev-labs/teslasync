@@ -3,6 +3,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Authorization-URL construction and redirect validation (PKCE, state, errors).
+@MainActor
 final class OIDCAuthorizationTests: XCTestCase {
     private func makeRequest() -> OIDCAuthorizationRequest {
         OIDCAuthorizationRequest(

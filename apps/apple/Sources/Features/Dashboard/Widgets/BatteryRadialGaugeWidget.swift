@@ -71,16 +71,6 @@ public struct TSDashboardWidgetMetadata: Equatable, Sendable {
 
 // MARK: - Diagnostics seam (P1/S11)
 
-/// Minimal product-analytics seam for dashboard surfaces (P1/S11 diagnostics
-/// contract). The widget reports a `view.opened` when it first appears.
-/// Production wiring forwards to the shared `Diagnostics.telemetry` once
-/// `AppContainer` exposes it; tests inject a spy; the default is an inert no-op
-/// so the surface never hard-depends on diagnostics being connected.
-@MainActor
-public protocol DashboardWidgetTelemetry: AnyObject {
-    /// Records that [surface] became visible (event name `view.opened`).
-    func viewOpened(surface: String)
-}
 
 /// Inert default used in production until diagnostics is wired, and in previews.
 @MainActor

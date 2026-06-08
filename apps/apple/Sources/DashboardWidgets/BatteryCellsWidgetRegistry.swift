@@ -9,16 +9,6 @@ import SwiftUI
 // (web/src/features/dashboard/widgets/types.ts + registry/*). They live here
 // with the first widget; later widgets reuse them unchanged.
 
-/// A widget's grid footprint in dashboard columns × rows (web `WidgetSize`).
-public struct DashboardWidgetSize: Equatable, Sendable {
-    public let cols: Int
-    public let rows: Int
-
-    public init(cols: Int, rows: Int) {
-        self.cols = cols
-        self.rows = rows
-    }
-}
 
 /// Runtime inputs a dashboard host hands a widget surface (web `WidgetProps`).
 public struct DashboardWidgetProps: Equatable, Sendable {

@@ -13,6 +13,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guard
 
+@MainActor
 final class ChargingSessionNumericTests: XCTestCase {
     func testSafeReturnsFiniteValuesElseZero() {
         XCTAssertEqual(ChargingSessionNumeric.safe(42.5), 42.5)
@@ -25,6 +26,7 @@ final class ChargingSessionNumericTests: XCTestCase {
 
 // MARK: - Adapter: charger category (port of `getChargerCategory`)
 
+@MainActor
 final class ChargerKindTests: XCTestCase {
     func testMissingOrEmptyTypeIsHome() {
         XCTAssertEqual(ChargerKind.category(forType: nil), .home)
@@ -66,6 +68,7 @@ final class ChargerKindTests: XCTestCase {
 
 // MARK: - Scale: per-session helpers
 
+@MainActor
 final class ChargingSessionMetricsTests: XCTestCase {
     private func session(
         start: TimeInterval?,
@@ -136,6 +139,7 @@ final class ChargingSessionMetricsTests: XCTestCase {
 
 // MARK: - Scale: A–F grade (port of `numericToGrade`)
 
+@MainActor
 final class ChargingScoreGradeTests: XCTestCase {
     func testThresholds() {
         XCTAssertEqual(ChargingScoreGrade.grade(forScore: 100), .gradeAPlus)
@@ -168,6 +172,7 @@ final class ChargingScoreGradeTests: XCTestCase {
 
 // MARK: - Scale: battery-delta display (port of `BatteryDelta`)
 
+@MainActor
 final class ChargingBatteryDeltaDisplayTests: XCTestCase {
     func testRise() {
         let display = ChargingBatteryDeltaDisplay.make(startPct: 18, endPct: 72)
@@ -201,6 +206,7 @@ final class ChargingBatteryDeltaDisplayTests: XCTestCase {
 
 // MARK: - Projection (port of the web card body)
 
+@MainActor
 final class ChargingSessionCardProjectionTests: XCTestCase {
     private let milesConverter: (Double) -> Double = { $0 * 0.621_371 }
 
@@ -296,6 +302,7 @@ final class ChargingSessionCardProjectionTests: XCTestCase {
 
 // MARK: - Formatting parity
 
+@MainActor
 final class ChargingSessionCardFormattingTests: XCTestCase {
     private let formatting = DefaultChargingSessionCardFormatting()
 
@@ -339,6 +346,7 @@ final class ChargingSessionCardFormattingTests: XCTestCase {
 
 // MARK: - Labels + accessibility builders (no hardcoded literals in the view)
 
+@MainActor
 final class ChargingSessionCardLabelsTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

@@ -20,13 +20,14 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (parity with convertDistanceFromSI)
 
+@MainActor
 final class OdometerProjectionTests: XCTestCase {
     func testKilometerConversionAndFormatting() {
         let input = OdometerInput(odometerMeters: 28_452_000, totalDistanceMeters: 19_804_000, distanceUnit: "km")
         let projection = OdometerProjectionBuilder.build(from: input, localeIdentifier: "en_US")
 
-        XCTAssertEqual(projection.odometer, 28452, accuracy: 0.0001)
-        XCTAssertEqual(projection.totalDriven, 19804, accuracy: 0.0001)
+        XCTAssertEqual(projection.odometer ?? .nan, 28452, accuracy: 0.0001)
+        XCTAssertEqual(projection.totalDriven ?? .nan, 19804, accuracy: 0.0001)
         XCTAssertTrue(projection.hasOdometer)
         XCTAssertEqual(projection.odometerText, "28,452")
         XCTAssertEqual(projection.odometerWithUnit, "28,452 km")
@@ -69,6 +70,7 @@ final class OdometerProjectionTests: XCTestCase {
 
 // MARK: - Responsive layout (web isCompact / isWide)
 
+@MainActor
 final class OdometerLayoutTests: XCTestCase {
     func testLayoutResolution() {
         XCTAssertEqual(OdometerLayout.resolve(for: DashboardWidgetSize(cols: 1, rows: 1)), .compact)
@@ -160,6 +162,7 @@ final class OdometerCounterModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class OdometerRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = OdometerCounterWidget.registration
@@ -187,6 +190,7 @@ final class OdometerRegistryTests: XCTestCase {
 
 // MARK: - Accessibility label content
 
+@MainActor
 final class OdometerAccessibilityTests: XCTestCase {
     func testReadoutLabelIncludesTitleValueAndUnit() {
         let input = OdometerInput(odometerMeters: 28_452_000, distanceUnit: "km")

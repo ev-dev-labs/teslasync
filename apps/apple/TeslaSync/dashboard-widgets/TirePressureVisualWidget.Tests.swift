@@ -21,7 +21,8 @@ import XCTest
 
 // MARK: - Adapter: thresholds, units, formatting, reading time
 
-final class TirePressureAdapterTests: XCTestCase {
+@MainActor
+final class TirePressureVisualWidgetAdapterTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let keyTap: (String, String) -> String = { key, _ in "L:\(key)" }
 
@@ -53,18 +54,18 @@ final class TirePressureAdapterTests: XCTestCase {
     }
 
     func testUnitConversionMatchesWebConstants() {
-        XCTAssertEqual(TirePressureUnit.bar.convert(fromKilopascals: 241) ?? -1, 2.41, accuracy: 0.0001)
-        XCTAssertEqual(TirePressureUnit.psi.convert(fromKilopascals: 240) ?? -1, 34.80906, accuracy: 0.0001)
-        XCTAssertEqual(TirePressureUnit.kilopascals.convert(fromKilopascals: 241) ?? -1, 241, accuracy: 0.0001)
-        XCTAssertNil(TirePressureUnit.bar.convert(fromKilopascals: nil))
-        XCTAssertNil(TirePressureUnit.bar.convert(fromKilopascals: .nan))
+        XCTAssertEqual(TirePressureVisualWidgetUnit.bar.convert(fromKilopascals: 241) ?? -1, 2.41, accuracy: 0.0001)
+        XCTAssertEqual(TirePressureVisualWidgetUnit.psi.convert(fromKilopascals: 240) ?? -1, 34.80906, accuracy: 0.0001)
+        XCTAssertEqual(TirePressureVisualWidgetUnit.kilopascals.convert(fromKilopascals: 241) ?? -1, 241, accuracy: 0.0001)
+        XCTAssertNil(TirePressureVisualWidgetUnit.bar.convert(fromKilopascals: nil))
+        XCTAssertNil(TirePressureVisualWidgetUnit.bar.convert(fromKilopascals: .nan))
     }
 
     func testUnitFromLabelDefaultsToBar() {
-        XCTAssertEqual(TirePressureUnit.from(label: "psi"), .psi)
-        XCTAssertEqual(TirePressureUnit.from(label: "kPa"), .kilopascals)
-        XCTAssertEqual(TirePressureUnit.from(label: "bar"), .bar)
-        XCTAssertEqual(TirePressureUnit.from(label: "garbage"), .bar)
+        XCTAssertEqual(TirePressureVisualWidgetUnit.from(label: "psi"), .psi)
+        XCTAssertEqual(TirePressureVisualWidgetUnit.from(label: "kPa"), .kilopascals)
+        XCTAssertEqual(TirePressureVisualWidgetUnit.from(label: "bar"), .bar)
+        XCTAssertEqual(TirePressureVisualWidgetUnit.from(label: "garbage"), .bar)
     }
 
     func testFormatterOneDecimalAndDashFallback() {
@@ -107,6 +108,7 @@ final class TirePressureAdapterTests: XCTestCase {
 
 // MARK: - Adapter: projection aggregates
 
+@MainActor
 final class TirePressureProjectionTests: XCTestCase {
     func testProjectionKeepsCornerOrderAndStatuses() {
         let reading = TirePressureReading(
@@ -115,7 +117,7 @@ final class TirePressureProjectionTests: XCTestCase {
             rearLeftKilopascals: 200,
             rearRightKilopascals: 245
         )
-        let projection = TirePressureProjection.project(from: reading)
+        let projection = TirePressureVisualWidgetProjection.project(from: reading)
         XCTAssertEqual(projection.readings.map(\.corner), [.frontLeft, .frontRight, .rearLeft, .rearRight])
         XCTAssertEqual(projection.frontLeft.status, .green)
         XCTAssertEqual(projection.frontRight.status, .amber)
@@ -124,7 +126,7 @@ final class TirePressureProjectionTests: XCTestCase {
     }
 
     func testAllNormalAndHasWarning() {
-        let healthy = TirePressureProjection.project(
+        let healthy = TirePressureVisualWidgetProjection.project(
             from: TirePressureReading(
                 frontLeftKilopascals: 240,
                 frontRightKilopascals: 241,
@@ -135,7 +137,7 @@ final class TirePressureProjectionTests: XCTestCase {
         XCTAssertTrue(healthy.allNormal)
         XCTAssertFalse(healthy.hasWarning)
 
-        let degraded = TirePressureProjection.project(
+        let degraded = TirePressureVisualWidgetProjection.project(
             from: TirePressureReading(frontLeftKilopascals: 240, frontRightKilopascals: 200)
         )
         XCTAssertFalse(degraded.allNormal)
@@ -150,12 +152,12 @@ final class TirePressureProjectionTests: XCTestCase {
             lastSeenRearLeft: nil,
             lastSeenRearRight: base.addingTimeInterval(-300)
         )
-        let projection = TirePressureProjection.project(from: reading)
+        let projection = TirePressureVisualWidgetProjection.project(from: reading)
         XCTAssertEqual(projection.latestReading, base.addingTimeInterval(300))
     }
 
     func testLatestReadingNilWhenNoTimestamps() {
-        let projection = TirePressureProjection.project(from: TirePressureReading(frontLeftKilopascals: 240))
+        let projection = TirePressureVisualWidgetProjection.project(from: TirePressureReading(frontLeftKilopascals: 240))
         XCTAssertNil(projection.latestReading)
     }
 }
@@ -163,7 +165,7 @@ final class TirePressureProjectionTests: XCTestCase {
 // MARK: - State holder: phases + telemetry + source wiring
 
 @MainActor
-final class TirePressureModelTests: XCTestCase {
+final class TirePressureVisualWidgetModelTests: XCTestCase {
     private func makeModel(
         _ update: TirePressureUpdate,
         telemetry: TirePressureTelemetry = OSLogTirePressureTelemetry()
@@ -249,7 +251,8 @@ final class TirePressureModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-final class TirePressureRegistryTests: XCTestCase {
+@MainActor
+final class TirePressureVisualWidgetRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = TirePressureVisualWidget.registration
         XCTAssertEqual(registration.id, "tire-pressure-visual")
@@ -278,11 +281,12 @@ final class TirePressureRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-final class TirePressureAccessibilityTests: XCTestCase {
+@MainActor
+final class TirePressureVisualWidgetAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testSummaryIncludesEveryCornerAndAllNormal() {
-        let projection = TirePressureProjection.project(
+        let projection = TirePressureVisualWidgetProjection.project(
             from: TirePressureReading(
                 frontLeftKilopascals: 240,
                 frontRightKilopascals: 241,
@@ -303,7 +307,7 @@ final class TirePressureAccessibilityTests: XCTestCase {
     }
 
     func testSummaryReportsCheckPressureWhenDegraded() {
-        let projection = TirePressureProjection.project(
+        let projection = TirePressureVisualWidgetProjection.project(
             from: TirePressureReading(frontLeftKilopascals: 240, frontRightKilopascals: 200)
         )
         let summary = TirePressureAccessibility.summary(

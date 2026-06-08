@@ -123,7 +123,7 @@ struct CostPerKwhPanel: View {
     var body: some View {
         CostForecastPanel(title: localize("costAnalysis.forecast.costPerKwhTrend", "Cost per kWh Trend")) {
             if hasTrend {
-                CostPerKwhChart(
+                CostForecastSectionPerKwhChart(
                     points: points,
                     upperBound: upperBound,
                     localize: localize,

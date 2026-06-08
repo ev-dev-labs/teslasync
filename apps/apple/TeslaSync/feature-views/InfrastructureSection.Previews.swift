@@ -30,6 +30,7 @@ import SwiftUI
         }
         """
 
+        @MainActor
         static func model(
             connection: InfraConnection = .online,
             seedOnline: Bool = true,

@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection
 
+@MainActor
 final class SignalLogAdapterTests: XCTestCase {
     private func observation(
         ts: TimeInterval = 0,
@@ -298,6 +299,7 @@ final class SignalLogModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class SignalLogRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SignalLogWidget.registration
@@ -331,6 +333,7 @@ final class SignalLogRegistryTests: XCTestCase {
 
 // MARK: - Accessibility copy
 
+@MainActor
 final class SignalLogAccessibilityTests: XCTestCase {
     func testRowLabelIncludesNameValueSourceAndTime() {
         let now = Date()

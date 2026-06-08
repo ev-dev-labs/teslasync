@@ -19,6 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with lib/vehicleState.ts)
 
+@MainActor
 final class DigitalTwinAdapterTests: XCTestCase {
     func testEmptyWhenAllInputsNil() {
         let state = TwinStateBuilder.buildTwinState(security: nil, vehicleState: nil, charging: nil)
@@ -134,7 +135,7 @@ final class DigitalTwinAdapterTests: XCTestCase {
 
     func testProjectionCounts() {
         let state = VehicleTwinState(
-            doors: TwinDoorStates(driverFront: true, passengerFront: false, driverRear: true),
+            doors: DigitalTwinWidgetTwinDoorStates(driverFront: true, passengerFront: false, driverRear: true),
             windowFD: .open,
             windowFP: .closed,
             windowRD: .partial,
@@ -188,7 +189,7 @@ final class DigitalTwinModelTests: XCTestCase {
     }
 
     func testVehiclePresentShowsContentEvenWhileFetchingOrFailed() {
-        let vehicle = TwinVehicle(id: 7, displayName: "Roadster")
+        let vehicle = DigitalTwinWidgetTwinVehicle(id: 7, displayName: "Roadster")
         let (loading, _) = makeModel(DigitalTwinUpdate(status: .loading, vehicle: vehicle))
         loading.start()
         XCTAssertEqual(loading.phase, .content)
@@ -222,7 +223,7 @@ final class DigitalTwinModelTests: XCTestCase {
             DigitalTwinUpdate(
                 status: .loaded,
                 connection: .offline,
-                vehicle: TwinVehicle(id: 3, displayName: "Cybertruck"),
+                vehicle: DigitalTwinWidgetTwinVehicle(id: 3, displayName: "Cybertruck"),
                 security: TwinSecurityInput(locked: true),
                 updatedAt: Date()
             )
@@ -241,6 +242,7 @@ final class DigitalTwinModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class DigitalTwinRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = DigitalTwinWidget.registration
@@ -267,6 +269,7 @@ final class DigitalTwinRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class DigitalTwinAccessibilityTests: XCTestCase {
     func testSummaryIncludesLockWindowAndStateLabels() {
         let state = VehicleTwinState(

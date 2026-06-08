@@ -8,6 +8,7 @@ import XCTest
 /// whose `name` returns the host OS version string on Apple. Reading a non-blank
 /// value end-to-end confirms commonMain ↔ appleMain `expect/actual` wiring
 /// survived the XCFramework packaging.
+@MainActor
 final class SharedCoreReachableTests: XCTestCase {
     func testPlatformNameIsReachableAndNonBlank() {
         let name = Shared.Platform.shared.name

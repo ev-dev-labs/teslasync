@@ -213,7 +213,7 @@ public extension LoadingSkeletonLayout {
 /// busy/loading-state contract requires. Keys live in the "LoadingSkeleton"
 /// table, folded into the app `Localizable.xcstrings` catalog at integration
 /// time.
-public enum LSStrings {
+public enum LoadingSkeletonLSStrings {
     public static let table = "LoadingSkeleton"
 
     public static func string(_ key: String, _ fallback: String) -> String {

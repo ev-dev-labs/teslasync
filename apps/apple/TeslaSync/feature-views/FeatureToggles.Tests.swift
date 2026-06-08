@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: truthiness (web `Boolean(value)`)
 
+@MainActor
 final class FeatureConfigTruthinessTests: XCTestCase {
     func testBooleanTruthiness() {
         XCTAssertTrue(FeatureConfigValue.bool(true).isTruthy)
@@ -68,6 +69,7 @@ final class FeatureConfigTruthinessTests: XCTestCase {
 
 // MARK: - Adapter: JSON.stringify (detail value rendering)
 
+@MainActor
 final class FeatureTogglesJSONTests: XCTestCase {
     func testPrimitiveEncoding() {
         XCTAssertEqual(FeatureTogglesJSON.encode(.null), "null")
@@ -94,6 +96,7 @@ final class FeatureTogglesJSONTests: XCTestCase {
 
 // MARK: - Adapter: per-entry derivation (web featureEntries map)
 
+@MainActor
 final class FeatureTogglesAdapterTests: XCTestCase {
     private func entry(_ key: String, _ value: FeatureConfigValue) -> FeatureToggleEntry {
         FeatureTogglesAdapter.project([key: value]).entries[0]
@@ -179,6 +182,7 @@ final class FeatureTogglesAdapterTests: XCTestCase {
 
 // MARK: - Adapter: phase resolver + formatting + slug
 
+@MainActor
 final class FeatureTogglesPhaseTests: XCTestCase {
     func testResolvePhase() {
         XCTAssertEqual(FeatureTogglesPhaseResolver.phase(status: .loading, hasData: false), .loading)
@@ -336,6 +340,7 @@ final class FeatureTogglesModelTests: XCTestCase {
 
 // MARK: - Accessibility content
 
+@MainActor
 final class FeatureTogglesAccessibilityTests: XCTestCase {
     func testEmptySummaryUsesNoDataMessage() {
         let summary = FeatureTogglesAccessibility.summary(for: .empty)

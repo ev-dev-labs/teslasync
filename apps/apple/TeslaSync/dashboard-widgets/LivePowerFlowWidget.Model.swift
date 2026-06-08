@@ -246,7 +246,7 @@ public enum LivePowerFlowStrings {
 /// Formats kW magnitudes the way the web `fmtNumber(abs(kw), 1)` does: one
 /// fraction digit, locale-aware grouping.
 public enum PowerFlowFormat {
-    private static let formatter: NumberFormatter = {
+    private nonisolated(unsafe) static let formatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = 1

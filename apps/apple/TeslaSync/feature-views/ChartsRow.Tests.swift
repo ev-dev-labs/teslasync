@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guard (port of `safeNumber`)
 
+@MainActor
 final class ChartsRowNumericTests: XCTestCase {
     func testSafeReturnsFiniteValues() {
         XCTAssertEqual(ChartsRowNumeric.safe(42.5), 42.5)
@@ -39,6 +40,7 @@ final class ChartsRowNumericTests: XCTestCase {
 
 // MARK: - Adapter: donut shares (port of `<Pie/>`)
 
+@MainActor
 final class ChartsRowDonutTests: XCTestCase {
     func testEmptySlicesProduceEmptyDonut() {
         let donut = ChartsRowProjection.donut([])
@@ -78,6 +80,7 @@ final class ChartsRowDonutTests: XCTestCase {
 
 // MARK: - Adapter: energy/cost shared-axis scale
 
+@MainActor
 final class ChartsRowEnergyScaleTests: XCTestCase {
     private let points = [
         ChartsRowEnergyPoint(date: "Jan", energy: 300, cost: 20),
@@ -114,6 +117,7 @@ final class ChartsRowEnergyScaleTests: XCTestCase {
 
 // MARK: - Formatting: web `fmtNumber` / `fmtWithUnit` / `${fmtNumber}` parity
 
+@MainActor
 final class ChartsRowFormattingTests: XCTestCase {
     private let formatting = DefaultChartsRowFormatting()
 
@@ -143,6 +147,7 @@ final class ChartsRowFormattingTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class ChartsRowAccessibilityTests: XCTestCase {
     private let formatting = DefaultChartsRowFormatting()
 

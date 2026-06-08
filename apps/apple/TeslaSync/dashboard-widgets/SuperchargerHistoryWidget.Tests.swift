@@ -40,6 +40,7 @@ private func session(
 
 // MARK: - Adapter: cached DTO → projection (parity with the web source)
 
+@MainActor
 final class SuperchargerHistoryAdapterTests: XCTestCase {
     func testSessionsSortByStartDescendingAndSliceToTen() {
         // 12 sessions, deliberately out of order; expect newest-first, capped at 10.
@@ -228,6 +229,7 @@ final class SuperchargerHistoryModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class SuperchargerHistoryRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SuperchargerHistoryWidget.registration
@@ -258,6 +260,7 @@ final class SuperchargerHistoryRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class SuperchargerHistoryAccessibilityTests: XCTestCase {
     func testSummaryIncludesTitleCountAndTotals() {
         let summary = SuperchargerHistoryAccessibility.summary(

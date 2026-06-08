@@ -108,6 +108,7 @@ import SwiftUI
         return model
     }
 
+    @MainActor
     private func previewShell(_ surface: InboxBody) -> some View {
         ScrollView {
             surface.padding(TSSpacing.lg)

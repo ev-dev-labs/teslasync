@@ -61,6 +61,7 @@ private enum Fixture {
 
 // MARK: - Severity mapping
 
+@MainActor
 final class NotificationSeverityKindTests: XCTestCase {
     func testKnownSeveritiesMapCaseInsensitively() {
         XCTAssertEqual(NotificationSeverityKind.from("critical"), .critical)
@@ -85,6 +86,7 @@ final class NotificationSeverityKindTests: XCTestCase {
 
 // MARK: - Group derivations
 
+@MainActor
 final class NotificationGroupProjectionTests: XCTestCase {
     func testSingletonDerivation() {
         let singleton = Fixture.group(key: nil, count: 1, unread: 1).projected(archived: false)
@@ -138,6 +140,7 @@ final class NotificationGroupProjectionTests: XCTestCase {
 
 // MARK: - Phase + member projectors
 
+@MainActor
 final class NotificationGroupProjectorTests: XCTestCase {
     func testResolvePhase() {
         XCTAssertEqual(NotificationGroupProjector.resolvePhase(.loading, hasGroup: false), .loading)
@@ -175,6 +178,7 @@ final class NotificationGroupProjectorTests: XCTestCase {
 
 // MARK: - Copy + formatting
 
+@MainActor
 final class NotificationGroupCopyTests: XCTestCase {
     func testExpandLabelSwitchesOnState() {
         XCTAssertEqual(NotificationGroupCopy.expandLabel(expanded: true, extraCount: 4, localize: echo), "Hide similar")
@@ -218,6 +222,7 @@ final class NotificationGroupCopyTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class NotificationGroupAccessibilityTests: XCTestCase {
     func testRowLabelIncludesSeverityReadStateAndTitle() {
         let row = Fixture.log(1, severity: "critical", read: false).projected()
@@ -256,6 +261,7 @@ final class NotificationGroupAccessibilityTests: XCTestCase {
 
 // MARK: - i18n: every web source key is wired
 
+@MainActor
 final class NotificationGroupLocalizationTests: XCTestCase {
     /// Drives every copy helper through a recording localizer and asserts all keys
     /// extracted from the web source are requested (the view-static keys are checked

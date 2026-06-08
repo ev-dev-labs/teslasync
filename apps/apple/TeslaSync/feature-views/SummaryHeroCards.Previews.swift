@@ -40,6 +40,7 @@ import SwiftUI
             funFact: nil
         )
 
+        @MainActor
         static func model(_ update: SummaryHeroUpdate?) -> SummaryHeroCardsModel {
             let source = InMemorySummaryHeroSource(initial: update)
             let model = SummaryHeroCardsModel(source: source)

@@ -12,7 +12,7 @@ import SwiftUI
 
 #if DEBUG
     private enum InputCommandPreviewData {
-        static let def = CommandTileDef(
+        static let def = InputCommandTileCommandTileDef(
             id: "set_speed_limit",
             command: "set_speed_limit",
             labelKey: "commands.security.speedLimit",

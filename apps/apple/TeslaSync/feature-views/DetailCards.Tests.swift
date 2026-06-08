@@ -25,6 +25,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guard (port of `safeNumber`)
 
+@MainActor
 final class DetailCardsNumericTests: XCTestCase {
     func testSafeReturnsFiniteValues() {
         XCTAssertEqual(DetailCardsNumeric.safe(42.5), 42.5)
@@ -42,6 +43,7 @@ final class DetailCardsNumericTests: XCTestCase {
 
 // MARK: - Formatting: web `useUnits` + `fmtInt` / `fmtNumber`
 
+@MainActor
 final class DetailCardsFormattingTests: XCTestCase {
     private let formatting = DefaultDetailCardsFormatting()
 
@@ -116,6 +118,7 @@ final class DetailCardsFormattingTests: XCTestCase {
 
 // MARK: - Adapter: displayTemp + temperature rows
 
+@MainActor
 final class DetailCardsTemperatureProjectionTests: XCTestCase {
     private let formatting = DefaultDetailCardsFormatting()
 
@@ -163,6 +166,7 @@ final class DetailCardsTemperatureProjectionTests: XCTestCase {
 
 // MARK: - Adapter: power summary rows
 
+@MainActor
 final class DetailCardsPowerProjectionTests: XCTestCase {
     private let formatting = DefaultDetailCardsFormatting()
     private let stats = DetailCardsStats(regenEnergyWh: 248_600, co2SavedKg: 612.4)
@@ -219,6 +223,7 @@ final class DetailCardsPowerProjectionTests: XCTestCase {
 
 // MARK: - Adapter: empty resolution
 
+@MainActor
 final class DetailCardsEmptyTests: XCTestCase {
     func testEmptyWhenEverythingAbsent() {
         XCTAssertTrue(
@@ -246,6 +251,7 @@ final class DetailCardsEmptyTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class DetailCardsAccessibilityTests: XCTestCase {
     func testRowSummaryJoinsLabelAndValue() {
         XCTAssertEqual(
@@ -264,6 +270,7 @@ final class DetailCardsAccessibilityTests: XCTestCase {
 
 // MARK: - i18n: the projection emits the web `drivetrain.*` keys
 
+@MainActor
 final class DetailCardsLocalizationKeyTests: XCTestCase {
     private let formatting = DefaultDetailCardsFormatting()
 

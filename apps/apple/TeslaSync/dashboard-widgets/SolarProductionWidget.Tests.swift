@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (parity with the web memos)
 
+@MainActor
 final class SolarProductionBuilderTests: XCTestCase {
     private let today = "2026-06-07"
 
@@ -235,6 +236,7 @@ final class SolarProductionModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class SolarProductionRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SolarProductionWidget.registration
@@ -264,6 +266,7 @@ final class SolarProductionRegistryTests: XCTestCase {
 
 // MARK: - Formatting (locale-safe)
 
+@MainActor
 final class SolarProductionFormatTests: XCTestCase {
     func testNumberKeepsFractionDigits() {
         XCTAssertEqual(SolarProductionFormat.number(8.0, fractionDigits: 1).filter(\.isNumber), "80")
@@ -290,6 +293,7 @@ final class SolarProductionFormatTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class SolarProductionAccessibilityTests: XCTestCase {
     func testSummaryListsEveryMetricWithUnit() {
         let history = [SolarHistoryEntry(timestamp: "2026-06-07T00:00:00Z", solarEnergyWh: 9000)]

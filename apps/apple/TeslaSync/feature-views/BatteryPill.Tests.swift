@@ -27,6 +27,7 @@
     import XCTest
     @testable import TeslaSync
 
+    @MainActor
     final class BatteryPillTests: XCTestCase {
         private let enUS = Locale(identifier: "en_US")
 

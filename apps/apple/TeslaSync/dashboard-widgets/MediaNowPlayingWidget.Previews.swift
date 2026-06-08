@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 
 #if DEBUG
+    @MainActor
     private func previewModel(_ update: MediaNowPlayingUpdate) -> MediaNowPlayingModel {
         let source = InMemoryMediaNowPlayingSource(initial: update)
         let model = MediaNowPlayingModel(source: source)

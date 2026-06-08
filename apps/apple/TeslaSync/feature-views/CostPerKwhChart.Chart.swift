@@ -22,7 +22,7 @@ import SwiftUI
 /// currency Y axis, a thinned date X axis, and an interactive selection callout
 /// that mirrors the web hover tooltip.
 struct CostPerKwhLineChart: View {
-    let points: [CostPerKwhPoint]
+    let points: [CostPerKwhChartPoint]
     let axisTicks: [String]
     let localize: (String, String) -> String
     let formatting: any CostPerKwhFormatting
@@ -40,7 +40,7 @@ struct CostPerKwhLineChart: View {
         localize("costAnalysis.charts.a11y.date", "Date")
     }
 
-    private var selectedPoint: CostPerKwhPoint? {
+    private var selectedPoint: CostPerKwhChartPoint? {
         guard let selectedDate else { return nil }
         return points.first { $0.date == selectedDate }
     }
@@ -133,7 +133,7 @@ struct CostPerKwhLineChart: View {
 /// The floating readout shown above the selected vertex — the native parity of the
 /// web Recharts `<Tooltip>`: the date category over the formatted rate.
 struct CostPerKwhSelectionCallout: View {
-    let point: CostPerKwhPoint
+    let point: CostPerKwhChartPoint
     let formatting: any CostPerKwhFormatting
 
     var body: some View {

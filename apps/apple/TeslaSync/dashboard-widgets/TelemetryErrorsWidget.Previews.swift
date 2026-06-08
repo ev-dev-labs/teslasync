@@ -12,9 +12,9 @@ import SwiftUI
 
 #if DEBUG
     @MainActor
-    private func previewModel(_ update: TelemetryErrorsUpdate) -> TelemetryErrorsModel {
-        let source = InMemoryTelemetryErrorsSource(initial: update)
-        let model = TelemetryErrorsModel(source: source)
+    private func previewModel(_ update: TelemetryErrorsUpdate) -> TelemetryErrorsWidgetModel {
+        let source = TelemetryErrorsWidgetInMemoryTelemetryErrorsSource(initial: update)
+        let model = TelemetryErrorsWidgetModel(source: source)
         model.start()
         return model
     }

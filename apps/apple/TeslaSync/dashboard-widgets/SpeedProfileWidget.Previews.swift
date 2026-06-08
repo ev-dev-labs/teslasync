@@ -11,6 +11,7 @@ import Foundation
 import SwiftUI
 
 #if DEBUG
+    @MainActor
     private func previewModel(_ update: SpeedProfileUpdate) -> SpeedProfileModel {
         let source = InMemorySpeedProfileSource(initial: update)
         let model = SpeedProfileModel(source: source)

@@ -302,6 +302,7 @@ struct BatteryRadialGaugeContent: View {
             }
         }
 
+        @MainActor
         private func preview(
             _ title: String,
             _ state: BatteryRadialGaugeRenderState,

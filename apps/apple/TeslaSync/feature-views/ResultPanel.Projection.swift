@@ -5,7 +5,7 @@
 //  The pure, host-testable adapter: a devtool result outcome → a render-ready
 //  projection. It is the native parity of the web `ResultPanel` branch selection
 //  (`error ? … : hasData ? … : idle`) plus the `JSON.stringify(data, null, 2)`
-//  formatting (delegated to `JSONValue`). Foundation-only — no SwiftUI, no
+//  formatting (delegated to `ResultPanelJSONValue`). Foundation-only — no SwiftUI, no
 //  networking, no `Shared` import — so it compiles + runs under bare `swiftc` for
 //  the executed adapter harness.
 //
@@ -24,7 +24,7 @@ public enum ResultOutcome: Equatable, Sendable {
     /// request runs) — renders the loading state.
     case running
     /// A successful result (web `data != null`) — renders the pretty JSON + copy.
-    case success(JSONValue)
+    case success(ResultPanelJSONValue)
     /// A failed invocation (web `error`) — renders the error message.
     case failure(message: String)
 }
@@ -35,7 +35,7 @@ public extension ResultOutcome {
     /// falls back to a JSON string value (quoted), matching `JSON.stringify` of a
     /// string `data` — a raw tool response still renders rather than vanishing.
     static func success(rawJSON: String) -> ResultOutcome {
-        if let parsed = try? JSONValue.parse(rawJSON) {
+        if let parsed = try? ResultPanelJSONValue.parse(rawJSON) {
             return .success(parsed)
         }
         return .success(.string(rawJSON))

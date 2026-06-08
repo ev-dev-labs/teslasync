@@ -79,7 +79,7 @@ public enum OverviewDistanceUnit: String, Sendable, Equatable {
 /// The data load lifecycle, mirroring the shared `LoadableState` a production
 /// source projects from the fleet-analytics `Resource<T>`. Modeled fully so every
 /// state in the surface's matrix is reachable + testable.
-public enum OverviewLoadStatus: Sendable, Equatable {
+public enum OverviewVehicleComparisonLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case empty
@@ -89,7 +89,7 @@ public enum OverviewLoadStatus: Sendable, Equatable {
 /// Live-stream freshness band (ADR-013). The web component receives data as a
 /// prop with no connectivity model; `stale` / `offline` are the native additions
 /// required by the surface state matrix and are reflected in a cached banner.
-public enum OverviewConnection: Sendable, Equatable {
+public enum OverviewVehicleComparisonConnection: Sendable, Equatable {
     case live
     case stale
     case offline
@@ -125,8 +125,8 @@ public enum OverviewRenderPhase: Sendable, Equatable {
 /// phase + freshness; the view derives the per-panel projections from them through
 /// the pure `OverviewComparisonBuilder` (mirroring the web `useMemo` derivations).
 public struct OverviewComparisonUpdate: Sendable, Equatable {
-    public var status: OverviewLoadStatus
-    public var connection: OverviewConnection
+    public var status: OverviewVehicleComparisonLoadStatus
+    public var connection: OverviewVehicleComparisonConnection
     public var isFetching: Bool
     public var isError: Bool
     public var vehicles: [OverviewVehicle]
@@ -134,8 +134,8 @@ public struct OverviewComparisonUpdate: Sendable, Equatable {
     public var updatedAt: Date?
 
     public init(
-        status: OverviewLoadStatus = .loading,
-        connection: OverviewConnection = .live,
+        status: OverviewVehicleComparisonLoadStatus = .loading,
+        connection: OverviewVehicleComparisonConnection = .live,
         isFetching: Bool = false,
         isError: Bool = false,
         vehicles: [OverviewVehicle] = [],

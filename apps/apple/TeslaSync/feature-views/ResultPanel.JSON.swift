@@ -16,12 +16,12 @@ import Foundation
 // MARK: - JSON value (object key order preserved, unlike JSONSerialization)
 
 /// One `"key": value` member of a JSON object. A dedicated struct (rather than a
-/// labelled tuple) so `JSONValue` can synthesize `Equatable`/`Sendable`.
+/// labelled tuple) so `ResultPanelJSONValue` can synthesize `Equatable`/`Sendable`.
 public struct JSONMember: Equatable, Sendable {
     public let key: String
-    public let value: JSONValue
+    public let value: ResultPanelJSONValue
 
-    public init(key: String, value: JSONValue) {
+    public init(key: String, value: ResultPanelJSONValue) {
         self.key = key
         self.value = value
     }
@@ -32,9 +32,9 @@ public struct JSONMember: Equatable, Sendable {
 /// native model must too. Numbers keep their source lexeme (`200`, `3.14`) so the
 /// raw-result inspector shows exactly what the backend sent rather than a
 /// re-normalized float.
-public enum JSONValue: Equatable, Sendable {
+public enum ResultPanelJSONValue: Equatable, Sendable {
     case object([JSONMember])
-    case array([JSONValue])
+    case array([ResultPanelJSONValue])
     case string(String)
     case number(String)
     case bool(Bool)
@@ -43,7 +43,7 @@ public enum JSONValue: Equatable, Sendable {
 
 // MARK: - Pretty printer (parity with `JSON.stringify(value, null, 2)`)
 
-public extension JSONValue {
+public extension ResultPanelJSONValue {
     /// The two-space-indented serialization, a 1:1 port of the web
     /// `JSON.stringify(data, null, 2)`: empty containers collapse to `{}` / `[]`,
     /// members join with `,\n`, and strings use ECMAScript escaping.
@@ -60,15 +60,15 @@ public extension JSONValue {
         case let .number(token):
             token
         case let .string(value):
-            JSONValue.encode(string: value)
+            ResultPanelJSONValue.encode(string: value)
         case let .array(items):
-            JSONValue.renderArray(items, level: level)
+            ResultPanelJSONValue.renderArray(items, level: level)
         case let .object(members):
-            JSONValue.renderObject(members, level: level)
+            ResultPanelJSONValue.renderObject(members, level: level)
         }
     }
 
-    private static func renderArray(_ items: [JSONValue], level: Int) -> String {
+    private static func renderArray(_ items: [ResultPanelJSONValue], level: Int) -> String {
         guard !items.isEmpty else { return "[]" }
         let inner = indent(level + 1)
         let body = items
@@ -134,11 +134,11 @@ public struct JSONParseError: Error, Equatable {
     public let offset: Int
 }
 
-public extension JSONValue {
-    /// Parses `text` into an order-preserving `JSONValue`. Mirrors the structural
+public extension ResultPanelJSONValue {
+    /// Parses `text` into an order-preserving `ResultPanelJSONValue`. Mirrors the structural
     /// acceptance of `JSON.parse` (objects, arrays, strings, numbers, the literals)
     /// while keeping number lexemes intact for faithful re-emission.
-    static func parse(_ text: String) throws -> JSONValue {
+    static func parse(_ text: String) throws -> ResultPanelJSONValue {
         var parser = JSONParser(text)
         return try parser.parseDocument()
     }
@@ -152,7 +152,7 @@ private struct JSONParser {
         scalars = Array(text.unicodeScalars)
     }
 
-    mutating func parseDocument() throws -> JSONValue {
+    mutating func parseDocument() throws -> ResultPanelJSONValue {
         skipWhitespace()
         let value = try parseValue()
         skipWhitespace()
@@ -162,7 +162,7 @@ private struct JSONParser {
         return value
     }
 
-    private mutating func parseValue() throws -> JSONValue {
+    private mutating func parseValue() throws -> ResultPanelJSONValue {
         skipWhitespace()
         guard let scalar = peek() else {
             throw error("unexpected end of input")
@@ -187,7 +187,7 @@ private struct JSONParser {
         }
     }
 
-    private mutating func parseObject() throws -> JSONValue {
+    private mutating func parseObject() throws -> ResultPanelJSONValue {
         advance() // consume '{'
         skipWhitespace()
         var members: [JSONMember] = []
@@ -221,10 +221,10 @@ private struct JSONParser {
         }
     }
 
-    private mutating func parseArray() throws -> JSONValue {
+    private mutating func parseArray() throws -> ResultPanelJSONValue {
         advance() // consume '['
         skipWhitespace()
-        var items: [JSONValue] = []
+        var items: [ResultPanelJSONValue] = []
         if peek() == "]" {
             advance()
             return .array(items)
@@ -308,7 +308,7 @@ private struct JSONParser {
         return scalar
     }
 
-    private mutating func parseBool() throws -> JSONValue {
+    private mutating func parseBool() throws -> ResultPanelJSONValue {
         if peek() == "t" {
             try expectLiteral("true")
             return .bool(true)

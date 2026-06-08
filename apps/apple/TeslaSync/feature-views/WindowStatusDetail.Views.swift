@@ -15,7 +15,7 @@ import SwiftUI
 
 // MARK: - State → tone (web `windowColor` / `windowTextClass`)
 
-extension WindowState {
+extension WindowStatusDetailState {
     /// The semantic tone driving the card tint, border, and value color — the native
     /// mapping of web `windowColor` (Closed=green, Venting=amber, Open=red, Unknown=gray).
     var tone: TSTone {

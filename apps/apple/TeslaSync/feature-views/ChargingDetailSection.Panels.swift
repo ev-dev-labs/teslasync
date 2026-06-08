@@ -181,7 +181,7 @@ struct CostByTypePanel: View {
             } else {
                 VStack(alignment: .leading, spacing: TSSpacing.md) {
                     ForEach(shares) { share in
-                        ChargerTypeRowView(share: share, formatting: formatting)
+                        ChargingDetailSectionChargerTypeRowView(share: share, formatting: formatting)
                     }
                 }
             }
@@ -192,7 +192,7 @@ struct CostByTypePanel: View {
 /// One charger-type row: a right-aligned label, a tinted proportion bar, and a
 /// monospaced "count (percent%)" trailing value (web row layout `w-28 / flex /
 /// w-20`).
-struct ChargerTypeRowView: View {
+struct ChargingDetailSectionChargerTypeRowView: View {
     let share: ChargerTypeShare
     let formatting: any ChargingDetailFormatting
 

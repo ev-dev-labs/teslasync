@@ -3,7 +3,7 @@
 //  TeslaSync — P4 feature view · 0087 · ChargerTypeChart (Apple)
 //
 //  Unit coverage for the ChargerTypeChart surface:
-//    • Adapter (`ChargerTypeProjection`) — charger classification (`getChargerLabel`),
+//    • Adapter (`ChargerTypeChartProjection`) — charger classification (`getChargerLabel`),
 //      first-occurrence grouping + aggregates, duration minutes, mean, chart-row
 //      flattening, phase resolution, totals, and locale-aware formatting.
 //    • State holder (`ChargerTypeChartModel`) — phase across loading / loaded / empty
@@ -20,7 +20,8 @@ import XCTest
 
 // MARK: - Adapter: projection (chargerTypeStats parity)
 
-final class ChargerTypeProjectionTests: XCTestCase {
+@MainActor
+final class ChargerTypeChartProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
     private let base = Date(timeIntervalSince1970: 1_700_000_000)
 
@@ -50,28 +51,28 @@ final class ChargerTypeProjectionTests: XCTestCase {
     }
 
     func testClassifyMatchesGetChargerLabel() {
-        XCTAssertEqual(ChargerTypeProjection.classify(chargerType: "Tesla", peakPowerW: nil), .supercharger)
+        XCTAssertEqual(ChargerTypeChartProjection.classify(chargerType: "Tesla", peakPowerW: nil), .supercharger)
         XCTAssertEqual(
-            ChargerTypeProjection.classify(chargerType: "Tesla Supercharger V3", peakPowerW: nil),
+            ChargerTypeChartProjection.classify(chargerType: "Tesla Supercharger V3", peakPowerW: nil),
             .supercharger
         )
-        XCTAssertEqual(ChargerTypeProjection.classify(chargerType: "EVgo", peakPowerW: 50000), .dcFast)
-        XCTAssertEqual(ChargerTypeProjection.classify(chargerType: "EVgo", peakPowerW: nil), .dcFast)
-        XCTAssertEqual(ChargerTypeProjection.classify(chargerType: nil, peakPowerW: 50000), .dcFast)
-        XCTAssertEqual(ChargerTypeProjection.classify(chargerType: "  ", peakPowerW: 50000), .dcFast)
-        XCTAssertEqual(ChargerTypeProjection.classify(chargerType: nil, peakPowerW: 7000), .homeAC)
-        XCTAssertEqual(ChargerTypeProjection.classify(chargerType: "", peakPowerW: 7000), .homeAC)
-        XCTAssertEqual(ChargerTypeProjection.classify(chargerType: nil, peakPowerW: 20000), .homeAC)
-        XCTAssertEqual(ChargerTypeProjection.classify(chargerType: nil, peakPowerW: nil), .homeAC)
+        XCTAssertEqual(ChargerTypeChartProjection.classify(chargerType: "EVgo", peakPowerW: 50000), .dcFast)
+        XCTAssertEqual(ChargerTypeChartProjection.classify(chargerType: "EVgo", peakPowerW: nil), .dcFast)
+        XCTAssertEqual(ChargerTypeChartProjection.classify(chargerType: nil, peakPowerW: 50000), .dcFast)
+        XCTAssertEqual(ChargerTypeChartProjection.classify(chargerType: "  ", peakPowerW: 50000), .dcFast)
+        XCTAssertEqual(ChargerTypeChartProjection.classify(chargerType: nil, peakPowerW: 7000), .homeAC)
+        XCTAssertEqual(ChargerTypeChartProjection.classify(chargerType: "", peakPowerW: 7000), .homeAC)
+        XCTAssertEqual(ChargerTypeChartProjection.classify(chargerType: nil, peakPowerW: 20000), .homeAC)
+        XCTAssertEqual(ChargerTypeChartProjection.classify(chargerType: nil, peakPowerW: nil), .homeAC)
     }
 
     func testPointsGroupInFirstOccurrenceOrder() {
-        let points = ChargerTypeProjection.points(from: sessions())
+        let points = ChargerTypeChartProjection.points(from: sessions())
         XCTAssertEqual(points.map(\.type), [.supercharger, .dcFast, .homeAC])
     }
 
     func testPointsAggregates() {
-        let points = ChargerTypeProjection.points(from: sessions())
+        let points = ChargerTypeChartProjection.points(from: sessions())
         let supercharger = points[0]
         XCTAssertEqual(supercharger.count, 2)
         XCTAssertEqual(supercharger.avgKw, 160.0, accuracy: 0.0001)
@@ -92,29 +93,29 @@ final class ChargerTypeProjectionTests: XCTestCase {
     }
 
     func testPointsEmptyForNoSessions() {
-        XCTAssertTrue(ChargerTypeProjection.points(from: []).isEmpty)
+        XCTAssertTrue(ChargerTypeChartProjection.points(from: []).isEmpty)
     }
 
     func testDurationMinutes() {
-        XCTAssertEqual(ChargerTypeProjection.durationMinutes(startedAt: base, endedAt: mins(30)), 30)
-        XCTAssertEqual(ChargerTypeProjection.durationMinutes(startedAt: base, endedAt: nil), 0)
-        XCTAssertEqual(ChargerTypeProjection.durationMinutes(startedAt: mins(10), endedAt: base), 0)
-        XCTAssertEqual(ChargerTypeProjection.durationMinutes(startedAt: nil, endedAt: mins(10)), 0)
+        XCTAssertEqual(ChargerTypeChartProjection.durationMinutes(startedAt: base, endedAt: mins(30)), 30)
+        XCTAssertEqual(ChargerTypeChartProjection.durationMinutes(startedAt: base, endedAt: nil), 0)
+        XCTAssertEqual(ChargerTypeChartProjection.durationMinutes(startedAt: mins(10), endedAt: base), 0)
+        XCTAssertEqual(ChargerTypeChartProjection.durationMinutes(startedAt: nil, endedAt: mins(10)), 0)
         XCTAssertEqual(
-            ChargerTypeProjection.durationMinutes(startedAt: base, endedAt: base.addingTimeInterval(90)),
+            ChargerTypeChartProjection.durationMinutes(startedAt: base, endedAt: base.addingTimeInterval(90)),
             2
         )
     }
 
     func testAvg() {
-        XCTAssertEqual(ChargerTypeProjection.avg([]), 0)
-        XCTAssertEqual(ChargerTypeProjection.avg([2, 4, 6]), 4, accuracy: 0.0001)
-        XCTAssertEqual(ChargerTypeProjection.avg([150, 170]), 160, accuracy: 0.0001)
+        XCTAssertEqual(ChargerTypeChartProjection.avg([]), 0)
+        XCTAssertEqual(ChargerTypeChartProjection.avg([2, 4, 6]), 4, accuracy: 0.0001)
+        XCTAssertEqual(ChargerTypeChartProjection.avg([150, 170]), 160, accuracy: 0.0001)
     }
 
     func testChartRowsFlattenInPlotOrder() {
-        let points = ChargerTypeProjection.points(from: sessions())
-        let rows = ChargerTypeProjection.chartRows(from: points)
+        let points = ChargerTypeChartProjection.points(from: sessions())
+        let rows = ChargerTypeChartProjection.chartRows(from: points)
         XCTAssertEqual(rows.count, points.count * 2)
         // Within each charger the Power (kW) row precedes the Energy (kWh) row.
         XCTAssertEqual(rows[0].metric, .power)
@@ -125,14 +126,14 @@ final class ChargerTypeProjectionTests: XCTestCase {
     }
 
     func testResolvePhase() {
-        XCTAssertEqual(ChargerTypeProjection.resolvePhase(.loading, hasRows: false), .loading)
-        XCTAssertEqual(ChargerTypeProjection.resolvePhase(.loaded, hasRows: true), .content)
-        XCTAssertEqual(ChargerTypeProjection.resolvePhase(.loaded, hasRows: false), .empty)
-        XCTAssertEqual(ChargerTypeProjection.resolvePhase(.failed("boom"), hasRows: true), .error("boom"))
+        XCTAssertEqual(ChargerTypeChartProjection.resolvePhase(.loading, hasRows: false), .loading)
+        XCTAssertEqual(ChargerTypeChartProjection.resolvePhase(.loaded, hasRows: true), .content)
+        XCTAssertEqual(ChargerTypeChartProjection.resolvePhase(.loaded, hasRows: false), .empty)
+        XCTAssertEqual(ChargerTypeChartProjection.resolvePhase(.failed("boom"), hasRows: true), .error("boom"))
     }
 
     func testTotalSessions() {
-        XCTAssertEqual(ChargerTypeProjection.totalSessions(ChargerTypeProjection.points(from: sessions())), 4)
+        XCTAssertEqual(ChargerTypeChartProjection.totalSessions(ChargerTypeChartProjection.points(from: sessions())), 4)
     }
 
     func testPointValueForMetric() {
@@ -142,12 +143,12 @@ final class ChargerTypeProjectionTests: XCTestCase {
     }
 
     func testFormatting() {
-        XCTAssertEqual(ChargerTypeProjection.decimalString(160.0, decimals: 1, locale: posix), "160.0")
-        XCTAssertEqual(ChargerTypeProjection.decimalString(48.567, decimals: 1, locale: posix), "48.6")
-        XCTAssertEqual(ChargerTypeProjection.intString(25.0, locale: posix), "25")
+        XCTAssertEqual(ChargerTypeChartProjection.decimalString(160.0, decimals: 1, locale: posix), "160.0")
+        XCTAssertEqual(ChargerTypeChartProjection.decimalString(48.567, decimals: 1, locale: posix), "48.6")
+        XCTAssertEqual(ChargerTypeChartProjection.intString(25.0, locale: posix), "25")
         // Grouping follows the locale (web `fmtInt` groups under en-US).
         let enUS = Locale(identifier: "en_US")
-        XCTAssertEqual(ChargerTypeProjection.intString(1234.0, locale: enUS), "1,234")
+        XCTAssertEqual(ChargerTypeChartProjection.intString(1234.0, locale: enUS), "1,234")
     }
 
     func testSurfaceSlug() {
@@ -175,17 +176,17 @@ final class ChargerTypeChartModelTests: XCTestCase {
     }
 
     private func makeModel(
-        initial: ChargerTypeUpdate?,
-        telemetry: ChargerTypeChartTelemetry = SpyChargerTypeTelemetry()
-    ) -> (ChargerTypeChartModel, InMemoryChargerTypeSource) {
-        let source = InMemoryChargerTypeSource(initial: initial)
+        initial: ChargerTypeChartUpdate?,
+        telemetry: ChargerTypeChartTelemetry = ChargerTypeChartSpyChargerTypeTelemetry()
+    ) -> (ChargerTypeChartModel, ChargerTypeChartInMemoryChargerTypeSource) {
+        let source = ChargerTypeChartInMemoryChargerTypeSource(initial: initial)
         let model = ChargerTypeChartModel(source: source, telemetry: telemetry)
         return (model, source)
     }
 
     func testLoadedContentProjectsPointsAndRows() {
         let (model, source) = makeModel(
-            initial: ChargerTypeUpdate(status: .loaded, sessions: sampleSessions())
+            initial: ChargerTypeChartUpdate(status: .loaded, sessions: sampleSessions())
         )
         model.start()
         XCTAssertEqual(model.phase, .content)
@@ -196,26 +197,26 @@ final class ChargerTypeChartModelTests: XCTestCase {
     }
 
     func testLoadedEmptyResolvesEmptyPhase() {
-        let (model, _) = makeModel(initial: ChargerTypeUpdate(status: .loaded, sessions: []))
+        let (model, _) = makeModel(initial: ChargerTypeChartUpdate(status: .loaded, sessions: []))
         model.start()
         XCTAssertEqual(model.phase, .empty)
         XCTAssertTrue(model.points.isEmpty)
     }
 
     func testLoadingPhaseBeforeData() {
-        let (model, _) = makeModel(initial: ChargerTypeUpdate(status: .loading, sessions: []))
+        let (model, _) = makeModel(initial: ChargerTypeChartUpdate(status: .loading, sessions: []))
         model.start()
         XCTAssertEqual(model.phase, .loading)
     }
 
     func testFailedPhaseCarriesMessage() {
-        let (model, _) = makeModel(initial: ChargerTypeUpdate(status: .failed("timeout"), sessions: []))
+        let (model, _) = makeModel(initial: ChargerTypeChartUpdate(status: .failed("timeout"), sessions: []))
         model.start()
         XCTAssertEqual(model.phase, .error("timeout"))
     }
 
     func testStartEmitsViewOpenedExactlyOnce() {
-        let spy = SpyChargerTypeTelemetry()
+        let spy = ChargerTypeChartSpyChargerTypeTelemetry()
         let (model, _) = makeModel(initial: nil, telemetry: spy)
         model.start()
         model.start()
@@ -225,8 +226,8 @@ final class ChargerTypeChartModelTests: XCTestCase {
     func testStaleConnectionAutoRefreshesExactlyOnce() {
         let (model, source) = makeModel(initial: nil)
         model.start()
-        source.push(ChargerTypeUpdate(status: .loaded, sessions: sampleSessions(), connection: .stale))
-        source.push(ChargerTypeUpdate(status: .loaded, sessions: sampleSessions(), connection: .stale))
+        source.push(ChargerTypeChartUpdate(status: .loaded, sessions: sampleSessions(), connection: .stale))
+        source.push(ChargerTypeChartUpdate(status: .loaded, sessions: sampleSessions(), connection: .stale))
         XCTAssertEqual(model.connection, .stale)
         XCTAssertEqual(source.refreshCount, 1, "stale should trigger exactly one guarded auto-refresh")
     }
@@ -234,9 +235,9 @@ final class ChargerTypeChartModelTests: XCTestCase {
     func testReturningToLiveReArmsStaleAutoRefresh() {
         let (model, source) = makeModel(initial: nil)
         model.start()
-        source.push(ChargerTypeUpdate(status: .loaded, sessions: sampleSessions(), connection: .stale))
-        source.push(ChargerTypeUpdate(status: .loaded, sessions: sampleSessions(), connection: .live))
-        source.push(ChargerTypeUpdate(status: .loaded, sessions: sampleSessions(), connection: .stale))
+        source.push(ChargerTypeChartUpdate(status: .loaded, sessions: sampleSessions(), connection: .stale))
+        source.push(ChargerTypeChartUpdate(status: .loaded, sessions: sampleSessions(), connection: .live))
+        source.push(ChargerTypeChartUpdate(status: .loaded, sessions: sampleSessions(), connection: .stale))
         XCTAssertEqual(source.refreshCount, 2)
         _ = model
     }
@@ -244,7 +245,7 @@ final class ChargerTypeChartModelTests: XCTestCase {
     func testOfflineKeepsCachedColumnsWithoutRefresh() {
         let (model, source) = makeModel(initial: nil)
         model.start()
-        source.push(ChargerTypeUpdate(status: .loaded, sessions: sampleSessions(), connection: .offline))
+        source.push(ChargerTypeChartUpdate(status: .loaded, sessions: sampleSessions(), connection: .offline))
         XCTAssertEqual(model.connection, .offline)
         XCTAssertEqual(model.phase, .content)
         XCTAssertEqual(model.points.count, 2)
@@ -252,7 +253,7 @@ final class ChargerTypeChartModelTests: XCTestCase {
     }
 
     func testRetryRefreshesSource() {
-        let (model, source) = makeModel(initial: ChargerTypeUpdate(status: .failed("x"), sessions: []))
+        let (model, source) = makeModel(initial: ChargerTypeChartUpdate(status: .failed("x"), sessions: []))
         model.start()
         model.refresh()
         XCTAssertEqual(source.refreshCount, 1)
@@ -274,7 +275,8 @@ final class ChargerTypeChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-final class ChargerTypeAccessibilityTests: XCTestCase {
+@MainActor
+final class ChargerTypeChartAccessibilityTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
@@ -285,20 +287,20 @@ final class ChargerTypeAccessibilityTests: XCTestCase {
     ]
 
     func testChartSummaryIncludesTotals() {
-        let summary = ChargerTypeAccessibility.chartSummary(points: points, localize: echo)
+        let summary = ChargerTypeChartAccessibility.chartSummary(points: points, localize: echo)
         XCTAssertTrue(summary.contains("Charge Rate by Charger Type"))
         XCTAssertTrue(summary.contains("2 charger types"))
         XCTAssertTrue(summary.contains("8 Sessions"))
     }
 
     func testChartSummaryEmpty() {
-        let summary = ChargerTypeAccessibility.chartSummary(points: [], localize: echo)
+        let summary = ChargerTypeChartAccessibility.chartSummary(points: [], localize: echo)
         XCTAssertTrue(summary.contains("Charge Rate by Charger Type"))
         XCTAssertTrue(summary.contains("No data available"))
     }
 
     func testRowLabelCarriesColumnFigures() {
-        let label = ChargerTypeAccessibility.rowLabel(points[0], name: "Supercharger", locale: posix, localize: echo)
+        let label = ChargerTypeChartAccessibility.rowLabel(points[0], name: "Supercharger", locale: posix, localize: echo)
         XCTAssertEqual(label, "Supercharger: Sessions 5, Avg kW 160.0, Avg kWh 55.0, Avg minutes 25")
     }
 }
@@ -306,7 +308,7 @@ final class ChargerTypeAccessibilityTests: XCTestCase {
 // MARK: - Telemetry spy
 
 /// Records the surfaces a model reports as opened. Single-threaded test use only.
-final class SpyChargerTypeTelemetry: ChargerTypeChartTelemetry, @unchecked Sendable {
+final class ChargerTypeChartSpyChargerTypeTelemetry: ChargerTypeChartTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
 
     func viewOpened(surface: String) {

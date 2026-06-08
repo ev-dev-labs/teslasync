@@ -11,15 +11,15 @@ import SwiftUI
 
 #if DEBUG
     @MainActor
-    private func recentDrivesPreviewModel(_ update: RecentDrivesUpdate) -> RecentDrivesModel {
-        let source = InMemoryRecentDrivesSource(initial: update)
-        let model = RecentDrivesModel(source: source)
+    private func recentDrivesPreviewModel(_ update: RecentDrivesWidgetUpdate) -> RecentDrivesWidgetModel {
+        let source = RecentDrivesWidgetInMemoryRecentDrivesSource(initial: update)
+        let model = RecentDrivesWidgetModel(source: source)
         model.start()
         return model
     }
 
-    private let recentDrivesSample: [RecentDriveDTO] = [
-        RecentDriveDTO(
+    private let recentDrivesSample: [RecentDrivesWidgetDriveDTO] = [
+        RecentDrivesWidgetDriveDTO(
             id: 5001,
             distanceM: 18234,
             durationS: 1500,
@@ -27,7 +27,7 @@ import SwiftUI
             endSocPct: 67,
             startTs: Date().addingTimeInterval(-3600)
         ),
-        RecentDriveDTO(
+        RecentDrivesWidgetDriveDTO(
             id: 5002,
             distanceM: 4120,
             durationS: 540,
@@ -35,7 +35,7 @@ import SwiftUI
             endSocPct: 63,
             startTs: Date().addingTimeInterval(-26 * 3600)
         ),
-        RecentDriveDTO(
+        RecentDrivesWidgetDriveDTO(
             id: 5003,
             distanceM: 51890,
             durationS: 3180,
@@ -43,7 +43,7 @@ import SwiftUI
             endSocPct: nil,
             startTs: Date().addingTimeInterval(-50 * 3600)
         ),
-        RecentDriveDTO(
+        RecentDrivesWidgetDriveDTO(
             id: 5004,
             distanceM: 9730,
             durationS: 960,
@@ -51,7 +51,7 @@ import SwiftUI
             endSocPct: 48,
             startTs: Date().addingTimeInterval(-74 * 3600)
         ),
-        RecentDriveDTO(
+        RecentDrivesWidgetDriveDTO(
             id: 5005,
             distanceM: 2240,
             durationS: 300,
@@ -61,12 +61,12 @@ import SwiftUI
         )
     ]
 
-    private let recentDrivesSampleUnits = RecentDrivesUnitPrefs(distance: .miles, localeIdentifier: "en_US")
+    private let recentDrivesSampleUnits = RecentDrivesWidgetUnitPrefs(distance: .miles, localeIdentifier: "en_US")
 
     #Preview("Standard (2×4)") {
         RecentDrivesWidget(
             model: recentDrivesPreviewModel(
-                RecentDrivesUpdate(
+                RecentDrivesWidgetUpdate(
                     status: .loaded,
                     connection: .live,
                     drives: recentDrivesSample,
@@ -86,11 +86,11 @@ import SwiftUI
     #Preview("Wide (4×4)") {
         RecentDrivesWidget(
             model: recentDrivesPreviewModel(
-                RecentDrivesUpdate(
+                RecentDrivesWidgetUpdate(
                     status: .loaded,
                     connection: .live,
                     drives: recentDrivesSample,
-                    units: RecentDrivesUnitPrefs(distance: .kilometers),
+                    units: RecentDrivesWidgetUnitPrefs(distance: .kilometers),
                     updatedAt: Date()
                 )
             ),
@@ -105,7 +105,7 @@ import SwiftUI
 
     #Preview("Loading") {
         RecentDrivesWidget(
-            model: recentDrivesPreviewModel(RecentDrivesUpdate(status: .loading, drives: nil)),
+            model: recentDrivesPreviewModel(RecentDrivesWidgetUpdate(status: .loading, drives: nil)),
             size: DashboardWidgetSize(cols: 2, rows: 4)
         )
         .frame(width: 320, height: 360)
@@ -115,7 +115,7 @@ import SwiftUI
 
     #Preview("Empty") {
         RecentDrivesWidget(
-            model: recentDrivesPreviewModel(RecentDrivesUpdate(status: .loaded, drives: [])),
+            model: recentDrivesPreviewModel(RecentDrivesWidgetUpdate(status: .loaded, drives: [])),
             size: DashboardWidgetSize(cols: 2, rows: 4)
         )
         .frame(width: 320, height: 360)
@@ -126,7 +126,7 @@ import SwiftUI
     #Preview("Error") {
         RecentDrivesWidget(
             model: recentDrivesPreviewModel(
-                RecentDrivesUpdate(status: .failed("Network unavailable"), drives: nil)
+                RecentDrivesWidgetUpdate(status: .failed("Network unavailable"), drives: nil)
             ),
             size: DashboardWidgetSize(cols: 2, rows: 4)
         )
@@ -138,7 +138,7 @@ import SwiftUI
     #Preview("Stale (cached)") {
         RecentDrivesWidget(
             model: recentDrivesPreviewModel(
-                RecentDrivesUpdate(
+                RecentDrivesWidgetUpdate(
                     status: .loaded,
                     connection: .stale,
                     isFetching: true,
@@ -159,7 +159,7 @@ import SwiftUI
     #Preview("Offline (cached)") {
         RecentDrivesWidget(
             model: recentDrivesPreviewModel(
-                RecentDrivesUpdate(
+                RecentDrivesWidgetUpdate(
                     status: .loaded,
                     connection: .offline,
                     drives: recentDrivesSample,

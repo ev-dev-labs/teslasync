@@ -28,7 +28,7 @@ public final class GeneralSettingsModel {
     public var form: AppSettingsState
 
     public private(set) var settings: SettingsQuery = .loading
-    public private(set) var vehicles: [VehicleOption] = []
+    public private(set) var vehicles: [GeneralSettingsVehicleOption] = []
     public private(set) var carPreferences: CarPreferences?
     public private(set) var connection: SettingsConnection = .live
     public private(set) var updatedAt: Date?
@@ -86,7 +86,7 @@ public final class GeneralSettingsModel {
     }
 
     /// The first vehicle whose car preferences are read (web `vehicles?.[0]`).
-    public var firstVehicle: VehicleOption? {
+    public var firstVehicle: GeneralSettingsVehicleOption? {
         vehicles.first
     }
 

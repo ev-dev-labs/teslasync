@@ -19,9 +19,10 @@ import XCTest
 
 // MARK: - Adapter: URL assembly (buildUrl + encodeURIComponent)
 
+@MainActor
 final class RequestURLBuilderTests: XCTestCase {
-    private func endpoint(_ method: HTTPMethod, _ path: String, _ params: [EndpointParameter]) -> ParsedEndpoint {
-        ParsedEndpoint(method: method, path: path, parameters: params)
+    private func endpoint(_ method: RequestBuilderHTTPMethod, _ path: String, _ params: [EndpointParameter]) -> RequestBuilderParsedEndpoint {
+        RequestBuilderParsedEndpoint(method: method, path: path, parameters: params)
     }
 
     func testPathParamSubstituted() {
@@ -80,6 +81,7 @@ final class RequestURLBuilderTests: XCTestCase {
 
 // MARK: - Adapter: JSON pretty printer (JSON.stringify(_, null, 2))
 
+@MainActor
 final class RequestJSONFormatterTests: XCTestCase {
     func testObjectIndentedAndOrdered() {
         let value = RequestJSON.object([
@@ -142,6 +144,7 @@ final class RequestJSONFormatterTests: XCTestCase {
 
 // MARK: - Adapter: seed / defaults / headers / prompts / method
 
+@MainActor
 final class RequestBuilderAdapterTests: XCTestCase {
     func testSeedBodyFromExample() {
         let body = RequestBody(
@@ -160,7 +163,7 @@ final class RequestBuilderAdapterTests: XCTestCase {
     }
 
     func testDefaultParameters() {
-        let endpoint = ParsedEndpoint(method: .get, path: "/x", parameters: [
+        let endpoint = RequestBuilderParsedEndpoint(method: .get, path: "/x", parameters: [
             EndpointParameter(name: "limit", location: .query, required: false, type: "integer", defaultValue: "50"),
             EndpointParameter(name: "q", location: .query, required: false, type: "string")
         ])
@@ -207,13 +210,13 @@ final class RequestBuilderAdapterTests: XCTestCase {
     }
 
     func testMethodFlagsAndParse() {
-        XCTAssertFalse(HTTPMethod.get.isDestructive)
-        XCTAssertTrue(HTTPMethod.post.isDestructive)
-        XCTAssertTrue(HTTPMethod.delete.isDestructive)
-        XCTAssertEqual(HTTPMethod.get.accentRole, .success)
-        XCTAssertEqual(HTTPMethod.delete.accentRole, .danger)
-        XCTAssertEqual(HTTPMethod.parse("patch"), .patch)
-        XCTAssertNil(HTTPMethod.parse("TRACE"))
+        XCTAssertFalse(RequestBuilderHTTPMethod.get.isDestructive)
+        XCTAssertTrue(RequestBuilderHTTPMethod.post.isDestructive)
+        XCTAssertTrue(RequestBuilderHTTPMethod.delete.isDestructive)
+        XCTAssertEqual(RequestBuilderHTTPMethod.get.accentRole, .success)
+        XCTAssertEqual(RequestBuilderHTTPMethod.delete.accentRole, .danger)
+        XCTAssertEqual(RequestBuilderHTTPMethod.parse("patch"), .patch)
+        XCTAssertNil(RequestBuilderHTTPMethod.parse("TRACE"))
     }
 }
 
@@ -221,15 +224,15 @@ final class RequestBuilderAdapterTests: XCTestCase {
 
 @MainActor
 final class RequestBuilderModelTests: XCTestCase {
-    private func getEndpoint() -> ParsedEndpoint {
-        ParsedEndpoint(method: .get, path: "/vehicles/{vehicleID}/state", parameters: [
+    private func getEndpoint() -> RequestBuilderParsedEndpoint {
+        RequestBuilderParsedEndpoint(method: .get, path: "/vehicles/{vehicleID}/state", parameters: [
             EndpointParameter(name: "vehicleID", location: .path, required: true, type: "string"),
             EndpointParameter(name: "limit", location: .query, required: false, type: "integer", defaultValue: "50")
         ])
     }
 
-    private func postEndpoint() -> ParsedEndpoint {
-        ParsedEndpoint(
+    private func postEndpoint() -> RequestBuilderParsedEndpoint {
+        RequestBuilderParsedEndpoint(
             method: .post,
             path: "/alerts/rules",
             requestBody: RequestBody(
@@ -334,6 +337,7 @@ final class RequestBuilderModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class RequestBuilderAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

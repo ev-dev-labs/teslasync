@@ -44,6 +44,7 @@ private enum SpeedHeatmapFixture {
 
 // MARK: - Adapter: cached drives → heatmap (port parity with the web derive block)
 
+@MainActor
 final class SpeedHeatmapAdapterTests: XCTestCase {
     func testConvertSpeedFromSI() {
         XCTAssertEqual(SpeedHeatmapBuilder.convertSpeedFromSI(10, to: .kilometersPerHour), 36, accuracy: 1e-9)
@@ -133,6 +134,7 @@ final class SpeedHeatmapAdapterTests: XCTestCase {
 
 // MARK: - Adapter: colour ramp + axis labels + value types
 
+@MainActor
 final class SpeedHeatmapColorTests: XCTestCase {
     private func assertColor(_ color: RGBAColor, _ red: Double, _ green: Double, _ blue: Double, _ alpha: Double) {
         XCTAssertEqual(color.red, red, accuracy: 1e-9)
@@ -177,11 +179,11 @@ final class SpeedHeatmapColorTests: XCTestCase {
     }
 
     func testUnitLabelParsing() {
-        XCTAssertEqual(SpeedUnit.fromLabel("mph"), .milesPerHour)
-        XCTAssertEqual(SpeedUnit.fromLabel("KM/H"), .kilometersPerHour)
-        XCTAssertEqual(SpeedUnit.fromLabel(nil), .kilometersPerHour)
-        XCTAssertEqual(SpeedUnit.fromLabel("knots"), .kilometersPerHour)
-        XCTAssertEqual(SpeedUnit.milesPerHour.symbol, "mph")
+        XCTAssertEqual(SpeedHeatmapWidgetUnit.fromLabel("mph"), .milesPerHour)
+        XCTAssertEqual(SpeedHeatmapWidgetUnit.fromLabel("KM/H"), .kilometersPerHour)
+        XCTAssertEqual(SpeedHeatmapWidgetUnit.fromLabel(nil), .kilometersPerHour)
+        XCTAssertEqual(SpeedHeatmapWidgetUnit.fromLabel("knots"), .kilometersPerHour)
+        XCTAssertEqual(SpeedHeatmapWidgetUnit.milesPerHour.symbol, "mph")
     }
 
     func testNumberFormatGroupsAndRounds() {
@@ -292,6 +294,7 @@ final class SpeedHeatmapModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class SpeedHeatmapRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SpeedHeatmapWidget.registration
@@ -321,6 +324,7 @@ final class SpeedHeatmapRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary + per-cell description content
 
+@MainActor
 final class SpeedHeatmapAccessibilityTests: XCTestCase {
     private func grid() -> [[HeatCell]] {
         SpeedHeatmapBuilder.buildHeatmap(

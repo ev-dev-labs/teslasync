@@ -46,6 +46,7 @@ private enum SampleSessions {
 
 // MARK: - Adapter: device descriptor (web `describeDevice`)
 
+@MainActor
 final class ActiveSessionsDeviceTests: XCTestCase {
     private func describe(_ userAgent: String) -> String {
         ActiveSessionDevice.describe(userAgent: userAgent, localize: passthroughLocalize)
@@ -103,6 +104,7 @@ final class ActiveSessionsDeviceTests: XCTestCase {
 
 // MARK: - Adapter: projection (phase + hasOtherDevices)
 
+@MainActor
 final class ActiveSessionsProjectionTests: XCTestCase {
     func testOpenModeWinsRegardlessOfStatus() {
         XCTAssertEqual(
@@ -159,6 +161,7 @@ final class ActiveSessionsProjectionTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class ActiveSessionsAccessibilityTests: XCTestCase {
     func testSectionSummary() {
         let summary = ActiveSessionsAccessibility.sectionSummary(count: 3, localize: passthroughLocalize)

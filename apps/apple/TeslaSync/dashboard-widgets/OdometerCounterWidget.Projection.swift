@@ -13,18 +13,6 @@ import Foundation
 
 // MARK: - Grid + seam value types (Foundation-only so the adapter is host-runnable)
 
-/// A dashboard grid size in (columns × rows), matching the web `WidgetSize`. Lives
-/// with the adapter (rather than the view) so the layout resolver + projection
-/// compile + run without SwiftUI or the `Shared` runtime.
-public struct DashboardWidgetSize: Sendable, Equatable {
-    public var cols: Int
-    public var rows: Int
-
-    public init(cols: Int, rows: Int) {
-        self.cols = cols
-        self.rows = rows
-    }
-}
 
 /// The cached DTO inputs the seam pushes each snapshot. The production source reads
 /// `state.odometer` (vehicle state) and `DrivingStats.totalDistanceKm` — both SI

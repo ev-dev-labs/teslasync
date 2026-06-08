@@ -3,7 +3,7 @@
 //  TeslaSync — P4 feature view · 0005 · FleetTelemetryHealth (Apple)
 //
 //  The testable projection core: cached `FleetTelemetryError*Input` DTOs → the
-//  view-ready `FleetVINRow` / `FleetErrorRow` rows. Reproduces the web `isRecent`
+//  view-ready `FleetVINRow` / `FleetTelemetryHealthErrorRow` rows. Reproduces the web `isRecent`
 //  (< 24h) recency rule and its timestamp emphasis (web rose/amber/secondary), the
 //  `vinList.length > 0 ? danger : success` badge tone, the em-dash fallback for an
 //  absent error code/message, the per-section render-phase resolution, the absolute/
@@ -65,7 +65,7 @@ public struct FleetVINRow: Identifiable, Equatable, Sendable {
 
 /// One Error-Log row (web `FleetTelemetryError`): VIN + optional code/message (nil →
 /// em-dash in the view) + reported-at with its emphasis (web `isRecent ? rose : secondary`).
-public struct FleetErrorRow: Identifiable, Equatable, Sendable {
+public struct FleetTelemetryHealthErrorRow: Identifiable, Equatable, Sendable {
     public let id: String
     public let vin: String
     public let errorCode: String?
@@ -133,9 +133,9 @@ public enum FleetHealthProjection {
 
     /// Projects the cached error records into view rows, preserving the source order.
     /// `now` drives the reported-at recency emphasis.
-    public static func errorRows(from inputs: [FleetTelemetryErrorInput], now: Date) -> [FleetErrorRow] {
+    public static func errorRows(from inputs: [FleetTelemetryErrorInput], now: Date) -> [FleetTelemetryHealthErrorRow] {
         inputs.map { input in
-            FleetErrorRow(
+            FleetTelemetryHealthErrorRow(
                 id: input.id,
                 vin: input.vin,
                 errorCode: normalized(input.errorCode),
@@ -213,7 +213,7 @@ public enum FleetHealthAccessibility {
         ].joined(separator: ", ")
     }
 
-    public static func errorRowSummary(_ row: FleetErrorRow, localize: (String, String) -> String) -> String {
+    public static func errorRowSummary(_ row: FleetTelemetryHealthErrorRow, localize: (String, String) -> String) -> String {
         var parts = ["\(localize("devtools.health.vin", "VIN")) \(row.vin)"]
         if let code = row.errorCode {
             parts.append("\(localize("devtools.health.errorCode", "Error Code")) \(code)")

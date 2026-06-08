@@ -97,7 +97,7 @@ public enum DriveAnalyticsUnits {
 // MARK: - Unit labels (web `distanceUnit` / `tempUnit` / `efficiencyUnit`)
 
 /// The three display-unit labels the charts surface (legend names + axis units).
-public struct DriveUnitLabels: Equatable, Sendable {
+public struct DrivingTabDriveUnitLabels: Equatable, Sendable {
     public let distance: String
     public let temperature: String
     public let efficiency: String
@@ -206,7 +206,7 @@ public struct DrivingTabProjection: Equatable, Sendable {
     public let dailyTrend: [DriveDailyPoint]
     public let durationBars: [DriveBar]
     public let effTrend: [DriveEffPoint]
-    public let labels: DriveUnitLabels
+    public let labels: DrivingTabDriveUnitLabels
 
     public init(
         speedBars: [DriveBar],
@@ -216,7 +216,7 @@ public struct DrivingTabProjection: Equatable, Sendable {
         dailyTrend: [DriveDailyPoint],
         durationBars: [DriveBar],
         effTrend: [DriveEffPoint],
-        labels: DriveUnitLabels
+        labels: DrivingTabDriveUnitLabels
     ) {
         self.speedBars = speedBars
         self.distanceBars = distanceBars
@@ -246,13 +246,13 @@ public struct DrivingTabProjection: Equatable, Sendable {
             dailyTrend: [],
             durationBars: [],
             effTrend: [],
-            labels: DriveUnitLabels(units: units)
+            labels: DrivingTabDriveUnitLabels(units: units)
         )
     }
 
     /// Projects the SI payload into the seven view-ready datasets in display units.
     public static func make(from input: DriveAnalyticsInput?, units: UnitPreferences) -> DrivingTabProjection {
-        let labels = DriveUnitLabels(units: units)
+        let labels = DrivingTabDriveUnitLabels(units: units)
         guard let input else { return .empty(units: units) }
 
         let hourly = input.hourlyPattern.map { point in

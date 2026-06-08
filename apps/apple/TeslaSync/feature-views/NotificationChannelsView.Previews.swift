@@ -54,6 +54,7 @@
             totalChannels: 3
         )
 
+        @MainActor
         static func model(_ input: NotifChannelsInput) -> NotificationChannelsModel {
             NotificationChannelsModel(source: InMemoryNotificationChannelsSource(initial: input))
         }
@@ -62,6 +63,7 @@
             NotificationChannelsView(model: model(input)).background(Color.TS.bg)
         }
 
+        @MainActor
         static func form(editing channel: NotificationChannelData?) -> some View {
             let source = InMemoryNotificationChannelsSource()
             let formModel = ChannelFormModel(source: source, editing: channel, onSaved: {})

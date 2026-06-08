@@ -42,6 +42,7 @@ private struct StubIconResolver: MiniGridIconResolving {
 
 // MARK: - Projection geometry (web render math)
 
+@MainActor
 final class MiniGridProjectionGeometryTests: XCTestCase {
     private let accuracy: CGFloat = 1e-9
 
@@ -153,6 +154,7 @@ final class MiniGridProjectionGeometryTests: XCTestCase {
 
 // MARK: - Widget → icon join (web `getWidgetDef(widget.widgetId)?.icon`)
 
+@MainActor
 final class MiniGridIconJoinTests: XCTestCase {
     private let resolver = StubIconResolver(map: ["battery-gauge": "battery.100"])
 
@@ -202,6 +204,7 @@ final class MiniGridIconJoinTests: XCTestCase {
 
 // MARK: - Default catalog (faithful registry port)
 
+@MainActor
 final class MiniGridWidgetIconCatalogTests: XCTestCase {
     private let catalog = MiniGridWidgetIconCatalog()
 
@@ -235,6 +238,7 @@ final class MiniGridWidgetIconCatalogTests: XCTestCase {
 
 // MARK: - Accessibility phrasing
 
+@MainActor
 final class MiniGridPreviewAccessibilityTests: XCTestCase {
     func testEmptyCaptionIsNonEmpty() {
         XCTAssertFalse(MiniGridPreviewAccessibility.emptyCaption.isEmpty)
@@ -260,6 +264,7 @@ final class MiniGridPreviewAccessibilityTests: XCTestCase {
 
 // MARK: - Surface slug + telemetry (P1/S11 view.opened)
 
+@MainActor
 final class MiniGridPreviewTelemetryTests: XCTestCase {
     func testReportOpenEmitsSurfaceSlug() {
         let spy = SpyMiniGridPreviewTelemetry()

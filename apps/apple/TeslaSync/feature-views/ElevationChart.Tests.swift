@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: projection (ElevationChart parity)
 
+@MainActor
 final class ElevationProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
@@ -322,6 +323,7 @@ final class ElevationChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class ElevationAccessibilityTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
     /// English-fallback localizer (bundle-free).

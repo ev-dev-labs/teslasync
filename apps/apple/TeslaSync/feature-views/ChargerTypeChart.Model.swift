@@ -65,17 +65,17 @@ public enum ChargerTypeStrings {
 
 /// One coalesced snapshot pushed by a `ChargerTypeChartSource`: the raw sessions +
 /// their load status + the live-state connection + the last-update timestamp.
-public struct ChargerTypeUpdate: Sendable, Equatable {
+public struct ChargerTypeChartUpdate: Sendable, Equatable {
     public var status: ChargerTypeLoadStatus
     public var sessions: [ChargingSessionInput]
-    public var connection: ChargerTypeConnection
+    public var connection: ChargerTypeChartConnection
     public var refreshing: Bool
     public var updatedAt: Date?
 
     public init(
         status: ChargerTypeLoadStatus = .loading,
         sessions: [ChargingSessionInput] = [],
-        connection: ChargerTypeConnection = .live,
+        connection: ChargerTypeChartConnection = .live,
         refreshing: Bool = false,
         updatedAt: Date? = nil
     ) {
@@ -92,10 +92,10 @@ public struct ChargerTypeUpdate: Sendable, Equatable {
 /// The seam the view binds through. The production app implements this over the
 /// shared P1/S8 state holders — composing the charging-sessions query the web
 /// charging-curve page reads and pushing each snapshot. Previews + tests use
-/// `InMemoryChargerTypeSource`. The view never talks to the network directly.
+/// `ChargerTypeChartInMemoryChargerTypeSource`. The view never talks to the network directly.
 @MainActor
 public protocol ChargerTypeChartSource: AnyObject {
-    var onUpdate: (@MainActor (ChargerTypeUpdate) -> Void)? { get set }
+    var onUpdate: (@MainActor (ChargerTypeChartUpdate) -> Void)? { get set }
     func start()
     func stop()
     /// Re-runs the underlying query (web parent refetch / the stale auto-refresh).
@@ -112,7 +112,7 @@ public protocol ChargerTypeChartSource: AnyObject {
 @Observable
 public final class ChargerTypeChartModel {
     public private(set) var phase: ChargerTypePhase = .loading
-    public private(set) var connection: ChargerTypeConnection = .live
+    public private(set) var connection: ChargerTypeChartConnection = .live
     public private(set) var points: [ChargerTypePoint] = []
     public private(set) var rows: [ChargerChartRow] = []
     public private(set) var refreshing = false
@@ -134,12 +134,12 @@ public final class ChargerTypeChartModel {
 
     /// Total sessions across all charger groups (header summary / a11y).
     public var totalSessions: Int {
-        ChargerTypeProjection.totalSessions(points)
+        ChargerTypeChartProjection.totalSessions(points)
     }
 
     /// The combined VoiceOver summary for the chart.
     public var accessibilitySummary: String {
-        ChargerTypeAccessibility.chartSummary(points: points, localize: ChargerTypeStrings.string)
+        ChargerTypeChartAccessibility.chartSummary(points: points, localize: ChargerTypeStrings.string)
     }
 
     /// Begins observing and emits the `view.opened` diagnostics event. Idempotent.
@@ -161,20 +161,20 @@ public final class ChargerTypeChartModel {
         source.refresh()
     }
 
-    private func apply(_ update: ChargerTypeUpdate) {
+    private func apply(_ update: ChargerTypeChartUpdate) {
         connection = update.connection
         refreshing = update.refreshing
         updatedAt = update.updatedAt
-        points = ChargerTypeProjection.points(from: update.sessions)
-        rows = ChargerTypeProjection.chartRows(from: points)
-        phase = ChargerTypeProjection.resolvePhase(update.status, hasRows: !points.isEmpty)
+        points = ChargerTypeChartProjection.points(from: update.sessions)
+        rows = ChargerTypeChartProjection.chartRows(from: points)
+        phase = ChargerTypeChartProjection.resolvePhase(update.status, hasRows: !points.isEmpty)
         handleAutoRefresh(for: update.connection)
     }
 
     /// Stale → one guarded auto-refresh (prompt "stale chip + auto-refresh"); reset
     /// once live so a later stale episode re-triggers exactly once. Offline keeps the
     /// cached columns on screen and does not refetch.
-    private func handleAutoRefresh(for connection: ChargerTypeConnection) {
+    private func handleAutoRefresh(for connection: ChargerTypeChartConnection) {
         switch connection {
         case .stale:
             guard !didAutoRefreshForStale else { return }
@@ -193,15 +193,15 @@ public final class ChargerTypeChartModel {
 /// In-memory source for previews + unit tests. Seeds an optional initial snapshot
 /// on `start()` and lets a test push further snapshots via `push(_:)`.
 @MainActor
-public final class InMemoryChargerTypeSource: ChargerTypeChartSource {
-    public var onUpdate: (@MainActor (ChargerTypeUpdate) -> Void)?
+public final class ChargerTypeChartInMemoryChargerTypeSource: ChargerTypeChartSource {
+    public var onUpdate: (@MainActor (ChargerTypeChartUpdate) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
     public private(set) var refreshCount = 0
 
-    private let initial: ChargerTypeUpdate?
+    private let initial: ChargerTypeChartUpdate?
 
-    public init(initial: ChargerTypeUpdate? = nil) {
+    public init(initial: ChargerTypeChartUpdate? = nil) {
         self.initial = initial
     }
 
@@ -219,7 +219,7 @@ public final class InMemoryChargerTypeSource: ChargerTypeChartSource {
     }
 
     /// Pushes a snapshot to the bound model (test / preview affordance).
-    public func push(_ update: ChargerTypeUpdate) {
+    public func push(_ update: ChargerTypeChartUpdate) {
         onUpdate?(update)
     }
 }

@@ -35,6 +35,7 @@ private let sampleSnapshot = SecurityStatsSnapshot(
 
 // MARK: - Adapter: cached snapshot → projection
 
+@MainActor
 final class SecurityStatisticsAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the projection tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }

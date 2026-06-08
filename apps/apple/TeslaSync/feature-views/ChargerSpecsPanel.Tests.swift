@@ -25,6 +25,7 @@ import XCTest
 
 // MARK: - Adapter: conversion / safe / formatting (web parity)
 
+@MainActor
 final class ChargerSpecsAdapterTests: XCTestCase {
     func testEnergyConvertsWattHoursToKilowattHours() {
         XCTAssertEqual(convertChargerEnergyToKwh(142_000), 142, accuracy: 0.0001)
@@ -53,6 +54,7 @@ final class ChargerSpecsAdapterTests: XCTestCase {
 
 // MARK: - Adapter: row strings + metric selection (web row expression)
 
+@MainActor
 final class ChargerSpecsProjectorStringTests: XCTestCase {
     private let prefs = ChargerSpecsUnitPrefs(localeIdentifier: "en_US", energyPrecision: 2)
 
@@ -110,6 +112,7 @@ final class ChargerSpecsProjectorStringTests: XCTestCase {
 
 // MARK: - Adapter: projection + column catalog (web grid)
 
+@MainActor
 final class ChargerSpecsProjectionTests: XCTestCase {
     private let prefs = ChargerSpecsUnitPrefs(localeIdentifier: "en_US", energyPrecision: 2)
 
@@ -355,6 +358,7 @@ final class ChargerSpecsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class ChargerSpecsAccessibilityTests: XCTestCase {
     func testRowSummaryComposesNameAndDetail() {
         let summary = ChargerSpecsAccessibility.rowSummary(name: "Supercharger", detail: "8 sessions · 11 kW avg")

@@ -20,7 +20,7 @@ import XCTest
 // MARK: - Fixtures
 
 private enum Fixture {
-    static let now = Date(timeIntervalSince1970: 1_700_000_000)
+    nonisolated(unsafe) static let now = Date(timeIntervalSince1970: 1_700_000_000)
 
     static func iso(_ secondsAgo: TimeInterval) -> String {
         ISO8601DateFormatter().string(from: now.addingTimeInterval(-secondsAgo))
@@ -56,6 +56,7 @@ private enum Fixture {
 
 // MARK: - Severity (web normalizeSeverity + severityTokens)
 
+@MainActor
 final class AlertSeverityTests: XCTestCase {
     func testNormalizeFoldsAliases() {
         XCTAssertEqual(AlertSeverity.normalize(nil), .info)
@@ -86,6 +87,7 @@ final class AlertSeverityTests: XCTestCase {
 
 // MARK: - Type icon + label (web TYPE_ICONS + type display)
 
+@MainActor
 final class AlertTypeIconTests: XCTestCase {
     func testKnownTypesMapToSymbols() {
         XCTAssertEqual(AlertTypeIcon.systemImage(for: "geofence_exit"), "mappin.and.ellipse")
@@ -109,6 +111,7 @@ final class AlertTypeIconTests: XCTestCase {
 
 // MARK: - Relative time (web getTimeAgo)
 
+@MainActor
 final class AlertTimeFormatTests: XCTestCase {
     private let echo = AlertCardLocalizer.echo
 
@@ -124,6 +127,7 @@ final class AlertTimeFormatTests: XCTestCase {
 
 // MARK: - Acknowledged badge + action (web isAcked branch)
 
+@MainActor
 final class AlertAckTests: XCTestCase {
     private let echo = AlertCardLocalizer.echo
 
@@ -156,6 +160,7 @@ final class AlertAckTests: XCTestCase {
 
 // MARK: - Freshness chip (stale / offline)
 
+@MainActor
 final class AlertFreshnessTests: XCTestCase {
     func testProjection() {
         XCTAssertNil(AlertFreshnessChip.project(.live))
@@ -176,6 +181,7 @@ final class AlertFreshnessTests: XCTestCase {
 
 // MARK: - Drill-through (web getAlertDrillthrough / getAlertDrillthroughHref)
 
+@MainActor
 final class AlertDrillthroughTests: XCTestCase {
     func testMappedSignalRoutesToContextPage() {
         let target = AlertDrillthrough.resolve(
@@ -226,6 +232,7 @@ final class AlertDrillthroughTests: XCTestCase {
 
 // MARK: - State accessor
 
+@MainActor
 final class AlertCardStateTests: XCTestCase {
     func testAlertAccessor() {
         let data = Fixture.alert()
@@ -238,6 +245,7 @@ final class AlertCardStateTests: XCTestCase {
 
 // MARK: - Accessibility + i18n key parity
 
+@MainActor
 final class AlertCardAccessibilityTests: XCTestCase {
     private let echo = AlertCardLocalizer.echo
 
@@ -284,6 +292,7 @@ final class AlertCardAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
+@MainActor
 final class AlertCardTelemetryTests: XCTestCase {
     private final class Recorder: AlertCardTelemetry, @unchecked Sendable {
         private let lock = NSLock()

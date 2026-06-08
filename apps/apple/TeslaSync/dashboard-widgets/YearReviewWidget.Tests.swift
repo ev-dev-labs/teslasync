@@ -11,7 +11,7 @@
 //    • Accessibility — the VoiceOver summary content per layout.
 //
 //  These run in the TeslaSync(/-macOS) XCTest targets. They have no network and no real store: the
-//  model is driven by `InMemoryYearReviewSource`.
+//  model is driven by `YearReviewWidgetInMemoryYearReviewSource`.
 //
 
 import XCTest
@@ -19,6 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
+@MainActor
 final class YearReviewAdapterTests: XCTestCase {
     private let sample = YearReviewDTO(
         totalDrives: 487,
@@ -167,6 +168,7 @@ final class YearReviewAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
+@MainActor
 final class YearReviewPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(YearReviewModel.resolvePhase(status: .loading, hasData: false), .loading)
@@ -185,8 +187,8 @@ final class YearReviewModelTests: XCTestCase {
     private func makeModel(
         _ update: YearReviewUpdate,
         telemetry: YearReviewTelemetry = OSLogYearReviewTelemetry()
-    ) -> (YearReviewModel, InMemoryYearReviewSource) {
-        let source = InMemoryYearReviewSource(initial: update)
+    ) -> (YearReviewModel, YearReviewWidgetInMemoryYearReviewSource) {
+        let source = YearReviewWidgetInMemoryYearReviewSource(initial: update)
         let model = YearReviewModel(source: source, telemetry: telemetry)
         return (model, source)
     }
@@ -276,6 +278,7 @@ final class YearReviewModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class YearReviewRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = YearReviewWidget.registration
@@ -303,6 +306,7 @@ final class YearReviewRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class YearReviewAccessibilityTests: XCTestCase {
     private let projection = YearReviewProjector.project(
         stats: YearReviewDTO(

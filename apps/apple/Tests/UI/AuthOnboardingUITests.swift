@@ -4,6 +4,7 @@ import XCTest
 /// injected with the `-uiTestAuthState` launch argument (see
 /// `AuthCoordinator.bootstrap`), so no real `ASWebAuthenticationSession` or
 /// Keychain is involved.
+@MainActor
 final class AuthOnboardingUITests: XCTestCase {
     override func setUp() {
         super.setUp()

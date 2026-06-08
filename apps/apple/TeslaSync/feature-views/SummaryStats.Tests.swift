@@ -38,6 +38,7 @@ private let sampleValues = DynamicsSummaryStatsValues(
 
 // MARK: - Number formatting (port of numberFormat.ts)
 
+@MainActor
 final class DynamicsSummaryStatsFormatTests: XCTestCase {
     func testDecimalPadsAndGroups() {
         XCTAssertEqual(DynamicsSummaryStatsFormat.decimal(142.6, fractionDigits: 1, locale: enUS), "142.6")
@@ -71,6 +72,7 @@ final class DynamicsSummaryStatsFormatTests: XCTestCase {
 
 // MARK: - Temperature conversion (web `convertTempFromSI`)
 
+@MainActor
 final class DynamicsSummaryStatsTemperatureTests: XCTestCase {
     func testCelsiusIsIdentity() {
         XCTAssertEqual(DynamicsSummaryStatsTemperatureUnit.celsius.convert(47.5), 47.5, accuracy: 0.0001)
@@ -93,6 +95,7 @@ final class DynamicsSummaryStatsTemperatureTests: XCTestCase {
 
 // MARK: - Formatting facade (web fmtNumber + temperature pipeline)
 
+@MainActor
 final class DynamicsSummaryStatsFormattingTests: XCTestCase {
     func testNumberCountAndTemperatureValue() {
         XCTAssertEqual(celsiusFmt.number(142.6), "142.6")
@@ -110,6 +113,7 @@ final class DynamicsSummaryStatsFormattingTests: XCTestCase {
 
 // MARK: - Responsive column math (web grid-cols-2 / md:3 / lg:6)
 
+@MainActor
 final class DynamicsSummaryStatsLayoutTests: XCTestCase {
     func testColumnsAtBreakpoints() {
         XCTAssertEqual(DynamicsSummaryStatsLayout.columnCount(forWidth: 320), 2)
@@ -123,6 +127,7 @@ final class DynamicsSummaryStatsLayoutTests: XCTestCase {
 
 // MARK: - Projection: branches + tile wiring
 
+@MainActor
 final class DynamicsSummaryStatsProjectionTests: XCTestCase {
     func testLoadingBranchMakesEveryTileLoading() {
         let resolved = DynamicsSummaryStatsProjection.resolve(
@@ -190,6 +195,7 @@ final class DynamicsSummaryStatsProjectionTests: XCTestCase {
 
 // MARK: - Tile facade resolution
 
+@MainActor
 final class DynamicsSummaryStatsCardTests: XCTestCase {
     private func torqueTile(_ value: DynamicsSummaryStatsCardValue) -> DynamicsSummaryStatsCard {
         DynamicsSummaryStatsCard(
@@ -230,6 +236,7 @@ final class DynamicsSummaryStatsCardTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class DynamicsSummaryStatsAccessibilityTests: XCTestCase {
     func testCardLabelWithUnit() {
         XCTAssertEqual(
@@ -252,6 +259,7 @@ final class DynamicsSummaryStatsAccessibilityTests: XCTestCase {
 
 // MARK: - i18n facade
 
+@MainActor
 final class DynamicsSummaryStatsStringsTests: XCTestCase {
     func testUnitSymbolsAndSentinelsResolveToFallback() {
         XCTAssertEqual(SSDStrings.string("dynamics.unit.nm", "Nm"), "Nm")

@@ -27,6 +27,7 @@ import SwiftUI
         updatedAt: Date()
     )
 
+    @MainActor
     private func previewShell(_ tool: HttpStatusTool) -> some View {
         tool
             .frame(maxWidth: 480)

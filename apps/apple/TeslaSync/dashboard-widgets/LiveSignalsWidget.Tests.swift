@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: pure conversion + formatting (parity with the web lib)
 
+@MainActor
 final class LiveSignalsFormatTests: XCTestCase {
     func testTemperatureConversion() {
         XCTAssertEqual(LiveSignalsFormat.convertTempFromSI(20, .celsius), 20, accuracy: 0.0001)
@@ -58,6 +59,7 @@ final class LiveSignalsFormatTests: XCTestCase {
 
 // MARK: - Adapter: cached DTO → projection
 
+@MainActor
 final class LiveSignalsBuilderTests: XCTestCase {
     private let metric = LiveSignalsUnitPrefs(temperature: .celsius, pressure: .bar, locale: "en-US")
     private let imperial = LiveSignalsUnitPrefs(temperature: .fahrenheit, pressure: .psi, locale: "en-US")
@@ -235,6 +237,7 @@ final class LiveSignalsModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class LiveSignalsRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = LiveSignalsWidget.registration
@@ -264,6 +267,7 @@ final class LiveSignalsRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class LiveSignalsAccessibilityTests: XCTestCase {
     func testSummaryIncludesEverySectionLabel() {
         let projection = LiveSignalsBuilder.buildProjection(

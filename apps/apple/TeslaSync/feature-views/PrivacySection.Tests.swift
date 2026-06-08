@@ -26,7 +26,7 @@ private struct PrivacyHarness {
     let environment: InMemoryPrivacyEnvironmentSource
     let recentPages: InMemoryRecentPagesStore
     let consentStore: InMemoryConsentStore
-    let silenceStore: InMemoryConfirmSilenceStore
+    let silenceStore: PrivacySectionInMemoryConfirmSilenceStore
 }
 
 @MainActor
@@ -41,7 +41,7 @@ private func makePrivacyHarness(
     let environment = InMemoryPrivacyEnvironmentSource(initial: initial)
     let recentPages = InMemoryRecentPagesStore(count: recent)
     let consentStore = InMemoryConsentStore(state: consent)
-    let silenceStore = InMemoryConfirmSilenceStore(silenced: silenced ? [PrivacyModel.confirmSilenceKey] : [])
+    let silenceStore = PrivacySectionInMemoryConfirmSilenceStore(silenced: silenced ? [PrivacyModel.confirmSilenceKey] : [])
     let model = PrivacyModel(
         environment: environment,
         recentPages: recentPages,

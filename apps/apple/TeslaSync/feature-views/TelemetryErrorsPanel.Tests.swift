@@ -19,6 +19,7 @@ import XCTest
 
 // MARK: - Extractor: Tesla wire shape → rows (port of extractTelemetryErrors)
 
+@MainActor
 final class TelemetryErrorsExtractorTests: XCTestCase {
     private func errorRow(_ members: [TelemetryJSON.Member]) -> TelemetryJSON {
         .object(members)
@@ -113,10 +114,11 @@ final class TelemetryErrorsExtractorTests: XCTestCase {
 
 // MARK: - Export + JSON serialisation (web JSON.stringify(value, null, 2))
 
+@MainActor
 final class TelemetryErrorsExportTests: XCTestCase {
     func testExportProducesPrettyJSONArrayInKeyOrder() {
         let rows = [
-            TelemetryErrorRow(rowKey: "k1", timestamp: "t1", code: "c1", message: "m1")
+            TelemetryErrorsPanelErrorRow(rowKey: "k1", timestamp: "t1", code: "c1", message: "m1")
         ]
         let export = TelemetryErrorsExport.make(rows: rows, vin: "VIN1")
         let expected = """
@@ -141,7 +143,7 @@ final class TelemetryErrorsExportTests: XCTestCase {
 
     func testStringEscapingMatchesJSON() {
         let rows = [
-            TelemetryErrorRow(rowKey: "k", timestamp: "t", code: "c", message: "a\"b\\c\nd\te")
+            TelemetryErrorsPanelErrorRow(rowKey: "k", timestamp: "t", code: "c", message: "a\"b\\c\nd\te")
         ]
         let export = TelemetryErrorsExport.make(rows: rows, vin: "v")
         XCTAssertTrue(export.json.contains("\"message\": \"a\\\"b\\\\c\\nd\\te\""))
@@ -150,6 +152,7 @@ final class TelemetryErrorsExportTests: XCTestCase {
 
 // MARK: - Timestamp formatting (web formatDateTime)
 
+@MainActor
 final class TelemetryErrorsFormatTests: XCTestCase {
     func testEmptyAndInvalidReturnDash() {
         XCTAssertEqual(TelemetryErrorsFormat.timestamp(""), "—")
@@ -167,6 +170,7 @@ final class TelemetryErrorsFormatTests: XCTestCase {
 
 // MARK: - Projection: phase resolution across every web branch
 
+@MainActor
 final class TelemetryErrorsProjectionTests: XCTestCase {
     func testIdleWhenNotRequested() {
         let resolved = TelemetryErrorsProjection.resolve(TelemetryErrorsInput(requested: false))
@@ -278,9 +282,10 @@ final class TelemetryErrorsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class TelemetryErrorsAccessibilityTests: XCTestCase {
     func testRowSummaryCombinesFields() {
-        let row = TelemetryErrorRow(rowKey: "k", timestamp: "", code: "c1", message: "m1")
+        let row = TelemetryErrorsPanelErrorRow(rowKey: "k", timestamp: "", code: "c1", message: "m1")
         let summary = TelemetryErrorsAccessibility.rowSummary(for: row)
         XCTAssertTrue(summary.contains("c1"))
         XCTAssertTrue(summary.contains("m1"))
@@ -289,7 +294,7 @@ final class TelemetryErrorsAccessibilityTests: XCTestCase {
     }
 
     func testRowSummaryDashesEmptyCodeAndMessage() {
-        let row = TelemetryErrorRow(rowKey: "k", timestamp: "", code: "", message: "")
+        let row = TelemetryErrorsPanelErrorRow(rowKey: "k", timestamp: "", code: "", message: "")
         XCTAssertEqual(TelemetryErrorsAccessibility.rowSummary(for: row), "—, —, —")
     }
 }

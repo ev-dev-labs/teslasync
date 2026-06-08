@@ -93,7 +93,7 @@ struct ChargerTypeBarChart: View {
                 AxisGridLine().foregroundStyle(Color.TS.border.opacity(0.4))
                 AxisValueLabel {
                     if let number = value.as(Double.self) {
-                        Text(verbatim: ChargerTypeProjection.intString(number, locale: locale))
+                        Text(verbatim: ChargerTypeChartProjection.intString(number, locale: locale))
                             .font(Font.TS.label)
                             .foregroundStyle(Color.TS.textMuted)
                     }
@@ -125,7 +125,7 @@ struct ChargerTypeBarChart: View {
 
     private func columnValue(for key: String) -> String {
         guard let point = points.first(where: { $0.type.rawValue == key }) else { return "" }
-        return ChargerTypeAccessibility.rowLabel(
+        return ChargerTypeChartAccessibility.rowLabel(
             point,
             name: localizedName(point.type),
             locale: locale,
@@ -176,7 +176,7 @@ struct ChargerTypeTooltip: View {
     }
 
     private func valueText(for metric: ChargerMetric) -> String {
-        let value = ChargerTypeProjection.decimalString(point.value(for: metric), decimals: 1, locale: locale)
+        let value = ChargerTypeChartProjection.decimalString(point.value(for: metric), decimals: 1, locale: locale)
         let unit = ChargerTypeStrings.string(metric.unitKey, metric.unitFallback)
         return "\(value) \(unit)"
     }

@@ -13,54 +13,7 @@ import SwiftUI
 
 // MARK: - Registry metadata (canonical: registry/vehicle.ts → "motor-performance")
 
-/// A dashboard grid size in (columns × rows), matching the web `WidgetSize`.
-public struct DashboardWidgetSize: Sendable, Equatable {
-    public var cols: Int
-    public var rows: Int
 
-    public init(cols: Int, rows: Int) {
-        self.cols = cols
-        self.rows = rows
-    }
-}
-
-/// The dashboard registration for a draggable widget surface (web `WidgetDef`).
-public struct DashboardWidgetRegistration: Sendable {
-    public let id: String
-    public let nameKey: String
-    public let descriptionKey: String
-    public let category: String
-    public let defaultSize: DashboardWidgetSize
-    public let minSize: DashboardWidgetSize
-    public let maxSize: DashboardWidgetSize
-
-    public init(
-        id: String,
-        nameKey: String,
-        descriptionKey: String,
-        category: String,
-        defaultSize: DashboardWidgetSize,
-        minSize: DashboardWidgetSize,
-        maxSize: DashboardWidgetSize
-    ) {
-        self.id = id
-        self.nameKey = nameKey
-        self.descriptionKey = descriptionKey
-        self.category = category
-        self.defaultSize = defaultSize
-        self.minSize = minSize
-        self.maxSize = maxSize
-    }
-
-    /// Clamps a requested grid size into the surface's `min…max` envelope, so the native grid honors the
-    /// same constraints as the web registry.
-    public func clamp(_ size: DashboardWidgetSize) -> DashboardWidgetSize {
-        DashboardWidgetSize(
-            cols: min(max(size.cols, minSize.cols), maxSize.cols),
-            rows: min(max(size.rows, minSize.rows), maxSize.rows)
-        )
-    }
-}
 
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 
@@ -135,7 +88,7 @@ public enum MotorTorqueZone: String, Sendable, Equatable {
 
 // MARK: - Display-boundary projection (adapter: cached SI → render-ready)
 
-/// The render-ready projection of a `MotorSnapshotInput`, computed at the display boundary. Pure + public
+/// The render-ready projection of a `MotorPerformanceWidgetSnapshotInput`, computed at the display boundary. Pure + public
 /// so the SI → display mapping (web data derivations + `convertTempFromSI` + `fmtInt`/`fmtNumber`) is
 /// unit-tested without rendering the view.
 public struct MotorProjection: Sendable, Equatable {
@@ -189,8 +142,8 @@ public struct MotorProjection: Sendable, Equatable {
     /// Builds the projection from a cached snapshot, applying the user's temperature unit + locale at the
     /// display boundary. `nil` yields `.empty` (web renders the `EmptyState`).
     public static func make(
-        from snapshot: MotorSnapshotInput?,
-        temperatureUnit: MotorTemperatureUnit,
+        from snapshot: MotorPerformanceWidgetSnapshotInput?,
+        temperatureUnit: MotorPerformanceWidgetTemperatureUnit,
         locale: Locale = .motorDefault
     ) -> MotorProjection {
         guard let snapshot else { return .empty }
@@ -224,7 +177,7 @@ public struct MotorProjection: Sendable, Equatable {
     }
 
     /// Web `gear ?? shift_state ?? '—'`, also treating blank strings as missing for null-safety.
-    private static func resolveGear(_ snapshot: MotorSnapshotInput) -> String {
+    private static func resolveGear(_ snapshot: MotorPerformanceWidgetSnapshotInput) -> String {
         if let gear = snapshot.gear?.trimmingCharacters(in: .whitespacesAndNewlines), !gear.isEmpty {
             return gear
         }

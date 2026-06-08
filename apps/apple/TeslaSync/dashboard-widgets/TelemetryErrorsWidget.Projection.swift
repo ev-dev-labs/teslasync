@@ -106,7 +106,7 @@ public struct TelemetryErrorAggregate: Sendable, Equatable {
 
 /// Pure adapter for the surface: every derivation the web component performs
 /// over the two cached lists (`errorVINs`, `errors`).
-public enum TelemetryErrorsProjection {
+public enum TelemetryErrorsWidgetProjection {
     /// One hour in seconds — the "recent" window (web `ONE_HOUR_MS`).
     public static let recentWindow: TimeInterval = 60 * 60
 
@@ -225,7 +225,7 @@ public enum TelemetryErrorsRelativeLabel: Equatable, Sendable {
 
 /// Integer + relative-time formatters that match the web `fmtInt` and
 /// `formatRelative` output the widget relies on.
-public enum TelemetryErrorsFormat {
+public enum TelemetryErrorsWidgetFormat {
     /// Shared "no value" glyph (web `'—'`).
     public static let emDash = "—"
 
@@ -329,7 +329,7 @@ public enum TelemetryErrorsStrings {
 
 /// Builds the VoiceOver value spoken for the surface. Pure + public so the a11y
 /// label content can be unit-tested without rendering the view.
-public enum TelemetryErrorsAccessibility {
+public enum TelemetryErrorsWidgetAccessibility {
     /// The widget-level summary (status + active VIN count).
     public static func summary(activeVINCount: Int, status: TelemetryErrorsStatus) -> String {
         let countText = TelemetryErrorsStrings.count(
@@ -352,7 +352,7 @@ public enum TelemetryErrorsAccessibility {
             aggregate.vin,
             aggregate.errorCode,
             TelemetryErrorsStrings.count("widget.telemetryErrors.countA11y", "%lld occurrences", aggregate.count),
-            TelemetryErrorsFormat.relativeText(for: aggregate.lastSeen, now: now, locale: locale)
+            TelemetryErrorsWidgetFormat.relativeText(for: aggregate.lastSeen, now: now, locale: locale)
         ]
         if isRecent {
             parts.append(TelemetryErrorsStrings.string("widget.telemetryErrors.recent", "recent"))

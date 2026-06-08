@@ -26,7 +26,7 @@ enum TwinPalette {
     static let glassOpen = Color(red: 0.012, green: 0.027, blue: 0.071)
     static let chrome = Color(red: 0.78, green: 0.83, blue: 0.90)
 
-    static func windowFill(_ state: TwinWindowState?) -> Color {
+    static func windowFill(_ state: DigitalTwinWidgetTwinWindowState?) -> Color {
         switch state {
         case .closed: glassClosed.opacity(0.65)
         case .open: glassOpen.opacity(0.78)
@@ -35,7 +35,7 @@ enum TwinPalette {
         }
     }
 
-    static func windowStroke(_ state: TwinWindowState?) -> Color {
+    static func windowStroke(_ state: DigitalTwinWidgetTwinWindowState?) -> Color {
         switch state {
         case .open: amber
         case .partial: amberSoft.opacity(0.6)

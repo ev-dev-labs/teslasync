@@ -19,29 +19,29 @@ import SwiftUI
         return model
     }
 
-    private let healthyData = SystemHealthData(
+    private let healthyData = UptimeMonitorWidgetSystemHealthData(
         status: "healthy",
         components: [
-            "database": SystemHealthComponentData(status: "healthy"),
-            "mqtt": SystemHealthComponentData(status: "healthy"),
-            "tesla_api": SystemHealthComponentData(status: "healthy"),
-            "fleet_telemetry": SystemHealthComponentData(status: "healthy")
+            "database": UptimeMonitorWidgetSystemHealthComponentData(status: "healthy"),
+            "mqtt": UptimeMonitorWidgetSystemHealthComponentData(status: "healthy"),
+            "tesla_api": UptimeMonitorWidgetSystemHealthComponentData(status: "healthy"),
+            "fleet_telemetry": UptimeMonitorWidgetSystemHealthComponentData(status: "healthy")
         ],
         databaseSize: "248 MB",
         tableCount: 87
     )
 
-    private let degradedData = SystemHealthData(
+    private let degradedData = UptimeMonitorWidgetSystemHealthData(
         status: "degraded",
         components: [
-            "database": SystemHealthComponentData(status: "healthy"),
-            "mqtt": SystemHealthComponentData(status: "healthy"),
-            "tesla_api": SystemHealthComponentData(
+            "database": UptimeMonitorWidgetSystemHealthComponentData(status: "healthy"),
+            "mqtt": UptimeMonitorWidgetSystemHealthComponentData(status: "healthy"),
+            "tesla_api": UptimeMonitorWidgetSystemHealthComponentData(
                 status: "degraded",
                 consecutiveFailures: 2,
                 lastError: "429 Too Many Requests"
             ),
-            "fleet_telemetry": SystemHealthComponentData(
+            "fleet_telemetry": UptimeMonitorWidgetSystemHealthComponentData(
                 status: "unhealthy",
                 consecutiveFailures: 11,
                 lastError: "connection refused"

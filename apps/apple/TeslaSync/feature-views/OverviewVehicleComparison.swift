@@ -64,7 +64,7 @@ extension OverviewVehicleComparison {
     private var grid: some View {
         VStack(alignment: .leading, spacing: TSSpacing.lg) {
             if model.connection != .live {
-                OverviewConnectivityBanner(
+                OverviewVehicleComparisonConnectivityBanner(
                     connection: model.connection,
                     updatedAt: model.updatedAt,
                     onRefresh: { model.refresh() }

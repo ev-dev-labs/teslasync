@@ -49,7 +49,7 @@ final class RecentActivityModelTests: XCTestCase {
         telemetry: RecentActivityTelemetry = SpyRecentActivityTelemetry()
     ) -> (RecentActivityModel, InMemoryRecentActivitySource) {
         let source = InMemoryRecentActivitySource(initial: initial)
-        let model = RecentActivityModel(source: source, telemetry: telemetry, now: { self.now })
+        let model = RecentActivityModel(source: source, telemetry: telemetry, now: { [now = self.now] in now })
         return (model, source)
     }
 
@@ -163,6 +163,7 @@ final class RecentActivityModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class RecentActivityAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

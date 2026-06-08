@@ -24,7 +24,7 @@ import Observation
 @MainActor
 public protocol TimeToChargeSource: AnyObject {
     /// Set by the model; invoked on the main actor for every coalesced snapshot.
-    var onUpdate: (@MainActor (TimeToChargeLoadState<[ChargingSessionSummary]>) -> Void)? { get set }
+    var onUpdate: (@MainActor (TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]>) -> Void)? { get set }
     func start()
     func stop()
     func refresh()
@@ -33,14 +33,14 @@ public protocol TimeToChargeSource: AnyObject {
 /// In-memory source for previews + unit tests. Drive it with `push(_:)`.
 @MainActor
 public final class InMemoryTimeToChargeSource: TimeToChargeSource {
-    public var onUpdate: (@MainActor (TimeToChargeLoadState<[ChargingSessionSummary]>) -> Void)?
+    public var onUpdate: (@MainActor (TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]>) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
     public private(set) var refreshCount = 0
 
-    private let initial: TimeToChargeLoadState<[ChargingSessionSummary]>?
+    private let initial: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]>?
 
-    public init(initial: TimeToChargeLoadState<[ChargingSessionSummary]>? = nil) {
+    public init(initial: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]>? = nil) {
         self.initial = initial
     }
 
@@ -58,7 +58,7 @@ public final class InMemoryTimeToChargeSource: TimeToChargeSource {
     }
 
     /// Pushes a snapshot to the bound model (test/preview affordance).
-    public func push(_ state: TimeToChargeLoadState<[ChargingSessionSummary]>) {
+    public func push(_ state: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]>) {
         onUpdate?(state)
     }
 }
@@ -72,7 +72,7 @@ public final class InMemoryTimeToChargeSource: TimeToChargeSource {
 @Observable
 public final class TimeToChargeModel {
     /// The current cache-then-network state for the charging-sessions feed.
-    public private(set) var state: TimeToChargeLoadState<[ChargingSessionSummary]> = .idle
+    public private(set) var state: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]> = .idle
 
     @ObservationIgnored private let source: any TimeToChargeSource
     @ObservationIgnored private let locale: Locale
@@ -86,7 +86,7 @@ public final class TimeToChargeModel {
     }
 
     /// Preview / test binding: render a fixed state without the shared core.
-    public init(previewState: TimeToChargeLoadState<[ChargingSessionSummary]>, locale: Locale = .current) {
+    public init(previewState: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]>, locale: Locale = .current) {
         let inMemory = InMemoryTimeToChargeSource(initial: previewState)
         source = inMemory
         self.locale = locale
@@ -98,7 +98,7 @@ public final class TimeToChargeModel {
     /// Maps the two web props onto the cache-then-network load state so the native
     /// surface renders the identical loading / empty / content branches.
     public convenience init(
-        sessions: [ChargingSessionSummary],
+        sessions: [TimeToChargeSectionChargingSessionSummary],
         loading: Bool,
         locale: Locale = .current
     ) {
@@ -121,9 +121,9 @@ public final class TimeToChargeModel {
     /// an empty set becomes the empty state and a present set the content.
     /// `nonisolated` because it touches no actor state — callable off the main actor.
     public nonisolated static func loadState(
-        sessions: [ChargingSessionSummary],
+        sessions: [TimeToChargeSectionChargingSessionSummary],
         loading: Bool
-    ) -> TimeToChargeLoadState<[ChargingSessionSummary]> {
+    ) -> TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]> {
         if loading { return .loading(cached: sessions.isEmpty ? nil : sessions, stale: false) }
         return sessions.isEmpty ? .empty(stale: false) : .loaded(sessions, stale: false)
     }

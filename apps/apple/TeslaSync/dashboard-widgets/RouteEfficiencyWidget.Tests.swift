@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (parity with the web useMemo)
 
+@MainActor
 final class RouteEfficiencyAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the projection tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
@@ -250,6 +251,7 @@ final class RouteEfficiencyModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class RouteEfficiencyRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = RouteEfficiencyWidget.registration
@@ -279,6 +281,7 @@ final class RouteEfficiencyRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class RouteEfficiencyAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

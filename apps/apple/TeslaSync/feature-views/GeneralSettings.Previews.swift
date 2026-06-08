@@ -32,7 +32,7 @@ import SwiftUI
             clock24Hour: false
         )
 
-        static let vehicles = [VehicleOption(id: 1, displayName: "Red Model 3")]
+        static let vehicles = [GeneralSettingsVehicleOption(id: 1, displayName: "Red Model 3")]
 
         static func snapshot(
             settings: SettingsQuery = .loaded(loaded),

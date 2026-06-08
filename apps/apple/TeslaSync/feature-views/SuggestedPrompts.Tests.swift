@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Catalog (verbatim port of web `getChatSuggestions()`)
 
+@MainActor
 final class SuggestedPromptsCatalogTests: XCTestCase {
     func testCatalogMatchesWebSourceKeysAndOrder() {
         let keys = SuggestedPromptsCatalog.defaults.map(\.i18nKey)
@@ -45,6 +46,7 @@ final class SuggestedPromptsCatalogTests: XCTestCase {
 
 // MARK: - Adapter (web `suggestions.map(...)`)
 
+@MainActor
 final class SuggestedPromptsAdapterTests: XCTestCase {
     func testProjectMapsEachSuggestionPreservingKeyAndFallback() {
         let projection = SuggestedPromptsAdapter.project(SuggestedPromptsCatalog.defaults)
@@ -219,6 +221,7 @@ final class SuggestedPromptsModelTests: XCTestCase {
 
 // MARK: - Accessibility content
 
+@MainActor
 final class SuggestedPromptsAccessibilityTests: XCTestCase {
     func testContainerLabelResolvesWebAriaLabel() {
         XCTAssertEqual(SuggestedPromptsAccessibility.containerLabel(), "Suggested prompts")
@@ -238,6 +241,7 @@ final class SuggestedPromptsAccessibilityTests: XCTestCase {
 
 // MARK: - Localization facade
 
+@MainActor
 final class SuggestedPromptsStringsTests: XCTestCase {
     func testStringFallsBackToProvidedValue() {
         XCTAssertEqual(

@@ -41,7 +41,7 @@ public struct OSLogMediaNowPlayingTelemetry: MediaNowPlayingTelemetry {
 
 /// The load lifecycle for the widget's data, mirroring the shared `LoadableState`
 /// cases the production source projects from `Resource<T>`.
-public enum MediaLoadStatus: Sendable, Equatable {
+public enum MediaNowPlayingWidgetLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case empty
@@ -51,7 +51,7 @@ public enum MediaLoadStatus: Sendable, Equatable {
 /// Live-stream freshness, mirroring `LiveConnectionState` (ADR-013). The web
 /// `useMediaLatest(id, 5_000)` polls every 5 s; the production source maps that
 /// cadence + reachability into these cases.
-public enum MediaConnection: Sendable, Equatable {
+public enum MediaNowPlayingWidgetConnection: Sendable, Equatable {
     case live
     case stale
     case offline
@@ -60,15 +60,15 @@ public enum MediaConnection: Sendable, Equatable {
 /// One coalesced snapshot pushed by a `MediaNowPlayingSource`: the cached DTO
 /// plus its load/connection status. The model turns this into the projection.
 public struct MediaNowPlayingUpdate: Sendable, Equatable {
-    public var status: MediaLoadStatus
-    public var connection: MediaConnection
+    public var status: MediaNowPlayingWidgetLoadStatus
+    public var connection: MediaNowPlayingWidgetConnection
     public var vehicle: MediaVehicle?
     public var snapshot: MediaSnapshotInput?
     public var updatedAt: Date?
 
     public init(
-        status: MediaLoadStatus = .loading,
-        connection: MediaConnection = .live,
+        status: MediaNowPlayingWidgetLoadStatus = .loading,
+        connection: MediaNowPlayingWidgetConnection = .live,
         vehicle: MediaVehicle? = nil,
         snapshot: MediaSnapshotInput? = nil,
         updatedAt: Date? = nil
@@ -109,7 +109,7 @@ public final class MediaNowPlayingModel {
     }
 
     public private(set) var phase: Phase = .loading
-    public private(set) var connection: MediaConnection = .live
+    public private(set) var connection: MediaNowPlayingWidgetConnection = .live
     public private(set) var media: MediaNowPlaying?
     public private(set) var vehicle: MediaVehicle?
     public private(set) var updatedAt: Date?
@@ -158,7 +158,7 @@ public final class MediaNowPlayingModel {
     /// Resolves the render phase. The web only shows the skeleton on the initial
     /// fetch and the empty state when there is no snapshot; whenever a snapshot is
     /// known the track renders (cached values stay visible behind refresh/errors).
-    static func resolvePhase(_ status: MediaLoadStatus, hasMedia: Bool) -> Phase {
+    static func resolvePhase(_ status: MediaNowPlayingWidgetLoadStatus, hasMedia: Bool) -> Phase {
         switch status {
         case .loading:
             hasMedia ? .content : .loading

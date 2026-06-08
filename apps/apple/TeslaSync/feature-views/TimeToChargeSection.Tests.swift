@@ -22,28 +22,28 @@ let timeToChargeEnUS = Locale(identifier: "en_US")
 
 enum TimeToChargeFixture {
     /// DC, crosses 10→80 and 20→80; 30 min; 30 kWh → 60 kWh/h; year 2026.
-    static let sessionA = ChargingSessionSummary(
+    static let sessionA = TimeToChargeSectionChargingSessionSummary(
         id: 301, startedAt: "2026-01-10T08:00:00Z", endedAt: "2026-01-10T08:30:00Z",
         startSocPct: 8, endSocPct: 82, totalEnergyAddedWh: 30000,
         peakPowerW: 120_000, chargerType: "Tesla"
     )
 
     /// DC, crosses 20→80 only (start 18 > 10); 60 min; 60 kWh → 60 kWh/h; 2026.
-    static let sessionB = ChargingSessionSummary(
+    static let sessionB = TimeToChargeSectionChargingSessionSummary(
         id: 302, startedAt: "2026-01-20T09:00:00Z", endedAt: "2026-01-20T10:00:00Z",
         startSocPct: 18, endSocPct: 88, totalEnergyAddedWh: 60000,
         peakPowerW: 100_000, chargerType: "CCS"
     )
 
     /// DC, crosses both bands; 20 min; 40 kWh → 120 kWh/h (fastest); year 2025.
-    static let sessionC = ChargingSessionSummary(
+    static let sessionC = TimeToChargeSectionChargingSessionSummary(
         id: 303, startedAt: "2025-12-05T22:00:00Z", endedAt: "2025-12-05T22:20:00Z",
         startSocPct: 5, endSocPct: 90, totalEnergyAddedWh: 40000,
         peakPowerW: 150_000, chargerType: "Tesla"
     )
 
     /// AC / home — excluded from DC analysis (no charger type, 7 kW peak).
-    static let sessionD = ChargingSessionSummary(
+    static let sessionD = TimeToChargeSectionChargingSessionSummary(
         id: 304, startedAt: "2026-03-01T19:00:00Z", endedAt: "2026-03-01T23:00:00Z",
         startSocPct: 40, endSocPct: 80, totalEnergyAddedWh: 11000,
         peakPowerW: 7000, chargerType: nil
@@ -54,6 +54,7 @@ enum TimeToChargeFixture {
 
 // MARK: - Formatting (ports of helpers.ts / numberFormat.ts / unitConversion.ts)
 
+@MainActor
 final class TimeToChargeFormatTests: XCTestCase {
     func testDurationMinutesValid() {
         XCTAssertEqual(
@@ -133,13 +134,14 @@ final class TimeToChargeFormatTests: XCTestCase {
 
 // MARK: - DC classification (web isDcSession)
 
+@MainActor
 final class TimeToChargeDcClassificationTests: XCTestCase {
     func testChargerTypePresentIsDc() {
         XCTAssertTrue(TimeToChargeProjection.isDcSession(TimeToChargeFixture.sessionB))
     }
 
     func testHighPeakPowerIsDc() {
-        let session = ChargingSessionSummary(
+        let session = TimeToChargeSectionChargingSessionSummary(
             id: 1, startedAt: "2026-01-01T00:00:00Z", endedAt: "2026-01-01T00:30:00Z",
             startSocPct: 10, endSocPct: 80, totalEnergyAddedWh: 20000,
             peakPowerW: 50000, chargerType: nil
@@ -149,7 +151,7 @@ final class TimeToChargeDcClassificationTests: XCTestCase {
 
     func testEmptyChargerTypeAndLowPowerIsNotDc() {
         XCTAssertFalse(TimeToChargeProjection.isDcSession(TimeToChargeFixture.sessionD))
-        let emptyType = ChargingSessionSummary(
+        let emptyType = TimeToChargeSectionChargingSessionSummary(
             id: 2, startedAt: "2026-01-01T00:00:00Z", endedAt: "2026-01-01T00:30:00Z",
             startSocPct: 10, endSocPct: 80, totalEnergyAddedWh: 1000,
             peakPowerW: 20000, chargerType: ""
@@ -160,6 +162,7 @@ final class TimeToChargeDcClassificationTests: XCTestCase {
 
 // MARK: - Metrics projection (web useMemo)
 
+@MainActor
 final class TimeToChargeMetricsTests: XCTestCase {
     func testEmptyWhenNoSessions() {
         XCTAssertEqual(TimeToChargeProjection.metrics(from: []), .empty)
@@ -194,12 +197,12 @@ final class TimeToChargeMetricsTests: XCTestCase {
     }
 
     func testZeroDurationOrZeroEnergyExcludedFromRates() {
-        let noEnd = ChargingSessionSummary(
+        let noEnd = TimeToChargeSectionChargingSessionSummary(
             id: 9, startedAt: "2026-01-01T00:00:00Z", endedAt: nil,
             startSocPct: 5, endSocPct: 90, totalEnergyAddedWh: 50000,
             peakPowerW: 120_000, chargerType: "Tesla"
         )
-        let zeroEnergy = ChargingSessionSummary(
+        let zeroEnergy = TimeToChargeSectionChargingSessionSummary(
             id: 10, startedAt: "2026-01-01T00:00:00Z", endedAt: "2026-01-01T00:30:00Z",
             startSocPct: 5, endSocPct: 90, totalEnergyAddedWh: 0,
             peakPowerW: 120_000, chargerType: "Tesla"
@@ -227,6 +230,7 @@ final class TimeToChargeMetricsTests: XCTestCase {
 
 // MARK: - Cards
 
+@MainActor
 final class TimeToChargeCardsTests: XCTestCase {
     func testBuildsFourCardsWithWiring() {
         let metrics = TimeToChargeProjection.metrics(from: TimeToChargeFixture.all)

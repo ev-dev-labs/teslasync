@@ -3,6 +3,7 @@ import XCTest
 
 /// The APNs payload parser: category resolution, deep-link routing, severity, and
 /// silent-push detection. Pure, so every case is deterministic.
+@MainActor
 final class PushPayloadParserTests: XCTestCase {
     func testChargingDeepLinkRoutesToCharging() {
         let note = PushPayloadParser.parse([

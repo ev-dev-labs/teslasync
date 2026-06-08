@@ -25,6 +25,7 @@ private let echo: @Sendable (String, String) -> String = { _, fallback in fallba
 
 // MARK: - Logic: doorClosed (port of ./helpers.ts doorClosed)
 
+@MainActor
 final class SecurityCardsDoorLogicTests: XCTestCase {
     func testAbsentIsClosed() {
         XCTAssertTrue(SecurityCardsLogic.doorClosed(.absent))
@@ -61,6 +62,7 @@ final class SecurityCardsDoorLogicTests: XCTestCase {
 
 // MARK: - Logic: windows (port of parseWindowState / allWindowsClosed)
 
+@MainActor
 final class SecurityCardsWindowLogicTests: XCTestCase {
     func testParseWindowState() {
         XCTAssertEqual(SecurityCardsLogic.parseWindowState(.text("Closed")), .closed)
@@ -94,6 +96,7 @@ final class SecurityCardsWindowLogicTests: XCTestCase {
 
 // MARK: - Signal truthiness (web `value ?`)
 
+@MainActor
 final class SecurityCardsSignalValueTests: XCTestCase {
     func testTruthiness() {
         XCTAssertTrue(SecurityCardsSignalValue.boolean(true).isTruthy)
@@ -108,6 +111,7 @@ final class SecurityCardsSignalValueTests: XCTestCase {
 
 // MARK: - Projection: the six cards across events
 
+@MainActor
 final class SecurityCardsProjectionTests: XCTestCase {
     private func card(_ cards: [SecurityCardViewModel], _ id: String) -> SecurityCardViewModel {
         guard let match = cards.first(where: { $0.id == id }) else {
@@ -200,6 +204,7 @@ final class SecurityCardsProjectionTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class SecurityCardsAccessibilityTests: XCTestCase {
     func testAccessibilityLabelCombinesTitleValueDetail() {
         let cards = SecurityCardsProjection.cards(
@@ -213,6 +218,7 @@ final class SecurityCardsAccessibilityTests: XCTestCase {
 
 // MARK: - Phase resolution
 
+@MainActor
 final class SecurityCardsPhaseTests: XCTestCase {
     private let event = SecurityCardsLatest(locked: true)
 

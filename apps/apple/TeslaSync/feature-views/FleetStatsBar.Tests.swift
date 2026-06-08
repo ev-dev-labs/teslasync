@@ -39,6 +39,7 @@ private func sampleInput(unit: DistanceUnitPref = .km, alerts: Int = 2) -> Fleet
 
 // MARK: - Unit conversion (port of lib/unitConversion + widget efficiency)
 
+@MainActor
 final class FleetUnitsTests: XCTestCase {
     func testDistanceFromSI() {
         XCTAssertEqual(FleetUnits.distanceFromSI(1000, .km), 1, accuracy: 1e-9)
@@ -64,6 +65,7 @@ final class FleetUnitsTests: XCTestCase {
 
 // MARK: - Number formatting (port of lib/numberFormat fmtNumber)
 
+@MainActor
 final class FleetStatsFormatTests: XCTestCase {
     func testGroupingAndFractionDigits() {
         XCTAssertEqual(FleetStatsFormat.number(1_234_567, decimals: 0, locale: enUS), "1,234,567")
@@ -90,6 +92,7 @@ final class FleetStatsFormatTests: XCTestCase {
 
 // MARK: - Responsive column math (web grid-cols-2 / sm:3 / md:4 / lg:5)
 
+@MainActor
 final class FleetStatsLayoutTests: XCTestCase {
     func testColumnsAtBreakpoints() {
         XCTAssertEqual(FleetStatsLayout.columnCount(forWidth: 320), 2)
@@ -105,6 +108,7 @@ final class FleetStatsLayoutTests: XCTestCase {
 
 // MARK: - Projection: five cards + wiring
 
+@MainActor
 final class FleetStatsProjectionTests: XCTestCase {
     func testBuildsFiveCardsInWebOrder() {
         let cards = FleetStatsProjection.cards(from: sampleInput(), locale: enUS)
@@ -169,6 +173,7 @@ final class FleetStatsProjectionTests: XCTestCase {
 
 // MARK: - Empty detection + phase resolution
 
+@MainActor
 final class FleetStatsPhaseTests: XCTestCase {
     func testIsEmpty() {
         XCTAssertTrue(FleetStatsProjection.isEmpty(FleetStatsInput()))
@@ -282,6 +287,7 @@ final class FleetStatsModelTests: XCTestCase {
 
 // MARK: - Accessibility content
 
+@MainActor
 final class FleetStatsAccessibilityTests: XCTestCase {
     func testCardLabelWithAndWithoutDetail() {
         XCTAssertEqual(

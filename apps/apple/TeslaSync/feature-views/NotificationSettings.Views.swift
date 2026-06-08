@@ -79,7 +79,7 @@ struct NotificationSettingsHeader: View {
                 .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: TSSpacing.sm)
-            NotificationFreshnessChip(connection: connection)
+            NotificationSettingsFreshnessChip(connection: connection)
         }
         .accessibilityElement(children: .combine)
     }
@@ -89,7 +89,7 @@ struct NotificationSettingsHeader: View {
 
 /// The header freshness chip reflecting the bound source's live-state (ADR-013). The web `useSettings`
 /// query can go stale, so a stalled read is surfaced here rather than shown as current.
-struct NotificationFreshnessChip: View {
+struct NotificationSettingsFreshnessChip: View {
     let connection: NotificationSettingsConnection
 
     private struct Descriptor {

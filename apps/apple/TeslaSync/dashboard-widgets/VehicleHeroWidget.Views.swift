@@ -14,7 +14,7 @@ import SwiftUI
 
 /// A neutral pill with a colored state dot + capitalized state label — the native
 /// port of the web `StatusBadge` (dot color from the FSM `badgeDot` override).
-struct VehicleHeroStatusBadge: View {
+struct VehicleHeroWidgetStatusBadge: View {
     let status: VehicleHeroStatusVisual
 
     var body: some View {
@@ -41,7 +41,7 @@ struct VehicleHeroStatusBadge: View {
 /// The live/stale/offline freshness chip shown in the header (web
 /// `FreshnessIndicator`). The colored dot mirrors the connection lifecycle.
 struct VehicleHeroFreshnessChip: View {
-    let connection: VehicleHeroConnection
+    let connection: VehicleHeroWidgetConnection
     let updatedAt: Date?
 
     var body: some View {
@@ -58,9 +58,9 @@ struct VehicleHeroFreshnessChip: View {
 
     private var descriptor: (Color, String) {
         switch connection {
-        case .live: (Color.TS.statusSuccess, VehicleHeroStrings.string("hero.live", "Live"))
-        case .stale: (Color.TS.statusWarning, VehicleHeroStrings.string("hero.connStale", "Stale"))
-        case .offline: (Color.TS.textMuted, VehicleHeroStrings.string("hero.connOffline", "Offline"))
+        case .live: (Color.TS.statusSuccess, VehicleHeroWidgetStrings.string("hero.live", "Live"))
+        case .stale: (Color.TS.statusWarning, VehicleHeroWidgetStrings.string("hero.connStale", "Stale"))
+        case .offline: (Color.TS.textMuted, VehicleHeroWidgetStrings.string("hero.connOffline", "Offline"))
         }
     }
 }
@@ -78,7 +78,7 @@ struct VehicleHeroRefreshButton: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.TS.textMuted)
-        .accessibilityLabel(VehicleHeroStrings.text("hero.refresh", "Refresh"))
+        .accessibilityLabel(VehicleHeroWidgetStrings.text("hero.refresh", "Refresh"))
     }
 }
 
@@ -87,7 +87,7 @@ struct VehicleHeroRefreshButton: View {
 /// The stale/offline banner shown above the content when the bound source is not
 /// live, so cached values are clearly labeled (web freshness-indicator intent).
 struct VehicleHeroConnectivityBanner: View {
-    let connection: VehicleHeroConnection
+    let connection: VehicleHeroWidgetConnection
 
     var body: some View {
         let isOffline = connection == .offline
@@ -99,7 +99,7 @@ struct VehicleHeroConnectivityBanner: View {
         return HStack(spacing: TSSpacing.xs) {
             Image(systemName: isOffline ? "wifi.slash" : "clock.arrow.circlepath")
                 .font(.system(size: 10, weight: .semibold))
-            VehicleHeroStrings.text(key, fallback).font(Font.TS.caption)
+            VehicleHeroWidgetStrings.text(key, fallback).font(Font.TS.caption)
         }
         .foregroundStyle(tone)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -141,7 +141,7 @@ struct VehicleHeroLoadingChrome: View {
         .padding(TSSpacing.lg)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .accessibilityElement()
-        .accessibilityLabel(VehicleHeroStrings.text("hero.loading", "Loading vehicle"))
+        .accessibilityLabel(VehicleHeroWidgetStrings.text("hero.loading", "Loading vehicle"))
     }
 }
 
@@ -153,12 +153,12 @@ struct VehicleHeroEmptyState: View {
     var body: some View {
         ContentUnavailableView {
             Label {
-                VehicleHeroStrings.text("hero.emptyTitle", "No vehicle")
+                VehicleHeroWidgetStrings.text("hero.emptyTitle", "No vehicle")
             } icon: {
                 Image(systemName: "car.fill")
             }
         } description: {
-            VehicleHeroStrings.text("hero.emptyHint", "Add a vehicle to see it here.")
+            VehicleHeroWidgetStrings.text("hero.emptyHint", "Add a vehicle to see it here.")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -177,7 +177,7 @@ struct VehicleHeroErrorState: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 26))
                 .foregroundStyle(Color.TS.statusDanger)
-            VehicleHeroStrings.text("hero.errorTitle", "Couldn't load vehicle")
+            VehicleHeroWidgetStrings.text("hero.errorTitle", "Couldn't load vehicle")
                 .font(Font.TS.panel)
                 .foregroundStyle(Color.TS.textPrimary)
                 .multilineTextAlignment(.center)
@@ -188,7 +188,7 @@ struct VehicleHeroErrorState: View {
                     .multilineTextAlignment(.center)
             }
             Button(action: onRetry) {
-                VehicleHeroStrings.text("hero.retry", "Retry")
+                VehicleHeroWidgetStrings.text("hero.retry", "Retry")
                     .font(Font.TS.caption)
                     .fontWeight(.semibold)
                     .padding(.horizontal, TSSpacing.md)
@@ -197,7 +197,7 @@ struct VehicleHeroErrorState: View {
                     .foregroundStyle(Color.TS.accent)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(VehicleHeroStrings.text("hero.retry", "Retry"))
+            .accessibilityLabel(VehicleHeroWidgetStrings.text("hero.retry", "Retry"))
         }
         .padding(TSSpacing.lg)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

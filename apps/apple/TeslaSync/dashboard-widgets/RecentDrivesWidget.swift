@@ -3,7 +3,7 @@
 //  TeslaSync — P4 dashboard widget · 0079 · RecentDrivesWidget (Apple)
 //
 //  The composable Recent Drives dashboard surface — SwiftUI parity of
-//  features/dashboard/widgets/RecentDrivesWidget.tsx. Binds through `RecentDrivesModel`
+//  features/dashboard/widgets/RecentDrivesWidget.tsx. Binds through `RecentDrivesWidgetModel`
 //  (no networking in the view) and renders every state from the web source.
 //
 
@@ -14,21 +14,21 @@ import SwiftUI
 /// The composable Recent Drives dashboard widget — the SwiftUI parity of
 /// `features/dashboard/widgets/RecentDrivesWidget.tsx`. Renders every state from the web source
 /// (loading / empty / error / stale / offline / content) inside a glass widget shell, binding
-/// through `RecentDrivesModel` (P1/S8). No networking lives here.
+/// through `RecentDrivesWidgetModel` (P1/S8). No networking lives here.
 public struct RecentDrivesWidget: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
-    public static let surfaceSlug = RecentDrivesSurface.slug
+    public static let surfaceSlug = RecentDrivesWidgetSurface.slug
 
     /// Canonical registry metadata (registry/driving.ts → "recent-drives").
-    public static let registration = RecentDrivesSurface.registration
+    public static let registration = RecentDrivesWidgetSurface.registration
 
-    @State private var model: RecentDrivesModel
+    @State private var model: RecentDrivesWidgetModel
     private let size: DashboardWidgetSize
     private let onOpenAll: (() -> Void)?
     private let onOpenDrive: ((Int64) -> Void)?
 
     public init(
-        model: RecentDrivesModel,
+        model: RecentDrivesWidgetModel,
         size: DashboardWidgetSize = RecentDrivesWidget.registration.defaultSize,
         onOpenAll: (() -> Void)? = nil,
         onOpenDrive: ((Int64) -> Void)? = nil
@@ -60,7 +60,7 @@ public struct RecentDrivesWidget: View {
 
     /// SwiftUI `Text` from the P1/S10 catalog (the view holds no English literals).
     private func text(_ key: String, _ fallback: String) -> Text {
-        Text(verbatim: RecentDrivesStrings.string(key, fallback))
+        Text(verbatim: RecentDrivesWidgetStrings.string(key, fallback))
     }
 }
 
@@ -96,13 +96,13 @@ extension RecentDrivesWidget {
         switch model.connection {
         case .live:
             tone = Color.TS.statusSuccess
-            label = RecentDrivesStrings.string("widget.recentDrives.live", "Live")
+            label = RecentDrivesWidgetStrings.string("widget.recentDrives.live", "Live")
         case .stale:
             tone = Color.TS.statusWarning
-            label = RecentDrivesStrings.string("widget.recentDrives.stale", "Stale")
+            label = RecentDrivesWidgetStrings.string("widget.recentDrives.stale", "Stale")
         case .offline:
             tone = Color.TS.textMuted
-            label = RecentDrivesStrings.string("widget.recentDrives.offline", "Offline")
+            label = RecentDrivesWidgetStrings.string("widget.recentDrives.offline", "Offline")
         }
         return HStack(spacing: 4) {
             Circle().fill(tone).frame(width: 6, height: 6)
@@ -210,7 +210,7 @@ extension RecentDrivesWidget {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: TSSpacing.xs) {
                     ForEach(model.projection.rows) { row in
-                        RecentDriveRowView(row: row, onOpen: rowAction(for: row.id))
+                        RecentDrivesWidgetDriveRowView(row: row, onOpen: rowAction(for: row.id))
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .top)

@@ -2,6 +2,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Quiet-hours windowing + the settings-derived foreground presentation policy.
+@MainActor
 final class QuietHoursTests: XCTestCase {
     func testWrapAroundWindowContainsNightHours() {
         let quiet = QuietHours(isEnabled: true, startMinute: 22 * 60, endMinute: 7 * 60)

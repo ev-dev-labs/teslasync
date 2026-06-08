@@ -15,6 +15,7 @@ import XCTest
 
 // MARK: - Adapter: formatting + temperature conversion (web parity)
 
+@MainActor
 final class LiveMotorFormatTests: XCTestCase {
     func testNumberGroupsAndFixesFractionDigits() {
         XCTAssertEqual(LiveMotorFormat.number(1234.0, decimals: 1), "1,234.0")
@@ -48,6 +49,7 @@ final class LiveMotorFormatTests: XCTestCase {
 
 // MARK: - Adapter: projector gauge math (web parity)
 
+@MainActor
 final class LiveMotorProjectorTests: XCTestCase {
     private func gauge(_ id: String, in projection: LiveMotorProjection) -> MotorGaugeTile? {
         projection.gauges.first { $0.id == id }
@@ -316,6 +318,7 @@ final class LiveMotorStatusModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class LiveMotorAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryGaugeAndShift() {
         let motor = MotorSnapshotInput(

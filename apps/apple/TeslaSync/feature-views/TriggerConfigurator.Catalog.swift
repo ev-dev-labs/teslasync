@@ -126,8 +126,8 @@ public enum SignalOperatorCatalog {
 
 // MARK: - Signal fields (web SIGNAL_FIELDS / SIGNAL_FIELD_OPTIONS / BOOL_FIELD_KEYS)
 
-/// The data type of a signal field (web `SignalFieldType`).
-public enum SignalFieldType: String, Sendable, Equatable {
+/// The data type of a signal field (web `TriggerConfiguratorSignalFieldType`).
+public enum TriggerConfiguratorSignalFieldType: String, Sendable, Equatable {
     case numeric
     case boolean
     case string
@@ -137,7 +137,7 @@ public enum SignalCatalog {
     /// Web `SIGNAL_FIELDS` — the key, the i18n label key + English fallback, and the type.
     /// The web `SIGNAL_FIELD_OPTIONS` uses `f.label` directly; the native surface routes
     /// the same display text through the facade so no English literal lives in the view.
-    public static let fields: [(option: TriggerOption<String>, type: SignalFieldType)] = [
+    public static let fields: [(option: TriggerOption<String>, type: TriggerConfiguratorSignalFieldType)] = [
         (TriggerOption("battery_level", "automations.signals.battery_level", "Battery Level"), .numeric),
         (TriggerOption("inside_temp", "automations.signals.inside_temp", "Inside Temperature"), .numeric),
         (TriggerOption("outside_temp", "automations.signals.outside_temp", "Outside Temperature"), .numeric),

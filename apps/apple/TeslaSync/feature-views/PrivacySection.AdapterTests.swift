@@ -18,6 +18,7 @@ import XCTest
 
 // MARK: - Consent domain
 
+@MainActor
 final class PrivacyConsentStateTests: XCTestCase {
     func testParseMapsExplicitDecisionsAndFoldsEverythingElseToUnknown() {
         XCTAssertEqual(PrivacyConsentState.parse("accepted"), .accepted)
@@ -39,6 +40,7 @@ final class PrivacyConsentStateTests: XCTestCase {
 
 // MARK: - Consent copy
 
+@MainActor
 final class PrivacyConsentCopyTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -68,6 +70,7 @@ final class PrivacyConsentCopyTests: XCTestCase {
 
 // MARK: - Recent-pages counter + empty
 
+@MainActor
 final class PrivacyRecentCounterTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -87,6 +90,7 @@ final class PrivacyRecentCounterTests: XCTestCase {
 
 // MARK: - Disabled predicates (web `disabled`)
 
+@MainActor
 final class PrivacyDisabledTests: XCTestCase {
     func testClearDisabledOnlyWhenEmpty() {
         XCTAssertTrue(PrivacyAdapter.isClearDisabled(count: 0))
@@ -114,6 +118,7 @@ final class PrivacyDisabledTests: XCTestCase {
 
 // MARK: - Status banner + precedence
 
+@MainActor
 final class PrivacyStatusBannerTests: XCTestCase {
     func testFreshLoadedPolicyHasNoBanner() {
         XCTAssertNil(PrivacyAdapter.statusBanner(status: .loaded, freshness: .fresh))
@@ -145,6 +150,7 @@ final class PrivacyStatusBannerTests: XCTestCase {
 
 // MARK: - Phase resolver
 
+@MainActor
 final class PrivacyPhaseResolverTests: XCTestCase {
     func testLoadingStatusHoldsSkeleton() {
         XCTAssertEqual(PrivacyPhaseResolver.resolve(status: .loading), .loading)
@@ -158,6 +164,7 @@ final class PrivacyPhaseResolverTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class PrivacyAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

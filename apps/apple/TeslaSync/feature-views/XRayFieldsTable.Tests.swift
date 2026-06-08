@@ -48,6 +48,7 @@ private final class SpyTelemetry: XRayFieldsTelemetry, @unchecked Sendable {
 
 // MARK: - Adapter parity
 
+@MainActor
 final class XRayFieldsAdapterTests: XCTestCase {
     func testValueKindLabelsMatchWeb() {
         let expected: [Int: String] = [
@@ -116,6 +117,7 @@ final class XRayFieldsAdapterTests: XCTestCase {
 
 // MARK: - Sort parity
 
+@MainActor
 final class XRayFieldsSorterTests: XCTestCase {
     func testSampleCountSort() {
         XCTAssertEqual(
@@ -164,6 +166,7 @@ final class XRayFieldsSorterTests: XCTestCase {
 
 // MARK: - Projection + accessibility
 
+@MainActor
 final class XRayFieldsProjectionTests: XCTestCase {
     private func project() -> [XRayFieldRow] {
         XRayFieldsProjector.project(

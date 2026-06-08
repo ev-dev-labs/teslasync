@@ -3,6 +3,7 @@ import XCTest
 
 /// Privacy-redaction tests: VIN stripping, name truncation, and the coordinate guard
 /// that keeps precise location out of the cached widget payload (ADR-005/ADR-013).
+@MainActor
 final class WidgetRedactionTests: XCTestCase {
     func testStripsEmbeddedVIN() {
         let result = WidgetRedaction.vehicleName("Tesla 5YJ3E1EA7KF000000")

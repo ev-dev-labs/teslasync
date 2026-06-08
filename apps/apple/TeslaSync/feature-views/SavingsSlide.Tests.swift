@@ -20,6 +20,7 @@
 import XCTest
 @testable import TeslaSync
 
+@MainActor
 final class SavingsSlideAdapterTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
 
@@ -98,6 +99,7 @@ final class SavingsSlideAdapterTests: XCTestCase {
 
 // MARK: - Presentation resolver (every state)
 
+@MainActor
 final class SavingsSlidePresentationTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
     private let savings = YearReviewSavings(gasSavings: 1850, totalChargingCost: 412)
@@ -176,6 +178,7 @@ final class SavingsSlidePresentationTests: XCTestCase {
 
 // MARK: - Telemetry + model
 
+@MainActor
 final class SavingsSlideModelTests: XCTestCase {
     private let savings = YearReviewSavings(gasSavings: 1850, totalChargingCost: 412)
 

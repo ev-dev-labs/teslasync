@@ -19,6 +19,7 @@ import XCTest
 
 // MARK: - Adapter: definition + status → projection
 
+@MainActor
 final class CommandTileAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the projection tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }

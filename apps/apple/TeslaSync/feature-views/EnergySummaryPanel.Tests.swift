@@ -33,6 +33,7 @@ private let sampleDrive = EnergySummaryInputData(
 
 // MARK: - Number formatting (port of numberFormat.ts fmtNumber / fmtWithUnit)
 
+@MainActor
 final class EnergySummaryFormatNumberTests: XCTestCase {
     func testNumberGroupsAndFixesTwoDecimals() {
         XCTAssertEqual(EnergySummaryFormat.number(18450, locale: enUS), "18,450.00")
@@ -61,6 +62,7 @@ final class EnergySummaryFormatNumberTests: XCTestCase {
 
 // MARK: - Energy ladder (web `value > 1000 ? kWh : Wh`)
 
+@MainActor
 final class EnergySummaryFormatEnergyTests: XCTestCase {
     func testAtOrBelowThresholdStaysWattHours() {
         XCTAssertEqual(EnergySummaryFormat.energy(1000, locale: enUS), "1,000.00 Wh")
@@ -86,6 +88,7 @@ final class EnergySummaryFormatEnergyTests: XCTestCase {
 
 // MARK: - Efficiency (web `whPerKm × factor` + Wh/km|Wh/mi, em-dash when not positive)
 
+@MainActor
 final class EnergySummaryFormatEfficiencyTests: XCTestCase {
     func testMetricKeepsWattHoursPerKilometre() {
         XCTAssertEqual(
@@ -110,6 +113,7 @@ final class EnergySummaryFormatEfficiencyTests: XCTestCase {
 
 // MARK: - Battery used (web `${start - end}%` + `${start ?? '?'}% → ${end ?? '?'}%`)
 
+@MainActor
 final class EnergySummaryFormatBatteryTests: XCTestCase {
     func testDeltaAndDetailWhenBothPresent() {
         XCTAssertEqual(EnergySummaryFormat.batteryUsedValue(start: 86, end: 61, locale: enUS), "25%")
@@ -135,6 +139,7 @@ final class EnergySummaryFormatBatteryTests: XCTestCase {
 
 // MARK: - Range used (web `fmtWithUnit(start - end, distanceUnit)`, em-dash when missing)
 
+@MainActor
 final class EnergySummaryFormatRangeTests: XCTestCase {
     func testMetricAndImperialUnitsAndDelta() {
         XCTAssertEqual(
@@ -155,6 +160,7 @@ final class EnergySummaryFormatRangeTests: XCTestCase {
 
 // MARK: - Distance preference (web `useUnits().unitPrefs.distance`)
 
+@MainActor
 final class EnergySummaryDistanceUnitTests: XCTestCase {
     func testMetricMapsToKilometres() {
         let unit = EnergySummaryDistanceUnit(.metric)
@@ -175,6 +181,7 @@ final class EnergySummaryDistanceUnitTests: XCTestCase {
 
 // MARK: - Metrics builder (cached → projection)
 
+@MainActor
 final class EnergySummaryMetricsBuilderTests: XCTestCase {
     func testBuildsSixCellsInSourceOrderWithMetricUnits() {
         let metrics = EnergySummaryMetricsBuilder.metrics(for: sampleDrive, unit: .km, locale: enUS)
@@ -225,6 +232,7 @@ final class EnergySummaryMetricsBuilderTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
+@MainActor
 final class EnergySummaryProjectionTests: XCTestCase {
     func testErrorTakesPrecedence() {
         let resolved = EnergySummaryProjection.resolve(
@@ -355,6 +363,7 @@ final class EnergySummaryModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class EnergySummaryAccessibilityTests: XCTestCase {
     func testMetricLabelJoinsLabelAndValue() {
         XCTAssertEqual(

@@ -115,7 +115,7 @@ public final class SpeedHeatmapModel {
     public private(set) var grid: [[HeatCell]] = []
     public private(set) var maxSpeed: Double = 0
     public private(set) var totalDrives: Int = 0
-    public private(set) var unit: SpeedUnit = .kilometersPerHour
+    public private(set) var unit: SpeedHeatmapWidgetUnit = .kilometersPerHour
     public private(set) var vehicle: SpeedHeatmapVehicleRef?
     public private(set) var updatedAt: Date?
 
@@ -171,7 +171,7 @@ public final class SpeedHeatmapModel {
         connection = update.connection
         vehicle = update.vehicle
         updatedAt = update.updatedAt
-        unit = SpeedUnit.fromLabel(update.speedUnitLabel)
+        unit = SpeedHeatmapWidgetUnit.fromLabel(update.speedUnitLabel)
         grid = SpeedHeatmapBuilder.buildHeatmap(drives: update.drives, speedUnit: unit, calendar: calendar)
         maxSpeed = SpeedHeatmapBuilder.maxSpeed(in: grid)
         totalDrives = SpeedHeatmapBuilder.totalDrives(in: grid)
@@ -263,7 +263,7 @@ public enum SpeedHeatmapStrings {
 /// Builds the VoiceOver value spoken for the heatmap. Pure + public so the a11y
 /// content can be unit-tested without rendering the view.
 public enum SpeedHeatmapAccessibility {
-    public static func summary(grid: [[HeatCell]], unit: SpeedUnit, calendar: Calendar = .current) -> String {
+    public static func summary(grid: [[HeatCell]], unit: SpeedHeatmapWidgetUnit, calendar: Calendar = .current) -> String {
         let title = SpeedHeatmapStrings.string("widget.speedHeatmap.title", "Speed Heatmap")
         let total = SpeedHeatmapBuilder.totalDrives(in: grid)
         guard total > 0 else {
@@ -290,7 +290,7 @@ public enum SpeedHeatmapAccessibility {
     /// `"{day} {hour}:00 – {speed} {unit} ({count} drives)"`, or `"… – No data"`
     /// when the slot has no drives. Used for the peak-cell a11y phrase and to
     /// keep the `drivesSuffix` / `noData` source keys genuinely exercised.
-    public static func cellDescription(_ cell: HeatCell, dayLabels: [String], unit: SpeedUnit) -> String {
+    public static func cellDescription(_ cell: HeatCell, dayLabels: [String], unit: SpeedHeatmapWidgetUnit) -> String {
         let dayLabel = cell.day < dayLabels.count ? dayLabels[cell.day] : ""
         let prefix = "\(dayLabel) \(cell.hour):00"
         guard cell.driveCount > 0 else {

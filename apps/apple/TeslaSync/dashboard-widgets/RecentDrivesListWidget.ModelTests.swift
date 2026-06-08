@@ -109,6 +109,7 @@ final class RecentDrivesModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class RecentDrivesRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = RecentDrivesListWidget.registration
@@ -136,6 +137,7 @@ final class RecentDrivesRegistryTests: XCTestCase {
 
 // MARK: - Accessibility content
 
+@MainActor
 final class RecentDrivesAccessibilityTests: XCTestCase {
     func testRowLabelIncludesEveryFieldWhenWide() {
         let projection = RecentDrivesProjector.project(

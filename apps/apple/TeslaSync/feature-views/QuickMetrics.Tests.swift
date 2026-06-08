@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: formatting (web fmtNumber / Currency / fmtWithUnit / formatDuration parity)
 
+@MainActor
 final class QuickMetricsFormatTests: XCTestCase {
     private let enUS = Locale(identifier: "en-US")
 
@@ -86,6 +87,7 @@ final class QuickMetricsFormatTests: XCTestCase {
 
 // MARK: - Adapter: projection (web stats consumer parity)
 
+@MainActor
 final class QuickMetricsProjectionTests: XCTestCase {
     private let enUS = Locale(identifier: "en-US")
 
@@ -292,8 +294,8 @@ final class QuickMetricsModelTests: XCTestCase {
             QuickMetricsUpdate(
                 status: .loaded,
                 stats: sampleStats(),
-                refreshing: true,
                 connection: .offline,
+                refreshing: true,
                 updatedAt: Date()
             )
         )
@@ -319,6 +321,7 @@ final class QuickMetricsModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class QuickMetricsAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

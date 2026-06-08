@@ -55,6 +55,7 @@
             )
         }
 
+        @MainActor
         static func card(_ update: BrowserPushChannelCardUpdate) -> some View {
             let source = InMemoryBrowserPushChannelCardSource(initial: update)
             let model = BrowserPushChannelCardModel(

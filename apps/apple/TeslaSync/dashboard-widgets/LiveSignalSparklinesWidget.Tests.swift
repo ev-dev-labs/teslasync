@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection
 
+@MainActor
 final class LiveSignalSparklinesAdapterTests: XCTestCase {
     func testSelectSignalsDefaultsWhenUnset() {
         let result = LiveSignalSparklinesBuilder.selectSignals(
@@ -299,6 +300,7 @@ final class LiveSignalSparklinesModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class LiveSignalSparklinesRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = LiveSignalSparklinesWidget.registration
@@ -332,6 +334,7 @@ final class LiveSignalSparklinesRegistryTests: XCTestCase {
 
 // MARK: - Accessibility copy
 
+@MainActor
 final class LiveSignalSparklinesAccessibilityTests: XCTestCase {
     func testRowLabelIncludesNameValueAndTrend() {
         let row = SignalRowProjection(

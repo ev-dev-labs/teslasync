@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web derive block)
 
+@MainActor
 final class MileageStatsAdapterTests: XCTestCase {
     func testProjectReturnsNilWithoutInput() {
         XCTAssertNil(MileageStatsBuilder.project(nil, unit: .kilometers))
@@ -173,6 +174,7 @@ final class MileageStatsModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class MileageStatsRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MileageStatsWidget.registration
@@ -202,6 +204,7 @@ final class MileageStatsRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class MileageStatsAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryStatLabelAndProjection() throws {
         let input = MileageStatsInput(lifetimeKm: 1000, last30dKm: 300)

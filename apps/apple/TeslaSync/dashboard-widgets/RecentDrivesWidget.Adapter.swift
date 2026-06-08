@@ -2,7 +2,7 @@
 //  RecentDrivesWidget.Adapter.swift
 //  TeslaSync — P4 dashboard widget · 0079 · RecentDrivesWidget (Apple)
 //
-//  Pure (Foundation-only) projection: cached `RecentDriveDTO`s + `RecentDrivesUnitPrefs`
+//  Pure (Foundation-only) projection: cached `RecentDrivesWidgetDriveDTO`s + `RecentDrivesWidgetUnitPrefs`
 //  → per-row display strings, reproducing the web source's numeric + date pipeline VERBATIM
 //  so the native surface shows the exact same values as
 //  features/dashboard/widgets/RecentDrivesWidget.tsx.
@@ -28,7 +28,7 @@ func convertRecentDrivesDistanceFromSI(_ meters: Double, to unit: RecentDrivesDi
 
 /// Locale-aware number formatting that mirrors the web `fmtNumber` / `fmtInt`
 /// (`Intl.NumberFormat`), used for the distance value and the minutes count.
-public enum RecentDrivesFormat {
+public enum RecentDrivesWidgetFormat {
     /// `safeNumber` from numberFormat.ts: non-finite inputs collapse to 0.
     static func safeNumber(_ value: Double) -> Double {
         value.isFinite ? value : 0
@@ -58,7 +58,7 @@ public enum RecentDrivesFormat {
 // MARK: - Injected, pre-localized copy (P1/S10) for the pure projector
 
 /// The small set of pre-localized strings the projector needs. Injected so the projection stays
-/// Foundation-only and host-testable (the view/model resolve these from `RecentDrivesStrings`),
+/// Foundation-only and host-testable (the view/model resolve these from `RecentDrivesWidgetStrings`),
 /// mirroring the web source's literal `min` / `?` fallbacks and the `· … % → … %` detail layout.
 public struct RecentDrivesCopy: Sendable, Equatable {
     /// Positional format for the detail line. Web:
@@ -89,7 +89,7 @@ public struct RecentDrivesCopy: Sendable, Equatable {
 /// One projected drive row: the formatted distance + unit, the `… min · …% → …%` detail line, a
 /// short date, and a spoken accessibility label. Mirrors the web list item built in
 /// `RecentDrivesWidget.tsx` (`distance + unit`, `minutes · start% → end%`, `formatDateShort`).
-public struct RecentDriveRow: Identifiable, Equatable {
+public struct RecentDrivesWidgetDriveRow: Identifiable, Equatable {
     public let id: Int64
     public let distanceValue: String
     public let distanceUnit: String
@@ -122,11 +122,11 @@ public struct RecentDriveRow: Identifiable, Equatable {
 // MARK: - Projection
 
 /// The projected widget content: the (≤5) recent-drive rows. Computed once per snapshot.
-public struct RecentDrivesProjection: Equatable {
+public struct RecentDrivesWidgetProjection: Equatable {
     /// Last-five drive rows, newest-first as delivered by the source.
-    public let rows: [RecentDriveRow]
+    public let rows: [RecentDrivesWidgetDriveRow]
 
-    public init(rows: [RecentDriveRow]) {
+    public init(rows: [RecentDrivesWidgetDriveRow]) {
         self.rows = rows
     }
 
@@ -135,41 +135,41 @@ public struct RecentDrivesProjection: Equatable {
     }
 }
 
-/// Pure projector: cached `RecentDriveDTO`s + unit prefs → `RecentDrivesProjection`. Every value is
+/// Pure projector: cached `RecentDrivesWidgetDriveDTO`s + unit prefs → `RecentDrivesWidgetProjection`. Every value is
 /// computed with the same arithmetic + formatting as the web widget so a user with the web and
 /// native dashboards open side by side sees identical rows.
-public enum RecentDrivesProjector {
+public enum RecentDrivesWidgetProjector {
     /// The widget's contract is "Last 5 drives" (registry: recent-drives). The source already
     /// requests `limit=5`; we defensively cap here too.
     public static let maxRows = 5
 
     public static func project(
-        drives: [RecentDriveDTO],
-        units: RecentDrivesUnitPrefs,
+        drives: [RecentDrivesWidgetDriveDTO],
+        units: RecentDrivesWidgetUnitPrefs,
         copy: RecentDrivesCopy = .fallback,
         timeZone: TimeZone = .current
-    ) -> RecentDrivesProjection {
+    ) -> RecentDrivesWidgetProjection {
         let rows = drives.prefix(maxRows).map { drive in
             project(drive: drive, units: units, copy: copy, timeZone: timeZone)
         }
-        return RecentDrivesProjection(rows: Array(rows))
+        return RecentDrivesWidgetProjection(rows: Array(rows))
     }
 
     public static func project(
-        drive: RecentDriveDTO,
-        units: RecentDrivesUnitPrefs,
+        drive: RecentDrivesWidgetDriveDTO,
+        units: RecentDrivesWidgetUnitPrefs,
         copy: RecentDrivesCopy = .fallback,
         timeZone: TimeZone = .current
-    ) -> RecentDriveRow {
+    ) -> RecentDrivesWidgetDriveRow {
         let locale = units.localeIdentifier
 
         // Distance: convertDistanceFromSI(distance_m ?? 0, unitPrefs.distance) then fmtNumber(_, 1).
         let displayDistance = convertRecentDrivesDistanceFromSI(drive.distanceM ?? 0, to: units.distance)
-        let distanceValue = RecentDrivesFormat.number(displayDistance, decimals: 1, localeIdentifier: locale)
+        let distanceValue = RecentDrivesWidgetFormat.number(displayDistance, decimals: 1, localeIdentifier: locale)
         let distanceUnit = units.distance.symbol
 
         // Detail: fmtInt((duration_s ?? 0) / 60) min · start% → end%.
-        let minutes = RecentDrivesFormat.integer((drive.durationS ?? 0) / 60, localeIdentifier: locale)
+        let minutes = RecentDrivesWidgetFormat.integer((drive.durationS ?? 0) / 60, localeIdentifier: locale)
         let startSoc = socLabel(drive.startSocPct, copy: copy)
         let endSoc = socLabel(drive.endSocPct, copy: copy)
         let detailText = String(format: copy.tripDetailFormat, minutes, startSoc, endSoc)
@@ -179,7 +179,7 @@ public enum RecentDrivesProjector {
 
         let accessibilityLabel = "\(distanceValue) \(distanceUnit), \(detailText), \(dateText)"
 
-        return RecentDriveRow(
+        return RecentDrivesWidgetDriveRow(
             id: drive.id,
             distanceValue: distanceValue,
             distanceUnit: distanceUnit,
@@ -228,10 +228,10 @@ public enum RecentDrivesProjector {
 
 /// Builds the VoiceOver summary spoken for the list. Pure + public so the a11y label content can be
 /// unit-tested without rendering the view.
-public enum RecentDrivesAccessibility {
+public enum RecentDrivesWidgetAccessibility {
     /// One spoken phrase per visible row, prefixed by the surface title:
     /// "Recent Drives. 12.3 km, 25 min · 80% → 62%, Jun 7. …".
-    public static func summary(for projection: RecentDrivesProjection, title: String) -> String {
+    public static func summary(for projection: RecentDrivesWidgetProjection, title: String) -> String {
         var parts = [title]
         for row in projection.rows {
             parts.append(row.accessibilityLabel)

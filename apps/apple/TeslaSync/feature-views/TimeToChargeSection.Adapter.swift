@@ -96,13 +96,13 @@ public enum TimeToChargeFormat {
 public enum TimeToChargeProjection {
     /// Whether a session is DC fast charging (web `helpers.ts isDcSession`): it
     /// has a non-empty charger type, or a peak power above 20 kW.
-    public static func isDcSession(_ session: ChargingSessionSummary) -> Bool {
+    public static func isDcSession(_ session: TimeToChargeSectionChargingSessionSummary) -> Bool {
         if let chargerType = session.chargerType, !chargerType.isEmpty { return true }
         return (session.peakPowerW ?? 0) > 20000
     }
 
     /// Builds the resolved metrics from the sessions (web `timeToCharge` memo).
-    public static func metrics(from sessions: [ChargingSessionSummary]) -> TimeToChargeMetrics {
+    public static func metrics(from sessions: [TimeToChargeSectionChargingSessionSummary]) -> TimeToChargeMetrics {
         guard !sessions.isEmpty else { return .empty }
         let dcSessions = sessions.filter(isDcSession)
         guard !dcSessions.isEmpty else { return .empty }
@@ -119,13 +119,13 @@ public enum TimeToChargeProjection {
 
     /// Whether a session crosses the `start <= ceiling` and `end >= 80` band
     /// (web `start_soc_pct <= n && (end_soc_pct ?? 0) >= 80`).
-    private static func crosses(_ session: ChargingSessionSummary, startCeiling: Double) -> Bool {
+    private static func crosses(_ session: TimeToChargeSectionChargingSessionSummary, startCeiling: Double) -> Bool {
         session.startSocPct <= startCeiling && (session.endSocPct ?? 0) >= 80
     }
 
     /// The average crossing-session duration for a band, or `nil` when none cross
     /// (web `cross.length ? avg(...) : null`).
-    private static func bandAverage(_ dcSessions: [ChargingSessionSummary], startCeiling: Double) -> Double? {
+    private static func bandAverage(_ dcSessions: [TimeToChargeSectionChargingSessionSummary], startCeiling: Double) -> Double? {
         let crossing = dcSessions.filter { crosses($0, startCeiling: startCeiling) }
         guard !crossing.isEmpty else { return nil }
         let durations = crossing.map {
@@ -136,7 +136,7 @@ public enum TimeToChargeProjection {
 
     /// The kWh/h charge rate for each session with a positive duration and added
     /// energy (web `withRate`): `(kWh / minutes) * 60`.
-    private static func chargeRates(_ dcSessions: [ChargingSessionSummary]) -> [ChargeRateRef] {
+    private static func chargeRates(_ dcSessions: [TimeToChargeSectionChargingSessionSummary]) -> [ChargeRateRef] {
         dcSessions.compactMap { session in
             let minutes = TimeToChargeFormat.durationMinutes(startedAt: session.startedAt, endedAt: session.endedAt)
             guard minutes > 0, session.totalEnergyAddedWh > 0 else { return nil }
@@ -161,7 +161,7 @@ public enum TimeToChargeProjection {
     }
 
     /// The per-year trend series (web `byYear` map → sorted `yearlyTrend`).
-    private static func yearlyTrend(_ dcSessions: [ChargingSessionSummary]) -> [YearlyTrendPoint] {
+    private static func yearlyTrend(_ dcSessions: [TimeToChargeSectionChargingSessionSummary]) -> [YearlyTrendPoint] {
         struct Bucket {
             var d10: [Double] = []
             var d20: [Double] = []
@@ -286,7 +286,7 @@ public extension TimeToChargePresentation {
     /// refresh/error; a resolved-but-empty session set becomes the friendly
     /// empty state (never a blank box).
     static func resolve(
-        state: TimeToChargeLoadState<[ChargingSessionSummary]>,
+        state: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]>,
         locale: Locale = .current
     ) -> TimeToChargePresentation {
         switch state {
@@ -307,7 +307,7 @@ public extension TimeToChargePresentation {
     }
 
     private static func content(
-        _ sessions: [ChargingSessionSummary],
+        _ sessions: [TimeToChargeSectionChargingSessionSummary],
         freshness: TimeToChargeFreshness,
         refreshing: Bool,
         locale: Locale
@@ -323,7 +323,7 @@ public extension TimeToChargePresentation {
 
     private static func resolveFailure(
         _ error: TimeToChargeError,
-        cached: [ChargingSessionSummary]?,
+        cached: [TimeToChargeSectionChargingSessionSummary]?,
         stale: Bool,
         locale: Locale
     ) -> TimeToChargePresentation {

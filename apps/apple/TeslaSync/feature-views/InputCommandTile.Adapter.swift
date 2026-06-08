@@ -23,7 +23,7 @@ import Foundation
 
 /// The command tile's emphasis — the native mirror of the web `CommandDef.variant`.
 /// The wire raw value is preserved (`"default"`) for parity with the source config.
-public enum CommandTileVariant: String, Sendable, Equatable, CaseIterable {
+public enum InputCommandTileCommandTileVariant: String, Sendable, Equatable, CaseIterable {
     case standard = "default"
     case danger
     case success
@@ -51,7 +51,7 @@ public enum CommandTileAccent: String, Sendable, Equatable {
 /// One input-command tile's definition — the native mirror of the web `CommandDef`
 /// fields the tile renders. The numeric/string command identity stays raw; the
 /// label/sublabel are carried as i18n key + English fallback (resolved in the view).
-public struct CommandTileDef: Identifiable, Equatable, Sendable {
+public struct InputCommandTileCommandTileDef: Identifiable, Equatable, Sendable {
     public let id: String
     public let command: String
     public let labelKey: String
@@ -59,7 +59,7 @@ public struct CommandTileDef: Identifiable, Equatable, Sendable {
     public let sublabelKey: String?
     public let sublabelFallback: String?
     public let systemImage: String
-    public let variant: CommandTileVariant
+    public let variant: InputCommandTileCommandTileVariant
 
     public init(
         id: String,
@@ -69,7 +69,7 @@ public struct CommandTileDef: Identifiable, Equatable, Sendable {
         sublabelKey: String? = nil,
         sublabelFallback: String? = nil,
         systemImage: String,
-        variant: CommandTileVariant = .standard
+        variant: InputCommandTileCommandTileVariant = .standard
     ) {
         self.id = id
         self.command = command
@@ -93,7 +93,7 @@ public struct CommandTileDef: Identifiable, Equatable, Sendable {
 /// The outcome of the most recent command run. The web tile tints the status line
 /// green when the string starts with `✓` and red otherwise; this makes the prefix
 /// convention explicit and testable.
-public enum CommandTileOutcome: String, Sendable, Equatable {
+public enum InputCommandTileCommandTileOutcome: String, Sendable, Equatable {
     case success
     case failure
 }
@@ -103,10 +103,10 @@ public struct CommandTileStatus: Equatable, Sendable {
     public static let successMarker = "✓"
     public static let failureMarker = "✗"
 
-    public let outcome: CommandTileOutcome
+    public let outcome: InputCommandTileCommandTileOutcome
     public let detail: String
 
-    public init(outcome: CommandTileOutcome, detail: String) {
+    public init(outcome: InputCommandTileCommandTileOutcome, detail: String) {
         self.outcome = outcome
         self.detail = detail
     }
@@ -140,7 +140,7 @@ public struct CommandTileStatus: Equatable, Sendable {
 
 /// Builds the VoiceOver strings from already-localised parts, so the spoken content
 /// is asserted without rendering the view.
-public enum CommandTileAccessibility {
+public enum InputCommandTileCommandTileAccessibility {
     /// The tile's spoken label: "{label}" or "{label}, {sublabel}".
     public static func tileLabel(label: String, sublabel: String?) -> String {
         guard let sublabel, !sublabel.isEmpty else { return label }

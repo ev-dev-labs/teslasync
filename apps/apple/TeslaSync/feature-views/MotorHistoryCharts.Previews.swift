@@ -21,7 +21,7 @@
     /// A realistic short drive: a throttle pull with intermittent regen on lift-off,
     /// correlated front/rear torque, and motor rpm rising with road speed.
     private enum MotorHistoryChartsPreviewData {
-        static let samples: [MotorHistoryChartsSample] = {
+        nonisolated(unsafe) static let samples: [MotorHistoryChartsSample] = {
             let formatter = ISO8601DateFormatter()
             let base = Date(timeIntervalSince1970: 1_700_000_000)
             return (0 ..< 24).map { index in

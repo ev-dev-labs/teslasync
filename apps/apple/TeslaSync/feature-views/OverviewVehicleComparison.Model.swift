@@ -105,7 +105,7 @@ public final class OverviewComparisonModel {
 
     public private(set) var phase: OverviewRenderPhase = .loading
     public private(set) var freshness: OverviewFreshness = .fresh
-    public private(set) var connection: OverviewConnection = .live
+    public private(set) var connection: OverviewVehicleComparisonConnection = .live
     public private(set) var vehicles: [OverviewVehicle] = []
     public private(set) var distanceUnit: OverviewDistanceUnit = .km
     public private(set) var updatedAt: Date?

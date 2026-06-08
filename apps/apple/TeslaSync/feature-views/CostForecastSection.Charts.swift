@@ -9,7 +9,7 @@
 //      `LineMark` over the historical months, and the projected-cost dashed
 //      `LineMark` over the forecast months. A custom legend (web `Legend`) sits
 //      above the plot.
-//    • CostPerKwhChart — the web `LineChart`: a `LineMark` + `PointMark` of the
+//    • CostForecastSectionPerKwhChart — the web `LineChart`: a `LineMark` + `PointMark` of the
 //      historical `cost_per_kwh`.
 //  Each chart exposes a single accessible summary so VoiceOver isn't handed an
 //  opaque image. Series colors mirror the web exactly (actual = chart palette[0];
@@ -192,7 +192,7 @@ struct CostForecastChart: View {
 
 /// The cost-per-kWh trend line (web `LineChart` plotting `cost_per_kwh`): a single
 /// cyan line with point dots and a dollar axis, with an accessible range summary.
-struct CostPerKwhChart: View {
+struct CostForecastSectionPerKwhChart: View {
     let points: [CostPerKwhPoint]
     let upperBound: Double
     let localize: (String, String) -> String

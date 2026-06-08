@@ -173,6 +173,7 @@ final class ComputedMetricPreviewModelTests: XCTestCase {
 
 // MARK: - Telemetry: P1/S11 view.opened
 
+@MainActor
 final class ComputedMetricEditorTelemetryTests: XCTestCase {
     func testReporterEmitsSurfaceSlug() {
         let spy = SpyComputedMetricEditorTelemetry()

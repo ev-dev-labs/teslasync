@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: conversion + formatting (web parity)
 
+@MainActor
 final class DrivingUnitMathTests: XCTestCase {
     func testSafeCoercesNonFinite() {
         XCTAssertEqual(DrivingUnitMath.safe(42), 42, accuracy: 0.0001)
@@ -60,6 +61,7 @@ final class DrivingUnitMathTests: XCTestCase {
 
 // MARK: - Adapter: projection (web parity)
 
+@MainActor
 final class DrivingPerformanceProjectionTests: XCTestCase {
     private let imperial = DrivingUnitPrefs(distance: "mi", speed: "mph", locale: "en-US")
     private let metric = DrivingUnitPrefs(distance: "km", speed: "km/h", locale: "en-US")
@@ -290,6 +292,7 @@ final class DrivingPerformanceModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class DrivingPerformanceAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

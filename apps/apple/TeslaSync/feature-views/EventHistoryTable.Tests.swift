@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: helpers.ts ports
 
+@MainActor
 final class EventHistoryAdapterTests: XCTestCase {
     func testParseWindowState() {
         XCTAssertEqual(EventHistoryAdapter.parseWindowState(.string("Closed")), .closed)
@@ -131,6 +132,7 @@ final class EventHistoryAdapterTests: XCTestCase {
 
 // MARK: - Timestamp formatting (web TimeStamp / formatDateTime)
 
+@MainActor
 final class EventHistoryFormatTests: XCTestCase {
     func testEmptyAndInvalidReturnDash() {
         XCTAssertNil(EventHistoryFormat.parse(""))
@@ -155,6 +157,7 @@ final class EventHistoryFormatTests: XCTestCase {
 
 // MARK: - Projection: phase resolution across every branch
 
+@MainActor
 final class EventHistoryProjectionTests: XCTestCase {
     private var sampleEvents: [SecurityEventInput] {
         [SecurityEventInput(id: "1", createdAt: "2026-01-05T15:04:05Z", locked: .bool(true))]
@@ -234,6 +237,7 @@ final class EventHistoryModelTests: XCTestCase {
 
 // MARK: - Accessibility + display text content
 
+@MainActor
 final class EventHistoryAccessibilityTests: XCTestCase {
     /// Bundle-free localizer that returns the English fallback (the web `t` default).
     private let localize: EventHistoryAccessibility.Localize = { _, fallback in fallback }

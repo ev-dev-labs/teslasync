@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Number formatting (port of web fmtNumber / fmtInt)
 
+@MainActor
 final class BatteryHealthNumberFormatTests: XCTestCase {
     private let enUS = Locale(identifier: "en-US")
 
@@ -58,6 +59,7 @@ final class BatteryHealthNumberFormatTests: XCTestCase {
 
 // MARK: - Battery colour band (web STATUS_COLORS ladder)
 
+@MainActor
 final class BatteryBandTests: XCTestCase {
     func testThresholds() {
         XCTAssertEqual(BatteryBand.forLevel(100), .good)
@@ -71,6 +73,7 @@ final class BatteryBandTests: XCTestCase {
 
 // MARK: - Battery pill projection (web BatteryPill inline maths)
 
+@MainActor
 final class BatteryPillProjectionTests: XCTestCase {
     func testRoundsLevelAndDerivesBandAndFraction() {
         let start = BatteryPillProjection.make(kind: .chargeStart, value: 42.4)
@@ -101,6 +104,7 @@ final class BatteryPillProjectionTests: XCTestCase {
 
 // MARK: - Tile builders (web BatteryHealthSection composition)
 
+@MainActor
 final class BatteryHealthTilesTests: XCTestCase {
     private let metrics = BatteryHealthMetrics(
         batteryStart: 42.4,
@@ -138,6 +142,7 @@ final class BatteryHealthTilesTests: XCTestCase {
 
 // MARK: - Projection: phase resolution + overlays
 
+@MainActor
 final class BatteryHealthProjectionTests: XCTestCase {
     private func metrics(count: Int) -> BatteryHealthMetrics {
         BatteryHealthMetrics(batteryStart: 40, batteryEnd: 80, chargingSessionCount: count, chargeEnergyAdded: 100)
@@ -241,6 +246,7 @@ final class BatteryHealthModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class BatteryHealthAccessibilityTests: XCTestCase {
     func testTileSummaryJoinsLabelAndValue() {
         let summary = BatteryHealthAccessibility.tileSummary(

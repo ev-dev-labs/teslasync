@@ -84,7 +84,7 @@ public enum VehicleHeroConvert {
 
 /// Locale-aware decimal formatting, parity with the web `fmtNumber` (global
 /// precision, grouping separators, `safeNumber` guard so NaN/±Inf render as 0).
-public enum VehicleHeroFormat {
+public enum VehicleHeroWidgetFormat {
     /// Web `fmtNumber(value, decimals, locale)`.
     public static func number(_ value: Double, decimals: Int, locale: String? = nil) -> String {
         let safe = value.isFinite ? value : 0
@@ -111,7 +111,7 @@ public enum VehicleHeroFormat {
 public enum VehicleHeroFirmware {
     public static let dash = "—"
 
-    public static func resolve(_ update: VehicleHeroUpdate) -> String {
+    public static func resolve(_ update: VehicleHeroWidgetUpdate) -> String {
         resolve(
             liveVersion: update.liveVersion,
             liveSwUpdateVersion: update.liveSwUpdateVersion,
@@ -203,7 +203,7 @@ public enum VehicleHeroStatusCatalog {
 
 /// Builds the VoiceOver strings for the header + gauges. Pure + public so the
 /// spoken content can be unit-tested without rendering the view.
-public enum VehicleHeroAccessibility {
+public enum VehicleHeroWidgetAccessibility {
     /// Header value: "<name>. <state>. <battery> <percentWord>".
     public static func headerSummary(
         name: String,

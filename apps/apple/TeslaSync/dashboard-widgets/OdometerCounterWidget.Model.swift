@@ -208,25 +208,6 @@ public final class OdometerCounterModel {
 
 // MARK: - Registry metadata (canonical: registry/vehicle.ts → "odometer-counter")
 
-/// The dashboard registration for a draggable widget surface (web `WidgetDef`).
-public struct DashboardWidgetRegistration: Sendable {
-    public let id: String
-    public let nameKey: String
-    public let descriptionKey: String
-    public let category: String
-    public let defaultSize: DashboardWidgetSize
-    public let minSize: DashboardWidgetSize
-    public let maxSize: DashboardWidgetSize
-
-    /// Clamps a requested grid size into the surface's `min…max` envelope, so the
-    /// native grid honors the same constraints as the web registry.
-    public func clamp(_ size: DashboardWidgetSize) -> DashboardWidgetSize {
-        DashboardWidgetSize(
-            cols: min(max(size.cols, minSize.cols), maxSize.cols),
-            rows: min(max(size.rows, minSize.rows), maxSize.rows)
-        )
-    }
-}
 
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 

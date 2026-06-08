@@ -41,6 +41,7 @@ private func assistantMessage(
 
 // MARK: - Visible text + blank check (web `streamedText ?? content` + trim)
 
+@MainActor
 final class ChatTextTests: XCTestCase {
     func testVisiblePrefersStreamed() {
         XCTAssertEqual(ChatText.visibleText(content: "full", streamedText: "partial"), "partial")
@@ -56,6 +57,7 @@ final class ChatTextTests: XCTestCase {
 
 // MARK: - Inline edit outcome (web `submitEdit`)
 
+@MainActor
 final class ChatEditTests: XCTestCase {
     func testCancelWhenEmpty() {
         XCTAssertEqual(ChatEdit.outcome(draft: "   ", original: "hello"), .cancel)
@@ -72,6 +74,7 @@ final class ChatEditTests: XCTestCase {
 
 // MARK: - Timestamp (port of dateFormat.ts formatTime)
 
+@MainActor
 final class ChatFormatTimeTests: XCTestCase {
     func testNilDateReturnsDash() {
         XCTAssertEqual(ChatFormat.time(nil, locale: enUS, timeZone: utc), "—")
@@ -96,6 +99,7 @@ final class ChatFormatTimeTests: XCTestCase {
 
 // MARK: - Assistant markdown (web `MarkdownRenderer`)
 
+@MainActor
 final class ChatMarkdownTests: XCTestCase {
     func testPlainTextRoundTrips() {
         let attributed = ChatMarkdown.attributed("just plain text")
@@ -110,6 +114,7 @@ final class ChatMarkdownTests: XCTestCase {
 
 // MARK: - Projection (web render gates + P4 leaf contract)
 
+@MainActor
 final class ChatMessageProjectionTests: XCTestCase {
     func testErrorTakesPrecedence() {
         let resolved = ChatMessageProjection.resolve(
@@ -332,6 +337,7 @@ final class ChatMessageModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class ChatAccessibilityTests: XCTestCase {
     func testMessageLabelWithTime() {
         XCTAssertEqual(

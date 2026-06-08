@@ -16,7 +16,7 @@ import SwiftUI
 // MARK: - Freshness chip + status accessory (live / stale / offline)
 
 /// Header chip flagging live / stale / offline data (web freshness indicator).
-struct SummaryFreshnessChip: View {
+struct SummarySlideFreshnessChip: View {
     let freshness: SummarySlideFreshness
 
     private var tone: TSTone {
@@ -65,7 +65,7 @@ struct SummaryStatusAccessory: View {
 
     var body: some View {
         HStack(spacing: TSSpacing.xs) {
-            SummaryFreshnessChip(freshness: freshness)
+            SummarySlideFreshnessChip(freshness: freshness)
             if refreshing {
                 ProgressView().controlSize(.mini)
             }

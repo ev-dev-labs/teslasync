@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Feature catalog (native port of `@/ai/features`)
 
+@MainActor
 final class AIFeatureCatalogTests: XCTestCase {
     func testKnownFeatureResolvesName() {
         XCTAssertTrue(AIFeatureCatalog.isKnown("chatbot-llm"))
@@ -46,6 +47,7 @@ final class AIFeatureCatalogTests: XCTestCase {
 
 // MARK: - Preview labels (native port of `previewLabels`)
 
+@MainActor
 final class AIRestorePreviewTests: XCTestCase {
     func testDropsDisabledEntriesAndPreservesOrder() {
         let archived = [
@@ -93,6 +95,7 @@ final class AIRestorePreviewTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class AIRestoreAccessibilityTests: XCTestCase {
     func testSummaryJoinsTitleDescriptionAndFeatures() {
         let summary = AIRestoreAccessibility.summary(
@@ -118,6 +121,7 @@ final class AIRestoreAccessibilityTests: XCTestCase {
 
 // MARK: - i18n facade label resolution
 
+@MainActor
 final class AIRestoreStringsTests: XCTestCase {
     /// The "AIRestorePanel" table is folded in at integration time, so the test bundle
     /// resolves each key to its `value:` fallback — deterministic for these assertions.
@@ -139,6 +143,7 @@ final class AIRestoreStringsTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
+@MainActor
 final class AIRestoreProjectionTests: XCTestCase {
     private let dataArchive = [AIArchivedEntry(id: "chatbot-llm", enabled: true)]
 

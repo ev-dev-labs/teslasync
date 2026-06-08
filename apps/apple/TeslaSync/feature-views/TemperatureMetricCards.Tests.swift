@@ -14,6 +14,7 @@ import XCTest
 
 // MARK: - Adapter: conversion + formatting (web parity)
 
+@MainActor
 final class TemperatureMetricsMathTests: XCTestCase {
     func testSafeCoercesNonFinite() {
         XCTAssertEqual(TemperatureMetricsMath.safe(42), 42, accuracy: 0.0001)
@@ -83,18 +84,19 @@ final class TemperatureMetricsMathTests: XCTestCase {
         XCTAssertEqual(TemperatureMetricsMath.percentOfMax(50, maxTempC: 0, localeIdentifier: "en_US"), "0")
     }
 
-    private func inline(_ celsius: Double?, _ unit: DrivetrainTemperatureUnit) -> String {
+    private func inline(_ celsius: Double?, _ unit: TemperatureMetricCardsDrivetrainTemperatureUnit) -> String {
         TemperatureMetricsMath.temperatureInline(celsius, unit: unit, precision: nil, localeIdentifier: "en_US")
     }
 }
 
 // MARK: - Adapter: projection (web parity)
 
+@MainActor
 final class TemperatureMetricsProjectionTests: XCTestCase {
     private let celsius = TemperatureMetricsUnitPrefs(temperature: .celsius, localeIdentifier: "en_US")
     private let fahrenheit = TemperatureMetricsUnitPrefs(temperature: .fahrenheit, localeIdentifier: "en_US")
 
-    private func sampleInput(_ health: DrivetrainHealthStatus = .warning) -> TemperatureMetricsInput {
+    private func sampleInput(_ health: TemperatureMetricCardsDrivetrainHealthStatus = .warning) -> TemperatureMetricsInput {
         TemperatureMetricsInput(
             frontMotorTempC: 98.0,
             rearMotorTempC: 132.0,
@@ -343,6 +345,7 @@ final class TemperatureMetricCardsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class TemperatureMetricsAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

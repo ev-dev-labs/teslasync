@@ -12,7 +12,7 @@ import SwiftUI
 #if DEBUG
     @MainActor
     private func yearReviewPreviewModel(_ update: YearReviewUpdate) -> YearReviewModel {
-        let source = InMemoryYearReviewSource(initial: update)
+        let source = YearReviewWidgetInMemoryYearReviewSource(initial: update)
         let model = YearReviewModel(source: source)
         model.start()
         return model

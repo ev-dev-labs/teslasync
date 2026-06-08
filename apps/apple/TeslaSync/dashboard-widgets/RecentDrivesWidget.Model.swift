@@ -18,12 +18,12 @@ import OSLog
 /// Emits the `screen_view` product-analytics event for the surface. The default implementation
 /// logs via `os.Logger`; the production app injects an adapter that forwards to the shared core
 /// `Telemetry.track(.screenView(screen:…))` (ADR-016 §5), which is consent-gated and redacted there.
-public protocol RecentDrivesTelemetry: Sendable {
+public protocol RecentDrivesWidgetTelemetry: Sendable {
     func viewOpened(surface: String)
 }
 
 /// `os.Logger`-backed default that records the surface open as a `screen_view`.
-public struct OSLogRecentDrivesTelemetry: RecentDrivesTelemetry {
+public struct RecentDrivesWidgetOSLogRecentDrivesTelemetry: RecentDrivesWidgetTelemetry {
     private let logger: Logger
 
     public init() {
@@ -39,7 +39,7 @@ public struct OSLogRecentDrivesTelemetry: RecentDrivesTelemetry {
 
 /// The load lifecycle for the widget's data, mirroring the shared `LoadableState` cases the
 /// production source projects from the drives `Resource<[Drive]>` query (web `useQuery`).
-public enum RecentDrivesLoadStatus: Sendable, Equatable {
+public enum RecentDrivesWidgetLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case empty
@@ -48,7 +48,7 @@ public enum RecentDrivesLoadStatus: Sendable, Equatable {
 
 /// Query freshness, mirroring `LiveConnectionState` (ADR-013) and the web `WidgetShell`
 /// `isStale` / `isFetching` freshness chip.
-public enum RecentDrivesConnection: Sendable, Equatable {
+public enum RecentDrivesWidgetConnection: Sendable, Equatable {
     case live
     case stale
     case offline
@@ -79,9 +79,9 @@ public enum RecentDrivesDistanceUnit: String, Sendable, Equatable, CaseIterable 
 
 /// One cached drive row the widget consumes — the subset of the web `Drive` DTO the source reads
 /// (`GET /drives?vehicle_id=…&limit=5`). All quantities are SI/raw as delivered by the API; display
-/// conversion happens in `RecentDrivesProjector`. Optionals mirror the web `?? 0` / `?? '?'`
+/// conversion happens in `RecentDrivesWidgetProjector`. Optionals mirror the web `?? 0` / `?? '?'`
 /// fallbacks; `startTs` is the already-parsed `start_ts` instant (`nil` when missing/invalid).
-public struct RecentDriveDTO: Sendable, Equatable, Identifiable {
+public struct RecentDrivesWidgetDriveDTO: Sendable, Equatable, Identifiable {
     public var id: Int64
     public var distanceM: Double?
     public var durationS: Double?
@@ -108,7 +108,7 @@ public struct RecentDriveDTO: Sendable, Equatable, Identifiable {
 
 /// The user's display preferences, mirroring `useUnits()` + `useDateFormat()`. The view never reads
 /// settings directly; the source resolves these and pushes them with each snapshot.
-public struct RecentDrivesUnitPrefs: Sendable, Equatable {
+public struct RecentDrivesWidgetUnitPrefs: Sendable, Equatable {
     public var distance: RecentDrivesDistanceUnit
     public var localeIdentifier: String
 
@@ -118,22 +118,22 @@ public struct RecentDrivesUnitPrefs: Sendable, Equatable {
     }
 }
 
-/// One coalesced snapshot pushed by a `RecentDrivesSource`: the cached drives + display prefs plus
+/// One coalesced snapshot pushed by a `RecentDrivesWidgetSource`: the cached drives + display prefs plus
 /// their load/connection status. The model turns this into the projection.
-public struct RecentDrivesUpdate: Sendable, Equatable {
-    public var status: RecentDrivesLoadStatus
-    public var connection: RecentDrivesConnection
+public struct RecentDrivesWidgetUpdate: Sendable, Equatable {
+    public var status: RecentDrivesWidgetLoadStatus
+    public var connection: RecentDrivesWidgetConnection
     public var isFetching: Bool
-    public var drives: [RecentDriveDTO]?
-    public var units: RecentDrivesUnitPrefs
+    public var drives: [RecentDrivesWidgetDriveDTO]?
+    public var units: RecentDrivesWidgetUnitPrefs
     public var updatedAt: Date?
 
     public init(
-        status: RecentDrivesLoadStatus = .loading,
-        connection: RecentDrivesConnection = .live,
+        status: RecentDrivesWidgetLoadStatus = .loading,
+        connection: RecentDrivesWidgetConnection = .live,
         isFetching: Bool = false,
-        drives: [RecentDriveDTO]? = nil,
-        units: RecentDrivesUnitPrefs = RecentDrivesUnitPrefs(),
+        drives: [RecentDrivesWidgetDriveDTO]? = nil,
+        units: RecentDrivesWidgetUnitPrefs = RecentDrivesWidgetUnitPrefs(),
         updatedAt: Date? = nil
     ) {
         self.status = status
@@ -147,22 +147,22 @@ public struct RecentDrivesUpdate: Sendable, Equatable {
 
 /// The seam the view binds through. The production app implements this over the shared P1/S8 state
 /// holders (the `VehicleStore` for the active vehicle + the drives `Resource` + `SettingsStore`);
-/// previews and tests use `InMemoryRecentDrivesSource`. The view never talks to the network directly.
+/// previews and tests use `RecentDrivesWidgetInMemoryRecentDrivesSource`. The view never talks to the network directly.
 @MainActor
-public protocol RecentDrivesSource: AnyObject {
+public protocol RecentDrivesWidgetSource: AnyObject {
     /// Set by the model; invoked on the main actor for every coalesced snapshot.
-    var onUpdate: (@MainActor (RecentDrivesUpdate) -> Void)? { get set }
+    var onUpdate: (@MainActor (RecentDrivesWidgetUpdate) -> Void)? { get set }
     func start()
     func stop()
     func refresh()
 }
 
-/// The widget's observable view-model. Subscribes to a `RecentDrivesSource`, recomputes the
-/// `RecentDrivesProjection` via `RecentDrivesProjector`, and exposes a render `Phase` + freshness
+/// The widget's observable view-model. Subscribes to a `RecentDrivesWidgetSource`, recomputes the
+/// `RecentDrivesWidgetProjection` via `RecentDrivesWidgetProjector`, and exposes a render `Phase` + freshness
 /// for SwiftUI to switch over.
 @MainActor
 @Observable
-public final class RecentDrivesModel {
+public final class RecentDrivesWidgetModel {
     /// The mutually-exclusive render branches (web shell loading / error + body empty / list).
     public enum Phase: Equatable {
         case loading
@@ -172,21 +172,21 @@ public final class RecentDrivesModel {
     }
 
     public private(set) var phase: Phase = .loading
-    public private(set) var connection: RecentDrivesConnection = .live
+    public private(set) var connection: RecentDrivesWidgetConnection = .live
     public private(set) var isFetching = false
-    public private(set) var projection = RecentDrivesProjection(rows: [])
-    public private(set) var units = RecentDrivesUnitPrefs()
+    public private(set) var projection = RecentDrivesWidgetProjection(rows: [])
+    public private(set) var units = RecentDrivesWidgetUnitPrefs()
     public private(set) var updatedAt: Date?
 
-    @ObservationIgnored private let source: any RecentDrivesSource
-    @ObservationIgnored private let telemetry: any RecentDrivesTelemetry
+    @ObservationIgnored private let source: any RecentDrivesWidgetSource
+    @ObservationIgnored private let telemetry: any RecentDrivesWidgetTelemetry
     @ObservationIgnored private let copy: RecentDrivesCopy
     @ObservationIgnored private var started = false
 
     public init(
-        source: any RecentDrivesSource,
-        telemetry: any RecentDrivesTelemetry = OSLogRecentDrivesTelemetry(),
-        copy: RecentDrivesCopy = RecentDrivesStrings.copy()
+        source: any RecentDrivesWidgetSource,
+        telemetry: any RecentDrivesWidgetTelemetry = RecentDrivesWidgetOSLogRecentDrivesTelemetry(),
+        copy: RecentDrivesCopy = RecentDrivesWidgetStrings.copy()
     ) {
         self.source = source
         self.telemetry = telemetry
@@ -198,7 +198,7 @@ public final class RecentDrivesModel {
     public func start() {
         guard !started else { return }
         started = true
-        telemetry.viewOpened(surface: RecentDrivesSurface.slug)
+        telemetry.viewOpened(surface: RecentDrivesWidgetSurface.slug)
         source.start()
     }
 
@@ -221,12 +221,12 @@ public final class RecentDrivesModel {
         source.refresh()
     }
 
-    private func apply(_ update: RecentDrivesUpdate) {
+    private func apply(_ update: RecentDrivesWidgetUpdate) {
         connection = update.connection
         isFetching = update.isFetching
         units = update.units
         updatedAt = update.updatedAt
-        projection = RecentDrivesProjector.project(drives: update.drives ?? [], units: update.units, copy: copy)
+        projection = RecentDrivesWidgetProjector.project(drives: update.drives ?? [], units: update.units, copy: copy)
         phase = Self.resolvePhase(status: update.status, hasData: !projection.isEmpty)
     }
 
@@ -237,7 +237,7 @@ public final class RecentDrivesModel {
     ///
     /// `nonisolated` because it is pure (touches no actor state); this lets the phase logic be
     /// unit-tested from a non-isolated context under Swift 6 strict concurrency.
-    public nonisolated static func resolvePhase(status: RecentDrivesLoadStatus, hasData: Bool) -> Phase {
+    public nonisolated static func resolvePhase(status: RecentDrivesWidgetLoadStatus, hasData: Bool) -> Phase {
         switch status {
         case .loading:
             hasData ? .content : .loading
@@ -253,15 +253,15 @@ public final class RecentDrivesModel {
 
 /// In-memory source for previews + unit/UI tests. Drive it with `push(_:)`.
 @MainActor
-public final class InMemoryRecentDrivesSource: RecentDrivesSource {
-    public var onUpdate: (@MainActor (RecentDrivesUpdate) -> Void)?
+public final class RecentDrivesWidgetInMemoryRecentDrivesSource: RecentDrivesWidgetSource {
+    public var onUpdate: (@MainActor (RecentDrivesWidgetUpdate) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
     public private(set) var refreshCount = 0
 
-    private let initial: RecentDrivesUpdate?
+    private let initial: RecentDrivesWidgetUpdate?
 
-    public init(initial: RecentDrivesUpdate? = nil) {
+    public init(initial: RecentDrivesWidgetUpdate? = nil) {
         self.initial = initial
     }
 
@@ -279,7 +279,7 @@ public final class InMemoryRecentDrivesSource: RecentDrivesSource {
     }
 
     /// Pushes a snapshot to the bound model (test/preview affordance).
-    public func push(_ update: RecentDrivesUpdate) {
+    public func push(_ update: RecentDrivesWidgetUpdate) {
         onUpdate?(update)
     }
 }
@@ -289,7 +289,7 @@ public final class InMemoryRecentDrivesSource: RecentDrivesSource {
 /// Diagnostics slug + canonical dashboard registration for this surface, kept out of the SwiftUI
 /// view so the model/adapter compile and test without SwiftUI. `RecentDrivesWidget` re-exposes these
 /// as `surfaceSlug` / `registration` for API parity with the other surfaces.
-public enum RecentDrivesSurface {
+public enum RecentDrivesWidgetSurface {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
     public static let slug = "RecentDrivesWidget"
 
@@ -312,7 +312,7 @@ public enum RecentDrivesSurface {
 /// hardcoded literals. Keys live in the "RecentDrivesWidget" table, folded into the app
 /// `Localizable.xcstrings` catalog at integration time. `string` is Foundation-only so the model +
 /// adapter copy can use it; the SwiftUI `text(_:_:)` helper lives in the view file.
-public enum RecentDrivesStrings {
+public enum RecentDrivesWidgetStrings {
     public static let table = "RecentDrivesWidget"
 
     public static func string(_ key: String, _ fallback: String) -> String {

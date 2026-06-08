@@ -23,7 +23,7 @@ import XCTest
 // MARK: - Fixtures
 
 private enum MotorHistoryChartsFixture {
-    static let base = Date(timeIntervalSince1970: 1_700_000_000)
+    nonisolated(unsafe) static let base = Date(timeIntervalSince1970: 1_700_000_000)
 
     static func stamp(_ secondsOffset: Int) -> String {
         ISO8601DateFormatter().string(from: base.addingTimeInterval(Double(secondsOffset)))
@@ -58,6 +58,7 @@ private enum MotorHistoryChartsFixture {
 
 // MARK: - Adapter: projection (web useMemo parity)
 
+@MainActor
 final class MotorHistoryChartsBuilderTests: XCTestCase {
     func testProjectMapsEveryDatasetAndPreservesNulls() {
         let projection = MotorHistoryChartsBuilder.project(MotorHistoryChartsFixture.drive)
@@ -251,6 +252,7 @@ final class MotorHistoryChartsModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class MotorHistoryChartsAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

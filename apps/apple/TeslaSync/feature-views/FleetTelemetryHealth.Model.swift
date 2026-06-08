@@ -165,7 +165,7 @@ public final class FleetHealthModel {
     public private(set) var vinsPhase: FleetHealthPhase = .loading
     public private(set) var errorsPhase: FleetHealthPhase = .loading
     public private(set) var vinRows: [FleetVINRow] = []
-    public private(set) var errorRows: [FleetErrorRow] = []
+    public private(set) var errorRows: [FleetTelemetryHealthErrorRow] = []
     public private(set) var vinsRefreshing = false
     public private(set) var errorsRefreshing = false
     public private(set) var updatedAt: Date?

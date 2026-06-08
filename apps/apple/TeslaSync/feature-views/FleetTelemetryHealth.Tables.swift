@@ -143,7 +143,7 @@ struct FleetHealthVINRowView: View {
 
 /// The Error-Log table: VIN · Error Code (danger badge / em-dash) · Message · Reported At.
 struct FleetHealthErrorTable: View {
-    let rows: [FleetErrorRow]
+    let rows: [FleetTelemetryHealthErrorRow]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -175,7 +175,7 @@ struct FleetHealthErrorTable: View {
 
 /// One Error-Log row, exposed to VoiceOver as one labeled element via the pure summary.
 struct FleetHealthErrorRowView: View {
-    let row: FleetErrorRow
+    let row: FleetTelemetryHealthErrorRow
 
     var body: some View {
         HStack(alignment: .top, spacing: TSSpacing.md) {

@@ -130,7 +130,7 @@ struct DrivingGlassPanel<Content: View>: View {
 /// One mini-stat tile (web `MiniStat`): a leading glyph, a label, and a value. For the
 /// efficiency-change tile the glyph is the trend arrow tinted emerald (improving) or red (worsening).
 struct DrivingStatTile: View {
-    let stat: DrivingStat
+    let stat: DrivingSectionStat
 
     var body: some View {
         DrivingGlassPanel(padding: TSSpacing.md) {
@@ -174,7 +174,7 @@ struct DrivingStatTile: View {
 /// The responsive grid of the four mini-stat tiles (web `grid grid-cols-1 sm:grid-cols-2
 /// lg:grid-cols-4`): an adaptive grid that collapses to fewer columns on narrow widths.
 struct DrivingStatsGrid: View {
-    let stats: [DrivingStat]
+    let stats: [DrivingSectionStat]
 
     private let columns = [GridItem(.adaptive(minimum: 150), spacing: TSSpacing.md)]
 

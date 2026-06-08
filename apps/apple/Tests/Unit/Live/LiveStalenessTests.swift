@@ -4,6 +4,7 @@ import XCTest
 /// Pure-logic tests for the live model: the 2-minute staleness policy, the
 /// five-state presentation derivation, target → SSE path mapping, the Shared-free
 /// event projection, and the `LiveStatus` snapshot. No framework/async needed.
+@MainActor
 final class LiveStalenessTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 10000)
 

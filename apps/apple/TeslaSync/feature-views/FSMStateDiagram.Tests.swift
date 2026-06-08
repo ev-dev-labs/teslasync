@@ -15,9 +15,12 @@
 
 import Foundation
 import XCTest
+@testable import TeslaSync
+ import TeslaSync
 
 // MARK: - Registry
 
+@MainActor
 final class FSMStateDiagramRegistryTests: XCTestCase {
     func testKnownTypesAreResolvable() {
         XCTAssertEqual(FSMRegistry.knownTypes.count, 8)
@@ -68,7 +71,7 @@ final class FSMStateDiagramRegistryTests: XCTestCase {
         XCTAssertEqual(FSMEdgeDerivation.derive(input), [FSMEdge("a", "b"), FSMEdge("b", "c")])
     }
 
-    func testVehicleEdgesAreUniqueAndContainKnownPairs() {
+    func testVehicleEdgesAreUniqueAndContainKnownPairs() throws {
         let edges = try XCTUnwrap(FSMRegistry.edges(for: "vehicle"))
         XCTAssertTrue(edges.contains(FSMEdge("online", "driving")))
         XCTAssertTrue(edges.contains(FSMEdge("charging", "asleep")))
@@ -79,6 +82,7 @@ final class FSMStateDiagramRegistryTests: XCTestCase {
 
 // MARK: - Projection
 
+@MainActor
 final class FSMStateDiagramProjectionTests: XCTestCase {
     private func transition(
         _ id: Int,

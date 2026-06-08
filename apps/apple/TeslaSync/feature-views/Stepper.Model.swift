@@ -1,6 +1,6 @@
 //
-//  Stepper.Model.swift
-//  TeslaSync — P4 feature view · 0195 · Stepper (Apple)
+//  OnboardingStepper.Model.swift
+//  TeslaSync — P4 feature view · 0195 · OnboardingStepper (Apple)
 //
 //  The state-holder seam (P1/S8), the telemetry seam (P1/S11 diagnostics), and
 //  the i18n facade (P1/S10). The view binds through `StepperModel`; no
@@ -131,7 +131,7 @@ public final class StepperModel {
     public func start() {
         guard !started else { return }
         started = true
-        telemetry.viewOpened(surface: Stepper.surfaceSlug)
+        telemetry.viewOpened(surface: OnboardingStepper.surfaceSlug)
         source.start()
     }
 
@@ -216,10 +216,10 @@ public final class InMemoryStepperSource: StepperSource {
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 
 /// Resolves the surface's strings by key with the web English fallback, so the
-/// view holds no hardcoded literals. Keys live in the "Stepper" table, folded
+/// view holds no hardcoded literals. Keys live in the "OnboardingStepper" table, folded
 /// into the app `Localizable.xcstrings` catalog at integration time.
 public enum StepperStrings {
-    public static let table = "Stepper"
+    public static let table = "OnboardingStepper"
 
     public static func string(_ key: String, _ fallback: String) -> String {
         NSLocalizedString(key, tableName: table, bundle: .main, value: fallback, comment: "")

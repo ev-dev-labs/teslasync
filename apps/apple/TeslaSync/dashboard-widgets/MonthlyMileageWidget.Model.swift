@@ -41,7 +41,7 @@ public struct OSLogMonthlyMileageTelemetry: MonthlyMileageTelemetry {
 
 /// The load lifecycle for the widget's data, mirroring the shared
 /// `LoadableState` cases the production source projects from `Resource<T>`.
-public enum MileageLoadStatus: Sendable, Equatable {
+public enum MonthlyMileageWidgetMileageLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case empty
@@ -49,7 +49,7 @@ public enum MileageLoadStatus: Sendable, Equatable {
 }
 
 /// Live-stream freshness, mirroring `LiveConnectionState` (ADR-013).
-public enum MileageConnection: Sendable, Equatable {
+public enum MonthlyMileageWidgetMileageConnection: Sendable, Equatable {
     case live
     case stale
     case offline
@@ -59,16 +59,16 @@ public enum MileageConnection: Sendable, Equatable {
 /// buckets + the active display-unit label + load/connection status. The model
 /// turns this into the rendered projection.
 public struct MonthlyMileageUpdate: Sendable, Equatable {
-    public var status: MileageLoadStatus
-    public var connection: MileageConnection
+    public var status: MonthlyMileageWidgetMileageLoadStatus
+    public var connection: MonthlyMileageWidgetMileageConnection
     public var vehicle: MileageVehicle?
     public var rows: [MileageMonthRow]
     public var distanceUnit: String
     public var updatedAt: Date?
 
     public init(
-        status: MileageLoadStatus = .loading,
-        connection: MileageConnection = .live,
+        status: MonthlyMileageWidgetMileageLoadStatus = .loading,
+        connection: MonthlyMileageWidgetMileageConnection = .live,
         vehicle: MileageVehicle? = nil,
         rows: [MileageMonthRow] = [],
         distanceUnit: String = "km",
@@ -112,7 +112,7 @@ public final class MonthlyMileageModel {
     }
 
     public private(set) var phase: Phase = .loading
-    public private(set) var connection: MileageConnection = .live
+    public private(set) var connection: MonthlyMileageWidgetMileageConnection = .live
     public private(set) var projection: MonthlyMileageProjection = .empty
     public private(set) var vehicle: MileageVehicle?
     public private(set) var updatedAt: Date?
@@ -188,7 +188,7 @@ public final class MonthlyMileageModel {
     /// fetch and the friendly "No mileage data" empty whenever there is no
     /// non-zero data; cached bars stay visible behind a refresh/offline/error so
     /// a transient failure never blanks a populated widget.
-    static func resolvePhase(status: MileageLoadStatus, projection: MonthlyMileageProjection) -> Phase {
+    static func resolvePhase(status: MonthlyMileageWidgetMileageLoadStatus, projection: MonthlyMileageProjection) -> Phase {
         switch status {
         case .loading:
             if projection.hasData { return .content }

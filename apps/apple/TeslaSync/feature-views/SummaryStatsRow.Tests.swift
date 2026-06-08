@@ -32,6 +32,7 @@ private let enUS = Locale(identifier: "en_US")
 
 // MARK: - Relative time (port of helpers.ts timeSince)
 
+@MainActor
 final class SummaryStatsRelativeTimeTests: XCTestCase {
     func testNilAndEmptyReturnNone() {
         XCTAssertEqual(SummaryStatsFormat.relativeTime(nil, now: referenceNow), .none)
@@ -77,6 +78,7 @@ final class SummaryStatsRelativeTimeTests: XCTestCase {
 
 // MARK: - Number formatting (port of numberFormat.ts fmtInt)
 
+@MainActor
 final class SummaryStatsNumberTests: XCTestCase {
     func testIntegerRoundsAndGroups() {
         XCTAssertEqual(SummaryStatsFormat.integer(12345.6, locale: enUS), "12,346")
@@ -103,6 +105,7 @@ final class SummaryStatsNumberTests: XCTestCase {
 
 // MARK: - Responsive column math (web grid-cols-1 / sm:2 / lg:4)
 
+@MainActor
 final class SummaryStatsLayoutTests: XCTestCase {
     func testColumnsAtBreakpoints() {
         XCTAssertEqual(SummaryStatsLayout.columnCount(forWidth: 320), 1)
@@ -117,6 +120,7 @@ final class SummaryStatsLayoutTests: XCTestCase {
 
 // MARK: - Projection: branches + tile wiring
 
+@MainActor
 final class SummaryStatsProjectionTests: XCTestCase {
     func testLoadingBranchHasNoTiles() {
         let resolved = SummaryStatsProjection.resolve(
@@ -176,6 +180,7 @@ final class SummaryStatsProjectionTests: XCTestCase {
 
 // MARK: - i18n wording (web timeSince literals routed through the facade)
 
+@MainActor
 final class SummaryStatsStringsTests: XCTestCase {
     func testRelativeTimeWording() {
         XCTAssertEqual(SSRStrings.relativeTime(.none), "—")
@@ -245,6 +250,7 @@ final class SummaryStatsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class SummaryStatsAccessibilityTests: XCTestCase {
     func testTileLabelCombinesLabelAndValue() {
         XCTAssertEqual(

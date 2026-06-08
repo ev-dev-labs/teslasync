@@ -48,6 +48,7 @@ private enum AlertFixture {
 
 // MARK: - Adapter: token extraction + autocomplete projection
 
+@MainActor
 final class AlertMessageEditorAdapterTests: XCTestCase {
     func testExtractTemplateKeysMatchesWebRegex() {
         XCTAssertEqual(
@@ -91,6 +92,7 @@ final class AlertMessageEditorAdapterTests: XCTestCase {
 
 // MARK: - Adapter: preset gallery gating
 
+@MainActor
 final class AlertMessageEditorPresetTests: XCTestCase {
     func testAvailableKeys() {
         XCTAssertEqual(
@@ -183,6 +185,7 @@ final class AlertMessageEditorPresetTests: XCTestCase {
 
 // MARK: - Adapter: trigger detection, insertion, preview request, maxLength
 
+@MainActor
 final class AlertMessageEditorEditingAdapterTests: XCTestCase {
     func testDetectTriggerOpensOnUnclosedBraces() {
         let trigger = AlertMessageEditorAdapter.detectTrigger(text: "Battery {{Bat", caret: 13)
@@ -247,6 +250,7 @@ final class AlertMessageEditorEditingAdapterTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class AlertMessageEditorAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, value in value }
 

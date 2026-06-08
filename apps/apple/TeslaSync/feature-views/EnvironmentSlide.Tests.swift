@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web slide)
 
+@MainActor
 final class EnvironmentSlideAdapterTests: XCTestCase {
     /// The web slide's headline derivation: `Math.round(co2_offset_kg / 21)` trees, capped at 30
     /// glyphs, with the remainder surfaced as "+N more". 1,840.2 kg → round(87.62…) = 88.
@@ -119,6 +120,7 @@ final class EnvironmentSlideAdapterTests: XCTestCase {
 
 // MARK: - State holder: phase resolution per state
 
+@MainActor
 final class EnvironmentSlidePhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         typealias Phase = EnvironmentSlideModel.Phase
@@ -243,6 +245,7 @@ final class EnvironmentSlideModelTests: XCTestCase {
 
 // MARK: - i18n: pluralized caption + source keys
 
+@MainActor
 final class EnvironmentSlideStringsTests: XCTestCase {
     func testTreesCaptionInterpolatesCount() {
         XCTAssertEqual(EnvironmentSlideStrings.trees(88), "Like planting 88 trees")
@@ -259,6 +262,7 @@ final class EnvironmentSlideStringsTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class EnvironmentSlideAccessibilityTests: XCTestCase {
     func testSummaryCombinesLabelFigureAndTrees() {
         let projection = EnvironmentSlideProjector.project(

@@ -13,7 +13,7 @@ import SwiftUI
 
 // MARK: - Health status → token tint (web HEALTH_COLOR map)
 
-extension DrivetrainHealthStatus {
+extension HealthGaugeGridDrivetrainHealthStatus {
     /// The shared status tone for the gauge arc + percent (web hex map: good `#10b981` →
     /// success, warning `#f59e0b` → warning, critical `#ef4444` → danger).
     var tone: TSTone {

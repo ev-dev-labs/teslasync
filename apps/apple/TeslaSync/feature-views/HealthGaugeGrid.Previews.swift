@@ -29,7 +29,7 @@ import SwiftUI
     }
 
     private func previewData(
-        health: DrivetrainHealthStatus = .good,
+        health: HealthGaugeGridDrivetrainHealthStatus = .good,
         score: Double = 95,
         includeStats: Bool = true
     ) -> DrivetrainHealthInput {
@@ -44,7 +44,7 @@ import SwiftUI
 
     private func loadedUpdate(
         connection: HealthGaugeConnection = .live,
-        health: DrivetrainHealthStatus = .good,
+        health: HealthGaugeGridDrivetrainHealthStatus = .good,
         score: Double = 95,
         includeStats: Bool = true,
         units: HealthGaugeUnitPrefs = HealthGaugeUnitPrefs()

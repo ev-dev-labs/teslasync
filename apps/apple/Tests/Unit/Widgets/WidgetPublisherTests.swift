@@ -3,6 +3,7 @@ import XCTest
 
 /// Publisher tests: redaction is enforced on the way into the cache (no VIN, no
 /// coordinates) and a `WidgetCenter` reload fires on publish and clear.
+@MainActor
 final class WidgetPublisherTests: XCTestCase {
     func testPublishRedactsAndReloads() {
         let store = makeTempWidgetStore()

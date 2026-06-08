@@ -66,6 +66,7 @@ import SwiftUI
         }
     }
 
+    @MainActor
     private func previewContainer(_ model: WhyEndedPanelModel) -> some View {
         WhyEndedPanel(model: model)
             .padding(TSSpacing.lg)

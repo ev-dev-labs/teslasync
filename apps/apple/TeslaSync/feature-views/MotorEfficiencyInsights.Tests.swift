@@ -43,6 +43,7 @@ private func sampleMetrics(
 
 // MARK: - Number formatting (port of numberFormat.ts fmtNumber / fmtWithUnit / fmtPercent)
 
+@MainActor
 final class MotorEfficiencyFormatNumberTests: XCTestCase {
     func testNumberGroupsAndFixesOneDecimal() {
         XCTAssertEqual(MotorEfficiencyFormat.number(1234.5, locale: enUS), "1,234.5")
@@ -69,6 +70,7 @@ final class MotorEfficiencyFormatNumberTests: XCTestCase {
 
 // MARK: - Temperature conversion + suffix (web `toTemperatureDisplay` + `tempUnit`)
 
+@MainActor
 final class MotorTemperatureUnitTests: XCTestCase {
     func testCelsiusIsIdentityWithCelsiusSuffix() {
         XCTAssertEqual(MotorTemperatureUnit.celsius.convert(fromCelsius: 49), 49, accuracy: 1e-9)
@@ -98,6 +100,7 @@ final class MotorTemperatureUnitTests: XCTestCase {
 
 // MARK: - Throttle style derivation (web helpers.ts getThrottleStyle)
 
+@MainActor
 final class MotorThrottleStyleTests: XCTestCase {
     func testThresholds() {
         XCTAssertEqual(MotorThrottle.style(forAveragePowerKW: 0), .conservative)
@@ -125,6 +128,7 @@ final class MotorThrottleStyleTests: XCTestCase {
 
 // MARK: - Thermal classification (web maxMotorTemp < 100 / < 140 thresholds)
 
+@MainActor
 final class MotorThermalStatusTests: XCTestCase {
     func testThresholdsOnRawCelsius() {
         XCTAssertEqual(MotorThermalStatus.classify(maxMotorTempC: 64), .good)
@@ -151,6 +155,7 @@ final class MotorThermalStatusTests: XCTestCase {
 
 // MARK: - Power-bar fraction (web MetricBar value/max=200)
 
+@MainActor
 final class MotorPowerFractionTests: XCTestCase {
     func testProportionalToTwoHundred() {
         XCTAssertEqual(MotorEfficiencyFormat.powerFraction(64), 0.32, accuracy: 1e-9)
@@ -166,6 +171,7 @@ final class MotorPowerFractionTests: XCTestCase {
 
 // MARK: - Projection (web render branch + P4 leaf contract)
 
+@MainActor
 final class MotorEfficiencyProjectionTests: XCTestCase {
     func testErrorTakesPrecedence() {
         let resolved = MotorEfficiencyProjection.resolve(
@@ -322,6 +328,7 @@ final class MotorEfficiencyInsightsModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class MotorEfficiencyAccessibilityTests: XCTestCase {
     func testJoinFiltersEmptyAndJoins() {
         XCTAssertEqual(MotorEfficiencyAccessibility.join(["Avg Torque", "", "142.5 Nm"]), "Avg Torque, 142.5 Nm")

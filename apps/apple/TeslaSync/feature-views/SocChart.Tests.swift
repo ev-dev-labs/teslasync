@@ -23,6 +23,7 @@ import XCTest
 
 // MARK: - Adapter: projection (web SocChart body parity)
 
+@MainActor
 final class SocChartProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
@@ -106,6 +107,7 @@ final class SocChartProjectionTests: XCTestCase {
 
 // MARK: - Formatting
 
+@MainActor
 final class SocChartFormatTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
@@ -259,6 +261,7 @@ final class SocChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class SocChartAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

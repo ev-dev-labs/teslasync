@@ -53,6 +53,7 @@ private enum SummaryHeroFixture {
 
 // MARK: - Adapter: formatting (web `numberFormat` parity)
 
+@MainActor
 final class SummaryHeroFormattingTests: XCTestCase {
     private let formatting = SummaryHeroFormatting.standard
 
@@ -91,6 +92,7 @@ final class SummaryHeroFormattingTests: XCTestCase {
 
 // MARK: - Adapter: trend (web `helpers.trendFor`)
 
+@MainActor
 final class TrendCalculatorTests: XCTestCase {
     func testPctChangeHandlesZeroPrevious() {
         XCTAssertEqual(TrendCalculator.pctChange(current: 5, previous: 0), 100)
@@ -135,6 +137,7 @@ final class TrendCalculatorTests: XCTestCase {
 
 // MARK: - Adapter: projection (web JSX → ordered grid)
 
+@MainActor
 final class SummaryHeroProjectionTests: XCTestCase {
     func testProjectionOrderMatchesWebJSX() {
         let items = SummaryHeroProjection.items(from: SummaryHeroFixture.sample)
@@ -312,6 +315,7 @@ final class SummaryHeroCardsModelTests: XCTestCase {
 
 // MARK: - Accessibility + i18n composition
 
+@MainActor
 final class SummaryHeroAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

@@ -74,7 +74,7 @@ public struct LoadingSkeleton: View {
     }
 
     private var accessibilityLabel: String {
-        LSStrings.string(
+        LoadingSkeletonLSStrings.string(
             LoadingSkeletonStringsKey.accessibilityLabel,
             LoadingSkeletonStringsKey.accessibilityLabelFallback
         )

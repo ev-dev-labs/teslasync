@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Channel kind catalog (web `CHANNEL_TYPES`)
 
+@MainActor
 final class NotifChannelKindTests: XCTestCase {
     func testFromFallsBackToWebhookForUnknown() {
         XCTAssertEqual(NotifChannelKind.from("discord"), .discord)
@@ -63,6 +64,7 @@ final class NotifChannelKindTests: XCTestCase {
 
 // MARK: - Secret masking (web `k.includes('token'|'key'|'password')`)
 
+@MainActor
 final class ChannelSecretTests: XCTestCase {
     func testIsSecretMatchesWebSubstrings() {
         XCTAssertTrue(ChannelSecret.isSecret("bot_token"))
@@ -86,6 +88,7 @@ final class ChannelSecretTests: XCTestCase {
 
 // MARK: - Channel data (web `channelToFormConfig` preview)
 
+@MainActor
 final class NotificationChannelDataTests: XCTestCase {
     private func sample() -> NotificationChannelData {
         NotificationChannelData(
@@ -120,6 +123,7 @@ final class NotificationChannelDataTests: XCTestCase {
 
 // MARK: - Payload builder (web `buildChannelPayload`)
 
+@MainActor
 final class ChannelPayloadBuilderTests: XCTestCase {
     func testSMTPPortCoercesInvalidTo587() {
         XCTAssertEqual(ChannelPayloadBuilder.smtpPort("587"), 587)
@@ -191,6 +195,7 @@ final class ChannelPayloadBuilderTests: XCTestCase {
 
 // MARK: - Validation (web `if (!name.trim())`)
 
+@MainActor
 final class ChannelFormValidationTests: XCTestCase {
     func testBlankNameFailsValidation() {
         XCTAssertNotNil(ChannelFormValidation.nameError(""))
@@ -206,6 +211,7 @@ final class ChannelFormValidationTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
+@MainActor
 final class NotifChannelsProjectionTests: XCTestCase {
     private let stats = NotifChannelStats(sent: 10, failed: 1, pending: 0, enabledChannels: 1, totalChannels: 2)
     private func channel() -> NotificationChannelData {
@@ -246,6 +252,7 @@ final class NotifChannelsProjectionTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class NotificationChannelsAccessibilityTests: XCTestCase {
     func testChannelLabelJoinsParts() {
         XCTAssertEqual(

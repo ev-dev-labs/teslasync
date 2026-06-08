@@ -42,6 +42,7 @@ private enum Fixture {
 
 // MARK: - Adapter: tab projection + icon fallback
 
+@MainActor
 final class LayoutTabProjectionTests: XCTestCase {
     func testProjectionPreservesOrderAndDerivesActive() {
         let tabs = Fixture.tabs(activeID: "b")
@@ -68,6 +69,7 @@ final class LayoutTabProjectionTests: XCTestCase {
 
 // MARK: - Adapter: reorder math (web onReorder)
 
+@MainActor
 final class LayoutReorderTests: XCTestCase {
     func testEdgeGuards() {
         XCTAssertFalse(LayoutReorder.canMoveLeft(index: 0))
@@ -101,6 +103,7 @@ final class LayoutReorderTests: XCTestCase {
 
 // MARK: - Adapter: context menu (web Rename/Duplicate/Settings/Delete)
 
+@MainActor
 final class LayoutMenuTests: XCTestCase {
     func testMenuOrderMatchesWeb() {
         XCTAssertEqual(LayoutMenuItemKind.order, [.rename, .duplicate, .settings, .delete])
@@ -136,6 +139,7 @@ final class LayoutMenuTests: XCTestCase {
 
 // MARK: - Adapter: name input + create intent
 
+@MainActor
 final class LayoutNameInputTests: XCTestCase {
     func testSanitizeTrims() {
         XCTAssertEqual(LayoutNameInput.sanitized("  Road Trips  "), "Road Trips")
@@ -170,6 +174,7 @@ final class LayoutNameInputTests: XCTestCase {
 
 // MARK: - State accessors + connection
 
+@MainActor
 final class LayoutManagerStateTests: XCTestCase {
     func testLoadedAccessors() {
         let state = LayoutManagerState.loaded(layouts: Fixture.layouts, activeID: "b")
@@ -195,6 +200,7 @@ final class LayoutManagerStateTests: XCTestCase {
 
 // MARK: - Accessibility + i18n key parity
 
+@MainActor
 final class LayoutManagerAccessibilityTests: XCTestCase {
     private let echo = LayoutManagerLocalizer.echo
 
@@ -234,6 +240,7 @@ final class LayoutManagerAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
+@MainActor
 final class LayoutManagerTelemetryTests: XCTestCase {
     private final class Recorder: LayoutManagerTelemetry, @unchecked Sendable {
         private let lock = NSLock()

@@ -14,6 +14,7 @@ import XCTest
 
 // MARK: - Conversion + formatting (web parity)
 
+@MainActor
 final class DriveStatCardsUnitMathTests: XCTestCase {
     func testSafeCoercesNonFinite() {
         XCTAssertEqual(DriveStatCardsUnitMath.safe(42), 42, accuracy: 0.0001)
@@ -65,6 +66,7 @@ final class DriveStatCardsUnitMathTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class DriveStatCardsAccessibilityTests: XCTestCase {
     /// Mirrors the strings facade: substitute positional args into the fallback (bundle-free).
     private let echo: (String, String, [String]) -> String = { _, fallback, args in

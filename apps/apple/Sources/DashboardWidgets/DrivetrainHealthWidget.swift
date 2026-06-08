@@ -5,7 +5,7 @@ import SwiftUI
 /// `features/dashboard/widgets/DrivetrainHealthWidget.tsx`.
 public struct DrivetrainHealthWidget: View {
     /// Registry metadata mirroring `registry/vehicle.ts` (`drivetrain-health`).
-    public static let descriptor = DashboardWidgetDescriptor(
+    public static let descriptor = DrivetrainHealthWidgetDescriptor(
         id: "drivetrain-health",
         displayNameKey: DrivetrainHealthStrings.displayName,
         descriptionKey: DrivetrainHealthStrings.description,
@@ -314,6 +314,7 @@ private struct DrivetrainStatCell: View {
         )
     }
 
+    @MainActor
     private func previewCard(
         _ state: DrivetrainHealthViewState,
         size: DashboardWidgetSize = DashboardWidgetSize(cols: 2, rows: 4),

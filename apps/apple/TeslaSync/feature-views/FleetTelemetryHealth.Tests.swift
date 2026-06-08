@@ -34,6 +34,7 @@ private func toneName(_ tone: TSTone) -> String {
 
 // MARK: - Adapter: recency / normalization / projection (web parity)
 
+@MainActor
 final class FleetHealthAdapterTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let window = FleetHealthProjection.recencyWindow
@@ -256,6 +257,7 @@ final class FleetHealthModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class FleetHealthAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -268,7 +270,7 @@ final class FleetHealthAccessibilityTests: XCTestCase {
     }
 
     func testErrorRowSummaryIncludesPresentSegments() {
-        let row = FleetErrorRow(
+        let row = FleetTelemetryHealthErrorRow(
             id: "1", vin: "A", errorCode: "X1", errorMessage: "boom",
             reportedAt: nil, reportedAtEmphasis: .normal
         )
@@ -280,7 +282,7 @@ final class FleetHealthAccessibilityTests: XCTestCase {
     }
 
     func testErrorRowSummaryOmitsAbsentSegments() {
-        let row = FleetErrorRow(
+        let row = FleetTelemetryHealthErrorRow(
             id: "2", vin: "B", errorCode: nil, errorMessage: nil,
             reportedAt: nil, reportedAtEmphasis: .normal
         )

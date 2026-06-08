@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 
 #if DEBUG
+    @MainActor
     private func previewModel(_ update: MediaHistoryUpdate) -> MediaHistoryModel {
         let source = InMemoryMediaHistorySource(initial: update)
         let model = MediaHistoryModel(source: source)

@@ -70,6 +70,7 @@ private enum DriveAnalyticsFixture {
 
 // MARK: - Adapter: speed distribution
 
+@MainActor
 final class DriveAnalyticsSpeedTests: XCTestCase {
     func testSpeedBucketsMatchWeb() {
         let projection = DriveAnalyticsFixture.project(DriveAnalyticsFixture.data(DriveAnalyticsFixture.speedDrives))
@@ -100,6 +101,7 @@ final class DriveAnalyticsSpeedTests: XCTestCase {
 
 // MARK: - Adapter: acceleration scatter + average
 
+@MainActor
 final class DriveAnalyticsAccelTests: XCTestCase {
     func testAccelPatternsMatchWeb() {
         let projection = DriveAnalyticsFixture.project(DriveAnalyticsFixture.data(DriveAnalyticsFixture.powerDrives))
@@ -131,6 +133,7 @@ final class DriveAnalyticsAccelTests: XCTestCase {
 
 // MARK: - Adapter: power profile
 
+@MainActor
 final class DriveAnalyticsPowerTests: XCTestCase {
     func testPowerProfileMatchesWeb() {
         let projection = DriveAnalyticsFixture.project(DriveAnalyticsFixture.data(DriveAnalyticsFixture.powerDrives))
@@ -163,6 +166,7 @@ final class DriveAnalyticsPowerTests: XCTestCase {
 
 // MARK: - Adapter: units, formatting, nil
 
+@MainActor
 final class DriveAnalyticsAdapterTests: XCTestCase {
     func testProjectionCarriesUnitGlyphs() {
         let metric = DriveAnalyticsFixture.project(DriveAnalyticsFixture.data(DriveAnalyticsFixture.powerDrives))
@@ -204,6 +208,7 @@ final class DriveAnalyticsAdapterTests: XCTestCase {
 
 // MARK: - State holder: phase resolution
 
+@MainActor
 final class DriveAnalyticsPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(DriveAnalyticsSectionProjector.resolvePhase(.loading, hasDrives: false), .loading)
@@ -348,6 +353,7 @@ final class DriveAnalyticsModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class DriveAnalyticsAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 

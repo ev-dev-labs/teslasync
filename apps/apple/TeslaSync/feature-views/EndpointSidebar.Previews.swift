@@ -53,6 +53,7 @@ import SwiftUI
         static let selected = endpoints[1]
     }
 
+    @MainActor
     private func endpointPreviewModel(
         _ update: EndpointSidebarUpdate,
         search: String = ""

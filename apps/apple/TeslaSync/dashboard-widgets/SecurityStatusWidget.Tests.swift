@@ -19,6 +19,7 @@ import XCTest
 
 // MARK: - Adapter: door / window parsing (port parity with the web useMemo)
 
+@MainActor
 final class SecuritySignalParserTests: XCTestCase {
     func testOpenDoorCountTreatsNativeTrueAsOneOpenDoor() {
         XCTAssertEqual(SecuritySignalParser.openDoorCount(.boolean(true)), 1)
@@ -68,6 +69,7 @@ final class SecuritySignalParserTests: XCTestCase {
 
 // MARK: - Adapter: cell projection (port parity with the web `cells` useMemo)
 
+@MainActor
 final class SecurityCellsBuilderTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let keyTap: (String, String) -> String = { key, _ in "L:\(key)" }
@@ -155,6 +157,7 @@ final class SecurityCellsBuilderTests: XCTestCase {
 
 // MARK: - Adapter: status → tone mapping
 
+@MainActor
 final class SecurityCellStatusTests: XCTestCase {
     func testToneMapping() {
         XCTAssertEqual(SecurityCellStatus.ok.tone, .success)
@@ -287,6 +290,7 @@ final class SecurityRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class SecurityAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

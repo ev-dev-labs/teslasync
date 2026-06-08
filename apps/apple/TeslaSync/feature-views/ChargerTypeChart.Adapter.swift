@@ -27,7 +27,7 @@ import Foundation
 /// The dependency-free projection from raw sessions to chart-ready columns +
 /// render phase. A faithful port of the web `chargerTypeStats` useMemo and the
 /// `getChargerLabel` / `avg` / `durationMinutes` helpers.
-public enum ChargerTypeProjection {
+public enum ChargerTypeChartProjection {
     /// Buckets a session into a `ChargerType` — the native `getChargerLabel`.
     /// Tesla → Supercharger; any other non-empty charger type → DC Fast; else a
     /// peak above 20 kW → DC Fast; otherwise Home / AC.
@@ -143,7 +143,7 @@ public enum ChargerTypeSurface {
 /// Builds the surface's VoiceOver strings. Copy resolves through an injected
 /// localizer (`(key, fallback) -> String`) so the summaries are testable without
 /// a bundle, exactly like the view's P1/S10 facade.
-public enum ChargerTypeAccessibility {
+public enum ChargerTypeChartAccessibility {
     /// The chart-level summary: title + charger-type count + total sessions.
     public static func chartSummary(
         points: [ChargerTypePoint],
@@ -155,7 +155,7 @@ public enum ChargerTypeAccessibility {
         }
         let categories = localize("charging.curve.categoryCount", "charger types")
         let sessionsLabel = localize("charging.curve.col.sessions", "Sessions")
-        let total = ChargerTypeProjection.totalSessions(points)
+        let total = ChargerTypeChartProjection.totalSessions(points)
         return "\(title): \(points.count) \(categories), \(total) \(sessionsLabel)"
     }
 
@@ -171,10 +171,10 @@ public enum ChargerTypeAccessibility {
         let avgKw = localize("charging.curve.col.avgKw", "Avg kW")
         let avgKwh = localize("charging.curve.col.avgKwh", "Avg kWh")
         let avgMin = localize("charging.curve.col.avgMin", "Avg minutes")
-        let count = ChargerTypeProjection.intString(Double(point.count), locale: locale)
-        let kw = ChargerTypeProjection.decimalString(point.avgKw, decimals: 1, locale: locale)
-        let kwh = ChargerTypeProjection.decimalString(point.avgKwh, decimals: 1, locale: locale)
-        let mins = ChargerTypeProjection.intString(point.avgDurationMin, locale: locale)
+        let count = ChargerTypeChartProjection.intString(Double(point.count), locale: locale)
+        let kw = ChargerTypeChartProjection.decimalString(point.avgKw, decimals: 1, locale: locale)
+        let kwh = ChargerTypeChartProjection.decimalString(point.avgKwh, decimals: 1, locale: locale)
+        let mins = ChargerTypeChartProjection.intString(point.avgDurationMin, locale: locale)
         return "\(name): \(sessions) \(count), \(avgKw) \(kw), \(avgKwh) \(kwh), \(avgMin) \(mins)"
     }
 }

@@ -117,7 +117,7 @@ struct TelemetryFreshnessChip: View {
         case .offline:
             TelemetryErrorsStrings.string("widget.telemetryErrors.offline", "Offline")
         case .live, .stale:
-            TelemetryErrorsFormat.relativeText(for: updatedAt)
+            TelemetryErrorsWidgetFormat.relativeText(for: updatedAt)
         }
     }
 
@@ -178,7 +178,7 @@ struct TelemetryErrorFeedRow: View {
     var now = Date()
 
     private var isRecent: Bool {
-        TelemetryErrorsProjection.isRecent(aggregate.lastSeen, now: now)
+        TelemetryErrorsWidgetProjection.isRecent(aggregate.lastSeen, now: now)
     }
 
     var body: some View {
@@ -201,12 +201,12 @@ struct TelemetryErrorFeedRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(verbatim: "×\(TelemetryErrorsFormat.int(aggregate.count))")
+                Text(verbatim: "×\(TelemetryErrorsWidgetFormat.int(aggregate.count))")
                     .font(Font.TS.caption)
                     .fontWeight(.medium)
                     .monospacedDigit()
                     .foregroundStyle(Color.TS.textSecondary)
-                Text(verbatim: TelemetryErrorsFormat.relativeText(for: aggregate.lastSeen, now: now))
+                Text(verbatim: TelemetryErrorsWidgetFormat.relativeText(for: aggregate.lastSeen, now: now))
                     .font(Font.TS.label)
                     .foregroundStyle(Color.TS.textMuted)
                     .lineLimit(1)
@@ -218,7 +218,7 @@ struct TelemetryErrorFeedRow: View {
         .frame(minHeight: 44)
         .background(Color.TS.surfaceGlass, in: RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: TelemetryErrorsAccessibility.rowLabel(
+        .accessibilityLabel(Text(verbatim: TelemetryErrorsWidgetAccessibility.rowLabel(
             for: aggregate,
             isRecent: isRecent,
             now: now

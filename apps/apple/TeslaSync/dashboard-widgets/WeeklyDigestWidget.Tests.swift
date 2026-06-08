@@ -41,6 +41,7 @@ private enum WeeklyDigestFixture {
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
+@MainActor
 final class WeeklyDigestAdapterTests: XCTestCase {
     func testMilesProjectionMatchesWeb() {
         let units = WeeklyDigestUnitPrefs(distance: .miles, localeIdentifier: "en_US")
@@ -220,6 +221,7 @@ final class WeeklyDigestAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
+@MainActor
 final class WeeklyDigestPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         // Web `WidgetShell`: loading and error short-circuit BEFORE the body (error wins over cache).
@@ -335,6 +337,7 @@ final class WeeklyDigestModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class WeeklyDigestRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = WeeklyDigestWidget.registration
@@ -362,6 +365,7 @@ final class WeeklyDigestRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class WeeklyDigestAccessibilityTests: XCTestCase {
     func testSummaryIncludesTitleAndEveryRow() {
         let units = WeeklyDigestUnitPrefs(distance: .miles, localeIdentifier: "en_US")

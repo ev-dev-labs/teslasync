@@ -19,8 +19,9 @@ import XCTest
 
 // MARK: - Adapter: cached SI snapshot → projection (parity with the web derivations)
 
+@MainActor
 final class MotorProjectionAdapterTests: XCTestCase {
-    private let sample = MotorSnapshotInput(
+    private let sample = MotorPerformanceWidgetSnapshotInput(
         diTorque: 312,
         diStatorTemp: 78,
         motorTempCFront: 64,
@@ -57,7 +58,7 @@ final class MotorProjectionAdapterTests: XCTestCase {
 
     func testTorqueClampsToMaxAndFractionSaturates() {
         let projection = MotorProjection.make(
-            from: MotorSnapshotInput(diTorque: 750),
+            from: MotorPerformanceWidgetSnapshotInput(diTorque: 750),
             temperatureUnit: .celsius
         )
         XCTAssertEqual(projection.torqueMagnitude, MotorProjection.torqueMax, accuracy: 0.0001)
@@ -69,7 +70,7 @@ final class MotorProjectionAdapterTests: XCTestCase {
 
     func testNegativeTorqueUsesMagnitudeForGaugeButKeepsSignedLabel() {
         let projection = MotorProjection.make(
-            from: MotorSnapshotInput(diTorque: -312),
+            from: MotorPerformanceWidgetSnapshotInput(diTorque: -312),
             temperatureUnit: .celsius
         )
         XCTAssertEqual(projection.torqueMagnitude, 312, accuracy: 0.0001)
@@ -78,7 +79,7 @@ final class MotorProjectionAdapterTests: XCTestCase {
     }
 
     func testMissingTorqueDefaultsToZero() {
-        let projection = MotorProjection.make(from: MotorSnapshotInput(gear: "N"), temperatureUnit: .celsius)
+        let projection = MotorProjection.make(from: MotorPerformanceWidgetSnapshotInput(gear: "N"), temperatureUnit: .celsius)
         XCTAssertTrue(projection.hasData)
         XCTAssertEqual(projection.torque, 0, accuracy: 0.0001)
         XCTAssertEqual(projection.torqueZone, .low)
@@ -87,7 +88,7 @@ final class MotorProjectionAdapterTests: XCTestCase {
 
     func testStatorTempFallsBackToFrontMotorTemp() {
         let projection = MotorProjection.make(
-            from: MotorSnapshotInput(diStatorTemp: nil, motorTempCFront: 64),
+            from: MotorPerformanceWidgetSnapshotInput(diStatorTemp: nil, motorTempCFront: 64),
             temperatureUnit: .celsius
         )
         XCTAssertEqual(projection.statorTempText, "64")
@@ -96,7 +97,7 @@ final class MotorProjectionAdapterTests: XCTestCase {
 
     func testStatorTempConvertsToFahrenheit() {
         let projection = MotorProjection.make(
-            from: MotorSnapshotInput(diStatorTemp: 100),
+            from: MotorPerformanceWidgetSnapshotInput(diStatorTemp: 100),
             temperatureUnit: .fahrenheit
         )
         XCTAssertEqual(projection.statorTempText, "212")
@@ -105,7 +106,7 @@ final class MotorProjectionAdapterTests: XCTestCase {
 
     func testStatorTempAbsentLeavesNoUnit() {
         let projection = MotorProjection.make(
-            from: MotorSnapshotInput(diTorque: 10),
+            from: MotorPerformanceWidgetSnapshotInput(diTorque: 10),
             temperatureUnit: .fahrenheit
         )
         XCTAssertNil(projection.statorTempText)
@@ -114,25 +115,25 @@ final class MotorProjectionAdapterTests: XCTestCase {
 
     func testGearFallsBackToShiftStateThenDash() {
         let viaGear = MotorProjection.make(
-            from: MotorSnapshotInput(gear: "R", shiftState: "P"),
+            from: MotorPerformanceWidgetSnapshotInput(gear: "R", shiftState: "P"),
             temperatureUnit: .celsius
         )
         XCTAssertEqual(viaGear.gearText, "R")
 
         let viaShift = MotorProjection.make(
-            from: MotorSnapshotInput(gear: nil, shiftState: "P"),
+            from: MotorPerformanceWidgetSnapshotInput(gear: nil, shiftState: "P"),
             temperatureUnit: .celsius
         )
         XCTAssertEqual(viaShift.gearText, "P")
 
         let blankGear = MotorProjection.make(
-            from: MotorSnapshotInput(gear: "  ", shiftState: "N"),
+            from: MotorPerformanceWidgetSnapshotInput(gear: "  ", shiftState: "N"),
             temperatureUnit: .celsius
         )
         XCTAssertEqual(blankGear.gearText, "N")
 
         let neither = MotorProjection.make(
-            from: MotorSnapshotInput(diTorque: 1),
+            from: MotorPerformanceWidgetSnapshotInput(diTorque: 1),
             temperatureUnit: .celsius
         )
         XCTAssertEqual(neither.gearText, "—")
@@ -140,20 +141,20 @@ final class MotorProjectionAdapterTests: XCTestCase {
 
     func testGForceFormattingAndAbsence() {
         let present = MotorProjection.make(
-            from: MotorSnapshotInput(lateralAccel: 0.5, longitudinalAccel: -1.25),
+            from: MotorPerformanceWidgetSnapshotInput(lateralAccel: 0.5, longitudinalAccel: -1.25),
             temperatureUnit: .celsius
         )
         XCTAssertEqual(present.lateralGText, "0.50")
         XCTAssertEqual(present.longitudinalGText, "-1.25")
 
-        let absent = MotorProjection.make(from: MotorSnapshotInput(diTorque: 1), temperatureUnit: .celsius)
+        let absent = MotorProjection.make(from: MotorPerformanceWidgetSnapshotInput(diTorque: 1), temperatureUnit: .celsius)
         XCTAssertNil(absent.lateralGText)
         XCTAssertNil(absent.longitudinalGText)
     }
 
     func testFractionalTorqueGaugeUsesTwoDecimals() {
         let projection = MotorProjection.make(
-            from: MotorSnapshotInput(diTorque: 312.5),
+            from: MotorPerformanceWidgetSnapshotInput(diTorque: 312.5),
             temperatureUnit: .celsius
         )
         XCTAssertEqual(projection.gaugeValueText, "312.50")
@@ -162,6 +163,7 @@ final class MotorProjectionAdapterTests: XCTestCase {
 
 // MARK: - Torque zone thresholds (web `torqueColor`)
 
+@MainActor
 final class MotorTorqueZoneTests: XCTestCase {
     func testZoneBoundaries() {
         XCTAssertEqual(MotorTorqueZone.classify(magnitude: 0), .low)
@@ -175,6 +177,7 @@ final class MotorTorqueZoneTests: XCTestCase {
 
 // MARK: - Number formatting (web `fmtInt` / `fmtNumber`)
 
+@MainActor
 final class MotorFormatTests: XCTestCase {
     func testIntegerGrouping() {
         XCTAssertEqual(MotorFormat.int(12345), "12,345")
@@ -196,22 +199,23 @@ final class MotorFormatTests: XCTestCase {
 
 // MARK: - Temperature unit (web `convertTempFromSI`)
 
-final class MotorTemperatureUnitTests: XCTestCase {
+@MainActor
+final class MotorPerformanceWidgetTemperatureUnitTests: XCTestCase {
     func testLabels() {
-        XCTAssertEqual(MotorTemperatureUnit.celsius.label, "°C")
-        XCTAssertEqual(MotorTemperatureUnit.fahrenheit.label, "°F")
+        XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.celsius.label, "°C")
+        XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.fahrenheit.label, "°F")
     }
 
     func testConversion() {
-        XCTAssertEqual(MotorTemperatureUnit.celsius.convert(fromCelsius: 20), 20, accuracy: 0.0001)
-        XCTAssertEqual(MotorTemperatureUnit.fahrenheit.convert(fromCelsius: 0), 32, accuracy: 0.0001)
-        XCTAssertEqual(MotorTemperatureUnit.fahrenheit.convert(fromCelsius: 100), 212, accuracy: 0.0001)
+        XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.celsius.convert(fromCelsius: 20), 20, accuracy: 0.0001)
+        XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.fahrenheit.convert(fromCelsius: 0), 32, accuracy: 0.0001)
+        XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.fahrenheit.convert(fromCelsius: 100), 212, accuracy: 0.0001)
     }
 
     func testFromLabel() {
-        XCTAssertEqual(MotorTemperatureUnit.from(label: "°F"), .fahrenheit)
-        XCTAssertEqual(MotorTemperatureUnit.from(label: "°C"), .celsius)
-        XCTAssertEqual(MotorTemperatureUnit.from(label: "km"), .celsius)
+        XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.from(label: "°F"), .fahrenheit)
+        XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.from(label: "°C"), .celsius)
+        XCTAssertEqual(MotorPerformanceWidgetTemperatureUnit.from(label: "km"), .celsius)
     }
 }
 
@@ -241,7 +245,7 @@ final class MotorPerformanceModelTests: XCTestCase {
     }
 
     func testLoadedWithSnapshotShowsContent() {
-        let (model, _) = makeModel(MotorUpdate(status: .loaded, snapshot: MotorSnapshotInput(diTorque: 120)))
+        let (model, _) = makeModel(MotorUpdate(status: .loaded, snapshot: MotorPerformanceWidgetSnapshotInput(diTorque: 120)))
         model.start()
         XCTAssertEqual(model.phase, .content)
         XCTAssertTrue(model.projection.hasData)
@@ -253,7 +257,7 @@ final class MotorPerformanceModelTests: XCTestCase {
         XCTAssertEqual(noCache.phase, .error("boom"))
 
         let (cached, _) = makeModel(
-            MotorUpdate(status: .failed("net"), snapshot: MotorSnapshotInput(diTorque: 50))
+            MotorUpdate(status: .failed("net"), snapshot: MotorPerformanceWidgetSnapshotInput(diTorque: 50))
         )
         cached.start()
         XCTAssertEqual(cached.phase, .error("net"))
@@ -261,7 +265,7 @@ final class MotorPerformanceModelTests: XCTestCase {
 
     func testCachedSnapshotStaysVisibleWhileLoading() {
         let (model, _) = makeModel(
-            MotorUpdate(status: .loading, snapshot: MotorSnapshotInput(diTorque: 90))
+            MotorUpdate(status: .loading, snapshot: MotorPerformanceWidgetSnapshotInput(diTorque: 90))
         )
         model.start()
         XCTAssertEqual(model.phase, .content)
@@ -274,7 +278,7 @@ final class MotorPerformanceModelTests: XCTestCase {
             MotorUpdate(
                 status: .loaded,
                 connection: .offline,
-                snapshot: MotorSnapshotInput(diTorque: 410, gear: "D"),
+                snapshot: MotorPerformanceWidgetSnapshotInput(diTorque: 410, gear: "D"),
                 temperatureUnit: .fahrenheit,
                 updatedAt: Date(),
                 isFetching: true
@@ -314,6 +318,7 @@ final class MotorPerformanceModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class MotorPerformanceRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MotorPerformanceWidget.registration
@@ -347,10 +352,11 @@ final class MotorPerformanceRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class MotorPerformanceAccessibilityTests: XCTestCase {
     func testSummaryIncludesAllPresentMetrics() {
         let projection = MotorProjection.make(
-            from: MotorSnapshotInput(
+            from: MotorPerformanceWidgetSnapshotInput(
                 diTorque: 312,
                 diStatorTemp: 78,
                 gear: "D",
@@ -377,7 +383,7 @@ final class MotorPerformanceAccessibilityTests: XCTestCase {
 
     func testSummaryOmitsAbsentOptionalMetrics() {
         let projection = MotorProjection.make(
-            from: MotorSnapshotInput(diTorque: 100, gear: "N"),
+            from: MotorPerformanceWidgetSnapshotInput(diTorque: 100, gear: "N"),
             temperatureUnit: .celsius
         )
         let summary = MotorPerformanceAccessibility.summary(for: projection)

@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guards (port of `safeNumber`)
 
+@MainActor
 final class OptimizerNumericTests: XCTestCase {
     func testSafeReturnsFiniteValues() {
         XCTAssertEqual(OptimizerNumeric.safe(42.5), 42.5)
@@ -46,6 +47,7 @@ final class OptimizerNumericTests: XCTestCase {
 
 // MARK: - Adapter: battery-score tier (web `>= 75 / >= 50`)
 
+@MainActor
 final class BatteryScoreTierTests: XCTestCase {
     func testThresholds() {
         XCTAssertEqual(BatteryScoreTier.resolve(100), .good)
@@ -63,6 +65,7 @@ final class BatteryScoreTierTests: XCTestCase {
 
 // MARK: - Adapter: projection predicates (ports of the web conditionals)
 
+@MainActor
 final class OptimizerProjectionTests: XCTestCase {
     func testSavingsBannerVisibleAboveFive() {
         XCTAssertTrue(OptimizerProjection.savingsBannerVisible(5.01))
@@ -110,6 +113,7 @@ final class OptimizerProjectionTests: XCTestCase {
 
 // MARK: - Adapter: empty disposition
 
+@MainActor
 final class ChargingOptimizerEmptyTests: XCTestCase {
     func testDefaultOptimizerIsEmpty() {
         XCTAssertTrue(ChargingOptimizer().isEmpty)
@@ -127,6 +131,7 @@ final class ChargingOptimizerEmptyTests: XCTestCase {
 
 // MARK: - Adapter: cost-heatmap matrix + color ramp (web `CostHeatmap`)
 
+@MainActor
 final class OptimizerHeatmapTests: XCTestCase {
     private let entries = [
         OptimizerHeatmapEntry(day: 1, hour: 18, sessions: 4, avgCostPerKwh: 0.42),
@@ -214,6 +219,7 @@ final class OptimizerHeatmapTests: XCTestCase {
 
 // MARK: - Formatting: web `fmtNumber` / `formatCurrency` parity
 
+@MainActor
 final class OptimizerFormattingTests: XCTestCase {
     private let formatting = DefaultOptimizerFormatting()
 

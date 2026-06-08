@@ -3,6 +3,7 @@ import XCTest
 
 /// Pure-logic tests for `LoadableState` — no framework dependency, so these run
 /// independently of the KMP `Shared.xcframework`.
+@MainActor
 final class LoadableStateTests: XCTestCase {
     func testLoadedExposesValueAndFreshness() {
         let state = LoadableState.loaded(42, stale: false)

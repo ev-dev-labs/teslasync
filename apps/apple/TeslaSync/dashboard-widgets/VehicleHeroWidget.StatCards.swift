@@ -12,7 +12,7 @@ import SwiftUI
 
 // MARK: - Stat cards
 
-extension VehicleHeroProjection {
+extension VehicleHeroWidgetProjection {
     static func buildStatCards(
         state: VehicleStateInput,
         status: String,
@@ -49,7 +49,7 @@ extension VehicleHeroProjection {
                 "ctx-speed",
                 "gauge.medium",
                 localize("hero.speed", "Speed"),
-                "\(VehicleHeroFormat.number(speed, decimals: 0, locale: prefs.locale)) \(prefs.speedUnit)",
+                "\(VehicleHeroWidgetFormat.number(speed, decimals: 0, locale: prefs.locale)) \(prefs.speedUnit)",
                 VehicleHeroPalette.purple
             ),
             powerCard(state.powerKw, prefs: prefs, localize: localize, id: "ctx-power"),
@@ -65,7 +65,7 @@ extension VehicleHeroProjection {
     ) -> [VehicleHeroStatCard] {
         let rate = VehicleHeroConvert.distance(state.chargeRateMph ?? 0, prefs.distanceUnit)
         let ttf = state.timeToFullChargeH
-        let rateText = "\(VehicleHeroFormat.int(rate, locale: prefs.locale)) \(prefs.distanceUnit)/h"
+        let rateText = "\(VehicleHeroWidgetFormat.int(rate, locale: prefs.locale)) \(prefs.distanceUnit)/h"
         return [
             card(
                 "ctx-rate",
@@ -78,7 +78,7 @@ extension VehicleHeroProjection {
                 "ctx-ttf",
                 "clock.fill",
                 localize("hero.timeToFull", "Time to Full"),
-                ttf > 0 ? "\(VehicleHeroFormat.number(ttf, decimals: 1, locale: prefs.locale))h" : "—",
+                ttf > 0 ? "\(VehicleHeroWidgetFormat.number(ttf, decimals: 1, locale: prefs.locale))h" : "—",
                 VehicleHeroPalette.amber
             ),
             idealRangeCard(state: state, prefs: prefs, localize: localize, id: "ctx-ideal"),
@@ -146,7 +146,7 @@ extension VehicleHeroProjection {
 
 // MARK: - Stat-card helpers
 
-extension VehicleHeroProjection {
+extension VehicleHeroWidgetProjection {
     private static func card(
         _ id: String, _ image: String, _ label: String, _ value: String, _ color: Color
     ) -> VehicleHeroStatCard {
@@ -167,7 +167,7 @@ extension VehicleHeroProjection {
             id,
             "bolt.fill",
             localize("hero.power", "Power"),
-            "\(VehicleHeroFormat.number(power, decimals: prefs.precision, locale: prefs.locale)) kW",
+            "\(VehicleHeroWidgetFormat.number(power, decimals: prefs.precision, locale: prefs.locale)) kW",
             powerColor(power)
         )
     }
@@ -176,7 +176,7 @@ extension VehicleHeroProjection {
         state: VehicleStateInput, prefs: UnitDisplayPrefs, localize: (String, String) -> String, id: String
     ) -> VehicleHeroStatCard {
         let value = VehicleHeroConvert.distance(state.odometerM, prefs.distanceUnit)
-        let text = "\(VehicleHeroFormat.int(value, locale: prefs.locale)) \(prefs.distanceUnit)"
+        let text = "\(VehicleHeroWidgetFormat.int(value, locale: prefs.locale)) \(prefs.distanceUnit)"
         return card(id, "location.north.fill", localize("hero.odometer", "Odometer"), text, VehicleHeroPalette.purple)
     }
 
@@ -188,7 +188,7 @@ extension VehicleHeroProjection {
             id,
             "waveform.path.ecg",
             localize("hero.idealRange", "Ideal Range"),
-            "\(VehicleHeroFormat.number(value, decimals: 0, locale: prefs.locale)) \(prefs.distanceUnit)",
+            "\(VehicleHeroWidgetFormat.number(value, decimals: 0, locale: prefs.locale)) \(prefs.distanceUnit)",
             VehicleHeroPalette.cyan
         )
     }
@@ -199,7 +199,7 @@ extension VehicleHeroProjection {
         let value: String
         if let celsius {
             let display = VehicleHeroConvert.temperature(celsius, prefs.tempUnit)
-            value = "\(VehicleHeroFormat.number(display, decimals: 1, locale: prefs.locale))\(prefs.tempUnit)"
+            value = "\(VehicleHeroWidgetFormat.number(display, decimals: 1, locale: prefs.locale))\(prefs.tempUnit)"
         } else {
             value = "—"
         }

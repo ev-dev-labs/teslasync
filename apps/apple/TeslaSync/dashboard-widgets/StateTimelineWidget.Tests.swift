@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: segments + stripe (parity with the web derive block)
 
+@MainActor
 final class StateTimelineBuilderTests: XCTestCase {
     func testBuildSegmentsEmptyWhenTotalIsZero() {
         let input = [
@@ -85,6 +86,7 @@ final class StateTimelineBuilderTests: XCTestCase {
 
 // MARK: - Adapter: formatting + kind parsing
 
+@MainActor
 final class StateTimelineFormatTests: XCTestCase {
     func testDecimalAndIntegerGroupAndRound() {
         XCTAssertEqual(StateTimelineFormat.decimal(25.806, fractionDigits: 1), "25.8")
@@ -215,6 +217,7 @@ final class StateTimelineModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class StateTimelineRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = StateTimelineWidget.registration
@@ -244,6 +247,7 @@ final class StateTimelineRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class StateTimelineAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryStateLabelAndPercent() {
         let projection = StateTimelineBuilder.project(

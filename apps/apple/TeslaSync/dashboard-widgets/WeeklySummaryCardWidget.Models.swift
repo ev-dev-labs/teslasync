@@ -62,7 +62,7 @@ public enum WeeklyDistanceUnit: String, Sendable, Equatable, CaseIterable {
 /// mirroring the web `WeeklyDigestData` interface 1:1. Distance is the backend's
 /// kilometres, energy is kWh, efficiency is Wh/km, cost is in the user's
 /// currency. The `prev*` members are last week's values for the trend chips.
-public struct WeeklyDigestDTO: Sendable, Equatable {
+public struct WeeklySummaryCardWidgetDigestDTO: Sendable, Equatable {
     public var drives: Int
     public var distanceKm: Double
     public var energyKwh: Double

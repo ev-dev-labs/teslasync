@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Format + month labels
 
+@MainActor
 final class StatChartSlideFormatTests: XCTestCase {
     private let locale = "en_US"
 
@@ -56,6 +57,7 @@ final class StatChartSlideFormatTests: XCTestCase {
 
 // MARK: - Projection (cached → projection)
 
+@MainActor
 final class StatChartSlideProjectionTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
 
@@ -116,6 +118,7 @@ final class StatChartSlideProjectionTests: XCTestCase {
 
 // MARK: - Presentation resolver (every state)
 
+@MainActor
 final class StatChartSlidePresentationTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
 
@@ -186,6 +189,7 @@ final class StatChartSlidePresentationTests: XCTestCase {
 
 // MARK: - Web-prop mapping + model + telemetry
 
+@MainActor
 final class StatChartSlideModelTests: XCTestCase {
     private func sample() -> StatChartSlideData {
         StatChartSlideData(
@@ -260,6 +264,7 @@ final class StatChartSlideModelTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class StatChartSlideAccessibilityTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
 

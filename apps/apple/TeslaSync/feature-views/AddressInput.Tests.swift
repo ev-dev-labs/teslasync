@@ -35,6 +35,7 @@ private enum AddressInputFixture {
 
 // MARK: - Adapter: cached results → projection (port parity with the web source)
 
+@MainActor
 final class AddressInputAdapterTests: XCTestCase {
     func testProjectMapsResultsToSuggestions() {
         let projection = AddressInputFixture.project(AddressInputFixture.results)
@@ -291,6 +292,7 @@ final class AddressInputModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class AddressInputAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 

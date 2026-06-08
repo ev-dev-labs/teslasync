@@ -12,12 +12,12 @@
 
 import Foundation
 
-// MARK: - Window state (web `WindowState`)
+// MARK: - Window state (web `WindowStatusDetailState`)
 
-/// The four derived window states (web `WindowState` union). The raw value is the
+/// The four derived window states (web `WindowStatusDetailState` union). The raw value is the
 /// lower-cased `slug` used to build the `admin.security.windowState.{slug}` i18n key,
 /// and `fallback` is the web English default passed to `t(key, default)`.
-public enum WindowState: String, Sendable, Equatable, CaseIterable {
+public enum WindowStatusDetailState: String, Sendable, Equatable, CaseIterable {
     case closed
     case venting
     case open
@@ -132,13 +132,13 @@ public struct WindowStatusEvent: Sendable, Equatable {
 /// position stem so the grid's list identity is collision-free.
 public struct WindowCell: Identifiable, Equatable, Sendable {
     public let position: WindowPosition
-    public let state: WindowState
+    public let state: WindowStatusDetailState
 
     public var id: String {
         position.rawValue
     }
 
-    public init(position: WindowPosition, state: WindowState) {
+    public init(position: WindowPosition, state: WindowStatusDetailState) {
         self.position = position
         self.state = state
     }
@@ -169,7 +169,7 @@ public enum WindowStatusProjection {
     /// non-empty value → Open; an empty/boolean/absent value → Unknown. The web ladder's
     /// final `lower !== '0'` branch means every recognised non-empty value resolves, so
     /// the trailing Unknown is reachable only for the empty/boolean/absent inputs above.
-    public static func parseWindowState(_ signal: WindowSignal) -> WindowState {
+    public static func parseWindowState(_ signal: WindowSignal) -> WindowStatusDetailState {
         guard let raw = signal.nonEmptyString else { return .unknown }
         let lower = raw.lowercased()
         if lower == "closed" || lower == "0" { return .closed }

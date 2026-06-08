@@ -18,6 +18,7 @@ import XCTest
 
 // MARK: - State holder: phases + telemetry + source wiring
 
+@MainActor
 final class WatchSummaryPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(WatchSummaryModel.resolvePhase(status: .loading, hasSummary: false), .loading)
@@ -125,6 +126,7 @@ final class WatchSummaryModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class WatchSummaryRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = WatchSummaryWidget.registration
@@ -155,6 +157,7 @@ final class WatchSummaryRegistryTests: XCTestCase {
 
 // MARK: - Accessibility content
 
+@MainActor
 final class WatchSummaryAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryFieldWhenPresent() {
         let projection = WatchSummaryProjector.project(

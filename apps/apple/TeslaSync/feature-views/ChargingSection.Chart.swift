@@ -110,7 +110,7 @@ struct ChargingEnergyChart: View {
             .cornerRadius(3)
             .accessibilityLabel(Text(verbatim: bar.day))
             .accessibilityValue(
-                Text(verbatim: ChargingAccessibility.barLabel(bar, localize: ChargingStrings.string, locale: locale))
+                Text(verbatim: ChargingSectionAccessibility.barLabel(bar, localize: ChargingStrings.string, locale: locale))
             )
         }
         if let selectedBar {

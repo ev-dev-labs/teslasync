@@ -1,9 +1,9 @@
 //
-//  Stepper.swift
-//  TeslaSync — P4 feature view · 0195 · Stepper (Apple)
+//  OnboardingStepper.swift
+//  TeslaSync — P4 feature view · 0195 · OnboardingStepper (Apple)
 //
 //  The composable onboarding step list — the SwiftUI parity of
-//  features/onboarding/components/Stepper.tsx. Binds through `StepperModel`
+//  features/onboarding/components/OnboardingStepper.tsx. Binds through `StepperModel`
 //  (P1/S8); no networking lives here. Renders the web leaf's ordered step list
 //  (done / current / pending rows with their while-current CTA) plus the P4
 //  states the leaf delegates to its parent: loading skeleton, never-a-blank-box
@@ -13,11 +13,11 @@
 import SwiftUI
 
 /// The composable onboarding step list — the SwiftUI parity of
-/// `features/onboarding/components/Stepper.tsx`, binding through `StepperModel`
+/// `features/onboarding/components/OnboardingStepper.tsx`, binding through `StepperModel`
 /// (P1/S8). No networking lives here.
-public struct Stepper: View {
+public struct OnboardingStepper: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
-    public static let surfaceSlug = "Stepper"
+    public static let surfaceSlug = "OnboardingStepper"
 
     @State private var model: StepperModel
 

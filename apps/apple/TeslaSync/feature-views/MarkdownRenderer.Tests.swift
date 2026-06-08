@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Inline parser
 
+@MainActor
 final class MarkdownInlineParserTests: XCTestCase {
     func testStrongEmphasisStrikethrough() {
         XCTAssertEqual(MarkdownInlineParser.parse("a **b** c"), [.text("a "), .strong([.text("b")]), .text(" c")])
@@ -109,6 +110,7 @@ final class MarkdownInlineParserTests: XCTestCase {
 
 // MARK: - Block parser
 
+@MainActor
 final class MarkdownParserTests: XCTestCase {
     private func blocks(_ source: String) -> [MarkdownBlock] {
         MarkdownParser.parse(source).blocks
@@ -237,6 +239,7 @@ final class MarkdownParserTests: XCTestCase {
 
 // MARK: - Projection (slug, plain text, stats, accessibility)
 
+@MainActor
 final class MarkdownRendererProjectionTests: XCTestCase {
     func testSurfaceSlug() {
         XCTAssertEqual(MarkdownRendererSurface.slug, "MarkdownRenderer")

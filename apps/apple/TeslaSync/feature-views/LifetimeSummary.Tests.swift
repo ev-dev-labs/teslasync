@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Number formatting (port of web fmtNumber / fmtInt / formatCurrency)
 
+@MainActor
 final class LifetimeNumberFormatTests: XCTestCase {
     private let enUS = Locale(identifier: "en-US")
 
@@ -64,6 +65,7 @@ final class LifetimeNumberFormatTests: XCTestCase {
 
 // MARK: - Formatting preferences (web useFormatting defaults)
 
+@MainActor
 final class LifetimeFormattingTests: XCTestCase {
     func testDefaultsMirrorWebGlobals() {
         let formatting = LifetimeFormatting()
@@ -82,6 +84,7 @@ final class LifetimeFormattingTests: XCTestCase {
 
 // MARK: - Tile builder (web LifetimeSummary composition)
 
+@MainActor
 final class LifetimeMetricsBuilderTests: XCTestCase {
     private let core = LifetimeCoreStats(totalCost: 1284.5, totalEnergy: 4210.6, count: 142)
     private let metrics = LifetimeMetrics(
@@ -132,6 +135,7 @@ final class LifetimeMetricsBuilderTests: XCTestCase {
 
 // MARK: - View composition (kind → unit-wrapped display value)
 
+@MainActor
 final class LifetimeMetricDisplayValueTests: XCTestCase {
     func testEnergyKindsWrapWithKwhUnit() {
         let energy = LifetimeMetricProjection(kind: .totalEnergy, primaryText: "4,210.6")
@@ -167,6 +171,7 @@ final class LifetimeMetricDisplayValueTests: XCTestCase {
 
 // MARK: - Projection: phase resolution + overlays
 
+@MainActor
 final class LifetimeSummaryProjectionTests: XCTestCase {
     private let core = LifetimeCoreStats(totalCost: 100, totalEnergy: 400, count: 12)
     private let metrics = LifetimeMetrics(
@@ -293,6 +298,7 @@ final class LifetimeSummaryModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class LifetimeSummaryAccessibilityTests: XCTestCase {
     func testTileSummaryJoinsLabelAndValue() {
         let summary = LifetimeSummaryAccessibility.tileSummary(label: "Total Spent", value: "$1,284.50")

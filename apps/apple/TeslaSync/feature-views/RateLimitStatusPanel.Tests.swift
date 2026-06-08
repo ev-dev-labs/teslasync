@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Number formatting (port of web fmtNumber)
 
+@MainActor
 final class RateLimitNumberFormatTests: XCTestCase {
     private let enUS = Locale(identifier: "en-US")
 
@@ -44,6 +45,7 @@ final class RateLimitNumberFormatTests: XCTestCase {
 
 // MARK: - Duration formatting (port of web formatDurationMsLong)
 
+@MainActor
 final class RateLimitDurationTests: XCTestCase {
     func testNullishAndNonPositiveReturnDash() {
         XCTAssertEqual(RateLimitDuration.long(nil), "—")
@@ -67,6 +69,7 @@ final class RateLimitDurationTests: XCTestCase {
 
 // MARK: - Relative time (port of web formatRelative)
 
+@MainActor
 final class RateLimitRelativeTests: XCTestCase {
     private let base = Date(timeIntervalSince1970: 1_762_000_000)
 
@@ -98,6 +101,7 @@ final class RateLimitRelativeTests: XCTestCase {
 
 // MARK: - Wire decode (snake_case → model)
 
+@MainActor
 final class RateLimitDecodeTests: XCTestCase {
     private func decode(_ json: String) -> RateLimitStatusResponse? {
         RateLimitStatusResponse.decode(Data(json.utf8))
@@ -139,6 +143,7 @@ final class RateLimitDecodeTests: XCTestCase {
 
 // MARK: - Row projection (web RateLimitRow inline maths)
 
+@MainActor
 final class RateLimitRowProjectionTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_762_000_000)
 
@@ -210,6 +215,7 @@ final class RateLimitRowProjectionTests: XCTestCase {
 
 // MARK: - Projection: phase resolution + overlays
 
+@MainActor
 final class RateLimitProjectionTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_762_000_000)
 
@@ -325,6 +331,7 @@ final class RateLimitModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class RateLimitAccessibilityTests: XCTestCase {
     func testRowSummaryJoinsResolvedFragments() {
         let summary = RateLimitAccessibility.rowSummary(

@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: cached positions → density projection (parity port)
 
+@MainActor
 final class PositionHeatmapBuilderTests: XCTestCase {
     func testTierFromColumns() {
         XCTAssertEqual(PositionHeatmapBuilder.tier(forColumns: 0), .compact)
@@ -247,6 +248,7 @@ final class PositionHeatmapRegistryTests: XCTestCase {
 
 // MARK: - i18n facade content
 
+@MainActor
 final class PositionHeatmapStringsTests: XCTestCase {
     func testCountFormatsValue() {
         let label = PositionHeatmapStrings.count("widget.positionHeatmap.count", "%lld positions", 3)

@@ -12,12 +12,12 @@
 
 import Foundation
 
-// MARK: - HTTP method (web ParsedEndpoint.method union)
+// MARK: - HTTP method (web RequestBuilderParsedEndpoint.method union)
 
-/// The five methods the web `ParsedEndpoint` models, with the destructive flag and
+/// The five methods the web `RequestBuilderParsedEndpoint` models, with the destructive flag and
 /// the semantic accent role the web `METHOD_COLORS` map encodes (the view resolves
 /// the role to a design token, keeping this layer SwiftUI-free).
-public enum HTTPMethod: String, Sendable, Equatable, CaseIterable {
+public enum RequestBuilderHTTPMethod: String, Sendable, Equatable, CaseIterable {
     case get = "GET"
     case post = "POST"
     case put = "PUT"
@@ -43,8 +43,8 @@ public enum HTTPMethod: String, Sendable, Equatable, CaseIterable {
 
     /// Parses a raw method string (integration boundary); unknown values are nil so
     /// the caller can apply the web's neutral fallback.
-    public static func parse(_ raw: String) -> HTTPMethod? {
-        HTTPMethod(rawValue: raw.uppercased())
+    public static func parse(_ raw: String) -> RequestBuilderHTTPMethod? {
+        RequestBuilderHTTPMethod(rawValue: raw.uppercased())
     }
 }
 
@@ -54,7 +54,7 @@ public enum RequestAccentRole: Sendable, Equatable {
     case success, info, warning, danger, accent, neutral
 }
 
-// MARK: - Endpoint model (web ParsedEndpoint / ParsedParam / ParsedBody)
+// MARK: - Endpoint model (web RequestBuilderParsedEndpoint / ParsedParam / ParsedBody)
 
 /// Where a parameter is carried (web `'path' | 'query'`).
 public enum ParameterLocation: String, Sendable, Equatable {
@@ -104,10 +104,10 @@ public struct RequestBody: Sendable, Equatable {
     }
 }
 
-/// A parsed endpoint (web `ParsedEndpoint`), trimmed to the fields the request
+/// A parsed endpoint (web `RequestBuilderParsedEndpoint`), trimmed to the fields the request
 /// builder consumes (method, path, summary, description, parameters, requestBody).
-public struct ParsedEndpoint: Sendable, Equatable {
-    public let method: HTTPMethod
+public struct RequestBuilderParsedEndpoint: Sendable, Equatable {
+    public let method: RequestBuilderHTTPMethod
     public let path: String
     public let summary: String
     public let description: String
@@ -115,7 +115,7 @@ public struct ParsedEndpoint: Sendable, Equatable {
     public let requestBody: RequestBody?
 
     public init(
-        method: HTTPMethod,
+        method: RequestBuilderHTTPMethod,
         path: String,
         summary: String = "",
         description: String = "",
@@ -248,7 +248,7 @@ public enum RequestBuilderAdapter {
     /// `{name}` token) and appends an `&`-joined, encoded query string for the query
     /// params that carry a value. Returns the relative path the host sends; the
     /// `/api/v1` shown in the URL bar is added by `displayURL`.
-    public static func relativeURL(endpoint: ParsedEndpoint, params: [String: String]) -> String {
+    public static func relativeURL(endpoint: RequestBuilderParsedEndpoint, params: [String: String]) -> String {
         var url = endpoint.path
         for parameter in endpoint.pathParameters {
             let raw = params[parameter.name] ?? ""
@@ -262,7 +262,7 @@ public enum RequestBuilderAdapter {
     }
 
     /// The full path shown in the URL bar (web `/api/v1{buildUrl()}`).
-    public static func displayURL(endpoint: ParsedEndpoint, params: [String: String]) -> String {
+    public static func displayURL(endpoint: RequestBuilderParsedEndpoint, params: [String: String]) -> String {
         "/api/v1" + relativeURL(endpoint: endpoint, params: params)
     }
 
@@ -277,7 +277,7 @@ public enum RequestBuilderAdapter {
     }
 
     /// Web defaults effect: seed `params` from each parameter's `default`.
-    public static func defaultParameters(for endpoint: ParsedEndpoint) -> [String: String] {
+    public static func defaultParameters(for endpoint: RequestBuilderParsedEndpoint) -> [String: String] {
         var defaults: [String: String] = [:]
         for parameter in endpoint.parameters {
             if let value = parameter.defaultValue {
@@ -332,7 +332,7 @@ public enum RequestBuilderSurface {
 public enum RequestBuilderAccessibility {
     /// "<Request URL>: GET /api/v1/vehicles".
     public static func urlSummary(
-        method: HTTPMethod,
+        method: RequestBuilderHTTPMethod,
         displayURL: String,
         localize: (String, String) -> String
     ) -> String {
@@ -341,7 +341,7 @@ public enum RequestBuilderAccessibility {
 
     /// The destructive-confirm prompt read aloud when the banner appears.
     public static func confirmSummary(
-        method: HTTPMethod,
+        method: RequestBuilderHTTPMethod,
         localize: (String, String) -> String
     ) -> String {
         let format = localize(

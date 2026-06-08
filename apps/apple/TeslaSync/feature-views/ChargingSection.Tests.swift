@@ -3,7 +3,7 @@
 //  TeslaSync — P4 feature view · 0074 · ChargingSection (Apple)
 //
 //  Unit coverage for the ChargingSection surface:
-//    • Adapter (`ChargingProjection` + `ChargingFormat`) — bar mapping + clamp, the
+//    • Adapter (`ChargingSectionProjection` + `ChargingFormat`) — bar mapping + clamp, the
 //      pctChange parity, the formatted stat tiles, the week-over-week badge
 //      (tone + em-dash sentinel), content/empty resolution, and the number/currency
 //      formatting (parity with the web `numberFormat` + `formatCurrency`).
@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: projection + formatting
 
+@MainActor
 final class ChargingProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
@@ -40,21 +41,21 @@ final class ChargingProjectionTests: XCTestCase {
     )
 
     func testBarsPreserveOrderAndClampNegatives() {
-        let bars = ChargingProjection.bars(from: daily)
+        let bars = ChargingSectionProjection.bars(from: daily)
         XCTAssertEqual(bars.map(\.day), ["Mon", "Tue", "Wed"])
         XCTAssertEqual(bars.map(\.index), [0, 1, 2])
         XCTAssertEqual(bars.map(\.energy), [5, 0, 3])
     }
 
     func testPctChange() {
-        XCTAssertEqual(ChargingProjection.pctChange(current: 120, previous: 100), 20, accuracy: 0.0001)
-        XCTAssertEqual(ChargingProjection.pctChange(current: 80, previous: 100), -20, accuracy: 0.0001)
-        XCTAssertEqual(ChargingProjection.pctChange(current: 50, previous: 0), 100, accuracy: 0.0001)
-        XCTAssertEqual(ChargingProjection.pctChange(current: 0, previous: 0), 0, accuracy: 0.0001)
+        XCTAssertEqual(ChargingSectionProjection.pctChange(current: 120, previous: 100), 20, accuracy: 0.0001)
+        XCTAssertEqual(ChargingSectionProjection.pctChange(current: 80, previous: 100), -20, accuracy: 0.0001)
+        XCTAssertEqual(ChargingSectionProjection.pctChange(current: 50, previous: 0), 100, accuracy: 0.0001)
+        XCTAssertEqual(ChargingSectionProjection.pctChange(current: 0, previous: 0), 0, accuracy: 0.0001)
     }
 
     func testStatsFormatting() {
-        let stats = ChargingProjection.stats(from: metrics, formatting: ChargingFormatting(), locale: posix)
+        let stats = ChargingSectionProjection.stats(from: metrics, formatting: ChargingFormatting(), locale: posix)
         XCTAssertEqual(stats.map(\.kind), [.sessions, .totalEnergy, .avgRate, .totalCost])
         XCTAssertEqual(stats[0].value, "1,234")
         XCTAssertEqual(stats[1].value, "42.5 kWh")
@@ -63,7 +64,7 @@ final class ChargingProjectionTests: XCTestCase {
     }
 
     func testStatsRespectCurrencySymbol() {
-        let stats = ChargingProjection.stats(
+        let stats = ChargingSectionProjection.stats(
             from: metrics,
             formatting: ChargingFormatting(currencySymbol: "€"),
             locale: posix
@@ -72,7 +73,7 @@ final class ChargingProjectionTests: XCTestCase {
     }
 
     func testTrendPositiveWhenGreaterOrEqual() {
-        let trend = ChargingProjection.trend(from: metrics, locale: posix)
+        let trend = ChargingSectionProjection.trend(from: metrics, locale: posix)
         XCTAssertEqual(trend.tone, .positive)
         XCTAssertEqual(trend.value, "6.3%")
     }
@@ -85,36 +86,36 @@ final class ChargingProjectionTests: XCTestCase {
             cost: 1,
             prevEnergyKwh: 100
         )
-        let trend = ChargingProjection.trend(from: lower, locale: posix)
+        let trend = ChargingSectionProjection.trend(from: lower, locale: posix)
         XCTAssertEqual(trend.tone, .negative)
         XCTAssertEqual(trend.value, "-20.0%")
     }
 
     func testTrendDashWhenNoPriorBaseline() {
         let fresh = ChargingMetrics(sessionCount: 1, energyAddedKwh: 50, avgChargeRateKw: 1, cost: 1, prevEnergyKwh: 0)
-        let trend = ChargingProjection.trend(from: fresh, locale: posix)
+        let trend = ChargingSectionProjection.trend(from: fresh, locale: posix)
         XCTAssertEqual(trend.value, "—")
         XCTAssertEqual(trend.tone, .positive)
     }
 
     func testHasContent() {
         let empty = ChargingMetrics(sessionCount: 0, energyAddedKwh: 0, avgChargeRateKw: 0, cost: 0, prevEnergyKwh: 0)
-        XCTAssertFalse(ChargingProjection.hasContent(metrics: empty, bars: []))
-        XCTAssertTrue(ChargingProjection.hasContent(metrics: empty, bars: ChargingProjection.bars(from: daily)))
+        XCTAssertFalse(ChargingSectionProjection.hasContent(metrics: empty, bars: []))
+        XCTAssertTrue(ChargingSectionProjection.hasContent(metrics: empty, bars: ChargingSectionProjection.bars(from: daily)))
         let active = ChargingMetrics(sessionCount: 2, energyAddedKwh: 0, avgChargeRateKw: 0, cost: 0, prevEnergyKwh: 0)
-        XCTAssertTrue(ChargingProjection.hasContent(metrics: active, bars: []))
-        XCTAssertFalse(ChargingProjection.hasContent(metrics: nil, bars: []))
+        XCTAssertTrue(ChargingSectionProjection.hasContent(metrics: active, bars: []))
+        XCTAssertFalse(ChargingSectionProjection.hasContent(metrics: nil, bars: []))
     }
 
     func testResolvePhase() {
-        XCTAssertEqual(ChargingProjection.resolvePhase(.loading, hasContent: false), .loading)
-        XCTAssertEqual(ChargingProjection.resolvePhase(.loaded, hasContent: true), .content)
-        XCTAssertEqual(ChargingProjection.resolvePhase(.loaded, hasContent: false), .empty)
-        XCTAssertEqual(ChargingProjection.resolvePhase(.failed("boom"), hasContent: true), .error("boom"))
+        XCTAssertEqual(ChargingSectionProjection.resolvePhase(.loading, hasContent: false), .loading)
+        XCTAssertEqual(ChargingSectionProjection.resolvePhase(.loaded, hasContent: true), .content)
+        XCTAssertEqual(ChargingSectionProjection.resolvePhase(.loaded, hasContent: false), .empty)
+        XCTAssertEqual(ChargingSectionProjection.resolvePhase(.failed("boom"), hasContent: true), .error("boom"))
     }
 
     func testTotalEnergy() {
-        XCTAssertEqual(ChargingProjection.totalEnergy(ChargingProjection.bars(from: daily)), 8, accuracy: 0.0001)
+        XCTAssertEqual(ChargingSectionProjection.totalEnergy(ChargingSectionProjection.bars(from: daily)), 8, accuracy: 0.0001)
     }
 
     func testNumberFormattingParity() {
@@ -248,7 +249,8 @@ final class ChargingSectionModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-final class ChargingAccessibilityTests: XCTestCase {
+@MainActor
+final class ChargingSectionAccessibilityTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
     /// English-fallback localizer (bundle-free).
@@ -262,8 +264,8 @@ final class ChargingAccessibilityTests: XCTestCase {
             cost: 18.49,
             prevEnergyKwh: 40
         )
-        let stats = ChargingProjection.stats(from: metrics, formatting: ChargingFormatting(), locale: posix)
-        let summary = ChargingAccessibility.sectionSummary(stats: stats, localize: echo)
+        let stats = ChargingSectionProjection.stats(from: metrics, formatting: ChargingFormatting(), locale: posix)
+        let summary = ChargingSectionAccessibility.sectionSummary(stats: stats, localize: echo)
         XCTAssertTrue(summary.contains("Charging"))
         XCTAssertTrue(summary.contains("Sessions 9"))
         XCTAssertTrue(summary.contains("Total Energy Added 42.5 kWh"))
@@ -271,11 +273,11 @@ final class ChargingAccessibilityTests: XCTestCase {
     }
 
     func testChartSummaryIncludesTotal() {
-        let bars = ChargingProjection.bars(from: [
+        let bars = ChargingSectionProjection.bars(from: [
             ChargingDailyEnergy(day: "Mon", energy: 5),
             ChargingDailyEnergy(day: "Tue", energy: 3)
         ])
-        let summary = ChargingAccessibility.chartSummary(bars: bars, localize: echo, locale: posix)
+        let summary = ChargingSectionAccessibility.chartSummary(bars: bars, localize: echo, locale: posix)
         XCTAssertTrue(summary.contains("Daily Energy Added (kWh)"))
         XCTAssertTrue(summary.contains("2 days"))
         XCTAssertTrue(summary.contains("8.0 kWh"))
@@ -283,14 +285,14 @@ final class ChargingAccessibilityTests: XCTestCase {
     }
 
     func testChartSummaryEmpty() {
-        let summary = ChargingAccessibility.chartSummary(bars: [], localize: echo, locale: posix)
+        let summary = ChargingSectionAccessibility.chartSummary(bars: [], localize: echo, locale: posix)
         XCTAssertTrue(summary.contains("Daily Energy Added (kWh)"))
         XCTAssertTrue(summary.contains("No data available"))
     }
 
     func testBarLabel() {
         let bar = ChargingEnergyBar(index: 0, day: "Mon", energy: 5)
-        XCTAssertEqual(ChargingAccessibility.barLabel(bar, localize: echo, locale: posix), "Mon: 5.0 kWh Energy Added")
+        XCTAssertEqual(ChargingSectionAccessibility.barLabel(bar, localize: echo, locale: posix), "Mon: 5.0 kWh Energy Added")
     }
 }
 

@@ -49,10 +49,10 @@
     }
 
     @MainActor
-    private func chargerTypePreview(_ update: ChargerTypeUpdate) -> ChargerTypeChart {
+    private func chargerTypePreview(_ update: ChargerTypeChartUpdate) -> ChargerTypeChart {
         ChargerTypeChart(
             model: ChargerTypeChartModel(
-                source: InMemoryChargerTypeSource(initial: update),
+                source: ChargerTypeChartInMemoryChargerTypeSource(initial: update),
                 telemetry: SilentChargerTypeTelemetry()
             )
         )
@@ -60,27 +60,27 @@
 
     #Preview("Content") {
         chargerTypePreview(
-            ChargerTypeUpdate(status: .loaded, sessions: ChargerTypePreviewData.sessions, connection: .live)
+            ChargerTypeChartUpdate(status: .loaded, sessions: ChargerTypePreviewData.sessions, connection: .live)
         )
         .padding()
         .frame(maxWidth: 480)
     }
 
     #Preview("Empty") {
-        chargerTypePreview(ChargerTypeUpdate(status: .loaded, sessions: [], connection: .live))
+        chargerTypePreview(ChargerTypeChartUpdate(status: .loaded, sessions: [], connection: .live))
             .padding()
             .frame(maxWidth: 480)
     }
 
     #Preview("Loading") {
-        chargerTypePreview(ChargerTypeUpdate(status: .loading, sessions: [], connection: .live))
+        chargerTypePreview(ChargerTypeChartUpdate(status: .loading, sessions: [], connection: .live))
             .padding()
             .frame(maxWidth: 480)
     }
 
     #Preview("Error") {
         chargerTypePreview(
-            ChargerTypeUpdate(status: .failed("Request timed out"), sessions: [], connection: .live)
+            ChargerTypeChartUpdate(status: .failed("Request timed out"), sessions: [], connection: .live)
         )
         .padding()
         .frame(maxWidth: 480)
@@ -88,7 +88,7 @@
 
     #Preview("Stale") {
         chargerTypePreview(
-            ChargerTypeUpdate(status: .loaded, sessions: ChargerTypePreviewData.sessions, connection: .stale)
+            ChargerTypeChartUpdate(status: .loaded, sessions: ChargerTypePreviewData.sessions, connection: .stale)
         )
         .padding()
         .frame(maxWidth: 480)
@@ -96,7 +96,7 @@
 
     #Preview("Offline") {
         chargerTypePreview(
-            ChargerTypeUpdate(status: .loaded, sessions: ChargerTypePreviewData.sessions, connection: .offline)
+            ChargerTypeChartUpdate(status: .loaded, sessions: ChargerTypePreviewData.sessions, connection: .offline)
         )
         .padding()
         .frame(maxWidth: 480)

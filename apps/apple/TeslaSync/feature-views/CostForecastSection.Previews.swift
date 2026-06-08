@@ -51,6 +51,7 @@ import SwiftUI
         return model
     }
 
+    @MainActor
     private func previewShell(_ section: CostForecastSection) -> some View {
         ScrollView {
             section.padding(TSSpacing.lg)

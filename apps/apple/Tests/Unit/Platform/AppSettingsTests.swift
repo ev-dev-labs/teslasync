@@ -2,6 +2,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Pure tests for the settings value type, measurement system, and stores.
+@MainActor
 final class AppSettingsDataTests: XCTestCase {
     func testDefaultsArePrivacyFirst() {
         let settings = AppSettings.default

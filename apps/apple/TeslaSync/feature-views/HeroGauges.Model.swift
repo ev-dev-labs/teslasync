@@ -56,7 +56,7 @@ public enum DistanceUnit: String, Sendable, Equatable {
 }
 
 /// Speed display unit — the web `SpeedUnitPref` (`'km/h' | 'mph'`).
-public enum SpeedUnit: String, Sendable, Equatable {
+public enum HeroGaugesSpeedUnit: String, Sendable, Equatable {
     case kmh = "km/h"
     case mph
 
@@ -121,13 +121,13 @@ public struct DriveGaugeStats: Sendable, Equatable {
 /// view never reads settings directly.
 public struct HeroUnitPrefs: Sendable, Equatable {
     public var distance: DistanceUnit
-    public var speed: SpeedUnit
+    public var speed: HeroGaugesSpeedUnit
     public var isMiles: Bool
     public var localeIdentifier: String
 
     public init(
         distance: DistanceUnit = .km,
-        speed: SpeedUnit = .kmh,
+        speed: HeroGaugesSpeedUnit = .kmh,
         isMiles: Bool = false,
         localeIdentifier: String = "en_US"
     ) {

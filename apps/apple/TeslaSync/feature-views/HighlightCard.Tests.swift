@@ -24,6 +24,7 @@ import XCTest
 
 // MARK: - Accent adapter (web color string → native projection + glow map)
 
+@MainActor
 final class HighlightCardAccentTests: XCTestCase {
     func testMapsEveryKnownWebColor() {
         XCTAssertEqual(HighlightCardAccent(web: "cyan"), .cyan)
@@ -83,6 +84,7 @@ final class HighlightCardAccentTests: XCTestCase {
 
 // MARK: - Change model (web `change.positive ? TrendingUp : TrendingDown`)
 
+@MainActor
 final class HighlightCardChangeTests: XCTestCase {
     func testPositiveUsesUpGlyphAndSuccessTint() {
         let change = HighlightCardChange(value: "+12.3%", isPositive: true)
@@ -112,6 +114,7 @@ final class HighlightCardChangeTests: XCTestCase {
 
 // MARK: - Presentation projection (per-configuration "snapshot")
 
+@MainActor
 final class HighlightCardPresentationTests: XCTestCase {
     private func make(
         icon: String = "car.fill",
@@ -198,6 +201,7 @@ final class HighlightCardPresentationTests: XCTestCase {
 
 // MARK: - Accessibility phrasing
 
+@MainActor
 final class HighlightCardAccessibilityTests: XCTestCase {
     func testChangeLabelAnnouncesIncreaseWithValue() {
         let label = HighlightCardAccessibility.changeLabel(isPositive: true, value: "+12.3%")
@@ -220,6 +224,7 @@ final class HighlightCardAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
+@MainActor
 final class HighlightCardTelemetryTests: XCTestCase {
     func testReportOpenEmitsSurfaceSlug() {
         let spy = SpyHighlightCardTelemetry()

@@ -118,7 +118,7 @@ public struct HealthScoreGauge: Equatable, Sendable {
     public let valueText: String
     public let unit: String
     public let fraction: Double
-    public let status: DrivetrainHealthStatus
+    public let status: HealthGaugeGridDrivetrainHealthStatus
 
     public init(
         labelKey: String,
@@ -126,7 +126,7 @@ public struct HealthScoreGauge: Equatable, Sendable {
         valueText: String,
         unit: String,
         fraction: Double,
-        status: DrivetrainHealthStatus
+        status: HealthGaugeGridDrivetrainHealthStatus
     ) {
         self.labelKey = labelKey
         self.labelFallback = labelFallback

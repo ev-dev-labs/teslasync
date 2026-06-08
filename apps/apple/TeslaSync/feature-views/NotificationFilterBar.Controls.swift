@@ -206,7 +206,7 @@ struct NotificationSearchField: View {
 /// The ISO `yyyy-MM-dd` boundary the date fields read + write (web `from`/`to` strings,
 /// sliced to 10 chars). Pure + bundle-free so the model's setters stay testable.
 enum NotificationDateFormat {
-    static let formatter: DateFormatter = {
+    nonisolated(unsafe) static let formatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(identifier: "UTC")

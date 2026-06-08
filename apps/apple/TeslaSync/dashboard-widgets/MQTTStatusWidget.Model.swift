@@ -222,54 +222,7 @@ public final class InMemoryMQTTStatusSource: MQTTStatusSource {
 
 // MARK: - Registry metadata (canonical: registry/system.ts → "mqtt-status")
 
-/// A dashboard grid size in (columns × rows), matching the web `WidgetSize`.
-public struct DashboardWidgetSize: Sendable, Equatable {
-    public var cols: Int
-    public var rows: Int
 
-    public init(cols: Int, rows: Int) {
-        self.cols = cols
-        self.rows = rows
-    }
-}
-
-/// The dashboard registration for a draggable widget surface (web `WidgetDef`).
-public struct DashboardWidgetRegistration: Sendable {
-    public let id: String
-    public let nameKey: String
-    public let descriptionKey: String
-    public let category: String
-    public let defaultSize: DashboardWidgetSize
-    public let minSize: DashboardWidgetSize
-    public let maxSize: DashboardWidgetSize
-
-    public init(
-        id: String,
-        nameKey: String,
-        descriptionKey: String,
-        category: String,
-        defaultSize: DashboardWidgetSize,
-        minSize: DashboardWidgetSize,
-        maxSize: DashboardWidgetSize
-    ) {
-        self.id = id
-        self.nameKey = nameKey
-        self.descriptionKey = descriptionKey
-        self.category = category
-        self.defaultSize = defaultSize
-        self.minSize = minSize
-        self.maxSize = maxSize
-    }
-
-    /// Clamps a requested grid size into the surface's `min…max` envelope, so the
-    /// native grid honors the same constraints as the web registry.
-    public func clamp(_ size: DashboardWidgetSize) -> DashboardWidgetSize {
-        DashboardWidgetSize(
-            cols: min(max(size.cols, minSize.cols), maxSize.cols),
-            rows: min(max(size.rows, minSize.rows), maxSize.rows)
-        )
-    }
-}
 
 // MARK: - Localization facade (P1/S10) — SwiftUI half
 

@@ -42,6 +42,7 @@ import SwiftUI
         return model
     }
 
+    @MainActor
     private func previewGallery(_ model: TemplateGalleryModel) -> some View {
         TemplateGallery(model: model, onApply: { _ in }, onClose: {})
             .frame(maxWidth: 560, maxHeight: 640)

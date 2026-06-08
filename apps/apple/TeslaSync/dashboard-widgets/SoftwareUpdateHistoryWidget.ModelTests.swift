@@ -138,6 +138,7 @@ final class SoftwareUpdateHistoryModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class SoftwareUpdateHistoryRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SoftwareUpdateHistoryWidget.registration
@@ -169,6 +170,7 @@ final class SoftwareUpdateHistoryRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class SoftwareUpdateHistoryAccessibilityTests: XCTestCase {
     func testCompactSummaryComposesVersionAndStatus() {
         let latest = SoftwareUpdateLatest(

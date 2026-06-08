@@ -115,7 +115,7 @@ public struct CarPreferences: Sendable, Equatable {
 
 /// A vehicle option (web `Vehicle`); only the id + a label are needed here — the
 /// first vehicle drives the car-preferences read.
-public struct VehicleOption: Sendable, Equatable, Identifiable {
+public struct GeneralSettingsVehicleOption: Sendable, Equatable, Identifiable {
     public let id: Int
     public let displayName: String
 
@@ -188,7 +188,7 @@ public struct SettingsSaveError: Error, Sendable, Equatable {
 /// connection band. The view-model resolves the render phase + freshness from it.
 public struct GeneralSettingsSnapshot: Sendable, Equatable {
     public var settings: SettingsQuery
-    public var vehicles: [VehicleOption]
+    public var vehicles: [GeneralSettingsVehicleOption]
     public var carPreferences: CarPreferences?
     public var connection: SettingsConnection
     public var isFetching: Bool
@@ -197,7 +197,7 @@ public struct GeneralSettingsSnapshot: Sendable, Equatable {
 
     public init(
         settings: SettingsQuery = .loading,
-        vehicles: [VehicleOption] = [],
+        vehicles: [GeneralSettingsVehicleOption] = [],
         carPreferences: CarPreferences? = nil,
         connection: SettingsConnection = .live,
         isFetching: Bool = false,

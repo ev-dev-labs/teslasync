@@ -50,6 +50,7 @@ enum NotificationFixture {
 
 // MARK: - Adapter: cached input → projection (port parity with the web source)
 
+@MainActor
 final class NotificationSettingsAdapterTests: XCTestCase {
     func testChannelOrderMatchesWebConstant() {
         let projection = NotificationFixture.project(NotificationFixture.input())
@@ -174,6 +175,7 @@ final class NotificationSettingsAdapterTests: XCTestCase {
 
 // MARK: - Volume math
 
+@MainActor
 final class NotificationVolumeMathTests: XCTestCase {
     func testClampUnit() {
         XCTAssertEqual(NotificationVolumeMath.clampUnit(0.5), 0.5, accuracy: 0.0001)
@@ -193,6 +195,7 @@ final class NotificationVolumeMathTests: XCTestCase {
 
 // MARK: - State holder: phase resolution
 
+@MainActor
 final class NotificationSettingsPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         // Web parent precedence: loading and error short-circuit BEFORE the content/empty body.
@@ -207,6 +210,7 @@ final class NotificationSettingsPhaseTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class NotificationSettingsAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 

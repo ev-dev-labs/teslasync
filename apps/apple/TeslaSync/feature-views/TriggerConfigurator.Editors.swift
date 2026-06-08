@@ -126,7 +126,7 @@ struct GeofenceEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: TSSpacing.lg) {
-            GeofencePickerField(
+            TriggerConfiguratorGeofencePickerField(
                 phase: model.geofencePhase,
                 geofences: model.geofences,
                 isStale: model.geofencesStale,

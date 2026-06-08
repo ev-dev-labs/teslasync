@@ -16,6 +16,7 @@ import XCTest
 
 // MARK: - Presentation resolver (every state)
 
+@MainActor
 final class TimeToChargePresentationTests: XCTestCase {
     func testIdleIsLoading() {
         XCTAssertEqual(TimeToChargePresentation.resolve(state: .idle), .loading)
@@ -29,7 +30,7 @@ final class TimeToChargePresentationTests: XCTestCase {
     }
 
     func testLoadingWithCacheIsRefreshingContent() {
-        let state: TimeToChargeLoadState<[ChargingSessionSummary]> =
+        let state: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]> =
             .loading(cached: TimeToChargeFixture.all, stale: false)
         guard case let .content(content) =
             TimeToChargePresentation.resolve(state: state, locale: timeToChargeEnUS)
@@ -49,7 +50,7 @@ final class TimeToChargePresentationTests: XCTestCase {
     }
 
     func testLoadedStaleIsStaleContent() {
-        let state: TimeToChargeLoadState<[ChargingSessionSummary]> =
+        let state: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]> =
             .loaded(TimeToChargeFixture.all, stale: true)
         guard case let .content(content) =
             TimeToChargePresentation.resolve(state: state, locale: timeToChargeEnUS)
@@ -68,7 +69,7 @@ final class TimeToChargePresentationTests: XCTestCase {
     }
 
     func testOfflineWithCacheKeepsContentOffline() {
-        let state: TimeToChargeLoadState<[ChargingSessionSummary]> =
+        let state: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]> =
             .failed(.offline, cached: TimeToChargeFixture.all, stale: true)
         guard case let .content(content) =
             TimeToChargePresentation.resolve(state: state, locale: timeToChargeEnUS)
@@ -104,7 +105,7 @@ final class TimeToChargePresentationTests: XCTestCase {
     }
 
     func testErrorWithCacheKeepsContent() {
-        let state: TimeToChargeLoadState<[ChargingSessionSummary]> =
+        let state: TimeToChargeLoadState<[TimeToChargeSectionChargingSessionSummary]> =
             .failed(.network(message: "x"), cached: TimeToChargeFixture.all, stale: false)
         guard case let .content(content) =
             TimeToChargePresentation.resolve(state: state, locale: timeToChargeEnUS)
@@ -117,6 +118,7 @@ final class TimeToChargePresentationTests: XCTestCase {
 
 // MARK: - Web-prop → load-state mapping
 
+@MainActor
 final class TimeToChargeLoadStateMappingTests: XCTestCase {
     func testLoadingWithSessionsKeepsCache() {
         let state = TimeToChargeModel.loadState(sessions: TimeToChargeFixture.all, loading: true)
@@ -145,6 +147,7 @@ final class TimeToChargeLoadStateMappingTests: XCTestCase {
 
 // MARK: - Layout
 
+@MainActor
 final class TimeToChargeLayoutTests: XCTestCase {
     func testColumnsAtBreakpoints() {
         XCTAssertEqual(TimeToChargeLayout.columnCount(forWidth: 375), 2)
@@ -156,6 +159,7 @@ final class TimeToChargeLayoutTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class TimeToChargeAccessibilityTests: XCTestCase {
     func testCardLabelWithValueUnitAndSubtitle() {
         XCTAssertEqual(
@@ -178,6 +182,7 @@ final class TimeToChargeAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry
 
+@MainActor
 final class TimeToChargeTelemetryTests: XCTestCase {
     func testViewOpenedEventCarriesSlug() {
         XCTAssertEqual(TimeToChargeSection.surfaceSlug, "TimeToChargeSection")

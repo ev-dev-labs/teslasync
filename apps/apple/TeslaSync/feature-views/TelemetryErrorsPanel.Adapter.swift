@@ -109,7 +109,7 @@ public extension TelemetryJSON {
 /// The UI-normalised error row after the defensive extractor unwraps Tesla's
 /// envelope — the native port of the web `TelemetryError` (types.ts). `id` is the
 /// composite `rowKey` (Tesla rows carry no id), keeping list identity collision-free.
-public struct TelemetryErrorRow: Identifiable, Equatable, Sendable {
+public struct TelemetryErrorsPanelErrorRow: Identifiable, Equatable, Sendable {
     public let rowKey: String
     public let timestamp: String
     public let code: String
@@ -140,7 +140,7 @@ public enum TelemetryErrorsExtractor {
     private static let codeKeys = ["error_code", "code", "name", "topic"]
     private static let messageKeys = ["error_message", "message", "body", "description"]
 
-    public static func extract(_ data: TelemetryJSON?) -> (rows: [TelemetryErrorRow], ok: Bool) {
+    public static func extract(_ data: TelemetryJSON?) -> (rows: [TelemetryErrorsPanelErrorRow], ok: Bool) {
         guard let data, case .object = data else {
             // Web: non-object (incl. arrays at root, scalars, null) → ([], false).
             if let array = data?.arrayValue { return (map(array), true) }
@@ -159,13 +159,13 @@ public enum TelemetryErrorsExtractor {
         return (map(raw), true)
     }
 
-    private static func map(_ raw: [TelemetryJSON]) -> [TelemetryErrorRow] {
+    private static func map(_ raw: [TelemetryJSON]) -> [TelemetryErrorsPanelErrorRow] {
         raw.enumerated().map { index, row in
             let timestamp = pickString(row, timestampKeys)
             let code = pickString(row, codeKeys)
             let message = pickString(row, messageKeys)
             let vin = pickString(row, ["vin"])
-            return TelemetryErrorRow(
+            return TelemetryErrorsPanelErrorRow(
                 rowKey: "\(timestamp)|\(code)|\(vin)|\(index)",
                 timestamp: timestamp,
                 code: code,
@@ -261,7 +261,7 @@ public struct TelemetryErrorsExport: Sendable, Equatable {
         self.filename = filename
     }
 
-    public static func make(rows: [TelemetryErrorRow], vin: String) -> TelemetryErrorsExport {
+    public static func make(rows: [TelemetryErrorsPanelErrorRow], vin: String) -> TelemetryErrorsExport {
         let array = TelemetryJSON.array(rows.map { row in
             .object([
                 .init("rowKey", .string(row.rowKey)),
@@ -313,7 +313,7 @@ public enum TelemetryErrorsFormat {
 /// Builds the VoiceOver strings for the panel rows + badges. Pure + public so the
 /// spoken content is asserted without rendering the view.
 public enum TelemetryErrorsAccessibility {
-    public static func rowSummary(for row: TelemetryErrorRow) -> String {
+    public static func rowSummary(for row: TelemetryErrorsPanelErrorRow) -> String {
         [
             TelemetryErrorsFormat.timestamp(row.timestamp),
             row.code.isEmpty ? TelemetryErrorsFormat.dash : row.code,

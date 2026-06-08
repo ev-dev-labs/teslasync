@@ -23,7 +23,7 @@ import SwiftUI
 /// the label/sublabel/status stack, the corner favorite star, and the freshness
 /// chip, wrapped in the shared fade-in (web `FadeIn`).
 struct InputCommandDataTile: View {
-    let def: CommandTileDef
+    let def: InputCommandTileCommandTileDef
     let state: InputCommandTileResolved
     let connection: InputCommandConnection
     let onActivate: () -> Void
@@ -121,7 +121,7 @@ struct InputCommandDataTile: View {
     }
 
     private var accessibilityLabel: String {
-        CommandTileAccessibility.tileLabel(label: label, sublabel: sublabel)
+        InputCommandTileCommandTileAccessibility.tileLabel(label: label, sublabel: sublabel)
     }
 
     private var accessibilityHint: String {
@@ -138,7 +138,7 @@ struct InputCommandDataTile: View {
         let wording = status.outcome == .success
             ? InputCommandStrings.string("inputCommand.statusSuccessA11y", "Last result succeeded")
             : InputCommandStrings.string("inputCommand.statusFailureA11y", "Last result failed")
-        return CommandTileAccessibility.statusLabel(outcomeWording: wording, detail: status.detail)
+        return InputCommandTileCommandTileAccessibility.statusLabel(outcomeWording: wording, detail: status.detail)
     }
 }
 

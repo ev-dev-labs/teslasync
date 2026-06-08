@@ -5,7 +5,7 @@
 //  The "state present" content composed by `VehicleHeroWidget`: the radial-gauge
 //  flow, the charging-detail panel, the context stat grid, the quick-action bar,
 //  and the asleep wake panel (web `VehicleHero`'s `state ? … : asleep` body). All
-//  consume the pre-projected `VehicleHeroProjection` + shared P1/S9 tokens.
+//  consume the pre-projected `VehicleHeroWidgetProjection` + shared P1/S9 tokens.
 //
 
 import SwiftUI
@@ -15,7 +15,7 @@ import SwiftUI
 /// The full "live state" body: gauges → charging panel (if charging) → stat grid →
 /// quick actions (web `VehicleHero`'s `state` branch).
 struct VehicleHeroStateContent: View {
-    let projection: VehicleHeroProjection
+    let projection: VehicleHeroWidgetProjection
     let onNavigate: ((VehicleHeroDestination) -> Void)?
 
     var body: some View {
@@ -44,7 +44,7 @@ struct VehicleHeroGaugeFlow: View {
             ForEach(gauges) { VehicleHeroGaugeView(gauge: $0) }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(VehicleHeroStrings.text("hero.a11y.gauges", "Live gauges"))
+        .accessibilityLabel(VehicleHeroWidgetStrings.text("hero.a11y.gauges", "Live gauges"))
     }
 }
 
@@ -110,7 +110,7 @@ struct VehicleHeroChargingPanel: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.TS.statusSuccess)
                     .accessibilityHidden(true)
-                VehicleHeroStrings.text("hero.charging", "Charging")
+                VehicleHeroWidgetStrings.text("hero.charging", "Charging")
                     .font(Font.TS.bodySm)
                     .fontWeight(.medium)
                     .foregroundStyle(Color.TS.statusSuccess)
@@ -134,7 +134,7 @@ struct VehicleHeroChargingPanel: View {
 
     private func cell(_ key: String, _ fallback: String, _ value: String) -> some View {
         VStack(spacing: 2) {
-            VehicleHeroStrings.text(key, fallback)
+            VehicleHeroWidgetStrings.text(key, fallback)
                 .font(Font.TS.caption)
                 .foregroundStyle(Color.TS.textSecondary)
             Text(verbatim: value)
@@ -149,7 +149,7 @@ struct VehicleHeroChargingPanel: View {
 
     private var timeToFullCell: some View {
         VStack(spacing: 2) {
-            VehicleHeroStrings.text("hero.timeToFull", "Time to Full")
+            VehicleHeroWidgetStrings.text("hero.timeToFull", "Time to Full")
                 .font(Font.TS.caption)
                 .foregroundStyle(Color.TS.textSecondary)
             Text(verbatim: detail.timeToFullText)
@@ -159,7 +159,7 @@ struct VehicleHeroChargingPanel: View {
                 .lineLimit(1)
             if let hours = detail.doneInHours {
                 let done = Date().addingTimeInterval(hours * 3600)
-                Text(verbatim: "\(VehicleHeroStrings.string("hero.doneAt", "Done")) ~"
+                Text(verbatim: "\(VehicleHeroWidgetStrings.string("hero.doneAt", "Done")) ~"
                     + done.formatted(date: .omitted, time: .shortened))
                     .font(.system(size: 9))
                     .foregroundStyle(Color.TS.textMuted)
@@ -246,7 +246,7 @@ struct VehicleHeroActionBar: View {
         Button(action: action) {
             HStack(spacing: TSSpacing.xs) {
                 Image(systemName: image).font(.system(size: 12, weight: .semibold))
-                VehicleHeroStrings.text(key, fallback).font(Font.TS.caption).fontWeight(.medium)
+                VehicleHeroWidgetStrings.text(key, fallback).font(Font.TS.caption).fontWeight(.medium)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, TSSpacing.sm)
@@ -258,7 +258,7 @@ struct VehicleHeroActionBar: View {
             .foregroundStyle(Color.TS.textSecondary)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(VehicleHeroStrings.text(key, fallback))
+        .accessibilityLabel(VehicleHeroWidgetStrings.text(key, fallback))
     }
 }
 
@@ -275,12 +275,12 @@ struct VehicleHeroAsleepPanel: View {
                 .font(.system(size: 26))
                 .foregroundStyle(Color.TS.textMuted)
                 .accessibilityHidden(true)
-            VehicleHeroStrings.text("hero.asleep", "Vehicle asleep — wake to see live data")
+            VehicleHeroWidgetStrings.text("hero.asleep", "Vehicle asleep — wake to see live data")
                 .font(Font.TS.bodySm)
                 .foregroundStyle(Color.TS.textSecondary)
                 .multilineTextAlignment(.center)
             Button(action: onWake) {
-                VehicleHeroStrings.text("hero.wakeUp", "Wake Up")
+                VehicleHeroWidgetStrings.text("hero.wakeUp", "Wake Up")
                     .font(Font.TS.caption)
                     .fontWeight(.semibold)
                     .padding(.horizontal, TSSpacing.md)
@@ -289,7 +289,7 @@ struct VehicleHeroAsleepPanel: View {
                     .foregroundStyle(Color.TS.surface)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(VehicleHeroStrings.text("hero.wakeUp", "Wake Up"))
+            .accessibilityLabel(VehicleHeroWidgetStrings.text("hero.wakeUp", "Wake Up"))
         }
         .frame(maxWidth: .infinity)
         .padding(TSSpacing.lg)

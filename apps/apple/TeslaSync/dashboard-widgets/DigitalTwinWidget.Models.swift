@@ -10,9 +10,9 @@ import Foundation
 
 // MARK: - Domain: window / door / turn-signal state (port of lib/vehicleState.ts)
 
-/// Normalized window position. `nil` (an optional `TwinWindowState`) models the
+/// Normalized window position. `nil` (an optional `DigitalTwinWidgetTwinWindowState`) models the
 /// web `WindowState`'s `null` ("unknown / no data").
-public enum TwinWindowState: String, Sendable, CaseIterable {
+public enum DigitalTwinWidgetTwinWindowState: String, Sendable, CaseIterable {
     case open
     case closed
     case partial
@@ -28,7 +28,7 @@ public enum TwinTurnSignalState: String, Sendable {
 
 /// Per-door open/closed booleans. `nil` means "unknown" (never defaulted to
 /// closed) — faithful to the web `DoorStates`.
-public struct TwinDoorStates: Sendable, Equatable {
+public struct DigitalTwinWidgetTwinDoorStates: Sendable, Equatable {
     public var driverFront: Bool?
     public var passengerFront: Bool?
     public var driverRear: Bool?
@@ -53,17 +53,17 @@ public struct TwinDoorStates: Sendable, Equatable {
     }
 
     /// All-unknown doors (web `UNKNOWN_DOORS`).
-    public static let unknown = TwinDoorStates()
+    public static let unknown = DigitalTwinWidgetTwinDoorStates()
 }
 
 /// The merged view-model the `VehicleTwinView` renders (port of the web
 /// `VehicleTwinState`).
 public struct VehicleTwinState: Sendable, Equatable {
-    public var doors: TwinDoorStates
-    public var windowFD: TwinWindowState?
-    public var windowFP: TwinWindowState?
-    public var windowRD: TwinWindowState?
-    public var windowRP: TwinWindowState?
+    public var doors: DigitalTwinWidgetTwinDoorStates
+    public var windowFD: DigitalTwinWidgetTwinWindowState?
+    public var windowFP: DigitalTwinWidgetTwinWindowState?
+    public var windowRD: DigitalTwinWidgetTwinWindowState?
+    public var windowRP: DigitalTwinWidgetTwinWindowState?
     public var frunkOpen: Bool?
     public var trunkOpen: Bool?
     public var chargePortOpen: Bool?
@@ -79,11 +79,11 @@ public struct VehicleTwinState: Sendable, Equatable {
     public var lastUpdated: Date?
 
     public init(
-        doors: TwinDoorStates = .unknown,
-        windowFD: TwinWindowState? = nil,
-        windowFP: TwinWindowState? = nil,
-        windowRD: TwinWindowState? = nil,
-        windowRP: TwinWindowState? = nil,
+        doors: DigitalTwinWidgetTwinDoorStates = .unknown,
+        windowFD: DigitalTwinWidgetTwinWindowState? = nil,
+        windowFP: DigitalTwinWidgetTwinWindowState? = nil,
+        windowRD: DigitalTwinWidgetTwinWindowState? = nil,
+        windowRP: DigitalTwinWidgetTwinWindowState? = nil,
         frunkOpen: Bool? = nil,
         trunkOpen: Bool? = nil,
         chargePortOpen: Bool? = nil,
@@ -124,7 +124,7 @@ public struct VehicleTwinState: Sendable, Equatable {
 
 public extension VehicleTwinState {
     /// The four side-window states in the web's `[FD, FP, RD, RP]` order.
-    var windowStates: [TwinWindowState?] {
+    var windowStates: [DigitalTwinWidgetTwinWindowState?] {
         [windowFD, windowFP, windowRD, windowRP]
     }
 
@@ -258,7 +258,7 @@ public struct TwinChargingInput: Sendable, Equatable {
 // MARK: - Vehicle identity
 
 /// The minimal vehicle identity the widget needs (web `useVehicles` row).
-public struct TwinVehicle: Sendable, Equatable, Identifiable {
+public struct DigitalTwinWidgetTwinVehicle: Sendable, Equatable, Identifiable {
     public let id: Int
     public var displayName: String?
     public var vin: String?

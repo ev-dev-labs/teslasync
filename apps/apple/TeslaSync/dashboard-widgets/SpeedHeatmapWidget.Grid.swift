@@ -150,7 +150,7 @@ struct SpeedHeatmapLegend: View {
 struct SpeedHeatmapSummaryRow: View {
     let totalDrives: Int
     let maxSpeed: Double
-    let unit: SpeedUnit
+    let unit: SpeedHeatmapWidgetUnit
 
     var body: some View {
         HStack(spacing: TSSpacing.sm) {
@@ -187,7 +187,7 @@ struct SpeedHeatmapSummaryRow: View {
 /// is no data) with a "Peak {unit}" caption. Honors Reduce Motion.
 struct SpeedHeatmapPeakNumber: View {
     let maxSpeed: Double
-    let unit: SpeedUnit
+    let unit: SpeedHeatmapWidgetUnit
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var formatted: String {

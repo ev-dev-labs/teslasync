@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 
 #if DEBUG
+    @MainActor
     private func previewModel(_ update: MotorHistoryUpdate) -> MotorHistoryModel {
         let source = InMemoryMotorHistorySource(initial: update)
         let model = MotorHistoryModel(source: source)
@@ -18,13 +19,13 @@ import SwiftUI
     }
 
     /// Synthesizes a plausible torque / stator-temp / g-force trace.
-    private func previewSnapshots(count: Int = 40) -> [MotorSnapshotInput] {
+    private func previewSnapshots(count: Int = 40) -> [MotorHistoryWidgetSnapshotInput] {
         let start = Date().addingTimeInterval(-Double(count) * 30)
         let formatter = ISO8601DateFormatter()
         return (0 ..< count).map { index in
             let time = start.addingTimeInterval(Double(index) * 30)
             let phase = Double(index) / Double(count) * .pi * 2
-            return MotorSnapshotInput(
+            return MotorHistoryWidgetSnapshotInput(
                 ts: formatter.string(from: time),
                 diTorque: 180 + 140 * sin(phase),
                 diStatorTemp: 70 + 45 * (0.5 + 0.5 * sin(phase * 0.7)),

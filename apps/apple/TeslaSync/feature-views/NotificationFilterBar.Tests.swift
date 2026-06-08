@@ -19,6 +19,7 @@ import XCTest
 
 // MARK: - Filter patch math (web setters)
 
+@MainActor
 final class NotificationFiltersPatchTests: XCTestCase {
     func testTogglingSeverityAppendsThenRemoves() {
         let base = NotificationFilters()
@@ -101,6 +102,7 @@ final class NotificationFiltersPatchTests: XCTestCase {
 
 // MARK: - Projection: phase + active chips
 
+@MainActor
 final class NotificationFilterProjectionTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -165,6 +167,7 @@ final class NotificationFilterProjectionTests: XCTestCase {
 
 // MARK: - Option labels + ISO date boundary
 
+@MainActor
 final class NotificationFilterOptionTests: XCTestCase {
     func testVehicleOptionLabelFallback() {
         XCTAssertEqual(NotificationVehicleOption(id: 1, displayName: "Roadster").label, "Roadster")
@@ -192,6 +195,7 @@ final class NotificationFilterOptionTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class NotificationFilterAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

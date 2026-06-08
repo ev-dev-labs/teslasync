@@ -38,11 +38,12 @@ private enum SubscriptionsFixture {
     static let format = SubscriptionsFormatting(localeIdentifier: "en_US", timeZoneIdentifier: "UTC")
 
     /// Identity localizer — returns the English fallback (web catalog default).
-    static let localize: SubscriptionsLocalize = { _, fallback in fallback }
+    nonisolated(unsafe) static let localize: SubscriptionsLocalize = { _, fallback in fallback }
 }
 
 // MARK: - Adapter: cached envelope → projection (parity with the web pipeline)
 
+@MainActor
 final class SubscriptionsAdapterTests: XCTestCase {
     private let now = SubscriptionsFixture.now
     private let format = SubscriptionsFixture.format
@@ -251,6 +252,7 @@ final class SubscriptionsModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class SubscriptionsRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SubscriptionsWidget.registration
@@ -274,6 +276,7 @@ final class SubscriptionsRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class SubscriptionsAccessibilityTests: XCTestCase {
     private let now = SubscriptionsFixture.now
     private let format = SubscriptionsFixture.format

@@ -21,13 +21,13 @@ import Foundation
 /// native editor produces byte-identical payloads + copy; each is unit-tested.
 public enum ComputedMetricEditorAdapter {
     /// Web `ALL_OPS` — the fallback operator list (declaration order preserved).
-    public static let allOps: [ComputedMetricOp] = ComputedMetricOp.allCases
+    public static let allOps: [ComputedMetricEditorOp] = ComputedMetricEditorOp.allCases
 
     // MARK: Operator label / key (web `opLabel` / `opKey`)
 
     /// Web `opLabel(op)`: the percent-change operators get a spaced label; every other
     /// operator renders its raw symbol.
-    public static func opLabel(_ op: ComputedMetricOp) -> String {
+    public static func opLabel(_ op: ComputedMetricEditorOp) -> String {
         switch op {
         case .percentChangeGreater: "% change >"
         case .percentChangeLess: "% change <"
@@ -36,7 +36,7 @@ public enum ComputedMetricEditorAdapter {
     }
 
     /// Web `opKey(op)`: the i18n sub-key for an operator (`metricOps.<key>`).
-    public static func opKey(_ op: ComputedMetricOp) -> String {
+    public static func opKey(_ op: ComputedMetricEditorOp) -> String {
         switch op {
         case .greaterThan: "gt"
         case .greaterThanOrEqual: "gte"
@@ -80,7 +80,7 @@ public enum ComputedMetricEditorAdapter {
     }
 
     /// Web `selected?.ops ?? ALL_OPS`.
-    public static func ops(for metric: ComputedMetricSummary?) -> [ComputedMetricOp] {
+    public static func ops(for metric: ComputedMetricSummary?) -> [ComputedMetricEditorOp] {
         metric?.ops ?? allOps
     }
 
@@ -97,7 +97,7 @@ public enum ComputedMetricEditorAdapter {
     }
 
     /// Web `t('notifications.alertStudio.metricOps.<opKey>', opLabel)`.
-    public static func opText(_ op: ComputedMetricOp) -> LocalizedText {
+    public static func opText(_ op: ComputedMetricEditorOp) -> LocalizedText {
         LocalizedText("notifications.alertStudio.metricOps.\(opKey(op))", opLabel(op))
     }
 

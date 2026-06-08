@@ -4,7 +4,7 @@
 //
 //  The value-typed model for the computed-metric operand editor — the SwiftUI parity
 //  of the web `ComputedMetricEditorValue` plus the `api/types` shapes it threads
-//  (`ComputedMetricOp`, `ComputedMetricSummary`, `ComputedMetricPreview`) and the
+//  (`ComputedMetricEditorOp`, `ComputedMetricSummary`, `ComputedMetricPreview`) and the
 //  preview request payload (`usePreviewComputedMetric` body). Everything here is pure
 //  + Foundation-only (no SwiftUI, no store, no `Shared`); the transforms over these
 //  types live in `ComputedMetricEditor.Adapter.swift`, and both are unit-tested. The
@@ -14,12 +14,12 @@
 
 import Foundation
 
-// MARK: - Operator (web `ComputedMetricOp`)
+// MARK: - Operator (web `ComputedMetricEditorOp`)
 
 /// The eight comparison operators a computed-metric rule supports (web
-/// `ComputedMetricOp`). Raw values are the wire discriminators; `CaseIterable` order
+/// `ComputedMetricEditorOp`). Raw values are the wire discriminators; `CaseIterable` order
 /// matches the web `ALL_OPS` array so the fallback operator dropdown lists identically.
-public enum ComputedMetricOp: String, CaseIterable, Sendable, Equatable {
+public enum ComputedMetricEditorOp: String, CaseIterable, Sendable, Equatable {
     case greaterThan = ">"
     case greaterThanOrEqual = ">="
     case lessThan = "<"
@@ -41,9 +41,9 @@ public struct ComputedMetricSummary: Sendable, Equatable, Identifiable {
     public let label: String
     public let unit: String
     public let windows: [String]
-    public let ops: [ComputedMetricOp]
+    public let ops: [ComputedMetricEditorOp]
 
-    public init(id: String, label: String, unit: String, windows: [String], ops: [ComputedMetricOp]) {
+    public init(id: String, label: String, unit: String, windows: [String], ops: [ComputedMetricEditorOp]) {
         self.id = id
         self.label = label
         self.unit = unit
@@ -61,14 +61,14 @@ public struct ComputedMetricSummary: Sendable, Equatable, Identifiable {
 public struct ComputedMetricEditorValue: Sendable, Equatable {
     public var metricID: String
     public var metricWindow: String
-    public var metricOp: ComputedMetricOp
+    public var metricOp: ComputedMetricEditorOp
     public var metricThreshold: String
     public var vehicleID: Int?
 
     public init(
         metricID: String = "",
         metricWindow: String = "",
-        metricOp: ComputedMetricOp = .greaterThan,
+        metricOp: ComputedMetricEditorOp = .greaterThan,
         metricThreshold: String = "",
         vehicleID: Int? = nil
     ) {
@@ -89,14 +89,14 @@ public struct ComputedMetricEditorValue: Sendable, Equatable {
 public struct ComputedMetricPreviewRequest: Sendable, Equatable {
     public let metricID: String
     public let metricWindow: String
-    public let metricOp: ComputedMetricOp
+    public let metricOp: ComputedMetricEditorOp
     public let metricThreshold: Double
     public let vehicleID: Int?
 
     public init(
         metricID: String,
         metricWindow: String,
-        metricOp: ComputedMetricOp,
+        metricOp: ComputedMetricEditorOp,
         metricThreshold: Double,
         vehicleID: Int?
     ) {

@@ -2,6 +2,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Pure-logic tests for the chart utilities (formatting / downsampling / summary).
+@MainActor
 final class ChartLogicTests: XCTestCase {
     func testAxisLabelAbbreviates() {
         XCTAssertEqual(TSChartFormat.axisLabel(950), "950")

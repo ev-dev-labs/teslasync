@@ -134,7 +134,7 @@ public struct PowerFlowChartSample: Identifiable, Equatable, Sendable {
 /// Pure projection from cached watt samples to the view-ready kilowatt points,
 /// summary stats, stacked samples, and the has-data predicate. Mirrors the web
 /// `chartData`/`avgSolarKw`/`peakHomeKw`/`netGridKwh`/`hasData` memos.
-public enum PowerFlowProjection {
+public enum PowerFlowHistoryWidgetProjection {
     /// Converts the cached live-status samples to chart points, applying the web
     /// `(x ?? 0) / 1000` watt→kilowatt conversion + null-coalescing per field.
     public static func points(from history: [PowerFlowHistoryEntryInput]) -> [PowerFlowPoint] {
@@ -182,7 +182,7 @@ public enum PowerFlowProjection {
 
 /// Locale-aware number + time formatting for the surface, kept pure so the
 /// rendered strings can be asserted deterministically with an explicit locale.
-public enum PowerFlowFormat {
+public enum PowerFlowHistoryWidgetFormat {
     /// One-decimal kilowatt value (web `fmtNumber(value, 1)`). Non-finite input
     /// renders an em dash rather than "nan".
     public static func kilowatts(_ value: Double, locale: Locale = .current) -> String {
@@ -220,7 +220,7 @@ public enum PowerFlowAccessibility {
         locale: Locale = .current
     ) -> String {
         let label = localize(labelKey, fallback)
-        let value = PowerFlowFormat.kilowatts(valueKw, locale: locale)
+        let value = PowerFlowHistoryWidgetFormat.kilowatts(valueKw, locale: locale)
         let unit = localize("widget.powerFlowHistory.unitKw", "kW")
         return "\(label): \(value) \(unit)"
     }

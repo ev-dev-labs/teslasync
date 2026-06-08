@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Codec: parity with encodeURIComponent / decodeURIComponent
 
+@MainActor
 final class UrlEncoderCodecTests: XCTestCase {
     func testEncodeMatchesEncodeURIComponentForExample() {
         // The exact web example pair: "hello world&foo=bar" → "hello%20world%26foo%3Dbar".
@@ -129,6 +130,7 @@ final class UrlEncoderModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class UrlEncoderAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let keyTap: (String, String) -> String = { key, _ in "L:\(key)" }
@@ -155,6 +157,7 @@ final class UrlEncoderAccessibilityTests: XCTestCase {
 
 // MARK: - i18n facade
 
+@MainActor
 final class UrlEncoderStringsTests: XCTestCase {
     func testFacadeResolvesToWebFallbackWhenKeyAbsent() {
         // The per-surface table is folded into the catalog at integration time; in

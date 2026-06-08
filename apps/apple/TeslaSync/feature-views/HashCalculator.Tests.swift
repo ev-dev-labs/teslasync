@@ -14,9 +14,12 @@
 //
 
 import XCTest
+@testable import TeslaSync
+ import TeslaSync
 
 // MARK: - Engine: pure SHA-256 hex (parity with crypto.subtle.digest)
 
+@MainActor
 final class HashCalculatorEngineTests: XCTestCase {
     func testKnownVectorABC() {
         XCTAssertEqual(
@@ -99,6 +102,7 @@ final class HashCalculatorModelTests: XCTestCase {
 
 // MARK: - i18n facade content
 
+@MainActor
 final class HashCalculatorStringsTests: XCTestCase {
     func testStringReturnsFallbackWhenKeyMissing() {
         let value = HashCalculatorStrings.string("devtools.hash.__missing__", "Fallback")

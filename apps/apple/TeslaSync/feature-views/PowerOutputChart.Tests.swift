@@ -60,6 +60,7 @@ private enum PowerOutputFixture {
 
 // MARK: - Adapter: projection
 
+@MainActor
 final class PowerOutputProjectionTests: XCTestCase {
     private let posix = PowerOutputFixture.posix
     private let utc = PowerOutputFixture.utc
@@ -171,6 +172,7 @@ final class PowerOutputProjectionTests: XCTestCase {
 
 // MARK: - Adapter: CSV export
 
+@MainActor
 final class PowerOutputExportTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -318,6 +320,7 @@ final class PowerOutputChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class PowerOutputAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

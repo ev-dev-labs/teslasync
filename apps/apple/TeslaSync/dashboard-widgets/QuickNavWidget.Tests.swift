@@ -23,6 +23,7 @@ import XCTest
 
 // MARK: - Adapter: catalog parity (port of the web `NAV_ITEMS`)
 
+@MainActor
 final class QuickNavCatalogTests: XCTestCase {
     func testCatalogMatchesWebOrder() {
         XCTAssertEqual(QuickNavCatalog.all, [.drives, .charging, .analytics, .battery])
@@ -75,6 +76,7 @@ final class QuickNavCatalogTests: XCTestCase {
 
 // MARK: - Adapter: item builder + layout
 
+@MainActor
 final class QuickNavBuilderTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the builder tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
@@ -190,6 +192,7 @@ final class QuickNavModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class QuickNavRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = QuickNavWidget.registration
@@ -216,6 +219,7 @@ final class QuickNavRegistryTests: XCTestCase {
 
 // MARK: - Accessibility content
 
+@MainActor
 final class QuickNavAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -242,7 +246,7 @@ final class QuickNavAccessibilityTests: XCTestCase {
 // MARK: - Per-state render smoke (snapshot)
 
 @MainActor
-final class QuickNavRenderTests: XCTestCase {
+final class QuickNavWidgetRenderTests: XCTestCase {
     private func render(_ update: QuickNavUpdate) -> CGImage? {
         let source = InMemoryQuickNavSource(initial: update)
         let model = QuickNavModel(source: source)

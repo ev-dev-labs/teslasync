@@ -3,6 +3,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Token expiry math and OIDC token-response decoding/mapping.
+@MainActor
 final class AuthTokensTests: XCTestCase {
     func testIsExpired() {
         let now = Date()

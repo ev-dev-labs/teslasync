@@ -4,7 +4,7 @@
 //
 //  The composable Vehicle Card dashboard surface — SwiftUI parity of
 //  features/dashboard/widgets/VehicleHeroWidget.tsx (+ components/VehicleHero.tsx).
-//  Binds through `VehicleHeroModel` (no networking in the view); renders every
+//  Binds through `VehicleHeroWidgetModel` (no networking in the view); renders every
 //  state (loading / empty / error / stale / offline / content + the asleep branch).
 //
 
@@ -28,7 +28,7 @@ public enum VehicleHeroDestination: Equatable, Sendable {
 
 /// The composable Vehicle Card dashboard widget — the SwiftUI parity of
 /// `features/dashboard/widgets/VehicleHeroWidget.tsx`. Renders every state from the
-/// web source inside a glass widget shell, binding through `VehicleHeroModel`
+/// web source inside a glass widget shell, binding through `VehicleHeroWidgetModel`
 /// (P1/S8). No networking lives here.
 public struct VehicleHeroWidget: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
@@ -45,12 +45,12 @@ public struct VehicleHeroWidget: View {
         maxSize: DashboardWidgetSize(cols: 4, rows: 40)
     )
 
-    @State private var model: VehicleHeroModel
+    @State private var model: VehicleHeroWidgetModel
     private let size: DashboardWidgetSize
     private let onNavigate: ((VehicleHeroDestination) -> Void)?
 
     public init(
-        model: VehicleHeroModel,
+        model: VehicleHeroWidgetModel,
         size: DashboardWidgetSize = VehicleHeroWidget.registration.defaultSize,
         onNavigate: ((VehicleHeroDestination) -> Void)? = nil
     ) {
@@ -111,7 +111,7 @@ public struct VehicleHeroWidget: View {
         }
     }
 
-    private func header(_ projection: VehicleHeroProjection) -> some View {
+    private func header(_ projection: VehicleHeroWidgetProjection) -> some View {
         VStack(alignment: .leading, spacing: TSSpacing.xs) {
             HStack(alignment: .firstTextBaseline, spacing: TSSpacing.sm) {
                 Text(verbatim: projection.title)
@@ -119,7 +119,7 @@ public struct VehicleHeroWidget: View {
                     .fontWeight(.bold)
                     .foregroundStyle(Color.TS.textPrimary)
                     .lineLimit(1)
-                VehicleHeroStatusBadge(status: projection.status)
+                VehicleHeroWidgetStatusBadge(status: projection.status)
                 Spacer(minLength: TSSpacing.sm)
                 VehicleHeroFreshnessChip(connection: model.connection, updatedAt: model.updatedAt)
                 VehicleHeroRefreshButton { model.refresh() }

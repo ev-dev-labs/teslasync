@@ -20,7 +20,7 @@ import XCTest
 // MARK: - Fixtures
 
 private enum Fixture {
-    static let now = Date(timeIntervalSince1970: 1_700_000_000)
+    nonisolated(unsafe) static let now = Date(timeIntervalSince1970: 1_700_000_000)
 
     static func ago(_ seconds: TimeInterval) -> String {
         let iso = ISO8601DateFormatter()
@@ -58,6 +58,7 @@ private enum Fixture {
 
 // MARK: - Adapter: status / toggle / menu / conflict / freshness
 
+@MainActor
 final class AutomationCardAdapterTests: XCTestCase {
     func testStatusProjectionPrecedence() {
         XCTAssertEqual(AutomationStatus.project(autoDisabled: true, enabled: true), .autoDisabled)
@@ -164,6 +165,7 @@ final class AutomationCardAdapterTests: XCTestCase {
 
 // MARK: - Formatting: timeAgo / dateTime / confirm
 
+@MainActor
 final class AutomationCardFormattingTests: XCTestCase {
     private let echo = AutomationCardLocalizer.echo
 
@@ -200,6 +202,7 @@ final class AutomationCardFormattingTests: XCTestCase {
 
 // MARK: - Accessibility + i18n key parity
 
+@MainActor
 final class AutomationCardAccessibilityTests: XCTestCase {
     private let echo = AutomationCardLocalizer.echo
 
@@ -243,6 +246,7 @@ final class AutomationCardAccessibilityTests: XCTestCase {
 
 // MARK: - Telemetry (P1/S11 view.opened)
 
+@MainActor
 final class AutomationCardTelemetryTests: XCTestCase {
     private final class Recorder: AutomationCardTelemetry, @unchecked Sendable {
         private let lock = NSLock()

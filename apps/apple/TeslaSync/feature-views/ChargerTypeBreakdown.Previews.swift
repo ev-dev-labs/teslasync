@@ -33,6 +33,7 @@ import SwiftUI
         return model
     }
 
+    @MainActor
     private func previewShell(_ surface: ChargerTypeBreakdown) -> some View {
         ScrollView {
             surface.padding(TSSpacing.lg)

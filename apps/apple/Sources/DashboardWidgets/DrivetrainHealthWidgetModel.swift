@@ -2,27 +2,13 @@ import Foundation
 
 // MARK: - Registry metadata
 
-/// Grid size (columns × rows) for a composable dashboard widget, mirroring the
-/// web `WidgetSize`. The dashboard grid host uses these to place and constrain a
-/// surface. This is the first native dashboard-widget surface, so the minimal
-/// shared grid types are bootstrapped here and can be lifted into a dedicated
-/// dashboard-infra group when the second surface lands.
-public struct DashboardWidgetSize: Equatable, Sendable {
-    public let cols: Int
-    public let rows: Int
-
-    public init(cols: Int, rows: Int) {
-        self.cols = cols
-        self.rows = rows
-    }
-}
 
 /// Static registry metadata for a dashboard widget, mirroring the web `WidgetDef`
 /// registry entry. Keeps the native grid in lockstep with
 /// `web/src/features/dashboard/widgets/registry`. String fields hold i18n catalog
 /// keys (resolved at the render boundary), so the descriptor stays a pure,
 /// testable value type.
-public struct DashboardWidgetDescriptor: Equatable, Sendable {
+public struct DrivetrainHealthWidgetDescriptor: Equatable, Sendable {
     public let id: String
     public let displayNameKey: String
     public let descriptionKey: String

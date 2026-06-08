@@ -52,7 +52,7 @@ public struct VehicleHeroStatCard: Identifiable, Equatable {
 /// The full view model the hero renders, projected from the cached vehicle + SI
 /// state + unit prefs. `hasState == false` is the web "asleep" branch (gauges /
 /// charging / cards are empty; the view shows the wake panel instead).
-public struct VehicleHeroProjection: Equatable {
+public struct VehicleHeroWidgetProjection: Equatable {
     public let vehicleId: Int64
     public let title: String
     public let subtitle: String
@@ -70,13 +70,13 @@ public struct VehicleHeroProjection: Equatable {
         firmware: String,
         prefs: UnitDisplayPrefs,
         localize: (String, String) -> String
-    ) -> VehicleHeroProjection {
+    ) -> VehicleHeroWidgetProjection {
         let statusKey = state?.state ?? "offline"
         let status = VehicleHeroStatusCatalog.visual(for: statusKey, localize: localize)
         let title = vehicle.displayName.isEmpty ? vehicle.vin : vehicle.displayName
         let gauges = state.map { buildGauges(state: $0, status: statusKey, prefs: prefs, localize: localize) } ?? []
         let battery = gauges.first?.valueText ?? "—"
-        return VehicleHeroProjection(
+        return VehicleHeroWidgetProjection(
             vehicleId: vehicle.id,
             title: title,
             subtitle: subtitle(for: vehicle),
@@ -97,7 +97,7 @@ public struct VehicleHeroProjection: Equatable {
 
 // MARK: - Header helpers
 
-extension VehicleHeroProjection {
+extension VehicleHeroWidgetProjection {
     /// Web `{model} {trim_badging} · {vin}` with empty parts dropped.
     static func subtitle(for vehicle: VehicleInput) -> String {
         let lead = [vehicle.model, vehicle.trimBadging]
@@ -115,7 +115,7 @@ extension VehicleHeroProjection {
         localize: (String, String) -> String
     ) -> String {
         guard hasState else { return "\(title). \(status.label)" }
-        return VehicleHeroAccessibility.headerSummary(
+        return VehicleHeroWidgetAccessibility.headerSummary(
             name: title,
             stateLabel: status.label,
             batteryText: battery,
@@ -126,7 +126,7 @@ extension VehicleHeroProjection {
 
 // MARK: - Gauges
 
-extension VehicleHeroProjection {
+extension VehicleHeroWidgetProjection {
     static func buildGauges(
         state: VehicleStateInput,
         status: String,
@@ -186,7 +186,7 @@ extension VehicleHeroProjection {
     private static func gauge(_ build: GaugeBuild, prefs: UnitDisplayPrefs) -> VehicleHeroGauge {
         let clamped = min(max(build.rawValue, 0), build.maxValue)
         let dec = build.decimals ?? (clamped.rounded() == clamped ? 0 : prefs.precision)
-        let valueText = VehicleHeroFormat.number(clamped, decimals: dec, locale: prefs.locale)
+        let valueText = VehicleHeroWidgetFormat.number(clamped, decimals: dec, locale: prefs.locale)
         return VehicleHeroGauge(
             id: build.id,
             label: build.label,
@@ -194,7 +194,7 @@ extension VehicleHeroProjection {
             unit: build.unit,
             fraction: build.maxValue > 0 ? clamped / build.maxValue : 0,
             color: build.color,
-            accessibilityValue: VehicleHeroAccessibility.gaugeValue(
+            accessibilityValue: VehicleHeroWidgetAccessibility.gaugeValue(
                 label: build.label, valueText: valueText, unit: build.unit
             )
         )
@@ -215,16 +215,16 @@ private struct GaugeBuild {
 
 // MARK: - Charging detail
 
-extension VehicleHeroProjection {
+extension VehicleHeroWidgetProjection {
     static func chargingDetail(state: VehicleStateInput, prefs: UnitDisplayPrefs) -> VehicleHeroChargingDetail? {
         guard state.isCharging else { return nil }
         let rate = VehicleHeroConvert.distance(state.chargeRateMph ?? 0, prefs.distanceUnit)
         let ttf = state.timeToFullChargeH
-        let power = VehicleHeroFormat.number(state.chargerPowerKw, decimals: prefs.precision, locale: prefs.locale)
+        let power = VehicleHeroWidgetFormat.number(state.chargerPowerKw, decimals: prefs.precision, locale: prefs.locale)
         return VehicleHeroChargingDetail(
             powerText: "\(power) kW",
-            rateText: "\(VehicleHeroFormat.int(rate, locale: prefs.locale)) \(prefs.distanceUnit)/h",
-            timeToFullText: ttf > 0 ? "\(VehicleHeroFormat.number(ttf, decimals: 1, locale: prefs.locale))h" : "—",
+            rateText: "\(VehicleHeroWidgetFormat.int(rate, locale: prefs.locale)) \(prefs.distanceUnit)/h",
+            timeToFullText: ttf > 0 ? "\(VehicleHeroWidgetFormat.number(ttf, decimals: 1, locale: prefs.locale))h" : "—",
             doneInHours: ttf > 0 ? ttf : nil
         )
     }

@@ -40,7 +40,7 @@ enum ChargerTypePalette {
 /// The panel header: the web `ChartContainer` title with a charger glyph (web
 /// lucide chart intent) and the live-state freshness chip.
 struct ChargerTypeHeader: View {
-    let connection: ChargerTypeConnection
+    let connection: ChargerTypeChartConnection
 
     var body: some View {
         HStack(alignment: .center, spacing: TSSpacing.sm) {
@@ -77,7 +77,7 @@ struct ChargerTypeSubtitle: View {
 
 /// The header freshness chip reflecting the bound source's live-state (ADR-013).
 struct ChargerTypeFreshnessChip: View {
-    let connection: ChargerTypeConnection
+    let connection: ChargerTypeChartConnection
 
     private struct Descriptor {
         let tone: Color
@@ -97,7 +97,7 @@ struct ChargerTypeFreshnessChip: View {
         .accessibilityLabel(ChargerTypeStrings.text(descriptor.key, descriptor.fallback))
     }
 
-    private static func descriptor(for connection: ChargerTypeConnection) -> Descriptor {
+    private static func descriptor(for connection: ChargerTypeChartConnection) -> Descriptor {
         switch connection {
         case .live: Descriptor(tone: Color.TS.statusSuccess, key: "charging.curve.live", fallback: "Live")
         case .stale: Descriptor(tone: Color.TS.statusWarning, key: "charging.curve.stale", fallback: "Stale")
@@ -111,7 +111,7 @@ struct ChargerTypeFreshnessChip: View {
 /// The stale/offline banner shown above the chart when the bound source is not
 /// live, so cached columns are clearly labeled (web `DataFreshness` intent).
 struct ChargerTypeConnectivityBanner: View {
-    let connection: ChargerTypeConnection
+    let connection: ChargerTypeChartConnection
 
     var body: some View {
         let offline = connection == .offline
@@ -191,8 +191,8 @@ struct ChargerTypeBreakdownRows: View {
     }
 
     private func summary(for point: ChargerTypePoint) -> String {
-        let count = ChargerTypeProjection.intString(Double(point.count), locale: locale)
-        let mins = ChargerTypeProjection.intString(point.avgDurationMin, locale: locale)
+        let count = ChargerTypeChartProjection.intString(Double(point.count), locale: locale)
+        let mins = ChargerTypeChartProjection.intString(point.avgDurationMin, locale: locale)
         let sessions = ChargerTypeStrings.string("charging.curve.sessions", "sessions")
         let minAvg = ChargerTypeStrings.string("charging.curve.minAvg", "min avg")
         return "\(count) \(sessions) · \(mins) \(minAvg)"
@@ -200,7 +200,7 @@ struct ChargerTypeBreakdownRows: View {
 
     private func rowAccessibility(for point: ChargerTypePoint) -> String {
         let name = ChargerTypeStrings.string(point.type.localizationKey, point.type.fallback)
-        return ChargerTypeAccessibility.rowLabel(point, name: name, locale: locale, localize: ChargerTypeStrings.string)
+        return ChargerTypeChartAccessibility.rowLabel(point, name: name, locale: locale, localize: ChargerTypeStrings.string)
     }
 }
 
@@ -233,10 +233,10 @@ struct ChargerTypeDataTable: View {
                             .font(Font.TS.caption)
                             .foregroundStyle(Color.TS.textPrimary)
                     }
-                    valueCell(ChargerTypeProjection.intString(Double(point.count), locale: locale))
-                    valueCell(ChargerTypeProjection.decimalString(point.avgKw, decimals: 1, locale: locale))
-                    valueCell(ChargerTypeProjection.decimalString(point.avgKwh, decimals: 1, locale: locale))
-                    valueCell(ChargerTypeProjection.intString(point.avgDurationMin, locale: locale))
+                    valueCell(ChargerTypeChartProjection.intString(Double(point.count), locale: locale))
+                    valueCell(ChargerTypeChartProjection.decimalString(point.avgKw, decimals: 1, locale: locale))
+                    valueCell(ChargerTypeChartProjection.decimalString(point.avgKwh, decimals: 1, locale: locale))
+                    valueCell(ChargerTypeChartProjection.intString(point.avgDurationMin, locale: locale))
                 }
             }
         }

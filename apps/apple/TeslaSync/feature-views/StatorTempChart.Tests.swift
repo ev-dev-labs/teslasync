@@ -23,6 +23,7 @@ import XCTest
 
 // MARK: - Adapter: conversion / display value / formatting (web parity)
 
+@MainActor
 final class StatorTempAdapterTests: XCTestCase {
     private let locale = "en_US"
 
@@ -76,6 +77,7 @@ final class StatorTempAdapterTests: XCTestCase {
 
 // MARK: - Adapter: series + thresholds + rows + axis (web grid)
 
+@MainActor
 final class StatorTempProjectorTests: XCTestCase {
     private let locale = "en_US"
 
@@ -318,6 +320,7 @@ final class StatorTempModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class StatorTempAccessibilityTests: XCTestCase {
     private let localize: (String, String) -> String = { _, fallback in fallback }
 

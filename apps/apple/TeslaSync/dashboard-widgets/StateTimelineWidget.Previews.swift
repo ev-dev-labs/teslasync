@@ -12,6 +12,7 @@ import Foundation
 import SwiftUI
 
 #if DEBUG
+    @MainActor
     private func previewModel(_ update: StateTimelineUpdate) -> StateTimelineModel {
         let source = InMemoryStateTimelineSource(initial: update)
         let model = StateTimelineModel(source: source)

@@ -179,7 +179,7 @@ struct DaysToggleRow: View {
 /// state. The web maps `geofences ?? []` silently; the production native surface renders the
 /// loading / error / empty / data branches + the stale / offline overlays the P4 states
 /// contract requires, never a blank control.
-struct GeofencePickerField: View {
+struct TriggerConfiguratorGeofencePickerField: View {
     let phase: GeofenceResolved.Phase
     let geofences: [Geofence]
     let isStale: Bool

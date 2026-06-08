@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: projection (web component-body parity)
 
+@MainActor
 final class TorqueHistoryProjectionTests: XCTestCase {
     private let sweep: [TorqueHistorySample] = [
         TorqueHistorySample(time: "08:00", torque: 0),
@@ -124,6 +125,7 @@ final class TorqueHistoryProjectionTests: XCTestCase {
 
 // MARK: - Formatting
 
+@MainActor
 final class TorqueHistoryFormatTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
 
@@ -279,6 +281,7 @@ final class TorqueHistoryChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class TorqueHistoryAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

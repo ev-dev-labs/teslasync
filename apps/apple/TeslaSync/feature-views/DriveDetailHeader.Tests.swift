@@ -69,6 +69,7 @@ private enum DriveHeaderFixture {
 
 // MARK: - Adapter: date / time / timezone formatting (web parity)
 
+@MainActor
 final class DriveDetailHeaderFormatTests: XCTestCase {
     private let start = DriveHeaderFixture.instant(year: 2026, month: 4, day: 4, hour: 14, minute: 30)
 
@@ -105,6 +106,7 @@ final class DriveDetailHeaderFormatTests: XCTestCase {
 
 // MARK: - Adapter: projector (route/fallback title + subtitle)
 
+@MainActor
 final class DriveDetailHeaderProjectorTests: XCTestCase {
     private func project(_ drive: DriveHeaderDTO) -> DriveHeaderProjection {
         DriveDetailHeaderProjector.project(drive: drive, prefs: DriveHeaderFixture.laPrefs)
@@ -262,6 +264,7 @@ final class DriveDetailHeaderModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class DriveDetailHeaderAccessibilityTests: XCTestCase {
     func testSummaryIncludesTitleAndSubtitle() {
         let projection = DriveDetailHeaderProjector.project(

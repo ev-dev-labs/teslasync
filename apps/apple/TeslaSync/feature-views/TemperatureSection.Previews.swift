@@ -21,7 +21,7 @@
     /// near its set point, and the seats track it, with climate on and a varying fan —
     /// so every series, tile, and the legend render.
     private enum TempSectionPreviewData {
-        static let samples: [TempSectionSample] = (0 ..< 8).map { index in
+        static let samples: [TempSectionSample] = (0 ..< 8).map { (index: Int) -> TempSectionSample in
             TempSectionSample(
                 time: String(format: "%02d:%02d", 8 + index / 6, (index * 10) % 60),
                 outsideC: 14 + Double(index) * 1.2,

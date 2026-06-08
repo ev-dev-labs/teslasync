@@ -353,7 +353,7 @@ public enum TOTPAccessibility {
 /// medium-date + short-time formatter. Injected as a closure so tests stay
 /// deterministic regardless of host locale / timezone.
 public enum TOTPDateFormatting {
-    public static let formatter: DateFormatter = {
+    public nonisolated(unsafe) static let formatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short

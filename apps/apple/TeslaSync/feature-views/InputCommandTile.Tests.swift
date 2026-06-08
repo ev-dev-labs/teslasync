@@ -21,10 +21,10 @@ import XCTest
 
 private func sampleDef(
     id: String = "set_speed_limit",
-    variant: CommandTileVariant = .danger,
+    variant: InputCommandTileCommandTileVariant = .danger,
     sublabelFallback: String? = "Set MPH"
-) -> CommandTileDef {
-    CommandTileDef(
+) -> InputCommandTileCommandTileDef {
+    InputCommandTileCommandTileDef(
         id: id,
         command: id,
         labelKey: "commands.security.speedLimit",
@@ -38,6 +38,7 @@ private func sampleDef(
 
 // MARK: - Last-result status parsing (web `lastStatus` ✓/✗)
 
+@MainActor
 final class CommandTileStatusTests: XCTestCase {
     func testSuccessMarkerParsesAndStrips() {
         let status = CommandTileStatus.parse("✓ 2m ago")
@@ -72,21 +73,23 @@ final class CommandTileStatusTests: XCTestCase {
 
 // MARK: - Variant → accent + raw value parity
 
+@MainActor
 final class CommandTileVariantTests: XCTestCase {
     func testAccentMapping() {
-        XCTAssertEqual(CommandTileVariant.standard.accent, .neutral)
-        XCTAssertEqual(CommandTileVariant.danger.accent, .danger)
-        XCTAssertEqual(CommandTileVariant.success.accent, .success)
+        XCTAssertEqual(InputCommandTileCommandTileVariant.standard.accent, .neutral)
+        XCTAssertEqual(InputCommandTileCommandTileVariant.danger.accent, .danger)
+        XCTAssertEqual(InputCommandTileCommandTileVariant.success.accent, .success)
     }
 
     func testRawValuePreservesWebWireString() {
-        XCTAssertEqual(CommandTileVariant.standard.rawValue, "default")
-        XCTAssertEqual(CommandTileVariant(rawValue: "default"), .standard)
+        XCTAssertEqual(InputCommandTileCommandTileVariant.standard.rawValue, "default")
+        XCTAssertEqual(InputCommandTileCommandTileVariant(rawValue: "default"), .standard)
     }
 }
 
 // MARK: - Sublabel presence (web `def.sublabelFallback && …`)
 
+@MainActor
 final class CommandTileDefTests: XCTestCase {
     func testHasSublabelWhenFallbackPresent() {
         XCTAssertTrue(sampleDef(sublabelFallback: "Set MPH").hasSublabel)
@@ -100,26 +103,27 @@ final class CommandTileDefTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class CommandTileAccessibilityTests: XCTestCase {
     func testTileLabelJoinsLabelAndSublabel() {
         XCTAssertEqual(
-            CommandTileAccessibility.tileLabel(label: "Speed Limit", sublabel: "Set MPH"),
+            InputCommandTileCommandTileAccessibility.tileLabel(label: "Speed Limit", sublabel: "Set MPH"),
             "Speed Limit, Set MPH"
         )
     }
 
     func testTileLabelOmitsMissingSublabel() {
-        XCTAssertEqual(CommandTileAccessibility.tileLabel(label: "Wake Up", sublabel: nil), "Wake Up")
-        XCTAssertEqual(CommandTileAccessibility.tileLabel(label: "Wake Up", sublabel: ""), "Wake Up")
+        XCTAssertEqual(InputCommandTileCommandTileAccessibility.tileLabel(label: "Wake Up", sublabel: nil), "Wake Up")
+        XCTAssertEqual(InputCommandTileCommandTileAccessibility.tileLabel(label: "Wake Up", sublabel: ""), "Wake Up")
     }
 
     func testStatusLabelJoinsWordingAndDetail() {
         XCTAssertEqual(
-            CommandTileAccessibility.statusLabel(outcomeWording: "Last result succeeded", detail: "2m ago"),
+            InputCommandTileCommandTileAccessibility.statusLabel(outcomeWording: "Last result succeeded", detail: "2m ago"),
             "Last result succeeded 2m ago"
         )
         XCTAssertEqual(
-            CommandTileAccessibility.statusLabel(outcomeWording: "Last result failed", detail: ""),
+            InputCommandTileCommandTileAccessibility.statusLabel(outcomeWording: "Last result failed", detail: ""),
             "Last result failed"
         )
     }
@@ -127,6 +131,7 @@ final class CommandTileAccessibilityTests: XCTestCase {
 
 // MARK: - Projection (web render branches + P4 leaf contract)
 
+@MainActor
 final class InputCommandTileProjectionTests: XCTestCase {
     func testErrorTakesPrecedence() {
         let resolved = InputCommandTileProjection.resolve(

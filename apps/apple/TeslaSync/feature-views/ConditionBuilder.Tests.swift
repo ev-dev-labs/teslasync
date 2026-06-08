@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: web transform ports
 
+@MainActor
 final class ConditionBuilderAdapterTests: XCTestCase {
     func testDefaultConditions() {
         XCTAssertEqual(
@@ -203,6 +204,7 @@ final class ConditionBuilderAdapterTests: XCTestCase {
 
 // MARK: - Presentation: geofence-source state resolution (every branch)
 
+@MainActor
 final class GeofencePresentationTests: XCTestCase {
     private let one = [GeofenceOption(id: "1", name: "Home")]
 
@@ -315,6 +317,7 @@ final class GeofenceOptionsModelTests: XCTestCase {
 
 // MARK: - Telemetry: P1/S11 view.opened
 
+@MainActor
 final class ConditionBuilderTelemetryTests: XCTestCase {
     func testReporterEmitsSurfaceSlug() {
         let spy = SpyConditionBuilderTelemetry()

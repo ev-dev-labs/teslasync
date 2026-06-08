@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: conversion / formatting / projection (web parity)
 
+@MainActor
 final class BatteryTabAdapterTests: XCTestCase {
     private let locale = "en_US"
 
@@ -278,6 +279,7 @@ final class BatteryTabModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class BatteryTabAccessibilityTests: XCTestCase {
     func testMetricsSummaryIncludesLabelsValuesAndUnits() {
         let latest = BatteryTrendPointDTO(

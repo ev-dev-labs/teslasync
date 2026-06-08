@@ -229,7 +229,7 @@ extension TirePressureVisualWidget {
         }
     }
 
-    private func diagramRow(_ projection: TirePressureProjection) -> some View {
+    private func diagramRow(_ projection: TirePressureVisualWidgetProjection) -> some View {
         HStack(spacing: TSSpacing.md) {
             TireValueColumn(
                 top: projection.frontLeft,
@@ -250,7 +250,7 @@ extension TirePressureVisualWidget {
         }
     }
 
-    private func footer(_ projection: TirePressureProjection) -> some View {
+    private func footer(_ projection: TirePressureVisualWidgetProjection) -> some View {
         let statusTone: TSTone = projection.allNormal ? .success : (projection.hasWarning ? .warning : .danger)
         let statusLabel = projection.allNormal
             ? TirePressureStrings.string("widget.tireAllNormal", "All Normal")

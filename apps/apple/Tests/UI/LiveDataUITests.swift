@@ -4,6 +4,7 @@ import XCTest
 /// same file runs in the iOS and macOS UI-test targets, so it proves the live
 /// indicator + stale-banner behavior on both idioms. The demo drives a
 /// `DemoLiveSource` turn by turn, so no real SSE backend is involved.
+@MainActor
 final class LiveDataUITests: XCTestCase {
     override func setUp() {
         super.setUp()

@@ -1,9 +1,9 @@
 //
-//  Stepper.Adapter.swift
-//  TeslaSync — P4 feature view · 0195 · Stepper (Apple)
+//  OnboardingStepper.Adapter.swift
+//  TeslaSync — P4 feature view · 0195 · OnboardingStepper (Apple)
 //
 //  The testable projection core — the SwiftUI parity of
-//  features/onboarding/components/Stepper.tsx. Everything here is pure +
+//  features/onboarding/components/OnboardingStepper.tsx. Everything here is pure +
 //  dependency-free (no store, no bundle, no rendered view) so the per-step
 //  state ladder (web `stateOf`), the indicator/tone mapping, the CTA gating,
 //  the stable row keys, and the VoiceOver summary are unit tested in isolation.
@@ -15,7 +15,7 @@
 //  that mapping; the empty/loading/error/stale/offline chrome required by the
 //  P4 states contract is resolved in the Model.
 //
-//  Type names are namespaced to the surface (`Stepper*`) because the app target
+//  Type names are namespaced to the surface (`OnboardingStepper*`) because the app target
 //  already defines an unrelated `OnboardingStep` (FleetApiSection.Models.swift);
 //  the web `OnboardingStep`/`StepperProps` shapes map to `StepperStep` here.
 //

@@ -4,6 +4,7 @@ import XCTest
 /// Timeline-construction tests: entries flip fresh → stale → offline honestly as the
 /// cache ages, are sorted, and the reload date is always in the future (sooner while
 /// charging).
+@MainActor
 final class WidgetTimelinePlannerTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 2_000_000)
 

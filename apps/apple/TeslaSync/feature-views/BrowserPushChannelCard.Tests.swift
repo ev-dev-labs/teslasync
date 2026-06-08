@@ -33,6 +33,7 @@ private enum BrowserPushFixture {
 
 // MARK: - disabledReason (web four-way)
 
+@MainActor
 final class BrowserPushUnsupportedReasonTests: XCTestCase {
     func testAvailableReturnsNil() {
         XCTAssertNil(BrowserPushUnsupportedReason.resolve(BrowserPushCapability()))
@@ -80,6 +81,7 @@ final class BrowserPushUnsupportedReasonTests: XCTestCase {
 
 // MARK: - Status badge
 
+@MainActor
 final class BrowserPushStatusTests: XCTestCase {
     func testUnavailableWinsOverSubscription() {
         let status = BrowserPushStatus.resolve(reason: .permissionDenied, isSubscribed: true)
@@ -105,6 +107,7 @@ final class BrowserPushStatusTests: XCTestCase {
 
 // MARK: - formatRelative port
 
+@MainActor
 final class BrowserPushRelativeTimeTests: XCTestCase {
     private func format(_ iso: String?) -> String {
         BrowserPushRelativeTime.format(
@@ -141,6 +144,7 @@ final class BrowserPushRelativeTimeTests: XCTestCase {
 
 // MARK: - Device projection (web rows.map)
 
+@MainActor
 final class BrowserPushDeviceProjectionTests: XCTestCase {
     private func project(_ row: BrowserPushDeviceRow, currentEndpoint: String? = nil) -> BrowserPushDeviceProjection {
         BrowserPushDeviceProjection.make(
@@ -182,6 +186,7 @@ final class BrowserPushDeviceProjectionTests: XCTestCase {
 
 // MARK: - Render-phase resolution
 
+@MainActor
 final class BrowserPushPhaseTests: XCTestCase {
     private func phase(_ update: BrowserPushChannelCardUpdate) -> BrowserPushChannelCardModel.Phase {
         BrowserPushChannelCardModel.resolvePhase(update)
@@ -324,6 +329,7 @@ final class BrowserPushChannelCardModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class BrowserPushAccessibilityTests: XCTestCase {
     func testHeaderLabelCombinesTitleAndStatus() {
         let label = BrowserPushChannelCardAccessibility.headerLabel(status: .active, localize: .echo)

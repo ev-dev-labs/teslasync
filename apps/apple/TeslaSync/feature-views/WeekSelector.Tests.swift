@@ -39,6 +39,7 @@ private enum WeekSelectorFixtures {
 
 // MARK: - Adapter: week range / label / navigation arithmetic
 
+@MainActor
 final class WeekSelectorProjectionTests: XCTestCase {
     private let calendar = WeekSelectorFixtures.calendar
     private let locale = WeekSelectorFixtures.locale
@@ -103,6 +104,7 @@ final class WeekSelectorProjectionTests: XCTestCase {
 
 // MARK: - Accessibility: composed VoiceOver copy
 
+@MainActor
 final class WeekSelectorAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
@@ -123,6 +125,7 @@ final class WeekSelectorAccessibilityTests: XCTestCase {
 
 // MARK: - State holder: phase resolution
 
+@MainActor
 final class WeekSelectorPhaseTests: XCTestCase {
     func testLoadingResolvesToLoading() {
         XCTAssertEqual(WeekSelectorModel.resolvePhase(status: .loading, hasData: false), .loading)

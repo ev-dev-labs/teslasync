@@ -7,11 +7,11 @@
 //      vehicle-state → badge catalog, a11y summaries.
 //    • Projection — gauges (context + clamp + color), charging detail, the
 //      context stat grid + always cards (parity with web buildStatCards).
-//    • State holder — VehicleHeroModel phase resolution + P1/S11 telemetry.
+//    • State holder — VehicleHeroWidgetModel phase resolution + P1/S11 telemetry.
 //    • Registry — canonical vehicle-hero metadata + size clamping.
 //
 //  These run in the TeslaSync(/-macOS) XCTest targets — no network, no real store
-//  (the model is driven by InMemoryVehicleHeroSource).
+//  (the model is driven by VehicleHeroWidgetInMemoryVehicleHeroSource).
 //
 
 import XCTest
@@ -57,7 +57,8 @@ private func idleState(inside: Double? = 22.5) -> VehicleStateInput {
 
 // MARK: - Adapter: converters + formatters + firmware
 
-final class VehicleHeroAdapterTests: XCTestCase {
+@MainActor
+final class VehicleHeroWidgetAdapterTests: XCTestCase {
     func testDistanceConversionMatchesWebConstants() {
         XCTAssertEqual(VehicleHeroConvert.distance(1000, "km"), 1, accuracy: 1e-9)
         XCTAssertEqual(VehicleHeroConvert.distance(1609.344, "mi"), 1, accuracy: 1e-9)
@@ -74,14 +75,14 @@ final class VehicleHeroAdapterTests: XCTestCase {
     }
 
     func testNumberFormattingParity() {
-        XCTAssertEqual(VehicleHeroFormat.number(12345.6, decimals: 0, locale: "en_US"), "12,346")
-        XCTAssertEqual(VehicleHeroFormat.number(42.567, decimals: 2, locale: "en_US"), "42.57")
-        XCTAssertEqual(VehicleHeroFormat.int(1234, locale: "en_US"), "1,234")
+        XCTAssertEqual(VehicleHeroWidgetFormat.number(12345.6, decimals: 0, locale: "en_US"), "12,346")
+        XCTAssertEqual(VehicleHeroWidgetFormat.number(42.567, decimals: 2, locale: "en_US"), "42.57")
+        XCTAssertEqual(VehicleHeroWidgetFormat.int(1234, locale: "en_US"), "1,234")
     }
 
     func testNumberFormattingGuardsNonFinite() {
-        XCTAssertEqual(VehicleHeroFormat.number(.nan, decimals: 2, locale: "en_US"), "0.00")
-        XCTAssertEqual(VehicleHeroFormat.number(.infinity, decimals: 0, locale: "en_US"), "0")
+        XCTAssertEqual(VehicleHeroWidgetFormat.number(.nan, decimals: 2, locale: "en_US"), "0.00")
+        XCTAssertEqual(VehicleHeroWidgetFormat.number(.infinity, decimals: 0, locale: "en_US"), "0")
     }
 
     func testFirmwarePrecedence() {
@@ -97,6 +98,7 @@ final class VehicleHeroAdapterTests: XCTestCase {
 
 // MARK: - Adapter: status catalog
 
+@MainActor
 final class VehicleHeroStatusCatalogTests: XCTestCase {
     func testKnownStatesCarryToneDotAndLabel() {
         let online = VehicleHeroStatusCatalog.visual(for: "online", localize: echo)
@@ -125,9 +127,10 @@ final class VehicleHeroStatusCatalogTests: XCTestCase {
 
 // MARK: - Projection: gauges
 
+@MainActor
 final class VehicleHeroGaugeTests: XCTestCase {
     private func gauges(_ state: VehicleStateInput, _ prefs: UnitDisplayPrefs = metric) -> [VehicleHeroGauge] {
-        VehicleHeroProjection.build(
+        VehicleHeroWidgetProjection.build(
             vehicle: vehicle, state: state, firmware: "fw", prefs: prefs, localize: echo
         ).gauges
     }
@@ -176,9 +179,10 @@ final class VehicleHeroGaugeTests: XCTestCase {
 
 // MARK: - Projection: charging detail + stat cards
 
+@MainActor
 final class VehicleHeroStatTests: XCTestCase {
-    private func projection(_ state: VehicleStateInput?, firmware: String = "2026.8.1") -> VehicleHeroProjection {
-        VehicleHeroProjection.build(vehicle: vehicle, state: state, firmware: firmware, prefs: metric, localize: echo)
+    private func projection(_ state: VehicleStateInput?, firmware: String = "2026.8.1") -> VehicleHeroWidgetProjection {
+        VehicleHeroWidgetProjection.build(vehicle: vehicle, state: state, firmware: firmware, prefs: metric, localize: echo)
     }
 
     func testChargingDetailOnlyWhenCharging() {
@@ -207,9 +211,9 @@ final class VehicleHeroStatTests: XCTestCase {
     }
 
     func testPowerColorTracksSign() {
-        XCTAssertEqual(VehicleHeroProjection.powerColor(5), VehicleHeroPalette.amber)
-        XCTAssertEqual(VehicleHeroProjection.powerColor(-5), VehicleHeroPalette.green)
-        XCTAssertEqual(VehicleHeroProjection.powerColor(0), VehicleHeroPalette.slate)
+        XCTAssertEqual(VehicleHeroWidgetProjection.powerColor(5), VehicleHeroPalette.amber)
+        XCTAssertEqual(VehicleHeroWidgetProjection.powerColor(-5), VehicleHeroPalette.green)
+        XCTAssertEqual(VehicleHeroWidgetProjection.powerColor(0), VehicleHeroPalette.slate)
     }
 
     func testTemperatureCardShowsDashWhenNil() {
@@ -220,18 +224,19 @@ final class VehicleHeroStatTests: XCTestCase {
 
 // MARK: - Projection: header + a11y
 
+@MainActor
 final class VehicleHeroHeaderTests: XCTestCase {
     func testSubtitleJoinsModelTrimAndVin() {
         XCTAssertEqual(
-            VehicleHeroProjection.subtitle(for: vehicle), "Model 3 Long Range · VIN123"
+            VehicleHeroWidgetProjection.subtitle(for: vehicle), "Model 3 Long Range · VIN123"
         )
         let noTrim = VehicleInput(id: 1, vin: "V", displayName: "n", model: "Model Y", trimBadging: "")
-        XCTAssertEqual(VehicleHeroProjection.subtitle(for: noTrim), "Model Y · V")
+        XCTAssertEqual(VehicleHeroWidgetProjection.subtitle(for: noTrim), "Model Y · V")
     }
 
     func testTitleFallsBackToVinAndStatusDefaultsOffline() {
         let anon = VehicleInput(id: 1, vin: "VIN999", displayName: "", model: "M", trimBadging: "")
-        let proj = VehicleHeroProjection.build(vehicle: anon, state: nil, firmware: "—", prefs: metric, localize: echo)
+        let proj = VehicleHeroWidgetProjection.build(vehicle: anon, state: nil, firmware: "—", prefs: metric, localize: echo)
         XCTAssertEqual(proj.title, "VIN999")
         XCTAssertFalse(proj.hasState)
         XCTAssertEqual(proj.status.label, "Offline") // state nil → "offline"
@@ -239,17 +244,17 @@ final class VehicleHeroHeaderTests: XCTestCase {
     }
 
     func testAccessibilitySummaries() {
-        let summary = VehicleHeroAccessibility.headerSummary(
+        let summary = VehicleHeroWidgetAccessibility.headerSummary(
             name: "Bolt", stateLabel: "Online", batteryText: "72", percentWord: "percent"
         )
         XCTAssertTrue(summary.contains("Bolt"))
         XCTAssertTrue(summary.contains("Online"))
         XCTAssertTrue(summary.contains("72 percent"))
         XCTAssertEqual(
-            VehicleHeroAccessibility.gaugeValue(label: "Battery", valueText: "72", unit: "%"), "Battery, 72 %"
+            VehicleHeroWidgetAccessibility.gaugeValue(label: "Battery", valueText: "72", unit: "%"), "Battery, 72 %"
         )
         XCTAssertEqual(
-            VehicleHeroAccessibility.gaugeValue(label: "Range", valueText: "440", unit: ""), "Range, 440"
+            VehicleHeroWidgetAccessibility.gaugeValue(label: "Range", valueText: "440", unit: ""), "Range, 440"
         )
     }
 }
@@ -257,31 +262,31 @@ final class VehicleHeroHeaderTests: XCTestCase {
 // MARK: - State holder: phases + telemetry
 
 @MainActor
-final class VehicleHeroModelTests: XCTestCase {
+final class VehicleHeroWidgetModelTests: XCTestCase {
     private func make(
-        _ update: VehicleHeroUpdate, telemetry: VehicleHeroTelemetry = OSLogVehicleHeroTelemetry()
-    ) -> (VehicleHeroModel, InMemoryVehicleHeroSource) {
-        let source = InMemoryVehicleHeroSource(initial: update)
-        return (VehicleHeroModel(source: source, telemetry: telemetry), source)
+        _ update: VehicleHeroWidgetUpdate, telemetry: VehicleHeroWidgetTelemetry = VehicleHeroWidgetOSLogVehicleHeroTelemetry()
+    ) -> (VehicleHeroWidgetModel, VehicleHeroWidgetInMemoryVehicleHeroSource) {
+        let source = VehicleHeroWidgetInMemoryVehicleHeroSource(initial: update)
+        return (VehicleHeroWidgetModel(source: source, telemetry: telemetry), source)
     }
 
     func testPhaseResolutionWithoutVehicle() {
-        let (loading, _) = make(VehicleHeroUpdate(status: .loading, vehicle: nil))
+        let (loading, _) = make(VehicleHeroWidgetUpdate(status: .loading, vehicle: nil))
         loading.start()
         XCTAssertEqual(loading.phase, .loading)
 
-        let (empty, _) = make(VehicleHeroUpdate(status: .loaded, vehicle: nil))
+        let (empty, _) = make(VehicleHeroWidgetUpdate(status: .loaded, vehicle: nil))
         empty.start()
         XCTAssertEqual(empty.phase, .empty)
 
-        let (failed, _) = make(VehicleHeroUpdate(status: .failed("boom"), vehicle: nil))
+        let (failed, _) = make(VehicleHeroWidgetUpdate(status: .failed("boom"), vehicle: nil))
         failed.start()
         XCTAssertEqual(failed.phase, .error("boom"))
     }
 
     func testVehiclePresentAlwaysRendersContent() {
-        for status in [VehicleHeroLoadStatus.loading, .loaded, .failed("net")] {
-            let (model, _) = make(VehicleHeroUpdate(status: status, vehicle: vehicle, state: idleState()))
+        for status in [VehicleHeroWidgetLoadStatus.loading, .loaded, .failed("net")] {
+            let (model, _) = make(VehicleHeroWidgetUpdate(status: status, vehicle: vehicle, state: idleState()))
             model.start()
             XCTAssertEqual(model.phase, .content)
             XCTAssertNotNil(model.projection)
@@ -290,7 +295,7 @@ final class VehicleHeroModelTests: XCTestCase {
 
     func testStartEmitsViewOpenedOnce() {
         let spy = SpyTelemetry()
-        let (model, source) = make(VehicleHeroUpdate(status: .loading, vehicle: nil), telemetry: spy)
+        let (model, source) = make(VehicleHeroWidgetUpdate(status: .loading, vehicle: nil), telemetry: spy)
         model.start()
         model.start()
         XCTAssertEqual(spy.surfaces, [VehicleHeroWidget.surfaceSlug])
@@ -298,13 +303,13 @@ final class VehicleHeroModelTests: XCTestCase {
     }
 
     func testRefreshDelegatesAndUpdatesTrack() {
-        let (model, source) = make(VehicleHeroUpdate(status: .loading, vehicle: nil))
+        let (model, source) = make(VehicleHeroWidgetUpdate(status: .loading, vehicle: nil))
         model.start()
         model.refresh()
         model.refresh()
         XCTAssertEqual(source.refreshCount, 2)
 
-        source.push(VehicleHeroUpdate(status: .loaded, connection: .offline, vehicle: vehicle, state: drivingState()))
+        source.push(VehicleHeroWidgetUpdate(status: .loaded, connection: .offline, vehicle: vehicle, state: drivingState()))
         XCTAssertEqual(model.connection, .offline)
         XCTAssertEqual(model.phase, .content)
         XCTAssertEqual(model.projection?.status.label, "Driving")
@@ -314,7 +319,7 @@ final class VehicleHeroModelTests: XCTestCase {
 // MARK: - Registry parity
 
 @MainActor
-final class VehicleHeroRegistryTests: XCTestCase {
+final class VehicleHeroWidgetRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = VehicleHeroWidget.registration
         XCTAssertEqual(registration.id, "vehicle-hero")
@@ -337,7 +342,7 @@ final class VehicleHeroRegistryTests: XCTestCase {
 
 // MARK: - Test doubles
 
-private final class SpyTelemetry: VehicleHeroTelemetry, @unchecked Sendable {
+private final class SpyTelemetry: VehicleHeroWidgetTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

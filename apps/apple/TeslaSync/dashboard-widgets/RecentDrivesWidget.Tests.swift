@@ -3,16 +3,16 @@
 //  TeslaSync — P4 dashboard widget · 0079 · RecentDrivesWidget (Apple)
 //
 //  Unit coverage for the RecentDrivesWidget surface:
-//    • Adapter (cached → projection) — `RecentDrivesProjector` value parity with the web widget's
+//    • Adapter (cached → projection) — `RecentDrivesWidgetProjector` value parity with the web widget's
 //      numeric + date pipeline (convertDistanceFromSI, fmtNumber/fmtInt, `?`/`—` fallbacks,
 //      formatDateShort).
-//    • State holder — `RecentDrivesModel` phase resolution across loading / empty / error / content,
+//    • State holder — `RecentDrivesWidgetModel` phase resolution across loading / empty / error / content,
 //      plus the P1/S11 `view.opened` telemetry, refresh + stale auto-refresh wiring.
 //    • Registry — canonical `recent-drives` metadata + size clamping.
 //    • Accessibility — the VoiceOver summary content.
 //
 //  These run in the TeslaSync(/-macOS) XCTest targets. They have no network and no real store: the
-//  model is driven by `InMemoryRecentDrivesSource`.
+//  model is driven by `RecentDrivesWidgetInMemoryRecentDrivesSource`.
 //
 
 import XCTest
@@ -35,18 +35,19 @@ private enum RecentDrivesFixture {
 
     static let utc = TimeZone(identifier: "UTC") ?? .gmt
 
-    static let drives: [RecentDriveDTO] = [
-        RecentDriveDTO(id: 1, distanceM: 16093.44, durationS: 1500, startSocPct: 82, endSocPct: 67, startTs: date),
-        RecentDriveDTO(id: 2, distanceM: 1000, durationS: 1530, startSocPct: 67, endSocPct: nil, startTs: nil)
+    static let drives: [RecentDrivesWidgetDriveDTO] = [
+        RecentDrivesWidgetDriveDTO(id: 1, distanceM: 16093.44, durationS: 1500, startSocPct: 82, endSocPct: 67, startTs: date),
+        RecentDrivesWidgetDriveDTO(id: 2, distanceM: 1000, durationS: 1530, startSocPct: 67, endSocPct: nil, startTs: nil)
     ]
 }
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
-final class RecentDrivesAdapterTests: XCTestCase {
+@MainActor
+final class RecentDrivesWidgetAdapterTests: XCTestCase {
     func testProjectionMiles() {
-        let units = RecentDrivesUnitPrefs(distance: .miles, localeIdentifier: "en_US")
-        let projection = RecentDrivesProjector.project(
+        let units = RecentDrivesWidgetUnitPrefs(distance: .miles, localeIdentifier: "en_US")
+        let projection = RecentDrivesWidgetProjector.project(
             drives: RecentDrivesFixture.drives,
             units: units,
             copy: .fallback,
@@ -68,8 +69,8 @@ final class RecentDrivesAdapterTests: XCTestCase {
     }
 
     func testProjectionKilometers() {
-        let units = RecentDrivesUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
-        let projection = RecentDrivesProjector.project(
+        let units = RecentDrivesWidgetUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
+        let projection = RecentDrivesWidgetProjector.project(
             drives: RecentDrivesFixture.drives,
             units: units,
             copy: .fallback,
@@ -83,9 +84,9 @@ final class RecentDrivesAdapterTests: XCTestCase {
     }
 
     func testFeetConversionAndGrouping() {
-        let units = RecentDrivesUnitPrefs(distance: .feet, localeIdentifier: "en_US")
-        let drive = RecentDriveDTO(id: 9, distanceM: 304.8, durationS: 0, startSocPct: 50, endSocPct: 50)
-        let row = RecentDrivesProjector.project(
+        let units = RecentDrivesWidgetUnitPrefs(distance: .feet, localeIdentifier: "en_US")
+        let drive = RecentDrivesWidgetDriveDTO(id: 9, distanceM: 304.8, durationS: 0, startSocPct: 50, endSocPct: 50)
+        let row = RecentDrivesWidgetProjector.project(
             drive: drive,
             units: units,
             copy: .fallback,
@@ -97,9 +98,9 @@ final class RecentDrivesAdapterTests: XCTestCase {
     }
 
     func testDurationRoundsHalfAwayFromZero() {
-        let units = RecentDrivesUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
+        let units = RecentDrivesWidgetUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
         // Second fixture drive: 1530 s / 60 = 25.5 → "26"; end SoC nil → "?"; nil date → "—".
-        let projection = RecentDrivesProjector.project(
+        let projection = RecentDrivesWidgetProjector.project(
             drives: RecentDrivesFixture.drives,
             units: units,
             copy: .fallback,
@@ -111,9 +112,9 @@ final class RecentDrivesAdapterTests: XCTestCase {
     }
 
     func testNilQuantitiesFallBackLikeWeb() {
-        let units = RecentDrivesUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
-        let drive = RecentDriveDTO(id: 3) // all nil
-        let row = RecentDrivesProjector.project(
+        let units = RecentDrivesWidgetUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
+        let drive = RecentDrivesWidgetDriveDTO(id: 3) // all nil
+        let row = RecentDrivesWidgetProjector.project(
             drive: drive,
             units: units,
             copy: .fallback,
@@ -125,9 +126,9 @@ final class RecentDrivesAdapterTests: XCTestCase {
     }
 
     func testFractionalSocRendersLikeJsNumber() {
-        let units = RecentDrivesUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
-        let drive = RecentDriveDTO(id: 4, distanceM: 0, durationS: 0, startSocPct: 80.5, endSocPct: 79)
-        let row = RecentDrivesProjector.project(
+        let units = RecentDrivesWidgetUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
+        let drive = RecentDrivesWidgetDriveDTO(id: 4, distanceM: 0, durationS: 0, startSocPct: 80.5, endSocPct: 79)
+        let row = RecentDrivesWidgetProjector.project(
             drive: drive,
             units: units,
             copy: .fallback,
@@ -139,23 +140,23 @@ final class RecentDrivesAdapterTests: XCTestCase {
     func testNonFiniteDistanceCollapsesToZero() {
         XCTAssertEqual(convertRecentDrivesDistanceFromSI(.nan, to: .kilometers), 0)
         XCTAssertEqual(convertRecentDrivesDistanceFromSI(.infinity, to: .miles), 0)
-        XCTAssertEqual(RecentDrivesFormat.number(.infinity, decimals: 1), "0.0")
+        XCTAssertEqual(RecentDrivesWidgetFormat.number(.infinity, decimals: 1), "0.0")
     }
 
     func testProjectorCapsAtFiveRows() {
-        let units = RecentDrivesUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
-        let many = (1 ... 8).map { RecentDriveDTO(id: Int64($0), distanceM: 1000, durationS: 600) }
-        let projection = RecentDrivesProjector.project(drives: many, units: units, copy: .fallback)
+        let units = RecentDrivesWidgetUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
+        let many = (1 ... 8).map { RecentDrivesWidgetDriveDTO(id: Int64($0), distanceM: 1000, durationS: 600) }
+        let projection = RecentDrivesWidgetProjector.project(drives: many, units: units, copy: .fallback)
         XCTAssertEqual(projection.rows.count, 5)
         XCTAssertEqual(projection.rows.first?.id, 1)
         XCTAssertEqual(projection.rows.last?.id, 5)
     }
 
     func testCopyIsLocalizableViaInjection() {
-        let units = RecentDrivesUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
+        let units = RecentDrivesWidgetUnitPrefs(distance: .kilometers, localeIdentifier: "en_US")
         let copy = RecentDrivesCopy(tripDetailFormat: "%1$@m · %2$@→%3$@", socUnknown: "·", noDate: "n/a")
-        let drive = RecentDriveDTO(id: 7, distanceM: 1000, durationS: 600, startSocPct: nil, endSocPct: nil)
-        let row = RecentDrivesProjector.project(
+        let drive = RecentDrivesWidgetDriveDTO(id: 7, distanceM: 1000, durationS: 600, startSocPct: nil, endSocPct: nil)
+        let row = RecentDrivesWidgetProjector.project(
             drive: drive,
             units: units,
             copy: copy,
@@ -168,52 +169,53 @@ final class RecentDrivesAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-final class RecentDrivesPhaseTests: XCTestCase {
+@MainActor
+final class RecentDrivesWidgetPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .loading, hasData: false), .loading)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .loading, hasData: true), .content)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .empty, hasData: false), .empty)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .empty, hasData: true), .empty)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .loaded, hasData: false), .empty)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .loaded, hasData: true), .content)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .failed("x"), hasData: false), .error("x"))
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .failed("x"), hasData: true), .content)
+        XCTAssertEqual(RecentDrivesWidgetModel.resolvePhase(status: .loading, hasData: false), .loading)
+        XCTAssertEqual(RecentDrivesWidgetModel.resolvePhase(status: .loading, hasData: true), .content)
+        XCTAssertEqual(RecentDrivesWidgetModel.resolvePhase(status: .empty, hasData: false), .empty)
+        XCTAssertEqual(RecentDrivesWidgetModel.resolvePhase(status: .empty, hasData: true), .empty)
+        XCTAssertEqual(RecentDrivesWidgetModel.resolvePhase(status: .loaded, hasData: false), .empty)
+        XCTAssertEqual(RecentDrivesWidgetModel.resolvePhase(status: .loaded, hasData: true), .content)
+        XCTAssertEqual(RecentDrivesWidgetModel.resolvePhase(status: .failed("x"), hasData: false), .error("x"))
+        XCTAssertEqual(RecentDrivesWidgetModel.resolvePhase(status: .failed("x"), hasData: true), .content)
     }
 }
 
 @MainActor
-final class RecentDrivesModelTests: XCTestCase {
+final class RecentDrivesWidgetModelTests: XCTestCase {
     private func makeModel(
-        _ update: RecentDrivesUpdate,
-        telemetry: RecentDrivesTelemetry = OSLogRecentDrivesTelemetry()
-    ) -> (RecentDrivesModel, InMemoryRecentDrivesSource) {
-        let source = InMemoryRecentDrivesSource(initial: update)
-        let model = RecentDrivesModel(source: source, telemetry: telemetry)
+        _ update: RecentDrivesWidgetUpdate,
+        telemetry: RecentDrivesWidgetTelemetry = RecentDrivesWidgetOSLogRecentDrivesTelemetry()
+    ) -> (RecentDrivesWidgetModel, RecentDrivesWidgetInMemoryRecentDrivesSource) {
+        let source = RecentDrivesWidgetInMemoryRecentDrivesSource(initial: update)
+        let model = RecentDrivesWidgetModel(source: source, telemetry: telemetry)
         return (model, source)
     }
 
     func testLoadingWithoutDataShowsLoading() {
-        let (model, _) = makeModel(RecentDrivesUpdate(status: .loading, drives: nil))
+        let (model, _) = makeModel(RecentDrivesWidgetUpdate(status: .loading, drives: nil))
         model.start()
         XCTAssertEqual(model.phase, .loading)
     }
 
     func testLoadedWithEmptyArrayShowsEmpty() {
-        let (model, _) = makeModel(RecentDrivesUpdate(status: .loaded, drives: []))
+        let (model, _) = makeModel(RecentDrivesWidgetUpdate(status: .loaded, drives: []))
         model.start()
         XCTAssertEqual(model.phase, .empty)
         XCTAssertTrue(model.projection.isEmpty)
     }
 
     func testFailedWithoutCacheShowsError() {
-        let (model, _) = makeModel(RecentDrivesUpdate(status: .failed("boom"), drives: nil))
+        let (model, _) = makeModel(RecentDrivesWidgetUpdate(status: .failed("boom"), drives: nil))
         model.start()
         XCTAssertEqual(model.phase, .error("boom"))
     }
 
     func testDataPresentShowsContentEvenWhileFailed() {
-        let drives = [RecentDriveDTO(id: 1, distanceM: 1000, durationS: 600)]
-        let (model, _) = makeModel(RecentDrivesUpdate(status: .failed("net"), drives: drives))
+        let drives = [RecentDrivesWidgetDriveDTO(id: 1, distanceM: 1000, durationS: 600)]
+        let (model, _) = makeModel(RecentDrivesWidgetUpdate(status: .failed("net"), drives: drives))
         model.start()
         XCTAssertEqual(model.phase, .content)
         XCTAssertEqual(model.projection.rows.count, 1)
@@ -221,7 +223,7 @@ final class RecentDrivesModelTests: XCTestCase {
 
     func testStartEmitsViewOpenedTelemetryOnce() {
         let spy = SpyRecentDrivesTelemetry()
-        let (model, source) = makeModel(RecentDrivesUpdate(status: .loading, drives: nil), telemetry: spy)
+        let (model, source) = makeModel(RecentDrivesWidgetUpdate(status: .loading, drives: nil), telemetry: spy)
         model.start()
         model.start()
         XCTAssertEqual(spy.surfaces, [RecentDrivesWidget.surfaceSlug])
@@ -229,7 +231,7 @@ final class RecentDrivesModelTests: XCTestCase {
     }
 
     func testRefreshDelegatesToSource() {
-        let (model, source) = makeModel(RecentDrivesUpdate(status: .loaded, drives: []))
+        let (model, source) = makeModel(RecentDrivesWidgetUpdate(status: .loaded, drives: []))
         model.start()
         model.refresh()
         model.refresh()
@@ -237,31 +239,31 @@ final class RecentDrivesModelTests: XCTestCase {
     }
 
     func testAutoRefreshOnlyWhenStaleAndNotFetching() {
-        let drives = [RecentDriveDTO(id: 1, distanceM: 1000, durationS: 600)]
-        let (model, source) = makeModel(RecentDrivesUpdate(status: .loaded, drives: drives))
+        let drives = [RecentDrivesWidgetDriveDTO(id: 1, distanceM: 1000, durationS: 600)]
+        let (model, source) = makeModel(RecentDrivesWidgetUpdate(status: .loaded, drives: drives))
         model.start()
 
         model.autoRefreshIfStale() // live → no refresh
         XCTAssertEqual(source.refreshCount, 0)
 
-        source.push(RecentDrivesUpdate(status: .loaded, connection: .stale, isFetching: true, drives: drives))
+        source.push(RecentDrivesWidgetUpdate(status: .loaded, connection: .stale, isFetching: true, drives: drives))
         model.autoRefreshIfStale() // stale but fetching → no refresh
         XCTAssertEqual(source.refreshCount, 0)
 
-        source.push(RecentDrivesUpdate(status: .loaded, connection: .stale, isFetching: false, drives: drives))
+        source.push(RecentDrivesWidgetUpdate(status: .loaded, connection: .stale, isFetching: false, drives: drives))
         model.autoRefreshIfStale() // stale + idle → refresh
         XCTAssertEqual(source.refreshCount, 1)
     }
 
     func testConnectionAndProjectionTrackUpdates() {
-        let (model, source) = makeModel(RecentDrivesUpdate(status: .loading, drives: nil))
+        let (model, source) = makeModel(RecentDrivesWidgetUpdate(status: .loading, drives: nil))
         model.start()
         source.push(
-            RecentDrivesUpdate(
+            RecentDrivesWidgetUpdate(
                 status: .loaded,
                 connection: .offline,
-                drives: [RecentDriveDTO(id: 7, distanceM: 2000, durationS: 1200)],
-                units: RecentDrivesUnitPrefs(distance: .miles),
+                drives: [RecentDrivesWidgetDriveDTO(id: 7, distanceM: 2000, durationS: 1200)],
+                units: RecentDrivesWidgetUnitPrefs(distance: .miles),
                 updatedAt: Date()
             )
         )
@@ -274,7 +276,8 @@ final class RecentDrivesModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
-final class RecentDrivesRegistryTests: XCTestCase {
+@MainActor
+final class RecentDrivesWidgetRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = RecentDrivesWidget.registration
         XCTAssertEqual(registration.id, "recent-drives")
@@ -301,16 +304,17 @@ final class RecentDrivesRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-final class RecentDrivesAccessibilityTests: XCTestCase {
+@MainActor
+final class RecentDrivesWidgetAccessibilityTests: XCTestCase {
     func testSummaryIncludesTitleAndEveryRow() {
-        let units = RecentDrivesUnitPrefs(distance: .miles, localeIdentifier: "en_US")
-        let projection = RecentDrivesProjector.project(
+        let units = RecentDrivesWidgetUnitPrefs(distance: .miles, localeIdentifier: "en_US")
+        let projection = RecentDrivesWidgetProjector.project(
             drives: RecentDrivesFixture.drives,
             units: units,
             copy: .fallback,
             timeZone: RecentDrivesFixture.utc
         )
-        let summary = RecentDrivesAccessibility.summary(for: projection, title: "Recent Drives")
+        let summary = RecentDrivesWidgetAccessibility.summary(for: projection, title: "Recent Drives")
         XCTAssertTrue(summary.hasPrefix("Recent Drives"))
         XCTAssertTrue(summary.contains("10.0 mi, 25 min · 82% → 67%, Jun 7"))
         // Second fixture row: 1000 m / 1609.344 = 0.6 mi, 1530 s → 26 min, end SoC nil → "?", nil date → "—".
@@ -321,7 +325,7 @@ final class RecentDrivesAccessibilityTests: XCTestCase {
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyRecentDrivesTelemetry: RecentDrivesTelemetry, @unchecked Sendable {
+private final class SpyRecentDrivesTelemetry: RecentDrivesWidgetTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

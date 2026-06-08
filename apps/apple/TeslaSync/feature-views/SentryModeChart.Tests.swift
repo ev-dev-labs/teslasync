@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: projection (buildSentryBuckets consumer parity)
 
+@MainActor
 final class SentryModeProjectionTests: XCTestCase {
     private let posix = Locale(identifier: "en_US_POSIX")
     private let utc = TimeZone(identifier: "UTC")!
@@ -210,6 +211,7 @@ final class SentryModeChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class SentryModeAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

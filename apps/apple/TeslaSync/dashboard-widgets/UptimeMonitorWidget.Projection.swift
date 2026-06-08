@@ -21,7 +21,7 @@ import Foundation
 /// source decodes the `/system/health` payload (snake_case or camelCase) into
 /// this normalized shape; `status` stays a raw string because the web
 /// `ComponentStatus` is an open union (healthy/ok/degraded/unhealthy/offline/…).
-public struct SystemHealthComponentData: Sendable, Equatable {
+public struct UptimeMonitorWidgetSystemHealthComponentData: Sendable, Equatable {
     public var status: String
     public var consecutiveFailures: Int
     public var lastError: String?
@@ -37,15 +37,15 @@ public struct SystemHealthComponentData: Sendable, Equatable {
 /// `SystemHealth` (`status`, `components`, `databaseSize`, `tableCount`).
 /// `databaseSize`/`tableCount` are optional so the web's defensive `?? '—'`
 /// fallbacks are reproduced exactly.
-public struct SystemHealthData: Sendable, Equatable {
+public struct UptimeMonitorWidgetSystemHealthData: Sendable, Equatable {
     public var status: String
-    public var components: [String: SystemHealthComponentData]
+    public var components: [String: UptimeMonitorWidgetSystemHealthComponentData]
     public var databaseSize: String?
     public var tableCount: Int?
 
     public init(
         status: String,
-        components: [String: SystemHealthComponentData] = [:],
+        components: [String: UptimeMonitorWidgetSystemHealthComponentData] = [:],
         databaseSize: String? = nil,
         tableCount: Int? = nil
     ) {
@@ -119,7 +119,7 @@ public struct UptimeMonitorProjection: Sendable, Equatable {
     }
 }
 
-/// Pure adapter: cached `SystemHealthData` → `UptimeMonitorProjection`. Reproduces
+/// Pure adapter: cached `UptimeMonitorWidgetSystemHealthData` → `UptimeMonitorProjection`. Reproduces
 /// the web `useMemo`/derivations exactly: the fixed `SERVICE_KEYS` order, the
 /// `status ?? 'unhealthy'` default, `statusVariant`, `healthyCount`, and the
 /// `data?.status ?? 'unknown'` overall fallback.
@@ -153,7 +153,7 @@ public enum UptimeMonitorProjector {
         return lowered == "ok" || lowered == "healthy"
     }
 
-    public static func project(from data: SystemHealthData) -> UptimeMonitorProjection {
+    public static func project(from data: UptimeMonitorWidgetSystemHealthData) -> UptimeMonitorProjection {
         let services = serviceKeys.map { key -> UptimeMonitorService in
             let component = data.components[key]
             let status = component?.status ?? defaultServiceStatus

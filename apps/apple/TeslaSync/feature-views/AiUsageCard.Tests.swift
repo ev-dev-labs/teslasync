@@ -36,6 +36,7 @@ private let sampleToday = AiUsageToday(
 
 // MARK: - Projection phases
 
+@MainActor
 final class AiUsageProjectionPhaseTests: XCTestCase {
     func testGatedWhenAiModeOff() {
         let resolved = AiUsageProjection.resolve(AiUsageInput(aiModeOff: true, today: sampleToday), locale: enUS)
@@ -82,6 +83,7 @@ final class AiUsageProjectionPhaseTests: XCTestCase {
 
 // MARK: - Projection bands / details
 
+@MainActor
 final class AiUsageProjectionContentTests: XCTestCase {
     private func resolve() -> AiUsageResolved {
         AiUsageProjection.resolve(AiUsageInput(today: sampleToday, currencySymbol: "$"), locale: enUS)
@@ -136,6 +138,7 @@ final class AiUsageProjectionContentTests: XCTestCase {
 
 // MARK: - Projection top-lists
 
+@MainActor
 final class AiUsageProjectionTopListTests: XCTestCase {
     func testNoTopListsWhenSourcesEmpty() {
         let resolved = AiUsageProjection.resolve(AiUsageInput(today: sampleToday), locale: enUS)
@@ -306,6 +309,7 @@ final class AiUsageModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class AiUsageAccessibilityTests: XCTestCase {
     func testLabelJoinsLabelAndValue() {
         XCTAssertEqual(AiUsageAccessibility.label("Today", "42 calls"), "Today: 42 calls")

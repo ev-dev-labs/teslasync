@@ -10,6 +10,7 @@ import Foundation
 import SwiftUI
 
 #if DEBUG
+    @MainActor
     private func previewModel(_ update: LivePowerFlowUpdate) -> LivePowerFlowModel {
         let source = InMemoryLivePowerFlowSource(initial: update)
         let model = LivePowerFlowModel(source: source)

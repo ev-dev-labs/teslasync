@@ -52,6 +52,7 @@ private func project(
 
 // MARK: - Adapter: cached DTO → projection
 
+@MainActor
 final class ProjectedRangeAdapterTests: XCTestCase {
     func testDistanceConversionMetricIsIdentity() {
         XCTAssertEqual(ProjectedRangeUnits.distanceFromKilometers(412, system: .metric), 412, accuracy: 0.001)
@@ -247,6 +248,7 @@ final class ProjectedRangeModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class ProjectedRangeRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = ProjectedRangeWidget.registration
@@ -273,6 +275,7 @@ final class ProjectedRangeRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class ProjectedRangeAccessibilityTests: XCTestCase {
     func testSummaryIncludesValueHealthAndEpaRatio() {
         let stats = project(

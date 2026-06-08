@@ -26,8 +26,8 @@ import SwiftUI
     ]
 
     private func previewUpdate(
-        status: OverviewLoadStatus = .loaded,
-        connection: OverviewConnection = .live,
+        status: OverviewVehicleComparisonLoadStatus = .loaded,
+        connection: OverviewVehicleComparisonConnection = .live,
         isFetching: Bool = false,
         isError: Bool = false,
         vehicles: [OverviewVehicle] = previewFleet,

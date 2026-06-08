@@ -213,7 +213,7 @@ public enum OverviewComparisonBuilder {
     /// empty states (`.empty`, the web's all-panels-present rendering); only a
     /// vehicle-less initial fetch shows the skeleton and only a vehicle-less failed
     /// fetch shows the retryable error.
-    public static func resolvePhase(status: OverviewLoadStatus, vehicleCount: Int) -> OverviewRenderPhase {
+    public static func resolvePhase(status: OverviewVehicleComparisonLoadStatus, vehicleCount: Int) -> OverviewRenderPhase {
         if vehicleCount > 0 {
             return .content
         }

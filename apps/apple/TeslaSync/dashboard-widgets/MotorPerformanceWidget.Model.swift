@@ -43,7 +43,7 @@ public struct OSLogMotorPerformanceTelemetry: MotorPerformanceTelemetry {
 
 /// The load lifecycle for the widget's data, mirroring the shared `LoadableState` cases the production
 /// source projects from the `MotorStore` `Resource<MotorSnapshot>` (`useMotorLatest`).
-public enum MotorLoadStatus: Sendable, Equatable {
+public enum MotorPerformanceWidgetLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case empty
@@ -51,7 +51,7 @@ public enum MotorLoadStatus: Sendable, Equatable {
 }
 
 /// Live-stream freshness, mirroring `LiveConnectionState` (ADR-013): the freshness chip surfaces this.
-public enum MotorConnection: Sendable, Equatable {
+public enum MotorPerformanceWidgetConnection: Sendable, Equatable {
     case live
     case stale
     case offline
@@ -59,7 +59,7 @@ public enum MotorConnection: Sendable, Equatable {
 
 /// The user's temperature display preference (web `useUnits().unitPrefs.temperature`). The conversion is the
 /// SI → display boundary the web performs with `convertTempFromSI`; kept pure so it can be unit-tested.
-public enum MotorTemperatureUnit: String, Sendable, Equatable {
+public enum MotorPerformanceWidgetTemperatureUnit: String, Sendable, Equatable {
     case celsius
     case fahrenheit
 
@@ -74,7 +74,7 @@ public enum MotorTemperatureUnit: String, Sendable, Equatable {
     }
 
     /// Resolves the unit from a shared `UnitPref` label (`"°C"` / `"°F"`), defaulting to Celsius.
-    public static func from(label: String) -> MotorTemperatureUnit {
+    public static func from(label: String) -> MotorPerformanceWidgetTemperatureUnit {
         label.uppercased().contains("F") ? .fahrenheit : .celsius
     }
 }
@@ -82,7 +82,7 @@ public enum MotorTemperatureUnit: String, Sendable, Equatable {
 /// The raw `/motor/latest` snapshot the source hands the model, in SI. Field names mirror the web
 /// `MotorSnapshot` wire keys (`di_torque`, `di_stator_temp`, `motor_temp_c_front`, `gear`, `shift_state`)
 /// plus the drive-dynamics `lateral_accel` / `longitudinal_accel` the widget reads via the raw accessor.
-public struct MotorSnapshotInput: Sendable, Equatable {
+public struct MotorPerformanceWidgetSnapshotInput: Sendable, Equatable {
     /// Drive-inverter torque in newton-meters (web `di_torque`).
     public var diTorque: Double?
     /// Stator temperature in degrees Celsius (web `di_stator_temp`).
@@ -121,19 +121,19 @@ public struct MotorSnapshotInput: Sendable, Equatable {
 /// status, the user's temperature preference, and the formatting locale. The model turns it into the
 /// `MotorProjection` the view renders.
 public struct MotorUpdate: Sendable, Equatable {
-    public var status: MotorLoadStatus
-    public var connection: MotorConnection
-    public var snapshot: MotorSnapshotInput?
-    public var temperatureUnit: MotorTemperatureUnit
+    public var status: MotorPerformanceWidgetLoadStatus
+    public var connection: MotorPerformanceWidgetConnection
+    public var snapshot: MotorPerformanceWidgetSnapshotInput?
+    public var temperatureUnit: MotorPerformanceWidgetTemperatureUnit
     public var localeIdentifier: String?
     public var updatedAt: Date?
     public var isFetching: Bool
 
     public init(
-        status: MotorLoadStatus = .loading,
-        connection: MotorConnection = .live,
-        snapshot: MotorSnapshotInput? = nil,
-        temperatureUnit: MotorTemperatureUnit = .celsius,
+        status: MotorPerformanceWidgetLoadStatus = .loading,
+        connection: MotorPerformanceWidgetConnection = .live,
+        snapshot: MotorPerformanceWidgetSnapshotInput? = nil,
+        temperatureUnit: MotorPerformanceWidgetTemperatureUnit = .celsius,
         localeIdentifier: String? = nil,
         updatedAt: Date? = nil,
         isFetching: Bool = false
@@ -211,7 +211,7 @@ public final class MotorPerformanceModel {
     }
 
     public private(set) var phase: Phase = .loading
-    public private(set) var connection: MotorConnection = .live
+    public private(set) var connection: MotorPerformanceWidgetConnection = .live
     public private(set) var projection: MotorProjection = .empty
     public private(set) var updatedAt: Date?
     public private(set) var isFetching = false

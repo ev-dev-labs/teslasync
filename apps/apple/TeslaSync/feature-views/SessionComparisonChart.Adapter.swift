@@ -85,7 +85,7 @@ public struct CurvePoint: Sendable, Equatable, Identifiable {
 /// The charger family the web `getChargerLabel` derives from `charger_type` /
 /// `peak_power_w`. Each case carries the i18n key + the web English fallback so the
 /// view resolves the label through the P1/S10 facade rather than a hardcoded literal.
-public enum ChargerKind: String, Sendable, Equatable, CaseIterable, Identifiable {
+public enum SessionComparisonChartChargerKind: String, Sendable, Equatable, CaseIterable, Identifiable {
     case supercharger
     case dcFast
     case homeAc
@@ -127,7 +127,7 @@ public struct ComparisonSeries: Sendable, Equatable, Identifiable {
     /// Localized short x-label for the legend (web `formatDateShort(started_at)`).
     public var dateLabel: String
     /// The charger family (web `getChargerLabel`) — localized at the view.
-    public var charger: ChargerKind
+    public var charger: SessionComparisonChartChargerKind
     /// Palette index (web `palette[i % palette.length]`).
     public var colorIndex: Int
     /// The sampled, display-rounded curve points.
@@ -137,7 +137,7 @@ public struct ComparisonSeries: Sendable, Equatable, Identifiable {
         id: String,
         index: Int,
         dateLabel: String,
-        charger: ChargerKind,
+        charger: SessionComparisonChartChargerKind,
         colorIndex: Int,
         points: [CurvePoint]
     ) {
@@ -211,7 +211,7 @@ public enum ComparisonProjection {
 
     /// The charger family (web `getChargerLabel`): Tesla → Supercharger, any other
     /// non-empty type or an above-threshold peak → DC Fast, else Home / AC.
-    public static func chargerKind(for session: ComparisonSession) -> ChargerKind {
+    public static func chargerKind(for session: ComparisonSession) -> SessionComparisonChartChargerKind {
         let type = session.chargerType ?? ""
         if type == "Tesla" || type.lowercased().contains("tesla") {
             return .supercharger

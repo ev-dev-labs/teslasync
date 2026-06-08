@@ -13,8 +13,8 @@ import SwiftUI
 
 /// One drive row: a prominent distance + unit, the `… min · …% → …%` detail line, and a short date,
 /// wrapped in a button that opens the drive detail (web `Link to /drives/{id}`).
-struct RecentDriveRowView: View {
-    let row: RecentDriveRow
+struct RecentDrivesWidgetDriveRowView: View {
+    let row: RecentDrivesWidgetDriveRow
     let onOpen: (() -> Void)?
 
     var body: some View {
@@ -65,7 +65,7 @@ struct RecentDriveRowView: View {
 /// The stale/offline banner shown above the list when the bound source is not live, so cached rows
 /// are clearly labeled (web freshness-indicator intent).
 struct RecentDrivesConnectivityBanner: View {
-    let connection: RecentDrivesConnection
+    let connection: RecentDrivesWidgetConnection
 
     var body: some View {
         let isOffline = connection == .offline
@@ -78,7 +78,7 @@ struct RecentDrivesConnectivityBanner: View {
             Image(systemName: isOffline ? "wifi.slash" : "clock.arrow.circlepath")
                 .font(.system(size: 10, weight: .semibold))
                 .accessibilityHidden(true)
-            Text(verbatim: RecentDrivesStrings.string(key, fallback))
+            Text(verbatim: RecentDrivesWidgetStrings.string(key, fallback))
                 .font(Font.TS.caption)
         }
         .foregroundStyle(tone)
@@ -116,7 +116,7 @@ struct RecentDrivesLoadingRows: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .accessibilityElement()
-        .accessibilityLabel(Text(verbatim: RecentDrivesStrings.string(
+        .accessibilityLabel(Text(verbatim: RecentDrivesWidgetStrings.string(
             "widget.recentDrives.loading",
             "Loading recent drives"
         )))

@@ -19,6 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with mapEventToFeedItem)
 
+@MainActor
 final class GuardAdapterTests: XCTestCase {
     /// English-fallback localizer (bundle-free) used by the builder tests.
     private let echo: (String, String) -> String = { _, fallback in fallback }
@@ -209,6 +210,7 @@ final class GuardModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class GuardRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = GuardModeWidget.registration
@@ -235,6 +237,7 @@ final class GuardRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class GuardAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

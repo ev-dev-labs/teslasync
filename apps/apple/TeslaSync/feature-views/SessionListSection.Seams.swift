@@ -309,7 +309,7 @@ public enum SessionListAccessibility {
 
 extension DateFormatter {
     /// A medium date + short time formatter for the row timestamp + a11y label.
-    static let sessionListMedium: DateFormatter = {
+    nonisolated(unsafe) static let sessionListMedium: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short

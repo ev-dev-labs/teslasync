@@ -19,7 +19,7 @@ final class WatchModelTests: XCTestCase {
             cache: WatchCacheStore(defaults: cacheDefaults),
             snapshotStore: snapStore,
             policy: .standard,
-            now: { self.now },
+            now: { [now = self.now] in now },
             reloadComplications: reload,
             makeMessenger: { _ in messenger }
         )

@@ -66,7 +66,7 @@ struct OverviewEmptyState: View {
 
 /// A titled glass panel — the web `<GlassPanel><SectionTitle/>…</GlassPanel>`
 /// block shared by all four sections.
-struct OverviewPanel<Content: View>: View {
+struct OverviewVehicleComparisonPanel<Content: View>: View {
     let titleKey: String
     let titleFallback: String
     @ViewBuilder var content: () -> Content
@@ -112,7 +112,7 @@ struct OverviewFleetUsagePanel: View {
     }
 
     var body: some View {
-        OverviewPanel(titleKey: "analytics.overview.fleetUsage", titleFallback: "Fleet Usage") {
+        OverviewVehicleComparisonPanel(titleKey: "analytics.overview.fleetUsage", titleFallback: "Fleet Usage") {
             if slices.isEmpty {
                 OverviewEmptyState(messageKey: "analytics.overview.noVehicles", messageFallback: "No vehicle data")
             } else {
@@ -152,7 +152,7 @@ struct OverviewLeaderboardPanel: View {
     }
 
     var body: some View {
-        OverviewPanel(titleKey: "analytics.overview.effLeaderboard", titleFallback: "Efficiency Leaderboard") {
+        OverviewVehicleComparisonPanel(titleKey: "analytics.overview.effLeaderboard", titleFallback: "Efficiency Leaderboard") {
             if entries.isEmpty {
                 OverviewEmptyState(
                     messageKey: "analytics.overview.noEfficiency",
@@ -182,7 +182,7 @@ struct OverviewComparisonRadarPanel: View {
     }
 
     var body: some View {
-        OverviewPanel(titleKey: "analytics.overview.vehicleComparison", titleFallback: "Vehicle Comparison") {
+        OverviewVehicleComparisonPanel(titleKey: "analytics.overview.vehicleComparison", titleFallback: "Vehicle Comparison") {
             if radar.isEmpty {
                 OverviewEmptyState(
                     messageKey: "analytics.overview.noComparison",
@@ -207,7 +207,7 @@ struct OverviewEnergyActivityPanel: View {
     }
 
     var body: some View {
-        OverviewPanel(titleKey: "analytics.overview.energyActivity", titleFallback: "Energy & Activity") {
+        OverviewVehicleComparisonPanel(titleKey: "analytics.overview.energyActivity", titleFallback: "Energy & Activity") {
             if bars.isEmpty {
                 OverviewEmptyState(messageKey: "analytics.overview.noVehicles", messageFallback: "No vehicle data")
             } else {
@@ -221,8 +221,8 @@ struct OverviewEnergyActivityPanel: View {
 
 /// A tappable stale / offline banner shown above the grid when the live feed is not
 /// fresh — taps refresh. Mirrors the cache-then-network freshness contract.
-struct OverviewConnectivityBanner: View {
-    let connection: OverviewConnection
+struct OverviewVehicleComparisonConnectivityBanner: View {
+    let connection: OverviewVehicleComparisonConnection
     var updatedAt: Date?
     let onRefresh: () -> Void
 

@@ -45,6 +45,7 @@ import SwiftUI
         return model
     }
 
+    @MainActor
     private func previewShell(_ surface: ChartsRow) -> some View {
         ScrollView {
             surface.padding(TSSpacing.lg)

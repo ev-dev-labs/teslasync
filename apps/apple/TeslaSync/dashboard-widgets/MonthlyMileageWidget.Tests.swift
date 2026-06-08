@@ -40,6 +40,7 @@ private func rows(_ pairs: [(String, Double)]) -> [MileageMonthRow] {
 
 // MARK: - Adapter: cached DTO → projection
 
+@MainActor
 final class MonthlyMileageBuilderTests: XCTestCase {
     func testShortMonthFormatsKnownMonths() {
         XCTAssertEqual(MonthlyMileageBuilder.shortMonth("2026-01"), "Jan")
@@ -147,6 +148,7 @@ final class MonthlyMileageBuilderTests: XCTestCase {
 
 // MARK: - Number formatting parity (web fmtInt / fmtNumber)
 
+@MainActor
 final class MonthlyMileageFormatTests: XCTestCase {
     func testIntRoundsAndGroups() {
         XCTAssertEqual(MonthlyMileageFormat.int(1234.6), "1,235")
@@ -267,6 +269,7 @@ final class MonthlyMileageModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class MonthlyMileageRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = MonthlyMileageWidget.registration
@@ -293,6 +296,7 @@ final class MonthlyMileageRegistryTests: XCTestCase {
 
 // MARK: - Accessibility content
 
+@MainActor
 final class MonthlyMileageAccessibilityTests: XCTestCase {
     func testSummaryIncludesStatsAndUnit() {
         let projection = MonthlyMileageBuilder.buildProjection(

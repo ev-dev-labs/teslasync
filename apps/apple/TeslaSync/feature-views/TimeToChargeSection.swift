@@ -48,7 +48,7 @@ public struct TimeToChargeSection: View {
     /// from the props so the call site matches the web `<TimeToChargeSection sessions />`.
     @MainActor
     public init(
-        sessions: [ChargingSessionSummary],
+        sessions: [TimeToChargeSectionChargingSessionSummary],
         loading: Bool = false,
         telemetry: (any DashboardWidgetTelemetrySink)? = nil
     ) {

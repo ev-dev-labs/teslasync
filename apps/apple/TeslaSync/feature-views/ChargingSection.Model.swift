@@ -150,12 +150,12 @@ public final class ChargingSectionModel {
 
     /// The combined VoiceOver summary for the section container.
     public var accessibilitySummary: String {
-        ChargingAccessibility.sectionSummary(stats: stats, localize: ChargingStrings.string)
+        ChargingSectionAccessibility.sectionSummary(stats: stats, localize: ChargingStrings.string)
     }
 
     /// The chart's VoiceOver summary (title + day count + total energy).
     public var chartAccessibilitySummary: String {
-        ChargingAccessibility.chartSummary(bars: bars, localize: ChargingStrings.string, locale: locale)
+        ChargingSectionAccessibility.chartSummary(bars: bars, localize: ChargingStrings.string, locale: locale)
     }
 
     /// Begins observing and emits the `view.opened` diagnostics event. Idempotent.
@@ -181,16 +181,16 @@ public final class ChargingSectionModel {
         connection = update.connection
         refreshing = update.refreshing
         updatedAt = update.updatedAt
-        bars = ChargingProjection.bars(from: update.dailyEnergy)
+        bars = ChargingSectionProjection.bars(from: update.dailyEnergy)
         if let metrics = update.metrics {
-            stats = ChargingProjection.stats(from: metrics, formatting: update.formatting, locale: locale)
-            trend = ChargingProjection.trend(from: metrics, locale: locale)
+            stats = ChargingSectionProjection.stats(from: metrics, formatting: update.formatting, locale: locale)
+            trend = ChargingSectionProjection.trend(from: metrics, locale: locale)
         } else {
             stats = []
             trend = ChargingTrend(value: "—", tone: .positive)
         }
-        let hasContent = ChargingProjection.hasContent(metrics: update.metrics, bars: bars)
-        phase = ChargingProjection.resolvePhase(update.status, hasContent: hasContent)
+        let hasContent = ChargingSectionProjection.hasContent(metrics: update.metrics, bars: bars)
+        phase = ChargingSectionProjection.resolvePhase(update.status, hasContent: hasContent)
         handleAutoRefresh(for: update.connection)
     }
 

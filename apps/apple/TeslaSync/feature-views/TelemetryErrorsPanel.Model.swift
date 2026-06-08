@@ -79,11 +79,11 @@ public struct TelemetryErrorsResolved: Sendable, Equatable {
     }
 
     public let phase: Phase
-    public let rows: [TelemetryErrorRow]
+    public let rows: [TelemetryErrorsPanelErrorRow]
     public let ok: Bool
     public let rawJSONText: String?
 
-    public init(phase: Phase, rows: [TelemetryErrorRow], ok: Bool, rawJSONText: String?) {
+    public init(phase: Phase, rows: [TelemetryErrorsPanelErrorRow], ok: Bool, rawJSONText: String?) {
         self.phase = phase
         self.rows = rows
         self.ok = ok
@@ -138,7 +138,7 @@ public protocol TelemetryErrorsSource: AnyObject {
 @Observable
 public final class TelemetryErrorsModel {
     public private(set) var phase: TelemetryErrorsResolved.Phase = .idle
-    public private(set) var rows: [TelemetryErrorRow] = []
+    public private(set) var rows: [TelemetryErrorsPanelErrorRow] = []
     public private(set) var ok = false
     public private(set) var rawJSONText: String?
     public private(set) var vin = ""

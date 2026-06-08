@@ -29,6 +29,7 @@ import SwiftUI
         return model
     }
 
+    @MainActor
     private func previewWrap(_ view: some View) -> some View {
         view
             .padding()

@@ -31,7 +31,7 @@ import SwiftUI
             label: "Efficiency",
             unit: "wh_per_mi",
             windows: ["7d", "30d"],
-            ops: ComputedMetricOp.allCases
+            ops: ComputedMetricEditorOp.allCases
         )
     ]
 

@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: formatting (title / trigger / timestamp)
 
+@MainActor
 final class WhyEndedPanelFormatTests: XCTestCase {
     func testTransitionTitleComposesWithArrow() {
         let title = WhyEndedPanelFormat.transitionTitle(fsmName: "drive", fromState: "driving", toState: "parked")
@@ -61,6 +62,7 @@ final class WhyEndedPanelFormatTests: XCTestCase {
 
 // MARK: - Adapter: builder (transition / signal rows + projection)
 
+@MainActor
 final class WhyEndedPanelBuilderTests: XCTestCase {
     func testTransitionRowCarriesTitleTriggerAndTime() {
         let data = DriveDiagnosticTransitionData(
@@ -135,6 +137,7 @@ final class WhyEndedPanelBuilderTests: XCTestCase {
 
 // MARK: - Adapter: pagination math (web DataTable pagination)
 
+@MainActor
 final class WhyEndedSignalPagingTests: XCTestCase {
     func testPageCountRoundsUpAndFloorsAtOne() {
         XCTAssertEqual(WhyEndedSignalPaging.pageCount(total: 0, pageSize: 25), 1)
@@ -165,6 +168,7 @@ final class WhyEndedSignalPagingTests: XCTestCase {
 
 // MARK: - State holder: phase resolution
 
+@MainActor
 final class WhyEndedPanelPhaseTests: XCTestCase {
     func testLoadingWithoutDataShowsLoading() {
         XCTAssertEqual(WhyEndedPanelModel.resolvePhase(status: .loading, hasData: false), .loading)
@@ -306,6 +310,7 @@ final class WhyEndedPanelModelTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class WhyEndedPanelAccessibilityTests: XCTestCase {
     func testTransitionRowLabelJoinsTitleSubtitleTime() {
         let row = WhyEndedTransitionRow(

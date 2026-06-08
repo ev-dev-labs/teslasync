@@ -3,6 +3,7 @@ import XCTest
 
 /// Tests intent support: error mapping, report routing, the vehicle entity
 /// directory, and reading the cached snapshot.
+@MainActor
 final class IntentSupportTests: XCTestCase {
     func testReportKindRoutes() {
         XCTAssertEqual(ReportKind.charging.route, .charging)

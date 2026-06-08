@@ -47,6 +47,7 @@ import SwiftUI
         ]
     }
 
+    @MainActor
     private func previewContainer(_ model: LiveSignalsTableModel) -> some View {
         LiveSignalsTable(model: model)
             .padding(TSSpacing.lg)

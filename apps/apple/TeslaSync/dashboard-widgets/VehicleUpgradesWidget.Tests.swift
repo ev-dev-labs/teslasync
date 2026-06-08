@@ -22,6 +22,7 @@ import XCTest
 
 // MARK: - Adapter: cached envelope → projection (parity with the web pipeline)
 
+@MainActor
 final class UpgradesAdapterTests: XCTestCase {
     /// Fixed reference clock so the share-link expiry math is deterministic.
     private let now = ISO8601DateFormatter().date(from: "2024-06-01T00:00:00Z")!
@@ -284,6 +285,7 @@ final class VehicleUpgradesModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class UpgradesRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = VehicleUpgradesWidget.registration
@@ -307,6 +309,7 @@ final class UpgradesRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class UpgradesAccessibilityTests: XCTestCase {
     private let now = ISO8601DateFormatter().date(from: "2024-06-01T00:00:00Z")!
 

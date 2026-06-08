@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: envelope → projection (parity with the web data pipeline)
 
+@MainActor
 final class WarrantyAdapterTests: XCTestCase {
     private let format = WarrantyFormatting(
         distanceUnit: "mi",
@@ -312,6 +313,7 @@ final class WarrantyModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class WarrantyRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = WarrantyStatusWidget.registration
@@ -339,6 +341,7 @@ final class WarrantyRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class WarrantyAccessibilityTests: XCTestCase {
     private let format = WarrantyFormatting(
         distanceUnit: "mi",

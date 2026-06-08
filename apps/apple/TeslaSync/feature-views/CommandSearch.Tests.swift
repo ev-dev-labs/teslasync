@@ -49,6 +49,7 @@ private enum CommandSearchFixture {
 
 // MARK: - Adapter: catalog → projection (port parity with the web filter)
 
+@MainActor
 final class CommandSearchAdapterTests: XCTestCase {
     func testProjectMatchesByTitle() {
         let projection = CommandSearchFixture.project("lock")
@@ -140,6 +141,7 @@ final class CommandSearchAdapterTests: XCTestCase {
 
 // MARK: - Adapter: stale-age label
 
+@MainActor
 final class CommandSearchAgeTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 1_000_000)
 
@@ -311,6 +313,7 @@ final class CommandSearchModelTests: XCTestCase {
 
 // MARK: - Accessibility summaries
 
+@MainActor
 final class CommandSearchAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 

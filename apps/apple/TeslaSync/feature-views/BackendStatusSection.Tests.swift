@@ -90,6 +90,7 @@ enum BackendStatusFixture {
 
 // MARK: - Adapter: status tone + okCount
 
+@MainActor
 final class BackendComponentStatusTests: XCTestCase {
     func testToneMatchesWebSuccessList() {
         for raw in ["healthy", "ok", "online", "connected", "ready", "sent", "completed"] {
@@ -132,6 +133,7 @@ final class BackendComponentStatusTests: XCTestCase {
 
 // MARK: - Adapter: projection
 
+@MainActor
 final class BackendStatusProjectionTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
 
@@ -222,6 +224,7 @@ final class BackendStatusProjectionTests: XCTestCase {
 
 // MARK: - Adapter: formatting
 
+@MainActor
 final class BackendStatusFormatTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
     private let zone = TimeZone(identifier: "UTC")!
@@ -271,6 +274,7 @@ final class BackendStatusFormatTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class BackendStatusAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

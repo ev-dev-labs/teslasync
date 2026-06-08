@@ -5,6 +5,7 @@ import XCTest
 /// Verifies the `ApiError` → `FacadeError` taxonomy mapping, including the
 /// `NSError.userInfo["KotlinException"]` unwrapping Kotlin/Native uses for
 /// `@Throws` suspend functions.
+@MainActor
 final class FacadeErrorMappingTests: XCTestCase {
     private func wrap(_ apiError: Shared.ApiError) -> NSError {
         NSError(domain: "KotlinException", code: 0, userInfo: ["KotlinException": apiError])

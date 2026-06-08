@@ -251,7 +251,7 @@ public enum ChargingFormat {
 
 /// The dependency-free projection from raw metrics + daily energy to chart-ready
 /// bars, formatted stat tiles, and the week-over-week trend.
-public enum ChargingProjection {
+public enum ChargingSectionProjection {
     /// Maps daily-energy data to chart bars in source order, clamping each value to
     /// a finite, non-negative height.
     public static func bars(from entries: [ChargingDailyEnergy]) -> [ChargingEnergyBar] {
@@ -341,7 +341,7 @@ public enum ChargingSurface {
 /// Builds the surface's VoiceOver strings. Copy resolves through an injected
 /// localizer (`(key, fallback) -> String`) so the summaries are testable without a
 /// bundle, exactly like the view's P1/S10 facade.
-public enum ChargingAccessibility {
+public enum ChargingSectionAccessibility {
     /// The section-level summary: the "Charging" title + each stat label/value.
     public static func sectionSummary(
         stats: [ChargingStat],
@@ -363,7 +363,7 @@ public enum ChargingAccessibility {
         guard !bars.isEmpty else {
             return "\(title): \(localize("common.noData", "No data available"))"
         }
-        let total = ChargingFormat.number(ChargingProjection.totalEnergy(bars), fractionDigits: 1, locale: locale)
+        let total = ChargingFormat.number(ChargingSectionProjection.totalEnergy(bars), fractionDigits: 1, locale: locale)
         let days = localize("analytics.weeklyDigest.charging.days", "days")
         let energyAdded = localize("analytics.weeklyDigest.energyAdded", "Energy Added")
         return "\(title): \(bars.count) \(days), \(total) \(ChargingUnits.kwh) \(energyAdded)"

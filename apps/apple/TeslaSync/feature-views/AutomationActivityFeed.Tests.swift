@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: status / event resolution
 
+@MainActor
 final class AutomationFeedStatusTests: XCTestCase {
     func testStatusParseAndFallback() {
         XCTAssertEqual(AutomationRunStatus.parse("success"), .success)
@@ -67,6 +68,7 @@ final class AutomationFeedStatusTests: XCTestCase {
 
 // MARK: - Adapter: formatting
 
+@MainActor
 final class AutomationFeedFormatTests: XCTestCase {
     func testDurationFormatting() {
         XCTAssertEqual(AutomationFeedFormat.duration(nil), "—")
@@ -102,6 +104,7 @@ final class AutomationFeedFormatTests: XCTestCase {
 
 // MARK: - Adapter: projection
 
+@MainActor
 final class AutomationFeedAdapterTests: XCTestCase {
     func testDisplayName() {
         XCTAssertEqual(AutomationFeedAdapter.displayName(name: "Morning", automationId: 7), "Morning")
@@ -193,6 +196,7 @@ final class AutomationFeedAdapterTests: XCTestCase {
 
 // MARK: - Projection: phase resolution across every branch
 
+@MainActor
 final class AutomationFeedProjectionTests: XCTestCase {
     private var sampleHistory: [AutomationHistoryInput] {
         [AutomationHistoryInput(id: "1", automationName: "A", status: "success", triggeredAt: "2026-01-05T15:04:05Z")]
@@ -333,6 +337,7 @@ final class AutomationFeedModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class AutomationFeedAccessibilityTests: XCTestCase {
     /// Bundle-free localizer that returns the English fallback (the web `t` default).
     private let localize: AutomationFeedAccessibility.Localize = { _, fallback in fallback }

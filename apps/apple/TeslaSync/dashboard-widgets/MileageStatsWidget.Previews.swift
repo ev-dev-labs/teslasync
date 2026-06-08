@@ -11,6 +11,7 @@ import Foundation
 import SwiftUI
 
 #if DEBUG
+    @MainActor
     private func previewModel(_ update: MileageStatsUpdate) -> MileageStatsModel {
         let source = InMemoryMileageStatsSource(initial: update)
         let model = MileageStatsModel(source: source)

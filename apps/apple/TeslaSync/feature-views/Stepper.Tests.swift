@@ -1,8 +1,8 @@
 //
-//  Stepper.Tests.swift
-//  TeslaSync — P4 feature view · 0195 · Stepper (Apple)
+//  OnboardingStepper.Tests.swift
+//  TeslaSync — P4 feature view · 0195 · OnboardingStepper (Apple)
 //
-//  Unit coverage for the Stepper surface:
+//  Unit coverage for the OnboardingStepper surface:
 //    • State ladder — the web `stateOf` (own-done → done; first not-done →
 //      current; the rest → pending; a done row after the current one stays done).
 //    • Projection — steps → display rows (1-based position, total, last-row flag,
@@ -36,6 +36,7 @@ private func makeStep(
 
 // MARK: - State ladder (web `stateOf`)
 
+@MainActor
 final class StepperProjectionStateTests: XCTestCase {
     func testFirstNotDoneIsCurrentRestPending() {
         let steps = [
@@ -81,6 +82,7 @@ final class StepperProjectionStateTests: XCTestCase {
 
 // MARK: - Projection rows
 
+@MainActor
 final class StepperProjectionRowsTests: XCTestCase {
     private func sampleSteps() -> [StepperStep] {
         [
@@ -143,6 +145,7 @@ final class StepperProjectionRowsTests: XCTestCase {
 
 // MARK: - Render resolution
 
+@MainActor
 final class StepperRenderTests: XCTestCase {
     func testLoadingPhase() {
         XCTAssertEqual(StepperModel.render(for: .loading), .loading)
@@ -167,6 +170,7 @@ final class StepperRenderTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class StepperAccessibilityTests: XCTestCase {
     func testPositionFormatting() {
         let clause = StepperAccessibility.position(format: "Step %1$d of %2$d", position: 2, total: 4)
@@ -186,6 +190,7 @@ final class StepperAccessibilityTests: XCTestCase {
 
 // MARK: - Copy catalog
 
+@MainActor
 final class StepperCopyTests: XCTestCase {
     func testCatalogKeysAndFallbacksNonEmpty() {
         XCTAssertFalse(StepperCopy.all.isEmpty)
@@ -227,7 +232,7 @@ final class StepperModelTests: XCTestCase {
         XCTAssertEqual(model.render, .steps(StepperProjection.rows(from: [step])))
         XCTAssertTrue(model.isOffline)
         XCTAssertEqual(source.startCount, 1)
-        XCTAssertEqual(spy.opened, ["Stepper"])
+        XCTAssertEqual(spy.opened, ["OnboardingStepper"])
     }
 
     func testPushUpdatesRenderAndFlags() {

@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Projection (web parity)
 
+@MainActor
 final class DriveStatCardsProjectionTests: XCTestCase {
     private let imperial = DriveStatCardsFormatting(
         distanceUnit: "mi", speedUnit: "mph", locale: "en-US",

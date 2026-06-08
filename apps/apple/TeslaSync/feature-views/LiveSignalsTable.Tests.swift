@@ -20,6 +20,7 @@ import XCTest
 
 // MARK: - Adapter: value rendering + timestamp parsing (web `renderValue`)
 
+@MainActor
 final class LiveSignalsTableFormatTests: XCTestCase {
     func testJsNumberMatchesTemplateLiteral() {
         XCTAssertEqual(LiveSignalsTableFormat.jsNumber(320), "320")
@@ -58,6 +59,7 @@ final class LiveSignalsTableFormatTests: XCTestCase {
 
 // MARK: - Adapter: rowFromEntry + projection + filter + sort
 
+@MainActor
 final class LiveSignalsTableBuilderTests: XCTestCase {
     func testRowFromEnvelopeCarriesValueAndTimestamp() {
         let entry = LiveSignalEntry(
@@ -240,6 +242,7 @@ final class LiveSignalsTableModelTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class LiveSignalsTableAccessibilityTests: XCTestCase {
     func testGridSummaryFallsBackToEmptyTitle() {
         XCTAssertEqual(LiveSignalsTableAccessibility.gridSummary(rowCount: 0), LiveSignalsTableStrings.emptyTitle)

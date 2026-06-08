@@ -72,6 +72,7 @@ import SwiftUI
         return drives
     }
 
+    @MainActor
     private func previewModel(_ update: SpeedHeatmapUpdate) -> SpeedHeatmapModel {
         let source = InMemorySpeedHeatmapSource(initial: update)
         let model = SpeedHeatmapModel(source: source, calendar: previewCalendar)

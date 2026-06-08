@@ -19,6 +19,7 @@
 import XCTest
 @testable import TeslaSync
 
+@MainActor
 final class NotificationStatsAdapterTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
     private let timeZone = TimeZone(identifier: "UTC")!
@@ -248,6 +249,7 @@ final class NotificationStatsAdapterTests: XCTestCase {
 
 // MARK: - Presentation resolver (every state)
 
+@MainActor
 final class NotificationStatsPresentationTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
     private let timeZone = TimeZone(identifier: "UTC")!
@@ -326,6 +328,7 @@ final class NotificationStatsPresentationTests: XCTestCase {
 
 // MARK: - Registry, telemetry, model
 
+@MainActor
 final class NotificationStatsRegistryTests: XCTestCase {
     func testDescriptorMatchesCanonicalRegistry() {
         let descriptor = NotificationStatsWidget.descriptor

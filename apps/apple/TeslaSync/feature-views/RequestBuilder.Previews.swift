@@ -20,7 +20,7 @@
     private enum RequestBuilderPreviewData {
         static let telemetry = SilentRequestBuilderTelemetry()
 
-        static let getWithParams = ParsedEndpoint(
+        static let getWithParams = RequestBuilderParsedEndpoint(
             method: .get,
             path: "/vehicles/{vehicleID}/telemetry",
             summary: "Fetch vehicle telemetry",
@@ -50,7 +50,7 @@
             ]
         )
 
-        static let postWithBody = ParsedEndpoint(
+        static let postWithBody = RequestBuilderParsedEndpoint(
             method: .post,
             path: "/alerts/rules",
             summary: "Create an alert rule",
@@ -64,7 +64,7 @@
             )
         )
 
-        static let minimal = ParsedEndpoint(method: .get, path: "/system/version", summary: "API version")
+        static let minimal = RequestBuilderParsedEndpoint(method: .get, path: "/system/version", summary: "API version")
     }
 
     #Preview("GET · params") {

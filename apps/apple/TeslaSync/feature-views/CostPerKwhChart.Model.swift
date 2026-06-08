@@ -143,7 +143,7 @@ public protocol CostPerKwhSource: AnyObject {
 public final class CostPerKwhModel {
     public private(set) var phase: CostPerKwhPhase = .loading
     public private(set) var connection: CostPerKwhConnection = .live
-    public private(set) var points: [CostPerKwhPoint] = []
+    public private(set) var points: [CostPerKwhChartPoint] = []
     public private(set) var refreshing = false
     public private(set) var updatedAt: Date?
 

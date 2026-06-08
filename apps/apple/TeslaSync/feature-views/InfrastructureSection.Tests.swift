@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: decode + pretty-print + projection (web parity)
 
+@MainActor
 final class InfrastructureAdapterTests: XCTestCase {
     func testDecodeSortsObjectKeysDeterministically() throws {
         let value = try InfraJSONValue.decode("{\"b\":2,\"a\":1}")
@@ -207,6 +208,7 @@ final class InfrastructureModelTests: XCTestCase {
 
 // MARK: - Catalog: web JSX grid parity
 
+@MainActor
 final class InfrastructureCatalogTests: XCTestCase {
     func testCatalogOrderMatchesWebJSX() {
         XCTAssertEqual(
@@ -236,6 +238,7 @@ final class InfrastructureCatalogTests: XCTestCase {
 
 // MARK: - Accessibility: composed VoiceOver labels
 
+@MainActor
 final class InfrastructureAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

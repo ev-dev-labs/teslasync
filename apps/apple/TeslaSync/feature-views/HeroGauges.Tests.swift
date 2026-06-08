@@ -24,6 +24,7 @@ import XCTest
 
 // MARK: - Adapter: SI converters + formatting (web parity)
 
+@MainActor
 final class HeroGaugesFormatTests: XCTestCase {
     func testNumberGroupsAndFixesFractionDigits() {
         XCTAssertEqual(HeroGaugesFormat.number(1234.0, decimals: 1), "1,234.0")
@@ -74,6 +75,7 @@ final class HeroGaugesFormatTests: XCTestCase {
 
 // MARK: - Adapter: projector gauge math (web parity)
 
+@MainActor
 final class HeroGaugesProjectorTests: XCTestCase {
     private func gauge(_ id: String, in projection: HeroGaugesProjection) -> HeroGaugeTileModel? {
         projection.gauges.first { $0.id == id }
@@ -271,6 +273,7 @@ final class HeroGaugesModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class HeroGaugesAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryGauge() {
         let stats = DriveGaugeStats(

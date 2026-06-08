@@ -16,6 +16,7 @@ import XCTest
 
 // MARK: - Adapter: deriveTimeline (port of helpers.deriveTimeline)
 
+@MainActor
 final class EventTimelineDeriveTests: XCTestCase {
     private func event(
         _ id: String,
@@ -107,6 +108,7 @@ final class EventTimelineDeriveTests: XCTestCase {
 
 // MARK: - Adapter: predicates + icon mapping
 
+@MainActor
 final class EventTimelineAdapterPredicateTests: XCTestCase {
     func testIsSentryActive() {
         XCTAssertTrue(EventTimelineAdapter.isSentryActive(.bool(true)))
@@ -153,6 +155,7 @@ final class EventTimelineAdapterPredicateTests: XCTestCase {
 
 // MARK: - Labels (port of useTimelineLabels)
 
+@MainActor
 final class EventTimelineLabelsTests: XCTestCase {
     private let englishFallback: (String, String) -> String = { _, fallback in fallback }
 
@@ -219,6 +222,7 @@ final class EventTimelineLabelsTests: XCTestCase {
 
 // MARK: - Timestamp formatting
 
+@MainActor
 final class EventTimelineTimestampTests: XCTestCase {
     func testAbsoluteNilReturnsDash() {
         XCTAssertEqual(EventTimelineTimestamp.absolute(for: nil), "—")
@@ -241,6 +245,7 @@ final class EventTimelineTimestampTests: XCTestCase {
 
 // MARK: - Projection: phase resolution
 
+@MainActor
 final class EventTimelineProjectionTests: XCTestCase {
     func testLoading() {
         XCTAssertEqual(EventTimelineProjection.resolvePhase(.loading, hasRows: false), .loading)
@@ -361,6 +366,7 @@ final class EventTimelineModelTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class EventTimelineAccessibilityTests: XCTestCase {
     private let englishFallback: (String, String) -> String = { _, fallback in fallback }
 

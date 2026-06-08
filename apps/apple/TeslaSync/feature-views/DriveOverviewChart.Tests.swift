@@ -59,6 +59,7 @@ private enum DriveFixture {
 
 // MARK: - Projection
 
+@MainActor
 final class DriveOverviewProjectionTests: XCTestCase {
     private let enUS = DriveFixture.enUS
     private let units = DriveFixture.units
@@ -192,6 +193,7 @@ final class DriveOverviewProjectionTests: XCTestCase {
 
 // MARK: - Number formatting
 
+@MainActor
 final class DriveNumberFormatTests: XCTestCase {
     private let enUS = DriveFixture.enUS
 
@@ -214,6 +216,7 @@ final class DriveNumberFormatTests: XCTestCase {
 
 // MARK: - Series identity + units
 
+@MainActor
 final class DriveSeriesKindTests: XCTestCase {
     func testHexAndDash() {
         XCTAssertEqual(DriveSeriesKind.speed.hex, "#3b82f6")
@@ -362,6 +365,7 @@ final class DriveOverviewChartModelTests: XCTestCase {
 
 // MARK: - Accessibility
 
+@MainActor
 final class DriveOverviewAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 

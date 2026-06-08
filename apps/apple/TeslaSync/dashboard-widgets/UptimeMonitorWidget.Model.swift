@@ -62,13 +62,13 @@ public enum UptimeConnection: Sendable, Equatable {
 public struct UptimeMonitorUpdate: Sendable, Equatable {
     public var status: UptimeLoadStatus
     public var connection: UptimeConnection
-    public var data: SystemHealthData?
+    public var data: UptimeMonitorWidgetSystemHealthData?
     public var updatedAt: Date?
 
     public init(
         status: UptimeLoadStatus = .loading,
         connection: UptimeConnection = .live,
-        data: SystemHealthData? = nil,
+        data: UptimeMonitorWidgetSystemHealthData? = nil,
         updatedAt: Date? = nil
     ) {
         self.status = status
@@ -109,7 +109,7 @@ public final class UptimeMonitorModel {
 
     public private(set) var phase: Phase = .loading
     public private(set) var connection: UptimeConnection = .live
-    public private(set) var data: SystemHealthData?
+    public private(set) var data: UptimeMonitorWidgetSystemHealthData?
     public private(set) var projection = UptimeMonitorProjection()
     public private(set) var updatedAt: Date?
 
@@ -221,54 +221,7 @@ public final class InMemoryUptimeMonitorSource: UptimeMonitorSource {
 
 // MARK: - Registry metadata (canonical: registry/system.ts → "uptime-monitor")
 
-/// A dashboard grid size in (columns × rows), matching the web `WidgetSize`.
-public struct DashboardWidgetSize: Sendable, Equatable {
-    public var cols: Int
-    public var rows: Int
 
-    public init(cols: Int, rows: Int) {
-        self.cols = cols
-        self.rows = rows
-    }
-}
-
-/// The dashboard registration for a draggable widget surface (web `WidgetDef`).
-public struct DashboardWidgetRegistration: Sendable {
-    public let id: String
-    public let nameKey: String
-    public let descriptionKey: String
-    public let category: String
-    public let defaultSize: DashboardWidgetSize
-    public let minSize: DashboardWidgetSize
-    public let maxSize: DashboardWidgetSize
-
-    public init(
-        id: String,
-        nameKey: String,
-        descriptionKey: String,
-        category: String,
-        defaultSize: DashboardWidgetSize,
-        minSize: DashboardWidgetSize,
-        maxSize: DashboardWidgetSize
-    ) {
-        self.id = id
-        self.nameKey = nameKey
-        self.descriptionKey = descriptionKey
-        self.category = category
-        self.defaultSize = defaultSize
-        self.minSize = minSize
-        self.maxSize = maxSize
-    }
-
-    /// Clamps a requested grid size into the surface's `min…max` envelope, so the
-    /// native grid honors the same constraints as the web registry.
-    public func clamp(_ size: DashboardWidgetSize) -> DashboardWidgetSize {
-        DashboardWidgetSize(
-            cols: min(max(size.cols, minSize.cols), maxSize.cols),
-            rows: min(max(size.rows, minSize.rows), maxSize.rows)
-        )
-    }
-}
 
 // MARK: - Localization facade (P1/S10) — SwiftUI half
 

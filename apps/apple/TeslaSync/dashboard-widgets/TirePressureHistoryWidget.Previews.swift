@@ -11,6 +11,7 @@ import Foundation
 import SwiftUI
 
 #if DEBUG
+    @MainActor
     private func previewModel(_ update: TirePressureHistoryUpdate) -> TirePressureHistoryModel {
         let source = InMemoryTirePressureHistorySource(initial: update)
         let model = TirePressureHistoryModel(source: source)

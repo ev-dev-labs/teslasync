@@ -27,6 +27,7 @@ private let fixedFormat: @Sendable (Date) -> String = { _ in "FMT" }
 
 // MARK: - Adapter: six-digit sanitiser (port of web `/\D/g` + `.slice(0, 6)`)
 
+@MainActor
 final class TOTPCodeTests: XCTestCase {
     func testSanitizeStripsNonDigitsAndCaps() {
         XCTAssertEqual(TOTPCode.sanitize("12ab34cd56ef78"), "123456")
@@ -50,6 +51,7 @@ final class TOTPCodeTests: XCTestCase {
 
 // MARK: - Adapter: backup-codes file (port of web `downloadCodes` blob)
 
+@MainActor
 final class TOTPBackupCodesFileTests: XCTestCase {
     func testContentsMatchesWebBlob() {
         let body = TOTPBackupCodesFile.contents(codes: ["aaaa", "bbbb"], header: "# header")
@@ -67,6 +69,7 @@ final class TOTPBackupCodesFileTests: XCTestCase {
 
 // MARK: - Adapter: verify-error mapping (web `handleVerify` catch switch)
 
+@MainActor
 final class TOTPVerifyErrorMapperTests: XCTestCase {
     func testEachCodeMapsToItsMessage() {
         XCTAssertEqual(
@@ -98,6 +101,7 @@ final class TOTPVerifyErrorMapperTests: XCTestCase {
 
 // MARK: - Adapter: status projection (web render-branch resolution)
 
+@MainActor
 final class TOTPStatusProjectionTests: XCTestCase {
     private let sessionActive = TOTPStatusData(mode: .session, activated: true, backupCodesRemaining: 3)
 
@@ -166,6 +170,7 @@ final class TOTPStatusProjectionTests: XCTestCase {
 
 // MARK: - Adapter: accessibility summaries
 
+@MainActor
 final class TOTPAccessibilityTests: XCTestCase {
     func testHeaderSummaryGatesOnActivated() {
         XCTAssertEqual(

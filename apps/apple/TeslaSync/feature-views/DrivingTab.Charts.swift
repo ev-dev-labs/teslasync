@@ -195,7 +195,7 @@ struct HourlyPatternChart: View {
 
 struct TemperatureEfficiencyChart: View {
     let points: [DriveTempEffPoint]
-    let labels: DriveUnitLabels
+    let labels: DrivingTabDriveUnitLabels
 
     var body: some View {
         DriveAnalyticsPanel(titleKey: "analytics.driving.tempVsEff", titleFallback: "Temperature vs Efficiency") {
@@ -252,7 +252,7 @@ struct TemperatureEfficiencyChart: View {
 
 struct DailyTrendChart: View {
     let points: [DriveDailyPoint]
-    let labels: DriveUnitLabels
+    let labels: DrivingTabDriveUnitLabels
 
     var body: some View {
         DriveAnalyticsPanel(titleKey: "analytics.driving.dailyTrend", titleFallback: "Daily Driving Trend") {
@@ -332,7 +332,7 @@ struct DurationDistributionChart: View {
 
 struct EfficiencyTrendChart: View {
     let points: [DriveEffPoint]
-    let labels: DriveUnitLabels
+    let labels: DrivingTabDriveUnitLabels
 
     var body: some View {
         DriveAnalyticsPanel(titleKey: "analytics.driving.effTrend", titleFallback: "Efficiency Trend") {

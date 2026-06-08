@@ -24,6 +24,7 @@ import XCTest
 
 // MARK: - Adapter: conversion / safe / formatting (web parity)
 
+@MainActor
 final class DrivingTemperatureAdapterTests: XCTestCase {
     func testConvertCelsiusIsIdentity() {
         XCTAssertEqual(convertDrivingTempFromSI(21.5, to: .celsius), 21.5, accuracy: 0.0001)
@@ -60,6 +61,7 @@ final class DrivingTemperatureAdapterTests: XCTestCase {
 
 // MARK: - Adapter: projection + cell catalog (web grid)
 
+@MainActor
 final class DrivingTemperatureProjectorTests: XCTestCase {
     private let locale = "en_US"
 
@@ -311,6 +313,7 @@ final class DrivingTemperatureModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class DrivingTemperatureAccessibilityTests: XCTestCase {
     func testCellSummaryComposesLabelValueUnit() {
         let summary = DrivingTemperatureAccessibility.cellSummary(label: "Inside Min", value: "18.5", unit: "°C")

@@ -26,15 +26,16 @@ private let enUS = Locale(identifier: "en_US")
 
 // MARK: - Adapter: cached payload → projection (port parity with the web useMemo)
 
+@MainActor
 final class UptimeMonitorProjectorTests: XCTestCase {
     func testServiceOrderMatchesWebKeys() {
-        let projection = UptimeMonitorProjector.project(from: SystemHealthData(status: "healthy"))
+        let projection = UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: "healthy"))
         XCTAssertEqual(projection.services.map(\.key), ["database", "mqtt", "tesla_api", "fleet_telemetry"])
         XCTAssertEqual(projection.totalCount, 4)
     }
 
     func testMissingComponentsDefaultToUnhealthy() {
-        let projection = UptimeMonitorProjector.project(from: SystemHealthData(status: "unhealthy"))
+        let projection = UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: "unhealthy"))
         for service in projection.services {
             XCTAssertEqual(service.status, "unhealthy")
             XCTAssertEqual(service.tone, .danger)
@@ -45,10 +46,10 @@ final class UptimeMonitorProjectorTests: XCTestCase {
     }
 
     func testComponentFieldsCarryThrough() throws {
-        let data = SystemHealthData(
+        let data = UptimeMonitorWidgetSystemHealthData(
             status: "degraded",
             components: [
-                "tesla_api": SystemHealthComponentData(
+                "tesla_api": UptimeMonitorWidgetSystemHealthComponentData(
                     status: "degraded",
                     consecutiveFailures: 3,
                     lastError: "429"
@@ -64,13 +65,13 @@ final class UptimeMonitorProjectorTests: XCTestCase {
     }
 
     func testHealthyCountMatchesWebFilter() {
-        let data = SystemHealthData(
+        let data = UptimeMonitorWidgetSystemHealthData(
             status: "degraded",
             components: [
-                "database": SystemHealthComponentData(status: "healthy"),
-                "mqtt": SystemHealthComponentData(status: "ok"),
-                "tesla_api": SystemHealthComponentData(status: "degraded"),
-                "fleet_telemetry": SystemHealthComponentData(status: "unhealthy")
+                "database": UptimeMonitorWidgetSystemHealthComponentData(status: "healthy"),
+                "mqtt": UptimeMonitorWidgetSystemHealthComponentData(status: "ok"),
+                "tesla_api": UptimeMonitorWidgetSystemHealthComponentData(status: "degraded"),
+                "fleet_telemetry": UptimeMonitorWidgetSystemHealthComponentData(status: "unhealthy")
             ]
         )
         let projection = UptimeMonitorProjector.project(from: data)
@@ -79,22 +80,22 @@ final class UptimeMonitorProjectorTests: XCTestCase {
     }
 
     func testOverallFallsBackToUnknown() {
-        let projection = UptimeMonitorProjector.project(from: SystemHealthData(status: ""))
+        let projection = UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: ""))
         XCTAssertEqual(projection.overallStatus, "unknown")
         XCTAssertEqual(projection.overallTone, .danger)
     }
 
     func testOverallToneTracksStatus() {
-        XCTAssertEqual(UptimeMonitorProjector.project(from: SystemHealthData(status: "healthy")).overallTone, .success)
-        XCTAssertEqual(UptimeMonitorProjector.project(from: SystemHealthData(status: "degraded")).overallTone, .warning)
+        XCTAssertEqual(UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: "healthy")).overallTone, .success)
+        XCTAssertEqual(UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: "degraded")).overallTone, .warning)
         XCTAssertEqual(
-            UptimeMonitorProjector.project(from: SystemHealthData(status: "unhealthy")).overallTone,
+            UptimeMonitorProjector.project(from: UptimeMonitorWidgetSystemHealthData(status: "unhealthy")).overallTone,
             .danger
         )
     }
 
     func testDatabaseAndTableCarryThrough() {
-        let data = SystemHealthData(status: "healthy", databaseSize: "248 MB", tableCount: 87)
+        let data = UptimeMonitorWidgetSystemHealthData(status: "healthy", databaseSize: "248 MB", tableCount: 87)
         let projection = UptimeMonitorProjector.project(from: data)
         XCTAssertEqual(projection.databaseSize, "248 MB")
         XCTAssertEqual(projection.tableCount, 87)
@@ -103,6 +104,7 @@ final class UptimeMonitorProjectorTests: XCTestCase {
 
 // MARK: - statusVariant / isHealthy parity
 
+@MainActor
 final class UptimeStatusToneTests: XCTestCase {
     func testToneMapping() {
         XCTAssertEqual(UptimeMonitorProjector.tone(for: "ok"), .success)
@@ -128,6 +130,7 @@ final class UptimeStatusToneTests: XCTestCase {
 
 // MARK: - Formatters: db-size / table-count / ratio parity
 
+@MainActor
 final class UptimeMonitorFormatTests: XCTestCase {
     func testDatabaseSizeFallsBackToEmDash() {
         XCTAssertEqual(UptimeMonitorFormat.databaseSize(nil), "—")
@@ -149,6 +152,7 @@ final class UptimeMonitorFormatTests: XCTestCase {
 
 // MARK: - Status text: web 'OK'/'All OK'/raw-status parity (English fallbacks)
 
+@MainActor
 final class UptimeMonitorStatusTextTests: XCTestCase {
     func testServiceBadgeText() {
         XCTAssertEqual(UptimeMonitorStatusText.serviceBadge("ok"), "OK")
@@ -170,6 +174,7 @@ final class UptimeMonitorStatusTextTests: XCTestCase {
 
 // MARK: - i18n facade: humanize + serviceLabel parity
 
+@MainActor
 final class UptimeMonitorStringsTests: XCTestCase {
     func testHumanizeMatchesWeb() {
         XCTAssertEqual(UptimeMonitorStrings.humanize("database"), "Database")
@@ -216,7 +221,7 @@ final class UptimeMonitorModelTests: XCTestCase {
     }
 
     func testDataPresentShowsContentEvenWhileFetchingOrFailed() {
-        let data = SystemHealthData(status: "healthy")
+        let data = UptimeMonitorWidgetSystemHealthData(status: "healthy")
         let (loading, _) = makeModel(UptimeMonitorUpdate(status: .loading, data: data))
         loading.start()
         XCTAssertEqual(loading.phase, .content)
@@ -250,11 +255,11 @@ final class UptimeMonitorModelTests: XCTestCase {
             UptimeMonitorUpdate(
                 status: .loaded,
                 connection: .offline,
-                data: SystemHealthData(
+                data: UptimeMonitorWidgetSystemHealthData(
                     status: "degraded",
                     components: [
-                        "database": SystemHealthComponentData(status: "healthy"),
-                        "mqtt": SystemHealthComponentData(status: "healthy")
+                        "database": UptimeMonitorWidgetSystemHealthComponentData(status: "healthy"),
+                        "mqtt": UptimeMonitorWidgetSystemHealthComponentData(status: "healthy")
                     ],
                     databaseSize: "248 MB",
                     tableCount: 87
@@ -283,6 +288,7 @@ final class UptimeMonitorModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class UptimeMonitorRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = UptimeMonitorWidget.registration
@@ -312,16 +318,17 @@ final class UptimeMonitorRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class UptimeMonitorAccessibilityTests: XCTestCase {
     func testSummaryIncludesOverallHealthCountAndDatabase() {
         let projection = UptimeMonitorProjector.project(
-            from: SystemHealthData(
+            from: UptimeMonitorWidgetSystemHealthData(
                 status: "degraded",
                 components: [
-                    "database": SystemHealthComponentData(status: "healthy"),
-                    "mqtt": SystemHealthComponentData(status: "healthy"),
-                    "tesla_api": SystemHealthComponentData(status: "degraded"),
-                    "fleet_telemetry": SystemHealthComponentData(status: "unhealthy")
+                    "database": UptimeMonitorWidgetSystemHealthComponentData(status: "healthy"),
+                    "mqtt": UptimeMonitorWidgetSystemHealthComponentData(status: "healthy"),
+                    "tesla_api": UptimeMonitorWidgetSystemHealthComponentData(status: "degraded"),
+                    "fleet_telemetry": UptimeMonitorWidgetSystemHealthComponentData(status: "unhealthy")
                 ],
                 databaseSize: "248 MB",
                 tableCount: 87

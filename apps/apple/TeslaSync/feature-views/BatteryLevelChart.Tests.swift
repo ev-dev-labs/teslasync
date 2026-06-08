@@ -21,6 +21,7 @@ import XCTest
 
 // MARK: - Adapter: projection (computeStartLevelDist consumer parity)
 
+@MainActor
 final class BatteryLevelBuilderTests: XCTestCase {
     func testRangeLabelsMatchWebDeciles() {
         XCTAssertEqual(BatteryLevelBuilder.rangeLabel(forIndex: 0), "0-10%")
@@ -197,6 +198,7 @@ final class BatteryLevelChartModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class BatteryLevelAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

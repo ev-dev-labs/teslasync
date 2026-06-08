@@ -241,7 +241,7 @@ public enum MediaHistoryStrings {
         }
     }
 
-    private static let absoluteFormatter: DateFormatter = {
+    private nonisolated(unsafe) static let absoluteFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short

@@ -23,7 +23,8 @@ import XCTest
 
 // MARK: - Adapter: projection (web `data` consumer parity)
 
-final class CostPerKwhProjectionTests: XCTestCase {
+@MainActor
+final class CostPerKwhChartProjectionTests: XCTestCase {
     func testPointsPreserveOrderAndAssignIndex() {
         let points = CostPerKwhProjection.points(from: [
             CostPerKwhSample(date: "a", costPerKwh: 0.1),
@@ -106,6 +107,7 @@ final class CostPerKwhProjectionTests: XCTestCase {
 
 // MARK: - Formatting: DefaultCostPerKwhFormatting (web `formatCurrency`)
 
+@MainActor
 final class CostPerKwhFormattingTests: XCTestCase {
     private let formatter = DefaultCostPerKwhFormatting(currencySymbol: "$", localeIdentifier: "en_US")
 
@@ -242,12 +244,13 @@ final class CostPerKwhModelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class CostPerKwhAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let formatter = DefaultCostPerKwhFormatting(currencySymbol: "$", localeIdentifier: "en_US")
 
-    private var points: [CostPerKwhPoint] {
+    private var points: [CostPerKwhChartPoint] {
         CostPerKwhProjection.points(from: [
             CostPerKwhSample(date: "Jan 01", costPerKwh: 0.10),
             CostPerKwhSample(date: "Jan 08", costPerKwh: 0.30)

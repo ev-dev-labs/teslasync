@@ -42,6 +42,7 @@ private enum AutopilotFixture {
 
 // MARK: - Adapter: cached input → projection (port parity with the web source)
 
+@MainActor
 final class AutopilotSectionAdapterTests: XCTestCase {
     func testSpeedTilesProjectionMphMatchesWeb() {
         let projection = AutopilotFixture.project(AutopilotFixture.full)
@@ -163,6 +164,7 @@ final class AutopilotSectionAdapterTests: XCTestCase {
 
 // MARK: - State holder: phase resolution
 
+@MainActor
 final class AutopilotSectionPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         // Web parent precedence: loading and error short-circuit BEFORE the content/empty body.
@@ -296,6 +298,7 @@ final class AutopilotSectionModelTests: XCTestCase {
 
 // MARK: - Accessibility summary
 
+@MainActor
 final class AutopilotSectionAccessibilityTests: XCTestCase {
     private let fallback: (String, String) -> String = { _, value in value }
 

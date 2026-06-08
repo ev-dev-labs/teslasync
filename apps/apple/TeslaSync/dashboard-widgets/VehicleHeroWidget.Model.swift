@@ -3,10 +3,10 @@
 //  TeslaSync — P4 dashboard widget · 0108 · VehicleHeroWidget (Apple)
 //
 //  State-holder seam (P1/S8) + telemetry seam (P1/S11) + registry + i18n facade
-//  (P1/S10). The view binds through `VehicleHeroModel`; no networking lives in the
-//  view. The production app wires a `VehicleHeroSource` over the shared vehicles /
+//  (P1/S10). The view binds through `VehicleHeroWidgetModel`; no networking lives in the
+//  view. The production app wires a `VehicleHeroWidgetSource` over the shared vehicles /
 //  vehicle-state / live / units / settings state holders; previews and tests use
-//  `InMemoryVehicleHeroSource`.
+//  `VehicleHeroWidgetInMemoryVehicleHeroSource`.
 //
 
 import Foundation
@@ -20,12 +20,12 @@ import SwiftUI
 /// implementation logs via `os.Logger`; the production app injects an adapter that
 /// forwards to the shared core `Telemetry.track(.screenView(screen:…))` (ADR-016
 /// §5), which is consent-gated and redacted there.
-public protocol VehicleHeroTelemetry: Sendable {
+public protocol VehicleHeroWidgetTelemetry: Sendable {
     func viewOpened(surface: String)
 }
 
 /// `os.Logger`-backed default that records the surface open as a `view.opened`.
-public struct OSLogVehicleHeroTelemetry: VehicleHeroTelemetry {
+public struct VehicleHeroWidgetOSLogVehicleHeroTelemetry: VehicleHeroWidgetTelemetry {
     private let logger: Logger
 
     public init() {
@@ -42,7 +42,7 @@ public struct OSLogVehicleHeroTelemetry: VehicleHeroTelemetry {
 /// The load lifecycle for the widget's vehicle/state data, mirroring the shared
 /// `LoadableState` cases the production source projects from the `Resource<T>`
 /// queries (web `useVehicles` / `useVehicleState`).
-public enum VehicleHeroLoadStatus: Sendable, Equatable {
+public enum VehicleHeroWidgetLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case empty
@@ -51,7 +51,7 @@ public enum VehicleHeroLoadStatus: Sendable, Equatable {
 
 /// Live-stream freshness, mirroring `LiveConnectionState` (ADR-013). Drives the
 /// freshness chip + stale/offline banner; cached values stay visible.
-public enum VehicleHeroConnection: Sendable, Equatable {
+public enum VehicleHeroWidgetConnection: Sendable, Equatable {
     case live
     case stale
     case offline
@@ -170,12 +170,12 @@ public struct UnitDisplayPrefs: Sendable, Equatable {
     }
 }
 
-/// One coalesced snapshot pushed by a `VehicleHeroSource`: the cached vehicle +
+/// One coalesced snapshot pushed by a `VehicleHeroWidgetSource`: the cached vehicle +
 /// live state + the live firmware hints + unit prefs, plus the load/connection
 /// status. The model turns this into the projection + render phase.
-public struct VehicleHeroUpdate: Sendable, Equatable {
-    public var status: VehicleHeroLoadStatus
-    public var connection: VehicleHeroConnection
+public struct VehicleHeroWidgetUpdate: Sendable, Equatable {
+    public var status: VehicleHeroWidgetLoadStatus
+    public var connection: VehicleHeroWidgetConnection
     public var vehicle: VehicleInput?
     public var state: VehicleStateInput?
     public var liveVersion: String?
@@ -184,8 +184,8 @@ public struct VehicleHeroUpdate: Sendable, Equatable {
     public var updatedAt: Date?
 
     public init(
-        status: VehicleHeroLoadStatus = .loading,
-        connection: VehicleHeroConnection = .live,
+        status: VehicleHeroWidgetLoadStatus = .loading,
+        connection: VehicleHeroWidgetConnection = .live,
         vehicle: VehicleInput? = nil,
         state: VehicleStateInput? = nil,
         liveVersion: String? = nil,
@@ -205,21 +205,21 @@ public struct VehicleHeroUpdate: Sendable, Equatable {
 }
 
 /// The seam the view binds through. The production app implements this over the
-/// shared P1/S8 state holders; previews and tests use `InMemoryVehicleHeroSource`.
+/// shared P1/S8 state holders; previews and tests use `VehicleHeroWidgetInMemoryVehicleHeroSource`.
 @MainActor
-public protocol VehicleHeroSource: AnyObject {
-    var onUpdate: (@MainActor (VehicleHeroUpdate) -> Void)? { get set }
+public protocol VehicleHeroWidgetSource: AnyObject {
+    var onUpdate: (@MainActor (VehicleHeroWidgetUpdate) -> Void)? { get set }
     func start()
     func stop()
     func refresh()
 }
 
-/// The widget's observable view-model. Subscribes to a `VehicleHeroSource`,
-/// recomputes the `VehicleHeroProjection`, and exposes a render `Phase` + freshness
+/// The widget's observable view-model. Subscribes to a `VehicleHeroWidgetSource`,
+/// recomputes the `VehicleHeroWidgetProjection`, and exposes a render `Phase` + freshness
 /// for SwiftUI to switch over.
 @MainActor
 @Observable
-public final class VehicleHeroModel {
+public final class VehicleHeroWidgetModel {
     /// The mutually-exclusive render branches (web shell loading / content / empty).
     public enum Phase: Equatable {
         case loading
@@ -229,17 +229,17 @@ public final class VehicleHeroModel {
     }
 
     public private(set) var phase: Phase = .loading
-    public private(set) var connection: VehicleHeroConnection = .live
-    public private(set) var projection: VehicleHeroProjection?
+    public private(set) var connection: VehicleHeroWidgetConnection = .live
+    public private(set) var projection: VehicleHeroWidgetProjection?
     public private(set) var updatedAt: Date?
 
-    @ObservationIgnored private let source: any VehicleHeroSource
-    @ObservationIgnored private let telemetry: any VehicleHeroTelemetry
+    @ObservationIgnored private let source: any VehicleHeroWidgetSource
+    @ObservationIgnored private let telemetry: any VehicleHeroWidgetTelemetry
     @ObservationIgnored private var started = false
 
     public init(
-        source: any VehicleHeroSource,
-        telemetry: any VehicleHeroTelemetry = OSLogVehicleHeroTelemetry()
+        source: any VehicleHeroWidgetSource,
+        telemetry: any VehicleHeroWidgetTelemetry = VehicleHeroWidgetOSLogVehicleHeroTelemetry()
     ) {
         self.source = source
         self.telemetry = telemetry
@@ -265,16 +265,16 @@ public final class VehicleHeroModel {
         source.refresh()
     }
 
-    private func apply(_ update: VehicleHeroUpdate) {
+    private func apply(_ update: VehicleHeroWidgetUpdate) {
         connection = update.connection
         updatedAt = update.updatedAt
         projection = update.vehicle.map { vehicle in
-            VehicleHeroProjection.build(
+            VehicleHeroWidgetProjection.build(
                 vehicle: vehicle,
                 state: update.state,
                 firmware: VehicleHeroFirmware.resolve(update),
                 prefs: update.prefs,
-                localize: VehicleHeroStrings.string
+                localize: VehicleHeroWidgetStrings.string
             )
         }
         phase = Self.resolvePhase(update)
@@ -285,7 +285,7 @@ public final class VehicleHeroModel {
     /// renders (cached values stay visible behind refresh/errors, the freshness
     /// chip reflecting staleness/failure). A resolved-but-empty fleet renders the
     /// friendly empty state rather than a perpetual skeleton.
-    public static func resolvePhase(_ update: VehicleHeroUpdate) -> Phase {
+    public static func resolvePhase(_ update: VehicleHeroWidgetUpdate) -> Phase {
         let hasVehicle = update.vehicle != nil
         switch update.status {
         case .loading:
@@ -302,15 +302,15 @@ public final class VehicleHeroModel {
 
 /// In-memory source for previews + unit/UI tests. Drive it with `push(_:)`.
 @MainActor
-public final class InMemoryVehicleHeroSource: VehicleHeroSource {
-    public var onUpdate: (@MainActor (VehicleHeroUpdate) -> Void)?
+public final class VehicleHeroWidgetInMemoryVehicleHeroSource: VehicleHeroWidgetSource {
+    public var onUpdate: (@MainActor (VehicleHeroWidgetUpdate) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
     public private(set) var refreshCount = 0
 
-    private let initial: VehicleHeroUpdate?
+    private let initial: VehicleHeroWidgetUpdate?
 
-    public init(initial: VehicleHeroUpdate? = nil) {
+    public init(initial: VehicleHeroWidgetUpdate? = nil) {
         self.initial = initial
     }
 
@@ -328,50 +328,21 @@ public final class InMemoryVehicleHeroSource: VehicleHeroSource {
     }
 
     /// Pushes a snapshot to the bound model (test/preview affordance).
-    public func push(_ update: VehicleHeroUpdate) {
+    public func push(_ update: VehicleHeroWidgetUpdate) {
         onUpdate?(update)
     }
 }
 
 // MARK: - Registry metadata (web `WidgetDef`)
 
-/// A grid size in dashboard columns × rows (web `WidgetSize`).
-public struct DashboardWidgetSize: Sendable, Equatable {
-    public var cols: Int
-    public var rows: Int
 
-    public init(cols: Int, rows: Int) {
-        self.cols = cols
-        self.rows = rows
-    }
-}
-
-/// The dashboard registration for a draggable widget surface (web `WidgetDef`).
-public struct DashboardWidgetRegistration: Sendable {
-    public let id: String
-    public let nameKey: String
-    public let descriptionKey: String
-    public let category: String
-    public let defaultSize: DashboardWidgetSize
-    public let minSize: DashboardWidgetSize
-    public let maxSize: DashboardWidgetSize
-
-    /// Clamps a requested grid size into the surface's `min…max` envelope, so the
-    /// native grid honors the same constraints as the web registry.
-    public func clamp(_ size: DashboardWidgetSize) -> DashboardWidgetSize {
-        DashboardWidgetSize(
-            cols: min(max(size.cols, minSize.cols), maxSize.cols),
-            rows: min(max(size.rows, minSize.rows), maxSize.rows)
-        )
-    }
-}
 
 // MARK: - Localization facade (P1/S10) — web `t(key, default)`
 
 /// Resolves the surface's strings by key with the web English fallback, so the
 /// view holds no hardcoded literals. Keys live in the "VehicleHeroWidget" table,
 /// folded into the app `Localizable.xcstrings` catalog at integration time.
-public enum VehicleHeroStrings {
+public enum VehicleHeroWidgetStrings {
     public static let table = "VehicleHeroWidget"
 
     public static func string(_ key: String, _ fallback: String) -> String {

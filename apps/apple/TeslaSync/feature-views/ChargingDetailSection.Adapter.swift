@@ -61,7 +61,7 @@ public struct ChargerBrandDatum: Identifiable, Equatable, Sendable {
 }
 
 /// One charger-type row (web `charger_types[i]` — `{ type, count }`).
-public struct ChargerTypeDatum: Identifiable, Equatable, Sendable {
+public struct ChargingDetailSectionChargerTypeDatum: Identifiable, Equatable, Sendable {
     public var type: String
     public var count: Double
 
@@ -123,13 +123,13 @@ public struct CostStats: Equatable, Sendable {
 /// independently (web `costStats ? … : <EmptyState/>`).
 public struct ChargingAnalytics: Equatable, Sendable {
     public var brands: [ChargerBrandDatum]
-    public var chargerTypes: [ChargerTypeDatum]
+    public var chargerTypes: [ChargingDetailSectionChargerTypeDatum]
     public var monthlyTrend: [MonthlyChargePoint]
     public var costStats: CostStats?
 
     public init(
         brands: [ChargerBrandDatum] = [],
-        chargerTypes: [ChargerTypeDatum] = [],
+        chargerTypes: [ChargingDetailSectionChargerTypeDatum] = [],
         monthlyTrend: [MonthlyChargePoint] = [],
         costStats: CostStats? = nil
     ) {
@@ -259,7 +259,7 @@ public enum ChargingProjection {
     /// sum of all counts, each `fraction` is `count / total` (`0` when total is
     /// `0`), `percent` is that as `0…100`, and `colorIndex` is the source index
     /// (the palette wraps it, matching web `CHART_COLORS[i % CHART_COLORS.length]`).
-    public static func chargerTypeShares(_ types: [ChargerTypeDatum]) -> [ChargerTypeShare] {
+    public static func chargerTypeShares(_ types: [ChargingDetailSectionChargerTypeDatum]) -> [ChargerTypeShare] {
         let total = types.reduce(0.0) { $0 + ChargingNumeric.safe($1.count) }
         return types.enumerated().map { index, datum in
             let count = ChargingNumeric.safe(datum.count)

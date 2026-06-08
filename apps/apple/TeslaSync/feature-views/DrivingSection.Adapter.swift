@@ -147,7 +147,7 @@ public enum DrivingSectionProjector {
         from data: DrivingDigestDTO,
         copy: DrivingSectionCopy,
         locale: String
-    ) -> [DrivingStat] {
+    ) -> [DrivingSectionStat] {
         [
             avgEfficiencyStat(data, copy: copy, locale: locale),
             drivingTimeStat(data, copy: copy, locale: locale),
@@ -160,11 +160,11 @@ public enum DrivingSectionProjector {
         _ data: DrivingDigestDTO,
         copy: DrivingSectionCopy,
         locale: String
-    ) -> DrivingStat {
+    ) -> DrivingSectionStat {
         // Web `${fmtNumber(metrics.avgEfficiency, 1)} Wh/km`.
         let avg = data.avgEfficiency ?? 0
         let value = "\(DrivingFormat.number(avg, decimals: 1, localeIdentifier: locale)) \(copy.efficiencyUnit)"
-        return DrivingStat(
+        return DrivingSectionStat(
             kind: .avgEfficiency,
             label: copy.avgEfficiencyLabel,
             value: value,
@@ -176,7 +176,7 @@ public enum DrivingSectionProjector {
         _ data: DrivingDigestDTO,
         copy: DrivingSectionCopy,
         locale: String
-    ) -> DrivingStat {
+    ) -> DrivingSectionStat {
         // Web `${fmtInt(Math.floor(totalDuration / 60))}h ${fmtInt(totalDuration % 60)}m`.
         let total = DrivingFormat.safeNumber(data.totalDurationMin ?? 0)
         let hours = (total / 60).rounded(.down)
@@ -184,7 +184,7 @@ public enum DrivingSectionProjector {
         let hoursText = DrivingFormat.integer(hours, localeIdentifier: locale)
         let minutesText = DrivingFormat.integer(minutes, localeIdentifier: locale)
         let value = "\(hoursText)\(copy.hoursGlyph) \(minutesText)\(copy.minutesGlyph)"
-        return DrivingStat(
+        return DrivingSectionStat(
             kind: .totalDrivingTime,
             label: copy.totalDrivingTimeLabel,
             value: value,
@@ -196,7 +196,7 @@ public enum DrivingSectionProjector {
         _ data: DrivingDigestDTO,
         copy: DrivingSectionCopy,
         locale: String
-    ) -> DrivingStat {
+    ) -> DrivingSectionStat {
         let avg = data.avgEfficiency ?? 0
         let prev = data.prevAvgEfficiency ?? 0
         // Web: `prevAvgEfficiency > 0 ? `${fmtNumber(pctChange(...), 1)}%` : '—'`.
@@ -211,7 +211,7 @@ public enum DrivingSectionProjector {
         let improving = avg <= prev
         let direction: DrivingTrendDirection = improving ? .down : .up
         let tone: DrivingTrendTone = improving ? .positive : .negative
-        return DrivingStat(
+        return DrivingSectionStat(
             kind: .efficiencyChange,
             label: copy.efficiencyChangeLabel,
             value: value,
@@ -225,10 +225,10 @@ public enum DrivingSectionProjector {
         _ data: DrivingDigestDTO,
         copy: DrivingSectionCopy,
         locale: String
-    ) -> DrivingStat {
+    ) -> DrivingSectionStat {
         // Web `fmtInt(metrics.totalDrives)`.
         let value = DrivingFormat.integer(data.totalDrives ?? 0, localeIdentifier: locale)
-        return DrivingStat(
+        return DrivingSectionStat(
             kind: .drives,
             label: copy.drivesLabel,
             value: value,

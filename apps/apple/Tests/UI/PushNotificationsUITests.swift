@@ -4,6 +4,7 @@ import XCTest
 /// runs in the iOS and macOS UI-test targets, proving the permission flow, the
 /// foreground banner + deep-link routing, device registration, Live Activity
 /// control, and the settings screen — all against in-memory fakes (no APNs).
+@MainActor
 final class PushNotificationsUITests: XCTestCase {
     override func setUp() {
         super.setUp()

@@ -19,8 +19,9 @@ import XCTest
 
 // MARK: - Adapter: JSON pretty printer (parity with JSON.stringify(_, null, 2))
 
+@MainActor
 final class ResultPanelJSONTests: XCTestCase {
-    private let objectTree = JSONValue.object([
+    private let objectTree = ResultPanelJSONValue.object([
         JSONMember(key: "status", value: .string("ok")),
         JSONMember(key: "code", value: .number("200")),
         JSONMember(key: "items", value: .array([.string("a"), .string("b")])),
@@ -50,56 +51,57 @@ final class ResultPanelJSONTests: XCTestCase {
     }
 
     func testEmptyContainersCollapse() {
-        XCTAssertEqual(JSONValue.object([]).prettyPrinted(), "{}")
-        XCTAssertEqual(JSONValue.array([]).prettyPrinted(), "[]")
+        XCTAssertEqual(ResultPanelJSONValue.object([]).prettyPrinted(), "{}")
+        XCTAssertEqual(ResultPanelJSONValue.array([]).prettyPrinted(), "[]")
     }
 
     func testScalarsRenderVerbatim() {
-        XCTAssertEqual(JSONValue.number("42").prettyPrinted(), "42")
-        XCTAssertEqual(JSONValue.number("3.14").prettyPrinted(), "3.14")
-        XCTAssertEqual(JSONValue.bool(false).prettyPrinted(), "false")
-        XCTAssertEqual(JSONValue.null.prettyPrinted(), "null")
+        XCTAssertEqual(ResultPanelJSONValue.number("42").prettyPrinted(), "42")
+        XCTAssertEqual(ResultPanelJSONValue.number("3.14").prettyPrinted(), "3.14")
+        XCTAssertEqual(ResultPanelJSONValue.bool(false).prettyPrinted(), "false")
+        XCTAssertEqual(ResultPanelJSONValue.null.prettyPrinted(), "null")
     }
 
     func testStringEscapingMatchesECMAScript() {
         XCTAssertEqual(
-            JSONValue.string("hello \"world\"\nline2\ttab").prettyPrinted(),
+            ResultPanelJSONValue.string("hello \"world\"\nline2\ttab").prettyPrinted(),
             "\"hello \\\"world\\\"\\nline2\\ttab\""
         )
         // C0 control (U+0001) → lowercase \u00xx; backslash doubled.
-        XCTAssertEqual(JSONValue.string("a\u{01}b").prettyPrinted(), "\"a\\u0001b\"")
-        XCTAssertEqual(JSONValue.string("C:\\temp").prettyPrinted(), "\"C:\\\\temp\"")
+        XCTAssertEqual(ResultPanelJSONValue.string("a\u{01}b").prettyPrinted(), "\"a\\u0001b\"")
+        XCTAssertEqual(ResultPanelJSONValue.string("C:\\temp").prettyPrinted(), "\"C:\\\\temp\"")
     }
 
     func testUnicodeIsEmittedVerbatim() {
-        XCTAssertEqual(JSONValue.string("Tëslá ⚡🚗").prettyPrinted(), "\"Tëslá ⚡🚗\"")
+        XCTAssertEqual(ResultPanelJSONValue.string("Tëslá ⚡🚗").prettyPrinted(), "\"Tëslá ⚡🚗\"")
     }
 
     func testParserPreservesKeyOrderAndRoundTrips() throws {
         let raw = "{\"status\":\"ok\",\"code\":200,\"items\":[\"a\",\"b\"]," +
             "\"nested\":{\"x\":1,\"y\":null},\"flag\":true}"
-        let parsed = try JSONValue.parse(raw)
+        let parsed = try ResultPanelJSONValue.parse(raw)
         XCTAssertEqual(parsed, objectTree)
         XCTAssertEqual(parsed.prettyPrinted(), objectTree.prettyPrinted())
     }
 
     func testParserHandlesWhitespaceAndEscapes() throws {
-        XCTAssertEqual(try JSONValue.parse("  [ 1 , 2 ] "), .array([.number("1"), .number("2")]))
-        XCTAssertEqual(try JSONValue.parse("\"a\\u0001b\""), .string("a\u{01}b"))
+        XCTAssertEqual(try ResultPanelJSONValue.parse("  [ 1 , 2 ] "), .array([.number("1"), .number("2")]))
+        XCTAssertEqual(try ResultPanelJSONValue.parse("\"a\\u0001b\""), .string("a\u{01}b"))
     }
 
     func testParserRejectsMalformedInput() {
-        XCTAssertThrowsError(try JSONValue.parse("{bad}"))
-        XCTAssertThrowsError(try JSONValue.parse("[1,2"))
-        XCTAssertThrowsError(try JSONValue.parse("\"unterminated"))
+        XCTAssertThrowsError(try ResultPanelJSONValue.parse("{bad}"))
+        XCTAssertThrowsError(try ResultPanelJSONValue.parse("[1,2"))
+        XCTAssertThrowsError(try ResultPanelJSONValue.parse("\"unterminated"))
     }
 }
 
 // MARK: - Adapter: outcome → projection
 
+@MainActor
 final class ResultProjectionTests: XCTestCase {
     func testSuccessProducesResultVariantWithCopyText() {
-        let value = JSONValue.object([JSONMember(key: "ok", value: .bool(true))])
+        let value = ResultPanelJSONValue.object([JSONMember(key: "ok", value: .bool(true))])
         let projection = ResultProjectionBuilder.build(
             from: ResultPanelInput(title: "Response", outcome: .success(value))
         )
@@ -191,7 +193,7 @@ final class ResultPanelModelTests: XCTestCase {
     }
 
     func testSuccessShowsContent() {
-        let value = JSONValue.object([JSONMember(key: "ok", value: .bool(true))])
+        let value = ResultPanelJSONValue.object([JSONMember(key: "ok", value: .bool(true))])
         let (model, _) = makeModel(ResultPanelUpdate(input: input(.success(value))))
         model.start()
         XCTAssertEqual(model.phase, .content)
@@ -217,7 +219,7 @@ final class ResultPanelModelTests: XCTestCase {
 
     func testCopyResultWritesPrettyJSONToClipboard() {
         let spy = SpyResultPanelClipboard()
-        let value = JSONValue.object([JSONMember(key: "a", value: .number("1"))])
+        let value = ResultPanelJSONValue.object([JSONMember(key: "a", value: .number("1"))])
         let (model, _) = makeModel(ResultPanelUpdate(input: input(.success(value))), clipboard: spy)
         model.start()
         XCTAssertTrue(model.copyResult())
@@ -235,7 +237,7 @@ final class ResultPanelModelTests: XCTestCase {
     func testConnectionAndProjectionTrackUpdates() {
         let (model, source) = makeModel(ResultPanelUpdate(input: input(.running)))
         model.start()
-        let value = JSONValue.string("done")
+        let value = ResultPanelJSONValue.string("done")
         source.push(ResultPanelUpdate(
             input: input(.success(value)),
             connection: .offline,
@@ -249,6 +251,7 @@ final class ResultPanelModelTests: XCTestCase {
 
 // MARK: - Accessibility label content
 
+@MainActor
 final class ResultPanelAccessibilityTests: XCTestCase {
     func testPanelLabelForResultIncludesTitle() {
         let projection = ResultProjectionBuilder.build(

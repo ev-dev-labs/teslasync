@@ -43,6 +43,7 @@ enum OrdersFixture {
 
 // MARK: - Adapter: status tone + label
 
+@MainActor
 final class OrdersStatusTests: XCTestCase {
     func testToneMatchesWebVariantMapping() {
         XCTAssertEqual(OrdersStatus.tone("DELIVERED"), .success)
@@ -81,6 +82,7 @@ final class OrdersStatusTests: XCTestCase {
 
 // MARK: - Adapter: projection
 
+@MainActor
 final class OrdersProjectionTests: XCTestCase {
     func testRowsMapEveryFieldAndPreserveOrder() {
         let rows = OrdersProjection.rows(from: [OrdersFixture.inProduction, OrdersFixture.readyForDelivery])
@@ -117,6 +119,7 @@ final class OrdersProjectionTests: XCTestCase {
 
 // MARK: - Adapter: date formatting
 
+@MainActor
 final class OrdersDateFormatTests: XCTestCase {
     private let locale = Locale(identifier: "en_US")
     private let zone = TimeZone.gmt
@@ -159,6 +162,7 @@ final class OrdersDateFormatTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
+@MainActor
 final class OrdersAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }

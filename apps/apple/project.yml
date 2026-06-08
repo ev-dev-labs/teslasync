@@ -32,9 +32,20 @@ targets:
     platform: iOS
     deploymentTarget: "18.0"
     sources:
+      # Co-located *Tests.swift live next to each surface but belong to the
+      # XCTest bundles (they `@testable import TeslaSync`), not the app target.
       - path: Sources
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
       - path: TeslaSync/dashboard-widgets
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
       - path: TeslaSync/feature-views
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
       - path: Localization
       - path: ../design/generated/apple
         name: DesignTokens
@@ -63,9 +74,19 @@ targets:
     platform: macOS
     deploymentTarget: "15.0"
     sources:
+      # Co-located *Tests.swift belong to the XCTest bundles, not the app target.
       - path: Sources
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
       - path: TeslaSync/dashboard-widgets
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
       - path: TeslaSync/feature-views
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
       - path: Localization
       - path: ../design/generated/apple
         name: DesignTokens
@@ -222,6 +243,15 @@ targets:
     platform: iOS
     sources:
       - path: Tests/Unit
+      # Co-located surface tests (feature-views + dashboard-widgets) run here.
+      - path: TeslaSync/dashboard-widgets
+        includes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
+      - path: TeslaSync/feature-views
+        includes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
     dependencies:
       - target: TeslaSync
       - framework: Frameworks/Shared.xcframework
@@ -242,6 +272,15 @@ targets:
     platform: macOS
     sources:
       - path: Tests/Unit
+      # Co-located surface tests (feature-views + dashboard-widgets) run here.
+      - path: TeslaSync/dashboard-widgets
+        includes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
+      - path: TeslaSync/feature-views
+        includes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
     settings:
       base:
         # The macOS app target overrides PRODUCT_NAME to "TeslaSync" (both

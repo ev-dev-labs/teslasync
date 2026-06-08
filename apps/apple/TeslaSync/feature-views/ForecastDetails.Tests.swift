@@ -23,6 +23,7 @@ import XCTest
 
 // MARK: - Adapter: numeric guard (port of `safe`)
 
+@MainActor
 final class ForecastNumericTests: XCTestCase {
     func testSafeReturnsFiniteValues() {
         XCTAssertEqual(ForecastNumeric.safe(42.5), 42.5)
@@ -40,6 +41,7 @@ final class ForecastNumericTests: XCTestCase {
 
 // MARK: - Adapter: breakdown donut slices (port of `<Pie data={[home, super]}>`)
 
+@MainActor
 final class ForecastBreakdownSliceTests: XCTestCase {
     private let breakdown = ForecastBreakdown(
         home: ForecastCategory(pct: 68, avgCostPerKwh: 0.142, monthlyAvg: 41.2),
@@ -79,6 +81,7 @@ final class ForecastBreakdownSliceTests: XCTestCase {
 
 // MARK: - Adapter: gas-vs-EV savings (port of `gas_comparison`)
 
+@MainActor
 final class ForecastSavingsTests: XCTestCase {
     func testSavingsPassThroughFiniteFields() {
         let raw = ForecastGasComparison(
@@ -114,6 +117,7 @@ final class ForecastSavingsTests: XCTestCase {
 
 // MARK: - Adapter: insight filtering (port of `insights.map`)
 
+@MainActor
 final class ForecastInsightTests: XCTestCase {
     func testEmptyArrayProducesNoRows() {
         XCTAssertTrue(ForecastProjection.insights([]).isEmpty)
@@ -133,6 +137,7 @@ final class ForecastInsightTests: XCTestCase {
 
 // MARK: - Formatting: web `<Currency>` / `fmtNumber` parity
 
+@MainActor
 final class ForecastFormattingTests: XCTestCase {
     private let formatting = DefaultForecastFormatting()
 
@@ -166,6 +171,7 @@ final class ForecastFormattingTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class ForecastAccessibilityTests: XCTestCase {
     private let formatting = DefaultForecastFormatting()
 

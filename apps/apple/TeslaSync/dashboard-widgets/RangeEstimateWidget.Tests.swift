@@ -19,6 +19,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
+@MainActor
 final class RangeEstimateAdapterTests: XCTestCase {
     private let sample = RangeStateDTO(ratedRangeMeters: 405_000, idealRangeMeters: 450_000)
 
@@ -104,6 +105,7 @@ final class RangeEstimateAdapterTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
+@MainActor
 final class RangeEstimatePhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(RangeEstimateModel.resolvePhase(status: .loading, hasData: false), .loading)
@@ -209,6 +211,7 @@ final class RangeEstimateModelTests: XCTestCase {
 
 // MARK: - Registry parity
 
+@MainActor
 final class RangeEstimateRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = RangeEstimateWidget.registration
@@ -239,6 +242,7 @@ final class RangeEstimateRegistryTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
+@MainActor
 final class RangeEstimateAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryMetric() {
         let projection = RangeEstimateProjector.project(

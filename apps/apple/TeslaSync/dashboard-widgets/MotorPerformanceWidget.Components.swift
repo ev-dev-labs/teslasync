@@ -127,7 +127,7 @@ struct MotorStatTile: View {
 /// web `DataFreshness` chip. Shows a tinted dot, a status label, and an optional relative-time caption,
 /// and swaps the dot for a spinner while a background refresh is in flight.
 struct MotorFreshnessChip: View {
-    let connection: MotorConnection
+    let connection: MotorPerformanceWidgetConnection
     let isFetching: Bool
     let updatedAt: Date?
     var showsLabel: Bool = true

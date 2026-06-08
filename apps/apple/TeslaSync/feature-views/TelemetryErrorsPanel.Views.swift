@@ -204,7 +204,7 @@ struct TECodeChip: View {
 /// timestamp / code / message columns, plus the JSON download affordance (web
 /// download Blob → native `ShareLink`).
 struct TEErrorsTable: View {
-    let rows: [TelemetryErrorRow]
+    let rows: [TelemetryErrorsPanelErrorRow]
     let export: TelemetryErrorsExport
     let downloadLabel: String
 
@@ -224,7 +224,7 @@ struct TEErrorsTable: View {
         }
     }
 
-    private var columns: [TSColumn<TelemetryErrorRow>] {
+    private var columns: [TSColumn<TelemetryErrorsPanelErrorRow>] {
         [
             TSColumn(id: "timestamp", title: title("Timestamp", "Timestamp")) { row in
                 Text(verbatim: TelemetryErrorsFormat.timestamp(row.timestamp))

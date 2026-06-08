@@ -211,7 +211,7 @@ public enum ChatSessionListProjection {
 /// Shared medium date + short time formatter for the absolute relative-time fallback
 /// and the row accessibility label.
 public enum ChatSessionDateFormat {
-    public static let medium: DateFormatter = {
+    public nonisolated(unsafe) static let medium: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
