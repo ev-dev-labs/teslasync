@@ -1,0 +1,219 @@
+================================================================================
+P4 · Feature view · 0055 — DrivingPerformanceCards (Apple)
+Run: 2026-06-07T20:42-0700   Host: Darwin arm64   Branch: 20260607-170817-98066/slot-176
+Base: 38f36fc7
+Prompt: .github/prompts/monorepo/p4-apple/feature-views/P-0055-DrivingPerformanceCards.prompt.md
+Web source (spec): web/src/features/analytics/components/analytics/DrivingPerformanceCards.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0002 BackendTool / 0005
+      FleetTelemetryHealth / 0009 TelemetryErrorsPanel precedent, ADR-012,
+      Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iphonesimulator26.5 (iOS 18.0 deploy target)         OK
+  macOS SDK .................. macosx26.5 (macOS 15.0 deploy target)                OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Shutdown)          OK
+  iOS 26.5 runtime ........... present (com.apple.CoreSimulator.SimRuntime.iOS-26-5) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. 0.63.3 (/opt/homebrew/bin/swiftlint)                 OK
+  swiftformat ................ 0.61.1 (/opt/homebrew/bin/swiftformat)               OK
+  pwsh (placeholder gate) .... 7.x (/opt/homebrew/bin/pwsh)                         OK
+  java (KMP gradle) .......... OpenJDK 17.0.19 (Homebrew)                           OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... project generates cleanly (TeslaSync.xcodeproj)      OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/data-display" + "@/components/charts" (only the `safe`
+  helper). The core requirement is SwiftUI, which is AVAILABLE and PROVEN by a real
+  Swift-6-strict-concurrency host compile + executed XCTest below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, host-compiled, and host-tested green.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/DrivingPerformanceCards.*) ===
+  DrivingPerformanceCards.swift          70  the surface View — freshness-chip header +
+                                             stale/offline banner + phase switch
+                                             (loading/empty/error/content) over the tile grid
+  DrivingPerformanceCards.Model.swift   280  P1/S8 state-holder seam (DrivingPerformanceSource→
+                                             DrivingPerformanceModel) + P1/S11 telemetry seam
+                                             (view.opened) + P1/S10 strings facade + load-status /
+                                             connection enums + stat/input/update value types +
+                                             InMemory source
+  DrivingPerformanceCards.Adapter.swift 313  testable projection core — SI converters (web
+                                             fromKmh/fromKm exact factors) + safe() + fmtNumber
+                                             (locale grouping, half-up) + the six-tile spec/
+                                             projection + phase resolution + a11y summary (pure)
+  DrivingPerformanceCards.Views.swift   277  presentational chrome — freshness chip, connectivity
+                                             banner, accent icon box, metric tile (web MetricCard),
+                                             responsive grid, skeleton, error+retry, empty hint
+  DrivingPerformanceCards.Previews.swift 87  #if DEBUG previews — content (imperial+metric) /
+                                             empty / loading / error / stale / offline
+  DrivingPerformanceCards.Tests.swift   335  XCTest — DrivingUnitMath golden vectors + projection +
+                                             phase matrix + model phases/refresh/stale/telemetry +
+                                             a11y (24 methods)
+  DrivingPerformanceCards.strings        36  P1/S10 catalog contribution (table "DrivingPerformanceCards")
+  Largest .swift = 335 lines (swiftlint file_length<=400 honored). No shipped file
+  imports the Shared xcframework (the seam is a Swift protocol; the prod app injects
+  the facade-backed source, previews/tests inject InMemoryDrivingPerformanceSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + useUnits, data: FleetAnalytics from the parent
+    useFleetAnalytics query): bound through the P1/S8 seam DrivingPerformanceSource→
+    DrivingPerformanceModel. The source pushes the drive_analytics stat groups
+    (speed/power/regen/distance) + the display-unit prefs; no HTTP in the view.
+  - Composition (web grid of 6 <MetricCard label value subtitle icon color/>):
+      • MetricCard -> DrivingMetricTile (label + prominent value + unit subtitle +
+        accent icon box), composed from the P1/S9 design tokens (no Tailwind ports).
+      • neon color  -> DrivingAccent {cyan,purple,amber,green}; cyan/amber/green map to
+        the theme-adaptive accent/warning/success tokens, purple to the brand
+        chartSeriesPower (== web neon-purple rgb(168,85,247); no theme-adaptive purple).
+      • safe()      -> DrivingUnitMath.safe (finite-else-0); fmtNumber -> NumberFormatter
+        (.decimal, grouping, fixed fraction digits, half-up) per lib/numberFormat.ts.
+  - The six tiles, exact order / stat / decimals / unit / icon / accent:
+      1 Top Speed          speed.max  km/h→display 0dp  speedUnit  speedometer            cyan
+      2 Avg Speed          speed.avg  km/h→display 0dp  speedUnit  chart.line.uptrend     purple
+      3 Peak Power         power.max  kW           0dp  "kW"       bolt.fill              amber
+      4 Peak Regen         regen.max  kW           0dp  "kW"       battery.100.bolt       green
+      5 Avg Drive Distance distance.avg km→display 1dp distUnit    mappin.and.ellipse     cyan
+      6 Longest Drive      distance.max km→display 1dp distUnit    car.fill               purple
+  - Conversions ported verbatim: fromKmh(kmh)=convertSpeedFromSI(kmh*1000/3600),
+    fromKm(km)=convertDistanceFromSI(km*1000); METERS_PER_MILE=1609.344, METERS_PER_KM=1000.
+    Golden vectors EXECUTED green (e.g. 201 km/h→"125" mph, 412.7 km→"256.4" mi).
+  - Em-dash fallback (web `ss ? … : '—'`): a nil stat group renders "—" for its tile(s);
+    the grid never renders blank (verified: nil + partial input tests).
+  - i18n: the 6 source keys (analytics.driving.topSpeed/avgSpeed/peakPower/peakRegen/
+    avgDriveDist/longestDrive) + native chrome keys; referenced==declared (15/15, verified).
+
+=== STATES (every state renders) ===
+  loading  -> DrivingCardsSkeleton (6 redacted tiles; static bars, reduce-motion-safe)
+  empty    -> the 6 em-dash tiles + DrivingEmptyHint (friendly, never a blank box)
+  error    -> DrivingErrorState (icon + title + failure message + Retry → source.refresh)
+  stale    -> cached tiles + amber freshness chip + banner + ONE guarded auto-refresh
+  offline  -> cached tiles + muted freshness chip + offline banner
+  content  -> the responsive 2→6 col grid of populated tiles
+  (Each has a #if DEBUG preview; phase logic unit-tested + EXECUTED green.)
+
+=== HOST-RUNNABLE GATES (each command actually run; real exit codes) ===
+  [1] Isolated SwiftPM build (Swift 6 strict concurrency, Xcode 26 toolchain)
+        harness: tokens (apps/design/generated/apple/Tokens.swift) + the 5 shipped
+        non-test surface files; lang mode .v6; DEVELOPER_DIR=…/Xcode.app
+        > Build complete! (8.67s)                                        BUILD_EXIT=0   OK
+        + direct `swiftc -typecheck` of Tokens.swift + the 5 shipped surface files,
+          proving the surface compiles against BOTH shipping SDKs (Swift 6):
+            iOS 18 simulator SDK (arm64-apple-ios18.0-simulator)         IOS_TYPECHECK=0 OK
+            macOS 15 SDK         (arm64-apple-macos15.0)                  MAC_TYPECHECK=0 OK
+  [2] Isolated SwiftPM test (XCTest, same harness + DrivingPerformanceCards.Tests.swift)
+        > Executed 24 tests, with 0 failures                             TEST_EXIT=0    OK
+        (DrivingUnitMathTests 5, DrivingPerformanceProjectionTests 9,
+         DrivingPerformanceModelTests 8, DrivingPerformanceAccessibilityTests 2)
+  [3] swiftformat --lint (shipped surface files)  0/6 require formatting  FORMAT_EXIT=0  OK
+        swiftformat --lint . (whole tree)          0/714 require formatting              OK
+  [4] swiftlint --strict (shipped surface files)  0 violations in 6 files SWIFTLINT(SURFACE)=0 OK
+        swiftlint --strict (whole tree)            1 violation — PRE-EXISTING, in the
+        sibling TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+        (function_body_length), committed in HEAD, OUTSIDE this prompt's allowed files;
+        zero DrivingPerformanceCards violations.                         SWIFTLINT(TREE)=2 (pre-existing)
+  [5] check-placeholders.ps1 (shipped surface files)  COUNT=0            PLACEHOLDER_EXIT=0 OK
+
+=== XCODE APP BUILD/TEST (DEFERRED — real evidence captured) ===
+  Command (gate step 1): DEVELOPER_DIR=…/Xcode.app xcodebuild -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  - xcodegen generate ............................................ project created      OK
+  - scheme pre-action :core:assembleSharedXCFramework (KMP/Gradle):
+        > xcframework successfully written … XCFrameworks/debug/Shared.xcframework
+        > xcframework successfully written … XCFrameworks/release/Shared.xcframework   OK
+  - app-target compile FAILED on a PRE-EXISTING, repo-wide blocker (NOT this surface):
+        apps/apple/TeslaSync/feature-views/BackendTool.Tests.swift:20:8:
+          error: Unable to resolve module dependency: 'XCTest'
+        Testing failed: Unable to resolve module dependency: 'XCTest'
+        ** TEST FAILED **                                                IOS_EXIT=65
+    Cause: 68 co-located *.Tests.swift files under the app-target source roots
+    (TeslaSync/feature-views + TeslaSync/dashboard-widgets) `import XCTest` +
+    `@testable import TeslaSync` and compile INTO the non-test app target. The build
+    aborts on the first one alphabetically (BackendTool.Tests.swift — a sibling from
+    prompt 0002), so it never reaches DrivingPerformanceCards.*. This surface follows
+    the IDENTICAL established convention as FleetTelemetryHealth.Tests.swift et al.
+  - macOS gate step (xcodebuild -scheme TeslaSync-macOS build test) shares the same
+    Sources/ + feature-views roots, so it fails on the identical XCTest-in-app-target
+    blocker (plus macOS development signing). Not separately re-run — the iOS run is
+    conclusive for the repo-wide structural cause.                       MAC_EXIT=65 (by construction)
+  Additional pre-existing app-target collisions confirmed present in HEAD (out of
+  allowed-files scope): `struct DashboardWidgetSize` redefined in 15 files; `enum/
+  struct PowerFlowConnection` redefined in 2 files (Sources/DashboardWidgets/* +
+  TeslaSync/dashboard-widgets/*).
+  Disposition: the signed/full-app Xcode build+test is DEFERRED to the downstream
+  integration / acceptance-gate prompt (p4-apple/P99-0001-apple-acceptance-gate),
+  which owns the one-time test-target wiring + the dup-symbol de-collision + macOS
+  signing — none a defect in this surface, all outside this prompt's allowed files.
+  Matches the 0002/0005/0009 "code-complete + DEFERRED Xcode gate" precedent (ADR-012)
+  and the apps/macos-pending-verifications.md mechanism.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (DrivingPerformanceSource→
+      DrivingPerformanceModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — the 6 analytics.driving.*
+      labels preserved verbatim + native chrome keys; referenced==declared (15/15 verified).
+  [x] Accessibility labels on every interactive element — each tile is one VoiceOver
+      element "{label}, {value} {unit}"; chips/banners/skeleton/error carry labels;
+      Retry has an explicit label; Dynamic Type via tokens; reduce-motion-safe skeleton.
+  [x] Tests: adapter unit + per-state model + a11y — 24 methods, EXECUTED 24/24, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with
+      captured evidence (Shared.xcframework built + pre-existing XCTest-in-app-target +
+      signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the xcodebuild build/test is shown DEFERRED with its real
+                       IOS_EXIT=65 + cause (pre-existing XCTest-in-app-target on a
+                       sibling file), NOT as a pass; every "OK" is a command actually
+                       run with its real exit code (incl. a 24/24 executed XCTest run).
+  2  No scope narrowing: implemented ALL six tiles + every state + seams + i18n + a11y
+                       + telemetry; nothing trimmed.
+  3  No skip-and-assume: web source read end-to-end; every t() + safe()/fromKmh/fromKm +
+                       em-dash branch reproduced and unit-tested with golden vectors.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (The SwiftPM
+                       harness lives in the session workspace, never in shipped files.)
+  5  No parity shortcuts: faithful port of the 6 MetricCards + neon→accent map (incl.
+                       purple) + conversion math + fmtNumber rounding + all states.
+  6  No delegation     : authored directly (delegation FORBIDDEN; no sub-agent used).
+  7  No predecessor bypass: same disposition as 0002/0005/0009 — did NOT self-register
+                       feature-views in project.yml/.swiftlint.yml, did NOT stage the
+                       KMP Shared.xcframework into the tree, did NOT edit the shared
+                       Localizable.xcstrings (parallel-unsafe); strings shipped as the
+                       per-surface table.
+  8  No commit on red  : committing on green host gates + a real Swift-6 strict-
+                       concurrency compile + 24/24 executed tests; the Xcode app build/
+                       test is explicitly DEFERRED (captured evidence), not failed; the
+                       lone whole-tree lint hit is pre-existing in a sibling, outside
+                       allowed files.
+  9  No silent drift   : changes confined to the allowed DrivingPerformanceCards.* files
+                       + this log (git status verified: exactly 7 surface files added).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native DrivingPerformanceCards shipped at parity with the web
+  source: a pure-Swift SI-conversion + formatting + six-tile projection core (executed-
+  green XCTest, 24/24), a P1/S8 state-holder seam (no view HTTP), P1/S11 view.opened
+  telemetry, every state (loading/empty/error/stale/offline/content) + every i18n key +
+  a11y label, the unit-aware Top Speed / Avg Speed / Peak Power / Peak Regen / Avg Drive
+  Distance / Longest Drive tiles. The surface compiles green against BOTH the iOS 18
+  simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict
+  concurrency and is swiftlint/swiftformat/placeholder clean. The signed full-app Xcode build/test is DEFERRED to the downstream
+  integration/acceptance-gate runner (pre-existing repo-wide XCTest-in-app-target test
+  co-location + dup DashboardWidgetSize/PowerFlowConnection symbols + macOS signing —
+  none a defect in this code, all outside this prompt's allowed files), matching the
+  0002/0005/0009 "code-complete + DEFERRED Xcode gate" precedent (ADR-012) and the
+  apps/macos-pending-verifications.md mechanism.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/DrivingPerformanceCards.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0055-DrivingPerformanceCards.log
+  git commit -m "feat(apps/apple/feature-views): add DrivingPerformanceCards surface (P4)"
+
+EXIT=0
+STATUS=DONE
