@@ -1,0 +1,198 @@
+================================================================================
+P4 · Feature view · 0094 — TimeToChargeSection (Apple)
+Run: 2026-06-07T21:26-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/215
+Base: 9452724d
+Prompt: P4/feature-views/0094 — TimeToChargeSection
+Web source (spec): web/src/features/charging/components/charging-curve/TimeToChargeSection.tsx
+Mode: code-complete + host-validated (standalone swift logic run / swiftc typecheck vs REAL
+      tokens / in-module compile / swiftlint --strict / swiftformat --lint / placeholder)
+      + DEFERRED full-app Xcode build/test (systemic co-located-test/target-wiring condition,
+      macos-pending-verifications.md ToolCard row, AuditPanel-0026 precedent, ADR-012).
+================================================================================
+
+=== P4 Feature view 0094 TimeToChargeSection (Apple) ===
+
+=== CAPABILITY PROBE (this runner) ===
+  swift ...................... Apple Swift 6.3.2                                       OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) — reachable via DEVELOPER_DIR        OK (full Xcode present)
+  iOS SDK / Simulator ........ iphonesimulator26.5 ; "iPhone 16" simulator available   OK (>= iOS 18 contract)
+  macOS SDK .................. MacOSX SDK present (macOS 15 target builds)              OK (>= macOS 15 contract)
+  swiftlint .................. /opt/homebrew/bin/swiftlint                              OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                   OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                               OK
+  KMP Shared.xcframework ..... Gradle :core:assembleSharedXCFramework RUNS; Debug slice OK (Release linking is slow;
+                               (ios-arm64 / ios-arm64-simulator / macos-arm64) built      Debug staged for the probe)
+  active developer dir ....... CLT by default; full Xcode used via DEVELOPER_DIR        OK
+
+  Capability-BLOCKED escape hatch ("SwiftUI / Swift Charts / MapKit unavailable") does NOT
+  apply: SwiftUI is present and PROVEN by a real macOS-SDK Swift-6 typecheck against the
+  REAL generated design tokens. This surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"); the YearlyTrendChart child is a separate sibling surface.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/TimeToChargeSection.*) ===
+  TimeToChargeSection.Models.swift   245  domain input (ChargingSessionSummary) + error taxonomy + cache-then-network
+                                          load state + metrics value types (ChargeRateRef/YearlyTrendPoint/Metrics) +
+                                          accent + card model + freshness/content/presentation enums (pure value types)
+  TimeToChargeSection.Adapter.swift  367  PURE port of the web useMemo: durationMinutes/avg/convertEnergyFromSI/fmtNumber,
+                                          isDcSession, 10->80 & 20->80 band averages, fastest/slowest reduce (web
+                                          later-wins tie-break), per-year trend, the four-card builder, the per-state
+                                          presentation resolver, the responsive column math, and the a11y summary
+  TimeToChargeSection.Model.swift    173  Shared-free P1/S8 source seam (+ InMemory) + @Observable model (live/preview/
+                                          web-prop inits) + P1/S10 i18n facade (TimeToChargeStrings, Session #{id} format)
+  TimeToChargeSection.Views.swift    391  metric card (web TimeToChargeCard) + responsive 2/4-col grid + persistent
+                                          header (title+desc) + freshness chip + status accessory + retry + loading
+                                          skeleton grid + empty (ContentUnavailableView) + error (web QueryError) + offline
+  TimeToChargeSection.swift          128  the surface (View): header + every state switch + P1/S11 view.opened telemetry
+                                          on .task + start/stop + stale auto-refresh (onChange)
+  TimeToChargeSection.Previews.swift 123  #if DEBUG previews — one per state (content live/stale, empty, loading,
+                                          offline cached, offline no-data, error)
+  TimeToChargeSection.Tests.swift    267  XCTest: format/dc/metrics/cards (adapter) — 4 classes, shared TimeToChargeFixture
+  TimeToChargeSection.StateTests.swift 240 XCTest: presentation(every state) + web-prop mapping + layout + a11y +
+                                          telemetry + model wiring — 6 classes
+  TimeToChargeSection.strings         44  P1/S10 catalog contribution: 8 web-source keys + 2 unit symbols + 10 native chrome
+  Every file <= 391 lines (house file_length <= 400, enforced --strict). One exported surface per file.
+
+=== ARCHITECTURE DECISIONS ===
+  • Data seam: own protocol `TimeToChargeSource` + `InMemoryTimeToChargeSource` (NO `import Shared`) so the surface
+    host-compiles without the KMP xcframework. The web `TimeToChargeSection` is presentational (prop `sessions`); the
+    native surface elevates that prop into the P1/S8 cache-then-network state holder and the view performs ZERO HTTP.
+    A `TimeToChargeModel(sessions:loading:)` web-prop initializer preserves the `<TimeToChargeSection sessions/>` site.
+  • Load state: self-contained `TimeToChargeLoadState` + `TimeToChargeError` mirroring the facade LoadableState /
+    FacadeError SHAPE (cached-behind-refresh, ADR-013 stale, offline-keeps-cache, retryable). The web leaf only has a
+    data branch with per-card em-dash; the resolver is a documented SUPERSET adding the prompt's required loading /
+    empty / error / stale / offline chrome while keeping the four-card summary as the content branch.
+  • Composition scope (parity boundary, NOT a shortcut): the web section renders a `YearlyTrendChart` child. In the
+    native decomposition that chart is its OWN sibling surface (this prompt's "Charts/maps used: (none)", "Out of
+    scope: other surfaces", allowed-files = TimeToChargeSection.* only, and the extracted i18n key list excludes any
+    trend labels). The adapter STILL computes the full `yearlyTrend` series — it is part of THIS section's data and the
+    sibling chart binds to it — and it is exposed on the resolved content AND fully unit-tested. The rendered surface
+    here is the title + description + four metric cards, faithful to the web minus the delegated child.
+  • Units (Phase-48 SI): the input is SI (`total_energy_added_wh` Wh, `peak_power_w` W). Energy is converted to kWh at
+    the projection edge via the `convertEnergyFromSI(wh,'kWh') = wh/1000` port (display boundary), never on disk. No
+    new unit-suffixed Go/JSON fields are introduced (native-only surface).
+  • i18n: per-surface `.strings` table + `TimeToChargeStrings` facade (NSLocalizedString tableName + value fallback) —
+    parallel-safe; the shared Localizable.xcstrings is NOT edited (Honesty rule 7).
+  • Telemetry: REUSES the canonical `DashboardWidgetTelemetryEvent`/`DashboardWidgetTelemetrySink`/
+    `BufferedDashboardWidgetTelemetry` (Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift). The surface emits
+    `TimeToChargeSection.viewOpenedEvent == .viewOpened(surface:"TimeToChargeSection")` on `.task`.
+  • Shared primitives reused: `TSFadeIn` (web FadeIn delay 0.25), `TSSkeleton` (loading), `TSTone` (freshness),
+    `ContentUnavailableView` (web EmptyState), `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` tokens (no raw hex, no
+    Tailwind ports). `onGeometryChange` (iOS 18/macOS 15) drives the pure, testable column math.
+
+=== GATE EXECUTION (commands actually run on this host; real exit codes) ===
+  (1) Standalone runtime PROOF of the pure adapter — compiled the REAL Models.swift + Adapter.swift with a
+      harness (swiftc, macOS SDK) and executed 40 assertions covering durationMinutes (valid/nil-end/end<=start/
+      fractional/unparseable), average, kWh-from-Wh, fmtNumber (2dp / grouping / NaN->0), roundToTenth, isDcSession,
+      band averages (avg10to80=25, avg20to80=110/3), fastest=C(120)/slowest=B(60) WITH the later-wins tie-break,
+      yearlyTrend grouping/sort/round, empty paths, the four-card wiring, every presentation state, layout, a11y.
+        -> "ALL_LOGIC_OK"   RUN_EXIT=0   FAILURES=0   OK
+  (2) swiftc -typecheck — Models+Adapter+Model+Views+main vs the REAL apps/design/generated/apple/Tokens.swift
+      (Color.TS/Font.TS/TSSpacing/TSRadius), macOS15 target, swift6, -strict-concurrency=complete
+        EXIT=0   OK   (the only non-zero was the #Preview macro plugin not loadable under bare swiftc — environmental,
+                       the macro resolves to SwiftUI.Preview; Xcode loads PreviewsMacros. Core files compile clean.)
+  (3) swiftc -typecheck -module-name TeslaSync — the 5 NON-test surface files compiled AS the TeslaSync module
+        EXIT=0   OK   (proves the shipped surface code is valid INSIDE the app module — see DEFER note for the tests)
+  (4) swiftlint --strict (config .swiftlint.yml) — all 8 surface .swift files
+        -> "Found 0 violations, 0 serious in 8 files"   LINT_EXIT=0   OK
+        (caught + fixed while iterating: file_length>400 on Adapter/Tests -> split into Models/Adapter +
+         Tests/StateTests; function_parameter_count>5 on the card builders -> spec-struct refactor.)
+  (5) swiftformat --lint (config .swiftformat) — all 8 surface .swift files
+        -> "0/8 files require formatting"   FORMAT_EXIT=0   OK
+        (numberFormatting digit-grouping + wrapPropertyBodies auto-applied with `swiftformat`, then re-linted clean.)
+  (6) check-placeholders.ps1 — real scan of the shipped files (temp dir) AND the verbatim gate path
+        -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0   PLACEHOLDER_EXIT=0   OK
+        (manual grep for TODO/FIXME/XXX/Coming soon/placeholder/Lorem/not implemented/fatalError-unimpl: NONE)
+  (7) xcodegen generate -> "Created project" XCODEGEN_EXIT=0; the 8 files are registered (54 pbxproj refs).
+
+  Prompt-gate commands (verbatim) and their REAL disposition on this runner:
+  $ DEVELOPER_DIR=/Applications/Xcode.app/... xcodebuild -scheme TeslaSync \
+        -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  $ DEVELOPER_DIR=/Applications/Xcode.app/... xcodebuild -scheme TeslaSync-macOS build test
+        Probed by building each app target directly (Debug Shared.xcframework staged from the Gradle build):
+        $ xcodebuild -target TeslaSync     -sdk iphonesimulator -configuration Debug build  -> EXIT=65
+        $ xcodebuild -target TeslaSync-macOS                    -configuration Debug build  -> EXIT=65
+        FIRST + ONLY error (both platforms), on a PRE-EXISTING SIBLING surface, not this code:
+          apps/apple/TeslaSync/feature-views/AuditPanel.Tests.swift:19:8:
+              error: unable to resolve module dependency: 'XCTest'
+        IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED
+
+  WHY the full-app Xcode build/test is DEFERRED (a documented, pre-existing, systemic condition — NOT a defect here):
+    • The app targets' source path `TeslaSync/feature-views` has no `*.Tests.swift` exclude in apps/apple/project.yml,
+      so XcodeGen compiles EVERY surface's co-located `*.Tests.swift` (which `import XCTest` + `@testable import
+      TeslaSync`) INTO the app target — which does not link XCTest and cannot self-`@testable`-import. The compile
+      fails on the first such file alphabetically (AuditPanel.Tests.swift), long before TimeToChargeSection.
+    • This is EXACTLY the condition `apps/macos-pending-verifications.md` already records for the feature-views family
+      ("co-located `*.Tests.swift` importing `XCTest` into the app target ... Zero ToolCard/feature-views errors"),
+      deferred to `p4-apple/P99-0001-apple-acceptance-gate` (runs on `macos-latest` with signing identities).
+    • Fixing it means editing apps/apple/project.yml (move feature-view tests into the TeslaSyncTests bundle) — shared
+      P4-core / acceptance-gate integration scope, OUTSIDE this prompt's allowed files (TimeToChargeSection.* + log),
+      and it would alter behavior for all ~30 sibling surfaces. Not in scope; not performed.
+    • PROOF this surface itself is sound: gate (3) compiled the 5 non-test TimeToChargeSection files AS module
+      TeslaSync with EXIT=0; the KMP Shared.xcframework builds via Gradle (Debug slices produced). The block is the
+      shared test/target wiring, not SwiftUI, not the tokens, not this surface's code.
+    Matches macos-pending-verifications.md and the AuditPanel-0026 (IOS/MAC=DEFERRED, EXIT=0, STATUS=DONE) precedent.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with ALL states from the web source reproduced — loading / empty / error / stale /
+      offline / content; resolver executed-green for every branch (proof (1) + tests).
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view (web `useTranslation` ->
+      P1/S10 facade; the `sessions` prop -> P1/S8 load state).
+  [x] Every i18n key from source has a matching catalog key — 8/8 web-source strings + 2 unit symbols + 10 native
+      chrome = 20 keys in TimeToChargeSection.strings.
+  [x] Accessibility labels on every interactive element; each card carries a testable VoiceOver summary
+      (label, value+unit / em-dash, subtitle); reduce-motion honored via TSFadeIn/TSSkeleton.
+  [x] Tests: adapter unit test + per-state resolver test + a11y label test + telemetry + model wiring — executed
+      green as pure logic via proof (1); compiled against the real types (XCTest RUN deferred to the Xcode target).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Host gates green (logic run / typecheck x2 / swiftlint / swiftformat / placeholder); full-app Xcode build/test
+      DEFERRED with concrete, predecessor-documented evidence above.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the full-app Xcode iOS/macOS build+test is shown DEFERRED (xcodebuild EXIT=65 quoted verbatim),
+                       NOT green. Every "OK" is a command actually run here with its real exit code.
+  2  No scope narrowing: implemented ALL states + the four cards + responsive grid + i18n + a11y + telemetry +
+                       stale auto-refresh; the full metrics port (incl. yearlyTrend) is computed and tested.
+  3  No skip-and-assume: the xcodebuild block was not assumed — it was REPRODUCED (EXIT=65) and root-caused to a
+                       sibling test file; the surface's own validity was PROVEN by an in-module compile (gate 3).
+  4  No stubs as final : complete implementations; placeholder COUNT=0; no "Coming soon"/empty-only panels.
+  5  No parity shortcuts: faithful port of isDcSession, the band crossings, the kWh/h rate, the later-wins fastest/
+                       slowest tie-break, the per-year trend rounding, the `value ?? '—'` em-dash, the FadeIn 0.25.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit apps/apple/project.yml / .swiftlint.yml / the shared Localizable.xcstrings /
+                       macos-pending-verifications.md; REUSED (not re-declared) the canonical telemetry primitives.
+  8  No commit on red  : committing on all-green host gates; the Xcode app build/test is DEFERRED (documented systemic
+                       condition outside the allowed files), per the established feature-views disposition.
+  9  No silent drift   : changes confined to the allowed TimeToChargeSection.* files + this log. The xcodegen project,
+                       the staged Debug Shared.xcframework, and the Gradle build outputs are git-ignored and were
+                       removed after the probe (git status shows only the 9 shipped files).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native TimeToChargeSection shipped at parity with the web source: a pure-Swift adapter
+  (faithful useMemo port — DC classification, 10->80 / 20->80 band averages, fastest/slowest charge-rate reduction
+  with the web's later-wins tie-break, per-year trend, SI->kWh conversion, locale fmtNumber) proven by a REAL
+  40-assertion runtime run; a Shared-free P1/S8 state-holder seam (no view HTTP) with a full loading/empty/error/
+  stale/offline/content resolver; the four metric cards + persistent header in a responsive 2/4-column grid using
+  only shared tokens + primitives; P1/S11 `view.opened` telemetry; complete i18n + per-card VoiceOver labels; and
+  XCTest coverage for the adapter, every state, the model wiring, telemetry, and a11y. All host-runnable gates pass,
+  including a Swift-6 strict-concurrency typecheck against the REAL generated design tokens and an in-module compile
+  of the shipped files. The full-app Xcode build/test is DEFERRED to the macos-latest acceptance gate
+  (p4-apple/P99-0001) because the app target compiles every surface's co-located `*.Tests.swift` (XCTest into the
+  app target) — a pre-existing, systemic project-wiring condition recorded in macos-pending-verifications.md and
+  outside this prompt's allowed files — reproduced here (xcodebuild EXIT=65 on AuditPanel.Tests.swift, zero
+  TimeToChargeSection errors). This matches the user-approved 0069 / AuditPanel-0026 "code-complete + DEFERRED Xcode
+  gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/TimeToChargeSection.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0094-TimeToChargeSection.log
+  git commit -m "feat(apps/apple/feature-views): add TimeToChargeSection surface (P4)"
+
+IOS_EXIT=DEFERRED
+MAC_EXIT=DEFERRED
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE

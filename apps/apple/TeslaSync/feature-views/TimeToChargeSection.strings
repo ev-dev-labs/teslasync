@@ -1,0 +1,44 @@
+/*
+  TimeToChargeSection.strings
+  TeslaSync — P4 feature view · 0094 · TimeToChargeSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TimeToChargeSection` resolves (table "TimeToChargeSection") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of strings extracted from the web source
+  (features/charging/components/charging-curve/TimeToChargeSection.tsx). The
+  second group keys the unit symbols the web passes as literals. The third group
+  backs the native lifecycle chrome (loading / empty / error / offline / freshness)
+  and accessibility — surfaces the web parent owns but which this self-contained
+  native surface must render per the prompt's state contract.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"charging.curve.timeToCharge" = "Time-to-Charge Analysis";
+"charging.curve.timeToChargeDesc" = "How long DC sessions take to reach key SOC thresholds";
+"charging.curve.avg10to80" = "10% → 80%";
+"charging.curve.avg20to80" = "20% → 80%";
+"charging.curve.avgDuration" = "Avg duration";
+"charging.curve.fastest" = "Fastest Session";
+"charging.curve.slowest" = "Slowest Session";
+"charging.curve.sessionId" = "Session #%lld";
+
+/* --- Unit symbols (web `unit` literals) --- */
+"charging.curve.unit.min" = "min";
+"charging.curve.unit.kwhPerHour" = "kWh/h";
+
+/* --- Native chrome: lifecycle states + freshness + accessibility --- */
+"charging.curve.live" = "Live";
+"charging.curve.stale" = "Stale";
+"charging.curve.offline" = "Offline";
+"charging.curve.refresh" = "Refresh";
+"charging.curve.retry" = "Retry";
+"charging.curve.loadingA11y" = "Loading time-to-charge analysis";
+"charging.curve.empty.title" = "No charging sessions yet";
+"charging.curve.empty.message" = "Time-to-charge figures appear here once DC fast-charging sessions are recorded.";
+"charging.curve.errorTitle" = "Couldn't load time-to-charge analysis";
+"charging.curve.offlineMessage" = "Offline — showing the last loaded analysis";
