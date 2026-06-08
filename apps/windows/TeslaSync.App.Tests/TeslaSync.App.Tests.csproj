@@ -132,6 +132,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreWidget\DriveScoreWidget.Model.cs" Link="Widgets\DriveScoreWidget\DriveScoreWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreWidget\DriveScoreWidget.ViewModel.cs" Link="Widgets\DriveScoreWidget\DriveScoreWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreWidget\DriveScoreWidget.Source.cs" Link="Widgets\DriveScoreWidget\DriveScoreWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.Model.cs" Link="Widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.ViewModel.cs" Link="Widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.Source.cs" Link="Widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.Source.cs" />
   </ItemGroup>
 
   <!--
