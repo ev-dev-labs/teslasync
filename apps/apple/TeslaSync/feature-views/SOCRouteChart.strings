@@ -1,0 +1,54 @@
+/*
+  SOCRouteChart.strings
+  TeslaSync — P4 feature view · 0176 · SOCRouteChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SOCRouteChart` resolves (table "SOCRouteChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/SOCRouteChart.tsx). The remainder back the labels the
+  web renders as literals (the "Min %", "Stop N", "km" overlays — keyed here so no
+  English literal lives in native code) plus the native state envelope (freshness
+  chip, connectivity banner, loading / empty / error chrome) and the accessibility
+  summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"tripPlanner.socChart.title" = "Battery Along Route";
+"tripPlanner.socChart.aria" = "Planned route battery state-of-charge area chart";
+"tripPlanner.socChart.empty" = "Plan a trip to see the SOC curve";
+"tripPlanner.socChart.col.distance" = "Distance";
+"tripPlanner.socChart.col.soc" = "SOC %";
+
+/* --- Web-rendered literals, keyed (no English literals in native code) --- */
+"tripPlanner.socChart.axis.distance" = "km";
+"tripPlanner.socChart.soc" = "SOC";
+"tripPlanner.socChart.min" = "Min";
+"tripPlanner.socChart.stop" = "Stop";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"tripPlanner.socChart.live" = "Live";
+"tripPlanner.socChart.stale" = "Stale";
+"tripPlanner.socChart.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"tripPlanner.socChart.staleBanner" = "Reconnecting — the planned route may be stale";
+"tripPlanner.socChart.offlineBanner" = "Offline — showing the last planned route";
+
+/* --- Accessibility summary --- */
+"tripPlanner.socChart.points" = "points";
+"tripPlanner.socChart.start" = "start";
+"tripPlanner.socChart.arrival" = "arrival";
+"tripPlanner.socChart.minArrivalLong" = "minimum arrival";
+"tripPlanner.socChart.stops" = "charge stops";
+"tripPlanner.socChart.at" = "at";
+
+/* --- Loading / empty / error chrome --- */
+"tripPlanner.socChart.loading" = "Loading planned route";
+"tripPlanner.socChart.emptyHint" = "The battery curve appears here once you plan a trip with a destination.";
+"tripPlanner.socChart.errorTitle" = "Couldn't load the planned route";
+"tripPlanner.socChart.retry" = "Retry";
