@@ -2,6 +2,7 @@
 included:
   - Sources
   - TeslaSync/dashboard-widgets
+  - TeslaSync/feature-views
   - Tests
   - TeslaSyncWidgets
   - TeslaSyncWatch

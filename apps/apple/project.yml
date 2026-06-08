@@ -34,6 +34,7 @@ targets:
     sources:
       - path: Sources
       - path: TeslaSync/dashboard-widgets
+      - path: TeslaSync/feature-views
       - path: Localization
       - path: ../design/generated/apple
         name: DesignTokens
@@ -64,6 +65,7 @@ targets:
     sources:
       - path: Sources
       - path: TeslaSync/dashboard-widgets
+      - path: TeslaSync/feature-views
       - path: Localization
       - path: ../design/generated/apple
         name: DesignTokens
