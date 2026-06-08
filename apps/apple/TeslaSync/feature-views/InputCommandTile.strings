@@ -1,0 +1,40 @@
+/*
+  InputCommandTile.strings
+  TeslaSync — P4 feature view · 0232 · InputCommandTile (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `InputCommandTile` resolves (table "InputCommandTile") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact key extracted from the web source
+  (features/system/components/InputCommandTile.tsx). The second group backs the
+  native chrome (the P4 leaf freshness / loading / empty / error copy and the
+  VoiceOver wording the web derives from glyphs), so the Swift sources hold no
+  English literals. The third group mirrors the command-catalog label/sublabel keys
+  the previews reference, with the web fallbacks, so the tile renders before the
+  shared catalog is merged.
+*/
+
+/* --- Key from the web source (parity) --- */
+"commands.toggleFavorite" = "Toggle favorite";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error + a11y --- */
+"inputCommand.openHint" = "Opens command options";
+"inputCommand.executingHint" = "Sending command";
+"inputCommand.offlineHint" = "Offline — connect to send commands";
+"inputCommand.statusSuccessA11y" = "Last result succeeded";
+"inputCommand.statusFailureA11y" = "Last result failed";
+"inputCommand.stale" = "Stale";
+"inputCommand.offline" = "Offline";
+"inputCommand.loadingA11y" = "Loading command";
+"inputCommand.unavailableTitle" = "Command unavailable";
+"inputCommand.unavailableMessage" = "This command isn't available for this vehicle.";
+"inputCommand.errorTitle" = "Couldn't load command";
+"inputCommand.retry" = "Retry";
+
+/* --- Command catalog (parity reference for the previews' sample def) --- */
+"commands.security.speedLimit" = "Speed Limit";
+"commands.security.setMph" = "Set MPH";
