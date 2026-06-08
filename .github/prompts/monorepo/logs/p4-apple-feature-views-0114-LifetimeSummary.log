@@ -1,0 +1,147 @@
+=== P4 Feature view 0114 LifetimeSummary (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin 25.5.0, arm64, Apple Silicon — Mac Studio).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+                       The active developer dir was /Library/Developer/CommandLineTools; overridden
+                       NON-DESTRUCTIVELY (no sudo, no `xcode-select -s`), so the shared runner is untouched.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.x · pwsh 7.6.2 · Java 17.0.19
+  Destinations       : iOS Simulator SDK (iphonesimulator, iOS 18 target) present · macOS 15 SDK present
+  Shared.xcframework : assembled + staged via apps/shared/gradlew :core:assembleSharedXCFramework
+                       (Kotlin/Native; BUILD SUCCESSFUL in 9m16s; release XCFramework staged to
+                       apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS SDKs present → NOT capability-BLOCKED.
+  Shared environment : a concurrent agent (slot-247 / LayoutSwitcher) transiently reused /tmp/ls-harness;
+                       the isolated SwiftPM run below completed while this slot's harness was intact, and the
+                       final module/test proofs were re-run from a PRIVATE session dir to avoid the collision.
+                       Repo-file builds (xcodebuild, SDK typechecks) were never affected.
+
+WEB SOURCE (the specification)
+  web/src/features/charging/components/cost-analysis/LifetimeSummary.tsx — a PURE presentational leaf.
+    Props: lifetimeMetrics: LifetimeMetrics | null, coreStats: CoreStats | null.
+    GlassPanel(glow=cyan, p-4) → header[ TrendingUp(cyan) + "Lifetime Summary" ]
+      → (lifetimeMetrics && coreStats)
+          ? grid (2/3 cols) of 7 LifetimeMetric tiles
+          : centered "No data".
+    Tiles (exact expressions, render order):
+      1 Total Spent        = formatCurrency(coreStats.totalCost, 2)
+      2 Total Energy       = fmtWithUnit(coreStats.totalEnergy, 'kWh', 1)
+      3 Total Sessions     = fmtInt(coreStats.count)
+      4 Avg Session Cost   = formatCurrency(lifetimeMetrics.avgSessionCost, 2)
+      5 Avg Energy/Session = fmtWithUnit(lifetimeMetrics.avgSessionEnergy, 'kWh', 1)
+      6 Avg Duration       = `${fmtNumber(lifetimeMetrics.avgDuration, 0)} min`
+      7 Free Sessions      = `${fmtInt(freeCount)} (${fmtWithUnit(freeEnergy, 'kWh', 1)})`
+    Data hooks (per prompt): useTranslation, useFormatting (formatCurrency = `${symbol}${fmtNumber(amount,d)}`,
+    symbol default `$`). Number ports: fmtNumber/fmtInt/fmtWithUnit (lib/numberFormat — safeNumber→0, en-US,
+    default precision 2).
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/)
+  LifetimeSummary.swift           — LifetimeSummary view (state switch + .onAppear start / .onDisappear stop)
+  LifetimeSummary.Model.swift     — Telemetry seam (P1/S11) + OSLog default, Input snapshot, Resolved(Phase),
+                                    LifetimeSummaryProjection (pure), Source seam (P1/S8), @Observable
+                                    LifetimeSummaryModel, InMemory source, LSStrings i18n facade (P1/S10)
+  LifetimeSummary.Adapter.swift   — pure: LifetimeCoreStats, LifetimeMetrics, LifetimeFormatting,
+                                    LifetimeNumberFormat (fmtNumber/int/currency ports), LifetimeMetricKind,
+                                    LifetimeMetricProjection, LifetimeMetricsBuilder (cached→7 tiles),
+                                    LifetimeSummaryAccessibility
+  LifetimeSummary.Tiles.swift     — kind→label/displayValue (kWh/min/free-sessions wrappers), LSChip, LSMetricTile
+  LifetimeSummary.Views.swift     — header, data grid, loading skeleton, empty ("No data"), error+retry
+  LifetimeSummary.Previews.swift  — loading/data/EUR-locale/empty/error/stale/offline (DEBUG)
+  LifetimeSummary.strings         — P1/S10 catalog (costAnalysis.lifetime.* parity keys + native chrome)
+  LifetimeSummary.Tests.swift     — XCTest: number/currency ports, builder, displayValue, projection,
+                                    model+telemetry, accessibility
+  No wiring edits needed: project.yml + .swiftlint.yml already include TeslaSync/feature-views.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel(glow cyan)   → .tsGlassPanel()                        (Sources/Design/TSMaterial.swift)
+  TrendingUp (lucide)     → SF Symbol "chart.line.uptrend.xyaxis" in Color.TS.accent (cyan)
+  LifetimeMetric tile     → LSMetricTile: TSSpacing.xs VStack[ Caption(textMuted, lineLimit 1) over
+                            bodySm/semibold value(textPrimary) ] in a .tsGlassPanel(md) card
+  h3 title                → Font.TS.section / textPrimary, .accessibilityAddTraits(.isHeader)
+  fmtNumber/fmtInt        → LifetimeNumberFormat.number/int (safeNumber→0, locale-aware grouping)
+  formatCurrency          → LifetimeNumberFormat.currency (symbol from LifetimeFormatting facade, no space)
+  'kWh' / 'min' units     → i18n keys energyUnit/durationUnit (web hardcodes these literals; the native
+                            states contract forbids literals — same decision as BatteryHealthSection P4)
+  freeEnergy              → passed through to the "kWh" wrapper exactly as the web leaf does; NO new
+                            SI-suffixed model field introduced (frontend SI-cutover respected)
+  i18n      : every string via LSStrings (NSLocalizedString, table "LifetimeSummary"); zero English literals
+              in code paths. Parity keys reuse the web costAnalysis.lifetime.* namespace verbatim.
+  a11y      : header icon decorative (.accessibilityHidden); each tile is one combined VoiceOver element
+              ("label, value"); Dynamic Type via tokenized fonts + minimumScaleFactor; Reduce-Motion via TSFadeIn.
+  telemetry : view.opened surface="LifetimeSummary" (P1/S11) on start(), idempotent, default OSLog sink.
+
+STATES (all render — verified in projection + previews + tests)
+  loading   → 7-tile skeleton grid (LSLoadingBody)            [phase precedence #1]
+  error     → message box + Retry (LSErrorBody → model.refresh) [#2; takes precedence over cached data]
+  empty     → friendly "No data" + helper (LSEmptyBody)       [#3; web `: "No data"`, when core||metrics nil]
+  data      → 7 lifetime-metric tiles (LSDataBody)            [#4]
+  stale     → header LSChip (warning) over data               [overlay; only with content]
+  offline   → header LSChip (neutral) over data               [overlay; only with content]
+
+GATES (raw results on THIS runner)
+  [GREEN]  swiftformat --lint (7 LifetimeSummary files)                 : 0/7 require formatting     FORMAT_EXIT=0
+  [GREEN]  swiftlint --strict (7 files, .swiftlint.yml)                 : 0 violations, 0 serious     LINT_EXIT=0
+  [GREEN]  check-placeholders.ps1 (each of 7 files)                     : PLACEHOLDER_COUNT=0         PLACEHOLDER_EXIT=0
+  [GREEN]  plutil -lint LifetimeSummary.strings                        : OK
+  [GREEN]  xcodegen generate (DEVELOPER_DIR=Xcode)                      : project created; 48 LifetimeSummary refs   XCODEGEN_EXIT=0
+  [GREEN]  iOS 18 SDK typecheck of shipped sources (swiftc, Swift 6)    : IOS_TYPECHECK_EXIT=0
+  [GREEN]  macOS 15 SDK typecheck of shipped sources (swiftc, Swift 6)  : MAC_TYPECHECK_EXIT=0
+  [GREEN]  testable TeslaSync module build of shipped production src     : MODULE_EXIT=0   (macOS 15, -enable-testing, Swift 6)
+  [GREEN]  shipped LifetimeSummary.Tests.swift typecheck vs XCTest+module: TESTFILE_TYPECHECK_EXIT=0
+  [GREEN]  isolated SwiftPM build + RUNTIME execution of all test logic  : CHECKS_RUN=69, ALL PASSED   SWIFT_RUN_EXIT=0
+           (swift-tools 6.0, Swift 6 language mode = strict-concurrency complete, same as the app target;
+            shipped surface sources compiled against the real generated DesignTokens + faithful component shims;
+            executes the number/currency ports, the 7-tile builder incl. de-DE locale, displayValue unit
+            composition, every projection phase + overlay, the model+telemetry wiring, and accessibility.)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO LifetimeSummary errors; the blocker PRE-EXISTS this change):
+    With Shared.xcframework staged, the full-app iOS + macOS builds were run. Both fail (exit 65) at module
+    dependency resolution with the SAME pre-existing error, alphabetically first on a file this change does
+    not touch:
+        TeslaSync/feature-views/AlertsSection.Tests.swift:20:8: error: unable to resolve module dependency: 'XCTest'
+    Root cause: the app target globs TeslaSync/feature-views/*, which includes the 53 PRE-EXISTING co-located
+    *.Tests.swift files (the established surface pattern — e.g. BatteryHealthSection.Tests.swift), and those
+    `import XCTest` into the non-test app target. This is exactly the condition apps/macos-pending-verifications.md
+    records as deferred to the P4/P99 Apple acceptance gate (alongside the DashboardWidgetSize / PowerFlowConnection
+    duplicate-type collisions across ~10 unrelated dashboard-widget files, and macOS development signing).
+    `grep -i 'LifetimeSummary' build.log | grep -i error` = 0 hits on BOTH the iOS and macOS build logs.
+    Note (no silent drift): this change adds one more co-located test file (LifetimeSummary.Tests.swift) following
+    that same sanctioned pattern and the prompt's allowed-files scope; the full-app build was already RED on
+    AlertsSection before this change, so the disposition is unchanged. The shipped test file is independently
+    proven to compile against XCTest + a testable TeslaSync module (TESTFILE_TYPECHECK_EXIT=0 above) and its
+    logic is proven to execute green (69/69 runtime checks).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild build test gate is reported RED (IOS_EXIT=65 /
+                          MAC_EXIT=65) and DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing : all 7 tiles + the "No data" branch reproduced, plus loading/error/stale/offline.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; the iOS+macOS failures were
+                          reproduced (not assumed) and confirmed to contain zero LifetimeSummary errors.
+  4  No stubs as final  : complete production surface; placeholder scanner = 0; 8 files; no TODO/mock/Lorem.
+  5  No parity shortcut : number/currency/locale/units/free-sessions/typography/a11y/telemetry all mapped + tested.
+  6  No delegation      : implemented directly; no sub-agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry all consumed.
+  8  No commit on red   : the COMMITTED artifact (LifetimeSummary.* + this log) is GREEN on every surface-level
+                          gate AND on real iOS 18 + macOS 15 SDK compiles AND a real testable-module + XCTest
+                          typecheck AND 69/69 runtime checks; the DEFERRED full-app gate is RED only on
+                          pre-existing, unrelated surfaces this commit neither introduces nor touches.
+  9  No silent drift    : changes confined to feature-views/LifetimeSummary.* and this log (enumerated above);
+                          the one new co-located test file follows the sanctioned 53-surface pattern.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic LifetimeSummary shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it type-checks against the real iOS 18 and macOS 15 SDKs, builds as a testable Swift 6
+  (strict-concurrency complete) module, its shipped XCTest file compiles against XCTest, all of its logic
+  executes green (69/69 runtime checks), and lint/format/placeholder/strings are all clean. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the
+  pre-existing, repo-wide "co-located *.Tests.swift import XCTest into the app target" condition (plus the
+  documented duplicate-type collisions + macOS signing), owned by the P4/P99 acceptance gate on a signed
+  macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED full-app Xcode gate" disposition used by P4 feature-view surfaces to date.
+
+EXIT=0
+STATUS=DONE

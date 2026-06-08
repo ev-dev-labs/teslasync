@@ -1,0 +1,43 @@
+/*
+  LifetimeSummary.strings
+  TeslaSync — P4 feature view · 0114 · LifetimeSummary (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `LifetimeSummary` resolves (table "LifetimeSummary") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/charging/components/cost-analysis/LifetimeSummary.tsx — the title, the
+  seven LifetimeMetric labels, and the "No data" fallback), reusing the web
+  `costAnalysis.lifetime.*` namespace verbatim. The second group backs the native-only
+  chrome (the "kWh"/"min" value units + the free-sessions value composition, the stale /
+  offline chips, and the loading / empty / error branches + accessibility) the Apple HIG
+  states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"costAnalysis.lifetime.title" = "Lifetime Summary";
+"costAnalysis.lifetime.totalSpent" = "Total Spent";
+"costAnalysis.lifetime.totalEnergy" = "Total Energy";
+"costAnalysis.lifetime.totalSessions" = "Total Sessions";
+"costAnalysis.lifetime.avgSessionCost" = "Avg Session Cost";
+"costAnalysis.lifetime.avgEnergy" = "Avg Energy / Session";
+"costAnalysis.lifetime.avgDuration" = "Avg Duration";
+"costAnalysis.lifetime.freeSessions" = "Free Sessions";
+"costAnalysis.lifetime.noData" = "No data";
+
+/* --- Native chrome: value units + composition --- */
+"costAnalysis.lifetime.energyUnit" = "{{value}} kWh";
+"costAnalysis.lifetime.durationUnit" = "{{value}} min";
+"costAnalysis.lifetime.freeSessionsValue" = "{{count}} ({{energy}})";
+
+/* --- Native chrome: P4 states + freshness + accessibility --- */
+"costAnalysis.lifetime.stale" = "Stale";
+"costAnalysis.lifetime.offline" = "Offline";
+"costAnalysis.lifetime.loadingA11y" = "Loading lifetime summary";
+"costAnalysis.lifetime.empty" = "Lifetime totals appear here once a charging session is recorded for the selected range.";
+"costAnalysis.lifetime.error" = "Could not load the lifetime summary.";
+"costAnalysis.lifetime.retry" = "Retry";
