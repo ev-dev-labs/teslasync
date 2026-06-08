@@ -1,0 +1,173 @@
+================================================================================
+P4 · Feature view · 0036 — LiveSignalsTable (Apple)
+Run: 2026-06-07T19:55-0700   Host: Darwin arm64 (Atuls-Mac-Studio)
+Prompt: .github/prompts/monorepo/p4-apple/feature-views/P-0036-LiveSignalsTable.prompt.md
+Web source (spec): web/src/features/admin/components/live-signal-inspector/LiveSignalsTable.tsx
+Native output: apps/apple/TeslaSync/feature-views/LiveSignalsTable.*
+Mode: code-complete + DEFERRED Xcode app build/test (established P4 Apple disposition;
+      ADR-012 macOS-pending; apps/macos-pending-verifications.md). Delegation: NONE (authored directly).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override       OK
+  macOS SDK (typecheck) ...... MacOSX26.5.sdk; -swift-version 6, -target macos15.0 OK
+  iPhone 16 simulator ........ present; iOS 26.5 runtime                           OK
+  iPad Pro 13" (M5) sim ...... present                                            OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                   OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                 OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... 2.45.4                                              OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  codesign identities ........ "0 valid identities found"                          WARN (macOS app gate blocker, ADR-012)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web source "Charts / maps used: (none)"). The core requirement is SwiftUI, which
+  is available and proven by a real macOS-SDK compile below (strict-concurrency=complete).
+  The capability-BLOCKED escape hatch therefore does NOT apply — the surface is
+  authored and host-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/LiveSignalsTable.*) ===
+  LiveSignalsTable.Models.swift        119  Foundation DTOs: LiveSignalCellValue, RawSignalPayload,
+                                            LiveSignalEntry, LiveSignalRow, sort key/dir, projection
+  LiveSignalsTable.Adapter.swift       147  pure ports: jsNumber/renderValue, parse/relative time,
+                                            rowFromEntry, buildProjection (name-asc), filter, stable sort
+  LiveSignalsTable.Model.swift         231  P1/S8 source seam + @Observable model (phase/connection/
+                                            filter/sort) + P1/S11 telemetry seam + InMemory source
+  LiveSignalsTable.Localization.swift  128  P1/S10 facade (table "LiveSignalsTable") + a11y summary
+  LiveSignalsTable.swift               172  surface View: filter field + loading/empty/error/content states
+  LiveSignalsTable.Table.swift         243  adaptive sortable table (Grid / compact cards) + stale/offline banner
+  LiveSignalsTable.Previews.swift       96  #if DEBUG previews — one per state (6)
+  LiveSignalsTable.Tests.swift         275  XCTest: format + builder + model + a11y (40+ assertions)
+  LiveSignalsTable.strings              43  P1/S10 catalog contribution (9 source keys + native chrome + a11y)
+  Total 1454 lines. Every file <= 400 (house file_length); largest 275. One exported view per file.
+
+=== PARITY (vs web LiveSignalsTable.tsx) ===
+  Data sources -> bound via the shared seam (LiveSignalsTableSource -> LiveSignalsTableModel):
+    useTelemetry (useVehicleLiveSignals, polling GET /signals/{id}/live) is the production source;
+    useTranslation -> LiveSignalsTableStrings (NSLocalizedString table); useSortToggle -> model
+    sortKey/sortDirection + toggleSort + LiveSignalsTableBuilder.sort. The view performs NO HTTP.
+  Adapter (cached -> projection) -> LiveSignalsTableFormat + LiveSignalsTableBuilder faithfully port:
+    renderValue (null->"null", undefined->"—", string verbatim, number/bool via String(v), object as JSON),
+    rowFromEntry (envelope {value,timestamp} vs bare scalar), the rows->filtered->sorted useMemo chain
+    (case-insensitive trimmed name filter; stable name/timestamp sort, name-asc default), and the
+    <TimeStamp format="relative"> via RelativeDateTimeFormatter. Proven by an executed harness (39/39 below).
+  Composition -> native primitives (no Tailwind): a search field (magnifyingglass + prompt + aria-label),
+    then an adaptive table — a columnar SwiftUI Grid on macOS/regular width with sortable Signal/Last-update
+    headers (chevron indicator) and a read-only Value column; a card list on compact iPhone width.
+    Recharts -> none. Leaflet -> none.
+  States (all render) -> loading (web DataTable "Loading…") · empty ("No live signals cached" +
+    web message via ContentUnavailableView) · error (retry) · content (table) · filtered-empty
+    ("No signals match this filter.") · stale/offline connectivity banner over cached rows. The model
+    phase resolution keeps cached rows visible behind refresh/errors, matching the web data-driven shell.
+  i18n -> all 9 web source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    admin.liveSignals.cols.name/value/timestamp, .filterPlaceholder, .filterAria, .empty.title/.message,
+    .table.loading/.filtered -> ALL PRESENT in LiveSignalsTable.strings (verified below). No English literals
+    in native code (every string via the facade; the one literal web key name carries a sanctioned
+    // parity:allow). a11y/chrome keys added for the native error/banner/sort affordances.
+  a11y -> the table is one contained element with a localized label + a row-count value summary; every row
+    is a combined element labelled name+value+relative-time; sortable headers carry label + sort-state value
+    + hint; the filter field carries the web aria-label; the retry button has a label. Dynamic Type via the
+    token ramp + relative monospaced styles. No animations (Reduce Motion N/A).
+  Telemetry -> LiveSignalsTableModel.start() emits viewOpened(surface:"LiveSignalsTable") exactly once
+    (P1/S11), spy-asserted in the XCTest model suite.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real exit codes) ===
+[1] swiftc -typecheck (the 7 surface files compiled together with the REAL generated Color/Font/Spacing/
+    Radius tokens — apps/design/generated/apple/Tokens.swift — under -swift-version 6 -target
+    arm64-apple-macos15.0 -strict-concurrency=complete). The surface's ONLY app-module dependency is the
+    generated token set (no TS* component is referenced), so this is the complete dependency surface.
+        TYPECHECK_EXIT=0
+    (An earlier run correctly caught a strict-concurrency defect — shared static ISO8601DateFormatter —
+     which was fixed to per-call construction before this green result.)
+[2] swiftc -typecheck COEXISTENCE (the 7 surface files + Tokens + the sibling
+    dashboard-widgets/LiveSignalSparklinesWidget.Models.swift, which declares the module's other
+    LiveSignal* types). Proves no in-module redeclaration once feature-views is registered.
+        COEXIST_EXIT=0
+    (An earlier run caught a real collision — enum LiveSignalValue already exists in the sparklines
+     widget — which was renamed to LiveSignalCellValue before this green result.)
+[3] EXECUTED adapter harness (Models + Adapter + Localization compiled to a native binary + a 39-assertion
+    main that exercises jsNumber/renderValue/parseTimestamp/relative + rowFromEntry/buildProjection/
+    filter/sort + a11y gridSummary/rowLabel against expected web values):
+        ADAPTER HARNESS: 39/39 assertions passed; 0 failed   (RUN_EXIT=0)
+[4] swiftlint --strict (the 8 feature-views .swift files, repo rules):
+        Done linting! Found 0 violations, 0 serious in 8 files.   (LINT_EXIT=0)
+    (Tree note: the only swiftlint violation in apps/apple is pre-existing in
+     dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 — outside this prompt's scope/allowed files.)
+[5] swiftformat --lint apps/apple/TeslaSync/feature-views (repo .swiftformat):
+        0/8 files require formatting.   (FORMAT_EXIT=0)
+[6] check-placeholders.ps1 — DIRECTORY scan of apps/apple/TeslaSync/feature-views (the honest scan that
+    actually reads the files; the prompt's prefix-path form `.../LiveSignalsTable` has no extension and
+    Test-Path returns false, so it scans zero files and reports a vacuous COUNT=0 — not relied upon):
+        PLACEHOLDER_ALLOWED=1   PLACEHOLDER_COUNT=0   EXIT=0
+    The single ALLOWED is the literal web i18n key name "admin.liveSignals.filterPlaceholder" (contains the
+    forbidden substring "Placeholder"); it carries `// parity:allow web i18n key`, exactly the opt-out the
+    script's own self-test blesses for "a translation key literally named <word>". Not a stub.
+
+  i18n parity verification (executed): all 9 web-source keys present in LiveSignalsTable.strings; code<->
+  catalog keys consistent (18 single-line + empty.message multi-line = 19 used keys; 0 dead refs, 0 dead keys).
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED, with verified evidence) ===
+  The prompt gate's `xcodebuild -scheme TeslaSync … build test` (iOS + macOS) and the XCTest suite are
+  DEFERRED on this host — NOT shown green — for three independent, code-external reasons:
+    (a) Shared.xcframework not staged: apps/apple/Frameworks holds only .gitkeep; the app target links the
+        KMP `Shared.xcframework` (a scheme pre-action shells out to apps/shared/gradlew :core:assembleShared
+        XCFramework — Kotlin/Native). apps/macos-pending-verifications.md explicitly defers producing that
+        binary to a macos-latest runner. Without it the app cannot link.
+    (b) macOS signing: `security find-identity -p codesigning` -> "0 valid identities found"; the macOS
+        app/widget entitlements require a development certificate (ADR-012 defers to a signed runner).
+    (c) Not target-registered: feature-views is not yet a source path in apps/apple/project.yml (nor in
+        .swiftlint.yml `included`). Self-registering is the integration prompt's scope and is parallel-unsafe
+        across the concurrent slots (the dashboard-widgets path was likewise wired by a later integration
+        commit, not by each surface). Consequently `xcodegen generate` + xcodebuild would build the app
+        WITHOUT these files and re-run the existing suite — providing ZERO evidence about this deliverable.
+        The host swiftc compile in [1]+[2] IS the meaningful validation: it compiles this surface against the
+        REAL token module and proves in-module coexistence with the sibling LiveSignal* types.
+  XCTest (LiveSignalsTable.Tests.swift) runs in the TeslaSync(/-macOS) XCTest target under Xcode. Its pure
+  adapter + a11y subset is PROVEN GREEN by the executed harness in [3]; the model phase/telemetry/filter/sort
+  suites compile against the same public API exercised by the host typecheck in [1].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading / empty / error / content / filtered-empty / stale / offline) —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (LiveSignalsTableSource); no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 9/9 source keys present (verified executed).
+  [x] Accessibility labels on every interactive element (filter field, sortable headers, retry); table carries
+      a label + row-count value; rows are combined elements with name/value/time labels.
+  [x] Tests: adapter unit (executed harness 39/39 + XCTest format/builder) + per-state model test + a11y label test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (1 sanctioned web-key opt-out).
+  [x] Host gates green (typecheck / coexistence / executed-harness / lint / format / placeholder); Xcode app
+      build/test DEFERRED with capability + predecessor evidence, per the established P4 Apple disposition.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); reasons verified here (0 identities,
+                       .gitkeep-only Frameworks, unregistered path). Every host "EXIT=0" is a real run.
+  2  No scope narrowing: implemented ALL states + filter + sort + value coercion + relative time + i18n +
+                         a11y + telemetry; both adaptive (regular Grid + compact cards) layouts.
+  3  No skip-and-assume: each host gate executed; the typecheck caught a real strict-concurrency defect and
+                         the coexistence compile caught a real type collision — both fixed, then re-run green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the web renderValue/rowFromEntry/filter/sort + all states + 9/9 keys.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml (integration scope,
+                         parallel-unsafe) and did NOT edit the shared Localizable.xcstrings; strings shipped as
+                         the per-surface table.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed LiveSignalsTable.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native LiveSignalsTable shipped at parity with the web source: pure-Swift display math
+  (executed-green adapter, 39/39), P1/S8 state-holder seam (no view HTTP), P1/S11 view.opened telemetry, every
+  state + 9/9 i18n keys + a11y labels, an adaptive sortable table (Grid / cards). All host-runnable gates pass;
+  the Xcode app build/test is DEFERRED to the signed macos-latest runner (Shared.xcframework absent + 0 signing
+  identities + surface not yet target-registered — none a defect in this code), matching the user-approved
+  "code-complete + DEFERRED Xcode gate" P4 Apple disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/LiveSignalsTable.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0036-LiveSignalsTable.log
+  git commit -m "feat(apps/apple/feature-views): add LiveSignalsTable surface (P4)"
+
+EXIT=0
+STATUS=DONE
