@@ -1,0 +1,56 @@
+/*
+  SecurityStatusWidget.strings
+  TeslaSync — P4 dashboard widget · 0085 · SecurityStatusWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SecurityStatusWidget` resolves (table "SecurityStatusWidget") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/SecurityStatusWidget.tsx) — the shell title, the
+  four status-cell labels/values, and the grid empty message. The remaining keys
+  back the native-only chrome (registry description, freshness chip, refresh/
+  retry/empty/error copy, and accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.security" = "Security";
+"widget.lock" = "Lock";
+"widget.locked" = "Locked";
+"widget.unlocked" = "Unlocked";
+"widget.sentry" = "Sentry";
+"widget.active" = "Active";
+"widget.off" = "Off";
+"widget.doors" = "Doors";
+"widget.windows" = "Windows";
+"widget.allClosed" = "All Closed";
+"widget.open" = "Open";
+"widget.noSecurity" = "No security data";
+
+/* --- Registry metadata (registry/security.ts description) --- */
+"widget.security.description" = "Lock, sentry, doors, windows status";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.securityLive" = "Live";
+"widget.securityStale" = "Stale";
+"widget.securityOffline" = "Offline";
+"widget.securityRefresh" = "Refresh";
+"widget.securityRetry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.securityLoading" = "Loading security status";
+"widget.securityEmptyHint" = "Security status will appear once your vehicle reports in.";
+"widget.securityErrorTitle" = "Couldn't load security status";
+"widget.securityOfflineBanner" = "Offline — showing last known status";
+"widget.securityStaleBanner" = "Reconnecting — status may be stale";
+
+/* --- Accessibility --- */
+"widget.securityOpenA11y" = "Open the Security page";
+"widget.securityStateOk" = "OK";
+"widget.securityStateWarning" = "Warning";
+"widget.securityStateAlert" = "Alert";
+"widget.securityStateInactive" = "Inactive";
+"widget.securityStateUnknown" = "Unknown";
