@@ -1,0 +1,83 @@
+/*
+  TemplateGallery.strings
+  TeslaSync — P4 feature view · 0132 · TemplateGallery (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Keys + values mirror the
+  web `useTranslation('dashboard')` calls in
+  features/dashboard/components/TemplateGallery.tsx one-for-one — the chrome
+  (title / detail / blank / apply / widget count / back), the per-preset name +
+  description descriptors (web `templates.${id}.name` + `TEMPLATE_DESCRIPTIONS`),
+  and the surface's own accessibility + state strings.
+
+  These entries fold into the app Localizable.xcstrings master catalog (table
+  "TemplateGallery") at integration time; they are kept in a per-surface table so
+  each parallel surface prompt owns its own strings without editing the shared
+  catalog. `%lld` is the count; `%1$@` / `%2$lld` are positional for a11y phrasing.
+*/
+
+/* ── Modal chrome (web Modal title + actions) ── */
+"templates.title" = "Dashboard Templates";
+"templates.detail" = "Template Preview";
+"templates.blank" = "Blank Dashboard";
+"templates.blank.desc" = "Start from scratch and add widgets manually";
+"templates.apply" = "Use This Template";
+"templates.widgetCount" = "%lld widgets";
+"templates.close" = "Close";
+"common.back" = "Back";
+
+/* ── Accessibility ── */
+/* %1$@ = template name, %2$lld = widget count. */
+"templates.card.a11y" = "%1$@, %2$lld widgets";
+"templates.card.hint" = "Opens a preview of this template";
+/* %1$lld = widget count in the decorative layout preview. */
+"templates.grid.a11y" = "Layout preview, %1$lld widgets";
+
+/* ── States (every state renders — never a blank box) ── */
+"templates.loading" = "Loading templates";
+"templates.empty.title" = "No templates available";
+"templates.empty.message" = "Dashboard templates will appear here.";
+"templates.error.title" = "Couldn't load templates";
+"templates.error.retry" = "Retry";
+"templates.error.generic" = "Something went wrong loading templates.";
+
+/* ── Preset names (web `t('templates.${id}.name', preset.name)`) ── */
+"templates.default.name" = "Default";
+"templates.commuter.name" = "Daily Commuter";
+"templates.fleet_manager.name" = "Fleet Manager";
+"templates.data_nerd.name" = "Data Nerd";
+"templates.charging_focus.name" = "Charging Hub";
+"templates.security_monitor.name" = "Security Monitor";
+"templates.road_trip.name" = "Road Trip";
+"templates.performance.name" = "Performance";
+"templates.kiosk_wall.name" = "Wall Display";
+"templates.minimal.name" = "Minimal";
+
+/* ── Preset descriptions (web `TEMPLATE_DESCRIPTIONS` — camelCased multiword keys) ── */
+"templates.default.desc" = "Balanced overview of vehicle status, battery, climate, and recent drives";
+"templates.commuter.desc" = "Essentials for your daily drive — range, charging, climate, and security";
+"templates.fleetManager.desc" = "Fleet-wide metrics, drive history, and charging analytics";
+"templates.dataNerd.desc" = "Live signals, energy flow, and deep telemetry data";
+"templates.chargingFocus.desc" = "Focus on charging status, costs, and energy flow";
+"templates.securityMonitor.desc" = "Keep an eye on doors, windows, sentry events, and location";
+"templates.roadTrip.desc" = "Everything you need for a long drive — range, weather, tires, and maps";
+"templates.performance.desc" = "Track driving performance, efficiency, and vehicle health";
+"templates.kioskWall.desc" = "Clean layout designed for always-on screens and kiosk mode";
+"templates.minimal.desc" = "Just the essentials — battery, charging, climate, and navigation";
+
+/* ── Category labels (VoiceOver names for the category-icon row) ── */
+"templates.category.vehicle" = "Vehicle";
+"templates.category.battery" = "Battery";
+"templates.category.energy" = "Energy";
+"templates.category.driving" = "Driving";
+"templates.category.charging" = "Charging";
+"templates.category.climate" = "Climate";
+"templates.category.tires" = "Tires";
+"templates.category.security" = "Security";
+"templates.category.commands" = "Commands";
+"templates.category.media" = "Media";
+"templates.category.telemetry" = "Telemetry";
+"templates.category.analytics" = "Analytics";
+"templates.category.alerts" = "Alerts";
+"templates.category.automations" = "Automations";
+"templates.category.system" = "System";
+"templates.category.maps" = "Maps";
