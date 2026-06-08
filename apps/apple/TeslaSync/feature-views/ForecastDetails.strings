@@ -1,0 +1,51 @@
+/*
+  ForecastDetails.strings
+  TeslaSync — P4 feature view · 0113 · ForecastDetails (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ForecastDetails` resolves (table "ForecastDetails") lives here with its web value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact keys + values extracted from the web source
+  (features/charging/components/cost-analysis/ForecastDetails.tsx), verified against
+  web/src/i18n/en.json (costAnalysis.forecast.*). The Home / Supercharger entries
+  reproduce the web's bare `t('Home')` / `t('Supercharger')` displayed values. The
+  last group backs the native-only chrome (freshness banners, loading / error copy,
+  accessibility, and the `/kWh` legend suffix the web renders as a literal).
+*/
+
+/* --- Web source (costAnalysis.forecast.*, parity with en.json) --- */
+"costAnalysis.forecast.breakdown" = "Charging Breakdown";
+"costAnalysis.forecast.noBreakdown" = "Breakdown will appear once charging data is available.";
+"costAnalysis.forecast.savings" = "Gas vs EV Savings";
+"costAnalysis.forecast.monthlySavings" = "Monthly Savings";
+"costAnalysis.forecast.annual" = "Annual";
+"costAnalysis.forecast.lifetime" = "Lifetime";
+"costAnalysis.forecast.gasCost" = "Gas cost/mo";
+"costAnalysis.forecast.evCost" = "EV cost/mo";
+"costAnalysis.forecast.avgKm" = "Avg km/mo";
+"costAnalysis.forecast.noSavings" = "Savings data will appear once driving history is available.";
+"costAnalysis.forecast.insights" = "Insights";
+"costAnalysis.forecast.noInsights" = "Insights will appear as more data is collected.";
+
+/* --- Web bare labels (t('Home') / t('Supercharger')) --- */
+"costAnalysis.forecast.home" = "Home";
+"costAnalysis.forecast.supercharger" = "Supercharger";
+
+/* --- Native chrome: legend suffix + accessibility --- */
+"costAnalysis.forecast.perKwhSuffix" = "/kWh";
+"costAnalysis.forecast.perKwh" = "per kWh";
+"costAnalysis.forecast.insightPrefix" = "Insight";
+"costAnalysis.forecast.a11y" = "Charging cost forecast";
+
+/* --- Native chrome: loading + error --- */
+"costAnalysis.forecast.loading" = "Loading cost forecast";
+"costAnalysis.forecast.errorTitle" = "Couldn't load the cost forecast";
+"costAnalysis.forecast.retry" = "Retry";
+
+/* --- Native chrome: freshness banners --- */
+"costAnalysis.forecast.refresh" = "Refresh";
+"costAnalysis.forecast.staleBanner" = "Reconnecting — the cost forecast may be out of date";
+"costAnalysis.forecast.offlineBanner" = "Offline — showing the last known cost forecast";
