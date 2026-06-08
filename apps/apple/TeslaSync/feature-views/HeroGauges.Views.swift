@@ -1,11 +1,11 @@
 //
 //  HeroGauges.Views.swift
-//  TeslaSync — P4 feature view · 0103 · HeroGauges (Apple)
+//  TeslaSync — P4 feature view · 0143 · HeroGauges (Apple)
 //
 //  The presentational chrome composed by `HeroGauges`: the responsive gauge row, the single radial
-//  gauge (web `RadialGauge`), the Avg $/kWh readout (web `AnimatedNumber`), the freshness chip, and
-//  the loading skeleton row. All consume pre-localized strings from the P1/S10 facade and the
-//  shared P1/S9 tokens — no networking, no Tailwind ports.
+//  gauge (web `RadialGauge`), the freshness chip, and the loading skeleton. All consume
+//  pre-localized strings from the P1/S10 facade and the shared P1/S9 tokens — no networking, no
+//  Tailwind ports.
 //
 
 import SwiftUI
@@ -15,22 +15,24 @@ import SwiftUI
 extension HeroAccent {
     /// Maps the web `RadialGauge` colour to its adaptive design token. Each token's RGB is an exact
     /// match for the web hex, so the arc keeps the source's palette across light, dark, and
-    /// high-contrast: cyan `#00f0ff`, green `#10b981`, amber `#f59e0b`, purple `#a855f7`.
+    /// high-contrast: cyan `#00f0ff`, purple `#a855f7`, amber `#f59e0b`, red `#ef4444`,
+    /// green `#10b981`.
     var color: Color {
         switch self {
         case .cyan: Color.TS.accent
-        case .green: Color.TS.statusSuccess
-        case .amber: Color.TS.statusWarning
         case .purple: Color.TS.chartSeriesPower
+        case .amber: Color.TS.statusWarning
+        case .red: Color.TS.statusDanger
+        case .green: Color.TS.statusSuccess
         }
     }
 }
 
-// MARK: - Responsive gauge row (web `grid-cols-2 sm:grid-cols-3 md:grid-cols-5`)
+// MARK: - Responsive gauge row (web `flex flex-wrap … gap-6 lg:gap-10 justify-center`)
 
-/// The four gauges plus the Avg $/kWh readout in a responsive grid — two-up on compact widths,
-/// flowing to three/five-up on wider iPad / Mac windows, mirroring the web breakpoints via an
-/// adaptive column track.
+/// The four-or-five gauges in a responsive grid — two-up on compact widths, flowing to
+/// three/four/five-up on wider iPad / Mac windows, mirroring the web wrapping row via an adaptive
+/// column track.
 struct HeroGaugesGrid: View {
     let projection: HeroGaugesProjection
 
@@ -41,7 +43,6 @@ struct HeroGaugesGrid: View {
             ForEach(projection.gauges) { gauge in
                 HeroRadialGaugeView(tile: gauge)
             }
-            HeroCostMetricTile(metric: projection.cost)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
@@ -118,35 +119,6 @@ struct HeroRadialGaugeView: View {
     }
 }
 
-// MARK: - Avg $/kWh readout (web `$<AnimatedNumber decimals={3}>`)
-
-/// The closing Avg $/kWh metric: an emerald-tinted animated currency value over an uppercase label,
-/// the parity of the web `<p class="text-2xl font-bold text-emerald-300">$<AnimatedNumber/></p>`.
-struct HeroCostMetricTile: View {
-    let metric: HeroCostMetric
-
-    var body: some View {
-        VStack(spacing: TSSpacing.xs) {
-            TSAnimatedNumber(formatted: metric.value)
-                .foregroundStyle(Color.TS.statusSuccess)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            Text(verbatim: metric.label)
-                .font(Font.TS.caption)
-                .textCase(.uppercase)
-                .tracking(0.6)
-                .foregroundStyle(Color.TS.textMuted)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, TSSpacing.xs)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: "\(metric.label) \(metric.value)"))
-    }
-}
-
 // MARK: - Freshness chip (Live / Stale / Offline / Updating)
 
 /// The header freshness chip reflecting the bound source's live-state (ADR-013): a tinted dot, a
@@ -187,12 +159,12 @@ struct HeroGaugesFreshnessChip: View {
 
     private var label: String {
         if isFetching {
-            return HeroGaugesStrings.string("charging.gauges.updating", "Updating")
+            return HeroGaugesStrings.string("driveDetail.gauges.updating", "Updating")
         }
         switch connection {
-        case .live: return HeroGaugesStrings.string("charging.gauges.live", "Live")
-        case .stale: return HeroGaugesStrings.string("charging.gauges.stale", "Stale")
-        case .offline: return HeroGaugesStrings.string("charging.gauges.offline", "Offline")
+        case .live: return HeroGaugesStrings.string("driveDetail.gauges.live", "Live")
+        case .stale: return HeroGaugesStrings.string("driveDetail.gauges.stale", "Stale")
+        case .offline: return HeroGaugesStrings.string("driveDetail.gauges.offline", "Offline")
         }
     }
 }
@@ -213,8 +185,8 @@ struct HeroGaugesLoadingGrid: View {
         .frame(maxWidth: .infinity)
         .accessibilityElement()
         .accessibilityLabel(Text(verbatim: HeroGaugesStrings.string(
-            "charging.gauges.loading",
-            "Loading charging stats"
+            "driveDetail.gauges.loading",
+            "Loading drive metrics"
         )))
     }
 }

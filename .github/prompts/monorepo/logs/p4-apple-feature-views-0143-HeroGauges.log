@@ -1,0 +1,167 @@
+================================================================================
+=== P4 Feature view 0143 HeroGauges (Apple) — drive-detail surface ===
+================================================================================
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/P-0143-HeroGauges.prompt.md
+Web src: web/src/features/driving/components/drive-detail/HeroGauges.tsx  (THE spec)
+Output : apps/apple/TeslaSync/feature-views/HeroGauges.{swift,Model,Adapter,Views,Previews,Tests}.swift
+         apps/apple/TeslaSync/feature-views/HeroGauges.strings
+Allowed: apps/apple/TeslaSync/feature-views/HeroGauges.* + this log   (confined; nothing else touched)
+Host   : macOS 26.5 (arm64), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint/swiftformat/pwsh present.
+
+--------------------------------------------------------------------------------
+SURFACE COLLISION RESOLUTION (why HeroGauges.* is overwritten)
+--------------------------------------------------------------------------------
+Three web surfaces share the base name HeroGauges and three prompts target the SAME native path
+`apps/apple/TeslaSync/feature-views/HeroGauges.*` (deliberate, last-writer-wins per surface):
+  • P-0058 → features/analytics/components/analytics/HeroGauges.tsx       (done; log present)
+  • P-0103 → features/charging/components/charging-list/HeroGauges.tsx    (done; was on disk)
+  • P-0143 → features/driving/components/drive-detail/HeroGauges.tsx      (THIS prompt)
+`git log -- HeroGauges.swift` shows two prior "add HeroGauges surface (P4)" commits (0058→0103).
+This run is the third overwrite: HeroGauges.* now is the DRIVING drive-detail surface. Per the
+0058 precedent, "predecessor" = shared infra (project.yml / Localizable.xcstrings / registry types),
+which is NOT touched; a sibling same-name surface is not a predecessor.
+
+--------------------------------------------------------------------------------
+CAPABILITY DETECTION (prompt: "If unavailable on the runner → STATUS=BLOCKED with API evidence")
+--------------------------------------------------------------------------------
+Default `xcodebuild` → CommandLineTools only (no Xcode). RESOLVED without sudo via DEVELOPER_DIR:
+  $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version
+    Xcode 26.5 / Build 17F42
+  $ xcodebuild -showsdks | grep -i 'ios\|macos'
+    iphoneos26.5 · iphonesimulator26.5 · macosx26.5
+  $ xcrun simctl list devices available | grep 'iPhone 16'
+    iPhone 16 (83717DEE-…) (Booted)            iOS 26.5 runtime present
+SwiftUI + Swift Charts + MapKit all import/typecheck. iOS 18 / iPadOS 18 / macOS 15 HIG minimums
+are satisfied (26.5 ≥ 18). => CAPABILITY AVAILABLE (NOT blocked).
+
+--------------------------------------------------------------------------------
+PARITY — web numeric pipeline ported VERBATIM (covenant #5)
+--------------------------------------------------------------------------------
+Five RadialGauges in web render order (HeroGauges.Adapter.swift → HeroGaugesProjector):
+  1 Distance    round(convertDistanceFromSI(distanceM, distance)); max(=*1.5,100); unit=distance; cyan  #00f0ff
+  2 Max Speed   round(stats.maxSpd[display]);  max=convertSpeedFromSI(250, speed);  unit=speed;   purple#a855f7
+  3 Duration    round((durationS ?? 0)/60);    max(=*1.5,60);      unit="min";                   amber #f59e0b
+  4 Consumption round(toEffDisplay(consumptionWhKm)); max(=*1.5,300); unit=Wh/mi|Wh/km;           red   #ef4444
+  5 Efficiency  Number(fmtNumber(efficiencyPctPer100)); max=30; unit=%/100mi|%/100km; — rendered ONLY
+               when efficiencyPctPer100 != nil (web `{stats.efficiencyPctPer100 != null && …}`);   green #10b981
+RadialGauge internals reproduced: clamped=max(0,min(v,max)); decimals = isInteger(clamped)?0:globalPrecision(2);
+fraction=clamped/max. Constants NIST-exact: METERS_PER_MILE=1609.344, _KM=1000, _FOOT=0.3048; SECONDS_PER_HOUR
+=3600; toEffDisplay = distance=='mi'? whPerKm*1.609344 : whPerKm. JS Math.round = floor(x+0.5). The
+`Number(fmtNumber(x))` grouping→NaN quirk is mirrored (Double("1,234.50")=nil→NaN→safeNumber→0).
+maxSpd is already display-unit (useDriveDetailData `toSpeedDisplay(maxSpeedMps)`) and consumed as-is, exactly
+as the web does; the speed gauge's `convertSpeedFromSI(250,…)` max bound is ported verbatim (not "fixed").
+
+--------------------------------------------------------------------------------
+i18n (P1/S10) — keys + English from web/src/i18n/en.json (canonical) and the source `t()` calls
+--------------------------------------------------------------------------------
+PARITY keys : driveDetail.distance=Distance · driveDetail.maxSpeed=Max Speed · driveDetail.duration=Duration
+              driveDetail.consumption=Consumption · driveDetail.efficiency=Efficiency
+              driveDetail.section.heroGaugesFailed="Hero gauges failed to load" (the page's SectionErrorBoundary)
+CHROME keys : driveDetail.gauges.{live,stale,offline,updating,loading,noData,retry}  (native states)
+No English literals in code — every string flows through HeroGaugesStrings (NSLocalizedString, table "HeroGauges").
+
+--------------------------------------------------------------------------------
+STATES — all render (no hidden surfaces); a11y on every element
+--------------------------------------------------------------------------------
+loading (5 gauge skeletons) · empty (TSEmptyState, never blank) · error (heroGaugesFailed + Retry) ·
+stale (amber freshness chip + auto-refresh) · offline (cached gauges + chip) · content (4-or-5 gauges) ·
+content-without-efficiency (4 gauges). VoiceOver: per-gauge labels + grid summary; Dynamic Type via tokens;
+Reduce-Motion honored on the arc fill. Telemetry: view.opened(surface:"HeroGauges") on start (P1/S11).
+Data binds ONLY via HeroGaugesSource (P1/S8) — zero HTTP in the view.
+
+================================================================================
+GATE RESULTS
+================================================================================
+--- swiftformat --lint apps/apple (HeroGauges.* — config apps/apple/.swiftformat) ---
+    0/6 files require formatting.                                            FORMAT_EXIT=0   PASS
+
+--- swiftlint --strict (HeroGauges.* — config apps/apple/.swiftlint.yml) ---
+    Done linting! Found 0 violations, 0 serious in 6 files.                  LINT_EXIT=0     PASS
+
+--- check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/HeroGauges ---
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0                                                      PLACEHOLDER_EXIT=0 PASS
+
+--- ISOLATED SwiftPM build + EXECUTED tests (real Xcode 26.5 toolchain, Swift 6 strict concurrency) ---
+    Vendored the SwiftUI-free core (HeroGauges.Model.swift + HeroGauges.Adapter.swift) into a throwaway
+    SwiftPM package and ran the adapter/projector/model/accessibility tests off the shipped
+    HeroGauges.Tests.swift:
+      Test Suite 'All tests' passed.  Executed 23 tests, with 0 failures (0 unexpected).
+    Covers: SI converters (convertDistance/SpeedFromSI), fmtNumber half-up, JS Math.round, the
+    Number(fmtNumber) grouping→NaN quirk, gauge order/accents/units/values/fractions, metric↔imperial,
+    the conditional 5th gauge present/omitted, nil-duration, non-finite collapse, phase matrix,
+    cached-stays-content, stale auto-refresh guard, and the view.opened-once telemetry contract.   PASS
+
+--- ISOLATED SDK typecheck of the SwiftUI surface (Model+Adapter+Views+View+Previews, token stubs) ---
+    macOS  : swiftc -typecheck -D DEBUG -swift-version 6 (macosx26.5)                    EXIT=0  PASS
+    iOS-18 : swiftc -typecheck -D DEBUG -swift-version 6 -sdk iPhoneSimulator26.5.sdk
+             -target arm64-apple-ios18.0-simulator                                       EXIT=0  PASS
+    => the surface COMPILES against BOTH the iOS-18 Simulator and macOS SDKs.
+
+--- FULL-APP xcodebuild build/test (TeslaSync iOS-Sim + TeslaSync-macOS) — DEFERRED ---
+    Attempted for real (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer; `xcodegen generate`;
+    -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'; -derivedDataPath /tmp/dd-264).
+    The Gradle build phase assembled + staged Shared.xcframework (KMP) successfully (no longer a blocker),
+    then the app target compiled and ** BUILD FAILED ** with exactly 2 errors — BOTH the same
+    PRE-EXISTING, PROJECT-WIDE, UNRELATED root cause: the convention's co-located
+    `feature-views/*.Tests.swift` files import XCTest into the *app* target. Verbatim from THIS slot's
+    own clean run (/tmp/ios264.log, uncontaminated slot-264 paths):
+        .../slot-264/apps/apple/TeslaSync/feature-views/AcDcStatsPanel.Tests.swift:19:8:
+        error: unable to resolve module dependency: 'XCTest'
+    The Swift compiler compiles the whole app module and aborts on the first such file (AcDcStatsPanel,
+    alphabetically before HeroGauges) — a SIBLING surface, NOT this one. grep of the full build log:
+        total ': error:' lines = 2   |   slot-264 HeroGauges errors = 0   |   slot-264 XCTest-in-app = 2
+    This structural issue affects EVERY surface's shipped test file (75 *.Tests.swift in feature-views,
+    including the convention-mandated HeroGauges.Tests.swift). ZERO HeroGauges/feature-views *surface*
+    compile errors are attributable to this prompt — and HeroGauges itself is independently PROVEN to
+    compile against BOTH SDKs above. Fixing the app-target XCTest issue = moving *.Tests.swift into a
+    dedicated test target in project.yml — OUTSIDE this prompt's allowed files. This is the exact
+    condition apps/macos-pending-verifications.md defers to `p4-apple/P99-0001-apple-acceptance-gate`
+    (macos-latest with signing), matching the accepted ToolCard P-0010 / 0058 / 0103 precedent
+    (surface green in isolation; full-app build deferred). Verbatim gate exit (honest, not green-washed):
+        IOS_EXIT=65 (BUILD FAILED — pre-existing XCTest-in-app-target; 0 HeroGauges errors) → DEFERRED
+        MAC_EXIT=  (same pre-existing structural cause) → DEFERRED to P99-0001
+    (Aside: the shared CI runner also runs sibling parallel slots concurrently — slot-260/265 observed on
+    overlapping /tmp paths — so the isolated build+tests above remain the authoritative, controlled DoD.)
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green : surface-scoped gates are really green (outputs pasted, 23/23 tests executed, both
+                     SDKs typechecked). The full-app xcodebuild is reported as DEFERRED, never as passed.
+ 2 No scope narrow : all 5 gauges (incl. the conditional Efficiency), all 6+ states, all i18n keys shipped.
+ 3 No skip-assume  : every runnable gate was run and pasted; the web pipeline was read end-to-end first.
+ 4 No stubs final  : complete implementation (1,489 lines / 7 files); placeholder COUNT=0. The /tmp SwiftPM
+                     + typecheck harnesses are throwaway verification scaffolding, never shipped.
+ 5 No parity short : numeric pipeline ported VERBATIM (incl. the maxSpd/convertSpeedFromSI(250) quirk and
+                     the Number(fmtNumber) grouping→NaN edge), pinned by tests vs. the same formatter.
+ 6 No delegation   : authored directly; no sub-agent delegation of the surface (delegation FORBIDDEN).
+ 7 No predecessor bypass : did NOT edit project.yml, Localizable.xcstrings, shared registry types, or any
+                     non-HeroGauges file. The generated TeslaSync.xcodeproj + KMP outputs are gitignored.
+ 8 No commit on red : committing on GREEN surface-scoped gates; the full-app build/test is explicitly
+                     DEFERRED (macos-pending), not a red surface result.
+ 9 No silent drift : changes confined to the allowed HeroGauges.* files + this log.
+ 10 Log ends with EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+Production-polished native drive-detail HeroGauges shipped at parity with the web source: a
+Foundation-only projection core (executed-green: 23/23 XCTest under Swift 6 strict concurrency), a
+P1/S8 state-holder seam (no HTTP in the view), P1/S11 view.opened telemetry, every state + every i18n
+key + VoiceOver labels + Dynamic Type / Reduce-Motion. All surface-scoped gates pass
+(swiftformat/swiftlint/placeholder) AND the surface COMPILES against BOTH the iOS-18 Simulator and the
+macOS SDKs with the real Xcode 26.5 toolchain. The full-app `xcodebuild build test` is DEFERRED to the
+apple acceptance gate (P99-0001): it fails only on the pre-existing, project-wide co-located-XCTest-in-
+app-target structural issue (outside this prompt's allowed files), matching the accepted 0058 / 0103 /
+ToolCard "surface green in isolation + DEFERRED full-app gate" precedent.
+
+================================================================================
+COMMIT
+================================================================================
+git add apps/apple/TeslaSync/feature-views/HeroGauges.* \
+        .github/prompts/monorepo/logs/p4-apple-feature-views-0143-HeroGauges.log
+git commit -m "feat(apps/apple/feature-views): add HeroGauges surface (P4)"
+
+EXIT=0
+STATUS=DONE
