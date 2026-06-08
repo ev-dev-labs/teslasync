@@ -1,0 +1,210 @@
+=== P4 Feature view 0239 BackendStatusSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/BackendStatusSection.*
+Web src : web/src/features/system/components/status/BackendStatusSection.tsx  (THE spec)
+          (+ sibling helpers.tsx: getStatusIcon / statusTextClass / formatUptime)
+Tier    : Feature view (composed feature component below page level)
+ADRs    : ADR-002 (shared SwiftUI source, iOS+macOS), ADR-004 (KMP Shared.xcframework),
+          ADR-009 (state-holder seam), ADR-013 (live freshness), ADR-016 (diagnostics)
+
+──────────────────────────────────────────────────────────────────────────────
+RUNNER CAPABILITY (verified, not assumed)
+──────────────────────────────────────────────────────────────────────────────
+  THIS runner carries Command Line Tools ONLY — full Xcode is ABSENT:
+      xcodebuild  -> "xcode-select: error: tool 'xcodebuild' requires Xcode, but active
+                      developer directory '/Library/Developer/CommandLineTools' is a
+                      command line tools instance"
+      xcrun xctest -> "unable to find utility \"xctest\", not a developer tool or in PATH"
+                      (XCTest.framework ships with Xcode, not CLT)
+      iOS Simulators -> none installed (no Xcode → no Simulator runtimes)
+  PRESENT + USED:
+      swift        Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)   — macOS 15 SDK at
+                   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk (SwiftUI compiles)
+      swiftlint    0.63.3        swiftformat 0.61.1        xcodegen, pwsh present
+  CAPABILITY NOTE: the prompt's required capability is SwiftUI (iOS18/iPadOS18/macOS15 HIG);
+      the web source uses NEITHER Swift Charts NOR MapKit (charts/maps section = none), so no
+      Charts/MapKit dependency applies. SwiftUI itself IS available against the macOS 15 SDK, so
+      the surface was COMPILED + behaviorally EXECUTED green here (below). The FULL Xcode
+      `build test` (iOS Simulator + macOS app, XCTest) is NOT runnable on a CLT-only host and is
+      therefore DEFERRED with the capability evidence above — exactly the user-approved P4-apple
+      "code-complete + DEFERRED Xcode gate" disposition (precedent: 0196 ActiveOrders, 0205
+      FeatureToggles). No step is reported green that was not actually run.
+
+──────────────────────────────────────────────────────────────────────────────
+GATE STEPS (real outputs)
+──────────────────────────────────────────────────────────────────────────────
+
+[swiftlint --strict]   (10 shipped .swift files)
+    Done linting! Found 0 violations, 0 serious in 10 files.
+    LINT_EXIT=0
+
+[swiftformat --lint]   (10 shipped .swift files)
+    0/10 files require formatting.
+    FORMAT_EXIT=0
+
+[check-placeholders.ps1]   (ADR-011 stub/placeholder gate, via pwsh)
+    & ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/BackendStatusSection -Language swift
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+    Independent manual scan (TODO|FIXME|placeholder|lorem|stub|coming soon|not implemented|
+        notImplemented|fatalError unimplemented) over all shipped files: 0 matches — a genuine
+        zero, not a vacuous prefix-path pass (the em-dash fallback constant is named `emDash`).
+    PLACEHOLDER_EXIT=0
+
+[swift build]   ISOLATED SwiftPM compile of the surface vs the REAL design system
+    Package "TeslaSync" target = the 8 shipped non-test surface files
+        (BackendStatusSection.{Adapter,Projection,Model,Views,Sections,States,Previews}.swift +
+         BackendStatusSection.swift) compiled against the REAL design system pulled from the repo:
+        apps/design/generated/apple/Tokens.swift + Sources/Design/TS{Material,Design}.swift +
+        Sources/Components/{Motion/Motion, Feedback/Skeletons, UI/{Badges,Cards,Buttons,Typography}}.swift.
+        Built debug, macOS 15, swift-tools 6.0 (== Swift 6 LANGUAGE MODE == the app's
+        SWIFT_STRICT_CONCURRENCY=complete).
+            Build of target: 'TeslaSync' complete!
+    => The ENTIRE surface (View + Views + Sections + States + Previews(view bodies) + Model +
+       Adapter + Projection) COMPILES CLEAN under Swift 6 strict concurrency on the macOS 15 SDK
+       with the real shared components. 0 errors attributable to this surface.
+    NOTE on #Preview: the SwiftUI `#Preview` MACRO PLUGIN (PreviewsMacros) ships inside Xcode, not
+       CLT, so a bare-SwiftPM compile of any `#Preview` (incl. the shared design system's own
+       Cards/Badges/Typography/Buttons previews) cannot resolve the macro here. The SHIPPED
+       Previews file uses the standard `#Preview` macro UNCHANGED (6 previews, one per state —
+       identical to all 1170+ sibling feature-view files) and is lint/format-clean; to ALSO
+       compile-verify the preview VIEW-CONSTRUCTION BODIES on this runner, the isolated harness
+       rewrote each `#Preview("x") { body }` into a macro-free `func -> some View { body }` — the
+       bodies type-checked green (part of the "complete!" build above).
+    SWIFT_BUILD_EXIT=0
+
+[BSSProbe]   EXECUTED behavioral verification of the shipped XCTest assertions (XCTest-free)
+    Because CLT has no XCTest.framework, the two shipped XCTest files cannot be run by `swift test`
+    here. To prove BEHAVIOR (not just compilation) on this runner, an executable target re-ran the
+    EXACT assertions of BackendStatusSection.Tests.swift + .ModelTests.swift against the real
+    compiled module using precondition-style checks:
+            PROBE: 100/100 checks passed, 0 failed
+      Coverage: tone classification (web getStatusIcon/statusTextClass case lists) + okCount
+                case-exactness; componentRows projection (order, tone, empty last_check→nil);
+                poolStats (5 ordered fmtInt tiles); runtimeRows (version→system fallback, OS/Arch
+                em-dash, uptime); resolvePhase (loading/error/content×3/empty); formatters
+                (number/int/latency/uptime/ISO-parse/dateTime em-dash); surface slug; a11y section
+                summary (tally / empty / title-only) + per-component label; AND the @MainActor
+                state holder — loaded-content, components-only, empty, pool-only, loading, failed,
+                view.opened-once, silent retry, stale auto-refresh-once + re-arm-on-live, offline
+                keeps-cached-no-refetch, accessibilitySummary, stop.
+    PROBE_EXIT=0   (100/100 executed green; the shipped XCTest files are byte-for-byte the real
+                    tests and run unchanged on the Xcode CI runner)
+
+[xcodebuild build test]   FULL Xcode app — iOS Simulator (iPhone 16) + macOS
+    NOT RUNNABLE on this host: Xcode absent (CLT only) → no `xcodebuild`, no iOS Simulator runtime,
+    no XCTest.framework (evidence in RUNNER CAPABILITY above).
+    IOS_EXIT=DEFERRED   (capability-blocked: no Xcode/simulator on this runner)
+    MAC_EXIT=DEFERRED   (capability-blocked: no Xcode/macOS app signing on this runner)
+
+──────────────────────────────────────────────────────────────────────────────
+PARITY — what was shipped (no scope narrowing)
+──────────────────────────────────────────────────────────────────────────────
+  Data sources (P1/S8 seam, no view networking):
+    getExtendedHealth (/system/health) + useConnectionPool (/dev-tools/runtime-info) + getVersionInfo
+    (/system/version) → coalesced by BackendStatusSource.onUpdate(BackendStatusUpdate{health,pool,
+    version,status,connection}); the three web interval-refetches become the source's refresh path,
+    surfaced as the error-retry + the one-shot stale auto-refresh (the web accordion has no manual
+    refresh — faithfully NOT invented). useTranslation → BackendStatusStrings facade (P1/S10).
+  Shared components mapped to native counterparts:
+    AccordionSection→BackendStatusAccordion (collapsible, defaultOpen, Server IconBox + title +
+    description + trailing badge + rotating chevron, full a11y button), GlassPanel→.tsGlassPanel(),
+    IconBox→TSIconBox, Badge(okCount/total healthy)→BackendHealthBadge (success when all ok else
+    warning), DataTable→native Grid(regular)/cards(compact) with the 5 web columns (Status icon+text
+    via getStatusIcon tone, Component, Latency `fmtNumber(_,1) ms`, Failures `fmtInt` danger-tinted
+    when >0, Last Check `formatDateTime`|—), StatCard×5→BackendPoolTile grid (Max Open/Open/In Use/
+    Idle/Wait Count), KVList→BackendRuntimeKVRow grid (Go Version/Uptime/Goroutines/OS-Arch with the
+    web version→system fallback), Skeleton→TSSkeleton, FadeIn→TSFadeIn.
+  States — every one renders (never a blank box):
+    loading (two-block skeleton, web `<Skeleton h-48 + h-32>`) · content (the three sections; the
+    component table owns the inline "No components found" web emptyMessage; pool + runtime sections
+    gated exactly like web `{pool &&}` / `{(system||version) &&}`) · empty (resolved with NOTHING —
+    no components, pool, or runtime → friendly ContentUnavailableView) · error (QueryError-equivalent
+    + Retry) · stale (chip + ONE guarded auto-refresh, re-armed on live) · offline (cached snapshot +
+    offline chip/banner, no refetch).
+  i18n: every web key present in BackendStatusSection.strings — the 21 source labels (Backend Status,
+    Component health…info, healthy, Component Health, Status, Component, Latency, Failures, Last Check,
+    No components found, Database Connection Pool, Max Open, Open, In Use, Idle, Wait Count, System
+    Runtime, Go Version, Uptime, Goroutines, OS / Arch) where the English label IS the key, plus the
+    native envelope (Stale/Offline + banners, Expanded/Collapsed/Toggle Section a11y, Loading, empty,
+    Couldn't load…, Retry). Every native string resolves via the facade — zero hardcoded English in code.
+  a11y: VoiceOver labels on the accordion header button (combined title+description, Expanded/Collapsed
+    value, hint, .isButton), the section summary (tally / empty / title-only), every component row +
+    card (combined: status, name, latency, failures, last check), the health badge, the freshness chip,
+    section titles as headers; Dynamic Type (system fonts) + reduce-motion (TSFadeIn/TSSkeleton + the
+    accordion reveal/chevron) respected; macOS-safe size-class guard (#if os(iOS)).
+  Telemetry: view.opened emitted once with surface slug "BackendStatusSection" (P1/S11), tested.
+
+──────────────────────────────────────────────────────────────────────────────
+FILES (allowed: apps/apple/TeslaSync/feature-views/BackendStatusSection.* + this log)
+──────────────────────────────────────────────────────────────────────────────
+  BackendStatusSection.Adapter.swift      320  DTOs + tone classification + projected row/tile/kv types
+  BackendStatusSection.Projection.swift   250  projection + formatters + accessibility (pure, split for length)
+  BackendStatusSection.Model.swift        295  telemetry/strings/source seams + @Observable model + in-memory source
+  BackendStatusSection.swift               99  main View (accordion wrapper, phase switch, start/telemetry)
+  BackendStatusSection.Views.swift        291  accordion shell, health badge, status cell, chip, banner, section title
+  BackendStatusSection.Sections.swift     308  the 3 content sections (component table / pool grid / runtime list)
+  BackendStatusSection.States.swift        95  loading / empty / error+retry
+  BackendStatusSection.Previews.swift     129  one #Preview per state
+  BackendStatusSection.Tests.swift        319  pure adapter + a11y XCTest
+  BackendStatusSection.ModelTests.swift   151  state-holder XCTest
+  BackendStatusSection.strings             59  i18n catalog
+  (each .swift file is within the 400-line lint budget; total 2316 lines)
+
+──────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT (binding)
+──────────────────────────────────────────────────────────────────────────────
+  1  No red-as-green   : xcodebuild iOS/macOS + XCTest shown as DEFERRED with hard capability
+                         evidence (CLT-only host); never claimed green. Achievable gates shown with
+                         their real outputs.
+  2  No scope narrowing: all 6 states, all 3 sections, all 5 table columns, all 5 pool tiles, all 4
+                         runtime rows, every t() key, telemetry, a11y — full surface, no subset.
+  3  No skip-and-assume: web source + helpers.tsx read end-to-end; getStatusIcon case lists, okCount
+                         case-exactness, version→system runtime fallback, and the pool/runtime section
+                         gates reproduced AND executed-tested (100/100).
+  4  No stubs as final : zero stubs/placeholders (gate=0 + manual scan=0); the InMemory source is a
+                         preview/test double, the shipped surface is View+Views+Sections+States+Model+
+                         Adapter+Projection (the P1/S8 real source is integration-wired, as all siblings).
+  5  No parity shortcut: components map to native counterparts; status tone, fmtNumber/fmtInt, uptime,
+                         and date formats match the web helpers byte-for-intent.
+  6  No delegation     : implemented directly (delegation FORBIDDEN by the prompt — honored).
+  7  No predecessor bypass: did NOT self-register / edit project.yml or .swiftlint.yml (feature-views is
+                         already globbed by the integration predecessor) and did NOT edit the shared
+                         Localizable.xcstrings (parallel-unsafe) — strings shipped as the per-surface
+                         BackendStatusSection.strings table. The isolated SwiftPM harness was a throwaway
+                         under /tmp (removed); the repo carries only the allowed files + this log.
+  8  No commit on red  : every ACHIEVABLE gate is GREEN (lint/format/placeholder/Swift-6 strict
+                         build/100-check executed probe); the Xcode app gate is not RED — it is
+                         capability-DEFERRED with evidence, the user-approved P4-apple disposition.
+  9  No silent drift   : the only intentional native additions over the web (collapsible accordion a11y,
+                         freshness chip + guarded stale auto-refresh + offline banner, friendly all-empty
+                         state) are the prompt-mandated P4 states/HIG, stated here and in code.
+  10 Log ends with EXIT=<int> + STATUS=<DONE|BLOCKED>.
+
+──────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+──────────────────────────────────────────────────────────────────────────────
+  Production-polished, native Apple-idiomatic BackendStatusSection shipped at parity with the web
+  source. Pure projection core + state-holder seam (no view networking), P1/S11 view.opened telemetry,
+  P1/S10 i18n (no English literals), P1/S9 tokens, shared-component reuse, ALL six states, full
+  accessibility (Dynamic Type + reduce-motion + VoiceOver). The surface COMPILES CLEAN against the
+  macOS 15 SDK under Swift 6 strict concurrency and passes 100/100 EXECUTED behavioral checks mirroring
+  the shipped XCTest suites. The full Xcode `build test` (iOS Simulator + macOS + XCTest) is DEFERRED
+  solely because this runner is Command-Line-Tools-only (no Xcode / Simulator / XCTest.framework) —
+  a host-capability limit, not a code defect — matching the user-approved P4-apple precedent
+  (0196 ActiveOrders, 0205 FeatureToggles). All host-runnable + achievable gates are GREEN.
+
+──────────────────────────────────────────────────────────────────────────────
+COMMIT
+──────────────────────────────────────────────────────────────────────────────
+  git add apps/apple/TeslaSync/feature-views/BackendStatusSection.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0239-BackendStatusSection.log
+  git commit -m "feat(apps/apple/feature-views): add BackendStatusSection surface (P4)"
+
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_BUILD_EXIT=0   (full surface vs real design system, Swift 6 strict, macOS 15 SDK — clean)
+PROBE_EXIT=0         (100/100 executed green — the shipped XCTest assertions, XCTest-free)
+IOS_EXIT=DEFERRED    (capability-blocked: no Xcode/iOS Simulator on this CLT-only runner)
+MAC_EXIT=DEFERRED    (capability-blocked: no Xcode/XCTest.framework on this CLT-only runner)
+EXIT=0
+STATUS=DONE
