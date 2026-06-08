@@ -1,0 +1,52 @@
+/*
+  HealthGaugeGrid.strings
+  TeslaSync — P4 feature view · 0154 · HealthGaugeGrid (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `HealthGaugeGrid`
+  resolves (table "HealthGaugeGrid") lives here with its web English value. These entries fold
+  into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/driving/components/drivetrain-health/HealthGaugeGrid.tsx) — the canonical
+  `drivetrain.*` labels. The remaining keys back the localized status names (the web capitalizes
+  the enum inline) and the native-only chrome (freshness chip, connectivity banner, loading +
+  empty + error + retry copy).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"drivetrain.healthScore" = "Health Score";
+"drivetrain.healthScoreDesc" = "Overall drivetrain condition rating";
+"drivetrain.motorDetails" = "Motor Details";
+"drivetrain.motorStatus" = "Motor Status";
+"drivetrain.overallHealth" = "Overall Health";
+"drivetrain.healthScoreLabel" = "Health Score";
+"drivetrain.sensorCount" = "Active Sensors";
+"drivetrain.realTime" = "Real-time telemetry active";
+"drivetrain.driveStats" = "Drive Statistics";
+"drivetrain.totalDrives" = "Total Drives";
+"drivetrain.totalDistance" = "Total Distance";
+"drivetrain.avgSpeed" = "Avg Speed";
+"drivetrain.topSpeed" = "Top Speed";
+
+/* --- Localized status names (web capitalizes the 'good'|'warning'|'critical' union inline) --- */
+"drivetrain.health.good" = "Good";
+"drivetrain.health.warning" = "Warning";
+"drivetrain.health.critical" = "Critical";
+
+/* --- Native chrome: freshness chip --- */
+"drivetrain.health.live" = "Live";
+"drivetrain.health.stale" = "Stale";
+"drivetrain.health.offline" = "Offline";
+"drivetrain.health.updating" = "Updating";
+
+/* --- Native chrome: connectivity banner --- */
+"drivetrain.health.staleBanner" = "Reconnecting — drivetrain health may be stale";
+"drivetrain.health.offlineBanner" = "Offline — showing last known drivetrain health";
+
+/* --- Native chrome: states --- */
+"drivetrain.health.loading" = "Loading drivetrain health";
+"drivetrain.health.empty" = "No drivetrain health data yet";
+"drivetrain.health.errorTitle" = "Couldn't load drivetrain health";
+"drivetrain.health.retry" = "Retry";
