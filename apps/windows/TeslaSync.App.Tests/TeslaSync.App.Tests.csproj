@@ -117,6 +117,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\CostBreakdownWidget\CostBreakdownWidget.Model.cs" Link="Widgets\CostBreakdownWidget\CostBreakdownWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\CostBreakdownWidget\CostBreakdownWidget.ViewModel.cs" Link="Widgets\CostBreakdownWidget\CostBreakdownWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\CostBreakdownWidget\CostBreakdownWidget.Source.cs" Link="Widgets\CostBreakdownWidget\CostBreakdownWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Model.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.ViewModel.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Source.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Source.cs" />
   </ItemGroup>
 
   <!--
