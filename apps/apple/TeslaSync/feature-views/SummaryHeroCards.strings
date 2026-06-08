@@ -1,0 +1,44 @@
+/*
+  SummaryHeroCards.strings
+  TeslaSync — P4 feature view · 0077 · SummaryHeroCards (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  SummaryHeroCards resolves (table "SummaryHeroCards") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys + English defaults extracted from the web
+  source (features/analytics/components/weekly-digest/SummaryHeroCards.tsx). The
+  second group is the digest empty-state copy its page owner renders
+  (WeeklyDigestPage.tsx). The remaining keys back the native-only chrome
+  (freshness / offline / error / refresh + accessibility composition).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"analytics.weeklyDigest.weekSummary" = "Week Summary";
+"analytics.weeklyDigest.totalDistance" = "Total Distance";
+"analytics.weeklyDigest.totalDrives" = "Total Drives";
+"analytics.weeklyDigest.energyUsed" = "Energy Used";
+"analytics.weeklyDigest.chargingCost" = "Charging Cost";
+"analytics.weeklyDigest.co2Saved" = "CO₂ Saved";
+"analytics.weeklyDigest.funFact" = "Fun Fact";
+"analytics.weeklyDigest.funFactDesc" = "≈ {{times}}× {{from}} → {{to}}";
+
+/* --- Digest empty-state copy (web page owner) --- */
+"analytics.weeklyDigest.noData" = "No Data";
+"analytics.weeklyDigest.noDataMessage" = "No driving or charging data found for this week.";
+
+/* --- Native chrome: connectivity / freshness / refresh --- */
+"analytics.weeklyDigest.live" = "Live";
+"analytics.weeklyDigest.stale" = "Stale";
+"analytics.weeklyDigest.offline" = "Offline";
+"analytics.weeklyDigest.offlineMessage" = "You're offline. Showing the last saved summary.";
+"analytics.weeklyDigest.refresh" = "Refresh";
+"analytics.weeklyDigest.refreshHint" = "Re-pull the weekly digest";
+"analytics.weeklyDigest.errorTitle" = "Couldn't refresh";
+"analytics.weeklyDigest.errorMessage" = "Showing the last saved summary.";
+
+/* --- Native chrome: VoiceOver composition --- */
+"analytics.weeklyDigest.a11y.change" = "change {{value}}";
