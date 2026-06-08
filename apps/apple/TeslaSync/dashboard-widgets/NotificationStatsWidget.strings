@@ -1,0 +1,56 @@
+/*
+  NotificationStatsWidget.strings
+  TeslaSync — P4 dashboard widget · 0069 · NotificationStatsWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  NotificationStatsWidget resolves (table "NotificationStatsWidget") lives here
+  with its web `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-safe across the concurrent slots).
+
+  Keys are the exact ones extracted from the web source
+  (features/dashboard/widgets/NotificationStatsWidget.tsx). The remaining keys
+  back the native-only chrome (freshness chip, relative-time, retry/empty/error
+  copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.notificationStats.title" = "Notification Stats";
+"widget.notificationStats.description" = "Notification delivery rate, active channels, recent delivery log";
+"widget.notificationStats.totalSent" = "Total Sent (7d)";
+"widget.notificationStats.deliveryRate" = "Delivery Rate";
+"widget.notificationStats.healthy" = "Healthy";
+"widget.notificationStats.failed" = "Failed";
+"widget.notificationStats.needsAttention" = "Needs attention";
+"widget.notificationStats.activeChannels" = "Active Channels";
+"widget.notificationStats.channel" = "Channel";
+"widget.notificationStats.type" = "Type";
+"widget.notificationStats.status" = "Status";
+"widget.notificationStats.time" = "Time";
+"widget.notificationStats.failedLabel" = "failed";
+"widget.notificationStats.noData" = "No notification data";
+
+/* --- Relative time (web `formatLogTime`) --- */
+"widget.notificationStats.justNow" = "Just now";
+"widget.notificationStats.minutesAgo" = "%lldm ago";
+"widget.notificationStats.hoursAgo" = "%lldh ago";
+
+/* --- Status tokens (web Badge body `{log.status}`) --- */
+"widget.notificationStats.statusValue.sent" = "sent";
+"widget.notificationStats.statusValue.failed" = "failed";
+"widget.notificationStats.statusValue.pending" = "pending";
+"widget.notificationStats.statusValue.deferred" = "deferred_dnd";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.notificationStats.live" = "Live";
+"widget.notificationStats.stale" = "Stale";
+"widget.notificationStats.offline" = "Offline";
+"widget.notificationStats.refresh" = "Refresh";
+"widget.notificationStats.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.notificationStats.loading" = "Loading notification stats";
+"widget.notificationStats.emptyHint" = "Notifications will appear here once delivered.";
+"widget.notificationStats.offlineMessage" = "Offline — showing last known stats";
+"widget.notificationStats.errorTitle" = "Couldn't load notification stats";
