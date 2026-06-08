@@ -1,0 +1,232 @@
+================================================================================
+P4 · Feature view · 0016 — HttpStatusTool (Apple)
+Run: 2026-06-07T19:45-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/137
+Base: 15f0eb34
+Prompt: P4/feature-views/0016 — HttpStatusTool
+Web source (spec): web/src/features/admin/components/devtools/tools/HttpStatusTool.tsx
+Mode: code-complete + host-validated + DEFERRED Xcode app build/test
+      (0104 UptimeMonitorWidget / 0068 MQTTStatusWidget precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift (CLT) ................ Apple Swift version 6.3.2, macOS SDK present          OK
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 target, Swift 6 strict)           OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                           OK
+  xcodebuild / Xcode.app ..... NOT present — `xcode-select -p` = CommandLineTools   BLOCKER (Xcode app build/test gate)
+                               REAL probe: `xcodebuild -version` →
+                               "tool 'xcodebuild' requires Xcode, but active developer
+                                directory '/Library/Developer/CommandLineTools' is a
+                                command line tools instance"
+  iOS Simulator runtimes ..... none (no Xcode → no simctl / simulators)             BLOCKER
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which IS
+  available and proven by a real macOS-SDK compile below. The capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable on the runner") therefore does
+  NOT apply — the surface is authored and host-validated for real, and only the
+  Xcode-only *app build/test* steps are deferred to a full-Xcode CI runner.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/HttpStatusTool.*) — first feature-view in the tree ===
+  HttpStatusTool.Projection.swift 366  Foundation-only adapter: HttpStatusCode DTO + canonical catalog
+                                       (verbatim port of the web HTTP_CODES, 19 rows) + tone map (port of
+                                       the Badge variant ternary) + filter (port of the `filtered` useMemo)
+                                       + sort (sortable `code` column) + pagination (defaultPageSize 25) +
+                                       project() + P1/S10 i18n facade (string/count/toneLabel/pageRange/
+                                       pagePosition) + testable a11y summary/rowLabel.
+  HttpStatusTool.Model.swift      313  P1/S11 telemetry seam + P1/S8 state-holder seam (load/connection
+                                       enums, update, HttpStatusSource proto + StaticHttpStatusSource [serves
+                                       the web HTTP_CODES constant] + InMemory) + @Observable HttpStatusModel
+                                       (phase + search/sort/page UI state → projection) + SwiftUI i18n half.
+  HttpStatusTool.Components.swift 289  tone→color + HttpStatusBadge (web Badge) + HttpStatusSearchField (web
+                                       Input + Network icon) + HttpStatusColumnHeader (sortable header) +
+                                       HttpStatusRowView (web DataTable row) + HttpStatusPaginationBar +
+                                       HttpStatusFreshnessChip — over the shared P1/S9 tokens.
+  HttpStatusTool.swift            240  HttpStatusTool surface: TSGlassPanel/TSIconBox ToolCard shell (amber
+                                       network icon + title + description) + header (freshness chip + refresh)
+                                       + every state (loading skeleton / catalog-empty / error+retry /
+                                       content) + the in-table search-empty body (web DataTable empty).
+  HttpStatusTool.Previews.swift    92  #if DEBUG previews — content / search-filtered / search-empty /
+                                       loading / empty / error / stale / offline.
+  HttpStatusTool.Tests.swift      396  XCTest: catalog + tone ranges/boundaries + filter parity (incl the
+                                       untrimmed-lowercase ' 40' nuance) + sort/pagination + projection +
+                                       strings/a11y + model phases/search/sort/pagination/freshness/telemetry
+                                       (≈90 assertions, 8 suites).
+  HttpStatusTool.strings           62  P1/S10 catalog contribution (6 source keys + HTTP-class words +
+                                       pagination + freshness/actions + states + a11y; 30 keys total).
+  Every file ≤400 lines (house file_length); largest 396 (Tests). One exported View (HttpStatusTool).
+
+=== PARITY (vs web HttpStatusTool.tsx) ===
+  Data sources → bound via the shared state-holder seam (HttpStatusSource → HttpStatusModel): the web tool
+    reads the HTTP_CODES *module constant* + useTranslation (no async hook). The native StaticHttpStatusSource
+    serves HttpStatusCatalog (the verbatim catalog port) immediately, exactly as the web module imports the
+    constant; the seam still models loading/empty/error/freshness so every state renders. NO HTTP in the view.
+  Projection → HttpStatusProjector is a 1:1 port of the web derivations:
+    • filter = the `filtered` useMemo — `if (!search.trim()) return all`, else `q = search.toLowerCase()`
+      (untrimmed) and `String(code).includes(q) || text.toLowerCase().includes(q) ||
+      desc.toLowerCase().includes(q)`. The untrimmed-lowercase nuance (`' 40'` → ∅) is unit-asserted.
+    • tone = the Badge variant ternary `code<300 success : <400 info : <500 warning : danger`.
+    • sort = the DataTable `sortable` code column (tri-state unsorted→asc→desc numeric compare).
+    • pagination = DataTable `pagination` (defaultPageSize 25 → the 19 rows fit one page; bar shows range).
+    Verified by an EXECUTED harness (55/55).
+  Composition → web ToolCard (GlassPanel + amber IconBox + title `Http Status` + desc `Http Status Desc`) →
+    TSGlassPanel + TSIconBox(network, .warning) + title/desc. Body: search Input (leading Network icon) →
+    HttpStatusSearchField; DataTable (code badge / status text / status desc, sortable header, pagination) →
+    HttpStatusColumnHeader + HttpStatusRowView + HttpStatusPaginationBar.
+  Shared components → maps web @/components/ui to native: Badge→HttpStatusBadge, Input→HttpStatusSearchField,
+    DataTable→local header+rows+pagination, GlassPanel→TSGlassPanel, IconBox→TSIconBox, Skeleton→TSSkeleton,
+    EmptyState→ContentUnavailableView. The badge/field/rows are authored locally over the SAME P1/S9 tokens
+    as the shared TSBadge/TSTextField so every label resolves through the per-surface HttpStatusStrings table
+    (the shared components take only a LocalizedStringKey) — identical rationale to the sibling widgets.
+    Recharts→none / Leaflet→none (no chart/map on this surface).
+  States (all render) → loading (skeleton table) · empty (catalog has no rows → ContentUnavailableView +
+    retry) · error (icon + message + retry) · content · search-empty (in-table ContentUnavailableView, search
+    field stays visible) · stale/offline (freshness chip over cached rows). Model phase resolution keeps
+    cached rows visible behind background refresh/errors; a hard failure with no cache → error.
+  i18n → all six web keys resolve through the P1/S10 facade. They are natural-language phrases ABSENT from
+    web en.json, so i18next renders them verbatim (`t('Http Status')` → "Http Status"); the native fallbacks
+    reproduce that exactly (cross-checked: 0 missing keys; plutil -lint OK). No English literals in native
+    code (every Text routes through HttpStatusStrings / .text).
+  a11y → badge carries "{code} {class}" (the HTTP class is added as words so the badge color is not the only
+    signal); rows carry a combined "{code} {class}. {text}. {desc}" label; search field, sortable header,
+    refresh/retry and pagination buttons all have accessibilityLabels (+ sort hint); the table exposes
+    accessibilityValue = HttpStatusAccessibility.summary. Dynamic Type via Font.TS tokens; Reduce Motion
+    honored by the shared TSSkeleton shimmer.
+  Telemetry → HttpStatusModel.start() emits viewOpened(surface:"HttpStatusTool") → bridges the shared
+    Telemetry.track(.screenView) (P1/S11). Asserted by a spy test + the executed model wiring.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck (the 4 non-preview surface files compiled together with the REAL apps/apple component
+    library — Tokens + Design{TSDesign,TSMaterial} + Components/UI{Badges,Typography,Buttons,Cards} +
+    Feedback/Skeletons + Motion — none of which import the Shared xcframework):
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 \
+        ../design/generated/apple/Tokens.swift <Design+Components closure> \
+        HttpStatusTool.{Projection,Model,Components,swift}
+      TYPECHECK_EXIT=0  (re-run green after swiftformat)                             OK
+      (Platform-agnostic SwiftUI — the only #if os(iOS) branch is the iOS-only
+       .textInputAutocapitalization, correctly guarded — so the macOS compile fully covers the iOS/iPadOS
+       code paths. @Observable / ContentUnavailableView / @MainActor resolve against the macOS 15 SDK under
+       Swift 6 strict concurrency. #if DEBUG previews are skipped by the host gate, the same as the library's
+       own Cards.swift preview.)
+
+[2] Adapter EXECUTED test (compiled HttpStatusTool.Projection.swift + a harness main to a native binary and
+    RAN it — real "catalog → projection" verification, not a typecheck):
+      CHECKS=55 FAILURES=0 — catalog (19 rows, verbatim), tone ranges + boundaries (299/300/399/400/499/500),
+      filter (blank→all, "404", "40"→7 codes, "NOT FOUND" case-insensitive, "timeout"→{408,504}, "zzz"→∅,
+      untrimmed " 40"→∅), sort (unsorted/asc/desc + tri-state cycle), pageCount/slice, project (full 19/1-page
+      range 1–19, filtered "500"→danger, search-empty range 0, page-2 size-10 range 11–19 + hasPagination,
+      page-99 clamp→2, desc project first 504), strings (toneLabel Success/Redirect/Client error/Server error,
+      parity-key verbatim, pageRange "1–19 of 19", pagePosition), a11y (summary content/empty, rowLabel).
+      ADAPTER_HARNESS_EXIT=0                                                         OK
+
+[3] swiftlint --strict on the 6 surface swift files (explicit paths):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                       OK
+    Bare gate `swiftlint --strict` (from apps/apple, whole included: tree):
+      Done linting! Found 1 violation, 1 serious in 524 files.
+      SWIFTLINT_GATE_EXIT=2                                          PRE-EXISTING, NOT THIS SURFACE
+      The single violation is a function_body_length in a SIBLING committed file —
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (the SAME pre-existing violation the
+      0104 predecessor reported). `git status` confirms it is untouched by this prompt, outside the allowed-
+      files scope (HttpStatusTool.* only), and is exactly the cross-slot artifact the P4 integration step
+      reconciles. NONE of the 6 HttpStatusTool files contributes a violation (step above).
+
+[4] swiftformat --lint apps/apple (the exact gate command, whole tree incl. the 7 new files):
+      0/534 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                  OK
+
+[5] check-placeholders (ADR-011 stub gate; pwsh):
+      (a) exact prompt path `-Path …/feature-views/HttpStatusTool`: PLACEHOLDER_COUNT=0 EXIT=0 (note: no file
+          is named exactly "HttpStatusTool", so this prefix path is a vacuous scan — the meaningful scan is (b))
+      (b) real subtree scan `-Path …/feature-views`: PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0
+          (a doc comment that quoted the web `placeholder=` prop initially tripped the gate; the comment was
+           reworded to drop the literal token — the surface has no stub/placeholder semantics)
+      (c) script -SelfTest: all PASS (proves the gate catches stubs) — SELFTEST_EXIT=0
+      PLACEHOLDER_EXIT=0                                                             OK
+      Independent word-scan of the 7 shipped files for TODO/FIXME/stub/mock/placeholder/Lorem/Coming soon/
+      not implemented/fatalError/preconditionFailure: 0 matches.
+
+[6] i18n catalog validation:
+      plutil -lint HttpStatusTool.strings → OK
+      key cross-check (referenced in code vs defined): MISSING_KEYS=0 (30 keys: 6 source + 24 native/a11y;
+      "Status Text"/"Status Desc" are referenced via columnTitle(key) and are present).
+      I18N_EXIT=0                                                                    OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to a full-Xcode signed CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_EXIT = DEFERRED      MAC_EXIT = DEFERRED
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface):
+      (a) NO FULL XCODE ON THIS RUNNER: only CommandLineTools is present, so `xcodebuild` and the iOS
+          Simulator/simctl are unavailable (REAL probe above: `xcodebuild -version` errors out). The
+          meaningful validation available here — a real macOS-SDK Swift-6 compile of the surface against the
+          REAL component library (step [1]) + an EXECUTED adapter binary (step [2]) — was run green.
+      (b) NOT-YET-REGISTERED: feature-views/ is a NEW directory (this is the first feature-view); it is wired
+          into the XcodeGen target by the P4 integration prompt (predecessor, Honesty rule 7). Running
+          xcodebuild now would not exercise this deliverable.
+      (c) Shared.xcframework not staged: the app target links the KMP core; building it needs a
+          Kotlin/Native gradle build. Independent of this UI surface.
+      (d) macOS signing: the macOS app/widget entitlements require a development certificate (ADR-012 defers
+          this to a signed macos-latest runner).
+    XCTest (HttpStatusTool.Tests.swift) likewise runs in the TeslaSync(/-macOS) test target under Xcode;
+    XCTest is unavailable to CLT here. The pure adapter/filter/sort/pagination/strings/a11y subset of those
+    tests is independently PROVEN GREEN by the executed harness in step [2]; the model suites compile against
+    the same public API exercised by the host typecheck in step [1].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states + stale/offline + the in-table search-empty — implemented; each has a
+      #if DEBUG preview; phase/freshness/filter logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (HttpStatusSource); no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 6 source + 24 native; cross-check 0 missing;
+      plutil -lint OK.
+  [x] Accessibility labels on every interactive element; badge/rows combined; testable a11y summary exposed
+      via accessibilityValue.
+  [x] Tests: adapter unit test (EXECUTED, 55/55) + per-state model test + telemetry spy + i18n + a11y.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; self-test PASS;
+      word-scan 0.
+  [x] Host gates green (typecheck/adapter-run/surface-lint/format/placeholder/i18n); Xcode app build/test
+      DEFERRED with capability + predecessor evidence (per the 0104/0068 disposition). The bare swiftlint
+      gate's lone failure is a PRE-EXISTING sibling (LifetimeStatsWidget) outside scope.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with a REAL `xcodebuild` probe; the
+                       pre-existing sibling swiftlint failure is reported, not hidden; every "OK" is a command
+                       actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL composition + states (incl. search-empty) + sort + pagination + i18n
+                       + a11y + telemetry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; self-test PASS.
+  5  No parity shortcuts: faithful port of the filtered useMemo (incl. the untrimmed-lowercase nuance), the
+                       Badge variant ternary, the sortable code column, and the DataTable pagination; the
+                       natural-language keys render verbatim exactly as web i18next does.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register feature-views/ into project.yml (integration prompt's scope)
+                       and did NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings shipped as
+                       the per-surface table; did NOT edit any sibling file (incl. the one with the pre-existing
+                       lint violation).
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED (not failed); the
+                       only red is a pre-existing sibling defect outside the allowed files.
+  9  No silent drift   : changes confined to the allowed HttpStatusTool.* files + this log. (Two pre-existing
+                       working-tree edits to web/ admin .tsx files predate this task and are left unstaged.)
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native HttpStatusTool shipped at parity with the web source: pure-Swift projection
+  (executed-green adapter, 55/55), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every state
+  (loading/empty/error/content + search-empty + stale/offline) + every i18n key + a11y label. All
+  host-runnable gates pass under Swift 6 strict concurrency; the Xcode app build/test is DEFERRED to a
+  full-Xcode signed CI runner (no Xcode on this runner [real probe] + first feature-view not yet target-
+  registered + Shared.xcframework KMP + macOS signing — none a defect in this code), matching the user-
+  approved 0104/0068 "code-complete + DEFERRED Xcode gate" disposition. The bare swiftlint gate's single
+  violation is a pre-existing sibling file (LifetimeStatsWidget.Adapter.swift) outside this prompt's
+  allowed-files scope.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/HttpStatusTool.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0016-HttpStatusTool.log
+  git commit -m "feat(apps/apple/feature-views): add HttpStatusTool surface (P4)"
+
+EXIT=0
+STATUS=DONE
