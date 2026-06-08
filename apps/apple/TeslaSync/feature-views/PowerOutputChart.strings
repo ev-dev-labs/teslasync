@@ -1,0 +1,61 @@
+/*
+  PowerOutputChart.strings
+  TeslaSync — P4 feature view · 0158 · PowerOutputChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `PowerOutputChart` resolves (table "PowerOutputChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/drivetrain-health/PowerOutputChart.tsx). The remainder
+  back the data-export columns, the native state envelope (freshness chip, connectivity
+  banner, loading / empty / error chrome), the toggle-legend affordance, and the chart
+  axes / accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"drivetrain.powerOutput" = "Power Output History";
+"drivetrain.powerOutputSub" = "Peak and regen power per drive over time";
+"drivetrain.powerOutput.aria" = "Per-drive peak and regen motor power output history area chart";
+"drivetrain.col.date" = "Date";
+"drivetrain.col.powerMax" = "Peak (kW)";
+"drivetrain.col.powerMin" = "Regen (kW)";
+"drivetrain.powerMax" = "Peak Power (kW)";
+"drivetrain.powerMin" = "Regen Power (kW)";
+
+/* --- Chart axes + units --- */
+"drivetrain.chart.power" = "Power";
+"drivetrain.unitKw" = "kW";
+
+/* --- Data export (web ChartContainer export menu) --- */
+"drivetrain.export" = "Copy chart data";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"drivetrain.live" = "Live";
+"drivetrain.stale" = "Stale";
+"drivetrain.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"drivetrain.staleBanner" = "Reconnecting — power history may be out of date";
+"drivetrain.offlineBanner" = "Offline — showing the last loaded drives";
+
+/* --- Loading / empty / error chrome --- */
+"drivetrain.loading" = "Loading power output history";
+"drivetrain.emptyTitle" = "Not enough drives yet";
+"drivetrain.emptyHint" = "Peak and regen power appears here once your vehicle logs a couple of drives.";
+"drivetrain.errorTitle" = "Couldn't load power output history";
+"drivetrain.retry" = "Retry";
+
+/* --- Toggle legend (web ChartLegend over useHiddenSeries) --- */
+"drivetrain.legend.hint" = "Double tap to toggle this series";
+"drivetrain.legend.hidden" = "Hidden";
+"drivetrain.legend.shown" = "Shown";
+
+/* --- Accessibility --- */
+"drivetrain.a11y.drives" = "drives";
+"drivetrain.a11y.peak" = "peak";
+"drivetrain.a11y.regen" = "regen";
+"common.noData" = "No data available";
