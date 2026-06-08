@@ -1,0 +1,163 @@
+=== P4 Feature view 0164 TorqueHistoryChart (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon) — SHARED runner (not task-dedicated).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · plutil
+  Destinations       : iOS Simulator "iPhone 16" present (Booted) · macOS 26.5 SDK present
+  Capability         : SwiftUI + Swift Charts present, iOS/macOS SDKs + iPhone 16 simulator present
+                       → NOT capability-BLOCKED. (This surface uses no MapKit — web "Charts / maps used: none".)
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/drivetrain-health/TorqueHistoryChart.tsx — a single-series area chart.
+    props: data: MotorChartDataPoint[]  (this chart reads only `time: string` + `torque: number|null`).
+    render guard:  if (data.length <= 1 || !data.some(d => d.torque !== null)) return null;
+    body: FadeIn(delay 0.24) → ChartContainer(title "Motor Torque", subtitle "Drive inverter torque output
+          over time", aria "Motor inverter torque output history area chart", height 280, dataColumns
+          Time / Torque (Nm)) → Recharts AreaChart:
+            • ChartGradient id="dtTorqueGrad" color="#00f0ff" (stop 0% @0.3 → 95% @0.02)
+            • Area {...AREA_DEFAULTS} (type monotone, dot false, connectNulls true, strokeWidth 2),
+              dataKey "torque", name `${t('drivetrain.torque','Torque')} (Nm)`, stroke "#00f0ff", fill gradient
+            • CartesianGrid; XAxis dataKey "time"; YAxis; Tooltip <ChartTooltip>; Legend
+            • ReferenceLine y={0} stroke "#64748b" strokeDasharray "2 2"
+  Data sources (prompt): useTranslation.  Shared components: @/components/charts, @/components/motion.  Maps: none.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/TorqueHistoryChart.*)
+  TorqueHistoryChart.Adapter.swift   (222) — pure (Foundation-only) projection: TorqueHistorySample (web
+                                            MotorChartDataPoint {time,torque} subset), TorquePoint (index/time/
+                                            torque?), TorqueHistory{Phase,LoadStatus,Connection}, TorqueHistory
+                                            Projection (points / hasRenderableData [web guard] / resolvePhase /
+                                            plotted / min / max / latestPoint), TorqueHistoryFormat (locale
+                                            decimal + Nm), TorqueHistorySurface (slug), TorqueHistoryAccessibility
+                                            (chart summary + per-sample VoiceOver value).
+  TorqueHistoryChart.Model.swift     (244) — P1/S11 telemetry seam (OSLog "view.opened"), P1/S10 i18n facade
+                                            (NSLocalizedString table "TorqueHistoryChart" + web fallbacks),
+                                            TorqueHistoryUpdate snapshot, P1/S8 TorqueHistoryChartSource seam,
+                                            @Observable TorqueHistoryChartModel (projects samples → points, phase +
+                                            freshness, once-only view.opened, guarded stale auto-refresh, offline
+                                            keeps cache), InMemoryTorqueHistorySource.
+  TorqueHistoryChart.Views.swift     (238) — header (title+subtitle+freshness chip), stale/offline banner, series
+                                            styling (#00f0ff == Color.TS.accent), one-swatch legend "Torque (Nm)",
+                                            loading skeleton, empty (ContentUnavailableView), error (retry).
+  TorqueHistoryChart.Chart.swift     (186) — the Swift Charts area chart: AreaMark (#00f0ff gradient) + LineMark
+                                            (monotone, strokeWidth 2) over the non-null samples (connectNulls),
+                                            RuleMark y=0 (web ReferenceLine), x-selection RuleMark tooltip; numeric
+                                            Y axis + verbatim time X axis; per-sample a11y value. (Split out of
+                                            Views.swift to keep every file within the 400-line lint budget.)
+  TorqueHistoryChart.swift           ( 70) — TorqueHistoryChart View: TSFadeIn(0.24) card, switch over phase
+                                            (loading/error/empty/content), onAppear start / onDisappear stop,
+                                            a11y summary label.
+  TorqueHistoryChart.Previews.swift  ( 88) — #if DEBUG previews: Content / Empty / Loading / Error / Stale / Offline.
+  TorqueHistoryChart.strings         ( 51) — P1/S10 catalog (table "TorqueHistoryChart"): the 6 web source keys +
+                                            the native state-envelope keys (21 keys total); plutil -lint = OK.
+  TorqueHistoryChart.Tests.swift     (329) — 29 XCTest cases (adapter projection + web guard + formatting + state
+                                            holder + a11y).
+  No shared wiring edits needed: feature-views is already a source path for TeslaSync / TeslaSync-macOS and an
+  included dir for swiftlint; the per-surface .strings keeps i18n self-contained exactly as the sibling
+  SpeedTrendChart surface does. Zero files outside TorqueHistoryChart.* touched.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  FadeIn(0.24)            → TSFadeIn(delay: 0.24).
+  ChartContainer card     → GlassPanel-equivalent: Color.TS.surface + TSRadius.lg + Color.TS.border.
+  Recharts AreaChart      → SwiftUI Charts `Chart { AreaMark + LineMark }`, monotone interpolation (web
+                            AREA_DEFAULTS type "monotone"), strokeWidth 2, dot false.
+  ChartGradient #00f0ff   → LinearGradient(Color.TS.accent.opacity(0.30) → 0.02, top→bottom). The dark accent
+                            token IS #00F0FF exactly (red 0, green 0.941, blue 1.0), so the line + area + legend
+                            swatch all read the token rather than a literal hex or a mismatched palette index.
+  connectNulls=true       → only non-null samples are plotted; monotone interpolation bridges the gaps.
+  ReferenceLine y={0}     → RuleMark(y: 0) dashed (web slate #64748b → Color.TS.textMuted.opacity(0.6),
+                            documented token map).
+  XAxis time / YAxis      → verbatim time X-axis labels (index-keyed, snap-to-nearest) + numeric leading Y axis.
+  Tooltip <ChartTooltip>  → x-selection RuleMark annotation tooltip (time + torque Nm).
+  Legend                  → TorqueHistoryLegend (single swatch "Torque (Nm)").
+  i18n      : every string via the P1/S10 facade; the 6 web source keys are present + parity-checked (below).
+  a11y      : chart accessibilityLabel = the web ariaLabel; per-sample .accessibilityValue "{time}: Torque X Nm";
+              card-level summary "Motor Torque: N samples. Latest {time}: Torque X Nm. Range min – max". Dynamic
+              Type (Font.TS roles), Reduce Motion respected (TSFadeIn / animation gated).
+  states    : web content/`return null` WIDENED to loading/content/empty/error/stale/offline (the P4 envelope,
+              supplied by the bound source — same precedent as the sibling SpeedTrendChart surface). The web
+              `return null` insufficient-data case maps to the native `empty` phase (ContentUnavailableView) so
+              the prompt's "never a hidden surface" rule holds. No blank surfaces.
+  telemetry : view.opened surface="TorqueHistoryChart" via TorqueHistoryChartModel.start (P1/S11), default OSLog sink.
+
+i18n SOURCE-KEY PARITY  (every key extracted from the web source has a catalog entry; verified MISSING_COUNT=0)
+  OK drivetrain.torqueHistory        OK drivetrain.torqueHistory.aria     OK drivetrain.col.torque
+  OK drivetrain.torqueHistorySub     OK drivetrain.col.time               OK drivetrain.torque
+
+GATES
+  [GREEN]    swiftformat --lint  (7 shipped swift files)        : 0/7 files require formatting          (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (7 shipped swift files)        : 0 violations, 0 serious               (LINT_EXIT=0)
+                                                                  (all 7 files within the 400-line file_length budget;
+                                                                   the chart was split into .Chart.swift to comply.)
+  [GREEN]    check-placeholders.ps1                             : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 (EXIT=0)
+                                                                  • literal gate -Path prefix (does not resolve in
+                                                                    the flat feature-views layout) → clean
+                                                                  • GENUINE scan of all 7 shipped files            → 0
+                                                                  • scanner self-test                              → PASS
+  [GREEN]    plutil -lint TorqueHistoryChart.strings            : OK
+  [GREEN]    TorqueHistoryChart build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             same as the app), compiling the EXACT shipped TorqueHistoryChart.* sources against the REAL repo
+             design-system files (apps/design/generated/apple/Tokens.swift, Sources/Design/TSDesign.swift,
+             Components/Motion/Motion.swift, Components/Feedback/Skeletons.swift; TSCard copied verbatim as the one
+             leaf Skeletons.swift references), linking the SDK SwiftUI + Charts frameworks:
+                 Build complete! (11.27s)  ·  Executed 29 tests, with 0 failures               (SWIFT_BUILD/TEST_EXIT=0)
+             (re-run green after the Views→Chart split.)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=75
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+             (TeslaSync.xcodeproj generated on-the-fly via `xcodegen generate`, then removed — it is .gitignored.)
+
+  WHY DEFERRED (full-app Xcode gate — ZERO TorqueHistoryChart errors; both blockers pre-exist / are environmental):
+    grep of BOTH full-app build logs for "TorqueHistoryChart … error:" = 0 hits (iOS:0, macOS:0).
+    iOS  (IOS_EXIT=75): the scheme PRE-BUILD action "Stage Shared.xcframework" failed before ANY app Swift source
+           was compiled — the Kotlin/Native Gradle assembly aborted with "Gradle build daemon has been stopped:
+           stop command received" (this is a SHARED runner; a co-tenant stopped the shared Gradle daemon mid-link),
+           compounded by an IDETesting result-bundle write failure "mkstemp: No such file or directory" (shared
+           /tmp contention). Neither touches TorqueHistoryChart; the app target never reached source compilation.
+    macOS (MAC_EXIT=65): "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require signing with a
+           development certificate ("…has entitlements that require signing with a development certificate. Enable
+           development signing…"), which this runner does not provision. This is the exact macOS blocker recorded
+           in apps/macos-pending-verifications.md and reproduced by every prior P4 feature-view surface.
+    These are the artifacts ADR-012 defers to the signed macos-latest CI runner (the P4/P99 acceptance gate); the
+    task rule forbids fixing pre-existing/unrelated infra breakage from a single feature-view prompt.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=75 / MAC_EXIT=65) and
+                          explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced — the empty guard (length<=1 / all-null), the single
+                          torque Area with the #00f0ff gradient, monotone + connectNulls, the y=0 ReferenceLine,
+                          the time/torque axes, the ChartTooltip, the Legend, and the "Torque (Nm)" unit.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; both Xcode failures inspected to
+                          their root cause (Gradle-daemon-stop + tmp mkstemp; macOS dev-signing), not assumed.
+  4  No stubs as final  : complete production surface + 29 real tests; placeholder scanner = 0; no TODO/stub/mock.
+  5  No parity shortcut : color/gradient/reference-line/units/i18n/a11y/telemetry/states all mapped to platform
+                          tokens + verified; accent token confirmed == web #00f0ff exactly.
+  6  No delegation      : implemented directly; no agents/sub-tasks.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry consumed;
+                          mirrors the sanctioned SpeedTrendChart (0092) structure + DEFERRED-gate disposition.
+  8  No commit on red   : the COMMITTED artifact (TorqueHistoryChart.*) is GREEN on every host gate AND on a real
+                          isolated Swift 6 build+test against the real design-system; the deferred full-app gate is
+                          RED only on pre-existing/environmental blockers (shared Gradle-daemon stop + macOS
+                          dev-signing) this commit neither introduces nor touches (0 surface errors).
+  9  No silent drift    : changes confined to apps/apple/TeslaSync/feature-views/TorqueHistoryChart.* (8 files) +
+                          this log. Documented native decisions: (a) #00f0ff read from the accent token; (b) the
+                          zero ReferenceLine slate → Color.TS.textMuted; (c) web `return null` → native `empty`
+                          phase; (d) web content/`return null` widened to the full P4 state envelope; (e) the chart
+                          split into a sibling .Chart.swift purely to satisfy the 400-line file_length lint.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TorqueHistoryChart shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 29 tests pass under the app's own Swift 6 language mode, against the real
+  design-system, with swiftformat / swiftlint / placeholder / plutil all green and the 6 web i18n keys present.
+  The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): iOS aborted
+  in the shared-runner Gradle xcframework pre-build (daemon stopped by a co-tenant + /tmp mkstemp failure) before
+  any app source compiled, and macOS requires a development-signing certificate this runner does not provision —
+  both pre-existing/environmental, both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date (e.g. p4-apple-feature-views-0092-SpeedTrendChart).
+
+EXIT=0
+STATUS=DONE
