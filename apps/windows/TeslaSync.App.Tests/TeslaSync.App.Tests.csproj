@@ -105,6 +105,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ClimateStatusWidget\ClimateStatusWidget.Model.cs" Link="Widgets\ClimateStatusWidget\ClimateStatusWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ClimateStatusWidget\ClimateStatusWidget.ViewModel.cs" Link="Widgets\ClimateStatusWidget\ClimateStatusWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ClimateStatusWidget\ClimateStatusWidget.Source.cs" Link="Widgets\ClimateStatusWidget\ClimateStatusWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\CommandHistoryWidget\CommandHistoryWidget.Model.cs" Link="Widgets\CommandHistoryWidget\CommandHistoryWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\CommandHistoryWidget\CommandHistoryWidget.ViewModel.cs" Link="Widgets\CommandHistoryWidget\CommandHistoryWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\CommandHistoryWidget\CommandHistoryWidget.Source.cs" Link="Widgets\CommandHistoryWidget\CommandHistoryWidget.Source.cs" />
   </ItemGroup>
 
   <!--
