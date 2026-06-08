@@ -1,0 +1,200 @@
+=== P4 Dashboard widget 0116 WeeklyDigestWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.*
+Web spec: web/src/features/dashboard/widgets/WeeklyDigestWidget.tsx
+Registry: registry/analytics.ts → "weekly-digest" · category=analytics · 2x4 / 1x2 / 4x40
+Runner  : Darwin · swiftc Apple Swift 6.3.2 (MacOSX26.0 SDK) · swiftlint + swiftformat + pwsh + xcodegen present
+          Xcode 26.5 (17F42) installed but NOT the active developer dir (see DEFERRED section)
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: WeeklyDigestWidget.* + this log)
+--------------------------------------------------------------------------------
+  WeeklyDigestWidget.swift          — SwiftUI surface. Header (calendar glyph + "This Week" title +
+                                      freshness chip + refresh); every state (loading skeleton / empty /
+                                      error+retry / stale / offline / content comparison card); compact
+                                      branch (size.cols<=1 → no title/icon, first 2 metrics); full a11y;
+                                      i18n; reduce-motion via TSSkeleton. No networking in the view.
+  WeeklyDigestWidget.Views.swift    — presentational subviews: WeeklyDigestMetricRowView (label + value +
+                                      unit + direction-aware percent delta), WeeklyDigestConnectivityBanner
+                                      (stale/offline), WeeklyDigestLoadingRows (shimmer). + token bridges
+                                      mapping delta direction→SF Symbol and tone→P1/S9 status colour.
+  WeeklyDigestWidget.Model.swift    — P1/S8 state-holder seam (WeeklyDigestSource), @Observable
+                                      WeeklyDigestModel (+ nonisolated resolvePhase, autoRefreshIfStale),
+                                      P1/S11 telemetry seam (view.opened), InMemory source, WeeklyDigestDTO
+                                      (web WeeklyDigestData shape), unit prefs/distance-unit enum,
+                                      DashboardWidgetSize/Registration, WeeklyDigestSurface (slug + canonical
+                                      registration), WeeklyDigestStrings (P1/S10 facade).
+  WeeklyDigestWidget.Adapter.swift  — pure (Foundation-only) projector: WeeklyDigestDTO + unit prefs → the
+                                      four WidgetComparisonCard rows, reproducing the web numeric + Delta
+                                      pipeline VERBATIM (parity). Host-executable.
+  WeeklyDigestWidget.Delta.swift    — the comparison-delta value model shared by the projector + the row
+                                      view: direction / tone / result + metric identity (order + higherIsBetter).
+  WeeklyDigestWidget.Previews.swift — #if DEBUG previews for every state (content mi/km, compact, loading,
+                                      empty, error, stale, offline).
+  WeeklyDigestWidget.Tests.swift    — XCTest: adapter value parity + model phases/telemetry/refresh/auto-
+                                      refresh + registry clamp + accessibility (runs in TeslaSync(/-macOS)
+                                      test targets at integration; the same assertions execute green in the
+                                      host harness, 86/86).
+  WeeklyDigestWidget.strings        — per-surface i18n table (web t() keys + registry description + native chrome).
+
+Data sources (web → native P1/S8 seam, NO view HTTP):
+  useWeeklyDigest(id) + useVehicles + useUnits + useTranslation('dashboard')
+  → WeeklyDigestSource pushes a coalesced WeeklyDigestUpdate {status, connection, isFetching, data, units,
+    updatedAt}; the model projects it; the view only switches over phase + renders the comparison card.
+
+--------------------------------------------------------------------------------
+PARITY ARITHMETIC (reproduced exactly from the web source — cross-platform value parity, NOT "corrected")
+--------------------------------------------------------------------------------
+  The web widget (and its shared sibling WeeklySummaryCardWidget.tsx — a codebase-wide convention) feeds
+  WeeklyDigestData through this transform before the shared <Delta>/<WidgetComparisonCard>:
+
+    distMi  = (distanceKm ?? 0) * UNITS.KM_TO_MI(0.621371)
+    dist    = convertDistanceFromSI(distMi, unitPrefs.distance)  = distMi / {km 1000 · mi 1609.344 · ft 0.3048}
+              → fmtNumber(_,1) + distanceUnit ; higherIsBetter
+    drives  = drives ?? 0  → fmtInt ; higherIsBetter
+    energy  = energyKwh ?? 0  → fmtNumber(_,1) + "kWh" ; higherIsBetter
+    effWhMi = (efficiency ?? 0) * UNITS.MI_TO_KM(1.60934)
+    eff     = unitPrefs.distance=='mi' ? effWhMi*1.609344 : effWhMi  → fmtNumber(_,0) + Wh/{mi|km} ; lower-is-better
+    Delta(display=percent): signed=cur-prev; pct = prev!=0 ? |signed/|prev||*100 : nil;
+                            text = fmtNumber(pct,1)+"%" else "—"; arrow = +→up / −→down / 0→flat;
+                            tone = signed==0 muted; (higher&&+)||(lower&&−) ? emerald : rose
+    metrics = [] when !data → web EmptyState "No weekly data yet" (data present, even all-zero, → card)
+
+  NOTE: the km→mi / Wh·km→Wh·mi pre-scale makes the ABSOLUTE distance/efficiency display values small,
+  but every per-metric PERCENT delta is ratio-preserving and therefore unchanged. Parity means native
+  renders byte-for-byte the same strings the web renders for the same input — pinned by executed asserts:
+    mi: distance "0.0 mi" +25.0%↑(good) · drives "12" +20.0%↑(good) · energy "45.6 kWh" 0.0%→(muted) ·
+        efficiency "647 Wh/mi" "—"↑(rose, prev=0)
+    km: distance "0.1 km" +25.0%↑ · efficiency "402 Wh/km"
+        drives 1234 vs 1500 → "1,234" 17.7%↓(rose) ; nil fields → "0.0"/"—" ; non-finite → 0/"0.0".
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] xcrun --sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+       -target arm64-apple-macos15.0
+       (WeeklyDigestWidget .swift/.Views/.Model/.Adapter/.Delta/.Previews vs the REAL design system —
+        apps/design/generated/apple/Tokens.swift + Sources/Components/** + Sources/Design/**)
+       → error count = 0
+       TYPECHECK_EXIT=0
+       (The lone excluded design file, Sources/Components/DataDisplay/UnitFormatters.swift, resolves KMP
+        `Shared` types Units/UnitPreferences and is UNUSED by this surface; every other design file + all
+        six shipped non-test Swift files type-check green. Zero errors originate in WeeklyDigestWidget.*.)
+
+[HOST] xcrun --sdk macosx swiftc -O -swift-version 6 (Adapter + Model + Delta + driver) && run
+       → === WeeklyDigestWidget host harness === CHECKS=86 FAILURES=0 HARNESS_OK
+       HARNESS_EXIT=0
+       Verified green by EXECUTION: distance km/mi pipeline + grouping, fmtNumber/fmtInt half-away-from-zero,
+       efficiency mi/km transform, energy passthrough, the full Delta matrix (percent / "—" when prev=0 /
+       arrow / emerald-rose-muted tone for higher-and lower-is-better), compact slice (Distance+Drives),
+       nil-data→empty, non-finite→0, injected-(localizable) labels + em-dash, the phase matrix
+       (loading/error-precedence/empty/content), telemetry-once, refresh + stale auto-refresh gating,
+       offline-cached-content, registry id/category/size + clamp, and the a11y summary (full + compact).
+
+[HOST] swiftformat --lint apps/apple (the 7 shipped Swift files)
+       → 0/7 files require formatting
+       FORMAT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint lint --strict --no-cache (the 7 shipped Swift files)
+       → Done linting! Found 0 violations, 0 serious in 7 files.
+       LINT_EXIT=0
+
+[HOST] pwsh check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget -Language swift
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0
+       PLACEHOLDER_EXIT=0
+       (also a manual case-insensitive forbidden-word scan — TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/
+        not implemented/unimplemented/stub/mock/fatalError — of the 8 shipped files → NONE.)
+
+[DEFERRED] xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                  build test
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green — see reasoning)
+       The scheme-level build/test is DEFERRED — not failed — for a hard dependency reason that is NOT a
+       defect in this surface's code:
+         · `xcodebuild` is unavailable under the active developer dir (CommandLineTools): `xcodebuild -version`
+           → "tool 'xcodebuild' requires Xcode". Xcode 26.5 (17F42) IS installed (works via DEVELOPER_DIR=
+           /Applications/Xcode.app/Contents/Developer) and xcodegen 2.45.4 IS present, so the toolchain
+           could be selected — but:
+         · The TeslaSync (and -macOS) target LINKS `Frameworks/Shared.xcframework` (project.yml) and 13 app
+           Source files `import Shared` (Sources/SharedFacade/**, Sources/DashboardWidgets/**). That KMP
+           shared-core xcframework is ABSENT in this checkout — apps/apple/Frameworks/ holds only .gitkeep.
+           The scheme's pre-build action builds it via Kotlin/Native + Gradle (Scripts/build-shared-xcframework.sh),
+           a heavy external toolchain not provisioned on this runner. Without Shared.xcframework the whole app
+           target cannot compile — independent of this surface.
+       (Unlike predecessor 0079, the staging dir apps/apple/TeslaSync/dashboard-widgets/ IS already a source
+        path of both TeslaSync targets in project.yml — so the surface would be compiled by the scheme once
+        the KMP framework is staged on a signed CI runner. No self-registration was needed or performed.)
+       Equivalent in-scope verification was performed instead and is GREEN above: a Swift-6 strict-concurrency
+       `swiftc -typecheck` of the surface against the real design tokens + shared components (the exact symbols
+       the app build resolves), plus an executed adapter/model/delta harness (86/86) pinned to the web display
+       strings. This matches the user-approved "code-complete + DEFERRED Xcode gate" disposition used by
+       predecessors 0036 (DigitalTwinWidget), 0055 (LifetimeStatsWidget), and 0079 (RecentDrivesWidget).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each state
+      has a #if DEBUG preview; phase + projection logic unit-tested AND executed in the harness.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (WeeklyDigestSource); no HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — widget.weeklyDigest.title ("This Week"),
+      .distance/.drives/.energy/.efficiency, .noData ("No weekly data yet") + the registry .description +
+      native chrome in WeeklyDigestWidget.strings; the view holds no English literals (all via
+      WeeklyDigestStrings / injected WeeklyDigestCopy).
+  [x] Accessibility labels on every interactive element (refresh / retry buttons), each metric row a spoken
+      "label, value unit, trend %" element, the freshness chip a combined label; decorative glyphs hidden;
+      Dynamic Type via tokens; Reduce Motion honored by TSSkeleton.
+  [x] Tests: adapter value-parity + per-phase model + telemetry/refresh/auto-refresh + registry clamp +
+      a11y summary (WeeklyDigestWidget.Tests.swift; same assertions executed green in the host harness 86/86).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Telemetry: view.opened emitted once with surface slug "WeeklyDigestWidget" (P1/S11) — tested+executed.
+  [x] Host-runnable gates green (typecheck swift6 strict / executed harness / format / lint / placeholder);
+      Xcode scheme build/test DEFERRED with capability + dependency evidence (per approved disposition).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild scheme steps are shown DEFERRED (not green) with the concrete
+                       blocker (absent KMP Shared.xcframework); every "EXIT=0" above is a command actually run.
+  2  No scope narrowing: implemented the FULL surface — header + all states + the 4-metric comparison card
+                       with direction-aware percent deltas + compact branch + freshness/stale/offline + i18n
+                       + a11y + telemetry + registry + clamp.
+  3  No skip-and-assume: each host gate executed and its real output captured; the deferral blocker was
+                       verified (Frameworks/=.gitkeep, 13 import Shared, project.yml links Shared.xcframework).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness executes real logic.
+  5  No parity shortcuts: distance/drives/energy/efficiency + the Delta percent/arrow/tone pipeline ported
+                       VERBATIM (incl. the codebase-wide km→mi/Wh·km→Wh·mi pre-scale) and pinned by executed
+                       assertions to the exact web display strings.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml or the shared Localizable.xcstrings; strings shipped as
+                       the per-surface table, matching predecessors 0036 / 0055 / 0079.
+  8  No commit on red  : committing on all-green host gates; the Xcode scheme steps are DEFERRED (documented
+                       dependency deferral with evidence), not failed.
+  9  No silent drift   : changes confined to the allowed WeeklyDigestWidget.* files + this log. (Two unrelated,
+                       pre-existing web/ edits already in the working tree were left untouched and are NOT
+                       part of this commit.)
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native WeeklyDigestWidget shipped at parity with the web source: a SwiftUI surface over
+  a P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens; every state, every
+  i18n key, every interactive a11y label; registry-correct (weekly-digest, 2x4 / 1x2 / 4x40, size clamping
+  enforced). The surface type-checks GREEN under Swift 6 strict concurrency against the real design system
+  and its adapter/model/delta logic executes GREEN (86/86) with exact web value parity (km/mi distance,
+  fmtNumber/fmtInt, efficiency transform, energy passthrough, the percent-delta arrow/tone, "—" prev=0, the
+  compact slice, and the empty/error-precedence phase matrix). The Xcode scheme build/test is DEFERRED to a
+  signed CI runner because the app target's KMP Shared.xcframework is absent in this checkout (built via
+  Kotlin/Native + Gradle) — an environment dependency, not a defect in this code — matching the user-approved
+  "code-complete + DEFERRED Xcode gate" disposition.
+
+TYPECHECK_EXIT=0
+HARNESS_EXIT=0
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_EXIT=DEFERRED
+MAC_EXIT=DEFERRED
+
+EXIT=0
+STATUS=DONE
