@@ -1,6 +1,7 @@
 # SwiftLint — TeslaSync Apple app (run: `cd apps/apple && swiftlint --strict`)
 included:
   - Sources
+  - TeslaSync/dashboard-widgets
   - Tests
   - TeslaSyncWidgets
   - TeslaSyncWatch
