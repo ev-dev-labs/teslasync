@@ -1,0 +1,45 @@
+/*
+  SocChart.strings
+  TeslaSync — P4 feature view · 0148 · SocChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SocChart` resolves (table "SocChart") lives here with its web `t(key, default)`
+  English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/drive-detail/SocChart.tsx). The remainder back the
+  native state envelope (freshness chip, connectivity banner, loading / empty /
+  error chrome) and the chart axes / accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.socOverTime" = "SOC % Over Time";
+"driveDetail.socOverTime.aria" = "State of charge percent over time area chart";
+"driveDetail.soc" = "SOC";
+"driveDetail.noChartData" = "No telemetry data available";
+
+/* --- Shared --- */
+"common.noData" = "No data available";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"driveDetail.soc.live" = "Live";
+"driveDetail.soc.stale" = "Stale";
+"driveDetail.soc.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"driveDetail.soc.staleBanner" = "Reconnecting — state of charge may be stale";
+"driveDetail.soc.offlineBanner" = "Offline — showing the last loaded state of charge";
+
+/* --- Chart axes + accessibility summary --- */
+"driveDetail.soc.timeAxis" = "Time";
+"driveDetail.soc.samples" = "samples";
+"driveDetail.soc.start" = "start";
+"driveDetail.soc.end" = "end";
+
+/* --- Loading / empty / error chrome --- */
+"driveDetail.soc.loading" = "Loading state of charge";
+"driveDetail.soc.emptyHint" = "The state-of-charge trace appears here once this drive has telemetry samples.";
+"driveDetail.soc.errorTitle" = "Couldn't load state of charge";
+"driveDetail.soc.retry" = "Retry";
