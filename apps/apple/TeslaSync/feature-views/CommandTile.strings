@@ -1,0 +1,33 @@
+/*
+  CommandTile.strings
+  TeslaSync — P4 feature view · 0226 · CommandTile (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `CommandTile` resolves (table "CommandTile") lives here with its web `t(key, default)`
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact key extracted from the web source
+  (features/system/components/CommandTile.tsx) — the favorite toggle's aria label. The
+  per-command label / sublabel keys are dynamic (owned by the command catalog) and are
+  resolved through the same facade with the def's key + fallback, so they are not
+  redeclared here. The remaining keys back the native-only chrome (VoiceOver activation
+  hint + state value, freshness chip) the state list requires.
+*/
+
+/* --- Key from the web source (parity) --- */
+"commands.toggleFavorite" = "Toggle favorite";
+
+/* --- Native chrome: VoiceOver activation hint (dangerous vs direct) --- */
+"commands.tile.hint.confirm" = "Asks for confirmation before running";
+"commands.tile.hint.run" = "Runs the command";
+
+/* --- Native chrome: VoiceOver state value --- */
+"commands.tile.state.running" = "Running";
+"commands.tile.state.succeeded" = "Succeeded";
+"commands.tile.state.failed" = "Failed";
+
+/* --- Native chrome: freshness chip --- */
+"commands.tile.freshness.stale" = "Stale";
+"commands.tile.freshness.offline" = "Offline";
