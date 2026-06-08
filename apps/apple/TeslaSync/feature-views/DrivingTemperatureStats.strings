@@ -1,0 +1,37 @@
+/*
+  DrivingTemperatureStats.strings
+  TeslaSync — P4 feature view · 0057 · DrivingTemperatureStats (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DrivingTemperatureStats` resolves (table "DrivingTemperatureStats") lives here with its
+  web English value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel surface prompt
+  owns its own strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/analytics/components/analytics/DrivingTemperatureStats.tsx) — the canonical
+  `analytics.driving.*` namespace. The remaining keys back the native-only chrome (freshness
+  chip, stale/offline banner, loading + error + retry copy).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"analytics.driving.tempStats" = "Temperature Stats";
+"analytics.driving.insideMin" = "Inside Min";
+"analytics.driving.insideAvg" = "Inside Avg";
+"analytics.driving.insideMax" = "Inside Max";
+"analytics.driving.outsideMin" = "Outside Min";
+"analytics.driving.outsideAvg" = "Outside Avg";
+"analytics.driving.outsideMax" = "Outside Max";
+"analytics.driving.noTempStats" = "No temperature stats";
+
+/* --- Native chrome: freshness + connectivity --- */
+"analytics.driving.temp.live" = "Live";
+"analytics.driving.temp.stale" = "Stale";
+"analytics.driving.temp.offline" = "Offline";
+"analytics.driving.temp.staleBanner" = "Reconnecting — temperature stats may be stale";
+"analytics.driving.temp.offlineBanner" = "Offline — showing last known temperature stats";
+
+/* --- Native chrome: states --- */
+"analytics.driving.temp.loading" = "Loading temperature stats";
+"analytics.driving.temp.errorTitle" = "Couldn't load temperature stats";
+"analytics.driving.temp.retry" = "Retry";
