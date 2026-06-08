@@ -1,0 +1,44 @@
+/*
+  EnvironmentalImpact.strings
+  TeslaSync — P4 feature view · 0112 · EnvironmentalImpact (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table
+  "EnvironmentalImpact"). Every key the native EnvironmentalImpact resolves lives
+  here with its web `t(key, default)` English value. These entries fold into the
+  app `Localizable.xcstrings` master catalog at integration time; they are kept in
+  a per-surface table so each parallel surface prompt owns its strings without
+  editing the shared catalog.
+
+  The first group is the EXACT keys extracted from the web source
+  (web/src/features/charging/components/cost-analysis/EnvironmentalImpact.tsx).
+  The web inline " kg" unit literal is expressed natively as the interpolated
+  `costAnalysis.environment.kgValue` ("%@ kg") so the view holds no hardcoded
+  literal. The remaining keys back the native chrome (the empty/error/loading
+  states and the live freshness chip the P4 state list requires).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"costAnalysis.environment.title" = "Environmental Impact";
+"costAnalysis.environment.kgCo2" = "kg CO₂ saved";
+"costAnalysis.environment.treeEquiv" = "tree-years equivalent";
+"costAnalysis.environment.desc" = "By driving electric instead of a gas car, you have avoided the equivalent of";
+"costAnalysis.environment.ofCo2" = "of CO₂ emissions.";
+"costAnalysis.environment.treeNote" = "That's the same as";
+"costAnalysis.environment.treesAbsorbing" = "trees absorbing carbon for a full year.";
+"costAnalysis.environment.gallons" = "gallons avoided";
+"costAnalysis.environment.metricTons" = "metric tons CO₂";
+"costAnalysis.environment.dollarsSaved" = "$ saved total";
+"costAnalysis.environment.noData" = "No data";
+
+/* --- Native chrome: description unit interpolation (web inline " kg") --- */
+"costAnalysis.environment.kgValue" = "%@ kg";
+
+/* --- Native chrome: live freshness chip (stale / offline) --- */
+"costAnalysis.environment.freshness.stale" = "Stale";
+"costAnalysis.environment.freshness.offline" = "Offline";
+
+/* --- Native chrome: load / empty / error states --- */
+"costAnalysis.environment.loading" = "Loading environmental impact…";
+"costAnalysis.environment.empty.message" = "Charge sessions will populate your environmental savings.";
+"costAnalysis.environment.error.title" = "Couldn't load environmental impact";
+"costAnalysis.environment.error.message" = "Something went wrong loading your environmental impact.";
