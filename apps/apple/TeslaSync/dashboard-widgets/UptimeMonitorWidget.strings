@@ -1,0 +1,61 @@
+/*
+  UptimeMonitorWidget.strings
+  TeslaSync — P4 dashboard widget · 0104 · UptimeMonitorWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `UptimeMonitorWidget` resolves (table "UptimeMonitorWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of titles/labels extracted from the web source
+  (features/dashboard/widgets/UptimeMonitorWidget.tsx); the remainder back the
+  service labels, status words, native-only chrome (freshness chip, refresh/retry/
+  empty/error copy), and accessibility.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.uptime.title" = "Uptime Monitor";
+"widget.uptime.overall" = "Overall";
+"widget.uptime.allOk" = "All OK";
+"widget.uptime.ok" = "OK";
+"widget.uptime.dbSize" = "DB Size";
+"widget.uptime.tables" = "Tables";
+"widget.uptime.noData" = "No system health data";
+
+/* --- Registry metadata (registry/system.ts → "uptime-monitor") --- */
+"widget.uptime.description" = "System health: DB, MQTT, Tesla API, Fleet Telemetry status";
+
+/* --- Service labels (web t('widget.uptime.${key}', humanize(key))) --- */
+"widget.uptime.database" = "Database";
+"widget.uptime.mqtt" = "MQTT";
+"widget.uptime.tesla_api" = "Tesla API";
+"widget.uptime.fleet_telemetry" = "Fleet Telemetry";
+
+/* --- Status words (web renders the raw status; localized for known states) --- */
+"widget.uptime.healthy" = "Healthy";
+"widget.uptime.degraded" = "Degraded";
+"widget.uptime.unhealthy" = "Unhealthy";
+"widget.uptime.statusOffline" = "Offline";
+"widget.uptime.down" = "Down";
+"widget.uptime.failed" = "Failed";
+"widget.uptime.unknown" = "Unknown";
+
+/* --- Native chrome: freshness chip + actions --- */
+"widget.uptime.live" = "Live";
+"widget.uptime.stale" = "Stale";
+"widget.uptime.offlineChip" = "Offline";
+"widget.uptime.refresh" = "Refresh";
+"widget.uptime.retry" = "Retry";
+"widget.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.uptime.loading" = "Loading system health";
+"widget.uptime.errorTitle" = "Couldn't load system health";
+"widget.uptime.emptyHint" = "Waiting for the health monitor to report.";
+
+/* --- Accessibility --- */
+"widget.uptime.openA11y" = "Open the System Health page";
+"widget.uptime.healthyA11y" = "%lld services healthy";
+"widget.uptime.ofTotalA11y" = "of %lld";

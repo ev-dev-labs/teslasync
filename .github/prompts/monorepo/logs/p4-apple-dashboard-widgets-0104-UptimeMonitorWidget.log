@@ -1,0 +1,234 @@
+================================================================================
+P4 · Dashboard widget · 0104 — UptimeMonitorWidget (Apple)
+Run: 2026-06-07T19:25-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/107
+Base: 29cb3442
+Prompt: P4/dashboard-widgets/0104 — UptimeMonitorWidget
+Web source (spec): web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx
+Mode: code-complete + host-validated + DEFERRED Xcode app build/test
+      (0068 MQTTStatusWidget / 0036 DigitalTwinWidget precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift (CLT) ................ Apple Swift version 6.3.2, macOS SDK present          ✅
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 target, Swift 6 strict)           ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               ✅
+  xcodegen ................... /opt/homebrew/bin/xcodegen                           ✅
+  xcodebuild / Xcode.app ..... NOT present — `xcode-select -p` = CommandLineTools   ✖ (BLOCKER for the Xcode app build/test gate)
+                               REAL probe: `xcodebuild -version` →
+                               "tool 'xcodebuild' requires Xcode, but active developer
+                                directory '/Library/Developer/CommandLineTools' is a
+                                command line tools instance"  (exit 1)
+  iOS Simulator runtimes ..... none (no Xcode → no simctl / simulators)             ✖
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which IS
+  available and proven by a real macOS-SDK compile below. The capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable on the runner") therefore does
+  NOT apply — the surface is authored and host-validated for real, and only the
+  Xcode-only *app build/test* steps are deferred to a full-Xcode CI runner.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.*) ===
+  UptimeMonitorWidget.Projection.swift 321  Foundation-only adapter: DTOs (SystemHealthData /
+                                            SystemHealthComponentData) + services projection (port of
+                                            the web `services` useMemo + healthyCount + overall) +
+                                            statusVariant→tone + db-size/table-count formatters +
+                                            status-text (OK/All OK/raw) + P1/S10 i18n facade
+                                            (string/count/serviceLabel/humanize) + testable a11y summary.
+  UptimeMonitorWidget.Model.swift      281  P1/S11 telemetry seam + P1/S8 state-holder seam
+                                            (load/connection enums, update, source proto + InMemory) +
+                                            UptimeMonitorModel (@Observable phase+freshness+projection) +
+                                            dashboard registry primitives + UptimeMonitorStrings.text.
+  UptimeMonitorWidget.Components.swift 157  UptimeStatusDot (web StatusDot) + UptimeStatusBadge (web
+                                            Badge) + UptimeServiceRow (web ServiceRow) + UptimeFooterRow +
+                                            UptimeFreshnessChip — over the shared design tokens.
+  UptimeMonitorWidget.swift            299  UptimeMonitorWidget surface: glass shell + header (Activity
+                                            icon + title [hidden when compact] + freshness chip + refresh
+                                            + open) + every state + overall/compact-count/service-rows/
+                                            tall DB-size+tables footer layout.
+  UptimeMonitorWidget.Previews.swift   145  #if DEBUG previews — content healthy(std)/degraded(std)/
+                                            compact(1×1)/loading/empty/error/stale/offline.
+  UptimeMonitorWidget.Tests.swift      346  XCTest: projection adapter + tone/isHealthy + formatters +
+                                            status text + humanize/serviceLabel + model phases/freshness/
+                                            telemetry + registry clamp + a11y (≈70 assertions, 8 suites).
+  UptimeMonitorWidget.strings           61  P1/S10 catalog contribution (7 source keys + registry desc +
+                                            service labels + status words + native chrome + a11y).
+  Every file ≤400 lines (house file_length); largest 346. One exported View (UptimeMonitorWidget).
+
+=== PARITY (vs web UptimeMonitorWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (UptimeMonitorSource → UptimeMonitorModel):
+    useSystemHealth (useAdmin), useTranslation. The production app wires UptimeMonitorSource over the
+    KMP AdminStore (StateHolderModel<LoadableState<…>>) polling /system/health on the web
+    INTERVALS.STANDARD cadence; the view performs NO HTTP. No direct transport in the view.
+  Projection → UptimeMonitorProjector.project is a 1:1 port of the web derivations:
+    services = SERVICE_KEYS.map(...) with status = components[key]?.status ?? 'unhealthy', failures =
+    consecutiveFailures ?? 0, lastError ?? null, fixed order [database, mqtt, tesla_api,
+    fleet_telemetry]; tone = statusVariant (ok/healthy→success, degraded→warning, else→danger);
+    healthyCount = count(ok|healthy); overallStatus = data.status ?: 'unknown'. databaseSize/tableCount
+    carried for the tall footer. Verified by an EXECUTED harness (43/43).
+  Composition → WidgetShell chrome (Activity icon + "Uptime Monitor" title [hidden when compact] +
+    freshness chip + refresh + optional Open) · Overall row ("Overall" label + "All OK"/status badge) ·
+    compact(1×1) big healthyCount/total · standard service rows (StatusDot + label + OK/status badge) ·
+    tall footer (top divider + "DB Size"/"Tables").
+  Shared components → maps web @/components/ui + @/components/feedback to native:
+    Badge→UptimeStatusBadge, StatusDot→UptimeStatusDot, ServiceRow→UptimeServiceRow,
+    DataFreshness→UptimeFreshnessChip, Skeleton→TSSkeleton (shared), EmptyState→ContentUnavailableView.
+    The badge/dot/rows are authored locally over the SAME tokens as the shared TSBadge so every label
+    resolves through the per-surface UptimeMonitorStrings table (the shared components take only a
+    LocalizedStringKey) — identical rationale to the sibling MQTTStatusWidget's chip/tile.
+    Recharts→none / Leaflet→none (no chart/map on this surface).
+  States (all render) → loading (skeleton chrome) · empty ("No system health data" +
+    ContentUnavailableView) · error (icon + retry) · content · stale (warning freshness chip over
+    cached content) · offline (muted freshness chip + cached content). Model phase resolution keeps
+    cached content visible behind background refresh/errors; a hard failure with no cache → error.
+  Breakpoints → isCompact = (cols == 1 && rows == 1), isTall = (rows >= 2) — verbatim web predicates.
+    The view reads `size` directly (like the web component); the registry envelope is enforced by the
+    grid through registration.clamp() (a tested utility), so the compact path stays faithful AND
+    previewable/testable.
+  i18n → all source titles/labels resolve through the P1/S10 facade with the web t(key,default)
+    fallback: widget.uptime.title("Uptime Monitor"), overall("Overall"), allOk("All OK"),
+    dbSize("DB Size"), tables("Tables"), noData("No system health data") + the 4 service labels.
+    Key cross-check: 24 referenced keys + 4 dynamic service keys → 0 missing in
+    UptimeMonitorWidget.strings. No English literals in native code (every Text routes through
+    UptimeMonitorStrings / .text).
+  a11y → dot/badge/rows carry combined VoiceOver labels; refresh/open buttons have accessibilityLabels;
+    the content exposes accessibilityValue = UptimeMonitorAccessibility.summary (overall + healthy
+    count + DB size + tables); Dynamic Type via Font.TS tokens + minimumScaleFactor; Reduce Motion
+    honored by the shared TSSkeleton shimmer.
+  Telemetry → UptimeMonitorModel.start() emits viewOpened(surface:"UptimeMonitorWidget") → bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test + the executed model wiring.
+  Registry → UptimeMonitorWidget.registration: id "uptime-monitor", category "system", default 2×2,
+    min 1×2, max 4×40 (+ clamp()), matching registry/system.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck (the 4 non-preview surface files compiled together with the REAL apps/apple
+    component library — Tokens + Design{TSDesign,TSMaterial} + Components/UI{Badges,Typography,Buttons,
+    Cards} + Feedback/Skeletons + Motion — none of which import the Shared xcframework):
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 \
+        ../design/generated/apple/Tokens.swift <Design+Components closure> \
+        UptimeMonitorWidget.{Projection,Model,Components,swift}
+      TYPECHECK_EXIT=0                                                              ✅
+      (Platform-agnostic SwiftUI — no `#if os(iOS)` branches — so the macOS compile fully covers the
+       iOS/iPadOS code paths. @Observable / ContentUnavailableView / @MainActor all resolve against the
+       macOS 15 SDK under Swift 6 strict concurrency. #if DEBUG previews are skipped by the host gate —
+       the #Preview macro plugin is not loadable under bare CLT swiftc, the same as the library's own
+       Badges.swift preview.)
+
+[2] Adapter EXECUTED test (compiled UptimeMonitorWidget.Projection.swift + a harness main to a native
+    binary and RAN it — real "cached → projection" verification, not a typecheck):
+      43/43 checks PASSED — service order + default 'unhealthy' tone/failures/lastError, healthyCount
+      (ok|healthy), component carry-through, overall ''→'unknown'/danger, statusVariant tone map +
+      case-insensitive, isHealthy, databaseSize nil/blank→'—' & value, tableCount nil→'—' & grouping
+      ("1,234"), healthRatio "3/4", serviceBadge OK/raw, overallBadge "All OK"/raw, localizedStatus raw
+      fallback, humanize (database/mqtt/tesla_api/fleet_telemetry), serviceLabel fallback, a11y summary.
+      ADAPTER_HARNESS_EXIT=0                                                        ✅
+
+[3] swiftlint --strict on the 6 surface swift files (explicit paths):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      ✅
+    Bare gate `swiftlint --strict` (from apps/apple, included: paths — which DO list
+    TeslaSync/dashboard-widgets in this slot): Found 1 violation in 388 files.
+      SWIFTLINT_GATE_EXIT=2                                                         ⚠ PRE-EXISTING, NOT THIS SURFACE
+      The single violation is a function_body_length in a SIBLING committed file —
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (slot 0055). It is unmodified
+      by this prompt (git shows it committed/clean), outside the allowed-files scope
+      (UptimeMonitorWidget.* only), and is exactly the kind of cross-slot artifact the P4 integration
+      step reconciles. NONE of the 6 UptimeMonitorWidget files contributes a violation (step above).
+
+[4] swiftformat --lint apps/apple (the exact gate command, whole tree incl. the 7 new files):
+      0/392 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 ✅
+
+[5] check-placeholders (ADR-011 stub gate; pwsh):
+      (a) exact prompt path `-Path …/UptimeMonitorWidget`: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+      (b) real per-file scan of all 7 shipped files: PLACEHOLDER_COUNT=0 each
+      (c) script -SelfTest: all PASS (proves the gate catches stubs) — SELFTEST_EXIT=0
+      PLACEHOLDER_EXIT=0                                                            ✅
+      Independent word-scan of the 7 shipped files for TODO/FIXME/stub/mock/placeholder/Lorem/
+      fatalError/preconditionFailure/"Coming soon"/"not implemented": 0 matches.
+
+[6] i18n catalog validation:
+      plutil -lint UptimeMonitorWidget.strings → OK
+      key cross-check (referenced in code vs defined): MISSING_KEYS=0 (24 static + 4 dynamic service keys)
+      I18N_EXIT=0                                                                   ✅
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to a full-Xcode signed CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_EXIT = DEFERRED      MAC_EXIT = DEFERRED
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface):
+      (a) NO FULL XCODE ON THIS RUNNER: only CommandLineTools is present, so `xcodebuild` and the iOS
+          Simulator/simctl are unavailable (REAL probe above: `xcodebuild -version` exits 1). The
+          meaningful validation available here — a real macOS-SDK Swift-6 compile of the surface against
+          the REAL component library (step [1]) + an EXECUTED adapter binary (step [2]) — was run green.
+      (b) NOT-YET-REGISTERED: the surface lives at TeslaSync/dashboard-widgets/ and is registered into
+          the XcodeGen target's dashboard grid by the P4 dashboard-grid integration prompt (predecessor,
+          Honesty rule 7). Running xcodebuild now would not exercise this deliverable.
+      (c) Shared.xcframework not staged: the app target links the KMP core; building it needs a
+          Kotlin/Native gradle build (apps/shared/gradlew :core:assembleSharedXCFramework). Independent
+          of this UI surface.
+      (d) macOS signing: the macOS app/widget entitlements require a development certificate (ADR-012
+          defers this to a signed macos-latest runner).
+      (e) Cross-slot dedup: the per-widget DashboardWidgetSize/DashboardWidgetRegistration primitives are
+          (by the established sibling convention) redefined in each widget's Model file; the parallel
+          base already carries several copies. A single-module app build dedups these at integration.
+    XCTest (UptimeMonitorWidget.Tests.swift) likewise runs in the TeslaSync(/-macOS) test target under
+    Xcode; XCTest is unavailable to CLT here. The pure adapter/formatter/status-text/humanize/a11y
+    subset of those tests is independently PROVEN GREEN by the executed harness in step [2]; the model/
+    registry suites compile against the same public API exercised by the host typecheck in step [1].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/content) + stale/offline freshness —
+      implemented; each has a #if DEBUG preview; phase/freshness logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (UptimeMonitorSource); no direct HTTP in
+      the view.
+  [x] Every i18n key from source has a matching catalog key — 24 static + 4 dynamic service keys
+      present; cross-check reports 0 missing; plutil -lint OK.
+  [x] Accessibility labels on every interactive element; dot/badge/rows combined; testable a11y summary
+      exposed via accessibilityValue.
+  [x] Tests: adapter unit test (EXECUTED, 43/43) + per-state model test + registry + a11y + formatters
+      + status text + humanize.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; self-test PASS;
+      word-scan 0.
+  [x] Host gates green (typecheck/adapter-run/surface-lint/format/placeholder/i18n); Xcode app
+      build/test DEFERRED with capability + predecessor evidence (per the 0068/0036 disposition). The
+      bare swiftlint gate's lone failure is a PRE-EXISTING sibling (LifetimeStatsWidget) outside scope.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with a REAL `xcodebuild` probe
+                       (exit 1); the pre-existing sibling swiftlint failure is reported, not hidden;
+                       every "✅" is a command actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL layouts/states + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; self-test PASS.
+  5  No parity shortcuts: faithful port of the services useMemo + statusVariant + healthyCount + overall
+                       + compact/standard/tall layouts + all states + breakpoints.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid (integration
+                       prompt's scope) and did NOT edit the shared Localizable.xcstrings
+                       (parallel-unsafe) — strings shipped as the per-surface table; did NOT edit any
+                       sibling widget file.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED (not
+                       failed); the only red is a pre-existing sibling defect outside the allowed files.
+  9  No silent drift   : changes confined to the allowed UptimeMonitorWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native UptimeMonitorWidget shipped at parity with the web source: pure-Swift
+  projection (executed-green adapter, 43/43), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  every state + i18n key + a11y label, registry-correct (uptime-monitor, 2×2 / 1×2 / 4×40). All
+  host-runnable gates pass under Swift 6 strict concurrency; the Xcode app build/test is DEFERRED to a
+  full-Xcode signed CI runner (no Xcode on this runner [real probe] + surface not yet target-registered
+  + Shared.xcframework KMP + macOS signing + cross-slot type dedup — none a defect in this code),
+  matching the user-approved 0068/0036 "code-complete + DEFERRED Xcode gate" disposition. The bare
+  swiftlint gate's single violation is a pre-existing sibling file (LifetimeStatsWidget.Adapter.swift)
+  outside this prompt's allowed-files scope.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0104-UptimeMonitorWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add UptimeMonitorWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
