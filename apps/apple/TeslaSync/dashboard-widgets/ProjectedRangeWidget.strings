@@ -1,0 +1,54 @@
+/*
+  ProjectedRangeWidget.strings
+  TeslaSync — P4 dashboard widget · 0074 · ProjectedRangeWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ProjectedRangeWidget` resolves (table "ProjectedRangeWidget") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/dashboard/widgets/ProjectedRangeWidget.tsx). The remaining keys back
+  the catalog registration and the native-only chrome (freshness chip, refresh /
+  retry / loading / error / empty copy, banners, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.projectedRange.title" = "Projected Range";
+"widget.projectedRange.projected" = "Projected";
+"widget.projectedRange.excellent" = "Excellent";
+"widget.projectedRange.good" = "Good";
+"widget.projectedRange.fair" = "Fair";
+"widget.projectedRange.poor" = "Poor";
+"widget.projectedRange.degradation" = "Battery Degradation";
+"widget.projectedRange.avgDaily" = "Avg Daily Usage";
+"widget.projectedRange.capacity" = "Current Capacity";
+"widget.projectedRange.cycles" = "Battery Cycles";
+"widget.projectedRange.factors" = "Range Factors";
+"widget.projectedRange.noData" = "No projected range data";
+"widget.projectedRange.epa" = "EPA";
+"widget.projectedRange.ofEpa" = "of EPA rated";
+
+/* --- Catalog registration (registry/battery.ts → "projected-range") --- */
+"widget.projectedRange" = "Projected Range";
+"widget.projectedRange.description" = "Helix-predicted range based on driving habits, weather, elevation";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.projectedRange.open" = "Open";
+"widget.projectedRange.live" = "Live";
+"widget.projectedRange.stale" = "Stale";
+"widget.projectedRange.offline" = "Offline";
+"widget.projectedRange.refresh" = "Refresh";
+"widget.projectedRange.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.projectedRange.loading" = "Loading projected range";
+"widget.projectedRange.errorTitle" = "Couldn't load projected range";
+"widget.projectedRange.emptyHint" = "A projection appears once enough driving history is collected.";
+"widget.projectedRange.offlineBanner" = "Offline — showing last known range";
+"widget.projectedRange.staleBanner" = "Reconnecting — range may be stale";
+
+/* --- Accessibility --- */
+"widget.projectedRange.openA11y" = "Open the Projected Range page";
