@@ -1,0 +1,237 @@
+================================================================================
+P4 · Feature view · 0123 — FleetStatsBar (Apple)
+Run: 2026-06-07T21:40-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/244
+Base: e6191ee3
+Prompt: P4/feature-views/0123 — Feature view: FleetStatsBar
+Web source (spec): web/src/features/dashboard/components/FleetStatsBar.tsx
+Mode: code-complete + host-proven (REAL iOS-18-sim AND macOS-15 SDK typecheck of the
+      surface + DEBUG previews + EXECUTED XCTest 25/25 via a self-contained SwiftPM
+      harness against the real design tokens + real component closure) + swiftlint /
+      swiftformat / placeholder green. The literal full-app `xcodebuild -scheme
+      TeslaSync(/-macOS) build test` aggregate is DEFERRED — Shared.xcframework is not
+      staged (apps/apple/Frameworks holds only .gitkeep) + macOS signing — shown below
+      with its REAL captured exit 65, NOT faked. Predecessor parity: 0089
+      SessionComparisonChart / 0048 SummaryStatsRow.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  Swift Charts ............... present in both SDKs (this surface USES it — sparkline)  OK
+  MapKit ..................... present in both SDKs (this surface uses NONE)        OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint  0.63.3                  OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                 OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh  7.6.2                        OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views in project.yml  REGISTERED (lines 37 + 68 — iOS + macOS app targets)  OK
+
+  Capability note: the prompt's capability-BLOCKED escape hatch ("SwiftUI / Swift
+  Charts / MapKit unavailable") does NOT apply — SwiftUI + Swift Charts are AVAILABLE
+  and PROVEN by the real iOS-18-simulator AND macOS-15 SDK typechecks below, and the
+  full XCTest suite is EXECUTED on the macOS host (25/25). The surface uses Swift
+  Charts (web `MiniChart` → native `Chart{LineMark}`); it uses no maps. STATUS is
+  DONE, not BLOCKED.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/FleetStatsBar.*) ===
+  FleetStatsBar.Adapter.swift     257  data types + pure helpers — DistanceUnitPref;
+                                       FleetUnits (convertDistanceFromSI port: /1000 km,
+                                       /1609.344 mi, /0.3048 ft; efficiency Wh/km→Wh/mi
+                                       ×1.609344); FleetStatsFormat (fmtNumber port —
+                                       safeNumber→0, grouping, half-up); accent / caption
+                                       / card / analytics-snapshot / input / load-status /
+                                       connection / phase types. Foundation only.
+  FleetStatsBar.Projection.swift  182  pure projection — responsive column math
+                                       (2/3/4/5 @ 640/768/1024), the 5-card builder (web
+                                       order), isEmpty + resolvePhase, the slug, and the
+                                       VoiceOver summaries. Foundation only.
+  FleetStatsBar.Model.swift       229  P1/S8 state-holder seam (FleetStatsSource →
+                                       @Observable FleetStatsBarModel + InMemory source)
+                                       + P1/S11 telemetry seam (view.opened) + P1/S10
+                                       strings facade + stale auto-refresh / offline hold.
+  FleetStatsBar.Views.swift       281  presentational subviews — accent→token color; the
+                                       glass stat tile (label + TSAnimatedNumber value +
+                                       caption|sparkline); the responsive stagger grid;
+                                       loading skeletons; empty; error+retry; freshness
+                                       banner.
+  FleetStatsBar.Chart.swift        53  the inline trend sparkline (web `MiniChart`) — a
+                                       Swift Charts axis-free `LineMark` (1.5pt, linear,
+                                       round caps), tinted with the card accent.
+  FleetStatsBar.swift              55  the surface — banner-above-cards stack + phase
+                                       switch (loading/empty/error/content) + onAppear/
+                                       onDisappear + a11y container + surfaceSlug.
+  FleetStatsBar.Previews.swift     93  #if DEBUG previews — one per state (content / empty
+                                       / loading / error / stale / offline).
+  FleetStatsBar.Tests.swift       321  XCTest — units + fmtNumber + layout + projection +
+                                       phase + model wiring/telemetry/freshness + a11y
+                                       (25 methods).
+  FleetStatsBar.strings            43  P1/S10 catalog contribution (table "FleetStatsBar",
+                                       17 keys).
+  Largest .swift = 321 lines (swiftlint file_length <= 400 honored — the Adapter was split
+  into Adapter [types] + Projection [logic] to stay within budget and to keep the
+  card-builder function under function_body_length). No file imports the Shared
+  xcframework (the seams are Swift protocols; the prod app injects the query-backed
+  source, previews/tests inject InMemoryFleetStatsSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data (web useTranslation + the props from FleetStatsWidget → useUnits /
+    useFleetAnalytics / useVehicles / recent drives+charges): bound through the P1/S8
+    seam FleetStatsSource → FleetStatsBarModel. The web leaf is pure-presentational; the
+    native source carries its prop snapshot. No HTTP in the view.
+  - The five cards reproduce the web order + wiring exactly:
+      1 Fleet Size  — fmtNumber(vehicleCount,0); caption "{onlineCount} online"; text-primary.
+      2 Distance(30d) — fmtNumber(toDistanceDisplay(total_distance_km),0)+" "+unit; cyan→accent;
+                        sparkline = recentDrives.distance_m reversed.
+      3 Energy(30d) — fmtNumber(total_energy_kwh,1)+" kWh"; emerald→success;
+                        sparkline = recentCharges.total_energy_added_wh reversed.
+      4 Efficiency  — fmtNumber(toEfficiencyDisplay(avg_efficiency_wh_km),0)+" "+effUnit;
+                        amber→warning; caption "fleet average".
+      5 Alerts      — fmtNumber(unreadAlerts,0); red→danger if >0 else emerald→success;
+                        caption "unread".
+  - Converters ported verbatim (FleetStatsWidget + lib/unitConversion): distance =
+    meters/{1000|1609.344|0.3048}; efficiency Wh/km → Wh/mi ×1.609344 on `mi`; the SI
+    `total_distance_km` value is fed as SI meters (Phase-42; the legacy `_km` key is the
+    R2-style misname). EXECUTED-verified: 1,234,000 m → "1,234 km" / "767 mi";
+    158 Wh/km → "158 Wh/km" / "254 Wh/mi"; 312.5 → "312.5 kWh".
+  - `MiniChart` gate reproduced: the web `if (data.length < 2) return null` becomes
+    `showsSparkline` (≥ 2 points), so a 0/1-point series draws nothing (not a stub box).
+  - Composition: web `<GlassPanel>` tile → glass-surface tile (label + TSAnimatedNumber
+    + caption|sparkline); web `<StaggerContainer>` / `<StaggerItem>` →
+    TSStaggerContainer/TSStaggerItem cascade; web `grid-cols-2 sm:3 md:4 lg:5` →
+    FleetStatsLayout.columnCount (640/768/1024 px), unit-tested.
+  - Unit symbols ("km" / "kWh" / "Wh/km") are locale-invariant codes appended in the
+    pure core verbatim (web passes them as data; same disposition as SummaryStatsRow's
+    "%"). Translatable prose (labels + online/average/unread) routes through P1/S10.
+
+=== I18N (P1/S10) ===
+  17 keys declared in FleetStatsBar.strings; referenced == declared == 17 (0 missing).
+  Web-source keys (8, namespace "dashboard"): fleet.size / fleet.online / fleet.distance /
+    fleet.energy / fleet.efficiency / fleet.average / fleet.alerts / fleet.unread.
+  Native chrome (9): fleet.loadingA11y / fleet.emptyTitle / fleet.emptyHint /
+    fleet.errorTitle / fleet.retry / fleet.staleBanner / fleet.offlineBanner +
+    fleet.statsTitle / common.noData (accessibility). No English prose literal in Swift.
+
+=== STATES (every state renders; each has a #if DEBUG preview — 6 previews) ===
+  loading -> FleetStatsLoadingRow: five 96pt skeletons in the responsive grid.        OK
+  content -> FleetStatsContentRow: five staggered glass tiles (web resolved branch).   OK
+  empty   -> FleetStatsEmpty: ContentUnavailableView when a resolved snapshot has no
+             vehicles / analytics / recent activity / alerts (never a row of zeros).   OK
+  error   -> FleetStatsError: icon + message + Retry (calls model.refresh()).          OK
+  stale   -> cached cards under the stale connectivity banner + ONE guarded auto-refresh
+             (re-arms on live). Web parent WidgetShell isStale.                        OK
+  offline -> cached cards under the offline banner; NO refetch (keeps last totals).    OK
+
+=== GATE — HOST-RUNNABLE STEPS (REAL, GREEN) ===
+  [1] swiftc -typecheck — iOS 18 simulator SDK (-target arm64-apple-ios18.0-simulator,
+        -swift-version 6, the 6 production surface files + the real design tokens
+        (apps/design/generated/apple/Tokens.swift) + Sources/Design + Sources/Components
+        closure, module TeslaSync):
+          IOS_TYPECHECK_EXIT=0                                                        OK
+  [2] swiftc -typecheck — macOS 15 SDK (-target arm64-apple-macos15.0, same closure):
+          MAC_TYPECHECK_EXIT=0                                                        OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin; the
+        production files + previews + closure, macOS 15):
+          PREVIEWS_TYPECHECK_EXIT=0                                                   OK
+  [4] swift build + swift test — the FULL XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (real production surface + real generated design
+        tokens + real Sources/Design + Sources/Components closure; @testable import
+        TeslaSync), Swift 6 language mode:
+          Build complete!
+          Executed 25 tests, with 0 failures (0 unexpected)
+          SWIFT_TEST_EXIT=0                                                           OK
+        Covers: distanceFromSI (km/mi/ft) + efficiencyFromWhKm (km/mi) + labels; fmtNumber
+        grouping / fraction digits / half-up / non-finite→0 + withUnit; column math at the
+        4 breakpoints; the 5-card projection (ids/values/accents/captions/reversed
+        sparklines) incl. imperial conversion, alerts accent flip, nil-analytics zeros,
+        sparkline <2 gating; isEmpty + resolvePhase; model start-applies + view.opened
+        once, loading→content, resolved-empty→empty, stale auto-refresh exactly once +
+        re-arm, offline keeps cached + no refetch, error + retry→refresh, stop re-arms;
+        a11y card label (± detail) + bar summary + empty fallback.
+        (The single shared file Components/DataDisplay/UnitFormatters.swift — which calls
+         the external P1/S8 `Units` facade and which THIS surface does not use — is
+         excluded from the closure, identical to the 0048 SummaryStatsRow disposition.)
+  [5] swiftlint --strict (8 surface .swift files; repo .swiftlint.yml):
+          Done linting! Found 0 violations, 0 serious in 8 files.   LINT_EXIT=0        OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/8 files require formatting.   FORMAT_EXIT=0                               OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; pwsh) on the surface's swift files:
+          [SelfTest] all PASS (dirty→COUNT=4, clean→0, opt-out accounting)
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0            OK
+        (The gate's literal no-extension `-Path …/FleetStatsBar` matches no real path and
+         returns a vacuous 0; scanned each real FleetStatsBar.* file instead — same
+         disposition as the 0048 predecessor.)
+
+=== GATE — LITERAL FULL-APP AGGREGATE (DEFERRED; shown with real evidence, NOT faked) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    FULL_APP_IOS = DEFERRED      FULL_APP_MAC = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                                        -> XCODEGEN_EXIT=0
+      - `xcodebuild -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at
+            '.../apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync-macOS')
+          ** BUILD FAILED **                                       -> MAC_BUILD_EXIT=65
+    Why deferred (code-unrelated environment blocker — NOT a defect in this surface;
+    identical disposition to the 0089 / 0048 predecessors, Honesty rule 7):
+      (a) Shared.xcframework not staged: the iOS + macOS app targets link the KMP core;
+          staging it needs a Kotlin/Native gradle build (apps/shared
+          :core:assembleSharedXCFramework). apps/apple/Frameworks holds only .gitkeep, so
+          xcodebuild fails at framework resolution (concrete error captured above).
+          Independent of this UI surface.
+      (b) macOS app/widget hardened-runtime signing requires a development certificate on
+          a signed runner (ADR-012).
+    NOTE: this slot's project.yml ALREADY registers TeslaSync/feature-views in BOTH app
+    targets (lines 37 + 68), so no registration gap remains — only the xcframework
+    staging blocks the app build. The SAME tests xcodebuild would run in the
+    TeslaSync(/-macOS) test target are PROVEN GREEN (25/25) by the executed SwiftPM
+    harness in step [4], and the surface compiles against BOTH the iOS 18 and macOS 15
+    SDKs in steps [1]/[2] + the DEBUG previews in [3].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (content/empty/loading/error/
+      stale/offline) — implemented; each has a #if DEBUG preview; phase + freshness
+      logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (FleetStatsSource ->
+      FleetStatsBarModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — the 8 web keys verbatim +
+      9 native-chrome/a11y keys; referenced == declared == 17 (0 missing).
+  [x] Accessibility labels on every element (each tile is one combined VoiceOver label;
+      loading row + banner + retry labelled; bar-level summary; Dynamic Type roles +
+      reduce-motion via TSAnimatedNumber/TSSkeleton/TSStaggerItem).
+  [x] Tests: adapter unit (units/fmt/layout/projection) + per-state model + a11y — 25
+      methods, EXECUTED 25/25, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green incl. REAL iOS+macOS SDK typecheck +
+      executed XCTest; literal full-app aggregate DEFERRED with captured exit 65
+      evidence (missing Shared.xcframework + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates (typecheck ×2 + previews + build + 25 tests + lint +
+                          format + placeholder) are genuinely green; the full-app build
+                          is shown DEFERRED with its REAL exit 65 + cause, never as a pass.
+  2 No scope narrowing ... full surface (8 swift + strings), all six states, the P1/S8/
+                          S10/S11 seams, the five cards, both sparklines, 25 tests.
+  3 No skip-and-assume ... web source + FleetStatsWidget + unitConversion + numberFormat +
+                          MiniChart + AnimatedNumber read end-to-end; every t() key + the
+                          ?? 0 fallbacks + the <2-point chart gate reproduced + EXECUTED.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. real unit conversions + fmtNumber + 2/3/4/5 grid + stagger +
+                          accent map + sparkline gating + 6-state envelope.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0089 SessionComparisonChart / 0048
+                          SummaryStatsRow host-gate + full-app deferral (captured exit 65).
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework build,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... the Adapter was split into Adapter + Projection to honor
+                          file_length / function_body_length; documented above. No other
+                          deviation (feature-views IS registered in this slot's project.yml).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
