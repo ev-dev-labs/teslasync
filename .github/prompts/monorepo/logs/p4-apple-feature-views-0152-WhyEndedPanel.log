@@ -1,0 +1,186 @@
+================================================================================
+P4 · Feature view · 0152 — WhyEndedPanel (Apple)
+Run: 2026-06-07T22:09-0700   Host: Darwin 25.5.0 arm64 (Atuls-Mac-Studio)
+Prompt: .github/prompts/monorepo/p4-apple/feature-views/P-0152-WhyEndedPanel.prompt.md
+Web source (spec): web/src/features/driving/components/drive-detail/WhyEndedPanel.tsx
+Native output: apps/apple/TeslaSync/feature-views/WhyEndedPanel.*
+Mode: code-complete + DEFERRED Xcode app build/test (established P4 Apple disposition;
+      ADR-012 macOS-pending; apps/macos-pending-verifications.md). Delegation: NONE (authored directly).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  active developer dir ....... /Library/Developer/CommandLineTools (system default) NOTE
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  macOS SDK (typecheck) ...... MacOSX26.5.sdk; -swift-version 6, -target macos15.0  OK
+  SwiftUI macOS-SDK compile .. real -typecheck of the surface succeeds (below)      OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... 2.45.4 (project generates with these files; below)   OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  codesign identities ........ "0 valid identities found"                           WARN (macOS app gate blocker, ADR-012)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web source "Charts / maps used: (none)"). The core requirement is SwiftUI, which
+  is available and proven by a real macOS-SDK compile below (strict-concurrency=complete).
+  The capability-BLOCKED escape hatch therefore does NOT apply — the surface is
+  authored and host-validated for real, then the full Xcode app build/test is
+  DEFERRED (Shared.xcframework + signing), exactly as for the 82 prior P4 surfaces.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/WhyEndedPanel.*) ===
+  WhyEndedPanel.Adapter.swift       330  pure ports: surface slug, DriveDiagnosticWindow,
+                                          transition/signal DTOs + display rows, title compose,
+                                          {{trigger}} interp, ISO parse + absolute, pagination math, a11y
+  WhyEndedPanel.Model.swift         324  P1/S8 source seam (load status/connection/update/lazy enable +
+                                          window + pagination) + @Observable model + P1/S11 telemetry
+                                          seam + InMemory source
+  WhyEndedPanel.Localization.swift  167  P1/S10 facade (table "WhyEndedPanel"): 14 source keys + chrome
+  WhyEndedPanel.Views.swift         271  FSM section + connected timeline + signal section + loading/error
+                                          states + freshness chip + connectivity banner
+  WhyEndedPanel.Table.swift         229  adaptive signal table (Grid / compact cards) + page-size/prev-next pager
+  WhyEndedPanel.swift               142  surface View: glass panel + disclosure header + window picker
+  WhyEndedPanel.Previews.swift      141  #if DEBUG previews — one per state (9)
+  WhyEndedPanel.Tests.swift         347  XCTest: format + builder + paging + phase + model + a11y (60+ assertions)
+  WhyEndedPanel.strings              61  P1/S10 catalog contribution (14 source keys + native chrome)
+  Total 2012 lines. Every file <= 400 (house file_length); largest 347. One exported view per file.
+
+=== PARITY (vs web WhyEndedPanel.tsx) ===
+  Data sources -> bound via the shared seam (WhyEndedPanelSource -> WhyEndedPanelModel):
+    useDriveWhyEnded(driveId, window, expanded) is the production source (lazy GET
+    /drives/{id}/why-ended?window=…, fired only on expand); useDriving context + useTranslation ->
+    WhyEndedPanelStrings (NSLocalizedString table). The view performs NO HTTP.
+  Adapter (records -> projection) -> WhyEndedPanelFormat + WhyEndedPanelBuilder faithfully port:
+    the `{fsm_name}: {from_state} → {to_state}` mono title; the i18next `trigger: {{trigger}}`
+    interpolation with `tx.trigger || '—'`; the `keyedSignals` index-spliced row id
+    (`${ts}-${field}-${idx}`, web keyExtractor); ISO-8601 parse (+fractional) and the absolute
+    `<TimeStamp>` / toLocaleString rendering; and the web DataTable pagination contract
+    (defaultPageSize 25, pageSizeOptions [25,50,100]). Proven by an executed harness (47/47 below).
+  Composition -> native primitives (no Tailwind): a collapsible glass panel (web `GlassPanel p-6`)
+    whose header is a disclosure Button (chevron down/right + panel title, web aria-expanded ->
+    accessibilityValue) with a trailing window menu Picker (web `Select` w-40, options 30s/60s/5m/15m,
+    aria-label "Diagnostic window") shown only while expanded; then the FSM section (branch glyph +
+    title + a connected timeline of `fsm: from → to` / `trigger: …` / absolute-time rows) and the signal
+    section (radio glyph + title + an adaptive table: a columnar SwiftUI Grid on macOS/regular width and
+    a card list on compact iPhone width, with a page-size + prev/next pager). Recharts -> none. Leaflet -> none.
+  States (all render) -> loading (web centered Spinner) · error (web `EmptyState` "Could not load diagnostic"
+    + message/fallback + Retry -> refetch) · content (both sections). Per-section empties reproduce the web
+    exactly: FSM empty -> `EmptyState` "No transitions in window"; signal empty -> the DataTable emptyMessage
+    "No signals in this window for the default whitelist." There is deliberately NO top-level empty phase —
+    a resolved-but-empty response renders both sections with their own empty views, mirroring the web shell.
+    Native HIG chrome adds the freshness chip + stale/offline connectivity banner over cached rows; the model
+    phase keeps cached rows visible behind a refresh/error, so the spinner shows only on the cold initial load.
+  i18n -> all 14 web-source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    driveDetail.whyEnded.title, .windowAria, .fsmTitle, .signalTitle, .signal.cols.ts/.field/.value,
+    .error.title/.message, common.retry, .fsmEmpty.title/.message, .trigger, .signalEmpty — ALL PRESENT
+    (verified below: 34/34 catalog<->code keys, 0 missing, 0 dead). The 4 windowOption.{30s,60s,5m,15m}
+    labels fall back to the window literal exactly as the web `t('…windowOption.{w}', w)`. No English
+    literals in native code (every string via the facade). a11y/chrome keys added for the native disclosure
+    state, freshness/banner, pagination, loading, and section/row summaries.
+  a11y -> the disclosure button is a header element labelled with the title + an expanded/collapsed value
+    + a hint (web aria-expanded); the window picker carries the web aria-label + its current value; each
+    timeline row is a combined element labelled title+trigger+time; the signal table rows are combined
+    elements labelled timestamp+field+value; the signal section announces its cached count; the pager
+    controls + page-size menu carry labels; the loader carries a label. Dynamic Type via the token ramp +
+    monospaced styles; no bespoke animation (Reduce Motion N/A).
+  Telemetry -> WhyEndedPanelModel.start() emits viewOpened(surface:"WhyEndedPanel") exactly once on first
+    surface appear (P1/S11), even while collapsed (the data query stays lazy). Spy-asserted in the XCTest model suite.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real exit codes) ===
+[1] swiftc -typecheck — the 6 surface files compiled together with the REAL generated tokens
+    (apps/design/generated/apple/Tokens.swift) AND the REAL shared components the surface uses
+    (Sources/Design/TSMaterial.swift `tsGlassPanel`, Sources/Components/Feedback/States.swift `TSEmptyState`,
+    + their closure: Banners/Typography/Buttons/Cards/Badges), under -swift-version 6
+    -target arm64-apple-macos15.0 -Xfrontend -strict-concurrency=complete. 0 errors, 0 warnings.
+        SURFACE_TYPECHECK_EXIT=0
+[2] swiftc -typecheck — the Foundation-only seam (Model + Adapter + Localization) alone, same flags.
+    Proves the @Observable state holder + pure adapter are type- and concurrency-correct with no SwiftUI.
+        MODEL_TYPECHECK_EXIT=0
+[3] EXECUTED adapter harness (Adapter + Localization compiled to a native arm64 binary + a 47-assertion
+    main exercising transitionTitle / triggerValue / interpolateTrigger / parseTimestamp / absolute +
+    transitionRow / signalRow index-keying / buildProjection / empty + pagination pageCount/clamp/page +
+    a11y transition/signal/count summaries + window enum order/default against expected web values):
+        WhyEndedPanel adapter harness: 47/47 assertions passed; 0 failed   (BUILD_EXIT=0  RUN_EXIT=0)
+[4] swiftlint --strict (the 8 feature-views .swift files, repo rules):
+        0 violations.   (LINT_EXIT=0)
+    (Tree note: the only swiftlint violation under apps/apple is pre-existing in
+     dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 — outside this prompt's scope/allowed files.)
+[5] swiftformat --lint (repo .swiftformat; the 8 .swift files):
+        0/8 files require formatting.   (FORMAT_EXIT=0)
+[6] check-placeholders.ps1 — honest isolated scan of the 9 WhyEndedPanel.* files:
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+    The prompt's prefix-path form (`.../WhyEndedPanel`, no extension) Test-Path's false and scans zero
+    files (vacuous EXIT=0) — recorded for completeness, not relied upon.   (PLACEHOLDER_EXIT=0)
+[7] i18n parity (executed): all 14 web-source keys present in WhyEndedPanel.strings; code<->catalog keys
+    consistent — 34 used keys = 34 catalog keys, 0 missing, 0 dead. No English literals in native code.
+[8] xcodegen generate (DEVELOPER_DIR=Xcode 26.5): project generates EXIT=0 and ALL 9 WhyEndedPanel files
+    are registered into BOTH app targets (TeslaSync iOS + TeslaSync-macOS) via the feature-views source
+    glob — positive evidence the deliverable is wired for the deferred Xcode build (generated .xcodeproj is
+    git-ignored; removed after the probe).
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED, with verified evidence) ===
+  The prompt gate's `xcodebuild -scheme TeslaSync … build test` (iOS + macOS) + the XCTest suite are
+  DEFERRED on this host — NOT shown green — for code-external reasons verified above:
+    (a) Shared.xcframework not staged: apps/apple/Frameworks holds only .gitkeep; the app target links the
+        KMP `Shared.xcframework`. The scheme pre-action (Scripts/build-shared-xcframework.sh) shells out to
+        the Kotlin/Native toolchain (`gradlew :core:assembleSharedXCFramework`) which
+        apps/macos-pending-verifications.md explicitly defers to a macos-latest runner. Without it the app
+        cannot link.
+    (b) macOS signing: `security find-identity -p codesigning` -> "0 valid identities found"; the macOS
+        app/widget entitlements require a development certificate (ADR-012 defers to a signed runner).
+    (c) Co-located *.Tests.swift: WhyEndedPanel.Tests.swift sits in feature-views (the same pattern as the
+        82 prior surfaces, e.g. LiveSignalsTable.Tests.swift) and imports XCTest + `@testable import TeslaSync`;
+        it runs in the TeslaSync(/-macOS) XCTest target under Xcode. Its pure adapter + a11y + paging subset
+        is PROVEN GREEN by the executed harness in [3]; the model phase/telemetry/disclosure/window/pagination
+        suites compile against the same public API exercised by the host typecheck in [1]+[2].
+        IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (per the established P4 Apple disposition, not a failure)
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading / error / content + per-section FSM-empty / signal-empty) plus
+      the HIG stale / offline / collapsed chrome — implemented; each has a #if DEBUG preview; phase + paging unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (WhyEndedPanelSource); no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 14/14 source keys present; 34/34 code<->catalog (executed).
+  [x] Accessibility labels on every interactive element (disclosure button, window picker, pager controls,
+      page-size menu, retry); rows + sections carry combined labels + count value; loader carries a label.
+  [x] Tests: adapter unit (executed harness 47/47 + XCTest format/builder/paging) + per-state model test + a11y label test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (0 opt-outs).
+  [x] Host gates green (surface typecheck / model typecheck / executed harness / lint / format / placeholder /
+      i18n / xcodegen registration); Xcode app build/test DEFERRED with capability + predecessor evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); reasons verified here (0 identities,
+                       .gitkeep-only Frameworks, co-located XCTest). Every host "EXIT=0" is a real run.
+  2  No scope narrowing: implemented ALL states + lazy disclosure + server-validated window selector + the
+                         FSM timeline + the adaptive signal table WITH the web DataTable pagination + i18n + a11y + telemetry.
+  3  No skip-and-assume: each host gate executed; the typecheck caught a redundant @ViewBuilder + a 486-line
+                         file (split into .Views + .Table), and the harness caught a Swift-6 actor-isolation
+                         defect in the test main — all fixed, then re-run green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the title compose / {{trigger}} interp / signal keying / pagination
+                         + all states + 14/14 keys + the lazy-on-expand query behaviour.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml (already list feature-views)
+                         and did NOT edit the shared Localizable.xcstrings or macos-pending-verifications.md;
+                         strings shipped as the per-surface table. Changes confined to the allowed files.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed WhyEndedPanel.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native WhyEndedPanel shipped at parity with the web source: pure-Swift display math
+  (executed-green adapter, 47/47), a P1/S8 state-holder seam (no view HTTP) that reproduces the web lazy-on-
+  expand query + server-validated window selector + DataTable pagination, P1/S11 view.opened telemetry, every
+  state + 14/14 i18n keys + a11y labels, a connected FSM timeline + an adaptive paginated signal table. All
+  host-runnable gates pass (surface+model typecheck under Swift 6 strict concurrency against the REAL tokens +
+  shared components, executed harness, lint, format, placeholder, i18n, xcodegen registration); the Xcode app
+  build/test is DEFERRED to the signed macos-latest runner (Shared.xcframework absent + 0 signing identities +
+  co-located XCTest — none a defect in this code), matching the user-approved "code-complete + DEFERRED Xcode
+  gate" P4 Apple disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/WhyEndedPanel.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0152-WhyEndedPanel.log
+  git commit -m "feat(apps/apple/feature-views): add WhyEndedPanel surface (P4)"
+
+EXIT=0
+STATUS=DONE

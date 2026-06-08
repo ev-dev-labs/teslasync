@@ -1,0 +1,61 @@
+/*
+  WhyEndedPanel.strings
+  TeslaSync — P4 feature view · 0152 · WhyEndedPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `WhyEndedPanel` resolves (table "WhyEndedPanel") lives here with its web `t(key,
+  default)` English value. These entries fold into the app `Localizable.xcstrings`
+  master catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/driving/components/drive-detail/WhyEndedPanel.tsx — the title, the
+  window-option labels, the section titles, the signal column headers, the error +
+  empty states, and the `trigger: {{trigger}}` template). The second group backs
+  the native-only chrome (disclosure a11y, freshness chip, connectivity banner,
+  loading, pagination, accessibility) the Apple HIG states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.whyEnded.title" = "Why did this drive end?";
+"driveDetail.whyEnded.windowAria" = "Diagnostic window";
+"driveDetail.whyEnded.windowOption.30s" = "30s";
+"driveDetail.whyEnded.windowOption.60s" = "60s";
+"driveDetail.whyEnded.windowOption.5m" = "5m";
+"driveDetail.whyEnded.windowOption.15m" = "15m";
+"driveDetail.whyEnded.fsmTitle" = "FSM transitions";
+"driveDetail.whyEnded.signalTitle" = "Signal window";
+"driveDetail.whyEnded.signal.cols.ts" = "Timestamp";
+"driveDetail.whyEnded.signal.cols.field" = "Field";
+"driveDetail.whyEnded.signal.cols.value" = "Value";
+"driveDetail.whyEnded.error.title" = "Could not load diagnostic";
+"driveDetail.whyEnded.error.message" = "Try a different window or reload the page.";
+"common.retry" = "Retry";
+"driveDetail.whyEnded.fsmEmpty.title" = "No transitions in window";
+"driveDetail.whyEnded.fsmEmpty.message" = "No FSM state changes recorded near the drive end. Try a wider window.";
+"driveDetail.whyEnded.trigger" = "trigger: {{trigger}}";
+"driveDetail.whyEnded.signalEmpty" = "No signals in this window for the default whitelist.";
+
+/* --- Native chrome: disclosure a11y --- */
+"driveDetail.whyEnded.a11y.expanded" = "expanded";
+"driveDetail.whyEnded.a11y.collapsed" = "collapsed";
+"driveDetail.whyEnded.a11y.toggleHint" = "Shows the drive-end diagnostic";
+
+/* --- Native chrome: freshness + connectivity --- */
+"driveDetail.whyEnded.live" = "Live";
+"driveDetail.whyEnded.stale" = "Stale";
+"driveDetail.whyEnded.offline" = "Offline";
+"driveDetail.whyEnded.staleBanner" = "Reconnecting — diagnostic data may be stale";
+"driveDetail.whyEnded.offlineBanner" = "Offline — showing the last loaded diagnostic";
+
+/* --- Native chrome: states + pagination --- */
+"driveDetail.whyEnded.loadingA11y" = "Loading drive-end diagnostic";
+"driveDetail.whyEnded.pagination.rowsPerPage" = "Rows per page";
+"driveDetail.whyEnded.pagination.previous" = "Previous page";
+"driveDetail.whyEnded.pagination.next" = "Next page";
+"driveDetail.whyEnded.pagination.status" = "Page {{page}} of {{count}}";
+
+/* --- Native chrome: accessibility --- */
+"driveDetail.whyEnded.a11y.fsmSection" = "FSM transitions";
+"driveDetail.whyEnded.a11y.signalSection" = "Signal window";
+"driveDetail.whyEnded.a11y.signalCount" = "%lld signals";
