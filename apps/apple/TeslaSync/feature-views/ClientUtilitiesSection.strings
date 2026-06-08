@@ -1,0 +1,78 @@
+/*
+  ClientUtilitiesSection.strings
+  TeslaSync — P4 feature view · 0003 · ClientUtilitiesSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ClientUtilitiesSection` resolves (table "ClientUtilitiesSection") lives here with
+  its web `t(key, default)` value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first two groups are the exact keys extracted from the web source
+  (features/admin/components/devtools/ClientUtilitiesSection.tsx): the 15 tool
+  name/description keys passed to `useToolList` (the web renders the key text
+  itself, since these keys are absent from the en catalog) and the section copy
+  (search prompt + no-results). The remaining keys back the native-only chrome
+  (freshness banners, loading / error / catalog-empty copy, accessibility).
+*/
+
+/* --- Tool names + descriptions (web `useToolList`, parity) --- */
+"Vin Decoder" = "Vin Decoder";
+"Vin Decoder Desc" = "Vin Decoder Desc";
+"Jwt Decoder" = "Jwt Decoder";
+"Jwt Decoder Desc" = "Jwt Decoder Desc";
+"Timestamp" = "Timestamp";
+"Timestamp Desc" = "Timestamp Desc";
+"devtools.utils.base64" = "Base64";
+"devtools.utils.base64Desc" = "Base64Desc";
+"Url Encoder" = "Url Encoder";
+"Url Encoder Desc" = "Url Encoder Desc";
+"Json Formatter" = "Json Formatter";
+"Json Formatter Desc" = "Json Formatter Desc";
+"Uuid Generator" = "Uuid Generator";
+"Uuid Generator Desc" = "Uuid Generator Desc";
+"Hash Calculator" = "Hash Calculator";
+"Hash Calculator Desc" = "Hash Calculator Desc";
+"Byte Size" = "Byte Size";
+"Byte Size Desc" = "Byte Size Desc";
+"Color Converter" = "Color Converter";
+"Color Converter Desc" = "Color Converter Desc";
+"Cron Parser" = "Cron Parser";
+"Cron Parser Desc" = "Cron Parser Desc";
+"Http Status" = "Http Status";
+"Http Status Desc" = "Http Status Desc";
+"Tesla Api Ref" = "Tesla Api Ref";
+"Tesla Api Ref Desc" = "Tesla Api Ref Desc";
+"Regex Tester" = "Regex Tester";
+"Regex Tester Desc" = "Regex Tester Desc";
+"Unix Perm" = "Unix Perm";
+"Unix Perm Desc" = "Unix Perm Desc";
+
+/* --- Section copy (web source, parity) --- */
+"devtools.searchTools" = "Search tools...";
+"devtools.noToolsFound" = "No tools match your search";
+
+/* --- Native chrome: catalog-empty + loading + error --- */
+"devtools.clientUtilities.noTools" = "No tools available";
+"devtools.clientUtilities.noToolsHint" = "Developer utilities will appear here once they are enabled.";
+"devtools.clientUtilities.loading" = "Loading tools";
+"devtools.clientUtilities.errorTitle" = "Couldn't load tools";
+"devtools.clientUtilities.retry" = "Retry";
+
+/* --- Native chrome: freshness banners --- */
+"devtools.clientUtilities.refresh" = "Refresh";
+"devtools.clientUtilities.staleBanner" = "Reconnecting — the catalog may be out of date";
+"devtools.clientUtilities.offlineBanner" = "Offline — showing the last known tools";
+
+/* --- Native chrome: descriptor body --- */
+"devtools.clientUtilities.identifier" = "Identifier";
+"devtools.clientUtilities.runsOn" = "Runs";
+"devtools.clientUtilities.clientSide" = "On device";
+
+/* --- Accessibility --- */
+"devtools.clientUtilities.a11y" = "Client utilities";
+"devtools.clientUtilities.clearSearch" = "Clear search";
+"devtools.clientUtilities.toggleHint" = "Double tap to expand or collapse";
+"devtools.clientUtilities.expanded" = "Expanded";
+"devtools.clientUtilities.collapsed" = "Collapsed";
