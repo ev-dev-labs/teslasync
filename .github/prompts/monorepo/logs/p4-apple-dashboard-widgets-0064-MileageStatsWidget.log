@@ -1,0 +1,179 @@
+================================================================================
+P4 · Dashboard widget · 0064 — MileageStatsWidget (Apple)
+Run: 2026-06-07T18:52-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/67
+Base: e9e15143
+Prompt: P4/dashboard-widgets/0064 — MileageStatsWidget
+Web source (spec): web/src/features/dashboard/widgets/MileageStatsWidget.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (P4/0036 DigitalTwinWidget precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK 26.5 present            ✅
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 target, real component library)  ✅
+  swiftc -O + run (harness) .. compiles + executes a native binary                 ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               ✅
+  /Applications/Xcode.app .... NOT installed — `xcode-select -p` = CommandLineTools ✗ (xcodebuild unavailable here)
+  iphonesimulator SDK ........ `xcrun --sdk iphonesimulator` = cannot be located    ✗ (no Simulator runtime on CLT host)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and proven by a real macOS-SDK compile below. The capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore does NOT apply —
+  the surface is authored and host-validated for real, then the Xcode-only app
+  build/test is DEFERRED (see the dedicated section), matching the 0036 precedent.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/MileageStatsWidget.*) ===
+  MileageStatsWidget.Models.swift    141  value types: MileageDistanceUnit (km/mi/ft + fromLabel + SI divisor),
+                                          MileageStatsInput, MileageVehicleRef, MileageStatsProjection, MileageNumberFormat
+  MileageStatsWidget.Builder.swift    73  pure adapter: convertDistanceFromSI + nextMilestone + monthsToMilestone +
+                                          project() — the unit-tested cached→projection core (port of the web derive block)
+  MileageStatsWidget.Model.swift     269  P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 i18n facade + a11y summary
+  MileageStatsWidget.swift           326  MileageStatsWidget surface (glass shell + header + all states + compact/standard)
+  MileageStatsWidget.Tile.swift       94  MileageStatTile (web StatCard) + MileageBigNumber (web AnimatedNumber)
+  MileageStatsWidget.Previews.swift  123  #if DEBUG previews — one per state (standard + compact + loading/empty/error/
+                                          stale/offline)
+  MileageStatsWidget.Tests.swift     235  XCTest: adapter + model + registry + a11y (67 assertions, 21 methods)
+  MileageStatsWidget.strings          47  P1/S10 catalog contribution (8 source keys + registry name/desc + 11 chrome keys)
+  Every file ≤400 lines (house file_length); largest 326. One exported View per file
+  (MileageStatsWidget; the Tile/BigNumber leaves are internal helpers).
+
+=== PARITY (vs web MileageStatsWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (MileageStatsSource → MileageStatsModel):
+    useMileageStats, useVehicles, useUnits, useTranslation. The production app wires MileageStatsSource
+    over the KMP analytics store + the units preference (StateHolderModel<LoadableState<…>>); the view
+    performs NO HTTP. No direct transport in the view.
+  Projection → MileageStatsBuilder.project + convertDistanceFromSI + nextMilestone + monthsToMilestone are a
+    1:1 port of the web derive block: totalMeters = lifetime_km*1000; dailyAvgMeters = (last_30d_km/30)*1000;
+    display = convertDistanceFromSI(meters, unit) [km/1000, mi/1609.344, ft/0.3048]; milestone =
+    ceil((total+1)/10000)*10000; months = dailyAvg>0 ? max(1, round(remaining/dailyAvg/30)) : 0; weekly =
+    daily*7; monthly = daily*30. Verified by an EXECUTED harness (31/31) — see gate step [2].
+  Composition → WidgetShell chrome (uptrend icon + "Mileage Stats" title + freshness chip + refresh + optional
+    "Open") · standard 2×2 StatGrid of StatCards (Daily/Weekly/Monthly Avg + Next Milestone with "up" trend
+    "~{m} mo") · compact 1-column big AnimatedNumber (daily avg, 0 dp) + "{unit}/day" caption.
+  Shared components → reuses the REAL apps/apple component library: Color.TS / Font.TS / TSSpacing / TSRadius /
+    TSMotion / TSSkeleton + ContentUnavailableView (compiled against them in the typecheck below). The web
+    StatCard / AnimatedNumber are reproduced as MileageStatTile / MileageBigNumber because the shared
+    TSStatCard / TSAnimatedNumber can't express a trailing unit + a string trend chip. Recharts→none /
+    Leaflet→none (no chart/map on this surface). Reuses the shared DashboardWidgetSize / DashboardWidgetRegistration
+    grid primitives (defined by 0036) — NOT redefined (no symbol collision; proven by the co-compile below).
+  States (all render) → loading (skeleton chrome) · empty ("No mileage data") · error (retry) · stale (chip +
+    banner, cached values stay visible) · offline (chip + banner, cached) · content. Model phase resolution
+    keeps cached content visible behind refresh/errors, matching the web shell.
+  i18n → all 8 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    title, dailyAvg, weeklyAvg, monthlyAvg, nextMilestone, inMonths(~{{months}} mo → "~%lld mo"), day, noData
+    → ALL PRESENT in MileageStatsWidget.strings (verified). No English literals in native code.
+  a11y → the stat grid carries a combined value summary (MileageStatsAccessibility.summary); the compact number
+    carries the same summary as its label; every button (refresh / retry / open) has an accessibilityLabel;
+    Dynamic Type via tokens; Reduce Motion gates the big-number numericText transition.
+  Telemetry → MileageStatsModel.start() emits viewOpened(surface:"MileageStatsWidget") → bridges shared
+    Telemetry.track(.screenView) (P1/S11). Asserted by a spy test.
+  Registry → MileageStatsWidget.registration: id "mileage-stats", category "analytics", default 2×2, min 1×2,
+    max 4×40 (+ clamp()), matching registry/analytics.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the 5 non-test/preview surface files compiled together with the REAL apps/apple
+    component library (Tokens + Design/{TSDesign,TSMaterial} + Components/UI/{Badges,Typography,Buttons,Cards}
+    + Feedback/Skeletons + Motion) AND the full 0036 DigitalTwinWidget surface, proving co-existence in one
+    module (shared registry types reused, no duplicate symbols):
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 <closure> <DigitalTwin.*> \
+        MileageStatsWidget.{Models,Builder,Model,swift,Tile}.swift
+      TYPECHECK_EXIT=0                                                              ✅
+      (The surface is platform-agnostic SwiftUI — no `#if os(iOS)` branches — so the macOS compile fully
+       covers the iOS/iPadOS code paths. ContentUnavailableView / @Observable / contentTransition resolve
+       against the macOS 15 SDK.)
+
+[2] Adapter EXECUTED test (compiled Models+Builder+harness to a native binary and RAN it — real
+    "cached → projection" verification, not a typecheck):
+      xcrun --sdk macosx swiftc -O ... MileageStatsWidget.{Models,Builder}.swift harness.swift -o run && ./run
+      CHECKS=31 FAILURES=0 → ADAPTER_HARNESS=PASS                                   ✅
+      Covers: km/mi/ft conversion factors, nextMilestone rounding (incl. exact-multiple bump), months-to-
+      milestone (incl. floor-to-1 and zero-pace), the full km/mi/ft projection, unit-label parsing, and the
+      en-US grouped + half-up number formatting.
+      ADAPTER_HARNESS_EXIT=0                                                        ✅
+
+[3] swiftlint --strict on the 7 surface Swift files (explicit paths; the repo .swiftlint.yml `included:` does
+    not list TeslaSync/dashboard-widgets — that wiring is the P4 integration prompt's job — so the bare gate
+    SKIPS this dir; run explicitly here to prove the files are clean for integration):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      ✅
+    Bare gate `swiftlint --strict` (from apps/apple, included: paths): 0 violations, 256 files.
+      SWIFTLINT_GATE_EXIT=0                                                         ✅ (does not scan the new dir — see note)
+
+[4] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 8 new files):
+      0/276 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 ✅
+
+[5] check-placeholders (ADR-011 stub gate; swift):
+      pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   →   PLACEHOLDER_EXIT=0           ✅
+      (The prompt's literal -Path …/MileageStatsWidget is a filename PREFIX that resolves to nothing → the
+       script returns a clean scan; PLACEHOLDER_COUNT=0 there too. The real per-dir scan above is reported.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed macos-latest CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (each is independent and code-unrelated — none is a defect in this surface):
+      (a) NOT-YET-REGISTERED: project.yml's app target globs `Sources/`; the surface lives at
+          TeslaSync/dashboard-widgets/ and is registered into the XcodeGen target + the dashboard grid by the
+          P4 dashboard-grid integration prompt (predecessor, Honesty rule 7). Running xcodebuild now would
+          build the app WITHOUT these files and re-run the existing suite — ZERO evidence about this
+          deliverable. The host swiftc compile in step [1] DOES compile this surface against the real
+          component library, which is the meaningful validation here.
+      (b) This runner has no Xcode (CommandLineTools only) and no iphonesimulator SDK, so xcodebuild cannot be
+          invoked here regardless of (a). Reasons (a),(c),(d) hold even on an Xcode host.
+      (c) Shared.xcframework not staged: the app target links the KMP core; building it needs a Kotlin/Native
+          gradle build. Independent of this UI surface.
+      (d) macOS signing: the macOS app/widget entitlements require a development certificate; ADR-012 defers
+          this to a signed macos-latest runner.
+    XCTest (MileageStatsWidget.Tests.swift) likewise runs in the TeslaSync/-macOS test target under Xcode;
+    XCTest is unavailable to CLT here. The pure-adapter subset of those tests is independently PROVEN GREEN by
+    the executed harness in step [2]; the model / registry / a11y suites compile against the same public API
+    exercised by the host typecheck. The #Preview macro needs Xcode's PreviewsMacros plugin (absent under CLT),
+    so Previews are excluded from the host typecheck — identical in shape to 0036's, which compiles under Xcode.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) in both compact + standard —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 8/8 present in MileageStatsWidget.strings.
+  [x] Accessibility labels on every interactive element; the grid + compact number carry a value summary.
+  [x] Tests: adapter unit test (EXECUTED, 31/31) + per-state model test + registry parity + a11y label test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Host gates green (typecheck/harness/lint/format/placeholder); Xcode app build/test DEFERRED with
+      capability + predecessor evidence (per the 0036 disposition).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); reasons given. Every "✅" is a command
+                       actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL states (compact + standard) + 4 stat tiles + milestone projection +
+                       i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the web derive block (executed-green adapter) + full composition.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration prompt's
+                       scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe across slots) —
+                       strings shipped as the per-surface table; reused 0036's shared grid primitives.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed MileageStatsWidget.* files + this log (two unrelated
+                       pre-existing web/ working-tree edits left untouched and NOT staged).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native MileageStatsWidget shipped at parity with the web source: pure-Swift domain port
+  (executed-green adapter, 31/31), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every state +
+  i18n key + a11y label, registry-correct (mileage-stats, 2×2 / 1×2 / 4×40). All host-runnable gates pass; the
+  Xcode app build/test is DEFERRED to the signed CI runner (surface not yet target-registered + this CLT host
+  lacks Xcode + Shared.xcframework + macOS signing — none a defect in this code), matching the 0036
+  "code-complete + DEFERRED Xcode gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/MileageStatsWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0064-MileageStatsWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add MileageStatsWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
