@@ -1,0 +1,64 @@
+/*
+  OptimizerSection.strings
+  TeslaSync — P4 feature view · 0104 · OptimizerSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `OptimizerSection` (and the cost-heatmap it composes) resolves — table
+  "OptimizerSection" — lives here with its web value. These entries fold into the
+  app `Localizable.xcstrings` master catalog at integration time; they are kept in
+  a per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys + values extracted from the web sources
+  (features/charging/components/charging-list/OptimizerSection.tsx and its composed
+  CostHeatmap.tsx), verified against web/src/i18n/en.json (charging.optimizer.*).
+  The web `savingsBanner` uses i18next interpolation `${{amount}}`; the native value
+  uses the `%@` positional form fed by `String(format:)`. The second group backs the
+  native-only chrome (states, freshness banners, day axis, accessibility).
+*/
+
+/* --- Web source (charging.optimizer.*, parity with en.json) --- */
+"charging.optimizer.savingsBanner" = "Save ~$%@/month by adjusting your charging schedule";
+"charging.optimizer.savingsDetail" = "Based on your charging patterns, shifting to off-peak hours could reduce your monthly costs.";
+"charging.optimizer.habits" = "Charging Habits";
+"charging.optimizer.sessionsWeek" = "Sessions/week";
+"charging.optimizer.homePct" = "Home charging";
+"charging.optimizer.avgTarget" = "Avg charge target";
+"charging.optimizer.commonHour" = "Common start hour";
+"charging.optimizer.commonDay" = "Most common";
+"charging.optimizer.batteryScore" = "Battery-Friendly Score";
+"charging.optimizer.scoreGood" = "Your habits are battery-friendly";
+"charging.optimizer.scoreFair" = "Room for improvement";
+"charging.optimizer.scorePoor" = "Consider adjusting your habits";
+"charging.optimizer.costAnalysis" = "Cost Analysis";
+"charging.optimizer.peakRate" = "Peak rate";
+"charging.optimizer.offpeakRate" = "Off-peak rate";
+"charging.optimizer.peakSessions" = "Sessions during peak";
+"charging.optimizer.peakHours" = "Peak hours";
+"charging.optimizer.offpeakHours" = "Off-peak hours";
+"charging.optimizer.recommendations" = "Optimization Recommendations";
+"charging.optimizer.noRecs" = "Recommendations will appear after more charging sessions.";
+"charging.optimizer.heatmap" = "Charging Cost Heatmap";
+"charging.optimizer.cheap" = "Cheap";
+"charging.optimizer.expensive" = "Expensive";
+
+/* --- Native chrome: states + accessibility --- */
+"charging.optimizer.a11y" = "Charging optimizer";
+"charging.optimizer.loading" = "Loading optimization";
+"charging.optimizer.errorTitle" = "Couldn't load optimization";
+"charging.optimizer.retry" = "Retry";
+"charging.optimizer.refresh" = "Refresh";
+"charging.optimizer.staleBanner" = "Reconnecting — optimization may be out of date";
+"charging.optimizer.offlineBanner" = "Offline — showing the last known optimization";
+"charging.optimizer.legend" = "Legend: cheap to expensive";
+"charging.optimizer.perMonth" = "/mo";
+"charging.optimizer.sessions" = "sessions";
+
+/* --- Native chrome: heatmap day axis (web fixed Sun…Sat) --- */
+"charging.optimizer.day0" = "Sun";
+"charging.optimizer.day1" = "Mon";
+"charging.optimizer.day2" = "Tue";
+"charging.optimizer.day3" = "Wed";
+"charging.optimizer.day4" = "Thu";
+"charging.optimizer.day5" = "Fri";
+"charging.optimizer.day6" = "Sat";
