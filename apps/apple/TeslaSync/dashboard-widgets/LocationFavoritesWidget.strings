@@ -1,0 +1,56 @@
+/*
+  LocationFavoritesWidget.strings
+  TeslaSync — P4 dashboard widget · 0059 · LocationFavoritesWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  LocationFavoritesWidget resolves (table "LocationFavoritesWidget") lives here
+  with its web `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact key set extracted from the web source
+  (features/dashboard/widgets/LocationFavoritesWidget.tsx). The remaining keys
+  back the native-only chrome (freshness chip, refresh/retry/empty/error copy,
+  relative-time phrasing, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.locationFavorites.title" = "Favorite Locations";
+"widget.locationFavorites.home" = "Home";
+"widget.locationFavorites.work" = "Work";
+"widget.locationFavorites.favorite" = "Favorite";
+"widget.locationFavorites.other" = "Other";
+"widget.locationFavorites.noData" = "No favorite locations";
+
+/* --- Registry metadata (registry/maps.ts) --- */
+"widget.locationFavorites.description" = "Frequently visited places, current location status (home/work/other)";
+
+/* --- Relative-time phrasing (port of lib/dateFormat.formatRelative) --- */
+"widget.locationFavorites.relativeNow" = "just now";
+"widget.locationFavorites.relativeMinutes" = "%lldm ago";
+"widget.locationFavorites.relativeHours" = "%lldh ago";
+"widget.locationFavorites.relativeDays" = "%lldd ago";
+
+/* --- Native chrome: freshness --- */
+"widget.locationFavorites.live" = "Live";
+"widget.locationFavorites.stale" = "Stale";
+"widget.locationFavorites.offline" = "Offline";
+
+/* --- Native chrome: actions --- */
+"widget.locationFavorites.refresh" = "Refresh";
+"widget.locationFavorites.retry" = "Retry";
+"widget.locationFavorites.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.locationFavorites.loading" = "Loading favorite locations";
+"widget.locationFavorites.errorTitle" = "Couldn't load locations";
+"widget.locationFavorites.emptyHint" = "Visited places will appear here as you drive.";
+"widget.locationFavorites.offlineBanner" = "Offline — showing last known places";
+"widget.locationFavorites.staleBanner" = "Reconnecting — places may be stale";
+
+/* --- Accessibility --- */
+"widget.locationFavorites.openA11y" = "Open the favorite locations page";
+"widget.locationFavorites.navigatingTo" = "Navigating to %@";
+"widget.locationFavorites.favoriteCount" = "%lld favorite locations";
+"widget.locationFavorites.rankA11y" = "Rank %lld";
