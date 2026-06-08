@@ -1,0 +1,67 @@
+/*
+  DataPipelineSection.strings
+  TeslaSync — P4 feature view · 0242 · DataPipelineSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  DataPipelineSection resolves (table "DataPipelineSection") lives here with its web
+  t(key, default) English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/system/components/status/DataPipelineSection.tsx, where the bare English
+  string is the t() key). The second group backs the native chrome (description,
+  status labels, freshness / loading / empty / error copy, accordion accessibility)
+  so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Data Pipeline" = "Data Pipeline";
+"Compression Statistics" = "Compression Statistics";
+"Export Job Queue" = "Export Job Queue";
+"Compression Ratio" = "Compression Ratio";
+"Estimated Savings" = "Estimated Savings";
+"Total Positions" = "Total Positions";
+"Compressed" = "Compressed";
+"Savings" = "Savings";
+"Pending" = "Pending";
+"Processing" = "Processing";
+"Completed" = "Completed";
+"Failed" = "Failed";
+"Status" = "Status";
+"Type" = "Type";
+"Format" = "Format";
+"File" = "File";
+"Records" = "Records";
+"Created" = "Created";
+"saved" = "saved";
+"active" = "active";
+
+/* --- Native chrome: description + localized status labels --- */
+"pipeline.description" = "Compression statistics and export job queue";
+"status.queued" = "Queued";
+"status.processing" = "Processing";
+"status.ready" = "Ready";
+"status.failed" = "Failed";
+
+/* --- Native chrome: empty states (web EmptyState message) --- */
+"pipeline.noCompression" = "No compression statistics yet";
+"pipeline.noJobs" = "No export jobs in queue";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"pipeline.live" = "Live";
+"pipeline.stale" = "Stale";
+"pipeline.offline" = "Offline";
+"pipeline.staleBanner" = "Reconnecting — data may be stale";
+"pipeline.offlineBanner" = "Offline — showing last known data";
+"pipeline.refresh" = "Refresh";
+"pipeline.refreshHint" = "Reloads compression stats and the export job queue";
+"pipeline.loadingA11y" = "Loading data pipeline";
+"pipeline.errorTitle" = "Couldn't load the data pipeline";
+"pipeline.retry" = "Retry";
+
+/* --- Native chrome: accordion accessibility --- */
+"a11y.expanded" = "Expanded";
+"a11y.collapsed" = "Collapsed";
+"a11y.toggleHint" = "Double tap to show or hide the data pipeline details";
