@@ -1,0 +1,111 @@
+/*
+  ConditionBuilder.strings
+  TeslaSync — P4 feature view · 0083 · ConditionBuilder (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ConditionBuilder resolves (table "ConditionBuilder") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  Group 1 mirrors the exact key set extracted from the web source
+  (features/automations/pages/ConditionBuilder.tsx) — the builder labels, the
+  condition-type / operator / geofence-state / other-automation-state options, the
+  signal-field labels (English in lib/signals.ts, routed through the facade here),
+  the day short-names, and the timezone labels. Group 2 backs the native-only chrome
+  (freshness / loading / empty / error / offline / retry) the Apple HIG states
+  contract requires for the `useGeofences` source.
+*/
+
+/* --- Builder labels (web automations.builder.*) --- */
+"automations.builder.selectGeofence" = "Select geofence...";
+"automations.builder.conditionType" = "Condition Type";
+"automations.builder.removeCondition" = "Remove condition";
+"automations.builder.addCondition" = "Add Condition";
+"automations.builder.signal" = "Signal";
+"automations.builder.operator" = "Operator";
+"automations.builder.minValue" = "Min";
+"automations.builder.maxValue" = "Max";
+"automations.builder.value" = "Value";
+"automations.builder.statePlaceholder" = "online";
+"automations.builder.startTime" = "Start";
+"automations.builder.endTime" = "End";
+"automations.builder.timezone" = "Timezone";
+"automations.builder.days" = "Days";
+"automations.builder.geofence" = "Geofence";
+"automations.builder.state" = "State";
+"automations.builder.otherAutomationId" = "Automation ID";
+
+/* --- Condition types (web CONDITION_TYPES) --- */
+"automations.conditions.signal" = "Signal Check";
+"automations.conditions.timeWindow" = "Time Window";
+"automations.conditions.geofence" = "Geofence State";
+"automations.conditions.otherAutomation" = "Other Automation";
+
+/* --- Signal operators (web CONDITION_SIGNAL_OPERATORS) --- */
+"automations.operators.equals" = "=";
+"automations.operators.notEquals" = "!=";
+"automations.operators.lessThan" = "<";
+"automations.operators.lessThanOrEqual" = "<=";
+"automations.operators.greaterThan" = ">";
+"automations.operators.greaterThanOrEqual" = ">=";
+"automations.operators.between" = "Between";
+"automations.operators.in" = "In";
+
+/* --- Geofence states (web GEOFENCE_STATES) --- */
+"automations.geofence.inside" = "Inside";
+"automations.geofence.outside" = "Outside";
+"automations.geofence.dwell" = "Dwell";
+
+/* --- Other-automation states (web OTHER_AUTOMATION_STATES) --- */
+"automations.otherAutomation.enabled" = "Enabled";
+"automations.otherAutomation.disabled" = "Disabled";
+"automations.otherAutomation.recentlyTriggered" = "Recently Triggered";
+
+/* --- Signal fields (web SIGNAL_FIELDS labels) --- */
+"automations.signals.battery_level" = "Battery Level";
+"automations.signals.inside_temp" = "Inside Temperature";
+"automations.signals.outside_temp" = "Outside Temperature";
+"automations.signals.speed" = "Speed";
+"automations.signals.is_locked" = "Is Locked";
+"automations.signals.is_charging" = "Is Charging";
+"automations.signals.is_climate_on" = "Climate On";
+"automations.signals.sentry_mode" = "Sentry Mode";
+"automations.signals.state" = "Vehicle State";
+
+/* --- Boolean value labels (web common.true / common.false) --- */
+"common.true" = "True";
+"common.false" = "False";
+
+/* --- Day short names (web DAYS, common.days.short.<n>) --- */
+"common.days.short.0" = "Sun";
+"common.days.short.1" = "Mon";
+"common.days.short.2" = "Tue";
+"common.days.short.3" = "Wed";
+"common.days.short.4" = "Thu";
+"common.days.short.5" = "Fri";
+"common.days.short.6" = "Sat";
+
+/* --- Timezones (web COMMON_TIMEZONES, keyed timezones.<value || 'utc'>) --- */
+"timezones.utc" = "UTC (Default)";
+"timezones.America/New_York" = "Eastern (US)";
+"timezones.America/Chicago" = "Central (US)";
+"timezones.America/Denver" = "Mountain (US)";
+"timezones.America/Los_Angeles" = "Pacific (US)";
+"timezones.Europe/London" = "London (UK)";
+"timezones.Europe/Berlin" = "Berlin (EU)";
+"timezones.Europe/Paris" = "Paris (EU)";
+"timezones.Asia/Tokyo" = "Tokyo (JP)";
+"timezones.Asia/Shanghai" = "Shanghai (CN)";
+"timezones.Australia/Sydney" = "Sydney (AU)";
+
+/* --- Native chrome: geofence-source states + accessibility --- */
+"automations.builder.live" = "Live";
+"automations.builder.stale" = "Stale";
+"automations.builder.offline" = "Offline";
+"automations.builder.geofenceLoading" = "Loading saved places…";
+"automations.builder.geofenceEmpty" = "No saved places yet.";
+"automations.builder.geofenceError" = "Couldn't load saved places";
+"automations.builder.geofenceOffline" = "Offline — showing no saved places";
+"automations.builder.retry" = "Retry";
