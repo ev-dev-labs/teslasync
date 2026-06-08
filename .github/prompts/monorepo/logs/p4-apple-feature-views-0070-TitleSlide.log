@@ -1,0 +1,213 @@
+================================================================================
+P4 · Feature view · 0070 — TitleSlide (Apple)
+Run: 2026-06-07T20:52-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/191
+Base: 76b13cc1
+Prompt: P4/feature-views/0070 — TitleSlide
+Web source (spec): web/src/features/analytics/components/review/TitleSlide.tsx
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (14/14) +
+      DEFERRED Xcode app build/test (Shared.xcframework unstaged — ADR-012, 0005/0086
+      precedent). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX SDK (macOS 15 deploy target)                  OK
+  iPhone 16 simulator ........ present (83717DEE-…)                                 OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     OK
+  pwsh (placeholder gate) .... PowerShell 7.6.2                                      OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                         OK
+  feature-views registration . project.yml (both app targets) + .swiftlint.yml      OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+
+  NOTE on active toolchain: `xcode-select -p` points at /Library/Developer/
+  CommandLineTools (no iPhoneSimulator SDK), so a bare `xcodebuild` fails ("tool
+  requires Xcode"). Full Xcode 26.5 IS installed at /Applications/Xcode.app and is
+  used here via the DEVELOPER_DIR override (the 0005/0086 precedent), which unlocks
+  the iOS 18 simulator SDK, the macOS 15 SDK, the iPhone 16 simulator, and `swift test`.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, both-SDK-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/TitleSlide.*) ===
+  TitleSlide.Model.swift     266  P1/S8 state-holder seam (TitleSlideSource ->
+                                  TitleSlideModel) + P1/S11 telemetry seam (view.opened) +
+                                  DTO (year + vehicleDisplayName) + InMemory source +
+                                  surface slug + P1/S10 i18n facade. SwiftUI-free.
+  TitleSlide.Adapter.swift    93  Pure projection: year fmt (web AnimatedNumber ->
+                                  fmtNumber(year,0) grouping parity) + vehicle-name trim /
+                                  em-dash null-safety + a11y summary. Foundation-only.
+  TitleSlide.swift           116  The SwiftUI surface: header (freshness chip + refresh) +
+                                  per-phase content switch + i18n text() helper.
+  TitleSlide.Views.swift     250  Presentational pieces: animated hero glyph (web emoji
+                                  scale entrance) + hero composition (AnimatedNumber year +
+                                  title + vehicle) + freshness chip + connectivity banner +
+                                  loading / empty / error sub-states.
+  TitleSlide.Previews.swift   65  #if DEBUG #Preview per state (content/loading/empty/error/
+                                  stale/offline).
+  TitleSlide.Tests.swift     204  XCTest: adapter + model + a11y (14 methods).
+  TitleSlide.strings          35  P1/S10 catalog (table "TitleSlide"): yearReview.title
+                                  (web parity key) + native chrome.
+                              ----
+                              1029  total (725 production .swift across the 4 shipped views)
+
+=== PARITY (web TitleSlide.tsx -> native) ===
+  data -> the web slide is presentational over `data: YearReview`, reading exactly
+    `data.year` + `data.vehicle.display_name`. Modeled as `TitleSlideDTO { year,
+    vehicleDisplayName }`; the loading/empty/error/stale/offline chrome the parent story
+    shell owns on the web is reproduced on the slide's own P1/S8 state-holder so EVERY
+    state renders natively.
+  composition -> 🚗 hero glyph (scale 0.5->1 + fade entrance, web motion.div) over the
+    animated year (web <AnimatedNumber> -> TSAnimatedNumber), the "Year in Review"
+    subtitle, and the vehicle name. The three text lines stagger in (web motion delays
+    0.3/0.5/0.7s) via TSFadeIn. Layout uses platform tokens (P1/S9), NOT ported Tailwind.
+  shared components -> @/components/data-display (AnimatedNumber) -> TSAnimatedNumber;
+    @/components/motion (motion) -> TSFadeIn + a reduce-motion hero scale entrance. Both
+    compiled against the REAL Components in the typechecks below. Recharts -> none /
+    Leaflet -> none (no chart/map on this surface).
+  states (all render) -> loading (redacted hero skeleton) · empty (ContentUnavailableView,
+    never a blank box) · error (QueryError-equivalent with retry; native chrome since the
+    web relies on the story shell's react-query handling) · stale (freshness chip + banner +
+    one guarded auto-refresh) · offline (cached value + chip + banner) · content. Cached
+    data stays visible behind refresh/transient failure, matching the web shell.
+  i18n -> the source key `t('yearReview.title','Year in Review')` resolves through the
+    P1/S10 facade (table "TitleSlide", key "yearReview.title" = "Year in Review" — the
+    canonical top-level yearReview.* namespace from web/src/i18n/en.json). Native chrome
+    (titleSlide.live/updating/stale/offline/refresh/retry/loading/noData/emptyHint/
+    errorTitle/staleBanner/offlineBanner) all present in TitleSlide.strings. No English
+    literal in Swift (Text(verbatim:) only wraps facade-resolved strings + the decorative
+    emoji + the em-dash sentinel).
+  a11y -> the hero is ONE combined VoiceOver element speaking the pure
+    TitleSlideAccessibility.summary ("Year in Review, 2,026, <vehicle>"); the emoji + the
+    error icon are accessibilityHidden; the freshness chip / refresh / retry controls each
+    carry an accessibilityLabel; Dynamic Type via tokens; Reduce Motion gates the hero
+    scale entrance, the TSFadeIn stagger, and the skeleton shimmer.
+  telemetry -> TitleSlideModel.start() emits viewOpened(surface:"TitleSlide") -> bridges
+    the shared Telemetry.track (P1/S11). Asserted by a spy test (fires exactly once).
+
+=== YEAR-GROUPING PARITY NOTE (deliberate, pinned) ===
+  The web year glyph is `<AnimatedNumber value={data.year} />`, whose default decimals=0
+  feeds fmtNumber(year, 0) -> value.toLocaleString(locale, {min/maxFractionDigits:0}).
+  For a four-digit year that EMITS a grouping separator (en-US -> "2,026"). Per the Honesty
+  Covenant (no silent drift / no parity shortcuts) and the YearReviewWidget.Adapter
+  precedent ("reproduce the web call chain verbatim rather than correcting it"), the native
+  adapter reproduces this EXACTLY — TitleSlideFormat.year(2026,"en_US") == "2,026" — so a
+  user with the web and native recaps open side by side sees identical text. Pinned by
+  TitleSlideAdapterTests.testYearGroupsLikeWebFmtNumber (+ locale + sub-threshold cases).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (Model + Adapter + swift View + Views,
+    compiled with the REAL design Tokens + REAL Sources/Components closure minus the one
+    app-coupled UnitFormatters.swift; Swift 6 language mode):
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+        -swift-version 6 <Tokens + Design + Components> <4 surface views>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0,
+    -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+    + Previews compiled under -D DEBUG (SwiftUI #Preview macros, real Xcode toolchain):
+      MAC_PREVIEW_TYPECHECK_EXIT=0                                                  OK
+[3] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+    SwiftPM harness (REAL production TitleSlide.swift/Model/Adapter/Views + the REAL design
+    Tokens + minimal real-interface shims for TSAnimatedNumber/TSFadeIn/TSSkeleton, clearly
+    labeled, used ONLY in the throwaway harness — NEVER shipped), Swift 6 language mode:
+      Executed 14 tests, with 0 failures (0 unexpected) in 0.003 seconds
+        TitleSlideAdapterTests          6/6  (year grouping parity, sub-threshold, locale
+                                              separator, vehicle-name trim, em-dash fallback,
+                                              resolvePhase matrix)
+        TitleSlideModelTests            7/7  (initial content+projection, loading/error phases,
+                                              cached-stays-content, refresh delegation, stale
+                                              auto-refresh guard, connection/fetching tracking,
+                                              view.opened once)
+        TitleSlideAccessibilityTests    1/1  (combined hero summary "Year in Review, 2,026, …")
+      SWIFT_TEST_EXIT=0                                                             OK
+[4] swiftlint --strict on the 6 surface .swift files (explicit paths; config
+    apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_SURFACE_EXIT=0                                                           OK
+    Whole-tree note: a bare `swiftlint --strict` over apps/apple (776 files) reports 1
+    violation — TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+    (function_body_length, 78>50). That file is a SIBLING surface (0055), is PRE-EXISTING
+    (the only added files are TitleSlide.*), and is OUTSIDE this prompt's allowed files.
+    This surface contributes 0 violations.
+[5] swiftformat --lint apps/apple (gate command, config apps/apple/.swiftformat):
+      0/780 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 OK
+[6] check-placeholders (ADR-011 stub gate; pwsh):
+      Gate command as written (`-Path apps/apple/TeslaSync/feature-views/TitleSlide`,
+      a non-existent literal path -> trivially scans nothing):
+        PLACEHOLDER_COUNT=0   EXIT=0                                               OK
+      REAL temp-copy scan of the 7 TitleSlide files (the meaningful evidence):
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0                        OK
+      Whole-dir note: scanning apps/apple/TeslaSync/feature-views reports COUNT=2 — both in
+      a SIBLING surface (InfrastructureSection.Previews.swift:7,
+      InfrastructureSection.Views.swift:289, the word "Placeholder"), PRE-EXISTING and
+      OUTSIDE this prompt's allowed files. NONE in TitleSlide.*.
+[7] xcodegen generate — project + all targets + schemes generate cleanly; the 7 TitleSlide
+    files are picked up by the existing TeslaSync/feature-views source path (42 pbxproj refs):
+      XCODEGEN_EXIT=0                                                              OK
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host, full Xcode 26.5):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **   XCODEBUILD_TARGET_EXIT=65
+    Why deferred (code-unrelated, outside this prompt's allowed files — Honesty rule 7):
+      Shared.xcframework is not staged: the app target links the KMP core; staging it needs a
+      Kotlin/Native Gradle build (the scheme runs it as a pre-build phase). This is the
+      integration/CI runner's job (ADR-012, apps/macos-pending-verifications.md) and is
+      independent of this UI surface — the concrete missing-framework error is captured above.
+      Unlike the 0005 predecessor, the TeslaSync/feature-views source path is ALREADY
+      registered in project.yml (both app targets) AND .swiftlint.yml, so NO registration
+      wiring is owed here; xcodegen EXIT=0 confirms the surface is wired into the project.
+    The MEANINGFUL validation IS performed above: the surface compiles against BOTH the iOS 18
+    simulator and macOS 15 SDKs (steps [1]/[2]) and its full XCTest suite EXECUTES green
+    (14/14, step [3]). Under Xcode these same tests run in the TeslaSync(/-macOS) test target.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (TitleSlideSource->TitleSlideModel);
+      no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — yearReview.title ("Year in
+      Review") present in TitleSlide.strings (+ 12 native-chrome keys).
+  [x] Accessibility labels on every interactive element; the hero is one combined element.
+  [x] Tests: adapter + model + a11y — 14 methods, EXECUTED 14/14 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 on TitleSlide.*.
+  [x] EXIT=0 / STATUS=DONE — host gates + both-SDK compiles + executed tests green; Xcode app
+      build/test DEFERRED with captured evidence (code-unrelated infra blocker, outside allowed files).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real
+                       XCODEBUILD_TARGET_EXIT=65 missing-framework error captured; every "OK" is a
+                       command actually run with its real exit code (incl. iOS+macOS SDK compiles
+                       and an EXECUTED 14/14 XCTest run). The 1 whole-tree swiftlint hit and the 2
+                       whole-dir placeholder hits are disclosed as PRE-EXISTING sibling issues, not
+                       hidden.
+  2  No scope narrowing: implemented ALL states + i18n + a11y + telemetry + freshness + refresh +
+                       stale auto-refresh; the year-grouping web quirk is reproduced, not "fixed".
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0 on the surface. (The
+                       3 component shims exist ONLY in the throwaway swift-test harness — clearly
+                       labeled, NEVER in shipped code; the surface compiles against the REAL
+                       Components in steps [1]/[2].)
+  5  No parity shortcuts: data + composition + states + shared-component mapping + i18n key all
+                       reproduced; year formatting matches web byte-for-byte.
+  6  No delegation : authored directly.
+  7  No predecessor bypass : same DEFERRED disposition + ADR-012 rationale as 0005/0086, with
+                       captured real evidence.
+  8  No commit on red : all code-level gates green before commit.
+  9  No silent drift : the deliberate year-grouping parity is documented + pinned by a test.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
