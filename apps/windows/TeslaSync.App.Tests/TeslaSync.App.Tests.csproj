@@ -126,6 +126,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.Model.cs" Link="Widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.ViewModel.cs" Link="Widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.Source.cs" Link="Widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.Model.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.ViewModel.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.Source.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.Source.cs" />
   </ItemGroup>
 
   <!--
