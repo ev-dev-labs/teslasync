@@ -1,0 +1,41 @@
+/*
+  CollapsibleCommandGroup.strings
+  TeslaSync — P4 feature view · 0224 · CollapsibleCommandGroup (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `CollapsibleCommandGroup` resolves (table "CollapsibleCommandGroup") lives here
+  with its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the category labels the web `CollapsibleCommandGroup` renders
+  through `CATEGORY_META[category].labelKey` (web source
+  features/system/commands.ts). The second group backs the native chrome the web
+  carries implicitly (the count read-out, the disclosure accessibility state/hint,
+  and the never-blank empty state), so the Swift sources hold no English literals.
+*/
+
+/* --- Category labels (web CATEGORY_META labelKey → fallback) --- */
+"commands.cat.security" = "Security & Access";
+"commands.cat.climate" = "Climate & Comfort";
+"commands.cat.climateProtect" = "Climate Protection";
+"commands.cat.charging" = "Charging";
+"commands.cat.doors" = "Doors & Trunk";
+"commands.cat.drive" = "Drive";
+"commands.cat.windows" = "Windows";
+"commands.cat.sunroof" = "Sunroof";
+"commands.cat.schedules" = "Schedules";
+"commands.cat.alerts" = "Alerts & Location";
+"commands.cat.navigation" = "Navigation";
+"commands.cat.software" = "Software";
+"commands.cat.vehicle" = "Vehicle";
+"commands.cat.media" = "Media";
+
+/* --- Native chrome: accessibility + empty state --- */
+"collapsibleGroup.a11y.countCommands" = "%lld commands";
+"collapsibleGroup.a11y.expanded" = "Expanded";
+"collapsibleGroup.a11y.collapsed" = "Collapsed";
+"collapsibleGroup.a11y.toggleHint" = "Double tap to show or hide the commands";
+"collapsibleGroup.empty.title" = "No commands";
+"collapsibleGroup.empty.message" = "No commands are available in this group.";
