@@ -1,0 +1,57 @@
+/*
+  NotificationGroupRow.strings
+  TeslaSync — P4 feature view · 0190 · NotificationGroupRow (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `NotificationGroupRow` resolves (table "NotificationGroupRow") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the EXACT keys extracted from the web source
+  (features/notifications/components/NotificationGroupRow.tsx). The web `{{count}}`
+  interpolation is expressed natively as a positional `%lld` so
+  String.localizedStringWithFormat applies locale-correct number formatting. The
+  remainder backs the native state envelope (load/empty/error chrome, freshness
+  chip + connectivity banner), the severity labels, and the VoiceOver summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"notifications.group.markReadSuccess" = "Marked %lld thread members as read";
+"notifications.group.markReadError" = "Could not mark group as read";
+"notifications.group.collapse" = "Hide similar";
+"notifications.group.expand" = "Show %lld similar";
+"notifications.group.similar" = "+%lld similar";
+"notifications.group.vehicleAffected" = "%lld vehicles affected";
+"notifications.group.markRead" = "Mark group read";
+"notifications.group.loadingMembers" = "Loading thread members…";
+"notifications.group.membersError" = "Could not load thread members";
+"notifications.group.noMembers" = "No thread members found";
+
+/* --- Severity labels (web `rule?.severity ?? 'info'`) --- */
+"notifications.group.severity.info" = "Info";
+"notifications.group.severity.warn" = "Warning";
+"notifications.group.severity.critical" = "Critical";
+
+/* --- Load / empty / error chrome (native P4 envelope) --- */
+"notifications.group.loading" = "Loading notification";
+"notifications.group.empty" = "No notifications";
+"notifications.group.errorTitle" = "Couldn't load notification";
+"notifications.group.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"notifications.group.live" = "Live";
+"notifications.group.stale" = "Stale";
+"notifications.group.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"notifications.group.staleBanner" = "Reconnecting — this thread may be stale";
+"notifications.group.offlineBanner" = "Offline — showing the last known thread";
+
+/* --- Accessibility (VoiceOver) --- */
+"notifications.group.a11y.read" = "Read";
+"notifications.group.a11y.unread" = "Unread";
+"notifications.group.a11y.unreadCount" = "%lld unread";
+"notifications.group.a11y.thread" = "Notification thread";
+"notifications.group.a11y.toast" = "Notification";
