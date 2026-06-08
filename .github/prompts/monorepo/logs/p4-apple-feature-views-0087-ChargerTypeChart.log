@@ -1,0 +1,257 @@
+=== P4 Feature view 0087 ChargerTypeChart (Apple) ===
+Host: Darwin arm64 (Apple Silicon) · Xcode 26.5 (Build 17F42) present at
+/Applications/Xcode.app (activated for this run via DEVELOPER_DIR; the default
+xcode-select points at CommandLineTools). Swift 6.3.2. swiftlint + swiftformat +
+pwsh + xcodegen on PATH. iPhone 16 simulator + iOS/macOS 26.5 SDKs available.
+
+Web source (THE specification):
+  web/src/features/charging/components/charging-curve/ChargerTypeChart.tsx
+  (+ its helpers.ts `getChargerLabel` / `avg` / `durationMinutes`, types.ts
+   `ChargerTypeStats`, lib/colors.ts `CHARGER_COLORS`, lib/numberFormat.ts
+   `fmtNumber` / `fmtInt`, components/charts `ChartContainer`)
+Native output (allowed files):
+  apps/apple/TeslaSync/feature-views/ChargerTypeChart.{swift,Models,Adapter,Model,Views,Chart,Previews,Tests}.swift
+  apps/apple/TeslaSync/feature-views/ChargerTypeChart.strings
+  + this log.
+(The surface is split across Models/Adapter/Model/Views/Chart so every file stays
+ under the 400-line file_length rule; all names match the allowed `ChargerTypeChart.*`
+ glob. No sibling / shared / project.yml files were edited.)
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web → native)
+---------------------------------------------------------------------------
+  data:   ChargingSession slice {charger_type, peak_power_w(W), total_energy_added_wh(Wh),
+            started_at, ended_at}                       → ChargingSessionInput (Models, SI)
+  group:  getChargerLabel(s) (Tesla→Supercharger; other charger_type→DC Fast;
+            peak>20kW→DC Fast; else Home / AC)          → ChargerTypeProjection.classify
+  stats:  chargerTypeStats useMemo (Map insertion order; count, avgKw=peak_power_w/1000,
+            avgKwh=total_energy_added_wh/1000, avgDuration=durationMinutes) → ChargerTypeProjection.points
+  shell:  <ChartContainer title subtitle ariaLabel>     → TSFadeIn + tokenized glass card
+            (Color.TS.surface + TSRadius.lg + Color.TS.border), header + subtitle
+  chart:  Recharts ComposedChart, <Bar avgKw> (left kW axis) + <Bar avgKwh opacity 0.6>
+            (right kWh axis), per-charger <Cell> fills   → Swift Charts Chart{ BarMark }
+            clustered by metric via .position(by:), .foregroundStyle = adaptive charger
+            token (energy at 0.6 opacity). The web dual y-axes collapse to one Swift
+            Charts y-domain (single scale per Chart); the two units are disambiguated by
+            the metric legend, the tooltip ("X kW" / "Y kWh"), and the data table.
+  colors: CHARGER_COLORS intent supercharger #ef4444 / dc #f59e0b / home #10b981
+            → statusDanger / statusWarning / statusSuccess adaptive tokens (the web map
+            only keys "Supercharger"; the obvious per-charger intent from its internal
+            supercharger/dc/home keys is reproduced — each charger its own hue).
+  tip:    <Tooltip content={<ChartTooltip/>}> (Avg Power / Avg Energy)
+            → ChargerTypeTooltip via .chartXSelection RuleMark annotation
+  legend: per-charger bottom list `{count} sessions · {avgDuration} min avg`
+            → ChargerTypeBreakdownRows (color swatch + localized name + same text)
+  table:  ChartContainer data + dataColumns (Charger Type / Sessions / Avg kW / Avg kWh /
+            Avg minutes) accessible fallback           → ChargerTypeDataTable (Grid)
+  i18n:   every t(key,default) from source resolved through ChargerTypeStrings facade
+            (table "ChargerTypeChart"); charger display names localized (fallbacks
+            identical to the web getChargerLabel strings) so no English literal ships.
+
+STATES (every one renders — no hidden surface):
+  loading  → ChargerTypeLoadingChart (TSSkeleton bars; reduce-motion safe)
+  content  → ChargerTypeBarChart + metric legend + breakdown rows + data table
+  empty    → ChargerTypeEmpty (ContentUnavailableView, web common.noData) — never blank
+  error    → ChargerTypeError (QueryError-equiv, Retry → model.refresh())
+  stale    → freshness chip (Stale) + connectivity banner + one guarded auto-refresh
+  offline  → freshness chip (Offline) + banner; keeps cached columns, no refetch
+a11y: container summary (title + charger-type count + total sessions), per-charger
+  VoiceOver value carrying all 5 column figures (Sessions / Avg kW / Avg kWh / Avg
+  minutes), reduce-motion animation gate, Dynamic Type via system fonts/tokens.
+telemetry: P1/S11 view.opened(surface:"ChargerTypeChart") emitted once on appear.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (per-surface, 8 swift files)
+    $ swiftformat --lint TeslaSync/feature-views/ChargerTypeChart.*.swift ChargerTypeChart.swift
+    → 0/8 files require formatting.
+    MYFORMAT_EXIT=0   ✅
+
+[2] swiftformat --lint apps/apple   (THE gate command, whole tree)
+    → SwiftFormat completed. 0/846 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0   ✅
+
+[3] swiftlint (per-surface, explicit paths, --strict)
+    $ swiftlint lint --strict --no-cache TeslaSync/feature-views/ChargerTypeChart.*.swift
+    → Linting 8 files. Done linting! Found 0 violations, 0 serious in 8 files.
+    MYLINT_EXIT=0   ✅  (this surface is clean)
+
+[4] swiftlint --strict   (THE bare gate command, from apps/apple)
+    → Linting 842 files. Found 1 violation, 1 serious.
+    LINT_EXIT=2   ⚠️ PRE-EXISTING SIBLING DEFECT, NOT THIS SURFACE:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+      error: Function Body Length Violation (currently 78 lines) (function_body_length)
+    Committed in b7fffb07 (the LifetimeStatsWidget P4 prompt), outside this prompt's
+    allowed files; editing it would violate the no-sibling-edit / predecessor-bypass
+    rule. grep of the violation set for "ChargerTypeChart" = 0 hits. Reported, not
+    hidden (Covenant #1). Same pre-existing defect noted in sibling log 0047-SentryModeChart.
+
+[5] check-placeholders.ps1   (THE gate command + meaningful per-file scan)
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ChargerTypeChart -Language swift
+    → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    Per real file (ChargerTypeChart.{swift,Models,Adapter,Model,Views,Chart,Previews,Tests}.swift):
+    → every file PLACEHOLDER_COUNT=0, PLACEHOLDER_ALLOWED=0.
+    PLACEHOLDER_EXIT=0   ✅  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+[6] EXECUTED isolated SwiftPM build + the REAL XCTest suite (Swift 6 strict
+    concurrency, macOS host) against the REAL design system (apps/design/generated/
+    apple/Tokens.swift) + the REAL Motion.swift (TSFadeIn) + a faithful TSSkeleton
+    shim + the 7 ChargerTypeChart production/preview files:
+    $ swift build   → [13/13] Compiling … Build complete! (10.82s)     BUILD_EXIT=0  ✅
+    $ swift test    → Executed 26 tests, with 0 failures               TEST_EXIT=0   ✅
+    Coverage: classify == getChargerLabel (Tesla / other charger_type / >20 kW / Home),
+      first-occurrence grouping + aggregates (avgKw/avgKwh/avgDuration), durationMinutes
+      (missing/non-positive → 0; 90 s → 2 min), avg (empty → 0), chartRows flatten in
+      Power→Energy order, phase resolution, totals, locale formatting (POSIX no-group +
+      en-US "1,234"); model phase across loading/loaded/empty/failed, view.opened once,
+      stale auto-refresh exactly once + re-arm on live, offline keeps cached/no refetch,
+      retry/stop; a11y chart summary + per-charger row value. (Two test asserts were
+      tightened during this run — the XCTAssertEqual accuracy overload rejects an
+      Optional, and en_US_POSIX intentionally omits grouping separators — both fixed,
+      re-run green; the @MainActor View slug is read in a MainActor test.)
+
+[7] OUT-OF-MODULE type-check of the full SwiftUI + Swift Charts view set
+    (real Tokens.swift + real Motion.swift[TSFadeIn] + faithful TSSkeleton shim + the
+    7 ChargerTypeChart view/model/adapter/previews files), Swift 6 strict concurrency,
+    for the iOS gate platform:
+    iOS Simulator (SDK iPhoneSimulator26.5, -target arm64-apple-ios18.0-simulator):
+      $ xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+        -strict-concurrency=complete … (incl. ChargerTypeChart.Previews.swift #Preview)
+      IOS_TYPECHECK_EXIT=0   ✅
+    macOS (SDK MacOSX26.5): fully COMPILED + TESTED by gate [6]'s SwiftPM build/test
+    (arm64-apple-macosx, Swift 6 strict) — stronger than a type-check.   ✅
+
+===========================================================================
+XCODE APP-TARGET GATE — DEFERRED (real probe; NOT claimed green; Covenant #1/#8)
+===========================================================================
+  Gate as written:
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+
+  Real probe performed on this host (not assumed):
+    $ xcodebuild -version            → Xcode 26.5 (17F42)                 ✅ present
+    $ xcodegen generate              → Created TeslaSync.xcodeproj (gitignored)  ✅
+    $ xcodebuild -list               → Schemes: TeslaSync, TeslaSync-macOS, … ✅
+    $ grep -c ChargerTypeChart …project.pbxproj → 54   (this surface IS registered;
+        project.yml now lists TeslaSync/feature-views, so the app target compiles
+        these files — a green build WOULD exercise this code)
+    $ ./Scripts/build-shared-xcframework.sh → Gradle :core:assembleSharedXCFramework
+        BUILD SUCCESSFUL in 6m 30s → Shared.xcframework staged   ✅ (KMP pre-action ran)
+    $ xcodebuild -scheme TeslaSync -destination '…iPhone 16' build → ** BUILD FAILED **
+        IOS_EXIT=65.  Root cause (deduped from the build log):
+          AuditPanel.Tests.swift:19:8: error: unable to resolve module dependency: 'XCTest'
+        i.e. the co-located `*.Tests.swift` files in TeslaSync/feature-views are compiled
+        INTO the app target, which cannot import XCTest. There are 30 such co-located
+        test files (AuditPanel, BackendTool, …, SentryModeChart, ChargerTypeChart) — the
+        established per-surface convention. The compiler fails at module-dependency
+        resolution on the first one (AuditPanel.Tests.swift, NOT this surface).
+        grep "error:" … | grep ChargerTypeChart | grep -v .Tests.swift → 0 hits
+        (every ChargerTypeChart PRODUCTION file is error-free; the only ChargerTypeChart
+         lines in the log are notes: "ChargerTypeChart.Tests.swift is part of module
+         'TeslaSync'; ignoring import").
+    $ xcodebuild -scheme TeslaSync-macOS build → ** BUILD FAILED **
+        MAC_EXIT=65.  Root cause:
+          "TeslaSync-macOS" has entitlements that require signing with a development
+          certificate. (and TeslaSyncWidgets-macOS) — this runner provisions no signing
+        identity. Again 0 ChargerTypeChart production-file errors.
+
+  Why DEFERRED (none a defect in THIS surface's code):
+    (a) The app target compiles the co-located per-surface `*.Tests.swift` files (XCTest)
+        — a project-structure issue owned by the P4/P99 integration gate, identical for
+        all 30 feature-view surfaces. This surface follows the SAME convention as its
+        predecessors (e.g. SentryModeChart.Tests.swift); fixing the build-system wiring
+        is out of this prompt's allowed files.
+    (b) The mandatory "Stage Shared.xcframework" pre-action builds the KMP core via Gradle
+        (ADR-004) — heavy Kotlin/Native multi-platform link; it ran green here (6m30s) but
+        is unrelated to this surface.
+    (c) macOS target code-signing for hosted `test`.
+  These are exactly the artifacts apps/macos-pending-verifications.md defers to the
+  ADR-012 macos-latest CI runner, and they match the user-approved "code-complete +
+  DEFERRED Xcode gate" disposition used by every P4 surface to date (0010-ToolCard,
+  0047-SentryModeChart). This surface is instead verified green by gates [6] (isolated
+  Swift 6 strict build + 26 executed tests against the REAL design system) and [7]
+  (Swift-6-strict iOS type-check + macOS SwiftPM compile of the rendered SwiftUI/Charts
+  view set) — real compiler verification on both gate platforms.
+
+  IOS_EXIT=DEFERRED  MAC_EXIT=DEFERRED  (real exit 65 each; pre-existing, unrelated;
+  not green, not faked)
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : Xcode app build/test reported DEFERRED with a REAL
+                          xcodegen + KMP gradle + xcodebuild probe (IOS_EXIT=65 /
+                          MAC_EXIT=65); the pre-existing bare-swiftlint failure is
+                          reported (not hidden); every ✅ is a command run on THIS host
+                          with its real exit code pasted.
+  2 No scope narrowing  : implemented ALL composition + every state (loading/content/
+                          empty/error/stale/offline) + chart + tooltip + metric legend +
+                          breakdown rows + data table (5 columns) + a11y + i18n + P1/S11
+                          telemetry.
+  3 No skip-and-assume  : each host gate executed; the Xcode path was actually probed
+                          (xcodegen + -list + pbxproj grep + a real KMP build that SUCCEEDED
+                          + real iOS & macOS xcodebuild runs whose logs were deduped).
+  4 No stubs as final   : complete implementations; placeholder gate COUNT=0; 26 real
+                          tests executed green (no hand-written self-test).
+  5 No parity shortcuts : faithful port of getChargerLabel bucketing, the Map-insertion
+                          grouping, avgKw/avgKwh/avgDuration aggregates, the Power-before-
+                          Energy bar order, per-charger color intent, the bottom list, the
+                          ChartContainer dataColumns table, and the exact web i18n keys.
+  6 No delegation       : authored directly (no sub-agent delegation of the surface).
+  7 No predecessor bypass: did NOT self-register feature-views into project.yml (already
+                          present; integration scope), did NOT edit the shared
+                          Localizable.xcstrings (parallel-unsafe) — strings ship as the
+                          per-surface ChargerTypeChart.strings table; did NOT edit any
+                          sibling file (incl. the dashboard-widget with the pre-existing
+                          lint violation) or apps/macos-pending-verifications.md (out of
+                          this prompt's allowed files).
+  8 No commit on red    : the COMMITTED artifact (ChargerTypeChart.* + this log) is GREEN
+                          on every host-runnable gate AND on a real isolated Swift 6
+                          build + 26 tests; the deferred full-app gate is RED only on
+                          pre-existing, unrelated surfaces (XCTest-in-app-target, macOS
+                          signing) which this commit neither introduces nor touches.
+  9 No silent drift     : changes confined to the 8 ChargerTypeChart.*.swift +
+                          ChargerTypeChart.strings + this log. The generated
+                          TeslaSync.xcodeproj and staged Frameworks/Shared.xcframework are
+                          git-ignored build outputs (not committed). Two pre-existing
+                          working-tree edits to web/ admin .tsx files predate this task and
+                          are left unstaged.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native ChargerTypeChart shipped at parity with the web source:
+  a pure, executed-green projection core (Foundation, Swift 6 strict) porting
+  getChargerLabel + the chargerTypeStats aggregation; a P1/S8 state-holder seam (no
+  view HTTP), P1/S10 i18n facade, P1/S11 view.opened telemetry, the native Swift Charts
+  clustered bar chart with selection tooltip + metric legend + per-charger breakdown
+  rows + the ChartContainer dataColumns data table, and every prompt state (loading/
+  content/empty/error/stale/offline) with VoiceOver + Dynamic Type + reduce-motion. All
+  host-runnable gates pass; the surface compiles under Swift 6 strict concurrency on
+  BOTH the iOS-Simulator and macOS SDKs and its 26 tests pass. The Xcode app build/test
+  is DEFERRED to the P4 integration runner (co-located per-surface *.Tests.swift compiled
+  into the app target + macOS development signing — neither a defect in this code; the
+  KMP Shared.xcframework pre-action built green here). The bare swiftlint gate's single
+  violation is a pre-existing sibling file (LifetimeStatsWidget.Adapter.swift) outside
+  this prompt's allowed-files scope.
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/ChargerTypeChart.swift \
+          apps/apple/TeslaSync/feature-views/ChargerTypeChart.Models.swift \
+          apps/apple/TeslaSync/feature-views/ChargerTypeChart.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/ChargerTypeChart.Model.swift \
+          apps/apple/TeslaSync/feature-views/ChargerTypeChart.Views.swift \
+          apps/apple/TeslaSync/feature-views/ChargerTypeChart.Chart.swift \
+          apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift \
+          apps/apple/TeslaSync/feature-views/ChargerTypeChart.Tests.swift \
+          apps/apple/TeslaSync/feature-views/ChargerTypeChart.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0087-ChargerTypeChart.log
+  git commit -m "feat(apps/apple/feature-views): add ChargerTypeChart surface (P4)"
+
+EXIT=0
+STATUS=DONE
