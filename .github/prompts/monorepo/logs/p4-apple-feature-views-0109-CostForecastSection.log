@@ -1,0 +1,306 @@
+=== P4 Feature view 0109 CostForecastSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/CostForecastSection.*
+Web src : web/src/features/charging/components/cost-analysis/CostForecastSection.tsx
+Runner  : Darwin arm64 · swift 6.3.2 · Xcode 26.5 (17F42) at /Applications/Xcode.app
+          (driven via DEVELOPER_DIR; the box's default dir is CommandLineTools)
+ADR refs: ADR-002 (shared SwiftUI source, iOS+macOS) · ADR-004 (KMP Shared.xcframework)
+          · ADR-009 · ADR-013 (live freshness) · ADR-016 (telemetry)
+Pattern : self-contained protocol-seam surface (predecessor parity:
+          feature-views/ChargingDetailSection 0053) — no direct `import Shared`.
+
+----------------------------------------------------------------------
+SHIPPED FILES (allowed scope: CostForecastSection.* + this log)
+----------------------------------------------------------------------
+  CostForecastSection.Adapter.swift   pure projection core (CostNumeric.safe/axisLabel,
+                                      the hasForecast / hasCostPerKwhTrend gates, the
+                                      composed forecast-chart assembly — actual area,
+                                      projected line, 95% band, ordered months, $ axis
+                                      bound — the cost-per-kWh series + bound, a11y)   361 L
+  CostForecastSection.Model.swift     P1/S8 CostForecastSource seam + @Observable
+                                      CostForecastModel + P1/S11 view.opened telemetry
+                                      + formatting seam (useFormatting) + P1/S10
+                                      CostForecastStrings facade                       316 L
+  CostForecastSection.swift           main feature view, surfaceSlug, state switch      90 L
+  CostForecastSection.Views.swift     panel shell (+TrendingUp icon), the two chart
+                                      panels, empty state, freshness banner, error
+                                      state, skeleton                                  262 L
+  CostForecastSection.Charts.swift    Swift Charts: composed forecast chart (band +
+                                      actual area/line + projected dashed line) +
+                                      cost-per-kWh line chart + legend + palette       264 L
+  CostForecastSection.Previews.swift  7 DEBUG previews (content / trend-only / empty /
+                                      loading / error / stale / offline)               135 L
+  CostForecastSection.strings         P1/S10 per-surface catalog (15 keys)              36 L
+  CostForecastSection.Tests.swift     adapter + gates + chart projection + cost-per-kWh
+                                      + formatting + a11y + model XCTest (29 cases)     377 L
+                                                                              total ≈ 1841 L
+
+----------------------------------------------------------------------
+PARITY (web CostForecastSection.tsx -> native)
+----------------------------------------------------------------------
+  [x] Prop `forecastData: CostForecastData | undefined` -> P1/S8 CostForecastSource
+      seam pushing CostForecastUpdate (status/connection/data) — view holds no HTTP
+      (the web section is itself fed `forecastData` by its parent cost-analysis page).
+  [x] useTranslation -> CostForecastStrings facade (table "CostForecastSection").
+  [x] useChartPalette -> TSChartPalette (web `palette[0]` -> color(at: 0)); the web
+      hardcoded series hexes are reproduced exactly: forecast/band #a855f7,
+      cost-per-kWh #06b6d4 (CostForecastPalette).
+  [x] useFormatting (the `$` y-axis unit / tooltip) -> CostForecastFormatting
+      (formatCurrency = "$" + grouped fixed-decimals; formatCurrencyCompact = "$" +
+      abbreviated magnitude for the dollar axis).
+  [x] `safe()` (@/components/charts) -> CostNumeric.safe (finite-or-0).
+  [x] hasForecast = historical.length >= 3 && forecast.length > 0
+      -> CostForecastProjection.hasForecast.
+  [x] hasCostPerKwhTrend = historical.length > 1
+      -> CostForecastProjection.hasCostPerKwhTrend.
+  [x] Panel 1 "Cost Forecast" (TrendingUp icon) ComposedChart:
+        • ci_low + ci_band stacked area (web's transparent-base trick) -> a NATIVE
+          Swift Charts band AreaMark(yStart: costLow, yEnd: costHigh) named
+          "95% Confidence"; Math.max(0, high-low) preserved by normalising inverted
+          bands.
+        • Area dataKey="actual" (stroke palette[0], url(#actualCostFill) 0.3) ->
+          AreaMark gradient + LineMark stroke "Actual Cost".
+        • Line dataKey="forecast" (#a855f7, strokeDasharray "8 4", connectNulls=false)
+          -> dashed LineMark "Projected Cost" over the forecast months only (the
+          actual/forecast gap is preserved — separate month subsets).
+        • YAxis unit="$" -> leading $-compact axis ; Legend -> custom legend chips.
+        EmptyState "Need at least 3 months of charging data for cost forecasting."
+        -> CostForecastEmptyState (web needData).
+  [x] <ForecastDetails forecastData=…/> — a SIBLING surface with its OWN prompt
+      (cost-analysis ForecastDetails). None of its i18n keys are in THIS prompt's
+      extracted list; the parent cost-analysis page composes it alongside this surface.
+      Out of scope here ("Out of Scope: other surfaces in the same feature") and NOT
+      stubbed — see "SCOPE NOTE" below.
+  [x] Panel 2 "Cost per kWh Trend" LineChart dataKey="cost_per_kwh" (#06b6d4, dots r3)
+      -> CostPerKwhChart (LineMark + PointMark, $ axis at 2 decimals), name "$/kWh" ;
+      EmptyState "Need at least 2 months of charging data to show the cost per kWh
+      trend." -> CostForecastEmptyState (web needTrendData).
+  [x] i18n keys verified verbatim against web/src/i18n/en.json (costAnalysis.forecast.*):
+      title, confidence, actual, projected, needData, costPerKwhTrend, costPerKwh,
+      needTrendData — 8 web keys reproduced + 7 native-chrome keys (a11y, loading,
+      errorTitle, retry, refresh, staleBanner, offlineBanner). used==defined == 15/15.
+
+SCOPE NOTE (ForecastDetails): the web component nests a separate `<ForecastDetails>`
+component between its two charts. That component is a distinct surface with its own
+prompt and its own i18n keys (costAnalysis.forecast.breakdown / savings / insights /
+…) — NONE of which appear in this prompt's "Titles / labels / i18n keys" list. This
+prompt's allowed files are CostForecastSection.* only, so the ForecastDetails files
+cannot (and must not) be created here. This surface therefore ships its OWN two
+charts + every state at full parity; the ForecastDetails seam is documented in
+CostForecastSection.swift's header. This is the prompt's intended decomposition, not
+scope narrowing (covenant #2): the extracted data sources, i18n keys, and "(none for
+maps)" all describe exactly the two charts implemented here.
+
+----------------------------------------------------------------------
+STATES (every state renders — no hidden surfaces)
+----------------------------------------------------------------------
+  [x] loading   CostForecastSkeleton (2 redacted panels)
+  [x] content   both chart panels with data
+  [x] empty     loaded + empty data -> each panel renders its own EmptyState (web
+                shows EmptyState rather than hiding the panel)
+  [x] trend-only historical>1 but <3 (or no forecast): forecast panel empties while
+                the cost-per-kWh panel renders (web hasCostPerKwhTrend && !hasForecast)
+  [x] error     CostForecastErrorView (icon + title + message + Retry -> refresh) when
+                a failure arrives with no cached data
+  [x] stale     CostForecastFreshnessBanner (warning) + Refresh, cached panels visible
+  [x] offline   CostForecastFreshnessBanner (muted) + Refresh, cached panels visible
+  Phase resolution + gates + chart projection + formatting + a11y unit-tested (29 cases).
+
+----------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on this runner — real exit codes)
+----------------------------------------------------------------------
+[1] swiftformat --lint apps/apple                 (gate cmd, whole tree)
+      0/972 files require formatting, 2 files skipped.
+      FORMAT_TREE_EXIT=0
+      (my 7 swift files: 0 require formatting; 0 of my files appear in the report.)
+
+[2] swiftlint --strict                             (gate cmd, .swiftlint.yml paths)
+      My 7 CostForecastSection.* files: Found 0 violations, 0 serious in 7 files.
+      MY_FILES_LINT_EXIT=0
+      Whole-tree run: Found 1 violation, 1 serious in 968 files (LINT_TREE_EXIT=2) —
+      the SINGLE violation is PRE-EXISTING and outside this prompt's allowed files:
+        dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length
+      (the exact same predecessor violation the 0053 log recorded). NONE of my files
+      appear among the violations.
+
+[3] placeholder gate — apps/tools/check-placeholders.ps1 -Path
+    apps/apple/TeslaSync/feature-views/CostForecastSection   (pwsh 7 present)
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0
+
+[4] swift test — throwaway SwiftPM package (module "TeslaSync" = the 6 shipped
+    production files + the REAL Shared-free Design tokens TSDesign.swift /
+    TSMaterial.swift / generated Tokens.swift; one same-signature leaf shim for
+    TSSkeleton, whose real file Skeletons.swift pulls the entire component library and
+    is never exercised by a test — the real TSSkeleton is compiled by the Xcode app
+    build below). Swift 6 language mode, macOS host, DEBUG (previews compiled). Drives
+    the model with InMemoryCostForecastSource (no network).
+      Test Suite 'All tests' passed.
+      Executed 29 tests, with 0 failures (0 unexpected).
+      TEST_EXIT=0
+    Coverage: CostNumeric.safe/axisLabel; the two render gates; the composed
+    forecast-chart projection (counts, ordered/deduped months, $-axis bound, inverted
+    band, non-finite zeroing); the cost-per-kWh series + bound; DefaultCostForecast-
+    Formatting currency + compact-axis parity; the two VoiceOver summaries; and the
+    model's phase resolution / projection wiring / view.opened-once / refresh / stale.
+
+[5] SDK compile — swiftc -typecheck -swift-version 6 of the 6 surface files + the real
+    Design deps (10 files incl. the SwiftUI Views + Swift Charts) against BOTH gate
+    destinations' SDKs:
+      iOS 18 Simulator (arm64-apple-ios18.0-simulator) : IOS_TYPECHECK_EXIT=0
+      macOS 15         (arm64-apple-macos15.0)          : MAC_TYPECHECK_EXIT=0
+    (SwiftUI + Swift Charts availability confirmed on both SDKs — the band AreaMark,
+    PointMark, ContentUnavailableView, #Preview all resolve.)
+
+----------------------------------------------------------------------
+XCODE APP BUILD/TEST — DEFERRED (NOT green; honest evidence below)
+----------------------------------------------------------------------
+Gate command literally runs (no DEVELOPER_DIR set):
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+
+(a) BARE gate command — active dir is CommandLineTools, so it fails before any work:
+      xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+      directory '/Library/Developer/CommandLineTools' is a command line tools instance
+      BARE_IOS_EXIT=1 · BARE_MAC_EXIT=1
+
+(b) Driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (Xcode 26.5):
+      • xcodegen generate -> OK. The surface IS target-registered (project.yml lists
+        TeslaSync/feature-views for both app targets; the generated pbxproj contains
+        48 CostForecastSection references).
+      • Scheme pre-action "Stage Shared.xcframework" RAN Gradle and STAGED the KMP
+        framework successfully (":core:assembleSharedXCFramework", "BUILD SUCCESSFUL in
+        7m 45s", "✓ Shared.xcframework staged"). ADR-004 framework present on this
+        runner — no KMP blocker.
+      • Default `build` (no exclusions) FAILED on a PRE-EXISTING project.yml issue:
+        feature-views/*.Tests.swift + *.ModelTests.swift are compiled INTO the app
+        target (project.yml `sources: TeslaSync/feature-views`), and the app target
+        does not link XCTest, so the app build aborts on the FIRST such file
+        alphabetically:
+          AlertsSection.Tests.swift:20: error: unable to resolve module dependency: 'XCTest'
+        This affects ALL ~106 feature-view + dashboard-widget *Tests.swift equally
+        (AlertsSection first) — the app-build gate was ALREADY red before this surface.
+        (On Xcode 26.5 the `@testable import TeslaSync` self-reference is now only a
+        warning — "file is part of module 'TeslaSync'; ignoring import" — not the hard
+        error older toolchains raised; the XCTest module-resolution error is the blocker.)
+      • Re-run with the test files excluded via a COMMAND-LINE build-setting override
+        (no file edits): build … CODE_SIGNING_ALLOWED=NO EXCLUDED_SOURCE_FILE_NAMES='*Tests.swift'
+        compiled the WHOLE app Swift module and then failed on a SECOND, unrelated
+        PRE-EXISTING condition: duplicate / ambiguous type declarations in sibling
+        in-flight dashboard-widget + Overview surfaces, e.g.
+          OdometerCounterWidget.Projection.swift:19: invalid redeclaration of 'DashboardWidgetSize'
+          OdometerCounterWidget.Model.swift:212: invalid redeclaration of 'DashboardWidgetRegistration'
+          OverviewModel … : 'OverviewConnection' is ambiguous for type lookup
+        iOS: 111 error lines across sibling files ; macOS: 257 error lines. A basename
+        breakdown of the iOS errors: dashboard-widgets *.Model.swift ×52, the
+        OverviewModel @Observable macro expansion ×25, plus assorted widget
+        Previews/Views/Adapter/Builder/Projection/Support, OverviewTab, and
+        OnboardingChecklistWidget — all OUTSIDE this prompt's allowed files.
+      IOS_EXIT=65 · MAC_EXIT=65  (DEFERRED)
+
+  Grep of BOTH app builds for `error:` lines referencing any CostForecastSection file:
+      iOS  : 0
+      macOS: 0
+  ZERO errors reference any of my files (.swift/.Model/.Adapter/.Views/.Charts/.Previews):
+  they compiled clean inside the REAL app Swift module (with the staged Shared.xcframework)
+  — the module failed only on the pre-existing sibling-surface declarations above.
+
+  Why DEFERRED, not fixed here: the two app-build blockers are
+  (1) project.yml compiling *Tests.swift into the app target instead of an XCTest
+  target, and (2) duplicate/ambiguous type declarations in other surfaces'
+  dashboard-widget / Overview files (+ DEVELOPMENT_TEAM / signing). ALL require editing
+  files OUTSIDE this prompt's allowed scope (project.yml, sibling surfaces, signing) —
+  a predecessor-bypass (covenant #7). Same deferral disposition as 0053.
+
+  Verification substituted here is strictly stronger than a registered-but-unbuilt
+  scheme: the EXACT shipped files were (i) compiled against BOTH target SDKs in Swift 6
+  mode [5], (ii) compiled inside the REAL app Swift module with the staged KMP framework
+  (0 errors on my files, both platforms) [b], and (iii) exercised by a 29-case XCTest
+  run that executed green [4].
+
+----------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+----------------------------------------------------------------------
+  [x] Surface renders on Apple with all web states reproduced (loading / content /
+      trend-only / per-panel empty / error / stale / offline) — 7 previews + phase tests.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (CostForecastSource); no direct
+      HTTP in the view (the view owns only render state; data via the seam).
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog — 15/15
+      used==defined (8 web costAnalysis.forecast.* verified against en.json + 7 native
+      chrome), cross-checked both directions (no missing, no dead keys).
+  [x] Accessibility labels on every interactive element (Retry / Refresh buttons), a
+      header trait on each panel title, and a combined VoiceOver summary on each chart
+      (forecast: actual/projected/confidence ranges ; trend: month span + rate range);
+      a11y unit-tested.
+  [x] Tests: adapter unit tests + chart-projection tests + model/state tests +
+      formatting + a11y (29 cases, executed green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green (format tree 0 / lint my-files 0 /
+      placeholder 0 / swift test 29-0 / iOS+macOS SDK typecheck 0); Xcode app build/test
+      DEFERRED with captured evidence (pre-existing project.yml test-target membership +
+      sibling-surface duplicate declarations + signing; KMP framework staged fine; my
+      files compile clean in the real module on both platforms). Platform capability
+      (SwiftUI + Swift Charts, iOS 18 / macOS 15) is PRESENT — so this is DONE, not a
+      capability BLOCK.
+
+----------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------
+  1  No red-as-green : the Xcode app build/test is shown DEFERRED (NOT green) with the
+                       real BARE_*_EXIT=1 and the real IOS/MAC_EXIT=65 (pre-existing
+                       XCTest + sibling-surface errors); every "0" is a command actually
+                       run with its real exit (incl. an executed 29/29 XCTest run +
+                       iOS-18-sim & macOS-15 SDK compiles + a real app-module compile of
+                       my files on both platforms).
+  2  No scope narrowing: implemented BOTH charts + every state + i18n + a11y + telemetry
+                       + the composed band/area/line chart + the cost-per-kWh trend +
+                       the gates/projection math. ForecastDetails is a separately-prompted
+                       sibling surface (documented), not omitted content of THIS one.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (The single
+                       TSSkeleton stand-in is a TEST-HARNESS leaf only — never shipped;
+                       the real one is compiled by the app build.)
+  5  No parity shortcuts: faithful port of the ComposedChart (native confidence band,
+                       actual area+stroke, dashed projected line, gap preserved), the
+                       cost-per-kWh LineChart, safe(), formatCurrency, the hasForecast /
+                       hasCostPerKwhTrend gates, and the exact en.json strings + hexes.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat /
+                       signing / sibling surfaces and did NOT edit the shared
+                       Localizable.xcstrings — strings shipped as the per-surface table,
+                       exactly like 0053. The two working-tree web edits
+                       (FleetApiSection.tsx, BackupRestorePage.tsx) are NOT mine and are
+                       excluded from the scoped commit.
+  8  No commit on red  : committing on all-green host gates; the Xcode app steps are
+                       explicitly DEFERRED with evidence, not falsely green.
+  9  No silent drift   : changes confined to the allowed CostForecastSection.* files +
+                       this log. Generated TeslaSync.xcodeproj + staged
+                       Frameworks/Shared.xcframework are git-ignored (not committed).
+  10 Log ends with EXIT/STATUS below.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+  Production-polished native CostForecastSection shipped at parity with the web source:
+  pure-Swift projection core (executed-green XCTest, 29/29), P1/S8 state-holder seam (no
+  view HTTP), P1/S11 view.opened telemetry (slug "CostForecastSection"), every state +
+  i18n key (15/15) + a11y label, a faithful Swift Charts composed forecast chart (native
+  95% confidence band + actual area/stroke + dashed projected line) and a cost-per-kWh
+  trend line. All host-runnable gates pass AND the surface compiles against BOTH the
+  iOS 18 simulator and macOS 15 SDKs under Swift 6 AND inside the real app Swift module
+  (with the Gradle-staged Shared.xcframework) with zero errors on my files on both
+  platforms. The Xcode app build/test is DEFERRED to the integration/signed runner —
+  blocked only by pre-existing project.yml test-target membership (*Tests.swift in the
+  app target) + pre-existing duplicate/ambiguous type declarations in sibling
+  dashboard-widget / Overview surfaces + signing/DEVELOPMENT_TEAM, all outside this
+  prompt's allowed files.
+
+----------------------------------------------------------------------
+COMMIT
+----------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/CostForecastSection.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0109-CostForecastSection.log
+  git commit -m "feat(apps/apple/feature-views): add CostForecastSection surface (P4)"
+
+EXIT=0
+STATUS=DONE
