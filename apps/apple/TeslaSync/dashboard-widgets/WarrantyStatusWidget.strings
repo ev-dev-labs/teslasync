@@ -1,0 +1,60 @@
+/*
+  WarrantyStatusWidget.strings
+  TeslaSync — P4 dashboard widget · 0113 · WarrantyStatusWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `WarrantyStatusWidget` resolves (table "WarrantyStatusWidget") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact keys extracted from the web source
+  (features/dashboard/widgets/WarrantyStatusWidget.tsx, table "dashboard"). The
+  remaining keys back the registry metadata + native-only chrome (freshness chip,
+  refresh / retry / empty / error copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.warranty.title" = "Warranty Status";
+"widget.warranty.active" = "Active";
+"widget.warranty.expired" = "Expired";
+"widget.warranty.expiryDate" = "Expiry Date";
+"widget.warranty.daysRemaining" = "Days Remaining";
+"widget.warranty.daysLeft" = "days left";
+"widget.warranty.mileageLimit" = "Mileage Limit";
+"widget.warranty.currentMileage" = "Current Mileage";
+"widget.warranty.timeRemaining" = "Time Remaining";
+"widget.warranty.daysUnit" = "days";
+"widget.warranty.mileageRemaining" = "Mileage Remaining";
+"widget.warranty.included" = "Included";
+"widget.warranty.covered" = "Covered";
+"widget.warranty.noData" = "No warranty data";
+
+/* --- Coverage type labels (web COVERAGE_TYPES) --- */
+"widget.warranty.basic" = "Basic";
+"widget.warranty.batteryDrive" = "Battery/Drive Unit";
+"widget.warranty.corrosion" = "Corrosion";
+"widget.warranty.emissions" = "Emissions";
+"widget.warranty.body" = "Body";
+
+/* --- Registry metadata (canonical: registry/vehicle.ts → "warranty-status") --- */
+"widget.warranty.description" = "Warranty countdown: time remaining, mileage remaining, coverage types";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.warranty.live" = "Live";
+"widget.warranty.stale" = "Stale";
+"widget.warranty.offline" = "Offline";
+"widget.warranty.refresh" = "Refresh";
+"widget.warranty.retry" = "Retry";
+"widget.warranty.open" = "Open";
+"widget.warranty.openA11y" = "Open the Warranty page";
+
+/* --- Native chrome: states --- */
+"widget.warranty.loading" = "Loading warranty";
+"widget.warranty.errorTitle" = "Couldn't load warranty";
+"widget.warranty.offlineBanner" = "Offline — showing last known data";
+"widget.warranty.staleBanner" = "Reconnecting — data may be stale";
+
+/* --- Accessibility --- */
+"widget.warranty.a11yLabel" = "Warranty status showing time and mileage remaining and coverage";
