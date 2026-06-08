@@ -1,0 +1,58 @@
+/*
+  TeslaApiRefTool.strings
+  TeslaSync — P4 feature view · 0020 · TeslaApiRefTool (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TeslaApiRefTool` resolves (table "TeslaApiRefTool") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog
+  (parallel-safe across the concurrent surface slots).
+
+  The "web source" keys are the exact t(...) keys from
+  features/admin/components/devtools/tools/TeslaApiRefTool.tsx. "Method" and "Path"
+  resolve to web/src/i18n/en.json; the other source keys are not present in en.json,
+  so i18next echoes the key as the displayed English — reproduced verbatim here for
+  parity. The remaining keys back the native chrome (search a11y, result count,
+  states, banners, freshness chip) and the row VoiceOver copy.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Tesla Api Ref" = "Tesla Api Ref";
+"Tesla Api Ref Desc" = "Tesla Api Ref Desc";
+"Search Endpoints" = "Search Endpoints";
+"Method" = "Method";
+"Path" = "Path";
+"Endpoint Desc" = "Endpoint Desc";
+
+/* --- Native chrome: search + table --- */
+"apiRef.search.a11y" = "Search endpoints";
+"apiRef.search.clear" = "Clear search";
+"apiRef.copyPath" = "Copy path";
+"apiRef.count" = "%lld endpoints";
+"apiRef.countFiltered" = "%lld of %lld endpoints";
+
+/* --- Native chrome: states --- */
+"apiRef.loading" = "Loading endpoints";
+"apiRef.noData" = "No endpoints";
+"apiRef.emptyHint" = "The Tesla Fleet API endpoint reference will appear here.";
+"apiRef.noResults" = "No matching endpoints";
+"apiRef.noResultsHint" = "Try a different search term.";
+"apiRef.errorTitle" = "Couldn't load endpoints";
+"apiRef.retry" = "Retry";
+"apiRef.refresh" = "Refresh";
+"apiRef.offlineBanner" = "Offline — showing the bundled reference";
+"apiRef.staleBanner" = "Reconnecting — the reference may be out of date";
+
+/* --- Native chrome: freshness chip --- */
+"apiRef.freshness.live" = "Live";
+"apiRef.freshness.updating" = "Updating…";
+"apiRef.freshness.stale" = "Stale";
+"apiRef.freshness.error" = "Error";
+"apiRef.freshness.errorShort" = "error";
+"apiRef.freshness.offline" = "Offline";
+"apiRef.freshness.justNow" = "just now";
+"apiRef.freshness.minutes" = "%lldm ago";
+"apiRef.freshness.hours" = "%lldh ago";
+"apiRef.freshness.days" = "%lldd ago";
+"apiRef.freshness.weeks" = "%lldw ago";
