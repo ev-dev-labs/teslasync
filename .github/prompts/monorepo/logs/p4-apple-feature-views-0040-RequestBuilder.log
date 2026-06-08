@@ -1,0 +1,268 @@
+================================================================================
+P4 · Feature view · 0040 — RequestBuilder (Apple)
+Run: 2026-06-07T20:20-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/161
+Base: f9fc90c2
+Prompt: P4/feature-views/0040 — RequestBuilder
+Web source (spec): web/src/features/admin/components/RequestBuilder.tsx
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (30/30) +
+      DEFERRED Xcode app build/test (0005/0011 feature-view precedent, ADR-012). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)  OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh 7.6.2                          OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (not yet target-registered)             WARN
+
+  NOTE — the active developer dir defaults to /Library/Developer/CommandLineTools
+  (no xcodebuild / no iPhoneSimulator SDK), so a bare `xcodebuild` fails ("tool
+  requires Xcode"). The full Xcode 26.5 toolchain (xcodebuild, simctl, iOS+macOS
+  SDKs, the iPhone 16 simulator, swift test) is reached WITHOUT sudo via
+  `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (0005/0011
+  feature-view precedent). The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply: SwiftUI is present and
+  PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below. This surface
+  uses NEITHER Swift Charts NOR MapKit (web "Charts/maps used: (none)").
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/RequestBuilder.*) ===
+  RequestBuilder.Adapter.swift   353  testable projection core — HTTPMethod (isDestructive +
+                                      METHOD_COLORS accent role + parse), ParsedEndpoint /
+                                      EndpointParameter / RequestBody, ordered RequestJSON +
+                                      RequestJSONFormatter (JSON.stringify(_, null, 2) port),
+                                      RequestBuilderAdapter (buildUrl path/query + encodeURIComponent,
+                                      body seed, defaults, headers, field prompts), surface slug, a11y
+  RequestBuilder.Model.swift     191  P1/S8 state holder (RequestBuilderModel: params/body/apiKey/
+                                      confirmOpen/isLoading + destructive confirm gate + SendRequest
+                                      payload) + P1/S11 telemetry seam + P1/S10 strings facade
+  RequestBuilder.Views.swift     349  presentational subviews — method badge, URL bar + send control,
+                                      destructive confirm banner, summary/description, section panel
+                                      (.tsGlassPanel), path/query parameter rows, body editor, auth panel
+  RequestBuilder.swift           117  RequestBuilder surface (URL bar + confirm + summary + path/query/
+                                      body sections + auth panel + view.opened)
+  RequestBuilder.Previews.swift  125  #if DEBUG previews — GET·params, POST·body, POST·confirm,
+                                      GET·sending, GET·minimal (one per web branch/state)
+  RequestBuilder.Tests.swift     374  XCTest — URL builder (6) + JSON formatter (6) + adapter (8) +
+                                      model (8) + a11y (2) = 30 methods
+  RequestBuilder.strings          37  P1/S10 catalog contribution (11 web-source keys + 5 native chrome/
+                                      a11y keys)
+  Total 1546 lines across 7 files. Every shipped .swift file <= 400 lines (house file_length, max 374);
+  no code line > 120 cols (house line_length, strict). The surface depends only on the design Tokens +
+  the shared `.tsGlassPanel()` material (Sources/Design/TSMaterial) + the shared TSButton
+  (Sources/Components/UI/Buttons) — no KMP `Shared` import.
+
+=== PARITY (vs web RequestBuilder.tsx) ===
+  Data sources -> the web source's ONLY hook is `useTranslation`; it is a controlled form driven by
+    props (`endpoint`, `onSend`, `loading`) with NO data hook / NO network of its own (the actual HTTP
+    is the parent's `onSend`). The native parity binds through a local P1/S8 state holder
+    (RequestBuilderModel) that owns the editable request state the web `useState`/`useEffect` hooks hold
+    and hands a `SendRequest` to the host on send. The view performs no HTTP — there is none to perform.
+  buildUrl -> RequestBuilderAdapter.relativeURL is a faithful port: `{name}` path substitution (empty
+    value keeps the `{name}` token, first-occurrence replace like JS String.replace), `&`-joined query
+    of the params that carry a value, each value `encodeURIComponent`-encoded (unreserved + !~*'() left
+    raw; verified `a b`->`a%20b`, `/?=&`->`%2F%3F%3D%26`). `displayURL` prefixes `/api/v1` (URL bar)
+    while `relativeURL` is what `onSend` receives — matching the web `/api/v1{buildUrl()}` display vs
+    `onSend(buildUrl(), …)`. All verified by EXECUTED XCTest.
+  body seed / JSON -> RequestJSONFormatter reproduces `JSON.stringify(example, null, 2)` exactly
+    (two-space indent, ordered object members via an ordered RequestJSON tree, `,\n` separators, empty
+    `{}`/`[]` collapse, JSON string + C0-control escaping, integers without a `.0` tail). seedBody
+    returns the pretty example, the `"{\n  \n}"` skeleton when a body is required without an example,
+    or "" when there is no body — the web body effect. EXECUTED-green (nested object/array, escaping,
+    empty collapse, scalar vectors).
+  destructive confirm -> the web `isDestructive = method !== 'GET'` two-step send is ported: the first
+    `send()` on a non-GET opens the amber confirm row (no onSend), the next `send()` (or any GET) builds
+    the headers + `SendRequest` and hands it to the host; `cancel()` dismisses. `body || undefined` ->
+    `body.isEmpty ? nil`. A trimmed non-empty API key becomes `X-API-Key`. EXECUTED-green.
+  composition -> URL bar (web MethodBadge colored mono chip -> token-tinted RequestMethodBadge + the
+    scrollable `/api/v1…` code + the Send control whose label flips to "Sending…" and disables while
+    `loading`) · destructive confirm banner · summary + (distinct) description · Path Parameters panel ·
+    Query Parameters panel · Request Body panel (+ content-type accessory) · Authentication (Optional)
+    panel (always shown) — each panel is the web `GlassPanel` mapped to the shared `.tsGlassPanel()`
+    material with an uppercase muted header.
+  shared components -> reuses the shared TSButton (Components/UI/Buttons) for Send / Yes,send / Cancel,
+    and the shared `.tsGlassPanel()` material (Design/TSMaterial) for the web `GlassPanel` sections,
+    compiled against the REAL sources in the typechecks below. The inputs (web `Input`/`Textarea`) are
+    composed from SwiftUI `TextField`/`SecureField`/`TextEditor` + a token field-chrome modifier so the
+    field prompts can resolve through this surface's P1/S10 table (the shared `TSTextField` takes only a
+    LocalizedStringKey prompt against the main catalog). Recharts -> none / Leaflet -> none (no chart/map).
+  States (all render) -> the web source's branches are reproduced, each with a #if DEBUG preview:
+      • loading  -> the Send control shows "Sending…" + disables (web `loading ? t('playground.sending')`).
+      • confirm  -> the destructive confirm banner (web `confirmOpen`).
+      • content  -> the path / query / body sections render only when present (web conditional panels).
+      • empty    -> an endpoint with no params + no body shows only the URL bar + the always-present
+                    auth panel (web behavior) — never a blank box.
+    The generic error / stale / offline states from the prompt's checklist have NO trigger on THIS
+    surface: it is a controlled form with no async data source of its own (the response + its error/empty
+    handling live in the sibling ResponseViewer surface, not here). Reproducing them would fabricate
+    behavior absent from the web spec; parity = matching the source, so they are intentionally omitted
+    (Honesty rule 3, "no skip-and-assume": the source was read end-to-end; these branches genuinely do
+    not exist on this surface).
+  i18n -> all 11 source keys resolve through the P1/S10 facade (RequestBuilderStrings, table
+    "RequestBuilder") with the web `t(key, default)` fallback: playground.send, playground.sending,
+    playground.confirmDestructive (%@ method interpolation = web `{{method}}`), playground.confirmYes,
+    playground.cancel, playground.pathParams, playground.queryParams, playground.requestBody,
+    playground.authHeader, playground.apiKeyPlaceholder, playground.authHint -> ALL present in
+    RequestBuilder.strings, plus the native chrome/a11y keys (requestBuilder.bodyExample,
+    a11y.requestBuilder.method/url/body/required). No English literals in native code (every string
+    from the facade; method names + header name + the URL are protocol data rendered verbatim).
+  a11y -> the method badge carries a "Method <X>" label; the URL code is one element labeled "Request
+    URL" with the path as its value; the Send icon is hidden; each parameter field carries its name as
+    label with a "Required" marker label on the asterisk; the body editor + API-key field carry labels;
+    the confirm banner is one contained element; the surface is an accessibility container. Dynamic Type
+    via tokens; no motion to gate.
+  Telemetry -> RequestBuilderModel.start() emits viewOpened(surface:"RequestBuilder") exactly once via
+    the P1/S11 seam (OSLog default; production injects the shared Telemetry.track(.screenView) adapter).
+    Asserted by a spy test (fires once across two start() calls; slug == "RequestBuilder").
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 4 shipping runtime files compiled together with the
+    REAL component closure — design Tokens + Design/TSMaterial + Components/UI/Buttons; no Shared
+    xcframework; no -D DEBUG so #Preview blocks compile out):
+      DEVELOPER_DIR=…/Xcode.app xcrun --sdk iphonesimulator swiftc -typecheck \
+        -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator -swift-version 6 \
+        apps/design/generated/apple/Tokens.swift apps/apple/Sources/Design/TSMaterial.swift \
+        apps/apple/Sources/Components/UI/Buttons.swift \
+        TeslaSync/feature-views/RequestBuilder.{Adapter,Model,Views,}.swift
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; same files + closure + RequestBuilder.Previews.swift
+    against the macOS 15 SDK; exercises every #Preview body, incl. the destructive-confirm preview that
+    calls model.send()):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained, throwaway
+    SwiftPM harness (real production Adapter + Model copied verbatim into a `TeslaSync` library target so
+    the test file's `@testable import TeslaSync` needs NO rewrite; Swift 6 language mode .v6; macOS 14).
+    NO shims were needed — the projection core + state holder compile standalone (no Shared, no UI views):
+      Test Suite 'All tests' passed
+        RequestURLBuilderTests        6/6  (path substitute, empty-keeps-token, query encode+skip-empty,
+                                            no-query-no-?, displayURL /api/v1 prefix, encodeURIComponent)
+        RequestJSONFormatterTests     6/6  (ordered object, nested object/array, empty collapse, scalars,
+                                            string escaping, C0-control escaping)
+        RequestBuilderAdapterTests    8/8  (seed from example / required-no-example / absent, defaults,
+                                            headers trim, path prompt, query prompt, method flags+parse)
+        RequestBuilderModelTests      8/8  (init seeds defaults+body, GET sends immediately, destructive
+                                            requires confirm, apiKey->header, cancel, apply re-seed keeps
+                                            apiKey, displayURL prefix, view.opened once + slug)
+        RequestBuilderAccessibilityTests 2/2 (url summary method+url, confirm summary interpolation)
+      Executed 30 tests, with 0 failures (0 unexpected) in 0.005 seconds
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths, config apps/apple/.swiftlint.yml;
+    the .swiftlint.yml `included:` does not list TeslaSync/feature-views — that wiring is the P4
+    integration prompt's job — so a bare `swiftlint --strict` SKIPS this dir; run explicitly here. One
+    122-col line was found and FIXED before this green result, not assumed):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint (gate command, config apps/apple/.swiftformat):
+      surface files: 0/6 files require formatting.
+      whole tree `swiftformat --lint apps/apple`: 0/642 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) — REAL scan of the surface directory:
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+      PLACEHOLDER_ALLOWED=1   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      ALLOWED=1 is the single sanctioned `// parity:allow web i18n key` opt-out on the line that carries
+      the verbatim web key `playground.apiKeyPlaceholder` (whose name contains the substring the gate
+      flags); the opt-out mechanism is purpose-built for translation keys literally named after a marker
+      (the script's own self-test demonstrates it for a key named "todo"). The bare gate invocation
+      `-Path …/feature-views/RequestBuilder` resolves to a non-existent literal stem and trivially scans
+      nothing (PLACEHOLDER_COUNT=0); the real directory scan above is the meaningful evidence.
+[8] xcodegen generate — project + 12 targets + schemes generate cleanly:
+      XCODEGEN_EXIT=0                                                               OK
+      generated TeslaSync.xcodeproj references to "RequestBuilder" = 0 (surface NOT target-registered).
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host, full Xcode 26.5):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **   XCODEBUILD_TARGET_EXIT=65
+    Why deferred (code-unrelated, outside this prompt's allowed files — identical disposition to the
+    0005/0011 feature-view predecessors, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets glob `Sources/` + `TeslaSync/dashboard-widgets`;
+          this surface lives at TeslaSync/feature-views/ and has 0 references in project.yml (confirmed
+          above). Registering the feature-views path into both app targets (+ the .swiftlint.yml
+          `included` scope) is a one-time wiring step shared by ALL feature-view surfaces; doing it here
+          would (i) edit files outside this prompt's allowed set and (ii) collide with every other
+          parallel feature-view prompt on the same project.yml lines. Running xcodebuild now would build
+          the app WITHOUT these files — ZERO evidence about this deliverable. Steps [1]/[2] DO compile
+          this surface against the real library, and step [4] EXECUTES its full XCTest suite.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native Gradle build (the scheme runs it as a pre-build phase). Independent of this UI
+          surface; concrete missing-framework error captured above (XCODEBUILD_TARGET_EXIT=65).
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    The MEANINGFUL validation IS performed above: the surface compiles against BOTH the iOS 18 simulator
+    and macOS 15 SDKs (steps [1]/[2]) and its full XCTest suite EXECUTES green (30/30, step [4]). Under
+    Xcode these same tests run in the TeslaSync(/-macOS) test target.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (loading / destructive-confirm / content with the
+      conditional path/query/body sections / empty) — implemented; each has a #if DEBUG preview; logic
+      unit-tested + EXECUTED green. (error/stale/offline N/A — controlled form, no async data of its own.)
+  [x] Hooks bind through the shared P1/S8 state-holder seam (RequestBuilderModel); no view HTTP (the
+      host receives a SendRequest via onSend).
+  [x] Every i18n key from source has a matching catalog key — 11 source keys + 5 native keys, all in
+      RequestBuilder.strings.
+  [x] Accessibility labels on every interactive element; method badge, URL, fields, body, API key, and
+      confirm controls all labeled; surface is an a11y container.
+  [x] Tests: adapter unit + per-state model + a11y — 30 methods, EXECUTED 30/30.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (1 sanctioned
+      opt-out for the verbatim web i18n key name).
+  [x] EXIT=0 / STATUS=DONE — host gates + both-SDK compiles + executed tests green; Xcode app build/test
+      DEFERRED with captured evidence (code-unrelated infra blocker, outside allowed files).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real
+                       XCODEBUILD_TARGET_EXIT=65 missing-framework error captured; every "OK" is a
+                       command actually run with its real exit code (incl. iOS+macOS SDK compiles, a
+                       DEBUG-previews compile, and an EXECUTED 30/30 XCTest run). The unregistered
+                       feature-views path is disclosed, not hidden.
+  2  No scope narrowing: implemented the full surface — method badge, URL bar + send/loading, destructive
+                       confirm, summary/description, path + query + body sections, auth panel, i18n, a11y,
+                       telemetry; only the states the web source genuinely lacks on this surface are
+                       absent (documented, not silently dropped).
+  3  No skip-and-assume: web source read end-to-end; each host gate executed; nothing assumed green (a
+                       122-col line was found by swiftlint and fixed before reporting green).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. No shims were needed — the
+                       harness compiled the real Adapter + Model unmodified.
+  5  No parity shortcuts: faithful buildUrl + encodeURIComponent + JSON.stringify(_, null, 2) ports, the
+                       full two-step destructive send, every web panel/state, verbatim source i18n keys.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register the feature-views path in project.yml / .swiftlint.yml
+                       and did NOT stage Shared.xcframework / edit the shared Localizable.xcstrings
+                       (parallel-unsafe, integration-runner scope) — strings shipped as the per-surface
+                       table, exactly like 0005/0011.
+  8  No commit on red  : committing on green host gates + iOS/macOS compiles + executed 30/30 tests;
+                       Xcode app build/test explicitly DEFERRED (captured evidence), not failed.
+  9  No silent drift   : changes confined to the allowed feature-views/RequestBuilder.* files + this log.
+                       (Two pre-existing web/* working-tree edits are unrelated and NOT committed here.)
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native RequestBuilder shipped at parity with the web source: a pure-Swift,
+  executed-green projection core (buildUrl / encodeURIComponent / JSON.stringify ports, 30/30 XCTest),
+  a P1/S8 state holder (no view HTTP; hands a SendRequest to the host), P1/S11 view.opened telemetry,
+  every state the web source produces on this surface (loading / destructive-confirm / the conditional
+  path-query-body sections / empty), every source i18n key, and a11y labels on every interactive element.
+  All host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and the macOS 15
+  SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency. The signed Xcode app build/test
+  is DEFERRED to the downstream integration/signed runner (surface not yet target-registered +
+  Shared.xcframework KMP staging + macOS signing — none a defect in this code, all outside this prompt's
+  allowed files), matching the 0005/0011 "code-complete + DEFERRED Xcode gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/RequestBuilder.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0040-RequestBuilder.log
+  git commit -m "feat(apps/apple/feature-views): add RequestBuilder surface (P4)"
+
+EXIT=0
+STATUS=DONE
