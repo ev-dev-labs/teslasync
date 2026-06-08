@@ -1,0 +1,181 @@
+===========================================================================
+=== P4 Feature view 0073 BatteryPill (Apple) ===
+===========================================================================
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/P-0073-BatteryPill.prompt.md
+Web src: web/src/features/analytics/components/weekly-digest/BatteryPill.tsx
+Native : apps/apple/TeslaSync/feature-views/BatteryPill.*
+HEAD   : 76b13cc1 (merge(parallel): P-0047-SentryModeChart)
+Host   : macOS / Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app
+         Swift 6.3.2 · iOS 26.5 Simulator (iPhone 16) · swiftlint + swiftformat
+         + pwsh + xcodegen + Gradle/Kotlin-Native all present.
+
+The platform capability IS available on this runner (SwiftUI + Swift Charts +
+MapKit, iOS 18 / macOS 15 SDKs), so this is NOT a STATUS=BLOCKED capability
+case. Every gate step that is a function of THIS surface's code is green; the
+only non-green items are PRE-EXISTING baseline defects in sibling files outside
+this prompt's allowed-files scope (documented below), identical in spirit to the
+deferral the merged sibling P-0047-SentryModeChart recorded.
+
+Files shipped (allowed-files: apps/apple/TeslaSync/feature-views/BatteryPill.*):
+  BatteryPill.swift            — SwiftUI surface (glass pill: tinted battery glyph
+                                 + caption label + bold fmtInt(level)% + capsule meter)
+  BatteryPill.Model.swift      — pure projection: STATUS_COLORS threshold ladder,
+                                 fmtInt/safeNumber parity, min(level,100) meter clamp,
+                                 surface slug, a11y status descriptors
+  BatteryPill.Telemetry.swift  — P1/S11 view.opened diagnostics seam + os_log sink
+  BatteryPill.Previews.swift   — DEBUG previews for all branches (tiers, boundaries,
+                                 0 / over-100 clamp, NaN ⇒ 0%, light/dark, Dynamic Type)
+  BatteryPill.Tests.swift      — 18 XCTest cases (guarded #if canImport(XCTest))
+  BatteryPill.strings          — P1/S10 catalog table (VoiceOver status words +
+                                 preview label); value is number + "%" (verbatim, the
+                                 TSPercentage convention), label is caller-supplied.
+
+===========================================================================
+PARITY NOTES (web BatteryPill.tsx → native)
+===========================================================================
+  • color ladder   level>=60 good / >=30 warning / else critical  → BatteryPillTint
+                   resolves to Color.TS.statusSuccess/statusWarning/statusDanger
+                   (dark token == web hex #10b981/#f59e0b/#ef4444, theme + high-
+                   contrast aware). NaN/negative fail both >= (JS parity) ⇒ critical.
+  • value          {fmtInt(level)}%  → fmtInt == safeNumber→toLocaleString(0 frac):
+                   non-finite ⇒ "0" (never "NaN"); grouped; half-up. Verified
+                   "12,346", "82", "0" (NaN/±Inf) in tests.
+  • meter          width = min(level,100), CSS clamps negatives → fillFraction in
+                   0...1 (−25⇒0, 120⇒1, 50⇒0.5, NaN⇒0). transition-all → eased
+                   animation gated on accessibilityReduceMotion.
+  • GlassPanel     → TSGlassPanel (system material).  lucide Battery → SF Symbol
+                   "battery.100" tinted by status (glyph constant, color carries
+                   status, meter carries level — exactly as on the web).
+  • a11y           one combined element: label + "<percent>, <status word>"; icon +
+                   meter are decorative (hidden). Dynamic Type previews included.
+  States: BatteryPill is a PURE presentational component (web fetches nothing), so
+  loading/empty/error/stale/offline belong to the embedding surface, not the pill —
+  the branches the web source actually carries (3 tiers + clamp + safeNumber guard)
+  are reproduced in full and unit-tested. (Same disposition as web ToolCard/pills.)
+
+===========================================================================
+GATE — host-runnable steps (all green)
+===========================================================================
+--- swiftc -typecheck (Swift 6, -strict-concurrency=complete) ----------------
+  closure: BatteryPill.{swift,Model,Telemetry} + real deps Tokens.swift,
+           TSMaterial.swift, Cards.swift (TSGlassPanel), Typography.swift
+  iOS  arm64-apple-ios18.0-simulator  (iPhoneSimulator26.5.sdk) : IOS_TYPECHECK_EXIT=0
+  macOS arm64-apple-macos15.0         (MacOSX.sdk)              : MAC_TYPECHECK_EXIT=0
+  + DEBUG closure incl. BatteryPill.Previews.swift (+Badges/Buttons):
+  macOS DEBUG : MAC_DEBUG_EXIT=0      iOS DEBUG : IOS_DEBUG_EXIT=0
+  (Two real bugs were caught and fixed by this gate before it went green:
+     1. Tests.swift missing `import SwiftUI` for Color/LocalizedStringKey refs.
+     2. Previews top-level `let [Row]` not concurrency-safe under Swift 6 →
+        moved onto the @MainActor preview view.)
+
+--- unit tests (real Color.TS tokens, executed) ------------------------------
+  Standalone SwiftPM module (Tokens.swift + BatteryPill.Model + .Telemetry as the
+  library, BatteryPill.Tests as the test target) so the tests RUN without the
+  pre-existing app-target breakage below.
+    swift test : Executed 18 tests, with 0 failures (0 unexpected)
+  Coverage: tint ladder + boundaries (60/30 inclusive) + NaN/negative; token
+  mapping; fmtInt grouping/rounding/non-finite; fillFraction clamp; presentation
+  projection + Equatable; iconSystemName; surface slug; view.opened slug via a
+  buffered telemetry sink; a11y descriptor keys.
+  UNIT_TESTS=18/18 PASS
+
+--- swiftlint --strict -------------------------------------------------------
+  BatteryPill scope (the 5 shipped .swift files) : LINT_EXIT=0  (0 violations)
+  Repo-wide `swiftlint --strict`                 : 1 violation, EXIT=2 —
+    PRE-EXISTING + OUT-OF-SCOPE:
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19
+      Function Body Length (78 > 50). `git diff HEAD` on that file is EMPTY
+      (pristine at HEAD 76b13cc1); it is not in this prompt's allowed-files and
+      not in this surface's commit. The merged sibling P-0047 recorded this same
+      pre-existing violation. NOT introduced by BatteryPill.
+  LINT_EXIT=0  (BatteryPill scope)
+
+--- swiftformat --lint apps/apple -------------------------------------------
+  0/779 files require formatting (repo-wide), 5/5 BatteryPill files clean.
+  FORMAT_EXIT=0
+
+--- check-placeholders.ps1 (pwsh) -------------------------------------------
+  apps/apple/TeslaSync/feature-views/BatteryPill : PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+===========================================================================
+GATE — full Xcode app build/test (DEFERRED to P4 integration runner)
+===========================================================================
+  KMP dependency staged for real (not skipped):
+    apps/shared/gradlew :core:assembleSharedXCFramework  → BUILD SUCCESSFUL
+    Shared.xcframework staged into apps/apple/Frameworks/  ✓
+
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+             build test
+    → ** BUILD FAILED ** in the *app target*, on PRE-EXISTING sibling code, before
+      any BatteryPill code is reached. Root causes (all outside allowed-files):
+
+      (a) Test files compiled into the APP target without XCTest.
+          apps/apple/project.yml adds `TeslaSync/feature-views` and
+          `TeslaSync/dashboard-widgets` (whole dirs) to the iOS/macOS APP targets,
+          which sweeps in 78 pre-existing `*Tests.swift` files (e.g.
+          AuditPanel.Tests.swift:19, DigitalTwinWidget.Tests.swift:17,
+          FleetApiSection.ModelTests.swift:13). The app targets do not link XCTest:
+            "unable to resolve module dependency: 'XCTest'".
+          The correct home is the XCTest bundle (cf. ToolCard, whose tests live in
+          Tests/Unit/FeatureViews/). This is project-target wiring, not surface code.
+          → BatteryPill.Tests.swift is defensively wrapped in `#if canImport(XCTest)`
+            so it can NEVER contribute to this breakage (compiles to nothing where
+            XCTest is absent; compiles + runs in the test bundle).
+
+      (b) Pre-existing duplicate type declarations in dashboard-widgets production
+          code, independent of (a) and of test files:
+            WeeklySummaryCardWidget.Model.swift:239 invalid redeclaration of
+              'DashboardWidgetSize'  (+ "ambiguous for type lookup" cascade across
+              Odometer/Onboarding/TelemetryErrors/TirePressure/Uptime/VehicleHero/
+              WallConnector/WeeklyDigest widgets), 'WeeklyDigestDTO' ambiguous,
+              'WeeklySummaryUpdate' does not conform to 'Equatable'.
+          The aggregated app target does not compile at HEAD regardless of this
+          surface — a P4 integration-runner concern (target registration of the
+          parallel-merged widget/feature groups), exactly as sibling P-0047 noted.
+
+  PROOF this surface is not the cause / is correct:
+    • With the standard test wiring (exclude *Tests.swift from the app target,
+      add BatteryPill.Tests.swift to the TeslaSyncTests bundle — a LOCAL-ONLY,
+      reverted project.yml change), the app compiles past the test files and the
+      remaining errors are purely the pre-existing (b) duplicate declarations.
+    • BatteryPill itself is proven on BOTH SDKs by the green swiftc typechecks
+      above and by the 18/18 executed unit tests against the REAL design tokens.
+    project.yml was restored to HEAD (git diff empty); only the 6 BatteryPill.*
+    files remain as the surface's contribution.
+  XCODE_IOS_BUILDTEST=DEFERRED (pre-existing baseline; not a BatteryPill defect)
+  XCODE_MAC_BUILDTEST=DEFERRED (same shared sources / app target, ADR-002; + macOS
+                                signing — same deferral the sibling recorded)
+
+===========================================================================
+ACCEPTANCE
+===========================================================================
+  [x] Surface renders all branches the web source carries (3 tiers + clamp +
+      safeNumber guard), each unit-tested; loading/empty/error/stale/offline are
+      the embedder's concern for this pure presentational pill (documented).
+  [x] No direct HTTP — purely presentational, no data binding required by source.
+  [x] Every i18n string resolves through the P1/S10 catalog (BatteryPill.strings);
+      no English literal in code (value is the "%" unit symbol, verbatim).
+  [x] Accessibility: combined VoiceOver element (label + percent + status word),
+      decorative icon/meter hidden, Dynamic Type preview, reduce-motion honored.
+  [x] Tests: adapter/projection unit tests + per-tier + a11y-descriptor + telemetry
+      slug — 18/18 executed green against real tokens.
+  [x] No TODO/stub/mock/placeholder/Lorem (placeholder gate = 0).
+  [x] Host-runnable gates green on iOS-sim AND macOS SDKs under Swift 6 strict
+      concurrency; Xcode app build/test deferred to integration runner for
+      pre-existing, out-of-scope baseline reasons (evidence above).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/BatteryPill.swift \
+          apps/apple/TeslaSync/feature-views/BatteryPill.Model.swift \
+          apps/apple/TeslaSync/feature-views/BatteryPill.Telemetry.swift \
+          apps/apple/TeslaSync/feature-views/BatteryPill.Previews.swift \
+          apps/apple/TeslaSync/feature-views/BatteryPill.Tests.swift \
+          apps/apple/TeslaSync/feature-views/BatteryPill.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0073-BatteryPill.log
+  git commit -m "feat(apps/apple/feature-views): add BatteryPill surface (P4)"
+
+EXIT=0
+STATUS=DONE
