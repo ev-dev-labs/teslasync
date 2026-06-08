@@ -1,0 +1,50 @@
+/*
+  MarkdownRenderer.strings
+  TeslaSync — P4 feature view · 0221 · MarkdownRenderer (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native MarkdownRenderer resolves
+  (table "MarkdownRenderer") lives here with its English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The web source (features/system/components/chatbot/MarkdownRenderer.tsx) is anonymous: it renders only the
+  formatted assistant prose and extracts no `t()` keys. Every key below therefore backs the native chrome
+  the SwiftUI surface adds around that prose — the loading / empty / error states, the live-state freshness
+  chip + connectivity banner, the fenced-code copy affordance (web CodeBlock), the gfm task checkboxes, and
+  the accessibility summaries — none of which exist as English literals in the Swift sources.
+*/
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"markdownRenderer.live" = "Live";
+"markdownRenderer.stale" = "Stale";
+"markdownRenderer.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"markdownRenderer.staleBanner" = "Reconnecting — showing the cached message";
+"markdownRenderer.offlineBanner" = "Offline — showing the last received message";
+
+/* --- Loading (web Suspense fallback) --- */
+"markdownRenderer.preparing" = "Formatting…";
+
+/* --- Empty (resolved but blank) --- */
+"markdownRenderer.empty.title" = "Nothing to show";
+"markdownRenderer.empty.message" = "This message has no content yet.";
+
+/* --- Error (delivery failure — web QueryError) --- */
+"markdownRenderer.error.title" = "Couldn't load the message";
+"markdownRenderer.error.retry" = "Retry";
+
+/* --- Fenced code block (web CodeBlock copy affordance) --- */
+"markdownRenderer.codeBlock.copy" = "Copy";
+"markdownRenderer.codeBlock.copied" = "Copied";
+"markdownRenderer.codeBlock.a11y" = "Code block, %@";
+
+/* --- gfm task checkboxes --- */
+"markdownRenderer.task.checked" = "Completed";
+"markdownRenderer.task.unchecked" = "To do";
+
+/* --- Accessibility summaries --- */
+"markdownRenderer.a11y.document" = "Formatted message";
+"markdownRenderer.a11y.loading" = "Loading message";
+"markdownRenderer.a11y.empty" = "No message content";
+"markdownRenderer.a11y.error" = "Couldn't load the message";
