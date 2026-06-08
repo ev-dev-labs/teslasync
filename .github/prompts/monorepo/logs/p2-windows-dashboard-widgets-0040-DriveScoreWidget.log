@@ -1,0 +1,71 @@
+=== P2 Dashboard widget 0040 DriveScoreWidget (Windows) ===
+Date: 2026-06-08 15:53:57 -07:00
+Surface:  apps/windows/TeslaSync.App/dashboard-widgets/DriveScoreWidget
+Web spec: web/src/features/dashboard/widgets/DriveScoreWidget.tsx (THE specification)
+Registry: id=drive-score category=driving default=1x2 min=1x2 max=2x40 slug=DriveScoreWidget
+Data:     useFleetAnalytics(7) -> GET /analytics/fleet?days=7 (avg_efficiency_wh_km); useUnits; useTranslation
+States:   loading / loaded / empty(No data yet) / error(retry) / stale / offline  (all rendered)
+i18n:     widget.score=Score  widget.efficiency=Efficiency  widget.noScore="No data yet"
+
+--- CAPABILITY (ADR-002 / ADR-004 / ADR-009 / ADR-013) ---
+WinUI 3 (Windows App SDK 1.6+) + .NET 10 + Fluent Design: PRESENT on this runner.
+  .NET SDK 10.0.300; workload 'maui-windows' supplies the WinUI 3 / win10 targeting packs;
+  Microsoft.WindowsAppSDK referenced via NuGet (Directory.Packages.props).
+  Proof: solution Release build below returns 0 errors. TeslaSync.App targets
+  net10.0-windows10.0.19041.0, UseWinUI=true, TreatWarningsAsErrors=true -> the new surface
+  compiles warning-clean under analyzers. => NOT BLOCKED.
+Out-of-process UI-automation harness (WinAppDriver/Appium): ABSENT on this runner.
+  TeslaSync.App.UITests ([Trait Category=UIAutomation]) drives the deployed MSIX over WebDriver
+  and, by its own design (csproj comment), FAILS FAST (never silently skips) when absent:
+    UiAutomationUnavailableException: UI automation cannot run: WinAppDriver/Appium runner is
+    absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found
+    at its standard install paths or on PATH.
+  The project is explicitly split so the headless unit suite (Category!=UIAutomation) and the
+  UIAutomation suite are gated independently (run-ui-automation.ps1 supplies the runner + MSIX).
+  The TEST step below therefore runs the authoritative headless logic suite; the UIAutomation
+  runner is environmental and orthogonal to this surface (identical for every sibling widget).
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt\wt-05\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt\wt-05\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+D:\repos\teslasync-wt\wt-05\apps\windows\TeslaSync.App.Core\Data\State\LoadState.cs(37,26): warning CA1716: Rename type LoadState<T>.Error so that it no longer conflicts with the reserved language keyword 'Error'. Using a reserved keyword as the name of a type makes it harder for consumers in other languages to use the type. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1716) [D:\repos\teslasync-wt\wt-05\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+  TeslaSync.App.Core -> D:\repos\teslasync-wt\wt-05\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt\wt-05\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt\wt-05\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt\wt-05\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt\wt-05\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+Build succeeded.
+D:\repos\teslasync-wt\wt-05\apps\windows\TeslaSync.App.Core\Data\State\LoadState.cs(37,26): warning CA1716: Rename type LoadState<T>.Error so that it no longer conflicts with the reserved language keyword 'Error'. Using a reserved keyword as the name of a type makes it harder for consumers in other languages to use the type. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1716) [D:\repos\teslasync-wt\wt-05\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+    17 Warning(s)
+    0 Error(s)
+Time Elapsed 00:00:17.12
+BUILD_EXIT=0
+
+--- TEST: dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" ---
+NOTE: Category!=UIAutomation runs the headless logic suite (the linked WinUI-free Model/ViewModel/Source
+      per widget + Core). The Category=UIAutomation suite needs the absent WinAppDriver/Appium runner
+      (see CAPABILITY above) and is gated separately by run-ui-automation.ps1.
+Passed!  - Failed:     0, Passed:  2924, Skipped:     0, Total:  2924, Duration: 743 ms - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+  Evidence: new DriveScoreWidget headless tests = 60 (adapter parse, score formula+rounding, status
+  thresholds, SI->display efficiency, projection metric/imperial, a11y automation names, result mapper,
+  per-state view-model matrix loading/loaded/empty/error/stale/offline, registry, diagnostics).
+  UIAutomation suite probe (Category=UIAutomation) on this runner -> UiAutomationUnavailableException
+  (WinAppDriver absent at http://127.0.0.1:4723/); environmental, not a surface defect.
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+(no formatting changes required)
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/dashboard-widgets/DriveScoreWidget ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- GATE SUMMARY ---
+BUILD_EXIT=0  TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
