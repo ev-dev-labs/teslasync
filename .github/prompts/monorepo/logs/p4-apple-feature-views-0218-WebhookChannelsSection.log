@@ -1,0 +1,232 @@
+================================================================================
+P4 · Feature view · 0218 — WebhookChannelsSection (Apple)
+Run: 2026-06-07T23:44-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/339
+Base: 2f29fbaec
+Prompt: P4/feature-views/0218 — Feature view: WebhookChannelsSection
+Web source (spec): web/src/features/settings/components/WebhookChannelsSection.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0002 BackendTool / 0054
+      GuardModeWidget precedent, ADR-012, Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... 2.45.x (project generates cleanly; 84 pbxproj refs
+                               to this surface — feature-views IS registered)       OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep);
+                               the app target's "Stage Shared.xcframework via Gradle"
+                               pre-build step is SKIPPED without a Kotlin/Native env  WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui + ui/Label + feedback + motion". The core requirement
+  is SwiftUI, which is AVAILABLE and PROVEN by real iOS-18-simulator AND macOS-15
+  SDK compiles below (Swift 6, complete strict concurrency). The capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply — the surface is
+  authored, host-compiled on BOTH SDKs, and host-tested (39/39 XCTest, EXECUTED).
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/WebhookChannelsSection.*) ===
+  Decomposed per house style (FleetApiSection precedent); swiftlint file_length<=400
+  honored on every file (largest = Adapter 354).
+  .Adapter.swift       354  pure projection core (Foundation only): WebhookMethod
+                            (+ save narrowing) / WebhookChannel / WebhookTestOutcome /
+                            WebhookFormState / WebhookSaveRequest / WebhookActionError /
+                            validation (web handleSubmit) / sorted (localized) / phase /
+                            WebhookFormat
+  .Content.swift       128  static copy (web sampleBody envelope + payload-variable
+                            docs) + surface slug + WebhookChannelsAccessibility (pure)
+  .Seams.swift         227  P1/S11 telemetry seam + P1/S10 WebhookStrings facade +
+                            source snapshot + P1/S8 WebhookChannelsSource protocol
+                            (CRUD + test + signature-preview) + InMemory source
+  .Model.swift         273  @Observable WebhookChannelsSectionModel — phase/freshness,
+                            form + delete-confirm + per-row test/toggle lifecycle,
+                            debounced (300 ms) signature preview, view.opened once
+  .Views.swift         281  header (icon/title/subtitle + freshness chip + Add) +
+                            buttons/pills + connectivity banner + glyphs/clipboard
+  .Row.swift           197  WebhookRow (status/method pills + Active toggle + Test/
+                            Edit/Delete) + inline WebhookTestResultPanel
+  .States.swift        144  payload-variables docs panel + loading/empty/error states
+  .Form.swift          291  WebhookFormSheet (web WebhookFormModal): name/url/method/
+                            secret + show-hide + enabled + Cancel/Save
+  .Fields.swift        164  field label/helper/text-input primitives + live
+                            WebhookSignaturePreviewView (web SignaturePreview)
+  .swift               138  composed surface (FadeIn glass card + phase switch +
+                            .sheet form + .alert delete) + surfaceSlug
+  .Previews.swift      152  #if DEBUG — content / +test-result / empty / loading /
+                            error / stale / offline + form add/edit + signature states
+  .Tests.swift         205  XCTest — adapter + accessibility (19 methods)
+  .ModelTests.swift    223  XCTest — state holder (20 methods)
+  .strings             102  P1/S10 catalog (table "WebhookChannelsSection", 66 keys)
+  No file imports the Shared xcframework; the seams are Swift protocols (prod app
+  injects the facade-backed source; previews/tests inject InMemoryWebhookChannelsSource).
+
+=== PARITY (web source read end-to-end; every t() + branch reproduced) ===
+  - Data sources (web useWebhookChannels / useSaveChannel / useDeleteChannel /
+    useToggleChannel / useTestWebhookChannel / useWebhookSignaturePreview): bound
+    through the P1/S8 WebhookChannelsSource seam. save() narrows PATCH->POST (web
+    toSavePayload); test() returns a WebhookTestOutcome (success / structured /
+    transport failure, status_code 0); previewSignature() over the verbatim web
+    sampleBody envelope. NO HTTP in the view.
+  - Composition (web GlassPanel + IconBox + Heading + Button + Badge + Toggle +
+    WebhookRow + Modal + ConfirmDialog + SignaturePreview + docs):
+      * Header  -> webhook IconBox + title/subtitle + tappable freshness chip + the
+                   "Add webhook" button (web header row).
+      * Row     -> name + Enabled/Disabled pill + METHOD pill + URL + Active toggle +
+                   Test (paperplane, spinner) / Edit (pencil) / Delete (trash, danger),
+                   then the inline test-result panel (verdict pill + Status {{status}} +
+                   {{ms}} ms + Signature + Response-body disclosure + error).
+      * Form    -> native .sheet (web Modal): Name* / URL* (+help) / HTTP method picker
+                   (POST/PUT/PATCH) / Signing secret with eye show-hide (+help) / live
+                   signature preview / Enabled toggle / inline error / Cancel + Save
+                   ("Saving…"/"Save changes"/"Add webhook", spinner).
+      * Signature preview -> empty helper | loading spinner | error | sha256 mono +
+                   copy + help (web SignaturePreview branches; 300 ms debounce + empty
+                   guard reproduced).
+      * Delete  -> native destructive .alert (web ConfirmDialog): title/message/
+                   Delete webhook/Cancel.
+      * Docs    -> "Available payload variables" + intro + title/message/source/
+                   timestamp bullets (code tokens verbatim, descriptions localized).
+  - States (ALL render; each has a #if DEBUG preview + a model unit test):
+      loading (skeleton list) · empty ("No webhooks yet" + "Add your first webhook")
+      · error ("Failed to load webhook channels: {{error}}" + Retry) · content (sorted
+      rows) · stale (freshness chip + reconnecting banner + ONE auto-refresh) ·
+      offline (cached rows kept + offline banner, no refetch).
+  - i18n (P1/S10): ALL 52 web `webhookChannels.*` keys preserved VERBATIM (defaults
+    byte-for-byte); native chrome adds 14 envelope keys (live/stale/offline/banners/
+    loading/retry/refresh/copy/docs.*). 66 keys declared; referenced==declared
+    (verified); NO English literals in native code (all via WebhookStrings facade +
+    Text(verbatim:)). The 4 web key names embedding "…Placeholder" are isolated in a
+    private key enum behind the sanctioned `// parity:allow` opt-out (ActionBuilder
+    precedent) so the .swift stub gate stays COUNT=0.
+  - Accessibility: VoiceOver labels on Add / Refresh chip / each Row (combined name +
+    state + method + url) / Active toggle / Test / Edit / Delete / secret show-hide /
+    copy / Save / Cancel; test-result + section carry combined summaries; Dynamic-Type
+    system fonts (Font.TS); reduce-motion honored (TSFadeIn / TSSkeleton / chip spin).
+  - Telemetry (P1/S11): WebhookChannelsSectionModel.start() emits view.opened with
+    surface slug "WebhookChannelsSection" exactly once (OSLog default; prod app injects
+    the shared diagnostics adapter).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 11 production files compiled with the REAL apps/apple closure
+  (design Tokens + Design/TSMaterial + Components/UI {Cards,Typography,Badges,Buttons}
+  + Components/Motion + Components/Feedback/Skeletons); none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK (Swift 6, complete strict concurrency)
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> \
+          -target arm64-apple-ios18.0-simulator -swift-version 6 \
+          -strict-concurrency=complete <closure> <11 production files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same flags, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode PreviewsMacros plugin;
+        the production files + Previews + closure, Swift 6):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the COMMITTED XCTest files EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (library target "TeslaSync" = production files
+        + real token/component closure; test target = the verbatim committed
+        WebhookChannelsSection.Tests.swift + .ModelTests.swift, @testable import):
+          Test Suite 'WebhookChannelsProjectionTests'     passed — 14 tests
+          Test Suite 'WebhookChannelsAccessibilityTests'  passed —  5 tests
+          Test Suite 'WebhookChannelsSectionModelTests'   passed — 20 tests
+          Executed 39 tests, with 0 failures (0 unexpected) in 0.118 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: method mapping + save narrowing, http(s) validation, trim + name/url
+        guards, localized sort, phase resolution, integer format, edit-seed blank
+        secret, sample-body parity, surface slug, a11y row/test-result/section; model
+        loading/empty/error, view.opened-once, stale auto-refresh (once + re-arm),
+        offline-cached-no-refetch, form present/dismiss/submit valid+invalid+failure+
+        in-flight, toggle + clear, test outcome + busy, delete confirm + drop result,
+        signature empty-guard / loading->loaded / failure, refresh+stop.
+  [4b] Headless executed harnesses (independent confirmation of pure + model logic):
+        adapter harness: 33/33 PASS (ALL_PASS) ; model harness: 26/26 PASS (ALL_PASS) OK
+  [5] swiftlint --strict (13 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` lists TeslaSync/feature-views):
+          Done linting! Found 0 violations, 0 serious in 13 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/13 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift) — scanned an isolated copy of
+        all 14 surface files (the gate's prompt path resolves to a non-dir; scanned the
+        real files here to avoid a hollow pass):
+          PLACEHOLDER_ALLOWED=4   PLACEHOLDER_COUNT=0
+        (the 4 ALLOWED are the verbatim web i18n key names containing "Placeholder",
+         carrying the required `// parity:allow verbatim web i18n key` reason)
+        PLACEHOLDER_EXIT=0                                                        OK
+  [8] i18n coverage cross-check (web tsx -> .strings -> .swift):
+          web keys: 52 ; defined in .strings: 66 ; MISSING from .strings: NONE
+          swift-referenced keys: 66 ; UNDEFINED in .strings: NONE
+        I18N_EXIT=0                                                               OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + targets
+          + schemes; this surface's 14 files ARE in the app target — 84 pbxproj refs).
+      - `xcodebuild -scheme TeslaSync-macOS build`  ->
+          SchemeAction "Stage Shared.xcframework via Gradle"
+          > Task :core:assembleDebug*FrameworkForSharedXCFramework SKIPPED (no KMP env)
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (code-unrelated; none is a defect in this surface; identical
+    disposition to the 0002 BackendTool / 0054 GuardModeWidget predecessors, Honesty
+    rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core and runs a
+          pre-build Gradle step (:core:assembleSharedXCFramework) that is SKIPPED here
+          (no Kotlin/Native toolchain). apps/apple/Frameworks holds only .gitkeep, so
+          the link/stage fails with the captured exit 65. Building the xcframework is
+          OUTSIDE this prompt's allowed files (WebhookChannelsSection.* + the log).
+      (b) macOS app/widget signing requires a development certificate on a signed
+          runner (ADR-012).
+    Note vs. predecessor: feature-views IS now registered in project.yml (2 source
+    refs; my files confirmed present in the generated pbxproj), so the surface WOULD
+    be compiled + tested by xcodebuild once the xcframework is staged. The XCTest target
+    runs the SAME tests PROVEN GREEN (39/39) by the executed SwiftPM harness in step [4],
+    and the surface compiles against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2]
+    under Swift 6 complete strict concurrency.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/content/stale/offline) —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested + EXECUTED.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (WebhookChannelsSource ->
+      WebhookChannelsSectionModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 52/52 web keys verbatim;
+      66 declared; referenced==declared verified.
+  [x] Accessibility labels on every interactive element (Add/Refresh/toggle/Test/Edit/
+      Delete/secret-toggle/copy/Save/Cancel); row + test-result + section combined values.
+  [x] Tests: adapter unit + per-state model + a11y — 39 methods, EXECUTED 39/39, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0
+      (4 sanctioned parity:allow web-key opt-outs).
+  [x] EXIT=0 / STATUS=DONE — host gates green (typecheck iOS+macOS Swift6 strict, DEBUG
+      previews, 39/39 XCTest, swiftlint --strict, swiftformat --lint, placeholder,
+      i18n); Xcode app build/test DEFERRED with captured evidence (xcframework staging
+      + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test
+                          is shown DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (14 files), all states, all 9 hooks via the
+                          seam, form + signature preview + delete + docs, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() (52) + branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. row/test-result/form/signature-preview/delete/docs + 6 states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool host-gate + deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework staging,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... documented: feature-views IS registered now (unlike the
+                          earlier 0002 base); the deferral cause is the KMP xcframework
+                          + signing, not file registration.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

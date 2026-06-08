@@ -1,0 +1,102 @@
+/*
+  WebhookChannelsSection.strings
+  TeslaSync — P4 feature view · 0218 · WebhookChannelsSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  WebhookChannelsSection resolves (table "WebhookChannelsSection") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first groups are the EXACT keys + defaults extracted from the web source
+  (features/settings/components/WebhookChannelsSection.tsx). The final group backs
+  the native state envelope (freshness chip, connectivity banner, loading / retry /
+  refresh chrome) and the localized payload-variable descriptions.
+*/
+
+/* --- Section header (web header + Add webhook) --- */
+"webhookChannels.title" = "Webhook channels";
+"webhookChannels.subtitle" = "Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver. Each channel can be HMAC-signed so receivers can verify authenticity.";
+"webhookChannels.addButton" = "Add webhook";
+"webhookChannels.loadError" = "Failed to load webhook channels: {{error}}";
+
+/* --- Empty state (web EmptyState) --- */
+"webhookChannels.empty.title" = "No webhooks yet";
+"webhookChannels.empty.message" = "Add a webhook to forward TeslaSync events to your favourite chat or automation tool.";
+"webhookChannels.empty.action" = "Add your first webhook";
+
+/* --- Payload-variables docs panel --- */
+"webhookChannels.docs.title" = "Available payload variables";
+"webhookChannels.docs.intro" = "Webhook receivers get a JSON envelope with these fields:";
+
+/* --- Channel row (status pills + actions) --- */
+"webhookChannels.row.enabled" = "Enabled";
+"webhookChannels.row.disabled" = "Disabled";
+"webhookChannels.row.toggle" = "Active";
+"webhookChannels.row.test" = "Test webhook";
+"webhookChannels.row.edit" = "Edit webhook";
+"webhookChannels.row.delete" = "Delete webhook";
+
+/* --- Inline test result --- */
+"webhookChannels.test.success" = "Success";
+"webhookChannels.test.failure" = "Failed";
+"webhookChannels.test.status" = "Status {{status}}";
+"webhookChannels.test.latency" = "{{ms}} ms";
+"webhookChannels.test.signature" = "Signature:";
+"webhookChannels.test.body" = "Response body";
+"webhookChannels.test.truncated" = "… (truncated)";
+
+/* --- Signature preview (web SignaturePreview) --- */
+"webhookChannels.signature.empty" = "Add a signing secret to preview the X-TeslaSync-Signature header.";
+"webhookChannels.signature.label" = "Signature preview";
+"webhookChannels.signature.loading" = "Computing signature…";
+"webhookChannels.signature.error" = "Failed to compute signature: {{error}}";
+"webhookChannels.signature.help" = "Send this header value with every webhook so receivers can verify authenticity.";
+
+/* --- Add/edit form (web WebhookFormModal) --- */
+"webhookChannels.form.addTitle" = "Add webhook";
+"webhookChannels.form.editTitle" = "Edit webhook";
+"webhookChannels.form.name" = "Name";
+"webhookChannels.form.namePlaceholder" = "Discord #alerts";
+"webhookChannels.form.nameRequired" = "Name is required.";
+"webhookChannels.form.url" = "URL";
+"webhookChannels.form.urlPlaceholder" = "https://discord.com/api/webhooks/...";
+"webhookChannels.form.urlHelp" = "Compatible with Discord, Slack, n8n, Home Assistant, and any HTTP receiver.";
+"webhookChannels.form.urlInvalid" = "URL must start with http:// or https://.";
+"webhookChannels.form.method" = "HTTP method";
+"webhookChannels.form.secret" = "Signing secret";
+"webhookChannels.form.secretPlaceholder" = "Optional — used for HMAC signing";
+"webhookChannels.form.secretPlaceholderEdit" = "Leave blank to keep existing";
+"webhookChannels.form.secretHelp" = "When set, every request includes X-TeslaSync-Signature: sha256=<hmac> so the receiver can verify authenticity.";
+"webhookChannels.form.showSecret" = "Show secret";
+"webhookChannels.form.hideSecret" = "Hide secret";
+"webhookChannels.form.enabled" = "Enabled";
+"webhookChannels.form.cancel" = "Cancel";
+"webhookChannels.form.saving" = "Saving…";
+"webhookChannels.form.save" = "Add webhook";
+"webhookChannels.form.saveEdit" = "Save changes";
+
+/* --- Delete confirmation (web ConfirmDialog) --- */
+"webhookChannels.delete.title" = "Delete webhook?";
+"webhookChannels.delete.message" = "This will permanently remove the webhook. TeslaSync will stop sending notifications to it immediately.";
+"webhookChannels.delete.confirm" = "Delete webhook";
+"webhookChannels.delete.cancel" = "Cancel";
+
+/* --- Native state envelope (freshness chip + banner + load chrome) --- */
+"webhookChannels.live" = "Live";
+"webhookChannels.stale" = "Stale";
+"webhookChannels.offline" = "Offline";
+"webhookChannels.staleBanner" = "Reconnecting — webhook list may be out of date";
+"webhookChannels.offlineBanner" = "Offline — showing the last loaded webhooks";
+"webhookChannels.loading" = "Loading webhook channels";
+"webhookChannels.retry" = "Retry";
+"webhookChannels.refresh" = "Refresh";
+"webhookChannels.copy" = "Copy";
+
+/* --- Payload-variable descriptions (web bullet list) --- */
+"webhookChannels.docs.dash" = "—";
+"webhookChannels.docs.var.title" = "short headline of the event";
+"webhookChannels.docs.var.message" = "long-form body of the event";
+"webhookChannels.docs.var.source" = "always \"teslasync\"";
+"webhookChannels.docs.var.timestamp" = "RFC3339 server-side time";
