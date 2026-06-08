@@ -1,0 +1,33 @@
+/*
+  SummaryStats.strings
+  TeslaSync — P4 feature view · 0175 · SummaryStats (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SummaryStats` resolves (table "SummaryStats") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of label keys extracted from the web source
+  (features/driving/components/driving-dynamics/SummaryStats.tsx). The second group
+  backs the native-only chrome: the unit suffixes the web bakes into the value strings
+  as literal symbols (so the Swift sources hold no literals), the temperature em-dash
+  sentinel (web `motorStats ? … : '—'`), and the loading accessibility wording.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"dynamics.totalReadings" = "Total Readings";
+"dynamics.avgTorque" = "Avg Torque";
+"dynamics.peakPower" = "Peak Power";
+"dynamics.peakRegen" = "Peak Regen";
+"dynamics.avgPower" = "Avg Power";
+"dynamics.avgMotorTemp" = "Avg Motor Temp";
+
+/* --- Native chrome: unit symbols (web literal suffixes) + sentinels --- */
+"dynamics.unit.nm" = "Nm";
+"dynamics.unit.kw" = "kW";
+"dynamics.unit.celsius" = "°C";
+"dynamics.unit.fahrenheit" = "°F";
+"dynamics.noData" = "—";
+"dynamics.loadingValueA11y" = "Loading";

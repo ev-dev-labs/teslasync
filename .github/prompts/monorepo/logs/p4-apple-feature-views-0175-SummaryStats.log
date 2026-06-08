@@ -1,0 +1,266 @@
+=== P4 Feature view 0175 SummaryStats (Apple) ===
+Host: Darwin arm64 (Apple Silicon). Swift 6.3.2 (swiftlang-6.3.2.1.108). active
+developer dir = /Library/Developer/CommandLineTools (Command Line Tools only — NO
+Xcode.app on this runner). swiftlint + swiftformat + pwsh on PATH. macOS SDK present
+(/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk); iPhoneSimulator SDK NOT
+locatable; zero iOS simulators (no simctl). Implication: SwiftUI ARE compilable here
+(proven at [4] — the production view set type-checks green against the macOS 15 SDK),
+but the xcodebuild app-target build/test harness cannot run on THIS host — it is
+DEFERRED to the P4 integration runner (Xcode + simulators), exactly as the peer
+surfaces 0093-SummaryStatsGrid / 0048-SummaryStatsRow / 0130-RecentActivity /
+0141-ElevationChart did.
+
+Web source (THE specification):
+  web/src/features/driving/components/driving-dynamics/SummaryStats.tsx
+Native output (allowed files — all match the SummaryStats.* glob):
+  apps/apple/TeslaSync/feature-views/SummaryStats.{swift,Adapter,Model,Views,Previews,
+    Tests}.swift
+  apps/apple/TeslaSync/feature-views/SummaryStats.strings
+  + this log.
+Charts/maps: the web source uses NEITHER a chart NOR a map (it is a pure six-tile stat
+grid). None is introduced (faithful: the web has none).
+
+NAMING NOTE: the bare `SummaryStats*` support-type namespace is already OWNED by the
+0048 SummaryStatsRow surface in the SAME TeslaSync module (SummaryStatsModel /
+SummaryStatsInput / SummaryStatsProjection / SummaryStatsLayout / SummaryStatsFormat /
+SummaryStatsAccessibility / OSLogSummaryStatsTelemetry / InMemorySummaryStatsSource).
+To avoid collisions this surface prefixes ALL support types `DynamicsSummaryStats*`,
+the view structs `SSD*`, and the i18n facade `SSDStrings` (table "SummaryStats"). The
+public entry view keeps the surface name `SummaryStats` (verified free in the module).
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web -> native)
+---------------------------------------------------------------------------
+  props:  motorStats: MotorStats | null + toTemperatureDisplay + tempUnit (the parent
+            Driving-Dynamics page derives these from useSettings/useUnits) → one
+            DynamicsSummaryStatsInput snapshot pushed by a DynamicsSummaryStatsSource
+            (P1/S8); DynamicsSummaryStatsProjection derives the six tiles from it.
+            toTemperatureDisplay+tempUnit are carried as a value-typed
+            DynamicsSummaryStatsTemperatureUnit (.celsius/.fahrenheit) which holds BOTH
+            the SI conversion (web convertTempFromSI: identity / c*9/5+32) and the unit
+            symbol key — keeping the projection pure + testable.
+  shell:  <FadeIn delay={0.4}> over <StaggerContainer grid-cols-2 md:grid-cols-3
+            lg:grid-cols-6 gap-4> of six <StaggerItem><StatCard/></StaggerItem>
+            → TSFadeIn(delay: 0.4) over SSDResponsiveGrid: a LazyVGrid whose column
+              count is the pure DynamicsSummaryStatsLayout (2 < 768 ≤ 3 < 1024 ≤ 6, the
+              md/lg Tailwind breakpoints), each cell wrapped in TSStaggerItem(index:)
+              for the web StaggerItem cascade. gap-4 → TSSpacing.lg (16).
+  tiles:  six <StatCard label value icon> (icon rendered web `text-[var(--text-muted)]`
+            — MUTED, not color-coded) →
+            1 Total Readings  : value={motorStats?.totalReadings ?? 0} (RAW number, NOT
+              grouped — React `{n}` = Number.toString()), no unit, icon BarChart3
+              → chart.bar.fill. null→"0".
+            2 Avg Torque      : `${fmtNumber(avgTorque ?? 0,1)} Nm`, icon Zap
+              → bolt.fill. null→"0.0" Nm.
+            3 Peak Power      : `${fmtNumber(peakPower ?? 0,1)} kW`, icon CornerDownRight
+              → arrow.turn.down.right. null→"0.0" kW.
+            4 Peak Regen      : `${fmtNumber(peakRegen ?? 0,1)} kW`, icon TrendingDown
+              → chart.line.downtrend.xyaxis. null→"0.0" kW.
+            5 Avg Power       : `${fmtNumber(avgPower ?? 0,1)} kW`, icon Gauge
+              → gauge.medium. null→"0.0" kW.
+            6 Avg Motor Temp  : motorStats ? `${fmtNumber(toTemperatureDisplay
+              (avgMotorTemp),1)}${tempUnit}` : '—', icon Thermometer
+              → thermometer.medium. null→"—" (em-dash, NO unit — the ONE tile that is
+              not zero-filled on a null motorStats).
+            Power/torque carry NO unit conversion (web appends literal "Nm"/"kW"); only
+            temperature is converted (SI °C → °C/°F). The unit symbols Nm/kW/°C/°F are
+            carried as i18n keys+fallbacks routed through the P1/S10 facade so the Swift
+            holds no literal symbols.
+  fmt:    fmtNumber(v,1) → DynamicsSummaryStatsFormat.decimal (NumberFormatter .decimal,
+            grouping, .halfUp, min=max fraction 1, non-finite→0 = web safeNumber); the
+            raw count → DynamicsSummaryStatsFormat.count (String(Int), UNGROUPED — the
+            web `{value}` vs grouped-fmtNumber distinction is honored, as the
+            0130-RecentActivity precedent established).
+  i18n:   6 web `t()` label keys (dynamics.totalReadings|avgTorque|peakPower|peakRegen|
+            avgPower|avgMotorTemp) → SSDStrings facade, table "SummaryStats". + native
+            envelope keys: dynamics.unit.nm|kw|celsius|fahrenheit (web literal suffixes),
+            dynamics.noData ("—", web temperature `: '—'`), dynamics.loadingValueA11y.
+
+STATES (every web-source branch renders — no hidden surface):
+  loading  → every tile resolves to .loading → SSDStatCard renders a TSSkeleton value
+             block (reduce-motion safe). The temperature tile keeps its unit descriptor.
+  data     → the six value tiles; a NULL motorStats renders the five numeric tiles as
+             zeros and the temperature tile as the em-dash ("—") — the web's OWN
+             `stats?.x ?? 0` / `stats ? … : '—'` emptiness, never a blank box.
+  (The web component is a pure presentational leaf fed by the Driving-Dynamics page;
+   its only render branches are the per-tile value + the StatCard skeleton. The
+   error / stale / offline lifecycle ENVELOPE is owned by the parent surface, exactly
+   as the 0048-SummaryStatsRow / 0093-SummaryStatsGrid sibling leaves document — it is
+   intentionally not duplicated at this leaf, and NO state renders as a blank box.)
+a11y: per-tile accessibilityElement(children:.ignore) with a combined label
+  "{label}, {value} {unit}" / "{label}, {value}" / "{label}, —" / "{label}, Loading";
+  the icon glyph is accessibilityHidden; Dynamic Type via system-font tokens;
+  minimumScaleFactor(0.6) on the value; reduce-motion gates inherited from TSFadeIn /
+  TSStaggerItem / TSSkeleton; container accessibilityElement(children:.contain).
+telemetry: P1/S11 view.opened(surface:"SummaryStats") emitted once on appear (idempotent
+  across repeated start()).
+binding: P1/S8 DynamicsSummaryStatsSource seam (production impl over the parent page's
+  resolved motorStats + temperature preference); the view performs NO networking.
+  Previews/tests drive InMemoryDynamicsSummaryStatsSource.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (6 swift files; config apps/apple/.swiftformat)
+    $ swiftformat --lint TeslaSync/feature-views/SummaryStats.{swift,Adapter,Model,
+        Views,Previews,Tests}.swift
+    → SwiftFormat completed. 0/6 files require formatting.
+    FORMAT_EXIT=0   OK  (maxwidth 120, before-first wrapping, --self remove)
+    NOTE: caught + fixed during dev — redundantReturn in the SSDStatCard
+      accessibilityText switch (single-expression cases → implicit return).
+
+[2] swiftlint --strict (6 files, explicit paths, repo apps/apple/.swiftlint.yml)
+    $ swiftlint lint --strict --config .swiftlint.yml TeslaSync/feature-views/
+        SummaryStats.*.swift
+    → Done linting! Found 0 violations, 0 serious in 6 files.
+    LINT_EXIT=0   OK
+    File lengths all < 400 (Tests 338, Model 297, Adapter 269, Views 186, Previews 80,
+      main 43). type_name ≤ 50 (longest DynamicsSummaryStatsTemperatureUnit = 35). No
+      single-char identifiers (identifier_name min 2).
+
+[3] check-placeholders.ps1 (literal gate + real per-file scan + negative control)
+    The gate's literal `-Path …/SummaryStats` resolves to the flat SummaryStats.* FILES
+    (not a subdir):
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/
+        SummaryStats -Language swift   → PLACEHOLDER_COUNT=0 / EXIT=0
+    A MEANINGFUL scan was also run on the real files copied into a temp dir — never
+    vacuous (Covenant #1/#3):
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path <tmp>/SummaryStats -Language swift
+        → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    Negative control (injected "// TODO" into a copy) → COUNT=1 / EXIT=1 (scanner proven
+    live). grep -niE for todo/fixme/xxx/coming soon/lorem/not implemented/unimplemented/
+    fatalError/placeholder/stub/mock across all SummaryStats.* → NONE FOUND.
+    PLACEHOLDER_EXIT=0   OK  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+[4] Swift-6-strict TYPE-CHECK of the full SwiftUI view set
+    Compiled against the REAL shared chain (apps/design/generated/apple/Tokens.swift +
+    Design/{TSDesign,TSMaterial} + Components/Motion/Motion + Feedback/Skeletons +
+    UI/{Cards,Typography,Badges,Buttons}) + the macOS 15 SDK, module TeslaSync:
+    $ swiftc -typecheck -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 \
+        -module-name TeslaSync <shared chain> SummaryStats.{Adapter,Model,Views,swift}
+        → VIEWSET_TYPECHECK_EXIT=0  OK  (SwiftUI compiles clean here)
+    NOTE: the SwiftUI `#Preview` macro (PreviewsMacros plugin) ships with Xcode, not with
+      Command Line Tools, so a raw `swiftc` cannot EXPAND `#Preview` on this host. The
+      DEBUG-only SummaryStats.Previews.swift is therefore compiled by the Xcode app
+      target at integration; the type-check above fully exercises the production view
+      set, and the Previews file uses only already-type-checked public APIs.
+    NOTE: iOS-Simulator type-check could NOT be performed — `xcrun --sdk iphonesimulator
+      --show-sdk-path` → "SDK iphonesimulator cannot be located" (CLT ships only the
+      macOS SDK). The SwiftUI source is platform-portable (onGeometryChange +
+      LazyVGrid + system fonts are cross-platform; no os(iOS)-only API), so the macOS-SDK
+      type-check exercises the same code the iOS target compiles.
+
+[5] EXECUTED adapter driver (Foundation only, Swift 6, macOS 15) — golden vectors
+    $ swiftc -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 \
+        SummaryStats.Adapter.swift main.swift -o driver && ./driver
+    Asserts (web-parity golden vectors): decimal half-up + grouping + non-finite→0
+      ("142.6","1,284.0",.nan→"0.0",12345.6→"12,346",2.5→"3"); de_DE separators
+      (1234.5→"1.234,5"); raw count UNGROUPED ("1284","1284932","0"); em-dash sentinel
+      "—"; temperature convert (C identity 47.5→47.5; F 47.5→117.5, 0→32, 100→212);
+      formatting facade (number "142.6", count "1284", tempValue C "47.5" / F "117.5",
+      descriptors °C/°F + keys); responsive columns (320/767→2, 768/1023→3, 1024/1440
+      →6); accessibility label with/without/empty unit.
+    → ALL_ADAPTER_CHECKS_PASS    COMPILE_EXIT=0 / RUN_EXIT=0   OK
+
+[6] EXECUTED state-holder + a11y driver (links REAL SwiftUI + Tokens + Motion[TSFadeIn/
+    TSStaggerItem] + Skeletons[TSSkeleton] + Cards/Typography/Badges/Buttons + the full
+    SummaryStats Adapter/Model/Views/swift view, Swift 6, macOS 15).
+    Same assertions as SummaryStats.Tests.swift:
+    $ swiftc -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 \
+        -module-name TeslaSync <shared chain> SummaryStats.{Adapter,Model,Views,swift} \
+        main.swift -o driver && ./driver
+    Asserts: projection loading branch (6 tiles all .loading, temp unit kept); data
+      branch (id order; card0 .value("1284") no unit; torque "142.6" Nm; peakPower
+      "248.3" kW; peakRegen "64.1" kW; avgPower "38.9" kW; temp C "47.5" °C); fahrenheit
+      temp "117.5" °F; null branch (count "0", torque "0.0", avgPower "0.0", temp .empty
+      + no unit); tile a11y ("Avg Torque, 142.6 Nm" / "…, Loading" / "Avg Motor Temp,
+      —"); model start() applies initial + view.opened emitted EXACTLY once across two
+      start() calls (startCount 1); stop() delegates (stopCount 1) + re-arms (startCount
+      2); push loading→data updates the projection; SummaryStats(model:) constructs
+      (View links); surface slug "SummaryStats".
+    → ALL_MODEL_CHECKS_PASS    COMPILE_EXIT=0 / RUN_EXIT=0   OK
+
+[7] i18n key coverage (every key-like literal in code resolves in the catalog)
+    $ grep "dynamics.*" string literals across the 6 swift files vs the keys defined in
+      SummaryStats.strings
+    → USED = 12, DEFINED = 12. USED-but-NOT-DEFINED: none. DEFINED-but-NOT-USED: none.
+      All 6 web `t()` parity labels + the native envelope keys are defined 1:1.
+    I18N_EXIT=0   OK
+
+[8] xcodebuild iOS-Simulator + macOS app build/test — DEFERRED (platform-capability)
+    $ xcode-select -p           → /Library/Developer/CommandLineTools
+    $ xcodebuild -version       → "error: tool 'xcodebuild' requires Xcode, but active
+                                   developer directory '…/CommandLineTools' is a command
+                                   line tools instance"
+    $ xcrun --sdk iphonesimulator --show-sdk-path → "error: SDK 'iphonesimulator' cannot
+                                   be located"
+    $ xcrun simctl list devices → "error: unable to find utility 'simctl'" (no simulators)
+    IOS_EXIT=DEFERRED  MAC_EXIT=DEFERRED  LINT/FORMAT/PLACEHOLDER all 0 (above)
+    The xcodebuild app-target build/test harness CANNOT run on this host (no Xcode.app, no
+    iPhoneSimulator SDK, no simulators; the app target additionally carries the KMP
+    Shared.xcframework Gradle pre-action + macOS signing) — none a defect in THIS code,
+    which is proven compilable at [4] and executed-green at [5]/[6]. Deferred to the P4
+    integration runner, matching the user-approved peer disposition (0093/0048/0130/0141).
+
+===========================================================================
+HONESTY COVENANT — attestation
+===========================================================================
+  1 No red-as-green   : every exit code above is the real one; the redundantReturn at [1]
+                        was FIXED in the source, not masked.
+  2 No scope narrowing: all six tiles + every web value branch (raw count / fmtNumber+
+                        unit / converted temperature / null-zeros / temperature em-dash /
+                        loading skeleton) reproduced.
+  3 No skip-and-assume: web source read end-to-end; every t() key + conditional branch
+                        mapped (the `?? 0` numeric fallbacks vs the `motorStats ? … : '—'`
+                        temperature ternary are reproduced distinctly).
+  4 No stubs as final : no TODO/placeholder/mock/Lorem ([3]); complete implementations.
+  5 No parity shortcut: fmtNumber (grouped, half-up, non-finite→0) vs raw UNGROUPED count
+                        vs convertTempFromSI reproduced + executed-green vs the web golden
+                        vectors ([5]); power/torque NOT converted, temperature IS.
+  6 No delegation     : authored directly (delegation FORBIDDEN per the prompt).
+  7 No predecessor bypass: built on the P1/S8 source + P1/S9 tokens + P1/S10 facade +
+                        P1/S11 telemetry seams the peer surfaces established; type-checked
+                        + executed against the REAL generated Tokens + shared components.
+  8 No commit on red  : commit made only after [1]-[7] green ([8] deferred w/ evidence).
+  9 No silent drift   : changes confined to the allowed SummaryStats.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native SummaryStats shipped at parity with the web source: a pure,
+  executed-green projection core (Foundation, Swift 6) reproducing the fmtNumber
+  (grouped, half-up, non-finite→0) vs the raw UNGROUPED Total-Readings count vs the SI
+  Celsius→°C/°F conversion (web convertTempFromSI), the six driving-dynamics tiles in
+  source order with their muted SF-Symbol icons, the `?? 0` numeric fallbacks and the
+  distinct temperature em-dash for a null motorStats, and the responsive 2/3/6-column
+  grid at the md/lg Tailwind breakpoints; a P1/S8 state-holder seam (no view HTTP); a
+  P1/S10 i18n facade with full 6-label parity coverage (+ native unit/sentinel envelope
+  keys, 12/12); P1/S11 view.opened telemetry emitted once; reduce-motion + Dynamic Type +
+  VoiceOver throughout; and the loading + data (zeros / em-dash) states with no blank box.
+  All host-runnable gates pass: swiftformat 0/6, swiftlint --strict 0/6, check-placeholders
+  real-scan COUNT=0 (control COUNT=1), Swift-6-strict macOS-SDK type-check of the full view
+  set EXIT=0, i18n coverage 12/12, and two executed runtime drivers (adapter Foundation-only
+  + model/a11y full SwiftUI link) PASS. The xcodebuild iOS-Simulator + macOS app build/test
+  is DEFERRED to the P4 integration runner — this host is Command Line Tools only (no
+  Xcode.app, no iPhoneSimulator SDK, no simulators, no #Preview macro plugin), and the app
+  build additionally carries the KMP Shared.xcframework Gradle pre-action + macOS signing —
+  none a defect in this code. Matches the user-approved peer disposition (0093-SummaryStatsGrid
+  / 0048-SummaryStatsRow / 0130-RecentActivity / 0141-ElevationChart, same P4 batch).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/SummaryStats.swift \
+          apps/apple/TeslaSync/feature-views/SummaryStats.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/SummaryStats.Model.swift \
+          apps/apple/TeslaSync/feature-views/SummaryStats.Views.swift \
+          apps/apple/TeslaSync/feature-views/SummaryStats.Previews.swift \
+          apps/apple/TeslaSync/feature-views/SummaryStats.Tests.swift \
+          apps/apple/TeslaSync/feature-views/SummaryStats.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0175-SummaryStats.log
+  git commit -m "feat(apps/apple/feature-views): add SummaryStats surface (P4)"
+
+EXIT=0
+STATUS=DONE
