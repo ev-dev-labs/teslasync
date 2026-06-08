@@ -1,0 +1,147 @@
+=== P4 Feature view 0142 EnergySummaryPanel (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon) — SHARED parallel-build host.
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively per
+                       invocation, no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · gradle 8.14.5 · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) present + booted · macOS 15 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 7m29s; release XCFramework staged
+                       to apps/apple/Frameworks/Shared.xcframework — SHARED_BUILD_EXIT=0).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators all present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/drive-detail/EnergySummaryPanel.tsx — a PURE presentational leaf fed the
+  `drive` (DriveDetail) + `stats` (DriveStats) props by its parent (the Drive Detail page) and the distance
+  preference from `useUnits().unitPrefs.distance`. It renders:
+    GlassPanel(p-5) → header[ <BatteryCharging/> (green) + <h3> {t('driveDetail.energySummary','Energy Summary')} ]
+                    → grid-cols-2 / sm:3 / lg:6 of six metric cells (muted 10px label over a bold text-lg tinted value):
+        1 Energy Consumed  (amber)  : energyWh > 1000 ? fmtWithUnit(energyWh/1000,'kWh') : `${fmtNumber(energyWh)} Wh`
+        2 Energy Recovered (green)  : same ladder on regenWh
+        3 Net Consumption  (cyan)   : same ladder on (energyWh - regenWh)
+        4 Efficiency       (purple) : consumptionWhKm > 0 ? `${fmtNumber(consumptionWhKm × (mi?1.609344:1))} ${'Wh/mi'|'Wh/km'}` : '—'
+        5 Battery Used     (amber)  : start&&end!=null ? `${start-end}%` : '—'  + sub `${start ?? '?'}% → ${end ?? '?'}%`
+        6 Range Used       (green)  : startRange&&endRange!=null ? fmtWithUnit(startRange-endRange, 'mi'|'km') : '—'
+  Data sources (prompt): useTranslation + useUnits. No data-fetching hook — it is a presentational leaf; the only
+  per-cell branches are the em-dash fallbacks above (reproduced verbatim). fmtNumber = 2-decimal locale format,
+  safeNumber coerces non-finite → 0; fmtWithUnit = `${fmtNumber(v)} ${unit}`. Energy threshold is a STRICT `> 1000`.
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/EnergySummaryPanel.*)
+  EnergySummaryPanel.Adapter.swift   — EnergySummaryFormat (number/withUnit/energy-ladder/efficiency/plain ports of
+                                       numberFormat.ts), EnergySummaryDistanceUnit (← shared MeasurementSystem),
+                                       EnergySummaryInputData (drive+stats), EnergySummaryMetric + MetricsBuilder
+                                       (the six-up grid projection), EnergySummaryAccessibility (VoiceOver seam)
+  EnergySummaryPanel.Model.swift     — EnergySummaryTelemetry seam + OSLog default (redaction-safe "view.opened"),
+                                       EnergySummaryConnection (live/stale/offline), EnergySummaryInput snapshot,
+                                       EnergySummaryResolved + Phase, EnergySummaryProjection (pure resolve),
+                                       EnergySummarySource seam, @MainActor @Observable EnergySummaryModel,
+                                       InMemoryEnergySummarySource, EnergySummaryStrings (P1/S10 facade)
+  EnergySummaryPanel.swift           — EnergySummaryPanel<…> SwiftUI surface (header + freshness chip + refresh +
+                                       connectivity banner + content switch); surfaceSlug = "EnergySummaryPanel"
+  EnergySummaryPanel.Views.swift     — EnergySummaryContent (TSFadeIn + adaptive LazyVGrid), EnergyMetricCell, the
+                                       loading skeleton grid / empty (ContentUnavailableView) / error (retry) chrome,
+                                       and the Tint → chart-series colour mapping
+  EnergySummaryPanel.Previews.swift  — #if DEBUG previews: data(metric), data(imperial), data(partial), empty,
+                                       loading, error, stale, offline
+  EnergySummaryPanel.strings         — the P1/S10 table "EnergySummaryPanel": the 7 web driveDetail.* keys + chrome
+  EnergySummaryPanel.Tests.swift     — 36 XCTest cases
+  No shared-wiring edits were required: project.yml + .swiftlint.yml already include TeslaSync/feature-views, and the
+  per-surface .strings table is the i18n contribution (the same pattern every sibling P4 feature-view uses — no edit
+  to the shared Localizable.xcstrings). Commit set = EnergySummaryPanel.* + this log only (prompt "Allowed files").
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel              → TSGlassPanel (Sources/Components/UI/Cards.swift)
+  FadeIn                  → TSFadeIn      (Sources/Components/Motion/Motion.swift; honours Reduce Motion)
+  h3 title                → Font.TS.panel + Color.TS.textPrimary, .isHeader
+  Lucide <BatteryCharging>→ SF Symbol "bolt.batteryblock.fill", tinted Color.TS.chartSeriesBattery, decorative (hidden)
+  text-{colour}-400       → chart-series tokens (ADR-006 semantic): amber→chartSeriesEnergy · green→chartSeriesBattery
+                            · cyan→chartSeriesRegen · purple→chartSeriesPower
+  fmtNumber / fmtWithUnit → EnergySummaryFormat.number / withUnit (2-dp, locale grouping, non-finite→0; injectable locale)
+  unitPrefs.distance      → EnergySummaryDistanceUnit(MeasurementSystem): metric→km (Wh/km, ×1), imperial→mi (Wh/mi, ×1.609344)
+  i18n      : every label/chrome string via EnergySummaryStrings facade (web keys driveDetail.energySummary /
+              energyConsumed / energyRecovered / netConsumption / efficiency / batteryUsed / rangeUsed) — zero English
+              prose literals in Swift; only unit symbols (Wh/kWh/km/mi/%) and math glyphs (→, ?) are inline, exactly as
+              the web source hardcodes them.
+  a11y      : each metric cell is one combined VoiceOver element ("{label}: {value}[, {detail}]"); title carries
+              .isHeader; the icon is .accessibilityHidden; motion respects Reduce Motion via TSFadeIn.
+  telemetry : view.opened surface="EnergySummaryPanel" via EnergySummaryModel.start (P1/S11), default OSLog sink.
+  states    : loading (skeleton grid) · empty (ContentUnavailableView — parent resolved, no snapshot) · error
+              (QueryError peer + Retry) · data (the six-up grid, per-cell em-dash fallbacks) · stale/offline
+              (freshness chip + banner + one-shot auto-refresh on the stale transition). Every state renders + is
+              previewed + is covered by tests.
+
+GATES
+  [GREEN]    swiftformat --lint (the 6 shipped EnergySummaryPanel*.swift)        : 0/6 files require formatting
+  [GREEN]    swiftlint --strict (the 6 shipped EnergySummaryPanel*.swift)        : 0 violations, 0 serious
+  [GREEN]    check-placeholders.ps1 (real per-surface scan of the 6 .swift)      : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0  (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 -Path …/feature-views/EnergySummaryPanel     : PLACEHOLDER_COUNT=0                        (the literal gate path; EXIT=0)
+  [GREEN]    EnergySummaryPanel build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             -strict-concurrency=complete = the app's own setting), compiling the EXACT shipped EnergySummaryPanel.*
+             sources against the REAL repo design-system files (Tokens / TSMaterial / Cards / Buttons / Motion /
+             Skeletons / Typography / MeasurementSystem):
+                 Build complete! (12.28s)  ·  Executed 36 tests, with 0 failures                              (SWIFT_TEST_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO EnergySummaryPanel errors; all blockers pre-exist this change and live
+                outside the prompt's allowed files = EnergySummaryPanel.* + this log):
+    iOS  : the whole app + widgets + activities COMPILE and CodeSign (the build reached CompileXCStrings /
+           CodeSign TeslaSync.app — my EnergySummaryPanel.* + .strings are compiled into the app, 11 build refs,
+           0 errors). The TEST action then fails because the 74 co-located feature-views `*.Tests.swift` are members
+           of the app target and `import XCTest`, which the app target does not link. The sole `error:` lines in the
+           8623-line log are 4 identical hits on the FIRST such file alphabetically —
+           TeslaSync/feature-views/AcDcStatsPanel.Tests.swift:19:8: "Unable to resolve module dependency: 'XCTest'"
+           — a SYSTEMIC project-configuration issue affecting every co-located test, not introduced here. grep of
+           the log for "EnergySummaryPanel … error:" = 0 hits.
+    macOS: BUILD FAILED at signing — `"TeslaSync-macOS" / "TeslaSyncWidgets-macOS" has entitlements that require
+           signing with a development certificate`, which this runner does not provision. The only two `error:`
+           lines are those signing errors; 0 EnergySummaryPanel errors.
+    Both are exactly the artifacts apps/macos-pending-verifications.md (origin p4-apple/feature-views/P-0010-ToolCard)
+    already defers to the ADR-012 macos-latest CI runner under the P4/P99 Apple acceptance gate (signing/archive) +
+    a feature-views test-target-membership pass — NOT a single feature-view prompt (task rule: do not fix
+    pre-existing unrelated breakage; allowed files forbid touching project.yml / sibling *.Tests.swift / signing).
+    The same EnergySummaryPanel.Tests.swift is PROVEN to compile + pass (36/36) in the isolated Swift 6 harness above.
+
+  Whole-tree gate FYI (pre-existing, NOT this change — both files unmodified in git status):
+    swiftformat --lint apps/apple : 1/1148 require formatting — TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+    swiftlint --strict (all)      : 1 serious — TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with raw exits + grep evidence — never reported as passing.
+  2  No scope narrowing : every web cell + branch (the energy ladder incl. the strict >1000 threshold, the
+                          km/mi efficiency conversion, the battery delta + endpoint detail, the range delta, every
+                          em-dash fallback) is reproduced; all P4 leaf states render.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; the macOS signing + iOS XCTest
+                          failures were confirmed by reading the build logs, not assumed.
+  4  No stubs as final  : complete production surface + 36 real tests; placeholder scanner = 0; no TODO/stub/placeholder.
+  5  No parity shortcut : formatter rounding, kWh/Wh ladder, ×1.609344 efficiency, tint/typography/a11y/telemetry all
+                          mapped to platform tokens and unit-asserted against the web expressions.
+  6  No delegation      : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry,
+                          and the P4 ToolCard "isolated-build + DEFERRED full-app" disposition all honoured.
+  8  No commit on red   : the COMMITTED artifact (EnergySummaryPanel.* + this log) is GREEN on every per-surface gate
+                          AND on a real isolated Swift 6 strict-concurrency build + 36/36 tests; the deferred full-app
+                          gate is RED only on pre-existing, unrelated surfaces (sibling co-located tests + macOS
+                          signing) which this commit neither introduces nor is permitted to touch.
+  9  No silent drift    : changes are confined to feature-views/EnergySummaryPanel.{swift,Adapter,Model,Views,Previews,
+                          Tests}.swift + EnergySummaryPanel.strings and this log — all enumerated above; git status
+                          shows exactly those new files and nothing else.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic EnergySummaryPanel shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 36 tests pass under the app's own Swift 6 strict-concurrency rules, against the real
+  design-system, with swiftformat / swiftlint / placeholder all green on the surface, and it compiles cleanly into
+  the full iOS app target (0 errors, reached CodeSign). The full-app iOS-Simulator + macOS xcodebuild build/test gate
+  is DEFERRED (not failed by this code): iOS is blocked by the pre-existing co-located-`*.Tests.swift`-into-app-target
+  configuration (first triggered by AcDcStatsPanel.Tests.swift) and macOS by development-signing — both owned by the
+  P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md, and both outside
+  this prompt's allowed files. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition
+  used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE
