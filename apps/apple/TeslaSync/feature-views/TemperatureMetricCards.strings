@@ -1,0 +1,39 @@
+/*
+  TemperatureMetricCards.strings
+  TeslaSync — P4 feature view · 0161 · TemperatureMetricCards (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TemperatureMetricCards` resolves (table "TemperatureMetricCards") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface prompt owns
+  its own strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/driving/components/drivetrain-health/TemperatureMetricCards.tsx and the `sensors`
+  array its parent DrivetrainHealthPage builds) — the canonical `drivetrain.*` namespace. The
+  remaining keys back the native-only chrome (freshness chip, stale/offline banner, loading +
+  error + retry copy, empty hint).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"drivetrain.frontMotor" = "Front Motor";
+"drivetrain.rearMotor" = "Rear Motor";
+"drivetrain.inverter" = "Inverter";
+"drivetrain.battery" = "Battery";
+"drivetrain.ofMax" = "of max";
+"drivetrain.noData" = "No data";
+"drivetrain.healthScore" = "Health Score";
+"drivetrain.peakPower" = "Peak Power";
+
+/* --- Native chrome: freshness + connectivity --- */
+"drivetrain.temp.live" = "Live";
+"drivetrain.temp.stale" = "Stale";
+"drivetrain.temp.offline" = "Offline";
+"drivetrain.temp.staleBanner" = "Reconnecting — drivetrain temperatures may be stale";
+"drivetrain.temp.offlineBanner" = "Offline — showing last known drivetrain temperatures";
+
+/* --- Native chrome: states --- */
+"drivetrain.temp.loading" = "Loading drivetrain temperatures";
+"drivetrain.temp.errorTitle" = "Couldn't load drivetrain temperatures";
+"drivetrain.temp.retry" = "Retry";
+"drivetrain.temp.empty" = "No drivetrain temperature data yet";
