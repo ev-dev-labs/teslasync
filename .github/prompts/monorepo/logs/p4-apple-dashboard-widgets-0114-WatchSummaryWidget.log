@@ -1,0 +1,215 @@
+=== P4 Dashboard widget 0114 WatchSummaryWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.*
+Web spec: web/src/features/dashboard/widgets/WatchSummaryWidget.tsx
+Registry: registry/vehicle.ts → "watch-summary" · category=vehicle · 1x2 / 1x2 / 2x40
+Runner  : Darwin · Swift 6.3.2 (swiftlang-6.3.2.1.108) · swiftformat + swiftlint + pwsh + xcodegen present
+Mode    : code-complete + host-validated + DEFERRED Xcode.app build/test
+
+--------------------------------------------------------------------------------
+CAPABILITY PROBE (this runner)
+--------------------------------------------------------------------------------
+  swiftc -typecheck SwiftUI ... compiles (macOS 15 target, Swift 6 strict-concurrency)  ✅
+  Foundation/Observation/OSLog adapter+model ... compiles + EXECUTES natively            ✅
+  swiftformat / swiftlint / pwsh / xcodegen .... present                                 ✅
+  xcodebuild / Xcode.app ....................... NOT present                             ✖
+      `xcode-select -p` = /Library/Developer/CommandLineTools
+      ("xcodebuild: error: tool 'xcodebuild' requires Xcode, but active developer
+        directory '/Library/Developer/CommandLineTools' is a command line tools instance")
+
+  The SwiftUI / Swift Charts / MapKit FRAMEWORKS + the macOS 15 SDK ARE available and proven
+  by a real macOS-SDK typecheck below, so the capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable on the runner") does NOT apply — the surface is authored
+  and host-typechecked + host-executed for real, not declared blocked. Only the Xcode.app
+  *app build/test* DRIVER (xcodebuild + the #Preview macro plugin + signing + Shared.xcframework)
+  is missing; those two scheme steps are DEFERRED to a full-Xcode signed CI runner (ADR-012;
+  matches the CLT-only predecessor 0068 MQTTStatusWidget disposition).
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: WatchSummaryWidget.* + this log)
+--------------------------------------------------------------------------------
+  WatchSummaryWidget.swift            — SwiftUI surface: glass widget shell; compact (1×2) watch-face
+                                        layout (battery ring + state pill + range + ⚡ charging) and
+                                        standard (2×n) battery hero + 2-col detail grid; header
+                                        (applewatch glyph + title + freshness chip + refresh); ALL
+                                        states; full a11y; i18n.
+  WatchSummaryWidget.Views.swift      — presentational subviews: WatchBatteryRing (RadialGauge parity,
+                                        trimmed-circle gauge), WatchStatePill (StatusBadge), WatchBigNumber
+                                        (WidgetBigNumber), WatchBadgeChip (Badge), WatchLockChip
+                                        (Lock/Unlock + badge), WatchStatCell + WatchValueUnit (detail
+                                        tiles), WatchChargingPip, WatchSummarySkeleton (loading).
+  WatchSummaryWidget.Model.swift      — P1/S8 state-holder seam (WatchSummarySource), @Observable
+                                        WatchSummaryModel (+ nonisolated resolvePhase, autoRefreshIfStale),
+                                        P1/S11 telemetry seam (view.opened), InMemory source,
+                                        WatchSummaryStrings (P1/S10), WatchSummarySurface (slug +
+                                        canonical registration).
+  WatchSummaryWidget.Adapter.swift    — pure (Foundation-only) projection: cached WatchSummaryDTO + unit
+                                        prefs → battery value/text/big-text/tone, state label+tones,
+                                        range/temp conversions + 0-dp text, lock, last-seen, charging,
+                                        reproducing the web numeric + tone pipeline VERBATIM (parity);
+                                        + layout (isCompact) + a11y summary.
+  WatchSummaryWidget.Previews.swift   — #if DEBUG previews for every state + compact/standard layouts.
+  WatchSummaryWidget.Tests.swift      — XCTest: adapter value parity + conversions + format + tones + layout.
+  WatchSummaryWidget.ModelTests.swift — XCTest: model phases/telemetry/refresh + registry + accessibility
+                                        (split from Tests.swift to stay within the 400-line lint envelope).
+  WatchSummaryWidget.strings          — per-surface i18n table (every web t() key + native chrome).
+
+--------------------------------------------------------------------------------
+PARITY ARITHMETIC (reproduced EXACTLY from the web source — value parity, NOT a "corrected" version)
+--------------------------------------------------------------------------------
+  battery (gauge) = value = batteryLevel ?? 0 ; centre = fmtNumber(value, 0) [RadialGauge decimals 0]
+  battery (hero)  = batteryLevel != null ? fmtNumber(batteryLevel, 0) : '—' [WidgetBigNumber nullDisplay]
+  batteryColor    = > 50 green · > 20 amber · else red ; null → grey track  [getBatteryColor]
+  range           = convertDistanceFromSI(range_km * 1000, unit) then fmtNumber(·, 0)
+                    [ /1000 km · /1609.344 mi · /0.3048 ft ]  ; '—' when range_km null
+  cabin temp      = convertTempFromSI(inside_temp_c, unit) then fmtNumber(·, 0)
+                    [ °C pass-through · °F = c*9/5+32 ]       ; '—' when inside_temp_c null
+  state (compact) = capitalize(state) + FSM badgeDot tone (online=success · driving/parked/updating=info ·
+                    charging=warning · asleep=neutral · offline=danger)        [StatusBadge]
+  state (hero)    = raw state + badge tone (online→success · asleep→neutral · else→warning) [web ternary]
+  lock            = is_locked == true → Locked/success · false → Unlocked/warning · null → '—'
+  last seen       = relative (RelativeDateTimeFormatter) ; '—' when null/invalid   [TimeStamp]
+  charging        = complication.charging → compact "⚡ Charging"
+  isCompact       = size.cols <= 1
+
+States reproduced (every one renders — no hidden surfaces), each with a #if DEBUG preview:
+  loading (skeleton chrome) · empty ("No watch data") · error (retry) · stale (chip + banner +
+  auto-refresh) · offline (cached glance + banner/chip) · content (compact watch-face / standard grid).
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] xcrun --sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+       (surface = WatchSummaryWidget.Model + .Adapter + .Views + .swift, type-checked against the REAL
+        generated design tokens apps/design/generated/apple/Tokens.swift + a registry-types shim that
+        reproduces DashboardWidgetSize/Registration VERBATIM from the sibling MQTTStatusWidget.Model.swift
+        that owns them in the app target; macOS SDK, strict concurrency complete)
+       → error count = 0
+       TYPECHECK_EXIT=0
+
+[HOST] same toolchain, DEBUG, #Preview bodies wrapped as `@MainActor func -> some View`
+       (the 8 preview bodies type-checked; the only CLT gap is the PreviewsMacros plugin, which ships
+        with Xcode.app — the preview BODIES themselves type-check clean)
+       → error count = 0
+       PREVIEW_TYPECHECK_EXIT=0
+
+[HOST] xcrun --sdk macosx swiftc -swift-version 6 -strict-concurrency=complete + EXECUTE harness
+       (RegistryShim + WatchSummaryWidget.Model + .Adapter + driver, compiled to a native executable)
+       → === WatchSummaryWidget host harness ===  CHECKS=133 FAILURES=0  HARNESS_OK
+       HARNESS_EXIT=0
+       Verified GREEN by EXECUTION: battery text "82" / big-text "82" vs null→"0"/"—" + tone bands
+       (good/warning/critical/unknown at 51/50/21/20/0/nil/nan); range km "312" + mi "194"
+       (312 km → 312000 m / 1609.344 → 194) ; cabin °C "22" + °F "71" (21.5 °C → 70.7 °F) ;
+       lock locked/unlocked/unknown ; compact-state tones (online success · driving/parked/updating info ·
+       charging warning · asleep neutral · offline danger · unknown neutral) + capitalize "Online"/"Charging";
+       hero-badge tones (online success · asleep neutral · else warning) ; state &&-guard (nil/"" → no badge) ;
+       charging flag ; nil-summary empty projection (hasData false, '—' placeholders, lastSeen '—') ;
+       half-away-from-zero rounding + grouping "1,000"/"1"/"22"/"194"/inf→"0" ; conversions (km/mi/ft,
+       °C/°F, nan→0/32) ; isCompact 0/1=t 2/4=f ; phase matrix (loading/empty/loaded/failed × hasSummary?) ;
+       telemetry-once + start/refresh delegation ; stale auto-refresh gating (skip while fetching, fire when
+       idle) ; offline-cached-content + units/connection tracking ; registry metadata + clamp ; a11y summary.
+
+[HOST] swiftformat --lint apps/apple
+       → 0/424 files require formatting, 2 files skipped
+       FORMAT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint lint --strict  <the 7 shipped WatchSummaryWidget*.swift files>
+       → Done linting! Found 0 violations, 0 serious in 7 files.
+       MYFILES_LINT_EXIT=0
+       (Adapter held to exactly 400 lines to honour the file_length rule; tests split Tests/ModelTests to
+        stay within the 400-line envelope, matching predecessor 0078.)
+
+[HOST] cd apps/apple && swiftlint --strict          (whole project: included dirs Sources/Tests/Watch*/
+       dashboard-widgets)
+       → Found 1 violation, 1 serious in 420 files.
+       PROJECT_LINT = 1 PRE-EXISTING violation, OUTSIDE my allowed scope (NOT introduced by me):
+         LifetimeStatsWidget.Adapter.swift:141 function_body_length (78 > 50). That file is a tracked,
+         committed PREDECESSOR surface (slot 0055), unchanged by this work (git diff = empty); editing it
+         is outside the allowed WatchSummaryWidget.* scope (Covenant #6/#7/#9). My 7 files contribute
+         ZERO violations (MYFILES_LINT_EXIT=0 above). Reported transparently rather than silently masked
+         or worked around.
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path .../WatchSummaryWidget -Language swift
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0 · EXIT=0
+       PLACEHOLDER_EXIT=0
+       (manual case-insensitive forbidden-word scan [TODO/FIXME/stub/mock/placeholder/lorem/coming soon/
+        not implemented/unimpl] of the shipped files → only legitimate hits: doc text "em-dash placeholder"
+        describing the '—' empty value, SwiftUI's `.redacted(reason: .placeholder)`, the named constant
+        `static let placeholder = "—"`, and the test name `testMissingScalarsFallBackToPlaceholders` —
+        NONE is a stub/TODO.)
+
+[HOST] i18n key cross-check (keys referenced in Swift vs defined in WatchSummaryWidget.strings)
+       → 22 used keys, 22 defined, 0 missing ; every web t() key present
+       (widget.watchSummary[.description] · widget.charging · widget.noWatchData · widget.battery ·
+        widget.range · widget.lockStatus · widget.locked · widget.unlocked · widget.cabinTemp ·
+        widget.lastSeen + native chrome). plutil -lint → OK.
+       I18N_EXIT=0
+
+[DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green)
+       Reason (a real capability probe, not a code defect): NO FULL XCODE ON THIS RUNNER — only
+       CommandLineTools is the active developer dir, so `xcodebuild` (and the simulators, signing,
+       Scripts/build-shared-xcframework.sh KMP Shared.xcframework, and the #Preview macro plugin)
+       cannot run here. The SwiftUI/MapKit frameworks + macOS 15 SDK ARE present and exercised by the
+       GREEN host typecheck + executed harness above. These two scheme steps are DEFERRED to a full-Xcode
+       signed CI runner (ADR-012), the same disposition as the CLT-only predecessor 0068 (MQTTStatusWidget).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) + the compact (1×2)
+      watch-face and standard (2×n) layouts — each with a #if DEBUG preview; type-checked GREEN.
+  [x] Hooks bind to the shared P1/S8 state-holder seam (WatchSummarySource) — NO direct HTTP in the view.
+  [x] Every i18n key from the web source has a matching key in the P1/S10 catalog (22/22; 0 missing).
+  [x] Accessibility labels on every interactive element (refresh + retry buttons) + a combined VoiceOver
+      summary over the content; gauge/decorative glyphs are accessibilityHidden.
+  [x] Tests: adapter unit tests (cached → projection) + per-state model/phase tests + a11y label tests;
+      executed-equivalent harness 133/133 GREEN.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Telemetry: view.opened emitted once with surface slug "WatchSummaryWidget" (P1/S11) — tested + executed.
+  [x] Host-runnable gates green (typecheck swift6 / executed harness / format / my-files lint / placeholder /
+      i18n); the two xcodebuild scheme steps DEFERRED with a real capability probe (CLT-only runner).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild scheme steps are shown DEFERRED (not green) with a real
+                       capability probe; the pre-existing project-wide swiftlint violation in a
+                       predecessor file is reported, not masked; every "EXIT=0" above was actually executed.
+  2  No scope narrowing: implemented ALL states + BOTH layouts + the full field set (battery gauge/hero,
+                       state badge, range, lock, cabin temp, last seen, charging) + i18n + a11y + telemetry
+                       + registry.
+  3  No skip-and-assume: each host gate executed and its real output captured; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness executes real logic.
+  5  No parity shortcuts: battery/range/temp/lock/state/last-seen pipeline + getBatteryColor bands +
+                       hero-vs-gauge null handling (— vs 0) + rounding ported VERBATIM and pinned by
+                       executed assertions to the exact web display strings.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid, did NOT edit the
+                       shared Localizable.xcstrings, and did NOT touch the predecessor LifetimeStatsWidget
+                       file to "fix" its pre-existing lint violation; strings shipped as the per-surface table.
+  8  No commit on red  : committing on all-green host gates for THIS surface (typecheck/harness/format/
+                       my-files lint/placeholder/i18n); the Xcode scheme steps are DEFERRED (a documented
+                       capability deferral), not failed; the lone project-wide lint violation is a
+                       pre-existing, out-of-scope predecessor defect.
+  9  No silent drift   : changes confined to the allowed WatchSummaryWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native WatchSummaryWidget shipped at parity with the web source: a SwiftUI surface
+  (glass shell + header + compact watch-face battery ring and standard battery hero + detail grid) over a
+  P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens; every state, every
+  i18n key (22/22), every interactive a11y label; registry-correct (watch-summary, vehicle, 1x2 / 1x2 /
+  2x40). The surface type-checks GREEN under Swift 6 strict concurrency against the REAL design tokens, its
+  preview bodies type-check GREEN, and its adapter/model logic EXECUTES GREEN (133/133) with exact web value
+  parity. The two xcodebuild scheme build/test steps are DEFERRED to a full-Xcode signed CI runner because
+  this runner has Command Line Tools only (no Xcode.app) — an environment limitation, not a code defect —
+  matching the CLT-only predecessor 0068 (MQTTStatusWidget) "code-complete + DEFERRED Xcode app build/test"
+  disposition.
+
+EXIT=0
+STATUS=DONE
