@@ -21114,6 +21114,45 @@
   <data name="translation.widget.chargingSessionDetail.unitKwh" xml:space="preserve">
     <value>kWh added</value>
   </data>
+  <data name="translation.widget.chargingSessionDetail.charger.acHome" xml:space="preserve">
+    <value>AC / Home</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.charger.dcFast" xml:space="preserve">
+    <value>DC Fast</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.charger.supercharger" xml:space="preserve">
+    <value>Supercharger</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.chartSummary" xml:space="preserve">
+    <value>{0} and {1}, {2} samples, peak {3} {4}</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.description" xml:space="preserve">
+    <value>Last charge session power curve with SoC overlay, kWh added, peak power</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.error" xml:space="preserve">
+    <value>Couldn't load the charge session</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.error.auth" xml:space="preserve">
+    <value>Sign in to view charge sessions</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.error.offline" xml:space="preserve">
+    <value>You're offline — showing the last cached charge session</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.loading" xml:space="preserve">
+    <value>Loading charge session</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.name" xml:space="preserve">
+    <value>Charge Session Detail</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.noCurve" xml:space="preserve">
+    <value>No charge curve data</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.refresh" xml:space="preserve">
+    <value>Refresh charge session</value>
+  </data>
+  <data name="translation.widget.chargingSessionDetail.retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
   <data name="translation.widget.chargingTelemetry.charger" xml:space="preserve">
     <value>Charger</value>
   </data>

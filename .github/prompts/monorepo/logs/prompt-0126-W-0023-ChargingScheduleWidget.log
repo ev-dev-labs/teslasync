@@ -1,0 +1,117 @@
+I'll start by exploring the repository structure and verifying both the web source specification and the native Windows platform dependencies exist.
+
+.NET 10.0.300 SDK is present and the Windows solution exists. Let me read the web source spec and explore the existing Windows app structure (excluding build artifacts).
+
+Many sibling widgets already exist. Let me examine the established pattern by inspecting a similar completed widget and the shared infrastructure (state holders, i18n, tokens).
+
+The pattern is C# (not XAML) with 4 files per widget: View, Model, Source, ViewModel. Let me read the `ChargeStatusWidget` template fully and locate the test structure.
+
+This is a sophisticated, well-established pattern. This widget differs from ChargeStatus: it combines **two** data sources (`useVehicleState` + a `/signals/{id}/live` query), branches on **size** (compact/tall), and uses `Timeline` + `Badge` + `EmptyState`. Let me study the registry, the shared native components I'll need, the date-format facade, and the test structure.
+
+Now let me study the native `Timeline`, `TsBadge`, `States` (EmptyState) components, the i18n catalog, the date-format facade, and how other widgets consume `/signals/{id}/live`.
+
+They're in category subdirectories. Let me read the key components I'll use.
+
+`TsTimeline` is bound to `TsActivityEntry` (severity + relative timestamps, no icons/custom colors/custom time strings) ΓÇö it won't faithfully reproduce the web timeline (icons, hex colors, formatted time strings, subtitles). I'll build the timeline inline for true parity. Now let me find where widget **tests** live and read `States.cs` (EmptyState), `Freshness.cs`, the date facade, and a multi-source widget.
+
+Tests live in `TeslaSync.App.Tests\Widgets\{Widget}Tests.cs` ΓÇö required by acceptance criteria and the `dotnet test` gate, so I'll add `ChargingScheduleWidgetTests.cs` there. Let me read the ChargeStatus test pattern, the EmptyState/Freshness components, and find how widgets consume `/signals/{id}/live` plus the operations/date facade.
+
+`ChargeStatusLiveWidget` already consumes the live signals endpoint ΓÇö the perfect reference for this widget's `/signals/{id}/live` parsing. Let me read it plus the `Operations` registry.
+
+Key finding: there's **no** `Signals.Live` operation in the registry, yet the web widget reads `/signals/{id}/live`. Let me check the generated endpoint table for that route and how `ApiRequest`/`IApiClient` resolves operations, plus read the live-signals model parsing reference.
+
+The generated endpoint `get_api_v1_signals_vehicleID_live` exists (line 410). Now let me understand the two-source combine pattern (ChargeStatusLive Model+ViewModel), the i18n catalog location, the web `useDateFormat`, and the native date facade.
+
+Keys live in `apps\windows\Strings\{en,ar,he}\Resources.resw`. Let me read the native date facade, the localizer, and check whether `chargingSchedule` keys already exist in the catalog.
+
+All 14 `chargingSchedule` display keys + shared `widget.charging`/`widget.notCharging` **already exist** in the catalog (P1/S10 done). The native date facade has a `Time` variant. Now I must check: (1) how widgets get registered centrally, (2) whether tests enumerate registrations/i18n keys, (3) the localizer key-prefix bridge. Let me investigate where `charge-status` registration is referenced and the manifest tests.
+
+Widget registrations are self-contained (no central manifest list to edit). Let me verify no test enumerates the full catalog, read how the localizer bridges keys to `.resw`, and view the ChargeStatus chrome-key entries as a template for the few native-only keys I'll add.
+
+Critical insight: sibling widgets' native chrome keys (`chargeStatus.name/refresh/error`) are **not** in the catalog ΓÇö they rely on `GetString(key, fallback)` English fallback, and there's no completeness test. All 16 web-source keys already exist in the catalog. So I won't touch `.resw`. Now let me fully internalize the two-source pattern by reading the `ChargeStatusLiveWidget` Model/ViewModel/View and its test.
+
+I now understand the two-source snapshot-combine pattern. This widget needs **no** unit conversion (only %, time-of-day) ΓÇö simpler than ChargeStatus. Let me read the remaining ChargeStatusLive Model (mapper/projection), the view, and the core data primitives I'll build on.
+
+Let me read the core data primitives and display helpers I'll build on: `RepositoryResult`, `CacheThenNetworkEngine`, `ApiRequest`, `IWidgetVehicleSource`, `CacheFreshness`, `DisplayPrimitives`/`DisplayTokens`, `Freshness`, and `StatusKind`.
+
+Now let me read the `ChargeStatusLiveWidget.ViewModel.cs` (size-aware projection + two-source state holder) and `CacheFreshness`, then the rest of its view and test to finalize my mental model.
+
+Let me read the rest of the ChargeStatusLive view (header + compact/tall branches) and skim its test to model the fake-source + state-transition test pattern.
+
+Let me read the final render branches of the ChargeStatusLive view and the test's fake-source/state-transition + source sections to model my test, plus the shared test fakes.
+
+Let me read the test helper methods (fakes, engine, drain) at the bottom of the ChargeStatusLive test and confirm the shared test-data fakes.
+
+I have the full pattern. Let me verify two last things before writing: the `CacheThenNetworkEngine` semantics (does it set `FetchedAt` on the empty branch?) and the shared test fakes (`FakeApiClient`, `InMemoryCacheStore`).
+
+The engine emits `Empty(now)` with the timestamp preserved. Everything is clear. Let me confirm the shared test fakes (`FakeApiClient`, `InMemoryCacheStore`) API so my test compiles.
+
+Important nuance: this widget's web source passes **no** `error` prop to `WidgetShell`, so it never shows a QueryError panel ΓÇö errors surface via the freshness chip + refresh. Let me verify how the sibling `ChargeStatusWidget.tsx` (whose native port *does* show QueryError) handles this, to decide the faithful convention.
+
+The established native convention is decisive: `ChargeStatusWidget.tsx` also passes only `isError` (no `error`) to `WidgetShell`, yet its native port **still** renders a full `TsQueryError` surface on hard failure. So the house style is to show QueryError on error-with-no-cache ΓÇö I'll mirror ChargeStatus/ChargeStatusLive exactly. I now have complete clarity. Let me set up tracking and write the plan.
+
+Now I'll write the four production files. Starting with `Model.cs` (parsers, snapshot, projection, mapper).
+
+Model.cs created. Now the ViewModel.cs (source port, registration, diagnostics, state holder ΓÇö no units needed).
+
+Now the Source.cs (two-source adapter: supplementary state + primary live-signals stream).
+
+Now let me confirm the exact namespaces for `LiveRegion`, `TsSkeleton`, and verify `DisplayPrimitives` accessibility, so the view's usings are precise (to keep `dotnet format` clean).
+
+All namespaces confirmed; no IDE0005 enforcement. Now the WinUI view.
+
+Now the comprehensive test file. Let me update tracking and create it.
+
+All five files created. Let me verify the log directory exists, then run the build gate (Release). This is a WinUI build so it'll take a while.
+
+All four production files are in place. Let me run a build of the solution to catch any compile errors (WinUI build ΓÇö allow time).
+
+CA1822 is enforced as an error here ΓÇö `BuildFull` doesn't touch instance state, so it must be `static`. Let me fix it.
+
+App project builds clean. Now let me build and run my new test class specifically (faster iteration).
+
+Types aren't resolving in the test project. Let me check the test project's references and confirm my files' namespace, then do a clean rebuild (likely stale incremental reference).
+
+The test project (`net10.0`) references **Core + Generated**, not the WinUI App. So sibling widget logic types must be compiled into Core (the WinUI view stays in App). Let me see how the build splits these files.
+
+The test project (headless `net10.0`) **links** each widget's WinUI-free `Model/ViewModel/Source` files directly (the WinUI view stays in the App). My logic files are WinUI-free, so I must add the same three `<Compile Include>` links ΓÇö exactly as every sibling does. Let me add them after the ChargingOptimizerWidget block.
+
+Now re-run my tests.
+
+All 67 tests pass. Now let me verify formatting on my files before running the full gate (scoped `dotnet format --verify-no-changes`).
+
+CRLF vs LF line-ending mismatch (repo uses LF; `create` wrote CRLF). Let me run `dotnet format` in fix mode on my files to normalize, then re-verify.
+
+Format fix applied. Let me check what changed and re-verify (including the csproj).
+
+Format now passes (`VERIFY_EXIT=0`). The diff is clean ΓÇö only line-ending normalization + my 3 csproj lines. Note siblings (ChargeStatusWidget, etc.) are also untracked WIP. Let me verify the placeholder script exists and that my files contain no forbidden tokens, then run the full gate.
+
+Those are false positives from my Select-String regex (the words "Subtitle"/"StartTime" contain no forbidden tokens). Let me confirm with ripgrep and run the authoritative placeholder script.
+
+Authoritative placeholder check passes (`COUNT=0, EXIT=0`) ΓÇö the grep hits are spurious boundary matches, not real tokens. Before the slow full-solution gate, let me check whether `TeslaSync.App.UITests` runs headlessly (it's in the solution `dotnet test`).
+
+The UITests require WinAppDriver + a deployed MSIX (they "fail fast when absent, never skipped") and are tagged `Category=UIAutomation` for independent gating. Let me run the gate steps and observe the real behavior. Starting with the full-solution build.
+
+Full build is green. Now the test step ΓÇö let me run the full-solution `dotnet test` and capture per-project results.
+
+Confirmed: the full-solution `dotnet test` fails **only** because the pre-existing `TeslaSync.App.UITests` suite (147 tests, all `Category=UIAutomation`) requires a WinAppDriver/Appium runner on `:4723` that's absent on this machine ΓÇö unrelated to my widget (the UITests reference only Core). The repo architects this as an independently-gated suite. Let me run the headless suite (the widget's real test gate) for evidence.
+
+Headless suite: **2320 passed, 0 failed** (includes my 67). Now let me capture the real full-solution `dotnet format` result for the log (the literal gate runs it solution-wide).
+
+Full-solution format passes (`FORMAT_EXIT=0`). All real results captured. Now let me run the **literal gate script** (Tee to the log for verbatim, non-fabricated output) and append the platform-capability evidence + headless-suite proof.
+
+All gate steps captured to the log. Let me extract the exact result lines for accurate evidence, then append the platform-capability evidence + honest verdict.
+
+All evidence lines are captured verbatim in the log. Let me append the platform-capability evidence and the honest verdict.
+
+Let me verify the log tail reads correctly and confirm the working tree only contains my intended changes.
+
+The log ends with `EXIT=1` / `STATUS=BLOCKED` on their own lines (the display just wrapped them). Git status confirms only my intended changes. Let me confirm the final lines are clean and mark todos done.
+
+The log ends cleanly with `EXIT=1` / `STATUS=BLOCKED` (rule 10 satisfied). All todos done. Let me do a final confirmation that my widget's own tests are green post-format-fix and that no stray repo changes exist.
+
+Final tree state is clean and correctly scoped: the only non-`ChargingSchedule` entries are **pre-existing WIP** from sibling widget prompts (0020ΓÇô0022) and harness logs ΓÇö none of which I touched. My contribution is the widget dir, test file, 3 csproj test-link lines, and the gate log.
+
+The widget is complete and verified. Marking the task done.
+
+

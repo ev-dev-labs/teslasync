@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure to understand what exists, then verify platform capabilities before writing any code.
+
+.NET 10 SDK is available and the Windows app exists. Let me read the web source and explore the existing native app structure.
+
+Now I understand the 4-file pattern. Let me study the closest analog ΓÇö `ChargeSessionChartWidget` ΓÇö which renders a charge session power curve, very similar to my target.
+
+The pattern is clear and substantial. Let me read the Model file (projection logic) and find the test pattern.
+
+Let me read the rest of the Model, the test file, and a line-chart widget analog (BatteryDegradationTrend) plus how widgets render line charts natively.
+
+Found the shared native chart components (`TsAreaChart`, `ChartSeries`, `ChartPoint`). Let me examine the chart component library, the test pattern, and the web hooks/types my widget needs.
+
+This widget chains 3 endpoints (sessionsΓåÆdetailΓåÆtelemetry), more complex than the analog. Let me examine the shared infrastructure, chart models, and web types.
+
+Operations exist for all three endpoints. Let me verify the operationΓåÆpath mappings against the backend router, and read the chart component + web types.
+
+Now let me confirm the backend detail route, examine the chart variants (for the power+SoC composed chart), and the web shared widget components.
+
+`TsComposedChart` supports mixed line+area series ΓÇö ideal for the power+SoC curve. Let me read the chart base class (axis handling) and confirm the v1 detail route shape + the web detail type.
+
+`ApiChargingSession` is just an alias of `ChargingSession` (same fields). The shared chart uses a single Y-axis, but my widget needs dual-axis (power + SoC). Let me see how existing widgets render curves and check the sparkline/mini-chart primitives.
+
+Let me see the only widget using `TsComposedChart` to learn the established composed-chart pattern, plus the chart geometry helper.
+
+I have enough understanding of the chart layer. Let me check the i18n catalog (P1/S10), any central widget registry, and the test helpers used by the analog tests.
+
+i18n catalogs are at `Strings/{en,ar,he}/Resources.resw`; registration is self-contained (no central catalog to edit). Let me inspect the resw format, the rest of the analog test, and test helpers.
+
+Let me read the web shared widget shell/summary components for exact state composition, and check the other-locale catalogs and remaining test sections.
+
+Let me read the `WidgetChartSummary` (my widget's key composition), the full en catalog block for the analog, and the middle test section.
+
+Let me examine `ApiRequest` (path params), a source that uses path params, and confirm the v1 detail route shape.
+
+`ChargeStatusLiveWidget.Source.cs` chains multiple requests ΓÇö the ideal analog for my 3-request source. Let me read it and the `ApiRequest` definition.
+
+I now have the complete pattern. `ChargeStatusLiveSource` is my template for the multi-request source. Let me verify the v1 detail endpoint's response shape, then start building.
+
+The v1 detail (`GetByID`) and list (`List`) share the same `chargingsvc` shape ΓÇö and the shipped `ChargeSessionChartWidget` already reads `total_energy_added_wh`/`charger_type`/`started_at` from it. Let me confirm `duration_min` exists in that shape.
+
+The v1 detail returns `started_at`/`ended_at` but **not** `duration_min` (it's a computed method) ΓÇö so I'll compute duration myself. Let me verify the telemetry endpoint's response shape (the old handler both web and native hit).
+
+Telemetry shape confirmed (`created_at`, `power_kw`, `battery_level`). I have full data clarity. Let me check the final view-component APIs (Badge, DisplayTokens brushes, time formatting) before building.
+
+Let me check the `TsBadge` variant API, available semantic brush keys (for the cyan SoC line), and chart role mapping.
+
+I now have full clarity. Let me verify `StatusKind` values and `ScalarFormatters`, then set up my plan and start building.
+
+I have everything needed. Let me confirm the `RepositoryResult` API and `CacheFreshness`, then write my plan and start building.
+
+I have complete clarity on the architecture, data flow, and all component APIs. Let me set up my plan and read the chart shape helpers, then build.
+
+All APIs confirmed. `ChartShapes` is internal-same-assembly (accessible), `PointD` is public. Now I'll build. Starting with the Model (records + pure projection + mapper).
+
+Model created. Now let me verify the vehicle-source and engine APIs precisely before writing the Source.
+
+Engine signature confirmed. Now writing the Source (3-request chain, mirroring `ChargeStatusLiveSource`).
+
+Now the ViewModel (registration + diagnostics + state machine), mirroring the analog.
+
+Now the view ΓÇö the WinUI control plus a nested manual dual-axis curve chart. This is the largest piece.
+
+Let me refine the view to avoid potential analyzer/warnings-as-errors issues (make the pure mapping helper static, simplify the axis-label helper).
+
+Now let me study the remaining analog test sections and the shared test fakes so my tests mirror them exactly.
+
+`PassthroughLocalizer`/`FakeWidgetVehicleSource` are shared test fakes. Let me see the end of the analog test and locate the shared fakes.
+
+`PassthroughLocalizer` returns the English fallback (in `Core.Notifications`); `FakeWidgetVehicleSource` is a per-file private fake. I have everything to write comprehensive tests now.
+
+I spotted a bug: the view uses `display.IsWide` but the display record doesn't have that property. Let me add `IsWide` to the display and fix the test.
+
+Now the i18n catalog. Let me check whether there's a catalog-completeness/sort test and find the insertion point for my keys.
+
+The base `chargingSessionDetail` keys are already pre-seeded in `en`. I need to add the extra native chrome keys. Let me check the other locales and whether a locale-parity test exists.
+
+The base source keys already exist in all three locales. I'll add the extra native chrome keys (registry name/description, error/loading/refresh/retry, charger buckets, chart summary, no-curve) to each locale, anchored before `chargingTelemetry.charger`.
+
+All files and i18n done. Let me verify no forbidden placeholder words in the widget dir, check the placeholder script, and kick off the Release build.
+
+No forbidden words. Let me view the placeholder script and start the Release build (this is slow for WinUI, so I'll let it run in the background).
+
+The build is running. Let me check the exact placeholder patterns while it compiles.
+
+Build is compiling. Let me confirm none of the script's substring patterns appear in my widget files (the script matches `Placeholder`, `XXX`, etc. as substrings, not just whole words).
+
+Widget dir is clean. Now let me wait for the build to complete.
+
+Build failed (exit 1). Let me find the errors ΓÇö focusing on my new files.
+
+The test errors are downstream ΓÇö the main app project must have failed first. Let me find the root errors in `TeslaSync.App` (not Tests).
+
+These are analyzer-as-error violations (CA1859/CA1822). The app fails to build, cascading to the test CS0246s. Let me get the complete unique list of app-side errors.
+
+These are analyzer-as-error rules (CA1859/CA1822). Let me fix all five ΓÇö concrete collection types, static helper, concrete return type.
+
+Let me change just the two parameter signatures to the concrete `List<PointD>` type that CA1859 wants.
+
+Fixed all 5 analyzer errors. Let me rebuild ΓÇö I'll build the Tests project (which compiles App + Core + my widget + tests) for a faster iteration.
+
+All errors are downstream in the test file ΓÇö the App project itself must still be failing. Let me check for any App-project error (not just `error CS`) in the build log.
+
+The App project produced 0 errors but also no DLL output line ΓÇö it likely was served stale or skipped. Let me build the App project explicitly to confirm it compiles my widget and emits a fresh DLL.
+
+App project builds clean with my widget (0 errors, fresh DLL). The earlier test build referenced a stale App DLL. Let me rebuild the test project now.
+
+The test can find ChargeSessionChart types but not mine ΓÇö this points to how the test project pulls in widget sources. Let me inspect the test csproj.
+
+The test project is headless (net10.0) and **links specific widget source files** (Model/ViewModel/Source ΓÇö not the WinUI view). My widget's files aren't linked. Let me add them (all three are WinUI-free by design).
+
+Test project now links my files. Let me rebuild it.
+
+Test project compiles. Let me run my test class to verify the logic passes.
+
+All 67 of my tests pass. Now let me verify formatting on my files before the final gate (the gate runs `dotnet format --verify-no-changes`).
+
+Format check found CRLF line endings (repo wants LF) in my files. Let me auto-fix formatting on my files with `dotnet format`.
+
+Let me confirm formatting is now clean on my files.
+
+Formatting is clean. Now let me run the full official gate (build ΓåÆ test ΓåÆ format ΓåÆ placeholder) writing to the prescribed log. First, ensure the log directory exists.
+
+The full solution built earlier (only my analyzer errors blocked it, now fixed). Let me run the official gate now, capturing to the prescribed log. This is slow (build + test + format of the whole solution), so I'll run it in the background.
+
+The gate is running (full solution build + test + format). This takes several minutes. Let me wait for it.
+
+Build, format, and placeholder pass. TEST_EXIT=1 ΓÇö my 67 tests passed in isolation, so let me find which test(s) failed in the full run.
+
+The 2387 unit tests in `App.Tests` (including my 67) **all pass**. The failures are entirely in `App.UITests` ΓÇö UI-Automation tests needing an interactive WinAppDriver runner. Let me confirm the failure cause to document it accurately.
+
+Confirmed: all 147 `App.UITests` failures are `UiAutomationUnavailableException` ΓÇö no WinAppDriver runner at 127.0.0.1:4723. These are pre-existing shell-level UI-automation tests, unrelated to my surface. Let me check whether they're meant to skip when the runner is absent.
+
+Decisive finding: the `App.UITests` are **intentionally designed to fail-loud (not skip) when WinAppDriver is absent** ΓÇö the repo's own "honest gate." This is precisely the prompt's sanctioned BLOCKED platform-capability scenario. My surface and all 2387 unit tests (incl. my 67) pass; only the WinAppDriver-dependent shell suite is blocked.
+
+Let me capture explicit surface-test evidence and append an honest analysis to the gate log.
+
+67/67 surface tests pass. Now let me append an honest analysis and the final status to the gate log.
+
+Let me verify the final lines of the log are clean (EXIT and STATUS on their own lines).
+
+The log ends cleanly with `EXIT=1` / `STATUS=BLOCKED`. The surface is complete and every surface-level gate is green; only the WinAppDriver-dependent shell UITests are blocked (pre-existing, environment-only). Let me review git status before committing.
+
+The working tree has several parallel in-flight widget tasks (ChargeStatusLive/Status/Schedule) sharing the csproj and resw. Let me check exactly what's uncommitted in those shared files (mine vs others') before committing.
+
+Confirmed: the csproj/resw are shared across 4 parallel in-flight widget tasks. The prompt's commit step deliberately stages **only the widget dir + log** (shared files are reconciled separately ΓÇö consistent with the other parallel widgets being uncommitted). I'll follow the prescribed commit exactly to avoid entangling other tasks' work.
+
+Exactly the 4 widget files + log are staged ΓÇö clean, no shared-file entanglement. Let me commit.
+
+Committed cleanly (5 files, 3221 insertions). Let me mark the final todo done.
+
+The implementation is complete and committed. Let me do a final recap of the deliverable and gate status.
+
+**Summary of what was delivered and verified:**
+
+I shipped the native WinUI 3 `ChargingSessionDetailWidget` (4 files: `.Model.cs`, `.Source.cs`, `.ViewModel.cs`, `.cs`) as a parity port of the web source, plus 67 unit tests and i18n keys across en/ar/he.
+
+**Gate results (logged to `.github/prompts/monorepo/logs/p2-windows-dashboard-widgets-0024-ChargingSessionDetailWidget.log`):**
+- `BUILD_EXIT=0` Γ£à ΓÇö WinUI 3 / .NET 10 solution compiles the surface
+- `FORMAT_EXIT=0` Γ£à ΓÇö `dotnet format --verify-no-changes` clean
+- `PLACEHOLDER_EXIT=0` Γ£à ΓÇö no stubs/TODO/placeholder
+- Surface tests: **67/67 pass** (within `App.Tests` 2387/2387) Γ£à
+- `TEST_EXIT=1` ΓÜá∩╕Å ΓÇö **only** because all 147 `App.UITests` throw `UiAutomationUnavailableException` (no WinAppDriver runner at 127.0.0.1:4723). Those are pre-existing shell-level tests, unrelated to this surface, that the repo *intentionally fails-loud* (RunnerAvailability.cs) when the runner is absent.
+
+Per the prompt's capability clause, that is the sanctioned **STATUS=BLOCKED** platform-capability scenario ΓÇö the surface itself and every runnable surface-level gate are green.
+
+

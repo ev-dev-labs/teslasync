@@ -1,0 +1,165 @@
+I'll start by understanding the task environment and prerequisites. Let me check the platform capabilities and explore the relevant directories.
+
+.NET 10 SDK present, Windows 11. The web source wasn't at the exact path ΓÇö let me locate it and explore the Windows app structure.
+
+Found the source. Let me read the web specification and the Windows app structure in parallel.
+
+Now let me read the supporting web hooks/shell and explore the existing Windows app patterns. There's a "predecessor bypass" rule, so I need to find existing dashboard-widgets to follow their pattern.
+
+A well-established pattern exists with 4 files per widget (`.cs`, `.Model.cs`, `.Source.cs`, `.ViewModel.cs`). The sibling `ChargeStatusLiveWidget` is the closest predecessor. Let me read it in full plus the shared base infrastructure.
+
+The pattern is sophisticated. Let me read the View (`.cs`) and Model (`.Model.cs`) files of the sibling widget in sections.
+
+Let me read the rest of the View and Model to understand the projection and rendering, plus the test pattern.
+
+I now understand the full 4-file pattern. The `ChargeStatusWidget` is a simpler sibling (no charging-sessions query, no compact/tall branching ΓÇö the web source ignores `size`). Now let me find the test pattern, the i18n catalog, and the shared helpers I'll reuse.
+
+All required i18n keys already exist (`widget.charging`, `widget.power`, `widget.rate`, `widget.battery`, `widget.timeToFull`, `widget.notCharging`, `widget.noChargeData`). Key insight: the web `ChargeStatusWidget` passes **no title** to `WidgetShell` (title-less, overlay freshness), unlike the Live sibling. Since types share the `TeslaSync.App.DashboardWidgets` namespace, I must use distinct type names. Let me read the test pattern and verify no name collisions.
+
+Let me finish the test file and read the test fakes plus the web number/unit formatters to match precision exactly.
+
+Key parity detail: my widget's `fmtNumber(charger_power)` uses the **global precision (default 2)**, unlike the Live sibling which hardcodes 1. Let me inspect the native formatter/unit helpers and the web converter.
+
+Now let me examine the shared UI components' APIs, the `Operations` catalog, the test fakes, and whether there's a central widget registry to plug into.
+
+`Operations.Vehicles.State` exists, and widgets are self-contained (no central catalog to modify ΓÇö good, respecting allowed-files). Let me read the component APIs, the test fakes, and the Live test's helper section.
+
+The fakes are private nested classes per-test-file. Let me locate `PassthroughLocalizer` and the feedback component APIs (`TsQueryError`, `TsEmptyState`, `TsDataFreshness`, `TsSkeleton`), and read `DisplayTokens` + `TsBadge`.
+
+Let me read the exact component APIs I'll consume (feedback states, freshness, skeleton, badge, live region, motion, pulse).
+
+I have enough on the feedback components. Let me confirm the remaining APIs: `TsBadge`/`StatusKind`, `TsSkeleton`, `LiveRegion`, `MotionPreference`, `PulseHelper`.
+
+I now have all component APIs. Let me verify project file globbing, the placeholder-check script, and `StatusKind`, then kick off a baseline build in the background.
+
+All infrastructure confirmed: `StatusKind` in Core, csproj uses default globbing (new files auto-included), `TreatWarningsAsErrors=true`. Let me read the forbidden-pattern list and start a baseline build to validate the environment.
+
+Forbidden words noted (`TODO`, `FIXME`, `XXX`, `Placeholder`, `Lorem ipsum`, `not implemented`, `NotImplementedException`, `// stub`). I can't modify `Resources.resw` (outside allowed files), so I must reuse existing keys or rely on fallback. Let me check which chrome/registration keys already exist and how the real localizer handles missing keys.
+
+Baseline build succeeded ΓÇö the environment supports WinUI 3 + .NET 10. Let me confirm the localizer's missing-key behavior and the build result.
+
+Baseline build is green (0 warnings/errors) ΓÇö the runner fully supports the gate. The localizer safely falls back for missing keys. I now have everything needed. Let me set up tracking and write the implementation.
+
+Let me verify `NumberFormatting.Format` grouping behavior (to match web `toLocaleString`) before writing the model.
+
+`NumberFormatting.Format` is a 1:1 port of `Intl.NumberFormat` en-US ΓÇö so native formatters match the web exactly. Now creating the four widget files, starting with the Model.
+
+Model created. Let me verify the `RepositoryResult` factory signatures I relied on, then write the ViewModel.
+
+All factories confirmed. Writing the ViewModel file.
+
+ViewModel created. Let me verify `RepositoryErrorKind` values and the `CacheThenNetworkEngine.StreamAsync` / `CacheFreshness` signatures before writing the Source.
+
+All signatures confirmed. Writing the Source (simpler than the sibling ΓÇö single state read, no session).
+
+View file next ΓÇö the WinUI surface with all states, title-less freshness overlay, and accessibility.
+
+All four widget files created. Let me compile the App project to catch errors before writing tests.
+
+Those XAML errors are pre-existing and unrelated to my pure-C# files ΓÇö they only appear when building the bare csproj (wrong platform). The baseline **solution** build was clean. Let me build via the solution (the actual gate command).
+
+The solution build now fails with a XAML compiler crash (`WMC9999: Object reference not set`) ΓÇö the cascade of "Unknown type" errors is the symptom of that crash. My files are pure C#, so I need to determine if they're the trigger or if it's a stale-state/environmental issue. Let me isolate by temporarily moving my folder out and rebuilding.
+
+Confirmed: without my files the build is clean (0 errors). So my files trigger the XAML compiler crash. This is often a stale-incremental-XAML-state issue. Let me restore my folder and try a **clean** build to distinguish a stale-state problem from a genuine code trigger.
+
+Even a clean build with my files crashes the markup compiler ΓÇö so one of my types is the trigger. Let me check for any pre-existing `ChargeStatusWidget` type and bisect by removing the view (the only `ContentControl`).
+
+The view file is the trigger ΓÇö yet it's structurally near-identical to the working `ChargeStatusLiveWidget`. The markup compiler (which scans `ContentControl`-derived types) is crashing on something specific. Let me isolate with a minimal view shell to determine if it's the class shape or the body code.
+
+The minimal shell builds fine ΓÇö so a specific member in the full view triggers it. Let me restore the full view and diff its structure against the working sibling to find the one difference, then bisect.
+
+Let me bisect empirically. The `Create` static factory has the most complex cross-assembly signature ΓÇö removing it first.
+
+Still crashing without `Create`. Let me strip to just fields + trivial constructor to determine whether a field type or a method is the trigger.
+
+Fields-only builds ΓÇö so the trigger is a **method**, and the markup compiler is parsing method bodies. Let me grow back everything except the leaf builders (`BuildCharging`/`BuildIdle`/`CellRow`/`MetricCell`/`ChargingGlyph`/`SuccessBrush`), stubbing `BuildBody`.
+
+The intermediate (lifecycle + chrome) builds. The culprit is among the leaf builders. Let me add back `BuildBody` + the charging/idle builder chain to isolate it.
+
+Crash returns with the leaf builders. Let me narrow to just `BuildIdle` (the simplest, no helper chain) to split charging-vs-idle.
+
+`BuildIdle` alone is fine. The crash is in the charging chain. The one structurally novel element is `MetricCell(..., Brush valueBrush)` ΓÇö a method taking a `Brush` parameter (the sibling has none). Let me test that specifically.
+
+`MetricCell` is fine. Remaining suspects: `CellRow` (which passes `UIElement` to `Grid.SetColumn`) and `ChargingGlyph`. Let me test `CellRow` ΓÇö its `Grid.SetColumn(UIElement, ΓÇª)` is the most novel construct vs the sibling.
+
+**Found it.** `CellRow(UIElement left, UIElement right)` crashes the markup compiler ΓÇö a `UIElement`-typed parameter is the trigger. The sibling passes `StackPanel`/`FrameworkElement`. Since my cells are `StackPanel`s, switching the param type to `FrameworkElement` should fix it. Let me verify.
+
+Confirmed root cause: this WinUI markup compiler version NREs on a project method with a `UIElement`-typed **parameter** (a `UIElement` *return* type is fine ΓÇö the sibling uses it). Fix: type `CellRow`'s params as `FrameworkElement` (all my cells are `StackPanel`s). Let me restore the full view and apply this one-line fix.
+
+Full view restored with the fix. Let me rebuild the App project to confirm the complete view compiles.
+
+Full App builds clean (0 warnings/0 errors). The markup-compiler crash is fixed. Now writing the test file ΓÇö let me read the shared test fakes' APIs first.
+
+FakeApiClient API understood. Now writing the comprehensive test file mirroring the sibling's structure.
+
+Let me fix an awkward assertion in the idle-summary test (I overcomplicated it).
+
+Tests written. Let me build the solution to verify everything compiles, then run my widget's tests.
+
+The test project can't find my new types (but finds the sibling's). Let me check how the test project references the App project.
+
+The test project links widget logic files explicitly (it can't reference the WinExe). The sibling links its Model/ViewModel/Source. To satisfy the required Tests acceptance criterion and predecessor parity, I must wire my three logic files in the same way. Let me add those entries after the sibling's.
+
+The test project links only Model/ViewModel/Source (not the WinUI view `.cs`). My `RegistryId_is_exposed_on_the_view_type` test references the view type `ChargeStatusWidget`, which isn't linked. Let me check how the AnomalyDetector test handles this.
+
+The sibling's test asserts on the `Registration.Id`, not the view type. Let me fix my test the same way.
+
+Now let me rebuild the solution and run my widget's tests.
+
+Solution builds clean. Let me run my widget's tests first to validate them.
+
+All 54 widget tests pass. Now let me run the full solution test suite (the gate command) to ensure nothing else broke.
+
+The 147 failures are **all** in `TeslaSync.App.UITests` ΓÇö they require WinAppDriver/Appium (`nothing listening on 127.0.0.1:4723`), which is absent on this runner. This is environmental and unrelated to my widget. Let me confirm the unit tests (App.Tests) all pass, and check whether the UITests are designed to skip when the driver is absent.
+
+All 2179 unit tests pass (including my 54). The UITests are designed to detect WinAppDriver and currently throw when absent. Let me check how predecessor widget gates handled this ΓÇö there should be precedent logs.
+
+Let me read the immediate predecessor's gate log (0020 ChargeStatusLiveWidget) to see how the `dotnet test` step and UITests were handled.
+
+This is the decisive precedent. The immediate predecessor (0020 ChargeStatusLiveWidget) recorded **exactly** this situation: `BUILD_EXIT=0`, `TEST_EXIT=1` (only the 147 UITests fail ΓÇö WinAppDriver absent; App.Tests pass), `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`, `EXIT=1`, `STATUS=BLOCKED`. Let me read its capability note to match the format.
+
+This is the exact, sanctioned precedent: the widget surface is complete and verified by build + headless tests + format + placeholder, but the full-solution `dotnet test` gate is blocked solely by absent WinAppDriver (UI-automation). Before finalizing, I must verify the remaining gate steps (format + placeholder) on my code. Let me run them.
+
+PLACEHOLDER_EXIT=0. Now the format verification (the gate command).
+
+Format check found CRLF line-ending issues in my files (repo enforces LF). Let me auto-fix with `dotnet format`, then confirm only my files changed.
+
+`dotnet format` ran. The pre-existing modified log files and the untracked `ChargeStatusLiveWidget` predecessor files were already in the working tree before I started. Let me re-verify formatting is now clean.
+
+FORMAT_EXIT=0. All my widget's verification steps pass (build, headless tests, format, placeholder). Now let me run the complete acceptance gate exactly as specified to produce the authoritative log.
+
+The gate completed. Let me extract the exit markers and test summaries from the log.
+
+Gate results match the sanctioned precedent exactly: `BUILD_EXIT=0`, `TEST_EXIT=1` (App.Tests 2179 pass incl. my 54; only the 147 WinAppDriver UITests fail), `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`. Let me confirm the UITests README's BLOCKED policy, then append the gate summary to the log.
+
+Confirmed ΓÇö the UITests README mandates `STATUS=BLOCKED` when WinAppDriver is absent. Let me append the gate summary and BLOCKED disposition to the log, matching the predecessor's format.
+
+The log ends with `EXIT=1` / `STATUS=BLOCKED` (covenant rule 10 satisfied). Let me do a final integrity check on my widget files ΓÇö confirm the view is the complete version (not leftover probe code) with the `FrameworkElement` fix intact.
+
+The view is complete with all builders and the `FrameworkElement` fix at line 365. Let me confirm the file terminates correctly (the line-count tool undercounts; grep shows content past line 399).
+
+The view is complete and terminates correctly. Now: the gate ended `STATUS=BLOCKED` (red), and Honesty Covenant rule 8 is "No commit on red" ΓÇö the predecessor (0020) likewise left its files **uncommitted** in the working tree. I'll follow that precedent: no commit. Let me clean up temp artifacts, finalize todos, and confirm the deliverables in the working tree.
+
+All deliverables are in the working tree and temp files are cleaned. Per Honesty Covenant rule 8 ("No commit on red") and the immediate predecessor's precedent (0020 left its files uncommitted under the same BLOCKED condition), I am not committing on a red gate.
+
+## Summary
+
+I shipped a production-complete native WinUI 3 (.NET 10) parity port of `ChargeStatusWidget`, following the established 4-file predecessor pattern.
+
+**Delivered** (`apps/windows/TeslaSync.App/dashboard-widgets/ChargeStatusWidget/`):
+- **`.Model.cs`** ΓÇö `ChargeStatusReading` (state parse incl. `rated_range`), `ChargeStatusProjection` (power/rate/battery/time-to-full/idle formatters matching the web's `fmtNumber`/`fmtInt`/`convertDistanceFromSI` precisely), `ChargeStatusResultMapper`, size/display/state types.
+- **`.ViewModel.cs`** ΓÇö `IChargeStatusSource`, `ChargeStatusRegistration` (id `charge-status`, 2├ù2 / 1├ù2 / 3├ù40), PII-safe `ChargeStatusDiagnostics`, and the state-holder VM (loading/loaded/empty/error/stale/offline).
+- **`.Source.cs`** ΓÇö primary-vehicle resolution + cache-then-network read of `/vehicles/{id}/state` (no HTTP in the view).
+- **`.cs`** ΓÇö title-less freshness chrome, the charging Power/Rate/Battery/Time-to-Full grid, "Not Charging" idle summary, "No charge data" empty state, loading skeleton, error retry; Narrator labels + reduce-motion throughout.
+- **54 headless tests** (`ChargeStatusWidgetTests.cs`) wired into the test project.
+
+**Notable fix:** This WinUI markup-compiler version crashes (`WMC9999` NRE) on any project method with a `UIElement`-typed **parameter**. I bisected it to `CellRow` and fixed it with `FrameworkElement` (a `UIElement` *return* type is fine ΓÇö the sibling uses it).
+
+**Gate results** (`...0021-ChargeStatusWidget.log`):
+- `BUILD_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`
+- Headless suite: **2179 passed / 0 failed** (incl. my 54)
+- `TEST_EXIT=1` ΓÇö solely the 147 pre-existing `App.UITests` that require WinAppDriver/Appium (nothing on `127.0.0.1:4723`), which is absent on this non-interactive runner and unrelated to dashboard widgets.
+
+**`EXIT=1 / STATUS=BLOCKED`** ΓÇö per the UITests README ("fails fastΓÇª never silently skippedΓÇª gate ends `STATUS=BLOCKED`") and the prompt's sanctioned BLOCKED path, matching the immediate predecessor (0020). The widget surface itself is complete and fully verified by the build, headless tests, formatting, and placeholder scan; the gate is blocked only by the absent WinAppDriver UI-automation capability.
+
+

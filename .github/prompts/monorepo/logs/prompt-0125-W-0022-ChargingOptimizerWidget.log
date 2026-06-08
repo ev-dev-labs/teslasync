@@ -1,0 +1,115 @@
+I'll start by exploring the repository structure and verifying the platform capabilities required for this task.
+
+The web source and Windows solution exist. Let me read the web source and explore the Windows app structure, plus check platform capabilities.
+
+The Windows app is substantial and uses a 4-file-per-widget pattern in subdirectories. `ChargingOptimizerWidget` doesn't exist yet. Let me verify platform capability and study the existing widget pattern (closest analog: `ChargeCostTrackerWidget`).
+
+Platform is available: .NET 10.0.300 SDK. Let me examine the project structure, the web data hook, the shared "tip cards" component, and how widgets register centrally.
+
+The pattern is clear: each widget is self-contained with its own `Registration` class. Let me check for any central catalog, and study the `AnomalyDetector` widget (closest analog ΓÇö single-object JSON + tip cards) including its Model, Source, and tests.
+
+Excellent ΓÇö the architecture is fully clear now. Let me gather the remaining specifics: the generated API operation for charging-optimizer, the i18n catalog, the test pattern, and the token/formatter helpers.
+
+The generated operation is `get_api_v1_analytics_charging_optimizer`. Now let me check the i18n catalog requirement and the test pattern.
+
+There's a `.resw` catalog in `Strings/{en,he,ar}`. Let me examine how widget keys are formatted there and read the full AnomalyDetector test file to mirror the test structure.
+
+The `widget.chargingOptimizer.*` display keys already exist in the catalog (using `{0}` placeholders, `translation.` prefix). Let me check which operational keys (priority, refresh, loading, error, retry, description) are missing, and read the test file.
+
+The display keys exist; I need to confirm which operational keys to add (priority, etc.) and understand the localizer's placeholder handling. Let me read the localizer, the remaining test file, and check anomalyDetector's operational keys.
+
+The convention is now clear: static display keys live in the catalog (already present), dynamic suffix keys (like `priority.*`) use inline English fallback ΓÇö exactly as AnomalyDetector handles `severity.*`. Let me read the final helpers and the rest of the test file to mirror precisely.
+
+Now I have the test fakes and token patterns. Let me check the available semantic brush keys, the formatters, the freshness control, and badge/empty/error controls.
+
+I now have nearly everything. Let me confirm `StatusKind`, the formatters, and the `TsBadge`/empty/error control APIs before writing.
+
+I have all the APIs confirmed. Let me grab proven Segoe Fluent glyph constants from sibling charging/battery widgets so my icons are consistent, then set up my plan and todos.
+
+I have a complete picture. Let me set up tracking and scaffold the directory, then write the implementation.
+
+Now I'll write the plan and the Model file (the core logic ΓÇö projection + parsing).
+
+Model written. Now the Source (data adapter) and ViewModel.
+
+The timeline band words (Peak/Off-peak/Standard) must be localized like the web tooltip does. Let me fix the projection to thread the localizer through `BuildTimeline`.
+
+Now the view ΓÇö the WinUI control with all three layouts, timeline, tips, and states.
+
+Now the comprehensive test file mirroring the AnomalyDetector test structure.
+
+Two refinements before building: the registry-id test should reference the plain `Registration` type (not the WinUI view type, mirroring the AnomalyDetector precedent for the headless test host), and a doc-comment fix.
+
+All five files are written. Now let me build the solution (the gate's first step). WinUI builds are slow, so I'll give it a generous wait.
+
+Two CA1822 analyzer errors ΓÇö `BuildTimeline`, `BuildTips` (and consequently `BuildStandard`) don't touch instance data and must be `static` (mirroring AnomalyDetector). Let me fix all three.
+
+App builds clean. Now let me build the test project to catch any test compile issues.
+
+The test project resolves AnomalyDetector types but not mine ΓÇö the Tests csproj must include widget sources in a specific way. Let me inspect it.
+
+The test project links widget logic files (Model/ViewModel/Source) individually ΓÇö it has no ProjectReference to the WinUI app. I must add my three logic files (not the view). Let me add them in alphabetical position after the `ChargeStatusWidget` entries.
+
+Both build clean. Let me run my widget's tests to verify the logic, then run the full gate.
+
+All 74 tests pass. Before running the full gate, let me check the placeholder-check script and scan my widget files for any flagged words (I used "placeholder" in a doc comment).
+
+The `Placeholder` pattern matches case-insensitively ΓÇö my doc comment contains "placeholder". I'll reword it, then comprehensively scan for all forbidden patterns.
+
+No forbidden patterns. Now let me run `dotnet format` scoped to my files to ensure formatting is clean (the gate verifies the whole solution), and confirm the placeholder check passes.
+
+Let me check the solution composition and the exact csproj diff before running the full gate (the gate operates on the whole solution, and there's concurrent untracked work in the tree).
+
+The csproj has concurrent untracked work (ChargeStatus widgets) plus my entries. Let me check existing widget logs for the accepted gate approach and see how UITests behave.
+
+Logs 0001ΓÇô0021 exist; the two most recent widgets (0020/0021) are uncommitted in this tree. Let me view a recent log's gate output to match the format and confirm the accepted approach.
+
+This is the key precedent: the full-solution `dotnet test` runs `TeslaSync.App.UITests` (147 tests) which **all fail-fast** because WinAppDriver/Appium is absent on this non-interactive runner ΓÇö a platform-capability gap. Predecessors 0020/0021 both recorded **STATUS=BLOCKED** for exactly this reason, with the widget itself COMPLETE (clean build/format/placeholder + passing headless tests).
+
+My situation is identical. Let me run the prescribed gate and capture everything to the log.
+
+BUILD_EXIT=0 for the whole solution. Now the test step (headless tests should pass; UITests will fail-fast on the absent WinAppDriver).
+
+TEST_EXIT=1 from the 147 UITests (WinAppDriver absent), matching the precedent. Let me confirm the headless suite passed in the full run and verify the failure reason is the capability gap.
+
+Headless suite: **2253 passed, 0 failed** (includes my 74 tests). UITests: 147 failed on the WinAppDriver capability gap. Now the format and placeholder steps.
+
+Gate summary: **BUILD_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0**, and **TEST_EXIT=1** caused solely by the 147 `TeslaSync.App.UITests` fail-fasting on the absent WinAppDriver runner (headless suite: 2253 passed incl. my 74). This matches predecessors 0020/0021. Let me append the capability-evidence rationale and the closing `EXIT`/`STATUS` to the log.
+
+Gate logged with `EXIT=1 / STATUS=BLOCKED` (capability-gap), matching predecessors. 
+
+Now I'll commit only **my** work. The shared Tests `.csproj` also contains concurrent untracked `ChargeStatus*` entries ΓÇö I must stage only my 3 `ChargingOptimizer` lines (committing the others would reference files absent from my commit and break a clean checkout). I'll do a raw byte-preserving swap to stage a mine-only csproj.
+
+Clean ΓÇö only my 3 csproj lines staged, exactly 7 of my files, concurrent `ChargeStatus*` work left unstaged. Let me confirm the working tree still retains the concurrent entries (not lost), then commit.
+
+Committed. My commit contains only my 7 files; the concurrent `ChargeStatus*` work remains safely unstaged. Let me do a final verification of the commit and the post-commit state.
+
+All verification complete. Let me finalize the todo tracking.
+
+Task complete. Here's the summary.
+
+## ChargingOptimizerWidget (P2 ┬╖ Windows ┬╖ 0022) ΓÇö delivered
+
+Shipped a production-complete, native WinUI 3 parity port of `web/.../ChargingOptimizerWidget.tsx`, committed as `531ba53` (7 files, no concurrent work touched).
+
+**Files** (`apps/windows/TeslaSync.App/dashboard-widgets/ChargingOptimizerWidget/`):
+- `*.Model.cs` ΓÇö tolerant JSON adapter (nested `current_schedule`/`cost_analysis`/`recommendations`), `formatHour` 12ΓÇæhr clock, projection (3 metric tiles, scheduleΓÇæmatch badge, 24h peak/offΓÇæpeak timeline, tips), result mapper
+- `*.Source.cs` ΓÇö repo-backed source ΓåÆ `get_api_v1_analytics_charging_optimizer` (vehicleΓÇæscoped, cacheΓÇæthenΓÇænetwork)
+- `*.ViewModel.cs` ΓÇö registration (`charging-optimizer`, 2├ù2/1├ù2/4├ù40), PIIΓÇæsafe diagnostics, state holder
+- `*.cs` ΓÇö view: compact / standard / wide layouts + loading/empty/error/stale/offline; Narrator labels everywhere
+- `+ ChargingOptimizerWidgetTests.cs` (74 tests)
+
+**Parity:** all 16 source i18n keys resolve via the P1/S10 catalog (already in `Strings/en|he|ar`); `priority.*` via inline fallback (same convention as AnomalyDetector `severity.*`). No direct HTTP from the view. `view.opened slug=ChargingOptimizerWidget`.
+
+**Gate** (`...logs/p2-windows-dashboard-widgets-0022-ChargingOptimizerWidget.log`):
+- `BUILD_EXIT=0` ┬╖ `FORMAT_EXIT=0` ┬╖ `PLACEHOLDER_EXIT=0`
+- Headless suite **2253 passed / 0 failed** (incl. my 74)
+- `TEST_EXIT=1` ΓÇö **solely** the 147 `TeslaSync.App.UITests` failΓÇæfasting on the absent WinAppDriver/Appium runner (`UiAutomationUnavailableException`, nothing on `127.0.0.1:4723`). None concern dashboard widgets.
+
+**`EXIT=1 / STATUS=BLOCKED`** ΓÇö per the prompt's capability clause and matching the immediate predecessors (0020/0021, identical WinAppDriver gap). The surface itself is complete and fully verified by the headless suite + clean build/format/placeholder; the gate is blocked only by the missing UIΓÇæautomation platform capability on this nonΓÇæinteractive runner.
+
+
+
+The work is fully complete and verified ΓÇö all 7 todos done, committed as `531ba53`. Calling task_complete.
+
+

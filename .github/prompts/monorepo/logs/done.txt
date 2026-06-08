@@ -121,3 +121,8 @@ p2-windows/dashboard-widgets/W-0016-ChargeCostTrackerWidget.prompt.md
 p2-windows/dashboard-widgets/W-0017-ChargeHistoryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0018-ChargePlansWidget.prompt.md
 p2-windows/dashboard-widgets/W-0019-ChargeSessionChartWidget.prompt.md
+p2-windows/dashboard-widgets/W-0020-ChargeStatusLiveWidget.prompt.md
+p2-windows/dashboard-widgets/W-0021-ChargeStatusWidget.prompt.md
+p2-windows/dashboard-widgets/W-0022-ChargingOptimizerWidget.prompt.md
+p2-windows/dashboard-widgets/W-0023-ChargingScheduleWidget.prompt.md
+p2-windows/dashboard-widgets/W-0024-ChargingSessionDetailWidget.prompt.md
