@@ -1,0 +1,58 @@
+/*
+  DrivingTab.strings
+  TeslaSync — P4 feature view · 0056 · DrivingTab (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DrivingTab` resolves (table "DrivingTab") lives here with its web English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns its own
+  strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/analytics/components/analytics/DrivingTab.tsx) — the canonical
+  `analytics.driving.*` namespace. The remaining keys back the native-only chrome
+  (freshness chip, stale/offline banner, loading / empty / error / retry copy, and the
+  VoiceOver value nouns).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"analytics.driving.speedDist" = "Speed Distribution";
+"analytics.driving.distDist" = "Trip Distance Distribution";
+"analytics.driving.hourlyPattern" = "Hourly Driving Pattern";
+"analytics.driving.tempVsEff" = "Temperature vs Efficiency";
+"analytics.driving.dailyTrend" = "Daily Driving Trend";
+"analytics.driving.durationDist" = "Drive Duration Distribution";
+"analytics.driving.effTrend" = "Efficiency Trend";
+"analytics.driving.trips" = "Trips";
+"analytics.driving.drives" = "Drives";
+"analytics.driving.distance" = "Distance";
+"analytics.driving.temp" = "Temp";
+"analytics.driving.efficiency" = "Efficiency";
+"analytics.driving.noSpeed" = "No speed data";
+"analytics.driving.noDistDist" = "No distance distribution data";
+"analytics.driving.noHourly" = "No hourly data";
+"analytics.driving.noTempEff" = "No temperature data";
+"analytics.driving.noDailyTrend" = "No daily trend data";
+"analytics.driving.noDurationData" = "Not enough drive data for distribution chart";
+"analytics.driving.noEffTrend" = "No efficiency trend data";
+
+/* --- Native chrome: freshness + connectivity --- */
+"analytics.driving.live" = "Live";
+"analytics.driving.stale" = "Stale";
+"analytics.driving.offline" = "Offline";
+"analytics.driving.staleBanner" = "Reconnecting — driving analytics may be stale";
+"analytics.driving.offlineBanner" = "Offline — showing last known driving analytics";
+
+/* --- Native chrome: states --- */
+"analytics.driving.loading" = "Loading driving analytics";
+"analytics.driving.emptyTitle" = "No driving data yet";
+"analytics.driving.emptyMessage" = "Drive analytics appear here once your vehicles report trips.";
+"analytics.driving.errorTitle" = "Couldn't load driving analytics";
+"analytics.driving.retry" = "Retry";
+
+/* --- Native chrome: VoiceOver value nouns --- */
+"analytics.driving.a11yRanges" = "ranges";
+"analytics.driving.a11yNoData" = "No data";
+"analytics.driving.a11yHours" = "hours";
+"analytics.driving.a11ySamples" = "samples";
+"analytics.driving.a11yDays" = "days";
