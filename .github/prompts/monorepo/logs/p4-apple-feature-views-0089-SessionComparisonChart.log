@@ -1,0 +1,216 @@
+================================================================================
+P4 · Feature view · 0089 — SessionComparisonChart (Apple)
+Run: 2026-06-07T21:06-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/210
+Base: 56082f93
+Prompt: P4/feature-views/0089 — Feature view: SessionComparisonChart
+Web source (spec): web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx
+Mode: code-complete + host-proven (typecheck both SDKs + executed XCTest) + DEFERRED
+      Xcode app build/test (Shared.xcframework not staged; ADR-012, Honesty rule 7 —
+      0002 BackendTool predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Shutdown)          OK
+  Swift Charts ............... present in both SDKs (this surface USES it)          OK
+  MapKit ..................... present in both SDKs (this surface uses NONE)        OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint  0.63.3                  OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                 OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh  7.6.2                        OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views in project.yml  REGISTERED (lines 37 + 68 — iOS + macOS app targets)  OK
+
+  Capability note: the prompt's capability-BLOCKED escape hatch ("SwiftUI / Swift
+  Charts / MapKit unavailable") does NOT apply — SwiftUI + Swift Charts are AVAILABLE
+  and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below, and the full
+  XCTest suite is EXECUTED on the macOS host. The surface uses Swift Charts (web
+  Recharts → native Chart{LineMark}); it uses no maps. STATUS is DONE, not BLOCKED.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/SessionComparisonChart.*) ===
+  SessionComparisonChart.Adapter.swift   381  pure projection core — ComparisonSession
+                                              (web ChargingSession subset) + CurvePoint +
+                                              ChargerKind + ComparisonSeries; curve()
+                                              (generateChargingCurve DC taper / AC flat),
+                                              isDc / chargerKind (getChargerLabel),
+                                              shortLabel (formatDateShort), series()
+                                              (slice(0,10) + per-SOC round), phases,
+                                              socDomain / peakPowerKw, slug, a11y. Foundation only.
+  SessionComparisonChart.Model.swift      238  P1/S8 state-holder seam (SessionComparisonSource
+                                              → SessionComparisonChartModel) + P1/S11 telemetry
+                                              seam (view.opened) + P1/S10 strings facade +
+                                              ComparisonUpdate + in-memory source. @Observable.
+  SessionComparisonChart.Views.swift      189  header (title+subtitle+freshness chip) +
+                                              connectivity banner + loading / empty / error states.
+  SessionComparisonChart.Chart.swift      272  overlaid Swift Charts line chart (monotone, 1.5pt,
+                                              per-session palette) + SOC/Power axis labels + dashed
+                                              grid + selection tooltip + wrapping flow legend.
+  SessionComparisonChart.swift             68  the surface — TSFadeIn(0.15) glass card + phase
+                                              switch + onAppear/onDisappear + a11y + surfaceSlug.
+  SessionComparisonChart.Previews.swift   113  #if DEBUG previews — one per state
+                                              (content/empty/loading/error/stale/offline).
+  SessionComparisonChart.Tests.swift      348  XCTest — adapter + model + a11y (26 methods).
+  SessionComparisonChart.strings           56  P1/S10 catalog contribution (table
+                                              "SessionComparisonChart", 25 keys).
+  Largest .swift = 381 lines (swiftlint file_length<=400 honored — the chart was split
+  out of Views into Chart.swift to stay within budget). No file imports the Shared
+  xcframework (seams are Swift protocols; the prod app injects the facade-backed source,
+  previews/tests inject InMemorySessionComparisonSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + useChartPalette + the parent `sessions` prop):
+      • useTranslation -> SessionComparisonStrings (P1/S10 table facade, t(key, default)).
+      • useChartPalette -> TSChartPalette.color(at:) — the index-stable brand palette,
+        the same Okabe-Ito set the web CB-safe `useChartPalette` default resolves to.
+      • `sessions` prop -> bound through the P1/S8 seam SessionComparisonSource ->
+        SessionComparisonChartModel; no HTTP in the view.
+  - Curve math (web `generateChargingCurve`, EXECUTED-verified, see [4] + standalone run):
+      startSoc=`start_soc_pct ?? 0`, endSoc=`end_soc_pct ?? 100`,
+      peakKw=`(peak_power_w ?? 11000)/1000`, dc=`isDcSession`; DC bands
+      ≤50 flat / 50–80 linear taper to 50 % / >80 steep drop, AC flat, clamp ≥0, step 1.
+      peak_power_w is SI watts on the model; kW is derived only at the chart display
+      boundary (web Y "Power (kW)"). Verified: soc50→150, soc80→75, soc100→22.5 (150 kW DC).
+  - Series projection (web `slice(0,10)` + merge `Math.round(power*10)/10`): the first
+      10 sessions, each a curve with display-rounded power (verified 72.375→72.4), a
+      `formatDateShort` short date label, a `getChargerLabel` charger family, and a
+      wrapping palette index `s0…s9`.
+  - Composition (web ChartContainer + Recharts LineChart + custom legend):
+      • ChartContainer title/subtitle -> header "Session Comparison" / "Power curves
+        overlaid from last 10 sessions" + freshness chip.
+      • LineChart -> Chart{ LineMark per session } (monotone == web AREA_DEFAULTS
+        type:'monotone'; 1.5pt == web strokeWidth={1.5}; no dots == dot:false).
+      • XAxis "SOC (%)" / YAxis "Power (kW)" -> chartX/YAxisLabel; chartGrid "3 3" ->
+        dashed AxisGridLine; axisTickSm -> muted Font.TS.label labels.
+      • ChartTooltip -> tap-snap RuleMark + per-session value tooltip at the SOC column.
+      • custom flex-wrap legend (date swatches) -> ComparisonFlowLayout (a Layout) +
+        per-session swatch + `formatDateShort` date.
+  - States (ALL rendered, each with a #if DEBUG preview + a model/projection unit test):
+      loading (skeleton chrome) · empty (web empty merge -> ContentUnavailableView) ·
+      error (message + Retry) · content (overlaid curves + legend) · stale (freshness
+      chip + "comparison may be out of date" banner + one guarded auto-refresh) ·
+      offline (cached curves kept + "showing the last loaded sessions" banner, no refetch).
+  - i18n (P1/S10): the 4 web source keys + the aria key preserved verbatim
+      (charging.curve.sessionComparison / .sessionComparisonDesc / .socPercent /
+      .powerKw / .sessionComparison.aria); charger labels (Supercharger / DC Fast /
+      Home / AC) + native chrome namespaced charging.curve.*. Every code-referenced key
+      (25) is declared in the catalog — referenced==declared verified, 0 missing. NO
+      English string literals in native code (all via the facade + Text(verbatim:)).
+  - Accessibility: chart carries a combined VoiceOver summary (title + session count +
+      peak kW); each legend chip carries a per-session value ("{date} ({charger}): peak
+      X kW"); decorative glyphs hidden; Dynamic-Type system fonts (Font.TS); reduce-motion
+      honored (chart animation gated + TSFadeIn + TSSkeleton shimmer).
+  - Telemetry (P1/S11): SessionComparisonChartModel.start() emits view.opened with
+      surface slug "SessionComparisonChart" exactly once (OSLog default; prod injects the
+      shared diagnostics adapter). Verified by testStartEmitsViewOpenedExactlyOnce.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 5 production files compiled together with the REAL apps/apple
+  component closure (design Tokens + Design/{TSDesign,TSMaterial} + Components/Motion +
+  Components/UI/{Typography,Badges,Buttons,Cards,Utility} + Feedback/{Banners,States,
+  Skeletons}); none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete -module-name TeslaSync <closure> <5 prod files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin; the 5
+        production files + previews + closure, macOS 15):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production surface + real design tokens + real TS component
+        closure; @testable import TeslaSync), Swift 6 language mode:
+          Test Suite 'ComparisonProjectionTests'          passed — 13 tests, 0 failures
+          Test Suite 'SessionComparisonChartModelTests'   passed — 10 tests, 0 failures
+          Test Suite 'ComparisonAccessibilityTests'       passed —  3 tests, 0 failures
+          Executed 26 tests, with 0 failures (0 unexpected) in 0.007 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: DC taper / AC flat curve parity (soc 0/50/65/80/81/100 + nil-field
+        defaults), isDc + chargerKind (getChargerLabel order, Tesla/CCS/peak/AC),
+        shortLabel (MMM d + nil em-dash), slice(0,10) + ids + colorIndex, per-SOC
+        rounding (72.375→72.4) + roundTenth, resolvePhase, socDomain/peakPowerKw, slug;
+        model loading/loaded/empty/failed projection, view.opened-once, stale
+        auto-refresh exactly once + re-arm on live, offline keeps cached + no refetch,
+        retry, stop; a11y chart summary (count + peak) + empty + per-series label.
+        (Also independently EXECUTED via a bare-`swiftc` Foundation harness for the
+        adapter math — 33/33 assertions green — before the XCTest suite.)
+  [5] swiftlint --strict (7 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` lists TeslaSync/feature-views so this dir is covered):
+          Done linting! Found 0 violations, 0 serious in 7 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/7 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; pwsh) on the surface's swift files:
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+        (grep for TODO/FIXME/XXX/Coming soon/placeholder/Lorem/not-implemented: none.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (code-unrelated environment blocker — NOT a defect in this surface;
+    identical disposition to the 0002 BackendTool predecessor, Honesty rule 7):
+      (a) Shared.xcframework not staged: the iOS + macOS app targets link the KMP core;
+          staging it needs a Kotlin/Native gradle build (apps/shared
+          :core:assembleSharedXCFramework). apps/apple/Frameworks holds only .gitkeep, so
+          xcodebuild fails at framework resolution BEFORE compiling app sources — the
+          concrete missing-framework error is captured above. Independent of this UI surface.
+      (b) macOS app/widget hardened-runtime signing requires a development certificate on
+          a signed runner (ADR-012).
+    NOTE: unlike the 0002 predecessor's environment, this slot's project.yml ALREADY
+    registers TeslaSync/feature-views in BOTH app targets (lines 37 + 68), so no
+    registration gap remains — only the xcframework staging blocks the app build.
+    The SAME tests xcodebuild would run in the TeslaSync(/-macOS) test target are PROVEN
+    GREEN (26/26) by the executed SwiftPM harness in step [4], and the surface compiles
+    against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2] + the DEBUG previews in [3].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (content/empty/loading/error/
+      stale/offline) — implemented; each has a #if DEBUG preview; phase logic
+      unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SessionComparisonSource ->
+      SessionComparisonChartModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — the 4 source keys + aria
+      preserved verbatim; 25/25 referenced keys declared (0 missing, verified).
+  [x] Accessibility labels on every interactive/data element (chart summary, legend
+      chips, freshness chip, retry, banners).
+  [x] Tests: adapter unit + per-state model + a11y — 26 methods, EXECUTED 26/26, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with
+      captured evidence (missing Shared.xcframework + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is
+                          shown DEFERRED with its real exit 65 + cause, not as a pass.
+  2 No scope narrowing ... full surface (8 files + strings), all states, seams, tests.
+  3 No skip-and-assume ... web source + helpers.ts read end-to-end; every t() + branch +
+                          the curve/charger/merge math reproduced and EXECUTED-verified.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. curve math + 10-session overlay + monotone 1.5pt lines +
+                          SOC/Power axes + tooltip + flex-wrap legend + 6 states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool host-gate + deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework build,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... the chart was split into Chart.swift to honor file_length;
+                          documented above. No other deviation (feature-views IS
+                          registered in this slot's project.yml).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
