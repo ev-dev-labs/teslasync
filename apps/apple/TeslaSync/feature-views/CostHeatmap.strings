@@ -1,0 +1,40 @@
+/*
+  CostHeatmap.strings
+  TeslaSync — P4 feature view · 0100 · CostHeatmap (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `CostHeatmap` resolves (table "CostHeatmap") lives here with its web value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns
+  its own strings without editing the shared catalog.
+
+  The first group is the exact keys + values extracted from the web source
+  (features/charging/components/charging-list/CostHeatmap.tsx), verified against
+  web/src/i18n/en.json (charging.optimizer.*). The second group backs the
+  native-only chrome (accessibility summary, freshness banners, loading / error).
+*/
+
+/* --- Web source (charging.optimizer.*, parity with en.json) --- */
+"charging.optimizer.heatmap" = "Charging Cost Heatmap";
+"charging.optimizer.cheap" = "Cheap";
+"charging.optimizer.expensive" = "Expensive";
+
+/* --- Native chrome: accessibility --- */
+"charging.optimizer.heatmap.a11y" = "Charging cost heatmap";
+"charging.optimizer.heatmap.legend" = "Cost scale from cheap to expensive";
+"charging.optimizer.heatmap.sessions" = "sessions";
+"charging.optimizer.heatmap.cheapest" = "Cheapest";
+"charging.optimizer.heatmap.priciest" = "Most expensive";
+"charging.optimizer.heatmap.busiest" = "Busiest";
+"charging.optimizer.heatmap.perKwh" = "/kWh";
+"charging.optimizer.heatmap.empty" = "No charging sessions recorded yet";
+
+/* --- Native chrome: loading + error --- */
+"charging.optimizer.heatmap.loading" = "Loading charging cost heatmap";
+"charging.optimizer.heatmap.errorTitle" = "Couldn't load the cost heatmap";
+"charging.optimizer.heatmap.retry" = "Retry";
+
+/* --- Native chrome: freshness banners --- */
+"charging.optimizer.heatmap.refresh" = "Refresh";
+"charging.optimizer.heatmap.staleBanner" = "Reconnecting — cost heatmap may be out of date";
+"charging.optimizer.heatmap.offlineBanner" = "Offline — showing the last known cost heatmap";
