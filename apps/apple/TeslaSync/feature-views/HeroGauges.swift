@@ -1,12 +1,12 @@
 //
 //  HeroGauges.swift
-//  TeslaSync — P4 feature view · 0058 · HeroGauges (Apple)
+//  TeslaSync — P4 feature view · 0103 · HeroGauges (Apple)
 //
-//  The composable "Hero Gauges" analytics surface — the SwiftUI parity of
-//  features/analytics/components/analytics/HeroGauges.tsx. Renders every state from the web
-//  source (loading skeleton / empty / error / stale / offline / content) for the six headline
-//  metric gauges, binding through `HeroGaugesModel` (P1/S8). No networking lives here; the
-//  freshness chip + auto-refresh reflect the bound source's live-state.
+//  The composable charging "Hero Gauges" surface — the SwiftUI parity of
+//  features/charging/components/charging-list/HeroGauges.tsx. Renders every state from the web
+//  source (loading skeleton / empty / error / stale / offline / content) for the four headline
+//  charging gauges plus the Avg $/kWh readout, binding through `HeroGaugesModel` (P1/S8). No
+//  networking lives here; the freshness chip + auto-refresh reflect the bound source's live-state.
 //
 
 import Foundation
@@ -15,19 +15,19 @@ import SwiftUI
 // MARK: - i18n facade SwiftUI helper (P1/S10)
 
 public extension HeroGaugesStrings {
-    /// SwiftUI `Text` for a key with the web English fallback. Kept here (not in the model file)
-    /// so the model/adapter stay SwiftUI-free.
+    /// SwiftUI `Text` for a key with the web English fallback. Kept here (not in the model file) so
+    /// the model/adapter stay SwiftUI-free.
     static func text(_ key: String, _ fallback: String) -> Text {
         Text(verbatim: string(key, fallback))
     }
 }
 
-// MARK: - HeroGauges (the analytics surface)
+// MARK: - HeroGauges (the charging surface)
 
-/// The composable Hero Gauges analytics surface — the SwiftUI parity of
-/// `features/analytics/components/analytics/HeroGauges.tsx`. Renders every state from the web
-/// source and the six-gauge responsive grid, binding through `HeroGaugesModel` (P1/S8). No
-/// networking lives here.
+/// The composable charging Hero Gauges surface — the SwiftUI parity of
+/// `features/charging/components/charging-list/HeroGauges.tsx`. Renders every state from the web
+/// source and the four-gauge responsive row plus the Avg $/kWh readout, binding through
+/// `HeroGaugesModel` (P1/S8). No networking lives here.
 public struct HeroGauges: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
     public static let surfaceSlug = HeroGaugesSurface.slug
@@ -39,13 +39,15 @@ public struct HeroGauges: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: TSSpacing.md) {
-            if showsFreshnessChip {
-                freshnessHeader
+        TSGlassPanel {
+            VStack(alignment: .leading, spacing: TSSpacing.md) {
+                if showsFreshnessChip {
+                    freshnessHeader
+                }
+                content
             }
-            content
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear {
             model.start()
             model.autoRefreshIfStale()
@@ -55,7 +57,7 @@ public struct HeroGauges: View {
         .accessibilityElement(children: .contain)
     }
 
-    /// The web grid is chrome-free when live + idle; the freshness chip appears only while fetching
+    /// The web panel is chrome-free when live + idle; the freshness chip appears only while fetching
     /// or when the bound source is stale/offline (the prompt's stale-chip / offline-chip states).
     private var showsFreshnessChip: Bool {
         model.isFetching || model.connection != .live
@@ -98,16 +100,13 @@ private extension HeroGauges {
         }
     }
 
+    /// The web empty branch: `<EmptyState message={t('charging.noStats', …)} />`.
     var emptyState: some View {
         TSEmptyState(
-            title: LocalizedStringKey(HeroGaugesStrings.string("analytics.hero.empty", "No fleet metrics yet")),
-            message: LocalizedStringKey(
-                HeroGaugesStrings.string(
-                    "analytics.hero.emptyHint",
-                    "Drive and charge to build up your fleet metrics."
-                )
+            title: LocalizedStringKey(
+                HeroGaugesStrings.string("charging.noStats", "No charging statistics available yet")
             ),
-            systemImage: "gauge.medium"
+            systemImage: "bolt.fill"
         )
         .frame(maxWidth: .infinity)
         .padding(.vertical, TSSpacing.lg)
@@ -119,7 +118,7 @@ private extension HeroGauges {
                 .font(.system(size: 26))
                 .foregroundStyle(Color.TS.statusDanger)
                 .accessibilityHidden(true)
-            HeroGaugesStrings.text("analytics.hero.errorTitle", "Couldn't load fleet metrics")
+            HeroGaugesStrings.text("charging.gauges.errorTitle", "Couldn't load charging stats")
                 .font(Font.TS.panel)
                 .foregroundStyle(Color.TS.textPrimary)
                 .multilineTextAlignment(.center)
@@ -132,7 +131,7 @@ private extension HeroGauges {
             Button {
                 model.refresh()
             } label: {
-                HeroGaugesStrings.text("analytics.hero.retry", "Retry")
+                HeroGaugesStrings.text("charging.gauges.retry", "Retry")
                     .font(Font.TS.caption)
                     .fontWeight(.semibold)
                     .padding(.horizontal, TSSpacing.md)
@@ -141,7 +140,7 @@ private extension HeroGauges {
                     .foregroundStyle(Color.TS.accent)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(HeroGaugesStrings.text("analytics.hero.retry", "Retry"))
+            .accessibilityLabel(HeroGaugesStrings.text("charging.gauges.retry", "Retry"))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, TSSpacing.lg)
