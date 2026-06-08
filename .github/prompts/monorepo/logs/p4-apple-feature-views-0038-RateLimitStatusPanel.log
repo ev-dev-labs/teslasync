@@ -1,0 +1,233 @@
+================================================================================
+P4 · Feature view · 0038 — RateLimitStatusPanel (Apple)
+Run: 2026-06-07T20:14-0700   Host: Darwin arm64 (macOS 26.5, 25F80)   Slot: slot-159
+Prompt: P4/feature-views/0038 — Feature view: RateLimitStatusPanel
+Web source (spec): web/src/features/admin/components/RateLimitStatusPanel.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (ADR-012; 0009/0036/0054 precedent).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (note: `xcode-select` points at /Library/Developer/CommandLineTools on this
+     slot; the full Xcode toolchain is reached with
+     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — proven by the
+     real iOS+macOS SDK compiles and the xcodebuild invocation below.)
+  iPhoneSimulator SDK ........ iphonesimulator26.5 (iOS 18.0 deploy target)         OK
+  macOS SDK .................. macosx26.5 (macOS 15.0 deploy target)                OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                           OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (feature-views/ not yet target-registered)  WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — the surface is authored, host-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/RateLimitStatusPanel.*) ===
+  RateLimitStatusPanel.Adapter.swift   290  testable core — RateLimitSeverity(+lenient decode)/
+                                            RateLimitScope+RateLimitStatusResponse Decodable (snake_case
+                                            CodingKeys + .iso8601) + RateLimitNumberFormat (fmtNumber port)
+                                            + RateLimitDuration (formatDurationMsLong port) +
+                                            RateLimitRelative (formatRelative port) + RateLimitRowProjection
+                                            (bar fraction + refill countdown + meta flags) + a11y summary
+  RateLimitStatusPanel.Model.swift     277  P1/S8 state-holder seam (RateLimitSource->Model) + P1/S11
+                                            telemetry seam + P1/S10 RLStrings facade (+{{}} interpolation) +
+                                            RateLimitInput snapshot + RateLimitProjection
+                                            (loading/error/empty/data + stale/offline overlays) +
+                                            in-memory source (injectable clock)
+  RateLimitStatusPanel.Views.swift     343  presentational subviews — severity->tone map / RLChip (runtime
+                                            stale+offline chips) / RLPanelHeader (title+subtitle+updated+
+                                            Refresh) / RLLoadingView (spinner+text) / RLErrorView (danger
+                                            box + retry) / RLEmptyView (italic) / RLRowsView /
+                                            RateLimitRowView (name+severity, labeled TSMetricBar, detail+
+                                            refill meta)
+  RateLimitStatusPanel.swift            69  RateLimitStatusPanel surface — TSGlassPanel wrapper, always-on
+                                            header + phase switch, onAppear telemetry, "Updated …" caption
+  RateLimitStatusPanel.Previews.swift  111  #if DEBUG previews — one per state (loading / data / empty /
+                                            error / stale / offline)
+  RateLimitStatusPanel.Tests.swift     361  XCTest — number/duration/relative/decode + row projection +
+                                            phase projection + model wiring + a11y (31 methods, 8 suites)
+  RateLimitStatusPanel.strings          39  P1/S10 catalog contribution (14 web-source keys + 4 native
+                                            chrome/a11y keys)
+  Every file <= 400 lines (house file_length under swiftlint --strict). Total 1490 lines across 7 files
+  (1451 Swift + 39 strings). Shared TSGlassPanel/TSButton/TSMetricBar/TSTone are REUSED from the real
+  component library (no redeclaration → no duplicate symbols when compiled in the app module); the runtime
+  stale/offline chip mirrors TSBadge tokens (the LocalizedStringKey-only TSBadge cannot take the runtime
+  string), exactly as the 0009 predecessor did for its runtime code chip.
+
+=== PARITY (vs web RateLimitStatusPanel.tsx) ===
+  Data sources -> useSystem/useRateLimitStatus (GET /system/rate-limits, the 30s pause-on-hidden poll). The
+    web component owns this hook; the native surface binds the coalesced query snapshot through the P1/S8
+    RateLimitSource seam (isLoading/isFetching/error/response + isStale/isOffline). The view performs NO
+    HTTP. useTranslation -> the P1/S10 RLStrings facade.
+  Projection -> RateLimitProjection.resolve is a 1:1 port of the web ladder
+    `isLoading ? loading : error ? error : scopes.length===0 ? empty : data`; error deliberately takes
+    precedence over cached rows (web shows the error box, not the stale data, on a refetch failure).
+    RateLimitRowProjection.make ports the per-row useMemo maths: max=limit>0?limit:1, fraction clamped
+    0…1, refill = reset_at-now dropped when nonpositive/non-finite, window phrasing flag, detail/meta
+    visibility. Verified by executed XCTest.
+  Composition -> the web GlassPanel: an always-visible header (panel title + subtitle + "Updated {when}"
+    via formatRelative + ghost Refresh w/ fetching spinner) above the state body: loading(spinner+bodySm
+    text) · error(danger box + warning triangle + retry) · empty(italic secondary text) · data(one
+    RateLimitRowView per scope). Each row reproduces the web RateLimitRow: name + toned severity caption,
+    a labeled TSMetricBar (window label left, monospace usage readout right, proportion bar tinted by
+    severity), and the detail/“Refills in …” bottom-meta. Severity hex map (ok #10b981 / warn #f59e0b /
+    critical #ef4444) -> shared TSTone .success/.warning/.danger.
+  Shared components -> @/components/ui -> TSGlassPanel (web GlassPanel), TSButton variant .ghost (web
+    Button), the runtime RLChip mirroring TSBadge; @/components/ui/Typography -> Font.TS ramp via
+    Text(verbatim:) for the runtime-interpolated strings the LocalizedStringKey roles can't express;
+    @/components/data-display -> TSMetricBar (web MetricBar); @/components/feedback -> the spinner is the
+    native ProgressView (web Spinner). Compiled against the REAL apps/apple component closure (Tokens +
+    TSDesign + TSMaterial + Typography + Cards + Buttons + Badges + Metrics; none import Shared) in the
+    iOS+macOS typechecks below. Recharts -> none / Leaflet -> none.
+  States (all render) -> loading · data · empty(friendly italic) · error(+retry) · stale(chip overlay on
+    the live data + auto-refresh implied by the polling hook) · offline(cached data + offline chip). The
+    web leaf renders loading/error/empty/data directly; the stale + offline chips are the native chrome
+    the P4 states contract requires for an auto-refreshing surface, layered as header overlays so cached
+    values stay visible (never a blank surface). Each state has a #if DEBUG preview and is unit-tested via
+    the projection.
+  i18n -> all 14 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    rateLimitStatus.{title, subtitle, usage, windowInstant, windowSeconds, resetIn, lastUpdated, refresh,
+    loading, error, empty, severity.ok, severity.warn, severity.critical} — ALL present in
+    RateLimitStatusPanel.strings, plus 4 native chrome/a11y keys (stale/offline/retry/loadingA11y). No
+    English literals in native code (Text(verbatim:) over the facade; {{name}} interpolation matches the
+    web i18next signature + the web test's t stub).
+  a11y -> the Refresh button + the retry button carry accessibilityLabels; the loading state is one
+    combined labeled element; each budget row is one combined element whose VoiceOver phrase is built by
+    the tested RateLimitAccessibility.rowSummary seam; the stale/offline chips combine + label; Dynamic
+    Type via Font.TS tokens; Reduce Motion is honoured by the shared TSMetricBar / ProgressView.
+  Telemetry -> RateLimitModel.start() emits viewOpened(surface:"RateLimitStatusPanel") -> bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once; startCount==1).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 4 shipped non-preview files compiled together with the
+    REAL apps/apple component closure — generated Tokens + TSDesign + TSMaterial + Typography + Cards +
+    Buttons + Badges + Metrics; none import the Shared xcframework):
+      xcrun swiftc -typecheck -sdk <iphonesimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  <component closure> <surface/Adapter/Model/Views>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0 -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; the 5 surface files incl Previews + the real closure;
+    #Preview macro expands under the Xcode 26 toolchain):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness
+    (swift-tools-version 6.0 → Swift 6 language mode / complete concurrency; real production
+    Adapter/Model/Views/surface + real design tokens + the real TSGlassPanel/TSButton/TSMetricBar/TSTone
+    component closure):
+      Executed 31 tests, with 0 failures (0 unexpected) in 0.006 seconds
+        RateLimitNumberFormatTests     4/4  (default 2dp / grouping / decimals override / non-finite→0)
+        RateLimitDurationTests         4/4  (nullish+nonpositive→— / sub-second ms / sub-minute s / m+s)
+        RateLimitRelativeTests         3/3  (nil→— / just-now+m+h+d thresholds / >=7d absolute fallback)
+        RateLimitDecodeTests           2/2  (snake_case envelope + optional reset_at/detail / unknown
+                                            severity→.warn + null generated_at)
+        RateLimitRowProjectionTests    7/7  (fraction ratio / zero-limit→max1 / clamp-to-1 / future reset
+                                            ms / past reset dropped / instant-window flag / meta+detail
+                                            normalisation)
+        RateLimitProjectionTests       6/6  (loading precedence / error precedence over data / empty /
+                                            data / stale+offline require content / fetching passthrough)
+        RateLimitModelTests            3/3  (start applies initial + telemetry-once + startCount==1 /
+                                            refresh delegation / push updates projection + clock countdown)
+        RateLimitAccessibilityTests    2/2  (row summary joins fragments / drops empty+nil fragments)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; the repo .swiftlint.yml `included:`
+    does not list TeslaSync/feature-views — that wiring is the P4 integration prompt's job — so the bare
+    gate `swiftlint --strict` SKIPS this dir; run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+      (the prompt's literal `-Path …/RateLimitStatusPanel` is a filename prefix, not a dir; the script
+       Test-Paths a real path, so the containing dir scoped to swift is scanned — it covers every
+       RateLimitStatusPanel.*.swift file.)
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + targets + schemes generate cleanly).
+      - `grep -c RateLimitStatusPanel TeslaSync.xcodeproj/project.pbxproj` -> 0 (surface not registered).
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   MAC_BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0009/0036/0054 predecessor surfaces, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets source `Sources/` + `TeslaSync/dashboard-widgets`;
+          this surface lives at `TeslaSync/feature-views/` with 0 references in project.yml (proven: 0
+          pbxproj refs). It is registered into the XcodeGen target + the admin surface by the downstream
+          P4 integration/acceptance prompt. Editing project.yml is OUTSIDE this prompt's allowed files.
+          Running xcodebuild now would build the app WITHOUT these files — ZERO evidence about this
+          deliverable. Steps [1]/[2] DO compile this surface against the real library, and step [4]
+          EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/apple/Scripts/build-shared-xcframework.sh ->
+          :core:assembleSharedXCFramework). Independent of this UI surface; concrete missing-framework
+          error captured above.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are PROVEN GREEN
+    (31/31) by the executed SwiftPM harness in step [4], and the views/model/adapter compile against
+    both the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/error/empty/data) + the P4 stale/offline overlays —
+      implemented; each has a #if DEBUG preview; projection unit-tested + executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (RateLimitSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all 14 source keys present in the strings.
+  [x] Accessibility labels on every interactive element (Refresh, retry) + combined row + chip labels.
+  [x] Tests: adapter (number/duration/relative/decode) + row + phase projection + model wiring + a11y —
+      31 methods across 8 suites, EXECUTED 31/31 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real MAC_BUILD_EXIT=65
+                       Shared.xcframework error captured; every "OK" is a command actually run with its
+                       real exit code (incl. a 31/31 executed XCTest run and iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented ALL web states/branches + the P4 stale/offline overlays + i18n +
+                       a11y + telemetry; the labeled bar, the refill countdown, and the severity tinting
+                       are all reproduced.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (The SwiftPM package is a
+                       throwaway test harness around the REAL surface files — no shipped stub.)
+  5  No parity shortcuts: faithful port of fmtNumber / formatDurationMsLong / formatRelative + the
+                       RateLimitRow inline maths + the full render ladder + the severity hex->tone map.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml (integration prompt's scope) and did
+                       NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings shipped as
+                       the per-surface table, exactly like 0009/0036/0054.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed RateLimitStatusPanel.* files + this log. (Two
+                       pre-existing working-tree edits under web/ predate this run and are NOT staged.)
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native RateLimitStatusPanel shipped at parity with the web source: pure-Swift
+  number/duration/relative formatters + snake_case wire decode + per-row bar/countdown projection
+  (executed-green XCTest, 31/31), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every state +
+  i18n key + a11y label, one labeled TSMetricBar per scope with severity-tinted fill. All host-runnable
+  gates pass AND the surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs with the real
+  Xcode 26 toolchain under Swift 6 strict concurrency. The Xcode app build/test is DEFERRED to the
+  downstream integration/signed runner (surface not yet target-registered + Shared.xcframework KMP staging
+  + macOS signing — none a defect in this code, all outside this prompt's allowed files), matching the
+  0009/0036/0054 "code-complete + DEFERRED Xcode gate" precedent (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/RateLimitStatusPanel.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0038-RateLimitStatusPanel.log
+  git commit -m "feat(apps/apple/feature-views): add RateLimitStatusPanel surface (P4)"
+
+EXIT=0
+STATUS=DONE

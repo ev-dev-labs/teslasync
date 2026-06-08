@@ -1,0 +1,39 @@
+/*
+  RateLimitStatusPanel.strings
+  TeslaSync — P4 feature view · 0038 · RateLimitStatusPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `RateLimitStatusPanel` resolves (table "RateLimitStatusPanel") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/RateLimitStatusPanel.tsx — title, subtitle, the
+  RateLimitRow labels, the severity sub-keys, and the loading / error / empty
+  branches). The second group backs the native-only chrome (stale / offline chips,
+  the retry affordance, accessibility) the Apple HIG states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"rateLimitStatus.title" = "Rate-limit budgets";
+"rateLimitStatus.subtitle" = "Live view of every server-side throttle that affects this TeslaSync deployment. Bars climb as the window fills; colour switches from green to amber at 50% and to red at 80%.";
+"rateLimitStatus.usage" = "{{current}} / {{limit}}";
+"rateLimitStatus.windowInstant" = "Live snapshot";
+"rateLimitStatus.windowSeconds" = "Last {{seconds}}s window";
+"rateLimitStatus.resetIn" = "Refills in {{duration}}";
+"rateLimitStatus.lastUpdated" = "Updated {{when}}";
+"rateLimitStatus.refresh" = "Refresh";
+"rateLimitStatus.loading" = "Loading rate-limit status…";
+"rateLimitStatus.error" = "Could not load rate-limit status. Check API logs and try again.";
+"rateLimitStatus.empty" = "No rate-limited resources are currently observed. Counters appear here once the API has handled at least one request.";
+"rateLimitStatus.severity.ok" = "ok";
+"rateLimitStatus.severity.warn" = "warn";
+"rateLimitStatus.severity.critical" = "critical";
+
+/* --- Native chrome: P4 states + accessibility --- */
+"rateLimitStatus.stale" = "Stale";
+"rateLimitStatus.offline" = "Offline";
+"rateLimitStatus.retry" = "Retry";
+"rateLimitStatus.loadingA11y" = "Loading rate-limit status";
