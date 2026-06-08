@@ -1,0 +1,53 @@
+/*
+  AutomationActivityFeed.strings
+  TeslaSync — P4 feature view · 0081 · AutomationActivityFeed (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  AutomationActivityFeed resolves (table "AutomationActivityFeed") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  Group 1 is the exact set of keys extracted from the web source
+  (features/automations/pages/AutomationActivityFeed.tsx). Group 2 routes the web
+  `statusConfig` labels (hardcoded English there) through the facade. Group 3 routes the
+  web live-event `Badge` text (`event.type.replace('automation.', '')`). Group 4 backs the
+  native-only chrome (stale / offline / loading / error / retry) the Apple HIG states
+  contract requires.
+*/
+
+/* --- Group 1: keys from the web source (parity) --- */
+"automations.recentActivity" = "Recent Activity";
+"automations.live" = "Live";
+"automations.reconnecting" = "Reconnecting";
+"automations.totalRuns" = "total";
+"automations.successRate" = "success";
+"automations.avgDuration" = "avg";
+"automations.noHistory" = "No execution history yet";
+
+/* --- Group 2: history status labels (web statusConfig) --- */
+"automations.status.success" = "Succeeded";
+"automations.status.partial" = "Partial";
+"automations.status.failed" = "Failed";
+"automations.status.skipped" = "Skipped";
+"automations.status.test" = "Test";
+"automations.status.undo" = "Undo";
+"automations.status.running" = "Running";
+"automations.status.cancelled" = "Cancelled";
+
+/* --- Group 3: live-event kind badge labels (web typeMap suffix) --- */
+"automations.event.triggered" = "triggered";
+"automations.event.succeeded" = "succeeded";
+"automations.event.failed" = "failed";
+"automations.event.skipped" = "skipped";
+"automations.event.state_changed" = "state_changed";
+
+/* --- Group 4: native chrome — states + accessibility --- */
+"automations.stale" = "Stale";
+"automations.offline" = "Offline";
+"automations.staleBanner" = "Reconnecting — activity may be stale";
+"automations.offlineBanner" = "Offline — showing last known activity";
+"automations.loadingA11y" = "Loading recent activity";
+"automations.errorTitle" = "Couldn't load recent activity";
+"automations.retry" = "Retry";
