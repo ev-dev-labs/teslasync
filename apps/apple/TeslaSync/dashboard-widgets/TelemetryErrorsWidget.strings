@@ -1,0 +1,53 @@
+/*
+  TelemetryErrorsWidget.strings
+  TeslaSync — P4 dashboard widget · 0100 · TelemetryErrorsWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TelemetryErrorsWidget` resolves (table "TelemetryErrorsWidget") lives here
+  with its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/TelemetryErrorsWidget.tsx); the remainder back the
+  native-only chrome (freshness chip, refresh/retry/open, loading/error/empty
+  copy, relative-time buckets, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.telemetryErrors.title" = "Telemetry Errors";
+"widget.telemetryErrors.unknown" = "Unknown";
+"widget.telemetryErrors.errors" = "Errors";
+"widget.telemetryErrors.healthy" = "Healthy";
+"widget.telemetryErrors.noData" = "No telemetry error data";
+"widget.telemetryErrors.errorVINs" = "error VINs";
+"widget.telemetryErrors.activeVINs" = "%lld VINs with errors";
+"widget.telemetryErrors.noErrors" = "No errors recorded";
+"widget.telemetryErrors.recent" = "recent";
+
+/* --- Registry metadata (registry/system.ts → "telemetry-errors") --- */
+"widget.telemetryErrors.description" = "Fleet Telemetry error monitor: VINs with errors, error types, counts";
+
+/* --- Native chrome: freshness chip (web DataFreshness) + actions --- */
+"widget.telemetryErrors.offline" = "Offline";
+"widget.telemetryErrors.updating" = "updating…";
+"widget.telemetryErrors.errorChip" = "error";
+"widget.telemetryErrors.refresh" = "Refresh";
+"widget.telemetryErrors.retry" = "Retry";
+"widget.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.telemetryErrors.loading" = "Loading telemetry errors";
+"widget.telemetryErrors.errorTitle" = "Couldn't load telemetry errors";
+"widget.telemetryErrors.emptyHint" = "Waiting for Fleet Telemetry data.";
+
+/* --- Relative time buckets (port of lib/dateFormat.ts formatRelative) --- */
+"widget.telemetryErrors.justNow" = "just now";
+"widget.telemetryErrors.minAgo" = "%lldm ago";
+"widget.telemetryErrors.hourAgo" = "%lldh ago";
+"widget.telemetryErrors.dayAgo" = "%lldd ago";
+
+/* --- Accessibility --- */
+"widget.telemetryErrors.countA11y" = "%lld occurrences";
+"widget.telemetryErrors.openA11y" = "Open the Fleet Telemetry page";
