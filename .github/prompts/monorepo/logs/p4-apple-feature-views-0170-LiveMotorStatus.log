@@ -1,0 +1,215 @@
+================================================================================
+P4 · Feature view · 0170 — LiveMotorStatus (Apple)
+Run: 2026-06-07T22:28-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/291
+Base: 9a66c1fd4
+Prompt: P4/feature-views/0170 — Feature view: LiveMotorStatus
+Web source (spec): web/src/features/driving/components/driving-dynamics/LiveMotorStatus.tsx
+Mode: code-complete + host-executed gates + DEFERRED Xcode app build/test
+      (0002 BackendTool / 0054 GuardModeWidget precedent, ADR-012, Honesty rule 7 —
+      predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  SwiftUI .................... present in both SDKs (this surface's core requirement) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.x (project + 12 targets generate cleanly)       OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views in project.yml  REGISTERED (iOS + macOS app targets reference it)   OK
+
+  Capability note: the prompt lists "Charts/maps used: (none)"; the core requirement
+  is SwiftUI + Swift Charts + MapKit on iOS 18 / macOS 15. SwiftUI is AVAILABLE and
+  PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below (this surface
+  uses gauges drawn with native SwiftUI shapes — no Charts/MapKit dependency). The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply
+  — the surface is authored, host-compiled on BOTH SDKs, and its full test suite is
+  EXECUTED green on the macOS host.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/LiveMotorStatus.*) ===
+  LiveMotorStatus.Model.swift    350  P1/S8 state-holder seam (LiveMotorSource→
+                                      LiveMotorStatusModel) + P1/S11 telemetry seam
+                                      (view.opened) + P1/S10 strings facade + load/
+                                      connection enums + temperature-unit pref +
+                                      MotorSnapshotInput DTO + in-memory source
+  LiveMotorStatus.Adapter.swift  317  testable projection core — fmtNumber parity,
+                                      Celsius→Fahrenheit (lib/unitConversion.ts 1:1),
+                                      torque-sum / RPM / motor-temp gauge math + shift
+                                      badge + a11y summary (pure, SwiftUI-free)
+  LiveMotorStatus.Views.swift    257  presentational chrome — accent→token map, the
+                                      responsive gauge row (web Grid 2/md:4), the radial
+                                      gauge (web RadialGauge), the shift badge (web Badge
+                                      + Cog glyph), freshness chip, loading skeleton row
+  LiveMotorStatus.swift          160  LiveMotorStatus surface (glass panel + always-on
+                                      <h2> title header + freshness chip + state switch
+                                      loading/empty/error/content + surfaceSlug)
+  LiveMotorStatus.Previews.swift 101  #if DEBUG previews — one per state (content / °F /
+                                      awaiting-temp / empty / loading / error / stale /
+                                      offline)
+  LiveMotorStatus.Tests.swift    400  XCTest — format/conversion + projector + model +
+                                      a11y + per-state view render (32 methods)
+  LiveMotorStatus.strings         36  P1/S10 catalog contribution (table "LiveMotorStatus")
+  Largest .swift = 400 lines (swiftlint file_length<=400 honored). No file imports the
+  Shared xcframework (the seam is a Swift protocol; the prod app injects the facade-backed
+  source, previews/tests inject InMemoryLiveMotorSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data source (web useTranslation; motorLatest fed by the parent's motor/latest hook):
+    bound through the P1/S8 seam LiveMotorSource→LiveMotorStatusModel. The view never
+    issues HTTP; the source resolves the snapshot + unit prefs and pushes coalesced updates.
+  - Composition (web GlassPanel + <h2> + Grid[RadialGauge ×3 + Badge]):
+      • GlassPanel  -> TSGlassPanel.
+      • <h2> title  -> always-visible header, web t('dynamics.liveMotor','Live Motor Status').
+      • RadialGauge -> native ring (track + accent arc fills clamped/max) + centre value
+                       (fmtNumber(clamped, isInteger?0:precision) + unit) + label + caption
+                       span; torque #3b82f6→chartSeriesSpeed, RPM #a855f7→chartSeriesPower,
+                       temp #f59e0b→statusWarning (token sRGB == web hex exactly).
+      • Torque gauge-> value=(torque_nm_front??0)+(torque_nm_rear??0), max 1000, "Nm",
+                       caption `${fmtNumber(total)} Nm` (default precision).
+      • RPM gauge   -> value=motor_rpm_front??0, max 18000, "RPM", caption
+                       `${fmtNumber(rpm,0)} RPM`.
+      • Temp gauge  -> motorTempC=max(front??-Inf,rear??-Inf); display=isFinite?conv:0,
+                       max 200, unit=tempUnit; caption `${fmtNumber(conv,1)}${tempUnit}`
+                       OR t('dynamics.awaiting','Awaiting data') when neither axle reports.
+      • Shift badge -> Badge variant success(shift=='D')/neutral + gearshape.fill glyph +
+                       (shift_state ?? t('dynamics.unknown','Unknown')) over the
+                       t('dynamics.shiftState','Shift State') caption.
+  - States (ALL rendered, each with a #if DEBUG preview + a model/view test):
+      loading (skeleton ring grid) · empty (web EmptyState
+      t('dynamics.noLiveMotor','Awaiting live motor data')) · content (gauge grid) ·
+      error (message + Retry; native QueryError affordance) · stale (freshness chip +
+      one guarded auto-refresh) · offline (cached readings kept + offline chip).
+  - i18n (P1/S10): web keys preserved VERBATIM — dynamics.{liveMotor,torque,rpmFront,
+      motorTemp,awaiting,unknown,shiftState,noLiveMotor}; native chrome namespaced
+      dynamics.motor.* (live/stale/offline/updating/loading/errorTitle/retry). Every
+      code-referenced key is declared in LiveMotorStatus.strings; referenced==declared
+      VERIFIED (15==15, zero orphans). NO English string literals in native code (all via
+      LiveMotorStatusStrings facade + Text(verbatim:)).
+  - Accessibility: VoiceOver labels on every gauge (label + caption), the shift badge,
+      the freshness chip, and the Retry button; the grid carries a combined summary
+      ("Torque 496.50 Nm. Front RPM 5,230 RPM. Motor 51.2°C. Shift State D"); Dynamic-Type
+      system fonts (Font.TS); reduce-motion honored (ring fill + TSSkeleton shimmer).
+  - Telemetry (P1/S11): LiveMotorStatusModel.start() emits view.opened with surface slug
+      "LiveMotorStatus" exactly once (OSLogLiveMotorTelemetry default; prod app injects the
+      shared diagnostics adapter). Asserted by testStartEmitsViewOpenedOnce.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 4 production files (+ DEBUG previews) compiled together with the
+  REAL apps/apple component closure (design Tokens + Design/{TSDesign,TSMaterial} +
+  Components/{UI,Feedback,DataDisplay,Charts,Maps,Motion,Forms,Layout}); none import the
+  Shared xcframework (UnitFormatters.swift, the only Shared-dependent component file, is
+  not used by this surface).
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete  <closure> <4 production files>
+        IOS_TYPECHECK_EXIT=0   (0 errors)                                          OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0   (0 errors)                                          OK
+  [3] DEBUG previews — compiled by the SwiftPM harness library build below (the #Preview
+        macro plugin resolves under the Xcode toolchain; `swift build` → Build complete):
+        PREVIEWS_BUILD_EXIT=0                                                      OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production Model/Adapter/Views/surface + DEBUG previews +
+        real design tokens + real TS component closure), Swift 6 language mode:
+          Test Suite 'LiveMotorFormatTests'         passed —  5 tests, 0 failures
+          Test Suite 'LiveMotorProjectorTests'      passed — 11 tests, 0 failures
+          Test Suite 'LiveMotorStatusModelTests'    passed —  9 tests, 0 failures
+          Test Suite 'LiveMotorAccessibilityTests'  passed —  1 test,  0 failures
+          Test Suite 'LiveMotorStatusViewStateTests'passed —  6 tests, 0 failures
+          Executed 32 tests, with 0 failures (0 unexpected) in 0.131 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: fmtNumber grouping/rounding + safeNumber + Celsius→Fahrenheit; projector
+        gauge order/accents/units, torque axle-sum, RPM integer centre, motor-temp axle-max,
+        Fahrenheit conversion, the "Awaiting data" branch, single-axle ??-coalescing, clamp
+        to gauge max, non-finite→0, precision pass-through, shift tone/text; model phase
+        matrix, cached-behind-offline, units/freshness tracking, refresh delegation, the
+        once-until-live stale auto-refresh + fetching guard, view.opened-once + slug; the
+        a11y summary; and an ImageRenderer render smoke for ALL SIX states (content / empty /
+        loading / error / stale / offline).
+  [5] swiftlint --strict (6 surface .swift files; explicit paths — the repo .swiftlint.yml
+        `included:` lists TeslaSync/feature-views, run here scoped to this surface):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/LiveMotorStatus
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        (also scanned the surface files directly: no TODO/FIXME/Placeholder/Lorem/
+         not-implemented in any shipped file)
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + 12 targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (two independent, code-unrelated reasons — neither is a defect in this
+    surface; identical disposition to the 0002 BackendTool / 0054 GuardModeWidget
+    predecessors, Honesty rule 7):
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs
+          a Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework). It is
+          independent of this UI surface; the concrete missing-framework error is captured
+          above. Frameworks/ holds only .gitkeep.
+      (c) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012); the entitlements error is captured above.
+    Note (narrower than 0002): project.yml ALREADY registers TeslaSync/feature-views in the
+    iOS + macOS app targets, so the predecessor's "not-yet-registered" reason does NOT apply
+    here — this surface IS in the build graph. The deferral is purely (b) the unstaged KMP
+    xcframework + (c) signing. The SAME tests are PROVEN GREEN (32/32) by the executed
+    SwiftPM harness in step [4], and the surface compiles against BOTH the iOS 18 and macOS
+    15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading / empty / error / stale / offline / content) —
+      implemented; each has a #if DEBUG preview; phase + per-state render EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (LiveMotorSource→
+      LiveMotorStatusModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web dynamics.* preserved
+      verbatim; native chrome dynamics.motor.* present; referenced==declared (15==15).
+  [x] Accessibility labels on every interactive element (gauges, shift badge, freshness
+      chip, Retry); grid carries a combined summary.
+  [x] Tests: adapter unit + per-state model + a11y + per-state view render — 32 methods,
+      EXECUTED 32/32, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      evidence (xcframework + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green (32/32 tests executed; both SDKs
+                          compile); the xcodebuild build/test is shown DEFERRED with its
+                          real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (6 .swift + strings), all states, seams, 32 tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + branch + numeric guard
+                          reproduced and pinned by an executed test.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. RadialGauge ×3 (torque-sum / RPM / temp-with-conversion) + shift
+                          Badge + "Awaiting data" branch + 6 states, web hex == token sRGB.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool host-gate + deferral; Xcode
+                          accessed via DEVELOPER_DIR exactly as the predecessors did.
+  8 No commit on red ..... committed work is green on every runnable gate; the only non-green
+                          step is the environment-blocked xcframework build/signing, deferred
+                          with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... deferral reasons documented; unlike 0002, feature-views is already
+                          registered in project.yml (deferral narrowed to xcframework+signing).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
