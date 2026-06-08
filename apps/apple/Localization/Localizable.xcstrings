@@ -1,6 +1,116 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "widget.drivetrainHealth.accessibility.refresh": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh drivetrain health"
+          }
+        }
+      }
+    },
+    "widget.drivetrainHealth.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor temp, stator temp, inverter health, overall powertrain score"
+          }
+        }
+      }
+    },
+    "widget.drivetrainHealth.displayName": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drivetrain Health"
+          }
+        }
+      }
+    },
+    "widget.drivetrainHealth.driveState": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drive State"
+          }
+        }
+      }
+    },
+    "widget.drivetrainHealth.inverterHealth": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inverter"
+          }
+        }
+      }
+    },
+    "widget.drivetrainHealth.motorTemp": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor Temp"
+          }
+        }
+      }
+    },
+    "widget.drivetrainHealth.noData": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No drivetrain data"
+          }
+        }
+      }
+    },
+    "widget.drivetrainHealth.score": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "health"
+          }
+        }
+      }
+    },
+    "widget.drivetrainHealth.statorTemp": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stator Temp"
+          }
+        }
+      }
+    },
+    "widget.drivetrainHealth.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drivetrain Health"
+          }
+        }
+      }
+    },
     "auth.signIn": {
       "extractionState": "manual",
       "localizations": {
