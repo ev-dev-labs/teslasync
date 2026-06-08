@@ -1,0 +1,204 @@
+================================================================================
+P4 · Feature view · 0023 — UrlEncoder (Apple)
+Run: 2026-06-07T19:56-0700   Host: Darwin arm64 (macOS 26.5.1)   Branch: auto/20260607-170817-98066/144
+Base: fec65f59
+Prompt: P4/feature-views/0023 — UrlEncoder
+Web source (spec): web/src/features/admin/components/devtools/tools/UrlEncoder.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0054 GuardModeWidget precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 via DEVELOPER_DIR override               OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)      OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)             OK
+  iPhone 16 simulator ........ present (83717DEE-…)                                OK
+  swiftlint .................. 0.63.3 (/opt/homebrew/bin/swiftlint)                OK
+  swiftformat ................ 0.61.1 (/opt/homebrew/bin/swiftformat)              OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                       OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (not yet target-registered)            WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles
+  below. The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable")
+  does NOT apply — the surface is authored, host-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/UrlEncoder.*) ===
+  UrlEncoder.Adapter.swift     98  testable transform core — UrlEncoderCodec (port of
+                                   encodeURIComponent/decodeURIComponent) + UrlEncoderMode +
+                                   UrlEncoderResult + a11y output-summary builder
+  UrlEncoder.Model.swift      112  P1/S8 state-holder seam (UrlEncoderModel @Observable) + P1/S11
+                                   telemetry seam (UrlEncoderTelemetry/OSLog) + P1/S10 strings facade
+  UrlEncoder.swift            244  UrlEncoderView surface — ToolCard chrome + mode toggle + input +
+                                   output/empty/invalid state switch
+  UrlEncoder.Previews.swift    44  #if DEBUG previews — one per state (empty/encoded/decode/invalid)
+  UrlEncoder.Tests.swift      176  XCTest — codec + model + accessibility + strings (21 methods)
+  UrlEncoder.strings           33  P1/S10 catalog contribution (7 web keys + 3 native chrome/a11y keys)
+  Total 707 lines across 6 files; every file <= 250 lines (house file_length).
+  Shared design tokens / components (Color.TS, Font.TS, TSSpacing, TSRadius, tsGlassPanel, TSButton,
+  TSCopyButton) are REUSED, never redeclared — no duplicate symbols in the app module.
+
+=== PARITY (vs web UrlEncoder.tsx) ===
+  Data sources -> useTranslation ONLY. The web source has NO data hooks (no Resource/query); it is a
+    pure client-side transform. It is bound through the shared state-holder seam (UrlEncoderModel,
+    P1/S8): the model owns mode+input and derives `result` exactly as the web `useMemo` does. The view
+    performs NO transform logic and NO I/O. Because there is no async data source, the generic
+    network states (loading/error/stale/offline) do NOT occur on this surface — this reproduces the
+    source faithfully (it has none); it is not scope narrowing.
+  Codec -> UrlEncoderCodec is a 1:1 port of encodeURIComponent / decodeURIComponent:
+    encode percent-encodes every byte EXCEPT the JS unreserved set A-Z a-z 0-9 - _ . ! ~ * ' ( )
+    (explicit ASCII set, NOT CharacterSet.alphanumerics, so non-ASCII emits UTF-8 triples:
+    "café"->"caf%C3%A9", "世"->"%E4%B8%96; space/&/= -> %20/%26/%3D so the exact web example
+    "hello world&foo=bar" -> "hello%20world%26foo%3Dbar"). decode returns .invalid on malformed
+    escapes / invalid UTF-8 (the web try/catch -> t('Invalid Input')). Empty input -> .empty sentinel
+    (web `if (!inputVal) return ''`). All verified by the executed XCTest (11 codec asserts).
+  Composition -> ToolCard frame (link icon chip + "Url Encoder" title + "Url Encoder Desc") over a
+    glass panel · Encode/Decode toggle (TSButton primary when active / ghost when inactive, mirroring
+    the web variant switch) · "Input Label" + monospaced auto-growing input with the per-mode example
+    prompt ("hello world&foo=bar" / "hello%20world%26foo%3Dbar", verbatim like the web) · output panel
+    ("Output Label" + TSCopyButton + monospaced value, web `pre`).
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius + tsGlassPanel (web GlassPanel)
+    + TSButton (web Button) + TSCopyButton (web CopyButton), compiled against the REAL apps/apple
+    component library in the typecheck steps below. Recharts -> none / Leaflet -> none.
+  States (all render) -> empty (web hides the output panel; native shows a friendly hint, never a blank
+    box) · value (output panel + copy) · invalid (web renders t('Invalid Input') in the panel with a
+    copy button; native keeps the verbatim "Invalid Input" text but swaps copy for a danger-toned
+    warning — the HIG-idiomatic error rendering the surface contract asks for; documented deviation).
+    Each has a #if DEBUG preview; the empty/value/invalid branching is unit-tested + executed green.
+  i18n -> every key the web source passes to t() resolves through the P1/S10 facade with the web
+    fallback: "Url Encoder", "Url Encoder Desc", "Encode", "Decode", "Input Label", "Output Label",
+    "Invalid Input" — ALL present in UrlEncoder.strings (values reproduce exactly what the web renders;
+    the bare keys absent from en.json render as the key itself, Encode/Decode are identity in en.json).
+    Plus 3 native chrome/a11y keys. No English literals in native code (verbatim from the facade).
+  a11y -> icon decorative (hidden); title carries .isHeader; each toggle button has an accessibility
+    label + .isSelected when active; the input has an explicit accessibilityLabel; the output carries a
+    label + value; the invalid panel a combined danger label; Dynamic Type via the Font.TS ramp;
+    no animation (no Reduce-Motion concern). The spoken output summary is a pure, unit-tested seam
+    (UrlEncoderAccessibility.outputSummary).
+  Telemetry -> UrlEncoderModel.start() emits viewOpened(surface:"UrlEncoder") -> bridges the shared
+    Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK. The 4 shipping source files compiled together with the
+    REAL apps/apple component closure (design Tokens + Design/TSMaterial + Components/UI/{Buttons,
+    Utility}); none import the Shared xcframework; Swift 6 + strict-concurrency=complete:
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+        -swift-version 6 -strict-concurrency=complete <closure> <UrlEncoder.{Adapter,Model,,Previews}>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, strict complete):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; same closure; isolates this surface's #Preview blocks):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness
+    (real production Adapter/Model/View/Previews + real design tokens + real TSButton/TSCopyButton),
+    Swift 6 language mode (.swiftLanguageMode(.v6)):
+      Executed 21 tests, with 0 failures (0 unexpected) in 0.004 seconds
+        UrlEncoderCodecTests        11/11  (encodeURIComponent example + unreserved set + reserved
+                                           delimiters + UTF-8 triples; decode round-trip; malformed
+                                           -> nil; empty sentinel; whitespace-as-value; transform x3)
+        UrlEncoderModelTests         6/6   (default encode/empty; typing encodes; mode switch recompute;
+                                           invalid decode; per-mode example; telemetry-once)
+        UrlEncoderAccessibilityTests 3/3   (empty/value/invalid output summaries)
+        UrlEncoderStringsTests       1/1   (facade resolves keys to the web fallback)
+      SWIFT_TEST_EXIT=0                                                             OK
+    (One real bug was caught + fixed here before green: the a11y output summary used the "Output"
+    fallback while the rest of the surface uses "Output Label" — corrected to match. Honesty rule 1.)
+[5] swiftlint --strict on the 5 surface .swift files (explicit paths; the repo .swiftlint.yml
+    `included:` does not list TeslaSync/feature-views — that wiring is the P4 integration prompt's job
+    — so the bare gate `swiftlint --strict` SKIPS this dir; run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 5 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the surface (config: apps/apple/.swiftformat):
+      0/5 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; swift):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0                                   OK
+      (The gate's literal `-Path …/feature-views/UrlEncoder` is a file PREFIX, not a dir, so it scans
+       0 files; the meaningful directory scan above covers all 5 .swift files. Coverage PROVEN: a
+       copy with an injected `// TODO` reported PLACEHOLDER_COUNT=1 / EXIT=1, so the gate really
+       scans files of this shape — the real surface is COUNT=0.)
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + 12 targets + schemes generate cleanly).
+      - `xcodebuild -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0054 GuardModeWidget precedent, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets enumerate Sources/, TeslaSync/dashboard-widgets,
+          Localization, and the design tokens — NOT TeslaSync/feature-views (grep -c "feature-views"
+          project.yml = 0). This surface is registered into the XcodeGen target by the downstream P4
+          integration/acceptance prompt. Editing project.yml is OUTSIDE this prompt's allowed files.
+          Running xcodebuild now builds the app WITHOUT these files — ZERO evidence about this
+          deliverable. Steps [1]/[2]/[3] DO compile this surface against the real library on BOTH SDKs,
+          and step [4] EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared/gradlew :core:assembleSharedXCFramework), which
+          apps/macos-pending-verifications.md defers to a `macos-latest` CI runner (ADR-012).
+          Independent of this UI surface; concrete missing-framework error captured above.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are PROVEN GREEN
+    (21/21) by the executed SwiftPM harness in step [4], and the view/model/adapter/previews compile
+    against BOTH the iOS 18 simulator and macOS 15 SDKs in steps [1]/[2]/[3].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (empty / value / invalid) — each has a #if DEBUG
+      preview; the branch logic is unit-tested + executed green. Network states (loading/error/stale/
+      offline) do not exist in the source (no data hooks) and are documented as N/A, not omitted.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (UrlEncoderModel); no I/O in the view.
+  [x] Every i18n key from source has a matching catalog key — 7 web keys + 3 native, all in
+      UrlEncoder.strings.
+  [x] Accessibility labels on every interactive element (toggle buttons + input + output regions).
+  [x] Tests: adapter/codec unit + model + a11y + strings — 21 methods, EXECUTED 21/21 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (coverage proven).
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       framework error; every "OK" is a command actually run with its real exit code
+                       (incl. a 21/21 executed XCTest run and iOS+macOS SDK compiles). A real a11y
+                       fallback bug was caught by the executed tests and fixed before green.
+  2  No scope narrowing: implemented the full surface (codec + all real states + i18n + a11y +
+                       telemetry + previews + tests). Absent network states are the source's own
+                       reality (no data hooks), documented — not dropped scope.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of encodeURIComponent/decodeURIComponent (unreserved set,
+                       %20/%26/%3D, UTF-8 triples, malformed->invalid, empty sentinel) + full ToolCard
+                       composition + every t() key.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml (integration prompt's scope) and did
+                       NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings shipped as
+                       the per-surface table, exactly like the 0054 precedent.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed UrlEncoder.* files + this log. The one
+                       intentional UX deviation (invalid state shows a danger warning instead of a copy
+                       button, while preserving the verbatim "Invalid Input" text) is documented above.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native UrlEncoder shipped at parity with the web source: a pure-Swift codec
+  (executed-green XCTest, 21/21) that reproduces encodeURIComponent/decodeURIComponent exactly, bound
+  through a P1/S8 state-holder seam (no view I/O), with P1/S11 telemetry, the full ToolCard composition,
+  every state + i18n key + a11y label. All host-runnable gates pass AND the surface compiles against
+  BOTH the iOS 18 simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict
+  concurrency. The Xcode app build/test is DEFERRED to the downstream integration/signed runner
+  (surface not yet target-registered + Shared.xcframework KMP staging + signing — none a defect in this
+  code, all outside this prompt's allowed files), matching the 0054 GuardModeWidget precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/UrlEncoder.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0023-UrlEncoder.log
+  git commit -m "feat(apps/apple/feature-views): add UrlEncoder surface (P4)"
+
+EXIT=0
+STATUS=DONE
