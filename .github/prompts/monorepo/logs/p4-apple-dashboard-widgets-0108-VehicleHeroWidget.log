@@ -1,0 +1,235 @@
+================================================================================
+P4 · Dashboard widget · 0108 — VehicleHeroWidget (Apple)
+Run: 2026-06-07T19:49-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/111
+Base: 7eca9e60
+Prompt: P4/dashboard-widgets/0108 — VehicleHeroWidget
+Web source (spec): web/src/features/dashboard/widgets/VehicleHeroWidget.tsx
+                   (+ its real spec components/VehicleHero.tsx, which the widget delegates to)
+Mode: code-complete + DEFERRED Xcode app build/test (0036 DigitalTwinWidget / 0054 GuardModeWidget
+      precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX (macOS 15 deploy target)                       OK
+  iPhone 16 simulator ........ present (Booted)                                     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (via Xcode toolchain)  OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... app targets glob `TeslaSync/dashboard-widgets` (compiled),
+                               but the shared registry types are still per-surface (see DEFERRED) WARN
+
+  Host note (honesty): `xcode-select -p` defaults to /Library/Developer/CommandLineTools on this
+  host (no XCTest, no Preview macro plugin, no iPhoneSimulator SDK). All steps below set
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer to use the full Xcode 26.5 toolchain —
+  the SAME override the 0054 GuardModeWidget predecessor used. The macOS-SDK-only typecheck also
+  passes under bare CommandLineTools; the iOS-simulator typecheck + executed XCTest require the
+  Xcode override and are reported under it.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)" — VehicleHero renders custom SVG radial gauges, ported to a
+  SwiftUI Circle-trim arc). The core requirement is SwiftUI, which is available and PROVEN by the
+  real iOS-18-simulator AND macOS-15 SDK compiles + the executed XCTest below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply — the
+  surface is authored, host-compiled (iOS+macOS), and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.*) ===
+  VehicleHeroWidget.Model.swift       384  P1/S8 state-holder seam (VehicleHeroSource→VehicleHeroModel)
+                                           + P1/S11 telemetry seam + P1/S10 strings facade + SI input DTOs
+                                           (VehicleInput/VehicleStateInput/UnitDisplayPrefs) + registry types
+  VehicleHeroWidget.Adapter.swift     222  pure core — SI converters (convert*FromSI parity), fmtNumber/
+                                           fmtInt, firmware precedence, status→badge catalog, brand palette,
+                                           a11y summaries
+  VehicleHeroWidget.Projection.swift  231  gauge projection (web RadialGauge array: battery/range/speed?/
+                                           power?/inside/outside + clamp + integer-or-precision rule) +
+                                           charging-detail block + header/subtitle/a11y assembly
+  VehicleHeroWidget.StatCards.swift   208  context stat-grid projection (web buildStatCards: driving/
+                                           charging/idle context cards + always lock/sentry/firmware/power)
+  VehicleHeroWidget.swift             135  VehicleHeroWidget surface (shell chrome + header + phase switch
+                                           + navigation seam + registry)
+  VehicleHeroWidget.Views.swift       206  chrome subviews — status badge / freshness chip / refresh /
+                                           connectivity banner / loading / empty / error
+  VehicleHeroWidget.Content.swift     301  state content — gauge flow + gauge view / charging panel /
+                                           stat grid + card / action bar / asleep panel
+  VehicleHeroWidget.Previews.swift    112  #if DEBUG previews — one per state (driving/charging/idle/
+                                           asleep/loading/empty/error/stale/offline)
+  VehicleHeroWidget.Tests.swift       345  XCTest — adapter + projection + model + registry + a11y
+                                           (28 methods)
+  VehicleHeroWidget.strings            89  P1/S10 catalog contribution (47 keys used, all defined)
+  Every file <= 400 lines (house file_length under swiftlint --strict). Total 2233 lines / 10 files.
+  Registry types (DashboardWidgetSize / DashboardWidgetRegistration) are declared in this surface's
+  .Model.swift, matching the established per-surface pattern of the sibling 0035/0036/... surfaces
+  (de-duplicated into a shared file at P4 integration — see DEFERRED note (b)).
+
+=== PARITY (vs web VehicleHeroWidget.tsx + components/VehicleHero.tsx) ===
+  Data sources -> bound via the shared state-holder seam (VehicleHeroSource -> VehicleHeroModel):
+    useVehicles, useVehicleState, useVehicleLive, useUnits, useSettings. The production app wires
+    VehicleHeroSource over those KMP state holders; the view performs NO HTTP. The widget picks the
+    vehicle (web `vehicleId ? find ?? [0] : [0]`), reads SI state, and converts at the render boundary.
+  Projection (pure, executed-green XCTest):
+    • SI->display converters are 1:1 with web unitConversion.ts (METERS_PER_MILE=1609.344, /1000 km,
+      /0.3048 ft; mph=*3600/1609.344, km/h=*3.6; °F=*9/5+32). fmtNumber/fmtInt reproduce the global
+      precision (2), grouping separators, and the safeNumber NaN/±Inf->0 guard.
+    • Gauges: battery(color >50 green / <=50 amber), range(cyan), speed(only when driving||speed>0),
+      power(only when charging), inside/outside(temp max 50°C / 122°F) — value/max/unit/color + the
+      clamped 0..1 arc + the RadialGauge integer-or-precision value rule.
+    • Charging detail: power(kW) / rate(dist/h) / time-to-full(h) + the "Done ~hh:mm" wall-clock.
+    • Stat grid: the exact context selection (driving -> speed/power/odometer/ideal; charging ->
+      rate/ttf/ideal/odometer; idle -> inside/outside/odometer/ideal) + always (lock/sentry/firmware/
+      power) with the web power tint (>0 amber / <0 green / 0 slate) and '—' temp null-guard.
+    • Firmware: live.version || live.swUpdateVersion || state.software_version || '—'.
+    • Status badge: neutral pill + colored dot from the FSM VEHICLE_STATES badgeDot (online=success,
+      driving=#3b82f6, charging=#facc15, parked=#06b6d4, updating=#6366f1, asleep=#a855f7,
+      offline=danger), status = state?.state ?? "offline"; unknown -> capitalized neutral fallback.
+  Composition -> header (name=display_name||vin + status badge + freshness chip + refresh) · subtitle
+    "model trim · vin" · radial-gauge flow · charging panel (charging only) · context stat grid ·
+    quick actions (Details/Commands/Live Map/Digital Twin via injected onNavigate) · asleep panel
+    ("Vehicle asleep — wake to see live data" + Wake Up) when state is null.
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton +
+    ContentUnavailableView (compiled against the REAL apps/apple component library in the typechecks
+    below). Recharts -> none / Leaflet -> none (custom SVG gauge -> SwiftUI Circle trim).
+  States (all render) -> loading (skeleton chrome) · empty (no vehicle -> ContentUnavailableView) ·
+    error (retry affordance) · stale (chip + banner) · offline (cached value + chip + banner) ·
+    content; PLUS the asleep branch when a vehicle is present but its live state is null. Model phase
+    resolution keeps cached content visible behind refresh/errors, matching the web shell.
+  i18n -> all 47 source/native keys resolve through the P1/S10 facade with the web t(key,default)
+    fallback; all present in VehicleHeroWidget.strings (used-but-undefined = 0). No English literals
+    in native code (Text(verbatim:) from the facade). Unknown vehicle states use the capitalized raw
+    value as the fallback display (web StatusBadge `capitalize`).
+  a11y -> header carries a combined name+state+battery summary; each gauge an
+    accessibilityLabel + value; each stat card / button a combined label; Dynamic Type via tokens;
+    Reduce Motion gates the gauge arc animation + the TSSkeleton shimmer.
+  Telemetry -> VehicleHeroModel.start() emits viewOpened(surface:"VehicleHeroWidget") -> bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once).
+  Registry -> VehicleHeroWidget.registration: id "vehicle-hero", category "vehicle", default 2x9,
+    min 2x4, max 4x40 (+ clamp()), matching registry/vehicle.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 7 shipping source files compiled together with the
+    REAL apps/apple component library — design Tokens + Design/{TSDesign,TSMaterial} + Theme +
+    Components/UI/{Badges,Typography,Cards} + Feedback/Skeletons; none import the Shared xcframework.
+    The component files' own #if DEBUG #Preview blocks are excluded from this closure since no
+    -D DEBUG is passed):
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  <component closure>  VehicleHeroWidget.{Model,Adapter,Projection,StatCards,
+        ,Views,Content}.swift
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; same closure + VehicleHeroWidget.Previews.swift;
+    the component closure is the #if-DEBUG-stripped copy so only THIS surface's #Preview blocks
+    compile, isolated from other components' previews):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+    harness (real production Model/Adapter/Projection/StatCards/Views/Content + real design tokens +
+    real TSTone badges + TSSkeleton closure; release config so the component #if DEBUG previews are
+    excluded; -enable-testing for @testable), Swift 6 language mode:
+      Test Suite 'All tests' passed — Executed 28 tests, with 0 failures (0 unexpected) in 0.013s
+        VehicleHeroAdapterTests        5  (distance/speed/temp conversion, fmtNumber/fmtInt parity,
+                                          non-finite guard, firmware precedence)
+        VehicleHeroStatusCatalogTests  3  (known tone/dot/label, unknown capitalized fallback, key)
+        VehicleHeroGaugeTests          6  (driving/charging/idle gauge sets, battery color+fraction,
+                                          range imperial conversion, temp gauge max per unit system)
+        VehicleHeroStatTests           5  (charging detail only-when-charging + text, context
+                                          selection + count, always cards, power color, temp dash)
+        VehicleHeroHeaderTests         3  (subtitle join, title->vin + status->offline, a11y summary)
+        VehicleHeroModelTests          4  (phase loading/empty/error, vehicle->content, telemetry-once
+                                          + refresh delegation + connection/projection tracking)
+        VehicleHeroRegistryTests       2  (canonical vehicle-hero metadata, clamp min/max)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 9 surface .swift files (explicit paths; the repo .swiftlint.yml lists
+    TeslaSync/dashboard-widgets but the bare gate would also lint the parallel siblings, so this is
+    scoped to THIS surface):
+      Done linting! Found 0 violations, 0 serious in 9 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 9 surface .swift files (config: apps/apple/.swiftformat):
+      0/9 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) on the surface .swift files:
+      ./apps/tools/check-placeholders.ps1 -Path <surface files> -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host, Xcode 26.5 toolchain):
+      - `xcodegen generate` -> EXIT=0 (project + 12 targets + schemes generate cleanly).
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   BUILD_EXIT=65
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface; identical
+    disposition to the 0036/0054 predecessor surfaces, Honesty rule 7):
+      (a) Shared.xcframework not staged: every app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared/gradlew :core:assembleSharedXCFramework). The
+          concrete missing-framework error is captured above (BUILD_EXIT=65). Independent of this UI.
+      (b) PARALLEL-SURFACE REGISTRY TYPES: DashboardWidgetSize / DashboardWidgetRegistration are each
+          declared per-surface (this one + the sibling 0035/0036/... surfaces under
+          TeslaSync/dashboard-widgets). Compiling the whole app target together would redeclare them;
+          de-duplication into one shared file is the downstream P4 integration prompt's job, OUTSIDE
+          this prompt's allowed files (VehicleHeroWidget.*). Steps [1]/[2] compile THIS surface
+          against the real library WITHOUT the siblings (no duplicate symbols), and step [4] EXECUTES
+          its full XCTest suite — the meaningful validation.
+      (c) macOS/iOS app + signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are PROVEN
+    GREEN (28/28) by the executed SwiftPM harness in step [4], and the views/model/adapter/projection
+    compile against BOTH the iOS 18 simulator and macOS 15 SDKs in steps [1]/[2] + previews in [3].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) + the asleep branch
+      — implemented; each has a #if DEBUG preview; phase logic unit-tested + executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (VehicleHeroSource->VehicleHeroModel);
+      no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 47 used, all defined in
+      VehicleHeroWidget.strings (used-but-undefined = 0).
+  [x] Accessibility labels on every interactive element; header + gauges + cards carry combined
+      values; Reduce Motion + Dynamic Type respected.
+  [x] Tests: adapter + projection + per-state model + registry + a11y — 28 methods, EXECUTED 28/28.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       missing-XCFramework error captured; every "OK" is a command actually run with
+                       its real exit code (incl. a 28/28 EXECUTED XCTest run + iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented ALL states/views/gauges/charging/stat-cards/actions/asleep +
+                       i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (The #if-DEBUG-stripped
+                       component copies + the SwiftPM harness are throwaway verification scaffolding,
+                       never shipped surface files.)
+  5  No parity shortcuts: faithful port of VehicleHero's gauge array + buildStatCards + charging panel
+                       + StatusBadge + firmware precedence + all states + the asleep branch.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register the shared registry types into a shared file / edit
+                       project.yml beyond its existing glob, and did NOT edit the shared
+                       Localizable.xcstrings (parallel-unsafe) — strings shipped as the per-surface
+                       table, exactly like 0036/0054.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed VehicleHeroWidget.* files + this log. Two
+                       pre-existing unrelated working-tree edits (web/.../FleetApiSection.tsx,
+                       BackupRestorePage.tsx) were NOT touched and are NOT staged.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native VehicleHeroWidget shipped at parity with the web source: pure-Swift
+  projection core (executed-green XCTest, 28/28), P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every state + i18n key + a11y label, registry-correct (vehicle-hero, 2x9 / 2x4 / 4x40).
+  All host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and macOS
+  15 SDKs with the real Xcode 26.5 toolchain under Swift 6. The Xcode app build/test is DEFERRED to
+  the downstream integration/signed runner (Shared.xcframework KMP staging + per-surface registry-type
+  de-duplication — neither a defect in this code, both outside this prompt's allowed files), matching
+  the 0036/0054 "code-complete + DEFERRED Xcode gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0108-VehicleHeroWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add VehicleHeroWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

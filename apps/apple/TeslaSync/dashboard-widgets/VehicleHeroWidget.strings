@@ -1,0 +1,89 @@
+/*
+  VehicleHeroWidget.strings
+  TeslaSync — P4 dashboard widget · 0108 · VehicleHeroWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  VehicleHeroWidget resolves (table "VehicleHeroWidget") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first groups are the exact keys extracted from the web spec
+  (features/dashboard/widgets/VehicleHeroWidget.tsx + components/VehicleHero.tsx),
+  namespace "dashboard". The web `buildStatCards` used a few hardcoded English
+  labels (Odometer / Ideal Range / Charge Rate / Firmware); those are localized
+  here so the native surface holds NO English literals. The remaining keys back
+  the native-only chrome (freshness chip, refresh/retry, loading/empty/error,
+  stale/offline banners) and the registry name/description.
+*/
+
+/* --- Registry (registry/vehicle.ts → "vehicle-hero") --- */
+"hero.title" = "Vehicle Card";
+"hero.description" = "Vehicle name, model, state, battery at a glance";
+
+/* --- Gauges (web VehicleHero RadialGauge labels) --- */
+"hero.battery" = "Battery";
+"hero.range" = "Range";
+"hero.speed" = "Speed";
+"hero.power" = "Power";
+"hero.inside" = "Inside";
+"hero.outside" = "Outside";
+
+/* --- Charging detail panel (web `state.is_charging` block) --- */
+"hero.charging" = "Charging";
+"hero.chargePower" = "Power";
+"hero.chargeRate" = "Rate";
+"hero.timeToFull" = "Time to Full";
+"hero.doneAt" = "Done";
+
+/* --- Quick-action buttons --- */
+"hero.details" = "Details";
+"hero.commands" = "Commands";
+"hero.liveMap" = "Live Map";
+"hero.digitalTwin" = "Digital Twin";
+
+/* --- Asleep / no-state panel --- */
+"hero.asleep" = "Vehicle asleep — wake to see live data";
+"hero.wakeUp" = "Wake Up";
+
+/* --- Stat-grid labels (web `common.*` t() + buildStatCards literals) --- */
+"common.status" = "Status";
+"common.locked" = "Locked";
+"common.unlocked" = "Unlocked";
+"common.sentry" = "Sentry";
+"common.active" = "Active";
+"common.off" = "Off";
+"hero.odometer" = "Odometer";
+"hero.idealRange" = "Ideal Range";
+"hero.firmware" = "Firmware";
+"hero.chargeRateLong" = "Charge Rate";
+
+/* --- Vehicle state labels (web VEHICLE_STATE_LABELS → StatusBadge) --- */
+"hero.state.online" = "Online";
+"hero.state.driving" = "Driving";
+"hero.state.charging" = "Charging";
+"hero.state.parked" = "Parked";
+"hero.state.updating" = "Updating";
+"hero.state.asleep" = "Asleep";
+"hero.state.offline" = "Offline";
+
+/* --- Native chrome: freshness + actions --- */
+"hero.live" = "Live";
+"hero.connStale" = "Stale";
+"hero.connOffline" = "Offline";
+"hero.refresh" = "Refresh";
+"hero.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"hero.loading" = "Loading vehicle";
+"hero.errorTitle" = "Couldn't load vehicle";
+"hero.emptyTitle" = "No vehicle";
+"hero.emptyHint" = "Add a vehicle to see it here.";
+"hero.staleBanner" = "Reconnecting — data may be stale";
+"hero.offlineBanner" = "Offline — showing last known data";
+
+/* --- Accessibility --- */
+"hero.a11y.summary" = "Vehicle summary";
+"hero.a11y.gauges" = "Live gauges";
+"hero.a11y.percent" = "percent";
