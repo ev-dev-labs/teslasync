@@ -1,0 +1,235 @@
+================================================================================
+P4 · Feature view · 0069 — SummarySlide (Apple)
+Run: 2026-06-07T20:47-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/190
+Base: 4155bdac
+Prompt: P4/feature-views/0069 — Feature view: SummarySlide
+Web source (spec): web/src/features/analytics/components/review/SummarySlide.tsx
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (24/24)
+      + DEBUG previews typecheck + DEFERRED Xcode app build/test (0002 BackendTool /
+      0005 FleetTelemetryHealth precedent, ADR-012, Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT default) ........ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools — a bare
+     `xcodebuild` there fails "tool requires Xcode"; full Xcode is driven via
+     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer, no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  feature-views in project.yml  REGISTERED (project.yml L37 iOS + L68 macOS)        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/data-display + @/components/motion". The core
+  requirement is SwiftUI, which is AVAILABLE and PROVEN by real iOS-18-simulator
+  AND macOS-15 SDK compiles below. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply — the surface is authored,
+  host-compiled on BOTH SDKs, host-tested (24/24), and previews-typechecked.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/SummarySlide.*) ===
+  SummarySlide.Models.swift      206  domain value types (YearReviewSummary + vehicle,
+                                      ported from web `YearReview` headline subset) +
+                                      DistanceDisplayUnit + SummaryUnitMath.convertDistanceFromSI
+                                      (1:1 port of lib/unitConversion.ts) + snake-case decode
+  SummarySlide.Model.swift       199  P1/S8 state-holder seam (YearReviewSource→SummarySlideModel)
+                                      + cache-then-network load state + error taxonomy + in-memory
+                                      source + P1/S10 strings facade; carries the useUnits distance pref
+  SummarySlide.Projection.swift  267  testable projection core (web component body): the 5 ordered
+                                      stats + distance SI→display conversion + conditional savings line
+                                      + header + brand/screenshot captions + per-state presentation
+                                      resolver + a11y card summary (pure, dependency-free)
+  SummarySlide.Components.swift   343  presentational subviews — glass recap card (web gradient
+                                      motion.div) + staggered stat rows (TSAnimatedNumber + TSStagger*)
+                                      + savings footer + freshness/refresh accessory + empty/error/
+                                      offline/loading states + share-hint caption
+  SummarySlide.swift             124  SummarySlide surface (surfaceSlug + state composition +
+                                      view.opened telemetry + FadeIn + auto-refresh on stale)
+  SummarySlide.Previews.swift    102  #if DEBUG previews — one per state (content live/imperial/
+                                      stale/no-savings + empty + loading + offline-cached/no-data + error)
+  SummarySlide.Tests.swift       335  XCTest — adapter + projection + presentation + model + a11y (24 methods)
+  SummarySlide.strings            42  P1/S10 catalog contribution (table "SummarySlide")
+  Largest .swift = 343 lines (swiftlint file_length<=400 honored). No file imports
+  the Shared xcframework (seams are Swift protocols; the prod app injects the
+  facade-backed source + the units holder's distance pref; previews/tests inject
+  InMemoryYearReviewSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + useUnits): useTranslation -> the P1/S10
+    SummarySlideStrings facade; useUnits().unitPrefs.distance -> the model's
+    `distanceUnit: DistanceDisplayUnit` (prod app feeds it from the shared units
+    holder). The web `data: YearReview` prop -> the P1/S8 YearReviewSource seam +
+    a web-prop convenience init `SummarySlide(data:)`. No HTTP in the view.
+  - Composition (web gradient card + AnimatedNumber stats + savings + captions):
+      • Card        -> TSGlassPanel material card (web `motion.div` glass card),
+                       max-width 420, centered (web items-center justify-center).
+      • Header      -> year (Font.TS.title) + "Year in Review" + vehicle name/model
+                       (web flex justify-between block), rendered verbatim.
+      • Stats       -> the 5 web rows IN ORDER (drives, distance, energy, charges,
+                       CO₂), each = SF-Symbol icon (Lucide map) + TSAnimatedNumber
+                       (data-display, reduce-motion aware) + label, cascaded via
+                       TSStaggerContainer/TSStaggerItem (motion) like the web per-
+                       index motion delay.
+      • Distance    -> convertDistanceFromSI(total_distance_km * 1000, unit) (web
+                       line verbatim: SI km -> metre floor -> display unit); label is
+                       the unit itself (km/mi/ft), exactly as web renders unitPrefs.distance.
+      • Savings     -> shown only when gas_savings > 0 (web conditional); emerald
+                       "💰 Saved $<amount> vs. gas" via the localized template
+                       (web default `Saved ${{amount}} vs. gas`).
+      • Captions    -> brand line "TeslaSync • Year in Review" + the share hint
+                       "📸 Screenshot to share your year!" (web `t('yearReview.screenshot')`).
+  - States (ALL rendered, each with a #if DEBUG preview + a resolver unit test):
+      loading (skeleton card) · empty (zero-activity review -> friendly
+      ContentUnavailableView, never a blank card) · content (the recap card) ·
+      stale (freshness chip + auto-refresh) · offline (cached card + offline chip,
+      or offline-no-data state with retry) · error (QueryError-equivalent + retry).
+  - i18n (P1/S10): web keys preserved verbatim — yearReview.title / totalDrives /
+    energyKwh / charges / co2KgSaved / screenshot / savedSummary; native chrome
+    namespaced yearReview.summary.* (live/stale/offline/refresh/retry/loading/
+    empty.title/empty.message/errorTitle/offlineMessage) + yearReview.brandLine.
+    Every code-referenced key is declared in SummarySlide.strings (referenced ⊆
+    declared verified); NO English string literals in native code (all via the
+    SummarySlideStrings facade + Text(verbatim:)).
+  - Accessibility: VoiceOver labels on every element — header (combined year +
+    vehicle), each stat row (combined "value label", icon hidden), savings line,
+    freshness chip, refresh + retry buttons; the card carries a contained summary;
+    Dynamic-Type system fonts (Font.TS); reduce-motion honored (TSAnimatedNumber +
+    TSFadeIn/TSStagger + TSSkeleton shimmer).
+  - Telemetry (P1/S11): SummarySlide emits view.opened with surface slug
+    "SummarySlide" on .task (DashboardWidgetTelemetrySink; prod app injects the
+    shared diagnostics adapter, tests use BufferedDashboardWidgetTelemetry).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 5 production files + previews compiled together with the
+  REAL apps/apple Shared-free component closure (design Tokens + Design/{TSDesign,
+  TSMaterial} + Components/UI/{Typography,Badges,Buttons,Cards,Utility} +
+  Components/DataDisplay/Metrics + Components/Motion/Motion +
+  Components/Feedback/{Skeletons,States,Banners} + DashboardWidgets/
+  BatteryCellsWidgetRegistry telemetry); none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun --sdk iphonesimulator swiftc -typecheck -sdk <iPhoneSimulator26.5> \
+          -target arm64-apple-ios18.0-simulator -swift-version 6 -strict-concurrency=complete \
+          <closure + 5 production files>
+        IOS_TYPECHECK_EXIT=0                                                        OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                        OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, #Preview macro via the Xcode
+        toolchain; closure + 5 production files + SummarySlide.Previews.swift):
+        PREVIEWS_TYPECHECK_EXIT=0                                                   OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (real production Models/Model/Projection/
+        Components/surface + real design tokens + real TS component closure),
+        Swift 6 language mode, strict-concurrency=complete:
+          Test Suite 'SummarySlideAdapterTests'        passed —  5 tests, 0 failures
+          Test Suite 'SummarySlideProjectionTests'     passed —  7 tests, 0 failures
+          Test Suite 'SummarySlidePresentationTests'   passed —  5 tests, 0 failures
+          Test Suite 'SummarySlideModelTests'          passed —  5 tests, 0 failures
+          Test Suite 'SummarySlideAccessibilityTests'  passed —  2 tests, 0 failures
+          Executed 24 tests, with 0 failures (0 unexpected) in 0.008 seconds
+        SWIFT_TEST_EXIT=0                                                           OK
+        Covers: snake-case decode (incl. nested vehicle) + partial/garbage payloads;
+        convertDistanceFromSI pins (1000m→1km, 1609.344m→1mi, 0.3048m→1ft); unit-
+        from-label; isEmpty; stat order + km/mi formatting + labels; conditional
+        savings + template; header em-dash fallbacks; every presentation state
+        (loading/empty/offline/error/stale/content + cached-behind-offline/error);
+        web-prop mapping; view.opened slug + buffered sink; model start-once/refresh/
+        stop/push; a11y card summary present + savings omission.
+  [5] swiftlint --strict (7 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` lists TeslaSync/feature-views, so this dir is in
+        scope; run explicitly here against just the new files):
+          Done linting! Found 0 violations, 0 serious in 7 files.
+        LINT_EXIT=0                                                                OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/7 files require formatting.
+        FORMAT_EXIT=0                                                              OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          ./apps/tools/check-placeholders.ps1 -Path <SummarySlide swift files> -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                         OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: There is no XCFramework found at
+                 '.../apps/apple/Frameworks/Shared.xcframework'. (target 'TeslaSync-macOS')
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (code-unrelated; identical disposition to the 0002 BackendTool /
+    0005 FleetTelemetryHealth predecessors, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging
+          it needs a Kotlin/Native gradle build (:core:assembleSharedXCFramework).
+          Independent of this UI surface; the concrete missing-framework error is
+          captured above. This surface's files import only SwiftUI/Foundation/
+          Observation/XCTest — never Shared — so steps [1]/[2] DO compile them
+          against the real component library on BOTH the iOS 18 and macOS 15 SDKs,
+          and step [4] EXECUTES the full XCTest suite (24/24).
+      (b) macOS app/widget signing requires a development certificate on a signed
+          runner (ADR-012).
+    NOTE: feature-views IS registered in project.yml (L37 iOS + L68 macOS), so this
+    surface is part of both app targets — the deferral is purely the un-staged KMP
+    framework + signing, NOT a registration gap. XCTest under Xcode runs in the
+    TeslaSync(/-macOS) test target; here the SAME tests are PROVEN GREEN (24/24) by
+    the executed SwiftPM harness in step [4].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source reproduced (loading/empty/
+      error/stale/offline/content) — implemented; each has a #if DEBUG preview +
+      resolver unit test (EXECUTED green).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (YearReviewSource→
+      SummarySlideModel) + the useUnits distance pref; no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web yearReview.*
+      keys preserved verbatim; native chrome yearReview.summary.* present;
+      referenced ⊆ declared verified.
+  [x] Accessibility labels on every interactive element (header/stat rows/savings/
+      freshness/refresh/retry); the card carries a contained summary.
+  [x] Tests: adapter unit + per-state resolver + a11y + telemetry — 24 methods,
+      EXECUTED 24/24, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with
+      captured evidence (xcframework + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test
+                          is shown DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (7 .swift files + strings), all states,
+                          seams, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + conditional
+                          branch (savings > 0) reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. card + 5 ordered AnimatedNumber stats + distance
+                          conversion + conditional savings + captions + 6 states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool / 0005
+                          FleetTelemetryHealth host-gate + deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework build,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... no deviation: feature-views is registered; surface files
+                          are Shared-free by design; closure is the real component layer.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+=== DISPOSITION ===
+  Production-polished native SummarySlide shipped at parity with the web source:
+  pure-Swift projection core (EXECUTED-green XCTest, 24/24), P1/S8 state-holder seam
+  (no view HTTP), P1/S11 view.opened telemetry, every state + i18n key + a11y label,
+  the distance SI→display conversion, and the conditional savings line. All host-
+  runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and
+  macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency,
+  plus a DEBUG previews typecheck. The signed Xcode app build/test is DEFERRED to the
+  downstream integration/signed runner (un-staged KMP Shared.xcframework + signing —
+  not a defect in this code, both outside this prompt's allowed files), matching the
+  0002/0005 "code-complete + DEFERRED Xcode gate" precedent.
+
+EXIT=0
+STATUS=DONE
