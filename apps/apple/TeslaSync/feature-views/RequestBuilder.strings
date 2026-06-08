@@ -1,0 +1,37 @@
+/*
+  RequestBuilder.strings
+  TeslaSync — P4 feature view · 0040 · RequestBuilder (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `RequestBuilder` resolves (table "RequestBuilder") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/admin/components/RequestBuilder.tsx). The remainder back the native-only
+  chrome (body example hint) and the VoiceOver summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"playground.send" = "Send";
+"playground.sending" = "Sending...";
+"playground.confirmDestructive" = "This is a %@ request. Are you sure you want to send it?";
+"playground.confirmYes" = "Yes, send";
+"playground.cancel" = "Cancel";
+"playground.pathParams" = "Path Parameters";
+"playground.queryParams" = "Query Parameters";
+"playground.requestBody" = "Request Body";
+"playground.authHeader" = "Authentication (Optional)";
+"playground.apiKeyPlaceholder" = "Leave empty to use session auth";
+"playground.authHint" = "Requests use your browser session by default. Enter an API key to test key-based auth.";
+
+/* --- Native chrome: body editor example hint --- */
+"requestBuilder.bodyExample" = "{ \"key\": \"value\" }";
+
+/* --- Accessibility: VoiceOver summaries --- */
+"a11y.requestBuilder.method" = "Method";
+"a11y.requestBuilder.url" = "Request URL";
+"a11y.requestBuilder.body" = "Request body";
+"a11y.requestBuilder.required" = "Required";
