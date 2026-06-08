@@ -130,3 +130,4 @@ p2-windows/dashboard-widgets/W-0028-ClimateStatusWidget.prompt.md
 p2-windows/dashboard-widgets/W-0029-CommandHistoryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0027-ClimateHistoryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0031-CostBreakdownWidget.prompt.md
+p2-windows/dashboard-widgets/W-0026-ClimateControlPanelWidget.prompt.md
