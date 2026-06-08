@@ -1,0 +1,220 @@
+================================================================================
+P4 · Feature view · 0060 — OverviewVehicleComparison (Apple)
+Run: 2026-06-07T20:46-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/181
+Base: 55b00cee
+Prompt: P4/feature-views/0060 — OverviewVehicleComparison
+Web source (spec): web/src/features/analytics/components/analytics/OverviewVehicleComparison.tsx
+Mode: code-complete + host-validated (swiftc iOS+macOS SDK typecheck + executed harness +
+      surface swiftlint/swiftformat/placeholder) + DEFERRED Xcode app build/test (Shared.xcframework
+      not staged + 0 codesigning identities — the user-approved P4 disposition, e.g. 0020 TeslaApiRefTool).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                  ✅
+  /Applications/Xcode.app .... Xcode toolchain via DEVELOPER_DIR override            ✅
+  macOS SDK .................. MacOSX26.5.sdk (target arm64-apple-macos15.0)         ✅
+  iOS simulator SDK .......... iPhoneSimulator present (target arm64-apple-ios18.0-simulator) ✅
+  Swift Charts + SwiftUI ..... `import Charts` + Chart/SectorMark/BarMark typecheck PROBE_EXIT=0 ✅
+  horizontalSizeClass + Grid . compiles on BOTH macOS 15 and iOS 18 targets         ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               ✅
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     ✅
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep) ⚠ (DEFERS the Xcode app gate)
+  codesign identities ........ "0 valid identities found"                            ⚠ (DEFERS the macOS app gate, ADR-012)
+
+  Charts/Maps capability note: the prompt's auto-extracted "Charts/maps used: (none)" is a
+  generator miss — the WEB SOURCE (the binding spec) renders THREE charts: a `PieChart`
+  donut (Fleet Usage), a `RadarChart` (Vehicle Comparison), and a grouped `BarChart`
+  (Energy & Activity), plus a progress-bar leaderboard. Swift Charts is REQUIRED and is
+  available + proven (PROBE_EXIT=0 above), so the capability-BLOCKED escape hatch does NOT
+  apply — the surface is authored + host-validated for real → STATUS=DONE (not BLOCKED).
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/OverviewVehicleComparison.*) ===
+  OverviewVehicleComparison.Models.swift    176  Foundation value types (OverviewVehicle row [port of
+                                                 vehicle_comparison], OverviewDistanceUnit [useUnits],
+                                                 load/connection/freshness/phase enums, the coalesced
+                                                 OverviewComparisonUpdate) + the P1/S10 strings facade.
+  OverviewVehicleComparison.Builder.swift   322  Pure adapter: safe, SI distance + Wh/km→Wh/mi conversion,
+                                                 fmtNumber, leaderboard (sort+pct), radarVehicles (norm +
+                                                 inverted efficiency), fleetUsage slices, energyActivity
+                                                 bars, phase/freshness, relativeTime, + the a11y summaries.
+  OverviewVehicleComparison.Model.swift     171  P1/S11 telemetry seam + P1/S8 state-holder seam
+                                                 (OverviewComparisonSource + InMemory…) + @Observable
+                                                 OverviewComparisonModel + strings SwiftUI half.
+  OverviewVehicleComparison.swift           143  The surface shell: phase switch (loading/error/grid) +
+                                                 the responsive 2×2 grid (compact 1-col, regular 2-col,
+                                                 the web grid-cols-1 lg:grid-cols-2) + the error chrome.
+  OverviewVehicleComparison.Views.swift     289  Panel leaves: section title, per-panel empty state,
+                                                 glass-panel wrapper, skeleton, the 4 data panels, the
+                                                 stale/offline banner, the retry button.
+  OverviewVehicleComparison.Charts.swift    309  Visualization leaves: leaderboard fill row (grow-in),
+                                                 legend, the multi-vehicle radar (Canvas), the grouped
+                                                 energy/activity bar chart (Swift Charts categorical x).
+  OverviewVehicleComparison.Previews.swift  105  #if DEBUG #Preview — content / content·miles / loading /
+                                                 empty / error / stale / offline.
+  OverviewVehicleComparison.Tests.swift     321  XCTest: adapter math + projections + phase/freshness +
+                                                 model lifecycle/telemetry + a11y label content.
+  OverviewVehicleComparison.strings          51  P1/S10 catalog: 9 web-parity keys + native chrome.
+  Every .swift file ≤ 400 lines (house file_length; largest 322 Builder). Word-scan clean
+  (placeholder gate isolated COUNT=0; no TODO/FIXME/XXX/Placeholder/Lorem/"not implemented").
+
+=== PARITY (vs web OverviewVehicleComparison.tsx) ===
+  Data sources → useTranslation binds through the P1/S10 strings facade (table
+    "OverviewVehicleComparison"). useUnits().unitPrefs.distance is delivered as the
+    OverviewDistanceUnit on each OverviewComparisonUpdate through the P1/S8 seam, so the view
+    performs NO networking; the production app injects a source bridging the shared
+    fleet-analytics + units state-holders (the seam still models loading/empty/error/stale/
+    offline so the full state matrix is reachable + tested).
+  Units → distance: convertDistanceFromSI(km·1000, unit) [km: /1000, mi: /1609.344], exactly the
+    web pie value; efficiency: Wh/km, scaled ×1.609344 for mi (web whPerKmToDisplay/KM_PER_MILE);
+    unit label "Wh/km"|"Wh/mi". Golden-value parity asserted by the harness (1609.344 m = 1 mi, etc.).
+  Composition → web 4× <GlassPanel><SectionTitle/></GlassPanel> → TSGlassPanel + OverviewSectionTitle
+    (text-sm semibold). Pie → the shared TSPieChart (SectorMark donut, innerRadius .ratio(0.6)) over
+    OverviewUsageSlice; the palette colorIndex is the 6-wrap of PIE_COLORS and the native
+    Color.TS.chartCategorical is byte-for-byte the Okabe-Ito CHART_COLORS_CB_SAFE, so colors line up
+    1:1. Leaderboard → token progress rows (web bg-white/6 track + bg-neon-cyan fill → Color.TS.border
+    track + Color.TS.accent fill, grown-in honoring Reduce Motion). Radar → a Canvas multi-vehicle
+    polygon set over the shared Distance/Energy/Drives/Efficiency axes (Swift Charts has no radar mark;
+    one filled polygon per vehicle + cardinal axis labels + a legend the web omits — added for touch /
+    VoiceOver). Bars → a Swift Charts grouped BarMark over a CATEGORICAL vehicle axis with two series
+    (Energy (kWh) = CHART_COLORS[1], Drives = CHART_COLORS[3]) + the built-in legend.
+  States (all render) → loading (4 panel skeletons) · error (retry → model.refresh) · content/empty
+    (the 2×2 grid; an empty fleet shows each panel's own empty state, the web's all-panels-present
+    rendering: "No vehicle data" / "No efficiency data" / "Need 2+ vehicles for comparison") · stale +
+    offline (cached grid + a tappable banner). resolvePhase/resolveFreshness executed-tested.
+  i18n → the exact web t() keys resolve through the P1/S10 facade with the en.json English: the 9
+    analytics.overview.* keys (fleetUsage, noVehicles, effLeaderboard, noEfficiency, vehicleComparison,
+    noComparison, energyActivity, energykWh, drives) + native chrome (radar axis labels — the web
+    hardcodes these literals, localized here — states, banners, retry, freshness, rank). No English
+    literals in native code.
+  a11y → each chart panel is one VoiceOver element with a data summary (pie distances, radar per-vehicle
+    metric %, bar energy+drives); each leaderboard row speaks "Rank N, name, eff Wh/km"; the banner +
+    retry carry labels; the radar metric labels are hidden duplicates of the spoken summary; Dynamic
+    Type via tokens; the bar grow-in + skeleton shimmer respect Reduce Motion.
+  Telemetry → OverviewComparisonModel.start() emits viewOpened(surface:"OverviewVehicleComparison")
+    once → bridges the shared Telemetry .screenView (P1/S11). Asserted by a spy in the executed harness.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  [1] swiftc -typecheck (macOS 15, -strict-concurrency=complete) — the 6 production source files +
+      the REAL Shared-free apps/apple component library (Components/** + Design/** minus the one
+      facade-bound UnitFormatters.swift) + the generated design Tokens.swift:
+        MAC_TYPECHECK_EXIT=0                                                          ✅
+  [2] swiftc -typecheck (iOS 18 simulator, -strict-concurrency=complete) — same set, proving the
+      iOS/iPadOS code paths (the surface is platform-agnostic SwiftUI, no #if os branches):
+        IOS_TYPECHECK_EXIT=0                                                          ✅
+  [3] swiftc -typecheck -D DEBUG including OverviewVehicleComparison.Previews.swift (the #Preview
+      PreviewsMacros plugin ships with the Xcode toolchain):
+        PREVIEWS_TYPECHECK_EXIT=0                                                     ✅
+  [4] Executed harness — compiled Models + Builder + Model to a native binary and RAN it (real
+      "cached → projection" + the @MainActor model lifecycle, not a typecheck):
+        HARNESS PASSED 67/67                                                          ✅
+        (math/conversions, leaderboard sort+pct+unit, radar 0…1 + inverted-efficiency, slices+color
+         wrap, energy/activity, phase/freshness, relativeTime, the 5 a11y summaries, and the model:
+         phases loading/empty/error/content, view.opened once, refresh delegation, connection/
+         freshness/unit tracking, surface slug. The XCTest file asserts the same API in the app
+         test target [needs @testable import TeslaSync + the un-staged Shared.xcframework].)
+        HARNESS_EXIT=0                                                                ✅
+  [5] swiftlint --strict on the 8 surface .swift files (explicit paths):
+        Done linting! Found 0 violations, 0 serious in 8 files.
+        SURFACE_SWIFTLINT_EXIT=0                                                      ✅
+      Bare gate `swiftlint --strict` (from apps/apple, included: paths, 736 files):
+        Found 1 violation, 1 serious in 736 files.
+        SWIFTLINT_GATE_EXIT=2                                                         ⚠ PRE-EXISTING — NOT this surface
+        The lone violation is TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+        (function_body_length, 78 lines) — a different surface's file (P4/dashboard-widgets/0055),
+        unmodified by this run and OUTSIDE this prompt's allowed-files contract. Reported honestly,
+        not waved through; this deliverable's own 8 files are 0-violation. No red-as-green.
+  [6] swiftformat --lint (the gate rules via apps/apple/.swiftformat):
+        surface (8 files): 0/8 require formatting.        FORMAT_EXIT=0               ✅
+        full `swiftformat --lint apps/apple`: 0/740 require formatting, 2 skipped.    ✅ (whole tree clean)
+  [7] check-placeholders (ADR-011 stub gate; pwsh):
+        isolated scan of THIS surface's 8 swift files: PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0 ✅
+        the prompt's literal -Path prefix (…/OverviewVehicleComparison): COUNT=0 EXIT=0              ✅
+        dir scan `-Path …/feature-views -Language swift`: COUNT=2 EXIT=1            ⚠ PRE-EXISTING — NOT this surface
+        The 2 hits are InfrastructureSection.Previews.swift:7 + InfrastructureSection.Views.swift:289
+        (P4/feature-views/0006), a non-owned surface outside this prompt's allowed-files contract.
+        PLACEHOLDER_EXIT (this surface) = 0                                           ✅
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Registration (PROVEN, unlike the 0020 predecessor's non-registration): project.yml's iOS + macOS
+      app targets glob TeslaSync/feature-views (lines 37 + 68). `xcodegen generate` then grep of the
+      generated TeslaSync.xcodeproj/project.pbxproj → OverviewVehicleComparison = 54 refs (all 9 files),
+      comparable to the registered sibling TeslaApiRefTool = 48 refs. So this surface IS target-registered;
+      registration is NOT the blocker. (generated .xcodeproj is .gitignored and was removed after the probe.)
+    Why DEFERRED (two independent, code-unrelated reasons — neither is a defect in this surface):
+      (a) Shared.xcframework not staged: an attempted `xcodebuild -scheme TeslaSync-macOS
+          CODE_SIGNING_ALLOWED=NO build` ran the project's "Stage Shared.xcframework" scheme pre-action,
+          which requires the KMP Kotlin/Native core staged into apps/apple/Frameworks (which holds only
+          .gitkeep). The app target links Frameworks/Shared.xcframework (project.yml lines 54 + 83), so it
+          cannot build until the framework is staged by the CI step (apps/apple/Scripts/build-shared-
+          xcframework.sh). Independent of this UI surface. The host swiftc compiles [1][2][3] DO exercise
+          this surface against the real component library + both SDKs, and the harness [4] runs its logic.
+      (b) macOS signing: `security find-identity -p codesigning` → 0 valid identities; the macOS app /
+          test entitlements require a development certificate. ADR-012 defers this to a signed runner.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — each has a #if DEBUG
+      preview; the phase/freshness logic is executed-tested (harness + XCTest).
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP/networking in the view.
+  [x] Every i18n key from source has a matching catalog key — 9/9 analytics.overview.* keys present.
+  [x] Accessibility labels on every interactive element + a data summary on each chart panel + each
+      leaderboard row; the banner + retry independently labelled.
+  [x] Tests: adapter unit tests + per-state model tests + a11y label tests (executed harness 67/67 +
+      a full XCTest suite for the app test target).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate (this surface) COUNT=0.
+  [x] Host gates green for THIS surface (macOS+iOS+preview typecheck / executed harness / surface
+      swiftlint --strict 0/8 / swiftformat 0/8 / placeholder 0); Xcode app build/test DEFERRED with
+      PROVEN registration (54 refs) + the unstaged-framework + signing evidence. The bare swiftlint
+      (1) + dir placeholder (2) reds are PRE-EXISTING non-owned baseline files, disclosed + attributed.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the "Stage Shared.xcframework"
+                       blocker reproduced on this host; the bare-swiftlint + dir-placeholder reds are
+                       reported + attributed to non-owned baseline files, never claimed clean. Every "✅"
+                       is a real command exit captured above.
+  2  No scope narrowing: implemented ALL 4 panels (donut + leaderboard + radar + bars) + every state +
+                       i18n + a11y + telemetry + the stale/offline banner + the responsive grid.
+  3  No skip-and-assume: every host gate executed; registration PROVEN via generated-pbxproj grep (54);
+                       the framework blocker PROVEN by an actual xcodebuild run reaching the staging action.
+  4  No stubs as final : complete implementations; placeholder gate (this surface) COUNT=0.
+  5  No parity shortcuts: faithful port of safe, the SI distance + Wh/km→Wh/mi math, fmtNumber, the
+                       leaderboard sort+pct, the radar normalization WITH the inverted efficiency axis,
+                       the 6-wrap pie palette, the grouped bars, and every t() key + empty message.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface) — delegation FORBIDDEN.
+  7  No predecessor bypass: did NOT edit project.yml / .swiftlint.yml (already register feature-views) and
+                       did NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings shipped
+                       as the per-surface table, folded in by the integration prompt.
+  8  No commit on red  : committing on all-green host gates for THIS surface; the Xcode steps are DEFERRED
+                       (not failed); the lone bare-lint + 2 dir-placeholder reds are pre-existing non-owned
+                       baseline files the allowed-files contract forbids touching — disclosed, not introduced.
+  9  No silent drift   : changes confined to the allowed OverviewVehicleComparison.* files + this log. Two
+                       unrelated pre-existing working-tree edits (web/.../FleetApiSection.tsx,
+                       web/.../BackupRestorePage.tsx) were left untouched and are NOT staged.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native OverviewVehicleComparison shipped at parity with the web source: a Foundation
+  projection adapter (executed-green 67/67) porting the SI distance + efficiency unit math, the efficiency
+  leaderboard, the inverted-efficiency radar normalization, the fleet-usage donut slices, and the
+  energy/activity bars; a P1/S8 state-holder seam (no view networking); P1/S11 telemetry; every state +
+  all 9 web i18n keys + per-panel a11y summaries; composed over the REAL apps/apple tokens + component
+  library with the shared TSPieChart + a Swift Charts grouped bar chart + a Canvas multi-vehicle radar. All
+  host-runnable gates pass for this surface (macOS + iOS + preview typecheck, executed harness 67/67, surface
+  swiftlint --strict 0/8, swiftformat 0/8, placeholder COUNT=0). The Xcode app build/test is DEFERRED to the
+  signed CI runner (Shared.xcframework not staged + macOS signing — neither a defect in this code; the surface
+  IS target-registered, proven 54 pbxproj refs), matching the user-approved P4 "code-complete + DEFERRED Xcode
+  gate" disposition. The bare swiftlint (1) + dir placeholder (2) reds are pre-existing baseline defects in
+  non-owned files (LifetimeStatsWidget.Adapter.swift, InfrastructureSection.*), disclosed here and outside
+  this prompt's allowed-files scope.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/OverviewVehicleComparison.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0060-OverviewVehicleComparison.log
+  git commit -m "feat(apps/apple/feature-views): add OverviewVehicleComparison surface (P4)"
+
+EXIT=0
+STATUS=DONE

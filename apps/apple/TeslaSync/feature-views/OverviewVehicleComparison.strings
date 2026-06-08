@@ -1,0 +1,51 @@
+/*
+  OverviewVehicleComparison.strings
+  TeslaSync — P4 feature view · 0060 · OverviewVehicleComparison (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `OverviewVehicleComparison` resolves (table "OverviewVehicleComparison") lives
+  here with its web English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-safe across the concurrent surface slots).
+
+  The "web source" keys are the exact t(...) keys from
+  features/analytics/components/analytics/OverviewVehicleComparison.tsx and resolve
+  to web/src/i18n/en.json (analytics.overview.*). The remaining keys back the
+  native chrome (radar axis labels — the web hardcodes these English strings; the
+  states, banners, retry, freshness relative-time, and the leaderboard rank a11y).
+*/
+
+/* --- Keys from the web source (parity, analytics.overview.*) --- */
+"analytics.overview.fleetUsage" = "Fleet Usage";
+"analytics.overview.noVehicles" = "No vehicle data";
+"analytics.overview.effLeaderboard" = "Efficiency Leaderboard";
+"analytics.overview.noEfficiency" = "No efficiency data";
+"analytics.overview.vehicleComparison" = "Vehicle Comparison";
+"analytics.overview.noComparison" = "Need 2+ vehicles for comparison";
+"analytics.overview.energyActivity" = "Energy & Activity";
+"analytics.overview.energykWh" = "Energy (kWh)";
+"analytics.overview.drives" = "Drives";
+
+/* --- Native chrome: radar axis labels (web hardcodes these literals) --- */
+"overview.metric.distance" = "Distance";
+"overview.metric.energy" = "Energy";
+"overview.metric.efficiency" = "Efficiency";
+
+/* --- Native chrome: states + actions --- */
+"overview.loading" = "Loading comparison";
+"overview.errorTitle" = "Couldn't load comparison";
+"overview.retry" = "Retry";
+"overview.refresh" = "Refresh";
+"overview.rank" = "Rank %lld";
+
+/* --- Native chrome: stale / offline banner --- */
+"overview.offlineBanner" = "Offline — showing the last cached comparison";
+"overview.staleBanner" = "Reconnecting — comparison may be out of date";
+
+/* --- Native chrome: freshness relative time --- */
+"overview.freshness.justNow" = "just now";
+"overview.freshness.minutes" = "%lldm ago";
+"overview.freshness.hours" = "%lldh ago";
+"overview.freshness.days" = "%lldd ago";
+"overview.freshness.weeks" = "%lldw ago";
