@@ -1,0 +1,50 @@
+/*
+  ElevationChart.strings
+  TeslaSync — P4 feature view · 0141 · ElevationChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ElevationChart` resolves (table "ElevationChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/drive-detail/ElevationChart.tsx). The remainder back
+  the native units, chart axes, the state envelope (freshness chip, connectivity
+  banner, loading / empty / error chrome), and the accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.elevProfile" = "Elevation Profile";
+"driveDetail.elevProfile.aria" = "Elevation and speed area+line chart over the drive timeline";
+"driveDetail.gain" = "gain";
+"driveDetail.loss" = "loss";
+"driveDetail.net" = "Net";
+"driveDetail.elevation" = "Elevation";
+"driveDetail.speed" = "Speed";
+"driveDetail.noChartData" = "No telemetry data available";
+
+/* --- Units --- */
+"driveDetail.unit.m" = "m";
+"driveDetail.unit.meters" = "meters";
+"driveDetail.upTo" = "up to";
+
+/* --- Chart axis scaffolding --- */
+"driveDetail.axis.time" = "Time";
+"driveDetail.axis.series" = "Series";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"driveDetail.live" = "Live";
+"driveDetail.stale" = "Stale";
+"driveDetail.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"driveDetail.staleBanner" = "Reconnecting — elevation trace may be stale";
+"driveDetail.offlineBanner" = "Offline — showing the last recorded elevation trace";
+
+/* --- Loading / empty / error chrome --- */
+"driveDetail.chart.loading" = "Loading elevation profile";
+"driveDetail.chart.emptyHint" = "The elevation and speed trace will appear here once this drive has telemetry.";
+"driveDetail.chart.errorTitle" = "Couldn't load the elevation profile";
+"driveDetail.chart.retry" = "Retry";

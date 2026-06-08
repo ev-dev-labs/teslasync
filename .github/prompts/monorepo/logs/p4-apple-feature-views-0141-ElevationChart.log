@@ -1,0 +1,293 @@
+=== P4 Feature view 0141 ElevationChart (Apple) ===
+Host: Darwin arm64 (Apple Silicon). Xcode 26.5 (Build 17F42) present at
+/Applications/Xcode.app (activated for this run via DEVELOPER_DIR; the default
+xcode-select points at CommandLineTools). Swift 6.3.2. swiftlint + swiftformat +
+pwsh + xcodegen on PATH. iPhone 16 simulator (Booted) + iOS/macOS 26.x SDKs
+available. → Platform capability PRESENT (SwiftUI + Swift Charts), so this surface
+is DONE, not BLOCKED.
+
+Web source (THE specification):
+  web/src/features/driving/components/drive-detail/ElevationChart.tsx
+  (+ its types.ts `ChartDataPoint` { time, elevation(m), speed } / `DriveStats`
+   { elevGain, elevLoss }, helpers.ts `LEGEND_STYLE`, useDriveDetailData.ts which
+   feeds `convertSpeedFromSI(speed, unitPrefs.speed)` + the elevGain/elevLoss
+   reduction, lib/numberFormat.ts `fmtNumber`, hooks useUnits / useSyncedCursor /
+   useSyncedReferenceLineX, components/charts `ChartContainer`, components/motion
+   `FadeIn`)
+Native output (allowed files):
+  apps/apple/TeslaSync/feature-views/ElevationChart.{swift,Models,Adapter,Model,
+    Views,Chart,Previews,Tests}.swift
+  apps/apple/TeslaSync/feature-views/ElevationChart.strings
+  + this log.
+(The surface is split across Models/Adapter/Model/Views/Chart so every file stays
+ under the 400-line file_length rule; all names match the allowed `ElevationChart.*`
+ glob. No sibling / shared / project.yml files were edited.)
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web → native)
+---------------------------------------------------------------------------
+  data:   ChartDataPoint slice { time, elevation(m SI), speed } + DriveStats
+            { elevGain, elevLoss }                       → ElevationSample
+            { index, time, elevationM, speedMps } (SI floor; speed kept in m/s and
+            converted only at the display boundary per ADR-004) + ElevationStats.
+  speed:  web pre-converts speed via convertSpeedFromSI(mps, unitPrefs.speed)
+            ('km/h'=mps*3600/1000, 'mph'=mps*3600/1609.344) → SpeedUnit.convert +
+            ElevationProjection.points(from:speedUnit:); the unit label is the bare
+            pref string ("Speed (km/h)" / "Speed (mph)").
+  stats:  web parent reduction elevGain=Σ max(0,Δ) / elevLoss=Σ max(0,-Δ) over the
+            consecutive elevation samples; Net = elevGain - elevLoss
+            → ElevationProjection.stats (self-contained + unit-tested).
+  shell:  <ChartContainer title="Elevation Profile" height 220> inside <FadeIn>
+            → TSFadeIn + tokenized glass card (Color.TS.surface + TSRadius.lg +
+            Color.TS.border), header + gain/loss/net stat row + legend.
+  chart:  Recharts ComposedChart — <Area dataKey=elevation> (#10b981, fill .2,
+            left axis) + <Line dataKey=speed> (#a855f7, opacity .6, right axis),
+            CartesianGrid, dual y-axes, synced ReferenceLine → Swift Charts Chart{
+            AreaMark(elevation, gradient) + LineMark(elevation stroke, statusSuccess
+            width 2) + LineMark(speed, chartSeriesPower .6 width 1.5) }. Swift Charts
+            plots ONE y-scale per Chart, so the web's two axes are reproduced REALLY
+            (not collapsed): the LEFT scale stays in elevation meters and the speed
+            line is projected into that domain (projectSpeedToElevation) while a
+            TRAILING AxisMarks reads the true speed back out. X is the sample index
+            with start/end time labels (web interval="preserveStartEnd").
+  colors: elevation #10b981 → Color.TS.statusSuccess (adaptive); speed #a855f7 →
+            Color.TS.chartSeriesPower (purple) at 0.6 opacity (web strokeOpacity .6).
+  cursor: useSyncedCursor (broadcast onMouseMove) + useSyncedReferenceLineX (read
+            syncedX) → ElevationCursorSync seam (the shared drive-detail cursor):
+            .chartXSelection broadcasts the local hover via model.updateCursor; the
+            RuleMark + tooltip follow model.cursorIndex, so a sibling chart's hover
+            moves this surface's reference line too (bidirectional, tested).
+  tip:    <Tooltip content={<ChartTooltip/>}> → ElevationTooltip via the RuleMark
+            annotation (time + Elevation X m + Speed Y unit).
+  legend: web <Legend> series names "Elevation (m)" / "Speed (unit)"
+            → ElevationMetricLegend (solid + faded line swatch).
+  empty:  web `chartData.length > 1 ? <chart> : <Activity glyph + "No telemetry
+            data available">` → resolvePhase threshold (> 1) + ElevationEmpty
+            (ContentUnavailableView, waveform.path.ecg). Never a blank box.
+  i18n:   every t(key,default) from source resolved through ElevationStrings facade
+            (table "ElevationChart"); series names + units localized (fallbacks
+            identical to the web strings) so no English literal ships in code.
+
+STATES (every one renders — no hidden surface):
+  loading  → ElevationLoadingChart (TSSkeleton stat row + chart block; reduce-motion)
+  content  → ElevationStatRow (gain/loss/net) + ElevationProfileChart + metric legend
+  empty    → ElevationEmpty (web "No telemetry data available") — never blank
+  error    → ElevationError (QueryError-equiv, Retry → model.refresh())
+  stale    → freshness chip (Stale) + connectivity banner + one guarded auto-refresh
+  offline  → freshness chip (Offline) + banner; keeps the cached trace, no refetch
+a11y: container summary (title + gain/loss/net + max speed), chart aria label +
+  spoken summary value, per-sample cursor label, stat-row + legend + chip combined
+  labels, reduce-motion animation gate, Dynamic Type via system fonts/tokens. The
+  web chart opts out of a per-sample table (its `chart-a11y:no-table` marker); native
+  matches that with a concise spoken summary rather than reading every sample.
+telemetry: P1/S11 view.opened(surface:"ElevationChart") emitted once on appear.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (per-surface, 8 swift files)
+    $ swiftformat --lint TeslaSync/feature-views/ElevationChart.*.swift
+    → 0/8 files require formatting.
+    MYFORMAT_EXIT=0   ✅
+
+[2] swiftformat --lint apps/apple   (THE gate command, whole tree)
+    → 1/1142 files require formatting, 2 files skipped.
+    FORMAT_EXIT=1   ⚠️ PRE-EXISTING SIBLING DEFECT, NOT THIS SURFACE:
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error:
+      (blankLinesBetweenScopes) Insert blank line before … declarations.
+    Committed in 87160b08 (the ActionBuilder P4 prompt), outside this prompt's
+    allowed files; editing it would violate the no-sibling-edit / predecessor-bypass
+    rule. The 8 ElevationChart files are clean (gate [1] = 0/8). Reported, not hidden
+    (Covenant #1).
+
+[3] swiftlint (per-surface, explicit paths, --strict)
+    $ swiftlint lint --strict --no-cache TeslaSync/feature-views/ElevationChart.*.swift
+    → Done linting! Found 0 violations, 0 serious in 8 files.
+    MYLINT_EXIT=0   ✅  (this surface is clean)
+
+[4] swiftlint --strict   (THE bare gate command, from apps/apple)
+    → Linting 1138 files. Found 1 violation, 1 serious.
+    LINT_EXIT=2   ⚠️ PRE-EXISTING SIBLING DEFECT, NOT THIS SURFACE:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+      error: Function Body Length Violation (currently 78 lines) (function_body_length)
+    The identical pre-existing defect the predecessor logs (0087-ChargerTypeChart,
+    0047-SentryModeChart) already reported. grep of the violation set for
+    "ElevationChart" = 0 hits. Reported, not hidden (Covenant #1).
+
+[5] check-placeholders.ps1   (THE gate command)
+    $ pwsh ./apps/tools/check-placeholders.ps1 \
+        -Path apps/apple/TeslaSync/feature-views/ElevationChart -Language swift
+    → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    PLACEHOLDER_EXIT=0   ✅  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+[6] EXECUTED isolated SwiftPM build + the REAL XCTest suite (Swift 6 language mode,
+    strict concurrency, macOS host) against the REAL design system
+    (apps/design/generated/apple/Tokens.swift) + the REAL Motion.swift (TSFadeIn) +
+    a faithful TSSkeleton shim + the 7 ElevationChart production/preview files:
+    $ swift build   → Build complete! (BUILD_EXIT=0)                          ✅
+    $ swift test    → Executed 32 tests, with 0 failures (TEST_EXIT=0)        ✅
+    Coverage: speed SI→unit conversion (km/h 10 m/s→36; mph 10 m/s→22.3694),
+      elevGain/elevLoss/net reduction (mixed +20/-30/+50 → gain 70 loss 30 net 40;
+      monotonic up/down; <2 samples → 0), the `chartData.length > 1` phase threshold
+      (0 & 1 → empty, 2 → content; loading/failed envelope), axis-domain padding +
+      flat-trace guard, speed→elevation projection (endpoints + midpoint + degenerate
+      domain), locale formatting (POSIX no-group, en-US "1,234"); model phase across
+      loading/loaded/empty/failed, view.opened once, stale auto-refresh exactly once
+      + re-arm on live, offline keeps the cached trace/no refetch, retry/stop, speed-
+      unit + precision propagation, and the synced-cursor read/write (local write
+      sets the shared + local index; out-of-range clears; an external sibling move
+      reflects on this surface's reference line); a11y chart summary + cursor value.
+    (One real compile error was caught + fixed during this run: the
+     ElevationAccessibility summaries called decimalString unqualified — now
+     ElevationProjection.decimalString; rebuilt + re-tested green.)
+
+[7] OUT-OF-MODULE type-check of the full SwiftUI + Swift Charts view set (real
+    Tokens.swift + real Motion.swift[TSFadeIn] + faithful TSSkeleton shim + the 7
+    ElevationChart view/model/adapter/previews files, incl. the #Preview macros via
+    -D DEBUG), Swift 6 + strict-concurrency=complete, on BOTH gate platforms:
+    iOS Simulator (SDK iphonesimulator, -target arm64-apple-ios18.0-simulator):
+      $ xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+        -strict-concurrency=complete -D DEBUG …
+      IOS_TYPECHECK_EXIT=0   ✅
+    macOS (SDK macosx, -target arm64-apple-macos15.0):
+      $ xcrun --sdk macosx swiftc -typecheck -swift-version 6
+        -strict-concurrency=complete -D DEBUG …
+      MAC_TYPECHECK_EXIT=0   ✅  (and macOS is additionally fully COMPILED + TESTED
+      by gate [6]'s arm64-apple-macosx SwiftPM build/test — stronger than a check.)
+
+===========================================================================
+XCODE APP-TARGET GATE — DEFERRED (real probe; NOT claimed green; Covenant #1/#8)
+===========================================================================
+  Gate as written:
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+
+  Real probe performed on this host (not assumed):
+    $ xcodebuild -version            → Xcode 26.5 (17F42)                       ✅ present
+    $ xcodegen generate              → Created TeslaSync.xcodeproj (gitignored)  ✅
+    $ xcodebuild -list               → Schemes: TeslaSync, TeslaSync-macOS, …    ✅
+    $ grep -c ElevationChart …project.pbxproj → 54  (this surface IS registered;
+        project.yml lists TeslaSync/feature-views, so the app target compiles these
+        files — a green build WOULD exercise this code)
+    $ xcodebuild -scheme TeslaSync -destination '…iPhone 16' build → ** BUILD FAILED **
+        IOS_BUILD_EXIT=65.  The mandatory "Stage Shared.xcframework" pre-action ran
+        the KMP core via Gradle (ADR-004) and SUCCEEDED ("xcframework successfully
+        written out …"). Root cause of the failure (deduped from the log):
+          AcDcStatsPanel.Tests.swift:19:8: error: unable to resolve module
+          dependency: 'XCTest'
+        i.e. the co-located per-surface `*.Tests.swift` files (74 of them in
+        TeslaSync/feature-views — the established convention) are compiled INTO the
+        app target, which cannot import XCTest. The compiler fails at module-
+        dependency resolution on the FIRST one alphabetically (AcDcStatsPanel),
+        NOT this surface.
+        grep "error:" … | grep ElevationChart | grep -v .Tests.swift → 0 hits
+        (ELEV_PROD_ERRORS=0; the only ElevationChart line is the benign note
+         "ElevationChart.Tests.swift is part of module 'TeslaSync'; ignoring import").
+    $ xcodebuild -scheme TeslaSync-macOS build → ** BUILD FAILED **
+        MAC_BUILD_EXIT=65.  Root cause:
+          "TeslaSync-macOS" has entitlements that require signing with a development
+          certificate. (and TeslaSyncWidgets-macOS) — this runner provisions no
+          signing identity. Fails at the entitlements check; ELEV_MAC_PROD_ERRORS=0.
+
+  Why DEFERRED (none a defect in THIS surface's code):
+    (a) The app target compiles the co-located per-surface `*.Tests.swift` files
+        (XCTest) — a project-structure issue owned by the P4/P99 integration gate,
+        identical for all 74 feature-view surfaces. This surface follows the SAME
+        convention as its predecessors (e.g. ChargerTypeChart.Tests.swift); fixing
+        the build-system wiring is out of this prompt's allowed files.
+    (b) macOS target code-signing for hosted build/test.
+  These are exactly the artifacts apps/macos-pending-verifications.md defers to the
+  ADR-012 macos-latest CI runner, and they match the user-approved "code-complete +
+  DEFERRED Xcode gate" disposition used by every P4 surface to date (0087-
+  ChargerTypeChart, 0047-SentryModeChart). This surface is instead verified green by
+  gates [6] (isolated Swift 6 strict build + 32 executed tests against the REAL
+  design system) and [7] (Swift-6-strict iOS + macOS type-checks of the rendered
+  SwiftUI/Charts view set) — real compiler verification on BOTH gate platforms.
+
+  IOS_EXIT=DEFERRED  MAC_EXIT=DEFERRED  (real exit 65 each; pre-existing, unrelated;
+  not green, not faked)
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : Xcode app build/test reported DEFERRED with a REAL
+                          xcodegen + KMP gradle (SUCCEEDED) + xcodebuild probe
+                          (IOS_BUILD_EXIT=65 / MAC_BUILD_EXIT=65); the pre-existing
+                          whole-tree swiftlint + swiftformat failures are reported
+                          (not hidden); every ✅ is a command run on THIS host with
+                          its real exit code.
+  2 No scope narrowing  : implemented ALL composition + every state (loading/content/
+                          empty/error/stale/offline) + the area+line chart + dual
+                          axis + synced-cursor reference line + tooltip + gain/loss/
+                          net header + metric legend + a11y + i18n + P1/S11 telemetry.
+  3 No skip-and-assume  : each host gate executed; the Xcode path was actually probed
+                          (xcodegen + -list + pbxproj grep + a real KMP build that
+                          SUCCEEDED + real iOS & macOS xcodebuild runs whose logs were
+                          deduped to their root causes).
+  4 No stubs as final   : complete implementations; placeholder gate COUNT=0; 32 real
+                          tests executed green.
+  5 No parity shortcuts : faithful port of the speed SI→unit conversion, the elevGain/
+                          elevLoss/net reduction, the `length > 1` content/empty
+                          threshold, the dual-axis area+line composition, the synced
+                          hover reference line, the legend, and the exact web i18n keys.
+  6 No delegation       : authored directly (no sub-agent delegation of the surface).
+  7 No predecessor bypass: did NOT self-register feature-views into project.yml
+                          (already present; integration scope), did NOT edit the
+                          shared Localizable.xcstrings (parallel-unsafe) — strings
+                          ship as the per-surface ElevationChart.strings table; did
+                          NOT edit any sibling file (incl. the two with pre-existing
+                          lint/format violations) or apps/macos-pending-verifications.md.
+  8 No commit on red    : the COMMITTED artifact (ElevationChart.* + this log) is GREEN
+                          on every host-runnable per-surface gate AND on a real
+                          isolated Swift 6 strict build + 32 tests + both type-checks;
+                          the deferred full-app gate is RED only on pre-existing,
+                          unrelated surfaces (XCTest-in-app-target, macOS signing)
+                          which this commit neither introduces nor touches.
+  9 No silent drift     : changes confined to the 8 ElevationChart.*.swift +
+                          ElevationChart.strings + this log. The generated
+                          TeslaSync.xcodeproj and staged Frameworks/Shared.xcframework
+                          are git-ignored build outputs (not committed). Two pre-
+                          existing working-tree edits to web/ admin .tsx files predate
+                          this task and are left unstaged.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native ElevationChart shipped at parity with the web source:
+  a pure, executed-green projection core (Foundation, Swift 6 strict) porting the
+  speed SI→unit conversion + the elevGain/elevLoss/net reduction + the length>1
+  content/empty threshold; a P1/S8 state-holder seam (no view HTTP) with a shared
+  ElevationCursorSync for the web useSyncedCursor/useSyncedReferenceLineX hover sync,
+  a P1/S10 i18n facade, P1/S11 view.opened telemetry, the native Swift Charts
+  area+line trace with a REAL dual axis (elevation left / projected speed + trailing
+  speed axis), a synced reference line + tooltip, the gain/loss/net header, the metric
+  legend, and every prompt state (loading/content/empty/error/stale/offline) with
+  VoiceOver + Dynamic Type + reduce-motion. All host-runnable per-surface gates pass;
+  the surface compiles under Swift 6 strict concurrency on BOTH the iOS-Simulator and
+  macOS SDKs and its 32 tests pass. The Xcode app build/test is DEFERRED to the P4
+  integration runner (co-located per-surface *.Tests.swift compiled into the app
+  target + macOS development signing — neither a defect in this code; the KMP
+  Shared.xcframework pre-action built green here). The whole-tree swiftlint +
+  swiftformat single violations are pre-existing sibling files
+  (LifetimeStatsWidget.Adapter.swift / ActionBuilder.Previews.swift) outside this
+  prompt's allowed-files scope.
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/ElevationChart.swift \
+          apps/apple/TeslaSync/feature-views/ElevationChart.Models.swift \
+          apps/apple/TeslaSync/feature-views/ElevationChart.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/ElevationChart.Model.swift \
+          apps/apple/TeslaSync/feature-views/ElevationChart.Views.swift \
+          apps/apple/TeslaSync/feature-views/ElevationChart.Chart.swift \
+          apps/apple/TeslaSync/feature-views/ElevationChart.Previews.swift \
+          apps/apple/TeslaSync/feature-views/ElevationChart.Tests.swift \
+          apps/apple/TeslaSync/feature-views/ElevationChart.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0141-ElevationChart.log
+  git commit -m "feat(apps/apple/feature-views): add ElevationChart surface (P4)"
+
+EXIT=0
+STATUS=DONE
