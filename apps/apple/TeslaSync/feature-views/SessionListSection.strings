@@ -1,0 +1,96 @@
+/*
+  SessionListSection.strings
+  TeslaSync — P4 feature view · 0106 · SessionListSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  SessionListSection resolves (table "SessionListSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first groups are the exact keys extracted from the web source
+  (features/charging/components/charging-list/SessionListSection.tsx and the
+  ChargingSessionCard it renders). The remainder back the native state envelope
+  (freshness chip, connectivity banner, loading / error chrome), the pagination
+  control, and the row accessibility strings.
+*/
+
+/* --- Header + list states (web parity) --- */
+"charging.sessions.allSessions" = "All Sessions";
+"charging.list.empty" = "No charging sessions yet";
+"charging.list.emptyDescription" = "Charging data will appear here once your vehicle records a session.";
+"charging.list.noMatches" = "No sessions match your filters";
+"charging.list.noMatchesDescription" = "Try clearing the search or charger filter to see more sessions.";
+
+/* --- Search + active filters (web `SearchInput` / `ActiveFilterChips`) --- */
+"charging.sessions.searchPlaceholder" = "Search by location or charger type…";
+"charging.sessions.clearSearch" = "Clear search";
+"charging.sessions.filterLabel.search" = "Search";
+"charging.sessions.filterLabel.charger" = "Charger";
+"charging.sessions.clearAll" = "Clear all";
+"charging.sessions.removeFilter" = "Remove filter";
+
+/* --- Charger filter pills (web All / Home / SC / DC) --- */
+"charging.sessions.filterAll" = "All";
+"charging.sessions.filterHome" = "Home";
+"charging.sessions.filterSC" = "SC";
+"charging.sessions.filterDC" = "DC";
+
+/* --- Sort pills (web Date / kWh / Cost / Time / Power) --- */
+"charging.sessions.sortDate" = "Date";
+"charging.sessions.sortEnergy" = "kWh";
+"charging.sessions.sortCost" = "Cost";
+"charging.sessions.sortTime" = "Time";
+"charging.sessions.sortPower" = "Power";
+
+/* --- Export (web CSV / JSON download links) --- */
+"charging.sessions.exportCsv" = "CSV";
+"charging.sessions.exportJson" = "JSON";
+"charging.sessions.exportAction" = "Export";
+
+/* --- Charger type labels (web `chargerTypes.*`) --- */
+"charging.chargerTypes.supercharger" = "Supercharger";
+"charging.chargerTypes.dc" = "DC Fast";
+"charging.chargerTypes.home" = "Home / AC";
+"charging.chargerTypes.unknown" = "Charger";
+
+/* --- Row metrics + selection (web `ChargingSessionCard`) --- */
+"charging.free" = "Free";
+"charging.selectSession" = "Select charging session";
+"charging.scoreAria" = "Battery-friendly score: {{value}}";
+"charging.sessions.peakPower" = "{{value}} kW peak";
+"charging.sessions.avgPower" = "~{{value}} kW avg";
+
+/* --- Bulk actions (web `BulkActionsToolbar`) --- */
+"bulk.actions.delete" = "Delete";
+"bulk.clear" = "Clear";
+"bulk.selectedCount" = "{{count}} selected";
+"bulk.deleteConfirmTitle" = "Delete {{count}} {{noun}}?";
+"bulk.deleteConfirmDescription" = "This cannot be undone.";
+"bulk.noun.session_one" = "charging session";
+"bulk.noun.session_other" = "charging sessions";
+"common.delete" = "Delete";
+"common.cancel" = "Cancel";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"charging.sessions.live" = "Live";
+"charging.sessions.stale" = "Stale";
+"charging.sessions.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"charging.sessions.staleBanner" = "Reconnecting — this list may be out of date";
+"charging.sessions.offlineBanner" = "Offline — showing the last loaded sessions";
+
+/* --- Loading / error chrome --- */
+"charging.sessions.loading" = "Loading charging sessions";
+"charging.sessions.errorTitle" = "Couldn't load charging sessions";
+"charging.sessions.retry" = "Retry";
+
+/* --- Pagination (web `Pagination`) --- */
+"charging.sessions.prevPage" = "Previous page";
+"charging.sessions.nextPage" = "Next page";
+"charging.sessions.pageSize" = "Rows per page";
+"charging.sessions.perPage" = "{{count}} / page";
+"charging.sessions.showingRange" = "{{start}}–{{end}} of {{total}}";
+"charging.sessions.pageOf" = "Page {{page}} of {{count}}";
