@@ -1,0 +1,43 @@
+/*
+  LiveSignalsTable.strings
+  TeslaSync — P4 feature view · 0036 · LiveSignalsTable (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `LiveSignalsTable` resolves (table "LiveSignalsTable") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of keys extracted from the web source
+  (features/admin/components/live-signal-inspector/LiveSignalsTable.tsx). The rest
+  backs the native-only chrome (error/retry, stale/offline banners, accessibility)
+  the web delegates to its host page / shared components.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.liveSignals.cols.name" = "Signal";
+"admin.liveSignals.cols.value" = "Value";
+"admin.liveSignals.cols.timestamp" = "Last update";
+"admin.liveSignals.filterPlaceholder" = "Filter signal names…";
+"admin.liveSignals.filterAria" = "Filter signals";
+"admin.liveSignals.empty.title" = "No live signals cached";
+"admin.liveSignals.empty.message" = "Redis has no live snapshot for this vehicle yet. Confirm the vehicle is online and publishing.";
+"admin.liveSignals.table.loading" = "Loading…";
+"admin.liveSignals.table.filtered" = "No signals match this filter.";
+
+/* --- Native chrome: error + actions --- */
+"admin.liveSignals.error.title" = "Couldn't load live signals";
+"admin.liveSignals.action.retry" = "Retry";
+
+/* --- Native chrome: connectivity banners --- */
+"admin.liveSignals.banner.stale" = "Reconnecting — values may be stale";
+"admin.liveSignals.banner.offline" = "Offline — showing last known values";
+
+/* --- Accessibility --- */
+"admin.liveSignals.a11y.table" = "Live signals";
+"admin.liveSignals.a11y.count" = "%lld live signals";
+"admin.liveSignals.a11y.noTimestamp" = "no timestamp";
+"admin.liveSignals.a11y.sortHint" = "Sorts the table";
+"admin.liveSignals.a11y.sortedAscending" = "sorted ascending";
+"admin.liveSignals.a11y.sortedDescending" = "sorted descending";
