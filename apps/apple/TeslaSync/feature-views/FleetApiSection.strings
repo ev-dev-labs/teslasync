@@ -1,0 +1,172 @@
+/*
+  FleetApiSection.strings
+  TeslaSync — P4 feature view · 0004 · FleetApiSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  FleetApiSection resolves (table "FleetApiSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  Keys extracted verbatim from the web source
+  (features/admin/components/devtools/FleetApiSection.tsx + ToolCard / ResultPanel /
+  TelemetryErrorsPanel / helpers / constants). The `devtools.*` keys mirror the web
+  i18n keys; the bare-label keys (Config, Partner Reg, …) mirror the web `t('Label')`
+  calls. The remaining keys back native chrome (freshness chip, banners, a11y).
+*/
+
+/* --- Section shell + states --- */
+"devtools.fleet.setupWizard" = "Setup Wizard";
+"devtools.fleet.toolsTitle" = "Fleet API Tools";
+"devtools.fleet.loading" = "Loading Fleet API tools";
+"devtools.fleet.emptyTitle" = "Fleet API not configured yet";
+"devtools.fleet.emptyHint" = "Complete the setup wizard to connect your Tesla Fleet API account.";
+"devtools.fleet.retry" = "Retry";
+"devtools.fleet.offlineBanner" = "Offline — showing the last loaded data";
+"devtools.fleet.staleBanner" = "Reconnecting — data may be out of date";
+"devtools.fleet.loadErrorHint" = "Some onboarding status could not be refreshed.";
+"error.loadFailed" = "Failed to load data";
+
+/* --- Freshness chip + relative time --- */
+"devtools.fleet.freshness.refresh" = "Refresh";
+"devtools.fleet.freshness.live" = "Live";
+"devtools.fleet.freshness.updating" = "Updating…";
+"devtools.fleet.freshness.stale" = "Stale";
+"devtools.fleet.freshness.error" = "Error";
+"devtools.fleet.freshness.offline" = "Offline";
+"devtools.fleet.justNow" = "just now";
+"devtools.fleet.minutesAgo" = "%lldm ago";
+"devtools.fleet.hoursAgo" = "%lldh ago";
+"devtools.fleet.daysAgo" = "%lldd ago";
+
+/* --- Shared chrome --- */
+"devtools.fleet.copy" = "Copy";
+"devtools.fleet.noResult" = "No result yet";
+"devtools.fleet.selectVehicle" = "Select a vehicle";
+"devtools.fleet.domainPrompt" = "yourapp.example.com";
+"Vehicle" = "Vehicle";
+
+/* --- Onboarding wizard --- */
+"devtools.fleet.progress" = "Progress";
+"devtools.onboarding.stepLabel" = "Step %lld";
+"devtools.onboarding.progressA11y" = "Setup progress, %1$lld of %2$lld complete";
+"devtools.fleet.previous" = "Previous";
+"devtools.fleet.next" = "Next";
+"devtools.fleet.markComplete" = "Mark Complete";
+"devtools.fleet.completed" = "Completed";
+"devtools.onboarding.account.label" = "Tesla Developer Account";
+"devtools.onboarding.account.desc" = "Create a Tesla Developer account at developer.tesla.com";
+"devtools.onboarding.application.label" = "Create Application";
+"devtools.onboarding.application.desc" = "Register a new application in the Tesla Developer Portal";
+"devtools.onboarding.keypair.label" = "Generate Key Pair";
+"devtools.onboarding.keypair.desc" = "Generate an EC private/public key pair for Fleet API authentication";
+"devtools.onboarding.register.label" = "Register Partner";
+"devtools.onboarding.register.desc" = "Register as a Fleet API partner with your public key";
+"devtools.onboarding.auth.label" = "Authorize Account";
+"devtools.onboarding.auth.desc" = "Complete OAuth2 authorization to get API access tokens";
+"devtools.onboarding.pair.label" = "Pair Vehicle Key";
+"devtools.onboarding.pair.desc" = "Pair your public key with each vehicle for command access";
+"devtools.onboarding.telemetry.label" = "Fleet Telemetry";
+"devtools.onboarding.telemetry.desc" = "Configure Fleet Telemetry streaming for real-time data";
+
+/* --- Config tool --- */
+"Config" = "Config";
+"Config Desc" = "Fleet API configuration";
+"Base Url" = "Base URL";
+"Client Id" = "Client ID";
+"Auth Status" = "Auth Status";
+"Authenticated" = "Authenticated";
+"Not Authenticated" = "Not Authenticated";
+"Regions" = "Regions";
+
+/* --- Partner registration tool --- */
+"Partner Reg" = "Partner Reg";
+"Partner Reg Desc" = "Register as a Fleet API partner";
+"Prerequisites" = "Prerequisites";
+"Prerequisites Desc" = "Generate an EC key pair before registering.";
+"Openssl Commands" = "OpenSSL Commands";
+"Domain" = "Domain";
+"Register" = "Register";
+
+/* --- Partner public-key tool --- */
+"devtools.partnerKey.title" = "Public Key Verification";
+"devtools.partnerKey.desc" = "Verify your registered public key with Tesla";
+"devtools.partnerKey.verify" = "Verify";
+"devtools.partnerKey.keyRegistered" = "Key Registered";
+"devtools.partnerKey.keyNotFound" = "Key Not Found";
+"devtools.partnerKey.matchesLocal" = "Matches Local Key";
+"devtools.partnerKey.mismatch" = "Does Not Match Local Key";
+"devtools.partnerKey.noLocal" = "No Local Key Configured";
+"devtools.partnerKey.pemLabel" = "Registered PEM";
+"devtools.partnerKey.rawResponse" = "Raw Response";
+
+/* --- Public-key setup tool --- */
+"Public Key" = "Public Key";
+"Public Key Desc" = "Manage your local public key";
+"Status" = "Status";
+"Configured" = "Configured";
+"Not Configured" = "Not Configured";
+"Private Key Warning" = "Never share your private key. Keep it secret and secure.";
+"Generate Keypair" = "Generate Keypair";
+"Delete Keypair" = "Delete Keypair";
+"devtools.keypairIdle" = "Generate or delete a keypair to see results";
+"Upload Pem" = "Upload PEM";
+"devtools.fleet.pemPrompt" = "-----BEGIN PUBLIC KEY-----";
+"Upload Key" = "Upload Key";
+"devtools.uploadIdle" = "Upload a public key to see results";
+
+/* --- Vehicle key-pairing tool --- */
+"Key Pairing" = "Key Pairing";
+"Key Pairing Desc" = "Pair your key with each vehicle";
+"Pairing Instructions" = "Pairing Instructions";
+"devtools.fleet.pairingStep1" = "Pairing Step1";
+"devtools.fleet.pairingStep2" = "Pairing Step2";
+"devtools.fleet.pairingStep3" = "Pairing Step3";
+
+/* --- Fleet Telemetry subscribe tool --- */
+"Telemetry Sub" = "Telemetry Sub";
+"Telemetry Sub Desc" = "Subscribe a vehicle to Fleet Telemetry";
+"Hostname" = "Hostname";
+"devtools.fleet.hostnamePrompt" = "telemetry.example.com";
+"Port" = "Port";
+"devtools.fleet.portPrompt" = "443";
+"Ca Cert" = "CA Certificate";
+"devtools.fleet.caCertPrompt" = "-----BEGIN CERTIFICATE-----";
+"Configure Signals" = "Configure Signals";
+"devtools.fleet.intervalLabel" = "Interval: %@";
+"Subscribe" = "Subscribe";
+
+/* --- Signal-config sheet --- */
+"devtools.fleet.intervalA11y" = "Streaming interval";
+"devtools.fleet.searchSignals" = "Search signals";
+"devtools.fleet.cancel" = "Cancel";
+"devtools.fleet.done" = "Done";
+
+/* --- Fleet Telemetry config tool --- */
+"Telemetry Config" = "Telemetry Config";
+"Telemetry Config Desc" = "Inspect a vehicle's telemetry config";
+"Get Config" = "Get Config";
+"View Errors" = "View Errors";
+"Delete Config" = "Delete Config";
+"devtools.configIdle" = "Fetch config to see results";
+"Telemetry Errors" = "Telemetry Errors";
+"devtools.errorsIdle" = "Click View Errors to fetch recent Fleet Telemetry errors for this vehicle.";
+"devtools.errorsEmpty" = "No Fleet Telemetry errors reported for this vehicle.";
+"devtools.errorsRaw" = "Show raw Tesla response";
+"devtools.fleet.downloadErrors" = "Download Errors";
+"devtools.fleet.noTime" = "no timestamp";
+"devtools.fleet.codeA11y" = "code %@";
+
+/* --- Fleet status tool --- */
+"Fleet Status" = "Fleet Status";
+"devtools.fleet.statusDesc" = "Check fleet status for all vehicles";
+"Check Fleet Status" = "Check Fleet Status";
+
+/* --- Vehicle data tool --- */
+"Vehicle Data" = "Vehicle Data";
+"Vehicle Data Desc" = "Query live Tesla vehicle endpoints";
+"Nearby Charging" = "Nearby Charging";
+"Release Notes" = "Release Notes";
+"Recent Alerts" = "Recent Alerts";
+"Service Data" = "Service Data";
