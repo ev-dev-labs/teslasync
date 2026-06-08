@@ -1,0 +1,47 @@
+/*
+  StatorTempChart.strings
+  TeslaSync — P4 feature view · 0159 · StatorTempChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `StatorTempChart`
+  resolves (table "StatorTempChart") lives here with its web English value. These entries fold into
+  the app `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface
+  table so each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/driving/components/drivetrain-health/StatorTempChart.tsx) — the canonical
+  `drivetrain.*` namespace. The remaining keys back the native-only chrome (freshness chip,
+  stale/offline banner, loading + empty + error + retry copy, accessibility summaries).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"drivetrain.statorTempHistory" = "Stator Temperature History";
+"drivetrain.statorTempSub" = "Motor stator temperature over recent snapshots";
+"drivetrain.statorTempHistory.aria" = "Front, rear-left and rear-right motor stator temperature history line chart";
+"drivetrain.col.time" = "Time";
+"drivetrain.col.stator" = "Stator";
+"drivetrain.col.statorRel" = "Rear-Left";
+"drivetrain.col.statorRer" = "Rear-Right";
+"drivetrain.statorTemp" = "Stator Temp";
+"drivetrain.statorTempRearLeft" = "Rear-Left Stator Temp";
+"drivetrain.statorTempRearRight" = "Rear-Right Stator Temp";
+"drivetrain.normal" = "Normal";
+"drivetrain.warm" = "Warm";
+
+/* --- Native chrome: freshness + connectivity --- */
+"drivetrain.statorTemp.live" = "Live";
+"drivetrain.statorTemp.stale" = "Stale";
+"drivetrain.statorTemp.offline" = "Offline";
+"drivetrain.statorTemp.staleBanner" = "Reconnecting — stator temperature history may be stale";
+"drivetrain.statorTemp.offlineBanner" = "Offline — showing last known stator temperature history";
+
+/* --- Native chrome: states --- */
+"drivetrain.statorTemp.loading" = "Loading stator temperature history";
+"drivetrain.statorTemp.noData" = "No stator temperature history";
+"drivetrain.statorTemp.emptyHint" = "Stator temperature history will appear here once at least two motor snapshots are recorded.";
+"drivetrain.statorTemp.errorTitle" = "Couldn't load stator temperature history";
+"drivetrain.statorTemp.retry" = "Retry";
+
+/* --- Native chrome: accessibility summary --- */
+"drivetrain.statorTemp.snapshots" = "snapshots";
+"drivetrain.statorTemp.latest" = "Latest";
+"common.noData" = "No data available";
