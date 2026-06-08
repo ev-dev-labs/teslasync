@@ -1,0 +1,49 @@
+/*
+  AddressInput.strings
+  TeslaSync — P4 feature view · 0135 · AddressInput (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `AddressInput`
+  resolves (table "AddressInput") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  The first key is the one extracted from the web source
+  (features/driving/components/AddressInput.tsx — `t('addressInput.label', 'Address')`). The
+  remainder back the native state envelope (field prompt, idle / loading / empty / error chrome,
+  the freshness chip, the connectivity banner, the post-select confirmation) and the accessibility
+  summaries — none of which exist as English literals in the Swift sources.
+*/
+
+/* --- Key from the web source (parity) --- */
+"addressInput.label" = "Address";
+
+/* --- Field chrome --- */
+"addressInput.prompt" = "Search for an address";
+"addressInput.suggestionRole" = "Address suggestion";
+"addressInput.selected" = "Selected address";
+"addressInput.clear" = "Clear address";
+
+/* --- Suggestion-area states (idle / loading / empty / error) --- */
+"addressInput.typeMore" = "Type at least 3 characters to search addresses";
+"addressInput.loading" = "Searching addresses…";
+"addressInput.noResults" = "No matching addresses";
+"addressInput.noResultsHint" = "Try a different street, city, or postal code.";
+"addressInput.errorTitle" = "Couldn't search addresses";
+"addressInput.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"addressInput.live" = "Live";
+"addressInput.stale" = "Stale";
+"addressInput.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"addressInput.staleBanner" = "Reconnecting — address search may be delayed";
+"addressInput.offlineBanner" = "Offline — showing the last address results";
+
+/* --- Accessibility summaries --- */
+"addressInput.a11y.idle" = "Type at least 3 characters to search addresses";
+"addressInput.a11y.loading" = "Searching addresses";
+"addressInput.a11y.results" = "%d address suggestions";
+"addressInput.a11y.empty" = "No matching addresses";
+"addressInput.a11y.error" = "Couldn't search addresses";
