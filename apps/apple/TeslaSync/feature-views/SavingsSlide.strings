@@ -1,0 +1,40 @@
+/*
+  SavingsSlide.strings
+  TeslaSync — P4 feature view · 0065 · SavingsSlide (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  SavingsSlide resolves (table "SavingsSlide") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-safe across the concurrent slots).
+
+  Keys are the exact ones extracted from the web source
+  (web/src/features/analytics/components/review/SavingsSlide.tsx). The remaining
+  keys back the native-only chrome (freshness chip, retry/error/offline/empty/
+  loading copy, and the VoiceOver label for the decorative emoji).
+*/
+
+/* --- Source keys (web `t(...)` calls) --- */
+"yearReview.youSaved" = "You saved";
+"yearReview.vsGas" = "vs. driving a gas car";
+"yearReview.gasCost" = "Gas would cost";
+"yearReview.electricCost" = "Electric cost";
+"yearReview.savingsNote" = "That's %d cups of coffee!";
+
+/* --- Native chrome: freshness + actions --- */
+"savings.live" = "Live";
+"savings.stale" = "Stale";
+"savings.offline" = "Offline";
+"savings.refresh" = "Refresh";
+"savings.retry" = "Retry";
+
+/* --- Native chrome: empty / error / offline / loading --- */
+"savings.empty.title" = "No savings yet";
+"savings.empty.message" = "Once you've driven and charged, your gas-vs-electric savings will appear here.";
+"savings.errorTitle" = "Couldn't load your savings";
+"savings.offlineMessage" = "Offline — showing your last known savings";
+"savings.loading" = "Tallying your savings…";
+
+/* --- Accessibility --- */
+"savings.emojiLabel" = "Money bag";
