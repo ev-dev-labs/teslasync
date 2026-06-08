@@ -1,0 +1,51 @@
+/*
+  AdvancedSettings.strings
+  TeslaSync — P4 feature view · 0198 · AdvancedSettings (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `AdvancedSettings`
+  resolves (table "AdvancedSettings") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  The first block is extracted from the web source
+  (features/settings/components/AdvancedSettings.tsx + lib/confirmSilence.ts). The web component uses
+  the `settings` i18n namespace, so its keys read `advanced.restoreConfirms.*`; the silence-key labels
+  come from `useSilenceKeyLabel` (`...keys.*`). The remainder backs the native state envelope (loading
+  skeleton, empty title, error / retry chrome, the freshness chip, the connectivity banner) and the
+  accessibility summaries — none of which exist as English literals in the Swift sources.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"advanced.restoreConfirms.title" = "Confirmation prompts";
+"advanced.restoreConfirms.description" = "Re-enable “Don’t ask again” prompts you previously silenced.";
+"advanced.restoreConfirms.restoreAll" = "Restore all";
+"advanced.restoreConfirms.restore" = "Restore";
+"advanced.restoreConfirms.empty" = "No silenced prompts. Tick “Don’t ask again” on a confirmation dialog to silence it.";
+
+/* --- Friendly silence-key labels (web useSilenceKeyLabel) --- */
+"advanced.restoreConfirms.keys.discardDraft" = "Discard unsaved draft";
+"advanced.restoreConfirms.keys.unsavedNavigation" = "Leave page with unsaved changes";
+
+/* --- Native state envelope (loading / empty title / error) --- */
+"advanced.restoreConfirms.loading" = "Loading silenced prompts…";
+"advanced.restoreConfirms.emptyTitle" = "No silenced prompts";
+"advanced.restoreConfirms.errorTitle" = "Couldn't load silenced prompts";
+"advanced.restoreConfirms.retry" = "Retry";
+"advanced.restoreConfirms.promptRole" = "Silenced prompt";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"advanced.restoreConfirms.live" = "Live";
+"advanced.restoreConfirms.stale" = "Stale";
+"advanced.restoreConfirms.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"advanced.restoreConfirms.staleBanner" = "Reconnecting — silenced prompts may be out of date";
+"advanced.restoreConfirms.offlineBanner" = "Offline — showing the last synced prompts";
+
+/* --- Accessibility summaries --- */
+"advanced.restoreConfirms.a11y.loading" = "Loading silenced prompts";
+"advanced.restoreConfirms.a11y.count" = "%d silenced prompts";
+"advanced.restoreConfirms.a11y.empty" = "No silenced prompts";
+"advanced.restoreConfirms.a11y.error" = "Couldn't load silenced prompts";
+"advanced.restoreConfirms.a11y.restore" = "Restore “%@”";
