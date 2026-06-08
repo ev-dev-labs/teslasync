@@ -1,0 +1,168 @@
+=== P4 Feature view 0190 NotificationGroupRow (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17 (OpenJDK 17.0.19)
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, booted) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via the scheme pre-action (Scripts/build-shared-xcframework.sh →
+                       Gradle ":core:assembleSharedXCFramework"); release + debug XCFrameworks written to
+                       apps/shared/core/build/XCFrameworks/{release,debug}/Shared.xcframework.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators/SDKs present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/notifications/components/NotificationGroupRow.tsx — renders ONE server-aggregated
+  notification thread. Composes the latest member as a `NotificationRow`; the grouping affordances live OUTSIDE
+  that row:
+      isSingleton = group.group_key == null
+      extraCount  = max(0, group.count - 1)
+      chrome shows when  !isSingleton && (extraCount > 0 || unread_count > 1):
+        • "+N similar" expand/collapse caret (ChevronRight/Down) → lazily fetches members on expand
+          (useGroupMembers, gated `enabled: expanded && !isSingleton`)
+        • unread-count chip · "{{count}} vehicles affected" hint
+        • "Mark group read" ghost Button → useBulkMarkRead({group_key}) → useToast success/error
+      expanded member region (role="region") omits the latest (members.filter(m => m.id !== latest.id)) and
+      renders membersLoading / membersError / "No thread members found" / the member rows.
+  Singletons (group_key === null) render as a plain row with the grouping chrome hidden.
+  Data sources (bound via the P1/S8 seam, no view HTTP): useNotifications, useGroupMembers, useBulkMarkRead,
+  useToast, useTranslation, useId.
+
+ARTIFACTS SHIPPED (allowed files: feature-views/NotificationGroupRow.* + this log)
+  TeslaSync/feature-views/NotificationGroupRow.Adapter.swift    — severity kind (web `?? 'info'`), log/group
+                                                                   projections + derivations, phases, projectors
+  TeslaSync/feature-views/NotificationGroupRow.Copy.swift       — parameterized copy (expand/similar/vehicles/
+                                                                   mark-read toasts), formatters, surface slug, a11y
+  TeslaSync/feature-views/NotificationGroupRow.Model.swift      — P1/S10 strings facade + P1/S11 telemetry seam +
+                                                                   the @Observable NotificationGroupRowModel
+  TeslaSync/feature-views/NotificationGroupRow.Source.swift     — P1/S8 source seam: raw inputs, update envelopes,
+                                                                   toast, mark-read result, InMemory source, slug ext
+  TeslaSync/feature-views/NotificationGroupRow.Views.swift      — severity badge, member row, expand toggle, unread
+                                                                   chip, mark-read button, chip row, members region, FlowRow
+  TeslaSync/feature-views/NotificationGroupRow.Chrome.swift     — freshness chip, stale/offline banner, loading/empty/
+                                                                   error envelope, action toast
+  TeslaSync/feature-views/NotificationGroupRow.swift            — the bound NotificationGroupRow view (all states)
+  TeslaSync/feature-views/NotificationGroupRow.Previews.swift   — #if DEBUG previews: content/singleton/empty/loading/
+                                                                   error/stale/offline
+  TeslaSync/feature-views/NotificationGroupRow.Tests.swift      — adapter/copy/a11y/i18n XCTest
+  TeslaSync/feature-views/NotificationGroupRow.ModelTests.swift — state-holder XCTest
+  TeslaSync/feature-views/NotificationGroupRow.strings          — per-surface P1/S10 table (the 10 web keys + chrome)
+  No shared wiring edited: "TeslaSync/feature-views" is already in project.yml (both app targets) and .swiftlint.yml;
+  strings ship as the per-surface table (NSLocalizedString tableName "NotificationGroupRow"), NOT via the shared
+  Localizable.xcstrings — same posture as 0153 DetailCards.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  NotificationRow (composed)   → NotificationMemberRowView (severity badge + DateTime + vehicle·rule meta + title +
+                                 message; unread → left accent bar + stronger fill, web `border-l-2 border-l-cyan-400/70`)
+  SeverityBadge                → NotificationSeverityBadge (info→statusInfo, warn→statusWarning, critical→statusDanger;
+                                 missing/unknown → info, the web `?? 'info'`)
+  "+N similar" caret           → NotificationExpandToggle (chevron.right/down + accent chip; a11y label = expand/collapse)
+  unread pill / "N affected"    → NotificationUnreadChip (monospaced, statusWarning) / muted caption
+  ghost "Mark group read"      → NotificationMarkGroupReadButton (envelope.open; ProgressView + disabled while marking)
+  flex flex-wrap               → NotificationFlowRow (a SwiftUI Layout)
+  expanded region states       → NotificationMembersRegion (idle/loading/error/empty/loaded; leading rail)
+  useToast                     → NotificationGroupToast + NotificationGroupToastView (auto-dismiss task; success/error)
+  load/freshness envelope      → GroupPhase (loading/content/empty/error) + NotificationConnection (live/stale/offline)
+                                 freshness chip + stale/offline banner + one guarded stale auto-refresh; offline keeps cache
+  i18n   : all 10 web keys resolve through the P1/S10 facade (`{{count}}` → `%lld` via localizedStringWithFormat);
+           zero English string literals in code.
+  a11y   : decorative glyphs .accessibilityHidden; each row a combined element with a spoken severity/read/time/
+           vehicle/rule/title label; the surface is a container with a thread label + a counts value; buttons carry
+           explicit labels; Dynamic Type via tokens; Reduce Motion honored by TSFadeIn / TSSkeleton.
+  telemetry : view.opened surface="NotificationGroupRow" emitted once on first appearance (P1/S11), default OSLog sink.
+
+GATES
+  [GREEN]    swiftformat --lint  (NotificationGroupRow.* — 10 swift files)   : 0/10 require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (NotificationGroupRow.* — 10 swift files)   : 0 violations, 0 serious   (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 (staged copy of the 11 shipped files)    : PLACEHOLDER_COUNT=0       (PLACEHOLDER_EXIT=0)
+             NOTE: the gate's literal `-Path …/feature-views/NotificationGroupRow` is a file PREFIX, not a directory,
+             so the scanner's `Get-ChildItem -LiteralPath` resolves to nothing and returns a vacuous 0. To make the
+             check meaningful I ALSO scanned a staged directory containing exactly the 11 shipped NotificationGroupRow.*
+             files (swift + strings): PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0. Both invocations EXIT=0.
+  [GREEN]    Isolated SwiftPM build + test (swift-tools 6.0, .swiftLanguageMode(.v6) = the app's Swift-6 /
+             strict-concurrency=complete mode), compiling the EXACT shipped NotificationGroupRow.* product sources
+             against the REAL repo design system (apps/design/generated/apple/Tokens.swift + Sources/Design/{TSDesign,
+             TSMaterial} + Sources/Components/UI/{Cards,Typography,Badges,Buttons} + Components/Motion/Motion +
+             Components/Feedback/Skeletons), then running both XCTest files:
+                 Build complete!  ·  Executed 39 tests, with 0 failures                          (SWIFT_TEST_EXIT=0)
+  [GREEN]    SDK typecheck (the 17 product files, swiftc -typecheck -swift-version 6):
+                 iOS  : -sdk iphonesimulator -target arm64-apple-ios18.0-simulator                (IOS_TYPECHECK_EXIT=0)
+                 macOS: -sdk macosx          -target arm64-apple-macos15.0                         (MAC_TYPECHECK_EXIT=0)
+  [GREEN]    xcodegen generate → all 11 files registered in TeslaSync.xcodeproj (66 build-file/file-ref entries
+             across the iOS + macOS app targets). The generated .xcodeproj is git-ignored and was removed after the
+             check (not committed).
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO NotificationGroupRow product errors; all blockers pre-exist this change):
+    iOS  : the Shared.xcframework assembled and the app target compiled; the run fails in the TEST build with
+           "Unable to resolve module dependency: 'XCTest'" originating in TeslaSync/feature-views/AcDcStatsPanel.Tests.swift
+           (a DIFFERENT, pre-existing surface — alphabetically first of the ~440 co-located *.Tests.swift). project.yml
+           compiles feature-views/*.Tests.swift INTO the app target, which does not link XCTest. This is the exact
+           project.yml test-target-membership blocker apps/macos-pending-verifications.md defers; it affects every
+           surface (AlertsSection, DetailCards, …) and is owned by P4/P99, not a single feature-view prompt.
+    macOS: additionally fails with "TeslaSync-macOS / TeslaSyncWidgets-macOS have entitlements that require signing
+           with a development certificate" — the macOS development-signing blocker, which this runner does not provision.
+    grep of BOTH build logs for an `error:` attributed to any NotificationGroupRow product file
+    (Adapter/Copy/Model/Source/Views/Chrome/Previews/.swift) = 0 hits. Both blockers are exactly the rows
+    apps/macos-pending-verifications.md defers to the ADR-012 macos-latest signed CI runner (P4/P99 acceptance gate).
+    Per this prompt's allowed-files set (feature-views/NotificationGroupRow.* + this log) the project.yml/signing
+    fixes are out of scope and were NOT touched.
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders on Apple with all web states reproduced — content / singleton / empty / loading / error /
+      stale / offline + the member region's idle/loading/error/empty/loaded (7 previews + per-state model/projection tests).
+  [x] Hooks bind to the shared P1/S8 state-holder layer (NotificationGroupRowSource); no direct HTTP in the view
+      (lazy member load, group mark-read, and the load/freshness envelope all flow through the seam).
+  [x] Every i18n key from source resolves through the P1/S10 catalog — all 10 web keys present in the per-surface
+      table and asserted by NotificationGroupLocalizationTests; severity + chrome + a11y keys added.
+  [x] Accessibility labels on every interactive element (expand toggle, mark-read button, retry) + combined row /
+      thread VoiceOver summaries; Dynamic Type via tokens; Reduce Motion honored; a11y unit-tested.
+  [x] Tests: adapter unit tests + per-state model tests + formatting + a11y + i18n (39 cases, executed green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green (format/lint/placeholder/SwiftPM build+test/iOS+macOS SDK typecheck/
+      xcodegen registration); the full-app Xcode build/test is DEFERRED with captured real exits (IOS_EXIT=65 /
+      MAC_EXIT=65) on pre-existing, unrelated blockers. Platform capability is PRESENT → DONE.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with the real root-cause lines pasted — never reported as passing.
+                          Every GREEN above is a command actually run on THIS runner with its real exit.
+  2  No scope narrowing : every web region + branch reproduced — singleton vs grouped, the chrome gating
+                          (extraCount/unread>1), expand toggle, unread chip, vehicles-affected, mark-group-read with
+                          archived suppression, the lazy member fetch + its 4 region states, and the toast paths.
+  3  No skip-and-assume : every host gate executed; raw exits pasted; the macOS signing + iOS XCTest failures were
+                          confirmed from the logs, not assumed.
+  4  No stubs as final  : complete production surface + 39 real tests; placeholder scanner = 0.
+  5  No parity shortcut : severity `?? 'info'` default, the `members.filter(m => m.id !== latest.id)` omission, the
+                          `count - 1` extra, the chrome/`unread_count > 1` gating, and the success/error toast copy all
+                          mapped to platform tokens + tested.
+  6  No delegation      : implemented directly; no sub-agents (delegation FORBIDDEN by the prompt).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 per-surface i18n table, P1/S11 view.opened
+                          telemetry, and the P4 design-system components all present and consumed.
+  8  No commit on red   : the COMMITTED artifact is GREEN on every host gate AND on a real isolated Swift-6 build+test
+                          AND on the iOS-18-sim + macOS-15 SDK typechecks; the deferred full-app gate is RED only on
+                          pre-existing, unrelated surfaces (other surfaces' *.Tests.swift + macOS signing) which this
+                          commit neither introduces nor touches.
+  9  No silent drift    : changes confined to the 11 feature-views/NotificationGroupRow.* files + this log. The
+                          generated TeslaSync.xcodeproj and the staged Frameworks/Shared.xcframework are git-ignored
+                          and were not committed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic NotificationGroupRow shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: a pure-Swift projection core (executed-green XCTest, 39/39) behind a P1/S8 state-holder seam (no view
+  HTTP), P1/S11 view.opened telemetry (slug "NotificationGroupRow"), every state + all 10 web i18n keys + a11y labels,
+  the latest-member row, the grouping chrome (expand "+N similar" / unread chip / "N vehicles affected" / mark-group-
+  read), the lazy expanded member region with its loading/error/empty/list branches, and the success/error toast — all
+  token-driven, no Tailwind ported. All host-runnable gates pass AND the surface compiles against BOTH the iOS-18
+  simulator and macOS-15 SDKs under Swift 6 AND is registered in the generated app project. The full-app iOS-Simulator
+  + macOS xcodebuild build/test is DEFERRED to the signed integration runner — blocked only by the pre-existing
+  project.yml test-target membership (*.Tests.swift in the app target, affecting all surfaces) + macOS development-
+  signing, both outside this prompt's allowed files and tracked by apps/macos-pending-verifications.md. This matches
+  the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE
