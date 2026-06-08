@@ -1,0 +1,148 @@
+=== P4 Feature view 0102 EfficiencyPanel (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no `xcode-select -s`, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 7m49s; release + debug
+                       XCFrameworks staged to apps/apple/Frameworks/Shared.xcframework, then removed during
+                       cleanup since the path is git-ignored).
+  Capability         : SwiftUI present, iOS/macOS simulators + SDKs present, KMP core builds → NOT
+                       capability-BLOCKED. (This surface uses neither Swift Charts nor MapKit — the web
+                       source has no charts/maps; the prompt's "Charts / maps used" list is "(none)".)
+
+WEB SOURCE (the specification)
+  web/src/features/charging/components/charging-list/EfficiencyPanel.tsx — a PURE presentational leaf its
+  parent renders only when `computeEfficiencyStats(...)` returns non-null `EfficiencyStats`:
+    GlassPanel(p-5) → h3.section-title[ Activity icon (text-neon-green)
+                                        + t('charging.efficiency.title','Charging Efficiency')
+                                        + hint span: t('…hint','Wall-to-battery energy conversion')
+                                                     ({stats.count} t('…sessionsWithData','sessions with data')) ]
+                    → grid-cols-1 sm:2 lg:4 of four inner GlassPanel(p-5 text-center):
+                        1 Average Efficiency : fmtPercent(avgEfficiency) [cyan-300] + bar width min(avg,100)%
+                        2 Best Session       : fmtPercent(best.efficiency) [emerald-300] + formatDateTime(best.date)
+                        3 Worst Session      : fmtPercent(worst.efficiency) [rose-300]  + formatDateTime(worst.date)
+                        4 Wall-to-Battery Loss: fmtWithUnit(wallLoss,'kWh') [amber-300]
+                                                + `${fmtNumber(totalUsed)} kWh → ${fmtNumber(totalAdded)} kWh`
+  Formatters (web defaults, lib/numberFormat.ts): _globalPrecision=2, _globalLocale='en-US';
+  fmtPercent = fmtNumber(v,2)+'%'; fmtWithUnit = fmtNumber(v,2)+' '+unit; safeNumber → non-finite ⇒ 0.
+  formatDateTime (lib/dateFormat.ts): localized date+time, '—' on nil/invalid.
+  No data hooks live in the leaf (the prompt's "Data sources" is just `useTranslation`); the loading / empty /
+  error / stale / offline branches are the Apple HIG states contract layered over the single web rendering.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/EfficiencyPanel.* + this log)
+  EfficiencyPanel.Adapter.swift   — pure projection (no SwiftUI/no net): EfficiencyPanelInput (EfficiencyStats
+                                    subset), EfficiencyFormat (fmtNumber/fmtPercent/fmtWithUnit/formatDateTime/safe
+                                    web parity), EfficiencyProjection (4 tiles + headerCount + resolvePhase),
+                                    EfficiencyMetricModel / accent / footer (progress|detail) / phase.
+  EfficiencyPanel.Model.swift     — P1/S8 state-holder seam (EfficiencyPanelSource/Update/LoadStatus/Connection),
+                                    @Observable @MainActor EfficiencyPanelModel (stale one-shot auto-refresh),
+                                    InMemoryEfficiencyPanelSource, P1/S11 telemetry seam (view.opened) +
+                                    OSLog default, P1/S10 i18n facade (EfficiencyPanelStrings, table "EfficiencyPanel").
+  EfficiencyPanel.swift           — EfficiencyPanel SwiftUI view: TSGlassPanel → header + (banner) + phase switch
+                                    (loading / empty / error / content); surfaceSlug = "EfficiencyPanel".
+  EfficiencyPanel.Views.swift     — header (Activity glyph + title + hint/count + freshness chip), responsive
+                                    4-tile grid + tile (value/label/footer), loading skeleton grid, empty hint,
+                                    QueryError-equivalent error state + retry, freshness chip, stale/offline banner.
+  EfficiencyPanel.Previews.swift  — #if DEBUG previews for loading / content / empty / error / stale / offline.
+  EfficiencyPanel.strings         — P1/S10 catalog contribution: the 7 verbatim web keys + native chrome keys.
+  EfficiencyPanel.Tests.swift     — 27 XCTest cases (format / projection / accessibility / phase / model+telemetry).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel (outer + tiles) → TSGlassPanel (outer) + surfaceGlass rounded tiles (no double-material).
+  Activity (lucide)          → SF Symbol "waveform.path.ecg", tinted Color.TS.statusSuccess (web neon-green).
+  tile value color           → cyan→Color.TS.accent · emerald→statusSuccess · rose→statusDanger · amber→statusWarning.
+  average bar (min(avg,100)%)→ TSMetricBar(fraction: clamp(avg/100), tone:.accent)  (shared P1/S9 component, DRY).
+  fmtPercent/fmtWithUnit/    → EfficiencyFormat (NumberFormatter .decimal, grouping, halfUp, 2 dp, en-US default;
+    fmtNumber/formatDateTime    safe() non-finite⇒0; DateFormatter medium date + short time, '—' on nil).
+  typography                 → Font.TS.section (title) / .title (value) / .caption (label/footer/hint).
+  i18n                       : every string via EfficiencyPanelStrings (P1/S10) — zero English literals in code;
+                               the 7 source keys (charging.efficiency.{title,hint,sessionsWithData,average,best,
+                               worst,wallLoss}) plus native chrome keys live in EfficiencyPanel.strings.
+  a11y                       : each tile one VoiceOver element ("{label}, {value}[, {detail}]"); icons/bars
+                               .accessibilityHidden; header combined + .isHeader; Dynamic Type via TS fonts;
+                               Reduce Motion honored by TSSkeleton/TSMetricBar.
+  telemetry                  : view.opened surface="EfficiencyPanel" via the P1/S11 seam (default OSLog sink).
+  states                     : loading (skeleton grid) · empty (em-dash tiles + friendly hint) · error (retry) ·
+                               stale (chip + banner + one-shot auto-refresh) · offline (chip + banner, no refresh) ·
+                               content — every branch renders; no hidden surfaces.
+
+GATES (executed on THIS runner; raw exits pasted)
+  [GREEN]    swiftformat --lint apps/apple                         : 0/931 files require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (EfficiencyPanel scope, 6 files)  : 0 violations, 0 serious          (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                  : 1 PRE-EXISTING violation — function_body_length
+                                                                     in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                     (NOT an EfficiencyPanel file; tracked + unmodified;
+                                                                     out of this prompt's allowed-files scope).
+  [GREEN]    check-placeholders.ps1 -Path …/feature-views/EfficiencyPanel : PLACEHOLDER_COUNT=0       (PLACEHOLDER_EXIT=0)
+             (also a real temp-dir scan of the 6 shipped .swift files : PLACEHOLDER_COUNT=0)
+  [GREEN]    EfficiencyPanel build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app target), compiling the EXACT shipped EfficiencyPanel.*
+             sources against the REAL repo design tokens (apps/design/generated/apple/Tokens.swift) + an
+             API-faithful harness for the four shared components used (TSGlassPanel/TSMetricBar/TSTone/TSSkeleton):
+                 Build complete!  ·  Executed 27 tests, with 0 failures                               (SWIFT_TEST_EXIT=0)
+  [GREEN]    Full-app iOS build (tests excluded) — REAL TeslaSync app target, linking the freshly-built KMP
+             Shared.xcframework + the real Sources/Components design system:
+                 grep " error: " | feature-views/EfficiencyPanel  : 0 hits  (the surface compiles in the full app)
+                 (the 74 errors that fail this build are ALL in dashboard-widgets/* — see DEFERRED below)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO EfficiencyPanel errors; all blockers pre-exist this change):
+    iOS  : `build test` fails at Swift module dependency scanning because the 43 co-located
+           feature-views/*.Tests.swift files import XCTest into the APP target
+           ("AuditPanel.Tests.swift:19: error: unable to resolve module dependency: 'XCTest'"). The
+           tests-excluded `build` instead surfaces 74 PRE-EXISTING dashboard-widget compile errors —
+           `public struct DashboardWidgetSize` is "ambiguous for type lookup" (defined 8× across
+           Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*) and `ISO8601DateFormatter` static
+           properties are non-Sendable under Swift 6 in NotificationStatsWidget.Models.swift. None are
+           EfficiencyPanel / feature-views/EfficiencyPanel files.
+    macOS: additionally requires a development SIGNING certificate ("TeslaSync-macOS / TeslaSyncWidgets-macOS
+           have entitlements that require signing with a development certificate"), which this runner does not
+           provision.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI
+    runner; they are owned by the P4/P99 Apple acceptance gate (signing/archive) + a dashboard-widget
+    de-duplication pass — NOT by a single feature-view prompt (task rule: do not fix pre-existing unrelated
+    breakage; this prompt's allowed files are feature-views/EfficiencyPanel.* + this log). grep of both build
+    logs for "feature-views/EfficiencyPanel … error:" = 0 hits. The co-located *.Tests.swift convention is the
+    same one every shipped P4 feature-view surface uses (SecurityStatusCards, DrivingPerformanceCards, …).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and
+                          explicitly DEFERRED with evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced (4 tiles, the avg bar clamp, best/worst dates,
+                          used→added summary, the count-suffixed hint) + the full HIG states contract.
+  3  No skip-and-assume : every host-runnable gate executed on THIS runner; raw exits pasted; the KMP framework
+                          was actually built and the full iOS + macOS gates actually run (not assumed).
+  4  No stubs as final  : complete production surface + 27 real passing tests; placeholder scanner = 0; no
+                          TODO/FIXME/Placeholder/Coming-soon anywhere in the shipped code.
+  5  No parity shortcut : numbers/percent/units/dates, tile order, colors, typography, a11y, telemetry, i18n keys
+                          all mapped to platform tokens + verified against the web source.
+  6  No delegation      : implemented directly; no sub-agents.
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P4 core all present and consumed.
+  8  No commit on red   : the COMMITTED artifact (EfficiencyPanel.*) is GREEN on every host gate AND on a real
+                          isolated Swift 6 build+test, and has ZERO errors in the full-app build; the deferred
+                          full-app gate is RED only on pre-existing, unrelated surfaces this commit never touches.
+  9  No silent drift    : changes are confined to feature-views/EfficiencyPanel.* + this log (enumerated above);
+                          no shared/wiring files modified (feature-views is already wired into the app targets
+                          and swiftlint includes).
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic EfficiencyPanel shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 27 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  real design tokens, with lint/format/placeholder all green, and it compiles cleanly inside the full real app
+  (linking the real KMP Shared.xcframework) with ZERO EfficiencyPanel errors. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the pre-existing
+  co-located-tests convention, pre-existing dashboard-widget duplicate-type/Sendable collisions, and macOS
+  development-signing — all owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE
