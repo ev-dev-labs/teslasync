@@ -1,0 +1,43 @@
+/*
+  ChargingDetailSection.strings
+  TeslaSync — P4 feature view · 0053 · ChargingDetailSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargingDetailSection` resolves (table "ChargingDetailSection") lives here with
+  its web value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact keys + values extracted from the web source
+  (features/analytics/components/analytics/ChargingDetailSection.tsx), verified
+  against web/src/i18n/en.json (analytics.charging.*). The second group backs the
+  native-only chrome (freshness banners, loading / error copy, accessibility).
+*/
+
+/* --- Web source (analytics.charging.*, parity with en.json) --- */
+"analytics.charging.chargerBrands" = "Charger Brands";
+"analytics.charging.sessions" = "sessions";
+"analytics.charging.noBrands" = "No charger brand data";
+"analytics.charging.monthlyTrend" = "Monthly Charging Trend";
+"analytics.charging.energykWh" = "Energy (kWh)";
+"analytics.charging.avgPowerkW" = "Avg Power (kW)";
+"analytics.charging.noMonthly" = "No monthly data";
+"analytics.charging.costAnalysis" = "Cost Analysis";
+"analytics.charging.minCost" = "Min Cost";
+"analytics.charging.avgCost" = "Avg Cost";
+"analytics.charging.medianCost" = "Median Cost";
+"analytics.charging.maxCost" = "Max Cost";
+"analytics.charging.noCostStats" = "No cost statistics";
+"analytics.charging.costByType" = "Cost by Charger Type";
+"analytics.charging.noCostByType" = "No charger type data";
+
+/* --- Native chrome: accessibility + loading + error --- */
+"analytics.charging.detail.a11y" = "Charging analytics";
+"analytics.charging.detail.loading" = "Loading charging analytics";
+"analytics.charging.detail.errorTitle" = "Couldn't load charging analytics";
+"analytics.charging.detail.retry" = "Retry";
+
+/* --- Native chrome: freshness banners --- */
+"analytics.charging.detail.refresh" = "Refresh";
+"analytics.charging.detail.staleBanner" = "Reconnecting — charging analytics may be out of date";
+"analytics.charging.detail.offlineBanner" = "Offline — showing the last known charging analytics";
