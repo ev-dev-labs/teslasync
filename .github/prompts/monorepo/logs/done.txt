@@ -133,3 +133,4 @@ p2-windows/dashboard-widgets/W-0031-CostBreakdownWidget.prompt.md
 p2-windows/dashboard-widgets/W-0026-ClimateControlPanelWidget.prompt.md
 p2-windows/dashboard-widgets/W-0034-DestinationETAWidget.prompt.md
 p2-windows/dashboard-widgets/W-0037-DoorWindowStatusWidget.prompt.md
+p2-windows/dashboard-widgets/W-0035-DigitalTwinMiniWidget.prompt.md
