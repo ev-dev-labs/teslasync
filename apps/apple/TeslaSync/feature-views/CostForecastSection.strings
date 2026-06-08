@@ -1,0 +1,36 @@
+/*
+  CostForecastSection.strings
+  TeslaSync — P4 feature view · 0109 · CostForecastSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `CostForecastSection` resolves (table "CostForecastSection") lives here with its
+  web value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact keys + values extracted from the web source
+  (features/charging/components/cost-analysis/CostForecastSection.tsx), verified
+  against web/src/i18n/en.json (costAnalysis.forecast.*). The second group backs the
+  native-only chrome (freshness banners, loading / error copy, accessibility).
+*/
+
+/* --- Web source (costAnalysis.forecast.*, parity with en.json) --- */
+"costAnalysis.forecast.title" = "Cost Forecast";
+"costAnalysis.forecast.confidence" = "95% Confidence";
+"costAnalysis.forecast.actual" = "Actual Cost";
+"costAnalysis.forecast.projected" = "Projected Cost";
+"costAnalysis.forecast.needData" = "Need at least 3 months of charging data for cost forecasting.";
+"costAnalysis.forecast.costPerKwhTrend" = "Cost per kWh Trend";
+"costAnalysis.forecast.costPerKwh" = "$/kWh";
+"costAnalysis.forecast.needTrendData" = "Need at least 2 months of charging data to show the cost per kWh trend.";
+
+/* --- Native chrome: accessibility + loading + error --- */
+"costAnalysis.forecast.a11y" = "Charging cost forecast";
+"costAnalysis.forecast.loading" = "Loading the cost forecast";
+"costAnalysis.forecast.errorTitle" = "Couldn't load the cost forecast";
+"costAnalysis.forecast.retry" = "Retry";
+
+/* --- Native chrome: freshness banners --- */
+"costAnalysis.forecast.refresh" = "Refresh";
+"costAnalysis.forecast.staleBanner" = "Reconnecting — the cost forecast may be out of date";
+"costAnalysis.forecast.offlineBanner" = "Offline — showing the last known cost forecast";
