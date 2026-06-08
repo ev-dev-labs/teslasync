@@ -1,0 +1,64 @@
+/*
+  NotificationFilterBar.strings
+  TeslaSync — P4 feature view · 0189 · NotificationFilterBar (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  NotificationFilterBar resolves (table "NotificationFilterBar") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/notifications/components/NotificationFilterBar.tsx). The remainder back the
+  native state envelope (loading / empty / error chrome, freshness chip + connectivity
+  banner) and the accessibility summary.
+*/
+
+/* --- Web parity: severity chips (web `SEVERITY_OPTIONS` + `severityLabels`) --- */
+"notifications.inbox.filter.severity" = "Severity";
+"notifications.inbox.filter.severity.info" = "Info";
+"notifications.inbox.filter.severity.warn" = "Warn";
+"notifications.inbox.filter.severity.critical" = "Critical";
+
+/* --- Web parity: vehicle + rule selects --- */
+"notifications.inbox.filter.allVehicles" = "All vehicles";
+"notifications.inbox.filter.allRules" = "All rules";
+"notifications.inbox.filter.vehicle" = "Vehicle";
+"notifications.inbox.filter.rule" = "Rule";
+
+/* --- Web parity: search + date range + active chips --- */
+"notifications.inbox.filter.searchLabel" = "Search";
+"notifications.inbox.filter.searchPlaceholder" = "Search messages…";
+"notifications.inbox.filter.from" = "From";
+"notifications.inbox.filter.to" = "To";
+
+/* --- Active-filter chips chrome (web `ActiveFilterChips`) --- */
+"notifications.inbox.filter.clearAll" = "Clear all";
+"notifications.inbox.filter.removeFilter" = "Remove filter";
+"notifications.inbox.filter.clearSearch" = "Clear search";
+
+/* --- Accessibility summary (VoiceOver) --- */
+"notifications.inbox.filter.title" = "Notification filters";
+"notifications.inbox.filter.noneActive" = "no filters active";
+"notifications.inbox.filter.activeCount" = "{{count}} active";
+
+/* --- Loading state (initial option fetch) --- */
+"notifications.inbox.filter.loading" = "Loading notification filters";
+
+/* --- Empty state (no vehicles or rules to filter by) --- */
+"notifications.inbox.filter.empty" = "No notifications to filter yet";
+"notifications.inbox.filter.emptyDescription" = "Filters will appear here once your fleet records alerts. Search and severity still work.";
+
+/* --- Error state (option fetch failed → retry) --- */
+"notifications.inbox.filter.errorTitle" = "Couldn't load filters";
+"notifications.inbox.filter.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"notifications.inbox.filter.live" = "Live";
+"notifications.inbox.filter.stale" = "Stale";
+"notifications.inbox.filter.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"notifications.inbox.filter.staleBanner" = "Reconnecting — filter options may be out of date";
+"notifications.inbox.filter.offlineBanner" = "Offline — showing the last loaded filter options";
