@@ -1,0 +1,42 @@
+/*
+  ChatMessageItem.strings
+  TeslaSync — P4 feature view · 0219 · ChatMessageItem (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChatMessageItem` resolves (table "ChatMessageItem") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/system/components/chatbot/ChatMessageItem.tsx). The second group backs
+  the native chrome (role + avatar labels, the P4 leaf loading / empty / error copy,
+  and the freshness banners) so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"chatbot.aria.editMessage" = "Edit message";
+"chatbot.actions.cancel" = "Cancel";
+"chatbot.actions.saveAndResend" = "Save & resend";
+"chatbot.aria.copyMessage" = "Copy message";
+"chatbot.aria.regenerate" = "Regenerate response";
+"chatbot.actions.regenerate" = "Regenerate";
+"chatbot.aria.edit" = "Edit and resend";
+"chatbot.actions.edit" = "Edit";
+
+/* --- Native chrome: role + avatar VoiceOver labels --- */
+"chat.role.user" = "You";
+"chat.role.assistant" = "Assistant";
+"chat.avatar.user" = "You";
+"chat.avatar.assistant" = "AI assistant";
+
+/* --- Native chrome: P4 leaf loading / empty / error --- */
+"chat.loadingA11y" = "Generating response";
+"chat.empty" = "No message content.";
+"chat.errorTitle" = "Couldn't load this message";
+"chat.retry" = "Retry";
+
+/* --- Native chrome: P4 leaf freshness banners --- */
+"chat.staleBanner" = "Reconnecting — this reply may be stale";
+"chat.offlineBanner" = "Offline — showing the last known message";
