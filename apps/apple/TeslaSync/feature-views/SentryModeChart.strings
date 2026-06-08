@@ -1,0 +1,46 @@
+/*
+  SentryModeChart.strings
+  TeslaSync — P4 feature view · 0047 · SentryModeChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SentryModeChart` resolves (table "SentryModeChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/admin/components/security-access/SentryModeChart.tsx). The remainder
+  back the native state envelope (freshness chip, connectivity banner, loading /
+  empty / error chrome) and the chart axes / accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.security.sentryChart" = "Sentry Mode Activity";
+"admin.security.chart.sentryOn" = "Sentry On";
+"admin.security.chart.sentryOff" = "Sentry Off";
+"common.noData" = "No data available";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"admin.security.live" = "Live";
+"admin.security.stale" = "Stale";
+"admin.security.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"admin.security.staleBanner" = "Reconnecting — sentry activity may be stale";
+"admin.security.offlineBanner" = "Offline — showing last known sentry activity";
+
+/* --- Chart axes + legend scaffolding --- */
+"admin.security.chart.series" = "Series";
+"admin.security.chart.day" = "Day";
+"admin.security.chart.count" = "Events";
+"admin.security.chart.dayCount" = "days";
+
+/* --- Loading / empty / error chrome --- */
+"admin.security.chart.loading" = "Loading sentry activity";
+"admin.security.chart.emptyHint" = "Sentry activity will appear here once security events are recorded.";
+"admin.security.chart.errorTitle" = "Couldn't load sentry activity";
+"admin.security.chart.retry" = "Retry";
+
+/* --- Accessibility summaries --- */
+"admin.security.chart.a11y" = "Stacked bar chart of daily sentry-armed and sentry-off event counts";
