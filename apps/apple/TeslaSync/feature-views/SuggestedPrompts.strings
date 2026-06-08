@@ -1,0 +1,36 @@
+/*
+  SuggestedPrompts.strings
+  TeslaSync — P4 feature view · 0223 · SuggestedPrompts (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SuggestedPrompts` resolves (table "SuggestedPrompts") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/system/components/chatbot/SuggestedPrompts.tsx): the four suggestion
+  chips (i18nKey + defaultValue) and the `aria-label` on the strip. The second group
+  backs the native chrome — the per-chip VoiceOver hint plus the P4 leaf freshness /
+  loading / empty / error copy — so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"chatbot.suggestion.fleetYesterday" = "What did my fleet do yesterday?";
+"chatbot.suggestion.chargingCost30d" = "Charging cost last 30 days";
+"chatbot.suggestion.socDropping" = "Why is my SoC dropping faster this week?";
+"chatbot.suggestion.efficientDrive" = "Show me the most efficient drive this month";
+"chatbot.aria.suggestions" = "Suggested prompts";
+
+/* --- Native chrome: VoiceOver hint + P4 leaf freshness / loading / empty / error --- */
+"chatbot.suggestion.hint" = "Inserts this prompt into the message field";
+"chatbot.suggestion.stale" = "Stale";
+"chatbot.suggestion.offline" = "Offline";
+"chatbot.suggestion.staleBanner" = "Reconnecting — suggestions may be stale";
+"chatbot.suggestion.offlineBanner" = "Offline — showing saved suggestions";
+"chatbot.suggestion.refresh" = "Refresh";
+"chatbot.suggestion.loading" = "Loading suggestions";
+"chatbot.suggestion.empty" = "No suggestions right now.";
+"chatbot.suggestion.errorTitle" = "Couldn't load suggestions";
+"chatbot.suggestion.retry" = "Retry";
