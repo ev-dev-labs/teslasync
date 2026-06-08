@@ -1,0 +1,205 @@
+================================================================================
+P4 · Feature view · 0024 — UuidGenerator (Apple)
+Run: 2026-06-07T19:32-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/145
+Base: fec65f59
+Prompt: P4/feature-views/0024 — UuidGenerator
+Web source (spec): web/src/features/admin/components/devtools/tools/UuidGenerator.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (P3 precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                ✅
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 AND iOS 18 sim targets)         ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh, self-test PASS               ✅
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        ✅
+  xcodegen ................... /opt/homebrew/bin/xcodegen (present)                 ✅
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep) ⚠ (BLOCKER for app build)
+  codesign identities ........ "0 valid identities found"                          ⚠ (BLOCKER for macOS app gate, per P9 / ADR-012)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and proven by REAL macOS + iOS-simulator SDK compiles below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore
+  does NOT apply — the surface is authored and host-validated for real.
+
+  Web-source nature: UuidGeneratorTool is a PURELY LOCAL, synchronous devtool.
+  Its only data source is `useTranslation` (no hook, no fetch, no useEffect). The
+  source therefore has exactly two render branches — empty (uuids.length===0 →
+  list hidden) and content (list shown). There is no loading/error/stale/offline
+  branch to port because there is no async data source; reproducing those would
+  FABRICATE behaviour absent from the spec. They are recorded N/A here (not
+  silently dropped — Honesty rule 9) and the two real branches are both rendered.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/UuidGenerator.*) ===
+  UuidGenerator.Model.swift     171  P1/S8 state holder + P1/S11 telemetry seam + P1/S10 i18n facade
+                                     + pure generation adapter (UuidGeneration) + UuidEntry + a11y
+  UuidGenerator.swift           159  UuidGeneratorView surface (ToolCard shell + header + generate
+                                     action + empty/content states + per-row a11y)
+  UuidGenerator.Tests.swift     118  XCTest: adapter (order/cap/v4) + model (phase/cap/telemetry-once) + a11y
+  UuidGenerator.Previews.swift   54  #if DEBUG previews — empty + content (deterministic generator)
+  UuidGenerator.strings          26  P1/S10 catalog contribution (3 source keys + 4 native chrome keys)
+  Every file ≤171 lines (house file_length ≤400); one exported View per file (View lives only in
+  UuidGenerator.swift). 528 lines total across the surface.
+
+=== PARITY (vs web UuidGenerator.tsx) ===
+  Data sources → useTranslation only (NO network). Bound through the shared state-holder seam
+    UuidGeneratorModel (P1/S8): the view holds no literals and performs NO I/O. There is no
+    HTTP/transport on this surface by construction (the web parity has none).
+  Adapter → UuidGeneration.prepending() is a 1:1 port of the web
+    `setUuids(prev => [uuid, ...prev].slice(0, 10))` (newest-first, capped at 10). SystemUuidGenerator
+    is the native equivalent of lib/safeUUID.ts `safeRandomUUID()`: Foundation `UUID()` (RFC 4122 §4.4
+    random), lowercased to match the web `crypto.randomUUID()` output. Verified by an EXECUTED harness.
+  Composition → web ToolCard(icon=Fingerprint, color=purple, title, description) → TSGlassPanel shell
+    with a purple icon chip (SF `touchid` ≈ lucide Fingerprint, Color.TS.chartSeriesPower) + title +
+    description; web primary Button(icon=RefreshCw){Generate} → TSButton(primary, small) with an
+    `arrow.clockwise` glyph + "Generate"; web row `<code class=purple-300> + CopyButton` → mono
+    purple value chip on Color.TS.surface + TSCopyButton (the shared web `CopyButton` counterpart).
+  Shared components → TSGlassPanel / TSButton / TSCopyButton + Color.TS / Font.TS / TSSpacing /
+    TSRadius, compiled against the REAL apps/apple component library in the typecheck below.
+    Recharts→none / Leaflet→none (no chart/map on this surface).
+  States (all render — never a blank box) → empty (icon + "No UUIDs yet" + hint) and content
+    (newest-first list of copyable UUIDs). loading/error/stale/offline = N/A (no async data source);
+    see capability note. Model.phase resolves empty↔content from entries.isEmpty.
+  i18n → all 3 source keys resolve through the P1/S10 facade (UuidGeneratorStrings, table
+    "UuidGenerator") with the web t(key,default) English fallback:
+      "Uuid Generator", "Uuid Generator Desc", "Generate"  →  ALL PRESENT in UuidGenerator.strings.
+    No English literals in native code (every Text goes through the facade or Text(verbatim:) of a
+    facade-resolved string). +4 native chrome keys (empty title/message, generate a11y, row a11y).
+  a11y → header is one combined element; the generate button has an explicit accessibilityLabel
+    ("Generate a new UUID"); every UUID row is a combined element labelled "UUID {n} of {total}: {value}"
+    (UuidGeneratorAccessibility.rowLabel, unit-tested); the icon glyph is accessibilityHidden; values
+    use Dynamic-Type tokens + .textSelection. No fixed-size text.
+  Telemetry → UuidGeneratorModel.start() emits viewOpened(surface:"UuidGenerator") exactly once
+    (idempotent) → bridges shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy (executed).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the surface (Model + View) compiled together with the REAL apps/apple
+    component library (Tokens + Design/{TSDesign,TSMaterial} + Components/UI/{Cards,Buttons,Utility,
+    Typography,Badges}), none of which import the Shared xcframework — under Swift 6 + strict
+    concurrency = complete (matching the project's SWIFT_STRICT_CONCURRENCY: complete):
+      xcrun --sdk macosx        swiftc -typecheck -target arm64-apple-macos15.0        ...  → 0   ✅
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator ... → 0 ✅
+      TYPECHECK_MACOS_EXIT=0   TYPECHECK_IOS_EXIT=0
+      (The surface is platform-agnostic SwiftUI — no `#if os(...)` branches — so BOTH the macOS 15
+       and iOS 18 compiles fully cover the iPadOS path too. @Observable / @MainActor /
+       ContentUnavailableView-free custom empty state / textSelection all resolve against both SDKs.)
+
+[2] Executed adapter harness — the REAL UuidGenerator.Model.swift compiled with a test `main` to a
+    native arm64 binary and RAN (not a typecheck): proves generation + state holder + telemetry + a11y:
+      xcrun --sdk macosx swiftc -O -target arm64-apple-macos15.0 -swift-version 6 \
+        UuidGenerator.Model.swift main.swift -o run  &&  ./run
+      17/17 checks PASSED — prepend-newest-first, cap-at-10 (u14…u5), isCanonicalV4 accept/reject
+      (junk, version-1, bad-variant), 256/256 SystemUuidGenerator outputs canonical+lowercase v4,
+      model empty→content, model cap-at-10 (uuid-21…uuid-12), start() emits view.opened once with
+      slug "UuidGenerator", rowLabel includes position+value.
+      ADAPTER_HARNESS_FAILURES=0   RUN_EXIT=0                                          ✅
+
+[3] swiftlint --strict on the 4 surface swift files (explicit paths; the repo .swiftlint.yml
+    `included:` does not list TeslaSync/feature-views — that wiring is the P4 integration prompt's
+    job, Honesty rule 7 — so the bare gate does not scan this dir; run explicitly to prove clean):
+      Done linting! Found 0 violations, 0 serious in 4 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                         ✅
+    Bare gate `swiftlint --strict` (from apps/apple, config included: paths): 1 violation, 557 files.
+      SWIFTLINT_GATE_EXIT=2                                                            ⚠ PRE-EXISTING / OUT-OF-SCOPE
+      The single violation is dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+      (function_body_length) — a SIBLING surface merged earlier on this branch, unmodified by this
+      prompt (git shows no local change to that file; it is red at HEAD fec65f59) and OUTSIDE this
+      prompt's allowed files (apps/apple/TeslaSync/feature-views/UuidGenerator.* + this log). It is
+      NOT introduced by this surface and cannot be fixed here without violating the allowed-files bar
+      (Honesty rules 2 + 9). This surface adds ZERO violations.
+
+[4] swiftformat --lint apps/apple   (the EXACT gate command, whole tree incl. the 5 new files):
+      0/565 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                    ✅
+
+[5] check-placeholders (ADR-011 stub gate; swift) — self-test + the surface dir:
+      ./apps/tools/check-placeholders.ps1 -SelfTest                → SELFTEST_EXIT=0   ✅
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                               ✅
+      (The prompt's literal -Path …/UuidGenerator is a filename PREFIX that Test-Path resolves to
+       nothing → the script returns a clean scan; the real per-dir scan above is reported instead and
+       is clean. No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented in any shipped file;
+       no `mock`/`stub` identifiers either — test doubles are Spy/Counting/Sequence.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to a signed macos-latest CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface):
+      (a) NOT-YET-REGISTERED: project.yml's app targets glob `Sources/` + `TeslaSync/dashboard-widgets`
+          but NOT `TeslaSync/feature-views`. Registering this new tier into the XcodeGen target is the
+          P4 feature-views integration prompt's scope (predecessor, Honesty rule 7) and project.yml is
+          OUTSIDE this prompt's allowed files. Running xcodebuild now would build the app WITHOUT this
+          surface and re-run the existing suite — ZERO evidence about this deliverable. Step [1]
+          DOES compile this surface against the real component library (macOS + iOS), which is the
+          meaningful validation; step [2] RUNS its logic.
+      (b) Shared.xcframework not staged: the app target links the KMP core (apps/apple/Frameworks holds
+          only .gitkeep); building it needs a Kotlin/Native gradle build (apps/shared/gradlew). The
+          scheme's "Stage Shared.xcframework" preAction is the seam. Independent of this UI surface.
+      (c) macOS signing: `security find-identity -p codesigning` → 0 valid identities; the macOS app
+          entitlements require a development certificate. ADR-012 defers this to a signed
+          macos-latest runner.
+    XCTest (UuidGenerator.Tests.swift) likewise runs in the TeslaSync(/-macOS) XCTest target under
+    Xcode; XCTest is unavailable to the CLT toolchain here. Its adapter + model + a11y assertions are
+    independently PROVEN GREEN by the executed harness in step [2], which exercises the SAME public API
+    (UuidGeneration / SystemUuidGenerator / UuidGeneratorModel / UuidGeneratorAccessibility).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states present in the web source (empty + content); loading/error/stale/
+      offline are N/A (no async data source) and documented, not silently dropped. Each rendered state
+      has a #if DEBUG preview; phase logic unit-tested + executed.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (UuidGeneratorModel); no direct HTTP/I/O
+      in the view (the web parity has none).
+  [x] Every i18n key from source has a matching catalog key — 3/3 (+4 chrome) in UuidGenerator.strings.
+  [x] Accessibility labels on every interactive element (generate button + each row); icon hidden;
+      Dynamic Type via tokens.
+  [x] Tests: adapter unit test (executed, order/cap/v4) + per-state model test + telemetry-once +
+      a11y label test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (typecheck ×2 / executed harness / surface swiftlint / swiftformat tree /
+      placeholder); Xcode app build/test DEFERRED with capability + predecessor evidence (P3
+      disposition). One repo-level red (bare swiftlint) is a PRE-EXISTING sibling violation outside
+      this prompt's allowed files — flagged, not masked.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); the bare swiftlint gate shown
+                       RED (SWIFTLINT_GATE_EXIT=2) with its pre-existing/out-of-scope cause. Every "✅"
+                       is a command actually run on this host with its real exit code.
+  2  No scope narrowing: implemented the full surface — composition + both real states + i18n + a11y +
+                       telemetry + adapter; did not drop the description/desc key or the copy affordance.
+  3  No skip-and-assume: each host gate executed; the "no loading/error/offline" decision is from
+                       READING the source (only useTranslation; no hook), not an assumption.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of safeUUID.ts (v4) + slice(0,10) cap + ToolCard composition.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / swiftlint included: (integration
+                       prompt's scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe
+                       across concurrent slots) — strings shipped as the per-surface table.
+  8  No commit on red  : the surface deliverable is green on every applicable gate; committing only the
+                       additive feature-views files + this log. The one repo red (bare swiftlint) is a
+                       pre-existing sibling defect that predates and is independent of this commit.
+  9  No silent drift   : changes confined to the allowed UuidGenerator.* files + this log (git status
+                       shows only apps/apple/TeslaSync/feature-views/ added; the 2 pre-existing web
+                       working-tree edits are NOT staged by this prompt).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native UuidGenerator shipped at parity with the web source: pure-Swift generation
+  adapter (executed-green, 17/17), P1/S8 state-holder seam (no view I/O), P1/S11 telemetry (once),
+  P1/S10 i18n facade (3/3 source keys), full a11y, both real states. All host-runnable surface gates
+  pass (typecheck macOS+iOS, executed harness, surface swiftlint, whole-tree swiftformat, placeholder);
+  the Xcode app build/test is DEFERRED to the signed CI runner (surface not yet target-registered +
+  Shared.xcframework + macOS signing — none a defect in this code), matching the user-approved P3
+  "code-complete + DEFERRED Xcode gate" disposition established by p4-apple-dashboard-widgets-0036.
+  The single bare-swiftlint red is a pre-existing, out-of-scope sibling violation, flagged not masked.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0024-UuidGenerator.log
+  git commit -m "feat(apps/apple/feature-views): add UuidGenerator surface (P4)"
+
+EXIT=0
+STATUS=DONE
