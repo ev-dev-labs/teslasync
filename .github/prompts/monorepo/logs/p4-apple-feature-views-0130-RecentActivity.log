@@ -1,0 +1,282 @@
+=== P4 Feature view 0130 RecentActivity (Apple) ===
+Host: Darwin arm64 (Apple Silicon). Swift 6.3.2 (swiftlang-6.3.2.1.108). active
+developer dir = /Library/Developer/CommandLineTools (Command Line Tools only — NO
+Xcode.app on this runner). swiftlint + swiftformat + pwsh on PATH. macOS SDK present
+(MacOSX.sdk); iPhoneSimulator SDK NOT locatable; zero iOS simulators. Implication:
+SwiftUI + Swift Charts + MapKit ARE compilable here (proven below — the production
+view set, incl. Swift Charts, type-checks green against the macOS 15 SDK), but the
+xcodebuild app-target build/test harness cannot run on THIS host — it is DEFERRED to
+the P4 integration runner (Xcode + simulators), exactly as the peer surfaces
+0105-QuickMetrics / 0092-SpeedTrendChart / 0071-AlertsSection / 0055-DrivingPerformanceCards did.
+
+Web source (THE specification):
+  web/src/features/dashboard/components/RecentActivity.tsx
+Native output (allowed files):
+  apps/apple/TeslaSync/feature-views/RecentActivity.{swift,Types,Adapter,Model,Views,
+    States,Charts,Previews,Tests,ModelTests}.swift
+  apps/apple/TeslaSync/feature-views/RecentActivity.strings
+  + this log.
+  (Two extra files beyond the 7-file peer template — Types + States + ModelTests —
+   keep every file under the swiftlint file_length 400 gate while the surface composes
+   three panels + a chart. All match the allowed `RecentActivity.*` glob.)
+Charts/maps: the web source uses ONE chart — a Recharts AreaChartWrapper single
+"Battery %" series — and NO map. Native renders it with Swift Charts (AreaMark +
+LineMark + gradient + % y-axis + selection tooltip). No map is introduced (faithful:
+the web has none).
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web → native)
+---------------------------------------------------------------------------
+  props:  recentDrives / recentCharges / analytics (derived by the parent dashboard
+            via useDriving/useCharging/useAnalytics) + distanceUnit / efficiencyUnit /
+            toEfficiencyDisplay (useUnits) + currencySymbol / locale (useFormatting)
+            → one RecentActivityUpdate snapshot pushed by a RecentActivitySource (P1/S8);
+              RecentActivityProjection derives the three panels from it.
+            → toEfficiencyDisplay is carried as a value-typed `efficiencyFactor`
+              (Wh/km → Wh/{unit} multiplier: 1.609344 for mi, 1 for km — the web
+              dashboard's converter), keeping the projection pure + testable.
+  shell:  3× <GlassPanel className="p-5"> in a grid-cols-1 lg:grid-cols-3 /
+            sm:grid-cols-2 layout
+            → RecentActivityGlassPanel (Color.TS.surfaceGlass + TSRadius.lg +
+              Color.TS.border stroke, TSSpacing.xl). Feed full-width; battery +
+              performance side-by-side on a regular width, stacked on compact
+              (horizontalSizeClass) — the same responsive intent, Apple-idiomatic.
+  panel1: Activity Feed — Activity glyph + t('activity.title') + Link("/drives")
+            t('activity.viewAll'); Timeline of recent drives+charges (slice 0..8) or
+            EmptyState Clock + t('activity.empty')
+            → RecentActivityFeedPanel: section title (waveform.path.ecg) + a Button
+              (onViewAll callback, the host wires nav) + the rows or the empty.
+            drive row: `${fmtNumber(convertDistanceFromSI(distance_m,unit),1)} ${unit}
+              ${t('activity.drive')}` / `${floor(s/3600)}h ${fmtInt(floor((s%3600)/60))}m
+              · ${start??'?'}% → ${end??'?'}%`, icon Route, color #00f0ff
+              → driveItem(): title "10.0 mi drive", subtitle "1h 30m · 80% → 60%",
+                glyph road.lanes, tint Color.TS.accent (cyan).
+            charge row: `${fmtNumber(convertEnergyFromSI(wh,'kWh'),1)} kWh
+              ${t('activity.charged')}` / `${start}% → ${end}%${cost? · formatCurrency(cost,2):''}`,
+              icon Zap, color #10b981
+              → chargeItem(): title "31.4 kWh charged", subtitle "44% → 80% · $9.40"
+                (omitted when cost nil), glyph bolt.fill, tint Color.TS.statusSuccess.
+            sort: activityItems.sort((a,b)=>b.time-a.time) → sorted newest-first.
+            relative time: formatTimeAgo ("Just now"/"{m}m ago"/"{h}h ago"/"{d}d ago",
+              else formatDateShort) → RecentActivityFormat.timeAgo (number words via the
+              localizer; %d format so non-en can reorder).
+  panel2: Battery Trend — BatteryCharging glyph + t('battery.title'); AreaChartWrapper
+            over end_soc_pct (`?? 50`), `.reverse()`, shown when length>1, else
+            t('battery.empty')
+            → RecentActivityBatteryPanel + RecentActivityBatteryChart (Swift Charts
+              AreaMark gradient 0.3→0 + LineMark, 0–100 % y-axis, original index x tick
+              [web `i`], selection tooltip). batteryTrend() maps+reverses, default 50.
+  panel3: Fleet Performance — TrendingUp glyph + t('perf.title'); rows Total Drives (30d)
+            {total_drives??0} / Charge Sessions {total_charging_sessions??0} / Total Cost
+            <Currency total_cost precision=2 amber> / CO₂ Saved {fmtInt(energy_kwh*0.42)}
+            kg emerald; + most_efficient_vehicle card (name + fmtInt(toEfficiencyDisplay
+            (efficiency)) efficiencyUnit) on bg-neon-green/5
+            → RecentActivityPerformancePanel: rows raw counts (web `{value}` — NOT
+              grouped), currency(2dp, amber→statusWarning), CO₂ fmtInt+" kg"
+              (emerald→statusSuccess), + RecentActivityEfficientCard (success-tinted).
+  fmt:    fmtNumber(v,d)/safeNumber → number/safe (NumberFormatter .decimal, .halfUp,
+            grouping, non-finite→0); fmtInt → int; <Currency> → currency (symbol+grouped,
+            non-finite→'—'); convertDistanceFromSI/convertEnergyFromSI → distanceFromSI/
+            energyKwhFromWh (÷1609.344 / ÷1000 / ÷1000); formatDateShort → dateShort
+            (.dateTime.month(.abbreviated).day()).
+  i18n:   13 web `t()` keys (activity.title|drive|charged|viewAll|empty, battery.title|
+            empty, perf.title|drives|charges|cost|co2|mostEfficient) → RecentActivityStrings
+            facade, table "RecentActivity". Symbols (%, →, ·, h, m, kWh, kg) are
+            locale-neutral literals, exactly as the web builds them in template strings
+            and as the QuickMetrics precedent treats "h"/"m"/"kWh".
+
+STATES (every one renders — no hidden surface):
+  loading  → RecentActivityLoading (three redacted TSSkeleton panels; reduce-motion safe)
+  content  → the three panels, each with its own internal empty (feed empty / battery
+             empty / performance zeros) — the web's own per-panel emptiness, never blank
+  empty    → RecentActivityEmpty (ContentUnavailableView, web "…Start driving!" message)
+             when the whole snapshot resolves with no drives/charges/analytics
+  error    → RecentActivityError (QueryError-equiv, Retry → model.refresh())
+  stale    → freshness chip (Stale) + RecentActivityConnectivityBanner + ONE guarded
+             auto-refresh (re-armed on return to live)
+  offline  → freshness chip (Offline) + banner; keeps cached panels, no refetch
+  (The web component itself only splits each panel content/empty; the loading/error/
+   stale/offline envelope the parent dashboard owns is reproduced here so no state is a
+   blank box. The chip + banner show ONLY when not live, keeping the healthy state as
+   visually clean as the web source.)
+a11y: container summary (surface label + feed-row count, or friendly empty); per-row
+  VoiceOver "{title}, {subtitle}, {time}"; per-metric "{label}: {value}"; icons
+  accessibilityHidden; reduce-motion animation gate (chart + fade); Dynamic Type via
+  system fonts/tokens; minimumScaleFactor on value/label.
+telemetry: P1/S11 view.opened(surface:"RecentActivity") emitted once on appear.
+binding: P1/S8 RecentActivitySource seam (production impl over the shared dashboard state
+  holders + useFormatting/useUnits prefs); the view performs NO networking.
+  Previews/tests drive InMemoryRecentActivitySource.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (10 swift files; config apps/apple/.swiftformat)
+    $ swiftformat --lint TeslaSync/feature-views/RecentActivity.{swift,Types,Adapter,
+        Model,Views,States,Charts,Previews,Tests,ModelTests}.swift
+    → SwiftFormat completed. 0/10 files require formatting.
+    FORMAT_EXIT=0   ✅  (maxwidth 120, before-first wrapping, --self remove)
+
+[2] swiftlint --strict (10 files, explicit paths, repo .swiftlint.yml)
+    $ swiftlint lint --strict --config .swiftlint.yml TeslaSync/feature-views/RecentActivity.*.swift
+    → Done linting! Found 0 violations, 0 serious in 10 files.
+    LINT_EXIT=0   ✅
+    NOTE: caught + fixed during dev — file_length (the initial Adapter 613 / Views 455 /
+      Tests 455 split into Types+Adapter / Views+States / Tests+ModelTests, each <400),
+      function_parameter_count (the Previews drive/charge helpers 6→5 via a soc tuple),
+      line_length (wrapped), and unusedArguments (dropped the unused `localize` from
+      RecentActivityProjection.performance). File lengths all < 400 (Adapter 355, Views
+      298, Tests 267, Types 265, Model 272, ModelTests 206, States 176, Previews 169,
+      Charts 157, main 86).
+
+[3] check-placeholders.ps1 (real per-file scan + negative control)
+    The gate's literal `-Path …/RecentActivity` is a no-op on the flat file layout (the
+    surfaces live as RecentActivity.* FILES, not a subdir), so a MEANINGFUL scan was run
+    on the real files copied into a temp dir — Covenant #1/#3, never vacuous:
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path <tmp>/RecentActivity -Language swift
+        → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    Negative control (injected "// TODO") → COUNT=1 / EXIT=1 (scanner proven live).
+    grep for TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/fatalError
+    across all RecentActivity.* → NONE FOUND.
+    PLACEHOLDER_EXIT=0   ✅  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+[4] Swift-6-strict TYPE-CHECK of the full SwiftUI view set (incl. Swift Charts)
+    Compiled against the REAL shared chain (apps/design/generated/apple/Tokens.swift +
+    Design/{TSDesign,TSMaterial} + Components/Motion/Motion + Feedback/Skeletons +
+    UI/{Cards,Typography,Badges,Buttons}) + the macOS 15 SDK, module TeslaSync:
+    $ swiftc -typecheck -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 \
+        -module-name TeslaSync <shared chain> RecentActivity.{Types,Adapter,Model,Views,
+        States,Charts,swift}
+        → VIEWSET_TYPECHECK_EXIT=0  ✅  (SwiftUI + Swift Charts compile clean here)
+    NOTE: the SwiftUI `#Preview` macro (PreviewsMacros plugin) ships with Xcode, not with
+      Command Line Tools, so a raw `swiftc` cannot EXPAND `#Preview` on this host. The
+      DEBUG-only RecentActivity.Previews.swift is therefore compiled by the Xcode app
+      target at integration; the type-check above fully exercises the production view set,
+      and the Previews file uses only already-type-checked public APIs.
+    NOTE: iOS-Simulator type-check could NOT be performed — `xcrun --sdk iphonesimulator
+      --show-sdk-path` → "SDK iphonesimulator cannot be located" (CLT ships only the macOS
+      SDK). The SwiftUI source is platform-portable (horizontalSizeClass is cross-platform;
+      no os(iOS)-only API in this surface), so the macOS-SDK type-check exercises the same
+      code the iOS target compiles.
+
+[5] EXECUTED adapter driver (Foundation only, Swift 6, macOS 15) — golden vectors
+    $ swiftc -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 \
+        RecentActivity.Types.swift RecentActivity.Adapter.swift main.swift -o driver && ./driver
+    Asserts (web-parity golden vectors): number half-up + non-finite→0 ("11.4","496",
+      .nan→"0.0"); int grouping ("1,234"); currency ("$9.40","$612.00",.nan→'—');
+      distanceFromSI (mi 1609.344→1.0, km 1000→1.0); energyKwhFromWh (31400→31.4); soc
+      ("80%","?%"); socRange ("80% → 60%"); timeAgo (Just now / 5m / 3h / 3d / dateShort);
+      drive row ("10.0 mi drive" / "1h 30m · 80% → 60%" / "10m ago"); charge row ("31.4
+      kWh charged" / "44% → 80% · $9.40" / no-cost "71% → 84%"); feed count 10 + timeline
+      cap 8; battery trend reverse + default 50 (positions[0,1,2], labels["2","1","0"],
+      values[50,49,74]); performance (["142","47","$612.00","496 kg"], tones [primary,
+      primary,warning,success], efficiency "238 Wh/mi"); performance defaults (["0","0",
+      "$0.00","0 kg"], no highlight); phase matrix; surface slug "RecentActivity"; a11y
+      item label + summary count + empty message.
+    → ALL_ADAPTER_CHECKS_PASS    COMPILE_EXIT=0 / RUN_EXIT=0   ✅
+
+[6] EXECUTED state-holder driver (links REAL SwiftUI + Tokens + Motion[TSFadeIn] +
+    Skeletons[TSSkeleton/TSChartSkeleton] + Cards/Typography/Badges/Buttons + the full
+    RecentActivity Types/Adapter/Model/Views/States/Charts/main view, Swift 6, macOS 15).
+    Same assertions as RecentActivity.ModelTests.swift RecentActivityModelTests:
+    $ swiftc -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 \
+        <shared chain> RecentActivity.{Types,Adapter,Model,Views,States,Charts,swift} \
+        main.swift -o driver && ./driver
+    Asserts: loaded→content (3 items, timeline 3, battery 2, performance 4, newest-is-
+      charge, startCount 1); view.opened emitted exactly once across two start() calls;
+      timeline cap 8 in the model; stale → exactly one guarded auto-refresh; return-to-
+      live re-arms (second stale → 2 total); offline keeps cached content + 0 refetch;
+      loaded-no-data → empty; failed-no-data → error + retry refreshes + stop stops;
+      displayLocale tracks the snapshot's locale (de-DE).
+    → ALL_MODEL_CHECKS_PASS    COMPILE_EXIT=0 / RUN_EXIT=0   ✅
+    NOTE: this driver caught a wrong TEST expectation during dev (the sample charge was
+      not actually the newest row) — the PRODUCTION sort was correct; the test fixture +
+      driver were corrected so "newest is charge" holds. Covenant #1 (no red-as-green).
+
+[7] i18n key coverage (every key-like literal in code resolves in the catalog)
+    $ grep key-like literals (activity.*/perf.*/battery.*) across the 7 production files
+      vs the keys defined in RecentActivity.strings
+    → USED-but-NOT-DEFINED: only "battery.100.bolt" (an SF Symbol name, NOT an i18n key).
+      All 29 real keys (incl. all 13 web `t()` parity strings) are defined 1:1.
+    → DEFINED-but-NOT-USED: none (no orphan keys).
+    I18N_EXIT=0   ✅
+
+[8] xcodebuild iOS-Simulator + macOS app build/test — DEFERRED (platform-capability)
+    $ xcode-select -p           → /Library/Developer/CommandLineTools
+    $ xcodebuild -version       → "error: tool 'xcodebuild' requires Xcode, but active
+                                   developer directory '…/CommandLineTools' is a command
+                                   line tools instance"
+    $ xcrun --sdk iphonesimulator --show-sdk-path → "error: SDK 'iphonesimulator' cannot
+                                   be located"
+    $ xcrun simctl list devices → "error: unable to find utility 'simctl'" (no simulators)
+    IOS_EXIT=DEFERRED  MAC_EXIT=DEFERRED
+    The xcodebuild app-target build/test harness CANNOT run on this host (no Xcode.app, no
+    iPhoneSimulator SDK, no simulators; the app target additionally carries the KMP
+    Shared.xcframework Gradle pre-action + macOS signing) — none a defect in THIS code,
+    which is proven compilable at [4] and executed-green at [5]/[6]. Deferred to the P4
+    integration runner, matching the user-approved peer disposition (0105/0092/0071/0055).
+
+===========================================================================
+HONESTY COVENANT — attestation
+===========================================================================
+  1 No red-as-green   : every exit code above is the real one; the one wrong test
+                        expectation found at [6] was fixed in the production fixtures,
+                        not masked.
+  2 No scope narrowing: all three panels + the chart + every web state reproduced.
+  3 No skip-and-assume: web source read end-to-end; every t() key + conditional branch
+                        mapped (feed content/empty, battery >1-point/empty, cost present/
+                        absent, most-efficient present/absent).
+  4 No stubs as final : no TODO/placeholder/mock/Lorem ([3]); complete implementations.
+  5 No parity shortcut: fmtNumber/Currency/SI/timeAgo reproduced + executed-green vs the
+                        web golden vectors ([5]); raw-count vs grouped distinction honored.
+  6 No delegation     : authored directly (delegation FORBIDDEN per the prompt).
+  7 No predecessor bypass: built on the P1/S8 source + P1/S9 tokens + P1/S10 facade +
+                        P1/S11 telemetry seams the peer surfaces established.
+  8 No commit on red  : commit made only after [1]-[7] green ([8] deferred w/ evidence).
+  9 No silent drift   : changes confined to the allowed RecentActivity.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native RecentActivity shipped at parity with the web source: a pure,
+  executed-green projection core (Foundation, Swift 6) reproducing the fmtNumber / fmtInt /
+  Currency / convertDistanceFromSI / convertEnergyFromSI / formatTimeAgo formatting, the
+  unified newest-first drive+charge feed (8-row Timeline cap), the reversed end-SoC battery
+  series (default 50), and the four-row fleet-performance read + most-efficient highlight; a
+  P1/S8 state-holder seam (no view HTTP); a Swift Charts area chart (gradient + % axis +
+  selection tooltip) for the web AreaChartWrapper; a P1/S10 i18n facade with full 13-key
+  parity coverage (+ native envelope keys); P1/S11 view.opened telemetry; reduce-motion +
+  Dynamic Type + VoiceOver throughout; and every prompt state (loading / content / empty /
+  error / stale / offline) with a freshness chip + connectivity banner + one guarded stale
+  auto-refresh. All host-runnable gates pass: swiftformat 0/10, swiftlint --strict 0/10,
+  check-placeholders real-scan COUNT=0 (control COUNT=1), Swift-6-strict macOS-SDK type-
+  check of the full view set incl. Swift Charts EXIT=0, i18n coverage complete, and two
+  executed runtime drivers (adapter + model/a11y, full SwiftUI link) PASS. The xcodebuild
+  iOS-Simulator + macOS app build/test is DEFERRED to the P4 integration runner — this host
+  is Command Line Tools only (no Xcode.app, no iPhoneSimulator SDK, no simulators, no
+  #Preview macro plugin), and the app build additionally carries the KMP Shared.xcframework
+  Gradle pre-action + macOS signing — none a defect in this code. Matches the user-approved
+  peer disposition (0105-QuickMetrics / 0092-SpeedTrendChart / 0071-AlertsSection /
+  0055-DrivingPerformanceCards, same P4 batch).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/RecentActivity.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Types.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Model.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Views.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.States.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Charts.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Previews.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.Tests.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.ModelTests.swift \
+          apps/apple/TeslaSync/feature-views/RecentActivity.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0130-RecentActivity.log
+  git commit -m "feat(apps/apple/feature-views): add RecentActivity surface (P4)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,58 @@
+/*
+  RecentActivity.strings
+  TeslaSync — P4 feature view · 0130 · RecentActivity (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `RecentActivity`
+  resolves (table "RecentActivity") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/dashboard/components/RecentActivity.tsx). The remainder back the native state envelope
+  (relative time, battery chart, freshness chip, connectivity banner, loading / error chrome) and
+  the VoiceOver summaries — strings the web builds as template literals or that the parent owns.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"activity.title" = "Recent Activity";
+"battery.title" = "Battery Trend";
+"perf.title" = "Fleet Performance";
+"activity.drive" = "drive";
+"activity.charged" = "charged";
+"activity.viewAll" = "View all";
+"activity.empty" = "No activity yet. Start driving!";
+"battery.empty" = "Charge data will appear here";
+"perf.drives" = "Total Drives (30d)";
+"perf.charges" = "Charge Sessions";
+"perf.cost" = "Total Cost";
+"perf.co2" = "CO₂ Saved";
+"perf.mostEfficient" = "Most Efficient";
+
+/* --- Relative time (web `formatTimeAgo`) --- */
+"activity.relative.justNow" = "Just now";
+"activity.relative.minutes" = "%dm ago";
+"activity.relative.hours" = "%dh ago";
+"activity.relative.days" = "%dd ago";
+
+/* --- Battery trend chart (web `AreaChartWrapper`) --- */
+"battery.axis" = "Battery %";
+"battery.drive" = "Drive";
+"battery.aria" = "Battery level across recent drives";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"activity.live" = "Live";
+"activity.stale" = "Stale";
+"activity.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"activity.staleBanner" = "Reconnecting — recent activity may be stale";
+"activity.offlineBanner" = "Offline — showing the last known activity";
+
+/* --- Loading / error chrome --- */
+"activity.loading" = "Loading recent activity";
+"activity.errorTitle" = "Couldn't load recent activity";
+"activity.retry" = "Retry";
+
+/* --- Accessibility summary --- */
+"activity.a11y.count" = "%d recent events";
