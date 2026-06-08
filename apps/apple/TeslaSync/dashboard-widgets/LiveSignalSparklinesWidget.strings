@@ -1,0 +1,54 @@
+/*
+  LiveSignalSparklinesWidget.strings
+  TeslaSync — P4 dashboard widget · 0057 · LiveSignalSparklinesWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  LiveSignalSparklinesWidget resolves (table "LiveSignalSparklinesWidget") lives
+  here with its web `t(key, default)` English value. These entries fold into the
+  app `Localizable.xcstrings` master catalog at integration time; they are kept in
+  a per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The three keys extracted verbatim from the web source
+  (features/dashboard/widgets/LiveSignalSparklinesWidget.tsx) are
+  widget.liveSparklines, widget.noHistory, and widget.noSignalsAvailable. The rest
+  back the native chrome (registry description, freshness chip, state copy, and
+  accessibility phrases).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.liveSparklines" = "Live Signal Sparklines";
+"widget.noHistory" = "no data";
+"widget.noSignalsAvailable" = "No signals available";
+
+/* --- Registry metadata (registry/telemetry.ts → "live-signal-sparklines") --- */
+"widget.liveSparklines.description" = "Configurable list of 4-6 signals with mini sparkline charts (last 5 min)";
+
+/* --- Native chrome: freshness chip --- */
+"widget.freshness.live" = "Live";
+"widget.freshness.updating" = "updating…";
+"widget.freshness.stale" = "Stale";
+"widget.freshness.error" = "Error";
+"widget.freshness.errorShort" = "error";
+"widget.freshness.offline" = "Offline";
+"widget.freshness.refresh" = "Refresh";
+"widget.freshness.justNow" = "just now";
+"widget.freshness.minutes" = "%lldm ago";
+"widget.freshness.hours" = "%lldh ago";
+"widget.freshness.days" = "%lldd ago";
+"widget.freshness.weeks" = "%lldw ago";
+
+/* --- Native chrome: states + actions --- */
+"widget.loading" = "Loading signals";
+"widget.emptyHint" = "Connect a vehicle streaming telemetry to chart its live signals.";
+"widget.errorTitle" = "Couldn't load signals";
+"widget.retry" = "Retry";
+"widget.open" = "Open";
+"widget.openA11y" = "Open the live signals page";
+"widget.offlineBanner" = "Offline — showing last known values";
+"widget.staleBanner" = "Reconnecting — values may be stale";
+
+/* --- Accessibility: trend phrases --- */
+"widget.trendUp" = "trending up";
+"widget.trendDown" = "trending down";
+"widget.trendFlat" = "holding steady";
