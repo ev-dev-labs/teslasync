@@ -1,0 +1,48 @@
+/*
+  ChargingSessionCard.strings
+  TeslaSync — P4 feature view · 0107 · ChargingSessionCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargingSessionCard` resolves (table "ChargingSessionCard") lives here with its
+  web value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  Group 1 is the exact keys + values extracted from the web source
+  (features/charging/components/ChargingSessionCard.tsx, namespace "charging").
+  Group 2 backs the atomic pieces the native row reproduces inline (web shared
+  components BatteryDelta / RouteDisplay) and the metric template literals. Group 3
+  backs the native-only chrome (freshness chip, loading / error / empty,
+  accessibility).
+*/
+
+/* --- Group 1: web source (charging.*) --- */
+"chargerTypes.supercharger" = "Supercharger";
+"chargerTypes.dc" = "DC Fast";
+"chargerTypes.home" = "Home / AC";
+"chargerTypes.unknown" = "Charger";
+"selectSession" = "Select charging session";
+"free" = "Free";
+"scoreAria" = "Battery-friendly score: {{value}}";
+
+/* --- Group 2: reproduced shared components + metric templates --- */
+"batteryDelta.aria" = "Battery {{from}}% to {{to}}%";
+"batteryDelta.unknown" = "Battery delta unknown";
+"route.noLocation" = "No location data";
+"metric.energy" = "{{value}} kWh";
+"metric.peak" = "{{value}} kW peak";
+"metric.avg" = "~{{value}} kW avg";
+"metric.costPerKwh" = "({{value}}/kWh)";
+"metric.distanceGained" = "+{{value}} {{unit}}";
+
+/* --- Group 3: native chrome (accessibility + loading + error + empty) --- */
+"card.openHint" = "Opens charging session details";
+"card.loading" = "Loading charging session";
+"card.empty" = "No charging session to show";
+"card.errorTitle" = "Couldn't load this charging session";
+"card.retry" = "Retry";
+
+/* --- Group 3: native chrome (freshness chip) --- */
+"card.refresh" = "Refresh";
+"card.staleBanner" = "Reconnecting — this charging session may be out of date";
+"card.offlineBanner" = "Offline — showing the last known charging session";
