@@ -1,0 +1,40 @@
+/*
+  ResultPanel.strings
+  TeslaSync — P4 feature view · 0008 · ResultPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ResultPanelView` resolves (table "ResultPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-safe across the concurrent surface slots).
+
+  The web source (features/admin/components/devtools/ResultPanel.tsx) is anonymous
+  (its title is a prop, not a literal). Its only literal is the idle default
+  'No result yet'; the copy affordance reuses the shared CopyButton keys
+  (common.copyButton.copy/copied). The remaining keys back the native-only chrome
+  (loading, freshness chip, connectivity banners, retry, and a11y nouns).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"devtools.resultPanel.idle" = "No result yet";
+
+/* --- Shared CopyButton (web @/components/ui CopyButton) --- */
+"common.copyButton.copy" = "Copy";
+"common.copyButton.copied" = "Copied";
+
+/* --- Native chrome: states --- */
+"devtools.resultPanel.loading" = "Running…";
+"devtools.resultPanel.genericError" = "Request failed";
+"devtools.resultPanel.retry" = "Retry";
+
+/* --- Native chrome: freshness + connectivity --- */
+"devtools.resultPanel.live" = "Live";
+"devtools.resultPanel.stale" = "Stale";
+"devtools.resultPanel.offline" = "Offline";
+"devtools.resultPanel.staleBanner" = "Reconnecting — this result may be stale";
+"devtools.resultPanel.offlineBanner" = "Offline — showing the last result";
+
+/* --- Native chrome: accessibility nouns --- */
+"devtools.resultPanel.resultAccessibility" = "result";
+"devtools.resultPanel.errorAccessibility" = "error";
