@@ -1,0 +1,190 @@
+================================================================================
+P4 · Dashboard widget · 0062 — MediaHistoryWidget (Apple)
+Run: 2026-06-07T18:47-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/65
+Base: e9e15143
+Prompt: P4/dashboard-widgets/0062 — MediaHistoryWidget
+Web source (spec): web/src/features/dashboard/widgets/MediaHistoryWidget.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (P3/0036 precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK 26.5 present             OK
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 target)                           OK
+  swiftc -strict-concurrency . compiles (-swift-version 6, complete)                OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh, self-test PASS               OK
+  /Applications/Xcode.app .... present, but xcode-select -p = CommandLineTools      WARN
+  xcodebuild ................. ERROR "requires Xcode, active dir is CommandLineTools" BLOCKER (iOS-sim gate)
+  iPhone 16 simulator ........ xcrun simctl lists none under CLT toolchain          BLOCKER (iOS-sim gate)
+  codesign identities ........ security find-identity -p codesigning = 0 valid      BLOCKER (macOS app gate, ADR-012)
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks empty, .gitkeep)   WARN (app-link only)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by a real macOS-SDK compile below. The capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore does NOT apply —
+  the surface is authored and host-validated for real. The Xcode app build/test
+  gate is DEFERRED (not capability-BLOCKED) for the same three structural reasons
+  the DigitalTwin (0036) predecessor recorded — see the XCODE-ONLY section.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/MediaHistoryWidget.*) ===
+  MediaHistoryWidget.Models.swift    101  domain value types (DTO row, projected track, relative-time bucket)
+  MediaHistoryWidget.Builder.swift    79  sourceLabel + makeTrack(s)/feedTracks/latestTrack/relativeTime (adapter)
+  MediaHistoryWidget.Model.swift     267  P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 strings + a11y
+  MediaHistoryWidget.swift           239  MediaHistoryWidget surface (glass shell + header + every state)
+  MediaHistoryWidget.Feed.swift      160  MediaCompactView + MediaFeedView + MediaFeedRow + MediaEmptyState
+  MediaHistoryWidget.Previews.swift  108  #if DEBUG previews — feed/compact/loading/empty/error/offline
+  MediaHistoryWidget.Tests.swift     242  XCTest: adapter + model + registry + a11y (40+ assertions, 16 methods)
+  MediaHistoryWidget.strings          44  P1/S10 catalog contribution (2 source keys + 16 native chrome keys)
+  Every file <= 400 lines (house file_length); largest 267 (Model). One exported (public) view per file
+  (MediaHistoryWidget); the Feed sub-views are internal composition.
+
+  Shared-type reuse (DRY): DashboardWidgetSize / DashboardWidgetRegistration are declared once by the
+  DigitalTwinWidget (0036) sibling in the same module and REUSED here (no redeclaration) — registering
+  "media-history" with the same grid-constraint contract.
+
+=== PARITY (vs web MediaHistoryWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (MediaHistorySource -> MediaHistoryModel):
+    useMediaHistory, useVehicles, useVehicleSystems, useTranslation. The production app wires
+    MediaHistorySource over the KMP media-history StateHolderModel<...> (fed by useMediaHistory +
+    the useVehicles vehicle pick); the view performs NO HTTP. No direct transport in the view.
+  Projection -> MediaHistoryBuilder is a 1:1 port of the web feedItems memo + WidgetEventFeed:
+    sourceLabel (usb->USB, else capitalize first char); makeTrack fallbacks (title ?? '—',
+    artist ?? '—', source ? sourceLabel : nil, isPlaying = status.lower=='playing',
+    timestamp ?? epoch); feedTracks newest-first + cap 10; latestTrack = history[0];
+    relativeTime buckets (<1m justNow / <60m minutes / <24h hours / else absolute). Verified by an
+    EXECUTED harness (25/25, below) — real cached->projection, not a typecheck.
+  Composition -> WidgetShell chrome (ListMusic icon + "Media History" title + freshness chip + refresh
+    + optional Open) · COMPACT (cols<=1): single "{title} — {artist}" row over a 44pt min-height, or the
+    inline empty row · FEED (cols>=2): scrollable timeline of rows (play-tinted music marker + connector,
+    "{title} — {artist}", source label, relative time). Recharts->none / Leaflet->none (no chart/map).
+    The web decorative "🎵 " title prefix is rendered Apple-idiomatically as the leading SF Symbol
+    (music.note) rather than an inline emoji literal.
+  States (all render) -> loading (skeleton rows) · empty ("No tracks played", ContentUnavailableView) ·
+    error (retry) · stale (chip + banner over cached feed) · offline (cached feed + chip + banner) ·
+    content. Model phase resolution keeps cached rows visible behind refresh/errors, matching the web
+    shell (skeleton only on initial fetch; empty only when there are no rows).
+  i18n -> both web source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.mediaHistory ("Media History"), widget.noMediaPlayed ("No tracks played") -> BOTH PRESENT in
+    MediaHistoryWidget.strings. The web's hardcoded relative-time/English literals ("Just now",
+    "{m}m ago", "{h}h ago") are promoted to catalog keys (widget.media.justNow/minutesAgo/hoursAgo) so
+    NO English literal lives in native code.
+  a11y -> each feed/compact row is one VoiceOver element with a localized composed label
+    (MediaHistoryAccessibility.rowLabel: title — artist, source, "Now playing" if active, relative time);
+    every header button (refresh / open) has an accessibilityLabel; the timeline rail + icons are
+    accessibilityHidden; Dynamic Type via Font.TS tokens; Reduce Motion respected by the shared TSSkeleton.
+  Telemetry -> MediaHistoryModel.start() emits viewOpened(surface:"MediaHistoryWidget") ->
+    bridges shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test.
+  Registry -> MediaHistoryWidget.registration: id "media-history", category "media", default 2x4,
+    min 1x2, max 4x40 (+ clamp()), matching registry/media.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck  (the 5 source files compiled together with the REAL apps/apple component
+    library — Tokens + Design + Components/UI{Badges,Typography,Buttons,Cards} + Feedback/Skeletons +
+    Motion — plus the DigitalTwin sibling that declares the shared registry types; none import the
+    Shared xcframework):
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 \
+        <Tokens+Design+Components closure> <DigitalTwinWidget non-preview/test> \
+        MediaHistoryWidget.{Models,Builder,Model,swift,Feed}.swift
+      TYPECHECK_EXIT=0                                                              OK
+      (Platform-agnostic SwiftUI — no #if os(iOS) branches — so the macOS compile fully covers the
+       iOS/iPadOS code paths. ScrollView/ContentUnavailableView/@Observable/Layout resolve vs macOS 15 SDK.)
+
+[1b] swiftc -typecheck with Swift-6 strict concurrency (matches the app target's
+     SWIFT_STRICT_CONCURRENCY: complete):
+      xcrun --sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+        -target arm64-apple-macos15.0 <same file set>
+      STRICT_EXIT=0                                                                 OK
+
+[2] Adapter EXECUTED test (compiled Models+Builder+harness to a native binary and RAN it —
+    real "cached -> projection" verification, not a typecheck):
+      25/25 checks PASSED — sourceLabel (usb/USB/spotify/bluetooth/FM); makeTrack fallbacks
+      (nil title/artist -> em-dash, nil source -> no label, nil status -> not playing, nil ts -> epoch);
+      Playing case-insensitive; titleLine; source label; makeTracks order; latestTrack = first/nil;
+      feedTracks cap 10 + newest-first (id 14 first, id 5 last); relativeTime justNow/5m/2h/absolute.
+      ADAPTER_HARNESS_EXIT=0                                                        OK
+
+[3] swiftlint --strict on the 7 surface .swift files (explicit paths; the repo .swiftlint.yml
+    included: does not yet list TeslaSync/dashboard-widgets — that wiring is the P4 integration
+    prompt's job — so the bare gate SKIPS this dir; run explicitly here to prove the files are clean):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      OK
+    Bare gate `swiftlint --strict` (from apps/apple, included: paths): 0 violations, 256 files.
+      SWIFTLINT_GATE_EXIT=0                                                         OK (does not scan the new dir — see note)
+
+[4] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 7 new files):
+      0/276 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 OK
+
+[5] check-placeholders (ADR-011 stub gate; swift):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      Self-test (-SelfTest): all 6 cases PASS. The prompt's literal -Path …/MediaHistoryWidget
+      (filename prefix) also scans clean (PLACEHOLDER_COUNT=0, EXIT=0).
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed macos-latest CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface):
+      (a) NO XCODE TOOLCHAIN ACTIVE: xcode-select -p = /Library/Developer/CommandLineTools, so
+          `xcodebuild` errors ("requires Xcode") and `xcrun simctl` lists no iOS simulators. Even with
+          /Applications/Xcode.app present, the next two reasons still block the app gate.
+      (b) NOT-YET-REGISTERED: project.yml's app target globs `Sources/`; this surface lives at
+          TeslaSync/dashboard-widgets/ and is registered into the XcodeGen target + the dashboard grid
+          by the P4 dashboard-grid integration prompt (predecessor, Honesty rule 7). Running xcodebuild
+          now would build the app WITHOUT these files — ZERO evidence about this deliverable. The host
+          swiftc compile in step [1] DOES compile this surface against the real component library.
+      (c) Shared.xcframework not staged + macOS signing: the app target links the KMP core (needs a
+          Kotlin/Native gradle build) and `security find-identity -p codesigning` = 0 valid identities;
+          ADR-012 defers both to a signed macos-latest runner.
+    XCTest (MediaHistoryWidget.Tests.swift) likewise runs in the TeslaSync(/-macOS) test target under
+    Xcode; XCTest is unavailable to CLT here. The pure-adapter subset is independently PROVEN GREEN by
+    the executed harness in step [2]; the model/registry/a11y suites compile against the same public API
+    exercised by the host typecheck in step [1].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has
+      a #if DEBUG preview; phase logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 2/2 source keys present in the strings table.
+  [x] Accessibility labels on every interactive element; each row carries a localized composed label.
+  [x] Tests: adapter unit test (EXECUTED, 25/25) + per-state model test + registry + a11y label test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (typecheck/strict/lint/format/placeholder/adapter-run); Xcode app build/test
+      DEFERRED with capability + predecessor evidence (per P3/0036 disposition).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); reasons given. Every "OK" is a
+                       command actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL states + compact/feed composition + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; the adapter is RUN, not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the feedItems memo + WidgetEventFeed (sourceLabel, fallbacks,
+                       sort+cap, relative-time) + every state.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface — prompt forbids it).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration prompt's
+                       scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe across the
+                       concurrent slots) — strings shipped as the per-surface table; shared registry types
+                       reused (not redeclared).
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed MediaHistoryWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native MediaHistoryWidget shipped at parity with the web source: pure-Swift domain
+  port (executed-green adapter, 25/25), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every
+  state + i18n key + a11y label, registry-correct (media-history, 2x4 / 1x2 / 4x40). All host-runnable
+  gates pass; the Xcode app build/test is DEFERRED to the signed CI runner (no active Xcode toolchain +
+  surface not yet target-registered + Shared.xcframework + macOS signing — none a defect in this code),
+  matching the user-approved P3 "code-complete + DEFERRED Xcode gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/MediaHistoryWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0062-MediaHistoryWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add MediaHistoryWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

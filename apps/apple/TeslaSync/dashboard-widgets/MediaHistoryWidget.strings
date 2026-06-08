@@ -1,0 +1,44 @@
+/*
+  MediaHistoryWidget.strings
+  TeslaSync — P4 dashboard widget · 0062 · MediaHistoryWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `MediaHistoryWidget` resolves (table "MediaHistoryWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  Keys under "widget.mediaHistory" / "widget.noMediaPlayed" are the exact keys
+  extracted from the web source (features/dashboard/widgets/MediaHistoryWidget.tsx,
+  namespace "dashboard"). The remaining "widget.media.*" keys back the native-only
+  chrome (freshness chip, refresh/open/retry, states, relative-time, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.mediaHistory" = "Media History";
+"widget.mediaHistory.description" = "Recently played tracks: title, artist, source, playback history";
+"widget.noMediaPlayed" = "No tracks played";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.media.live" = "Live";
+"widget.media.stale" = "Stale";
+"widget.media.offline" = "Offline";
+"widget.media.refresh" = "Refresh";
+"widget.media.retry" = "Retry";
+"widget.media.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.media.loading" = "Loading media history";
+"widget.media.errorTitle" = "Couldn't load media history";
+"widget.media.offlineBanner" = "Offline — showing last known tracks";
+"widget.media.staleBanner" = "Reconnecting — history may be stale";
+
+/* --- Relative time (port of WidgetEventFeed.formatRelativeTime) --- */
+"widget.media.justNow" = "Just now";
+"widget.media.minutesAgo" = "%lldm ago";
+"widget.media.hoursAgo" = "%lldh ago";
+
+/* --- Accessibility --- */
+"widget.media.nowPlaying" = "Now playing";
+"widget.media.openA11y" = "Open the media history page";
