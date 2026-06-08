@@ -1,0 +1,48 @@
+/*
+  SessionDetailPanel.strings
+  TeslaSync — P4 feature view · 0091 · SessionDetailPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SessionDetailPanel` resolves (table "SessionDetailPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/charging/components/charging-curve/SessionDetailPanel.tsx). The second group
+  routes the web helpers.ts `getChargerLabel` return values through i18n (the web source
+  hardcodes them; native code may hold no English literal). The third group backs the
+  native-only chrome (freshness / banner / states / accessibility) the Apple HIG states
+  contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"charging.curve.sessionDetails" = "Session Details";
+"charging.curve.date" = "Date";
+"charging.curve.chargerType" = "Charger Type";
+"charging.curve.socRange" = "SOC Range";
+"charging.curve.energyAdded" = "Energy Added";
+"charging.curve.peakPower" = "Peak Power";
+"charging.curve.avgPower" = "Avg Power";
+"charging.curve.duration" = "Duration";
+"charging.curve.cost_decimal" = "Cost";
+"charging.curve.location" = "Location";
+
+/* --- Charger labels (web helpers.ts getChargerLabel, routed through i18n) --- */
+"charging.curve.charger.supercharger" = "Supercharger";
+"charging.curve.charger.dcFast" = "DC Fast";
+"charging.curve.charger.homeAc" = "Home / AC";
+
+/* --- Native chrome: freshness + connectivity (ADR-013) --- */
+"charging.curve.live" = "Live";
+"charging.curve.stale" = "Stale";
+"charging.curve.offline" = "Offline";
+"charging.curve.staleBanner" = "Reconnecting — session details may be stale";
+"charging.curve.offlineBanner" = "Offline — showing last known session details";
+
+/* --- Native chrome: states + accessibility --- */
+"charging.curve.loadingA11y" = "Loading session details";
+"charging.curve.error" = "Couldn't load session details";
+"charging.curve.retry" = "Retry";
+"charging.curve.empty" = "No charging session selected.";

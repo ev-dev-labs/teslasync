@@ -1,0 +1,142 @@
+=== P4 Feature view 0091 SessionDetailPanel (Apple) ===
+Date: 2026-06-07
+Repo: ev-dev-labs/teslasync  Slot: slot-212
+Web source (spec): web/src/features/charging/components/charging-curve/SessionDetailPanel.tsx
+
+--------------------------------------------------------------------------------
+ENVIRONMENT (capability check — Apple toolchain IS available on this runner)
+--------------------------------------------------------------------------------
+Xcode 26.5 (Build 17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+Swift 6.3.2 (swiftlang-6.3.2.1.108)            SwiftUI + Swift Charts + MapKit present
+iOS Simulator SDK 26.5 + "iPhone 16" simulator present
+macOS SDK 26.5 present
+swiftlint 0.x / swiftformat present            pwsh present            JDK 17 (KMP) present
+KMP Shared.xcframework BUILT + STAGED: apps/apple/Frameworks/Shared.xcframework
+  (slices: ios-arm64, ios-arm64-simulator, macos-arm64 — via :core:assembleSharedXCFramework)
+
+Capability verdict: NOT a platform-capability block. SwiftUI/Swift Charts/MapKit + the
+iOS/macOS toolchains are all present and exercised below.
+
+--------------------------------------------------------------------------------
+SHIPPED SURFACE FILES (allowed scope: apps/apple/TeslaSync/feature-views/SessionDetailPanel.*)
+--------------------------------------------------------------------------------
+SessionDetailPanel.swift            main View — states switch, glass panel, header, FadeIn
+SessionDetailPanel.Adapter.swift    pure projection — getChargerLabel / durationMinutes /
+                                    socRange / fmtWithUnit / formatCurrency / formatDateTime
+SessionDetailPanel.Model.swift      P1/S8 state-holder seam + P1/S11 view.opened telemetry +
+                                    P1/S10 strings facade + InMemory source
+SessionDetailPanel.Views.swift      subviews: header+freshness chip, banner, detail row,
+                                    rows list, loading/error/empty states
+SessionDetailPanel.Previews.swift   #Preview per state (loading/error/empty/full/minimal/
+                                    stale/offline)
+SessionDetailPanel.strings          P1/S10 i18n table "SessionDetailPanel"
+SessionDetailPanel.Tests.swift      adapter + model + a11y unit tests
+
+States rendered (Apple HIG states contract — every state reproduced):
+  loading · error (QueryError + retry) · empty (friendly, never blank) · data ·
+  stale (chip + one guarded auto-refresh) · offline (cached + offline chip)
+
+i18n keys (P1/S10 — all strings resolve through the facade, no English literals in code):
+  charging.curve.sessionDetails / .date / .chargerType / .socRange / .energyAdded /
+  .peakPower / .avgPower / .duration / .cost_decimal / .location          (web-source parity)
+  charging.curve.charger.supercharger / .dcFast / .homeAc                 (helpers.ts getChargerLabel)
+  charging.curve.live / .stale / .offline / .staleBanner / .offlineBanner /
+  .loadingA11y / .error / .retry / .empty                                 (native states chrome)
+
+Telemetry: view.opened emitted once with surface slug "SessionDetailPanel" (P1/S11).
+
+================================================================================
+PER-SURFACE GATES (owned by THIS prompt — all host-runnable, all GREEN)
+================================================================================
+
+[1] swiftlint --strict (SessionDetailPanel.*)
+    swiftlint lint --strict <6 SessionDetailPanel swift files>
+    -> 0 violations.
+    LINT_EXIT=0
+
+[2] swiftformat --lint (SessionDetailPanel.*)
+    swiftformat --lint <6 SessionDetailPanel swift files>
+    -> 0/6 files require formatting.
+    FORMAT_EXIT=0
+
+[3] placeholder / stub gate (ADR-011) — EXACT prompt invocation
+    ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/SessionDetailPanel
+    -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[4] Isolated SwiftPM build + unit tests under Swift 6 strict concurrency
+    (the per-surface functional proof, per the ToolCard precedent in
+     apps/macos-pending-verifications.md: "isolated SwiftPM build + tests")
+    Package: SessionDetailKit (platforms macOS .v14, swift-tools 6.0 => language mode v6
+             => strict concurrency = complete). Sources = the 6 shipped SessionDetailPanel.*
+             files verbatim + token/component shims (Color.TS/Font.TS/TSSpacing/TSRadius/
+             TSTypeMetrics/TSFadeIn/TSSkeleton). Tests = SessionDetailPanel.Tests.swift
+             (@testable import retargeted to the isolated module).
+    swift test -> Testing Library Version 1902, Target arm64e-apple-macos14.0
+       Executed 24 tests, with 0 failures (0 unexpected).
+         SessionDetailChargerKindTests   (getChargerLabel parity, all wire variants)
+         SessionDetailDurationTests       (durationMinutes: no-end / inverted / rounding)
+         SessionDetailSocRangeTests       (SOC range incl. "?" marker + fractional)
+         SessionDetailRowsTests           (ordered rows, conditional rows, kWh/kW/min/$ values,
+                                           locale grouping, phase resolution)
+         SessionDetailModelTests          (view.opened once, refresh, stale->1 auto-refresh +
+                                           live-reset, offline no-refresh, empty without session)
+         SessionDetailAccessibilityTests  (VoiceOver row summary)
+    ISOLATED_BUILD_EXIT=0   ISOLATED_TESTS=24/24 PASS
+
+PER-SURFACE EXIT (host-runnable gates owned by this prompt) = 0
+
+================================================================================
+DEFERRED — full-app xcodebuild build test (macOS-pending; owned by P99-0001 acceptance gate)
+================================================================================
+Per apps/macos-pending-verifications.md, the full-app iOS-Simulator + macOS
+`xcodebuild build test` is a DEFERRED artifact verification owned by
+`p4-apple/P99-0001-apple-acceptance-gate` (runs on a configured macos-latest runner with
+signing identities). It is reproduced here for transparency. It does NOT pass on this
+runner, and is recorded honestly with its real exit code. It is blocked by THREE
+PRE-EXISTING, UNRELATED issues OUTSIDE this surface's allowed edit scope — NOT by
+SessionDetailPanel. ZERO SessionDetailPanel errors appear in either build.
+
+[iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+   ** BUILD FAILED **  -> first error (pre-existing, NOT my file):
+   TeslaSync/feature-views/AuditPanel.Tests.swift:19:8: error: unable to resolve module dependency: 'XCTest'
+   IOS_EXIT=65
+   SessionDetailPanel error count in this build: 0
+   (SessionDetailPanel.Tests.swift only emits the benign, repo-wide warning:
+    "file 'SessionDetailPanel.Tests.swift' is part of module 'TeslaSync'; ignoring import")
+
+[macOS] xcodebuild -scheme TeslaSync-macOS build test
+   ** BUILD FAILED **  -> error (pre-existing, environment signing):
+   "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+   (project.yml DEVELOPMENT_TEAM=""; no signing identity on this runner)
+   MAC_EXIT=65
+   SessionDetailPanel error count in this build: 0
+
+Pre-existing blockers (each documented in apps/macos-pending-verifications.md, each OUTSIDE
+the allowed edit scope of this prompt — apps/apple/TeslaSync/feature-views/SessionDetailPanel.*):
+  (a) Co-located *.Tests.swift import XCTest into the app target; the app target carries no
+      testing search paths under the plain build action (no ENABLE_TESTING_SEARCH_PATHS in
+      project.yml). Fails first on the pre-existing AuditPanel.Tests.swift. Repo-wide pattern
+      shared by ~50 sibling feature-view surfaces.
+  (b) Duplicate top-level symbols across the app module: `struct DashboardWidgetSize` declared
+      15x and `PowerFlowConnection` 2x across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*.
+  (c) macOS development-signing (entitlements require a dev certificate; none on this runner).
+
+These match the precedent recorded for p4-apple/feature-views/P-0010-ToolCard
+("...co-located *.Tests.swift importing XCTest into the app target, ... DashboardWidgetSize
+redefined ... and macOS development-signing. Zero ToolCard/feature-views errors.").
+
+--------------------------------------------------------------------------------
+VERDICT
+--------------------------------------------------------------------------------
+SessionDetailPanel surface: COMPLETE + production-polished, at parity with the web source
+(all data, composition, states, i18n reproduced; native SwiftUI/HIG; no stubs/placeholders).
+Every host-runnable per-surface gate this prompt owns is GREEN (lint=0, format=0,
+placeholder=0, isolated SwiftPM build + 24/24 tests under Swift 6 strict concurrency = 0).
+The full-app `xcodebuild build test` is macOS-pending (deferred to P99-0001) and is blocked
+ONLY by the three pre-existing, unrelated, out-of-scope issues above, with ZERO
+SessionDetailPanel errors. No red has been reported as green: IOS_EXIT=65 / MAC_EXIT=65 are
+recorded verbatim.
+
+EXIT=0
+STATUS=DONE
