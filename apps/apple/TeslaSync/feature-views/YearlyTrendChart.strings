@@ -1,0 +1,49 @@
+/*
+  YearlyTrendChart.strings
+  TeslaSync — P4 feature view · 0095 · YearlyTrendChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `YearlyTrendChart` resolves (table "YearlyTrendChart") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared
+  catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/charging/components/charging-curve/YearlyTrendChart.tsx) — the
+  canonical `charging.curve.*` and shared `common.*` namespaces. The remaining
+  keys back the native-only chrome (freshness chip, stale/offline banner,
+  loading / error / retry copy, and the VoiceOver value nouns).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"charging.curve.yearlyTrend" = "Yearly Charging Speed Trend";
+"charging.curve.yearlyTrendDesc" = "Average time-to-charge and session count by year";
+"charging.curve.yearlyTrend.aria" = "Yearly average charge-time and session-count composed chart";
+"charging.curve.col.year" = "Year";
+"charging.curve.col.avg10to80" = "10→80% avg min";
+"charging.curve.col.avg20to80" = "20→80% avg min";
+"charging.curve.col.dcSessions" = "DC Sessions";
+"charging.curve.minutes" = "Minutes";
+"charging.curve.sessionCount" = "Sessions";
+"charging.curve.avg10to80Line" = "10→80% avg";
+"charging.curve.avg20to80Line" = "20→80% avg";
+"charging.curve.dcSessions" = "DC Sessions";
+"common.noData" = "No data available";
+
+/* --- Native chrome: freshness + connectivity --- */
+"charging.curve.live" = "Live";
+"charging.curve.stale" = "Stale";
+"charging.curve.offline" = "Offline";
+"charging.curve.staleBanner" = "Reconnecting — the yearly trend may be stale";
+"charging.curve.offlineBanner" = "Offline — showing the last loaded yearly trend";
+
+/* --- Native chrome: states --- */
+"charging.curve.loading" = "Loading yearly trend";
+"charging.curve.errorTitle" = "Couldn't load the yearly trend";
+"charging.curve.retry" = "Retry";
+
+/* --- Native chrome: VoiceOver value nouns --- */
+"charging.curve.a11yYears" = "years";
+"charging.curve.a11ySessions" = "sessions";
+"charging.curve.a11yNoData" = "No data";
