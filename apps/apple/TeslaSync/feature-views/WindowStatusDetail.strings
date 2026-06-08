@@ -1,0 +1,45 @@
+/*
+  WindowStatusDetail.strings
+  TeslaSync — P4 feature view · 0049 · WindowStatusDetail (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `WindowStatusDetail` resolves (table "WindowStatusDetail") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/security-access/WindowStatusDetail.tsx + the WINDOW_KEYS
+  labels + the windowState value keys). The second group backs the native-only chrome
+  (freshness / banner / summary / states / accessibility) the Apple HIG states
+  contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.security.windowDetail" = "Window Status Detail";
+"admin.security.window.fd" = "Front Driver";
+"admin.security.window.fp" = "Front Passenger";
+"admin.security.window.rd" = "Rear Driver";
+"admin.security.window.rp" = "Rear Passenger";
+"admin.security.windowState.closed" = "Closed";
+"admin.security.windowState.venting" = "Venting";
+"admin.security.windowState.open" = "Open";
+"admin.security.windowState.unknown" = "Unknown";
+
+/* --- Native chrome: freshness + connectivity (ADR-013) --- */
+"admin.security.window.live" = "Live";
+"admin.security.window.stale" = "Stale";
+"admin.security.window.offline" = "Offline";
+"admin.security.window.staleBanner" = "Reconnecting — window status may be stale";
+"admin.security.window.offlineBanner" = "Offline — showing last known window status";
+
+/* --- Native chrome: summary (web windowSummary) --- */
+"admin.security.window.allClosed" = "All Closed";
+"admin.security.window.openVenting" = "Open/Venting";
+
+/* --- Native chrome: states + accessibility --- */
+"admin.security.window.loadingA11y" = "Loading window status";
+"admin.security.window.error" = "Couldn't load window status";
+"admin.security.window.retry" = "Retry";
+"admin.security.window.empty" = "No recent window telemetry for this vehicle.";
