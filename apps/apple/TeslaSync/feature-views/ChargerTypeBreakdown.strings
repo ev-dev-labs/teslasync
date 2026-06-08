@@ -1,0 +1,36 @@
+/*
+  ChargerTypeBreakdown.strings
+  TeslaSync — P4 feature view · 0108 · ChargerTypeBreakdown (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargerTypeBreakdown` resolves (table "ChargerTypeBreakdown") lives here with
+  its web value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact keys + values extracted from the web source
+  (features/charging/components/cost-analysis/ChargerTypeBreakdown.tsx), verified
+  against web/src/i18n/en.json (costAnalysis.*). The second group backs the
+  native-only chrome (freshness banners, loading / error copy, accessibility, and
+  the unit suffixes the web passes to fmtWithUnit / the $/kWh rate label).
+*/
+
+/* --- Web source (costAnalysis.*, parity with en.json) --- */
+"costAnalysis.chargerType.title" = "Cost by Charger Type";
+"costAnalysis.chargerType.sessions" = "sessions";
+"costAnalysis.charts.noData" = "Not enough data";
+
+/* --- Native chrome: accessibility + loading + error --- */
+"costAnalysis.chargerType.a11y" = "Cost by charger type";
+"costAnalysis.chargerType.loading" = "Loading cost by charger type";
+"costAnalysis.chargerType.errorTitle" = "Couldn't load charger type costs";
+"costAnalysis.chargerType.retry" = "Retry";
+
+/* --- Native chrome: freshness banners --- */
+"costAnalysis.chargerType.refresh" = "Refresh";
+"costAnalysis.chargerType.staleBanner" = "Reconnecting — charger type costs may be out of date";
+"costAnalysis.chargerType.offlineBanner" = "Offline — showing the last known charger type costs";
+
+/* --- Native chrome: unit suffixes (web passes 'kWh' to fmtWithUnit; '/kWh' on the rate) --- */
+"costAnalysis.chargerType.energyUnit" = "kWh";
+"costAnalysis.chargerType.perKwhSuffix" = "/kWh";
