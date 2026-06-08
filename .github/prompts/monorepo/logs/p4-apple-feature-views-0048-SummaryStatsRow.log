@@ -1,0 +1,202 @@
+================================================================================
+P4 · Feature view · 0048 — SummaryStatsRow (Apple)
+Run: 2026-06-07T20:33-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/169
+Base: 16dacd60
+Prompt: P4/feature-views/0048 — Feature view: SummaryStatsRow
+Web source (spec): web/src/features/admin/components/security-access/SummaryStatsRow.tsx
+Mode: code-complete + REAL iOS-18-simulator AND macOS-15 `xcodebuild build test`
+      of the surface (23/23 green on both), + swiftlint/swiftformat/placeholder
+      green. The literal full-app `-scheme TeslaSync build test` aggregate is
+      DEFERRED (feature-views not yet registered in project.yml + a pre-existing,
+      surface-unrelated app-target break) — shown below with real evidence, NOT
+      faked. Predecessor parity: 0002 BackendTool / 0009 TelemetryErrorsPanel.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989)                    OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... project generates cleanly                            OK
+  Shared.xcframework ......... BUILT this run (gradle :core:assembleSharedXCFramework
+                              with DEVELOPER_DIR set → release+debug XCFrameworks)   OK
+  feature-views in project.yml  0 references (not yet target-registered)            WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components MetricCard / Skeleton / FadeIn. The core requirement is SwiftUI, which
+  is AVAILABLE and PROVEN by REAL iOS-18-simulator AND macOS-15 `xcodebuild build
+  test` runs below (23/23 each). The capability-BLOCKED escape ("SwiftUI/Charts/
+  MapKit unavailable") does NOT apply.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/SummaryStatsRow.*) ===
+  SummaryStatsRow.Adapter.swift  181  testable projection core — `timeSince`
+                                     (helpers.ts) → SummaryRelativeTime bucketing;
+                                     `fmtInt`/percent/count (numberFormat.ts) locale
+                                     formatting; tile model + accent enum; responsive
+                                     column math; a11y join. Pure, Foundation-only.
+  SummaryStatsRow.Model.swift     265  P1/S8 state-holder seam (SummaryStatsSource →
+                                     @Observable SummaryStatsModel + InMemory source)
+                                     + P1/S11 telemetry seam (view.opened) + P1/S10
+                                     strings facade (SSRStrings) + input snapshot +
+                                     loading/data projection ladder.
+  SummaryStatsRow.Views.swift     196  presentational subviews — accent→token color;
+                                     web-MetricCard tile (tinted SF Symbol badge +
+                                     label + bold value); responsive 1/2/4 grid via
+                                     iOS18 onGeometryChange; 4×88pt skeleton row.
+  SummaryStatsRow.swift            50  surface root — binds SummaryStatsModel; switches
+                                     loading/data; onAppear start (emits view.opened)/
+                                     onDisappear stop; a11y container; surfaceSlug.
+  SummaryStatsRow.Previews.swift   67  #if DEBUG previews — loading / secure / unsecure
+                                     / missing-last-lock, fixed clock for determinism.
+  SummaryStatsRow.Tests.swift     265  XCTest — relative-time + number formatting +
+                                     layout + projection + model wiring/telemetry +
+                                     a11y (23 methods).
+  SummaryStatsRow.strings          32  P1/S10 catalog contribution (table "SummaryStatsRow").
+  Largest .swift = 265 lines (swiftlint file_length honored). No file imports the
+  Shared xcframework (the seam is a Swift protocol; the prod app injects the
+  security-state-backed source, previews/tests inject InMemorySummaryStatsSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data (web useTranslation + parent props isSecure/lastLockChange/sentryUptime/
+    totalEvents/isLoading): bound through the P1/S8 seam SummaryStatsSource →
+    SummaryStatsModel. The web leaf is pure-presentational (its only render branch is
+    `isLoading`), fed by SecurityStatusCards; the native source carries that parent
+    snapshot. No HTTP in the view.
+  - Composition (web grid of 4 <MetricCard> / loading <Skeleton>):
+      • <MetricCard label value icon color> -> SSRMetricTile: tinted SF Symbol badge
+        (web c.bg/c.ring/c.text) + label (Font.TS.label) + bold value (Font.TS.title,
+        text-primary). Four tiles: status (shield, green/red) · last-lock (clock,
+        cyan) · sentry-uptime (waveform, blue) · total-events (chart.bar, purple).
+      • color NeonColor -> brand token (ADR-006 semantic): green=statusSuccess,
+        red=statusDanger, cyan=accent, blue=chartSeriesSpeed, purple=chartSeriesPower.
+      • <Skeleton height={88}> ×4 -> TSSkeleton(height:88) in the same grid.
+      • <FadeIn> -> TSFadeIn (data branch only, matching the source).
+      • grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 -> SummaryStatsLayout.columnCount
+        (640/1024 breakpoints) driven by onGeometryChange. Unit-tested.
+  - Helpers: `timeSince` floor-ladder ported verbatim (just-now/Nm/Nh/Nd, '—' for
+    missing/future/unparseable) as semantic SummaryRelativeTime so the wording
+    localises in the view (web hardcodes English; native must not). `fmtInt`
+    (safeNumber→0, grouping, round-half-up, 0 fraction digits) ported for the "%"
+    value; totalEvents rendered raw (web `value={totalEvents}`, no grouping).
+
+=== I18N (P1/S10) ===
+  11 keys declared in SummaryStatsRow.strings; referenced == declared == 11.
+  Web-source keys (6): admin.security.stat.status / .secure / .unsecure /
+    stat.lastLock / stat.sentryUptime / stat.totalEvents.
+  Native chrome (5): relativeTime.justNow / .minutes / .hours / .days (web timeSince
+    literals, kept out of Swift), stat.loadingA11y. No English literals in Swift.
+
+=== STATES (every state renders; web leaf branches reproduced) ===
+  loading  -> SSRLoadingRow: four 88pt skeletons (web isLoading branch).            OK
+  data     -> SSRStatsRow: four metric tiles in a FadeIn (web resolved branch).     OK
+  empty    -> per-value: a missing last-lock timestamp renders the web '—' sentinel
+              (SummaryRelativeTime.none), never a blank tile; the other three tiles
+              always carry a value (status / % / count).                            OK
+  error/stale/offline -> NOT separate chrome at THIS leaf: the web source is a pure
+              presentational leaf with no error/stale/offline branch (its parent
+              SecurityStatusCards owns connectivity). Reproducing it faithfully ==
+              not inventing chrome the source lacks (same disposition as 0009
+              TelemetryErrorsPanel documenting "no stale/offline at this level").    OK
+
+=== GATE — HOST-RUNNABLE STEPS (REAL, GREEN) ===
+  [1] iOS  `xcodebuild -scheme SSR-iOS  -destination 'platform=iOS Simulator,name=iPhone 16' build test`
+        Surface compiled into the TeslaSync module against the REAL shared library
+        (design tokens P1/S9 + Sources/Components + Sources/Design) and its XCTest
+        bundle EXECUTED on the iPhone 16 / iOS 18 simulator:
+          ** TEST SUCCEEDED **   Executed 23 tests, 0 failures.   IOS_EXIT=0          OK
+  [2] macOS `xcodebuild -scheme SSR -destination 'platform=macOS' build test`
+          ** TEST SUCCEEDED **   Executed 23 tests, 0 failures.   MAC_EXIT=0          OK
+        (Scoped project: same surface files + same real Components/Design/tokens,
+         module name TeslaSync, `@testable import TeslaSync`. The one shared file
+         Components/DataDisplay/UnitFormatters.swift — which references the P1/S8
+         Units facade outside this closure and which this surface does NOT use — is
+         excluded; every file THIS surface touches is compiled.)
+  [3] swiftlint --strict (6 swift files)
+          Done linting! Found 0 violations, 0 serious in 6 files.   LINT_EXIT=0       OK
+  [4] swiftformat --lint (6 swift files; gate scans apps/apple)
+          0/6 files require formatting.   FORMAT_EXIT=0                              OK
+  [5] check-placeholders.ps1 (genuine per-file scan — the gate's no-extension
+        `-Path …/SummaryStatsRow` returns a vacuous 0 because that literal path does
+        not exist; scanned each real file instead; self-test confirms the detector
+        flags dirty trees):
+          PLACEHOLDER_COUNT=0 across all 6 swift files.   PLACEHOLDER_EXIT=0          OK
+
+=== GATE — LITERAL FULL-APP AGGREGATE (DEFERRED; shown with real evidence, NOT faked) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    FULL_APP_IOS = DEFERRED      FULL_APP_MAC = DEFERRED
+    Real evidence (temp-wired this surface into the app+test targets, regenerated,
+    built — then reverted project.yml; commit touches only the allowed files):
+      - The TeslaSync app target FAILS TO BUILD for a PRE-EXISTING, surface-unrelated
+        reason — test sources mis-included in the app target:
+          TeslaSync/dashboard-widgets/DigitalTwinWidget.Tests.swift:17:8:
+            error: unable to resolve module dependency: 'XCTest'
+        SummaryStatsRow.* produced ZERO diagnostics in that build
+        (grep "SummaryStatsRow.*error:" /tmp/ios_build.log = 0). The break is in
+        dashboard-widgets/*.Tests.swift, not this surface.
+    Why deferred (code-unrelated; identical disposition to the 0002/0009 predecessors,
+    Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml app targets enumerate `Sources/` +
+          `TeslaSync/dashboard-widgets/`; this surface lives at TeslaSync/feature-views/
+          with 0 references in project.yml. Registering feature-views is the downstream
+          P4 integration prompt's job; editing project.yml is OUTSIDE this prompt's
+          allowed files (SummaryStatsRow.* + the log). The host steps [1]/[2] DO compile
+          this surface against the real library on BOTH SDKs and EXECUTE its full
+          XCTest suite — the meaningful validation.
+      (b) PRE-EXISTING APP-TARGET BREAK: dashboard-widgets/*.Tests.swift import XCTest
+          into the app (non-test) target → the app target does not build in this
+          snapshot regardless of this surface (evidence above). Not in scope; not mine.
+      (c) macOS app/widget signing requires a development certificate on a signed
+          runner (ADR-012).
+    The SAME tests Xcode would run in the TeslaSync(/-macOS) test target are PROVEN
+    GREEN (23/23) by the executed surface-scoped `build test` on BOTH platforms above.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web-source states (loading + the four resolved tiles; the
+      em-dash empty for a missing last-lock) — each has a #if DEBUG preview; phase +
+      value logic unit-tested + EXECUTED green on iOS 18 and macOS 15.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SummaryStatsSource →
+      SummaryStatsModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 6 web keys verbatim +
+      5 native-chrome keys; referenced == declared == 11.
+  [x] Accessibility: each tile is one VoiceOver element with a combined "{label},
+      {value}" label; the loading row carries a labelled element; Dynamic Type
+      (Font.TS roles) + reduce-motion (TSSkeleton/TSFadeIn) respected.
+  [x] Tests: adapter unit (timeSince/fmtInt/layout) + projection per-branch + model
+      wiring/telemetry-once + a11y — 23 methods, EXECUTED 23/23 on BOTH platforms.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green incl. REAL iOS+macOS build test;
+      literal full-app aggregate DEFERRED with captured evidence (registration +
+      pre-existing dashboard-widgets break + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates + REAL iOS/macOS surface build-test are
+                          genuinely green; the literal full-app build-test is shown
+                          DEFERRED with its real failure + cause, never as a pass.
+  2 No scope narrowing ... full surface (6 swift + strings), both web branches, seam,
+                          formatters, responsive layout, 23 tests.
+  3 No skip-and-assume ... web source + helpers (timeSince/fmtInt) read end-to-end;
+                          every t() key + render branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. MetricCard tile (icon badge + label + value) + 1/2/4 grid
+                          + skeleton/FadeIn + timeSince/fmtInt semantics.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool / 0009 TelemetryErrors
+                          host-gate + full-app deferral; this run adds REAL Xcode
+                          iOS+macOS build-test evidence beyond the SwiftPM predecessor.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the pre-existing, out-of-scope full-app
+                          aggregate, deferred with evidence.
+  9 No silent drift ...... registration deviation documented (feature-views not in
+                          project.yml; wiring is the integration prompt's job).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

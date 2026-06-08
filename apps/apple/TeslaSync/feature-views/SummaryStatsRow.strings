@@ -1,0 +1,32 @@
+/*
+  SummaryStatsRow.strings
+  TeslaSync — P4 feature view · 0048 · SummaryStatsRow (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SummaryStatsRow` resolves (table "SummaryStatsRow") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/security-access/SummaryStatsRow.tsx). The second group
+  backs the native-only chrome: the relative-time wording the web `timeSince`
+  hardcodes in English (helpers.ts) is keyed here so the Swift sources hold no
+  English literals, plus the loading accessibility label.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.security.stat.status" = "Current Status";
+"admin.security.secure" = "Secure";
+"admin.security.unsecure" = "Unsecure";
+"admin.security.stat.lastLock" = "Last Lock Change";
+"admin.security.stat.sentryUptime" = "Sentry Uptime";
+"admin.security.stat.totalEvents" = "Total Events";
+
+/* --- Native chrome: relative time (web timeSince) + accessibility --- */
+"admin.security.relativeTime.justNow" = "just now";
+"admin.security.relativeTime.minutes" = "%lldm ago";
+"admin.security.relativeTime.hours" = "%lldh ago";
+"admin.security.relativeTime.days" = "%lldd ago";
+"admin.security.stat.loadingA11y" = "Loading security summary";
