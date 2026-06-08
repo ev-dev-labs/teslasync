@@ -1,0 +1,71 @@
+/*
+  DriveAnalyticsSection.strings
+  TeslaSync — P4 feature view · 0166 · DriveAnalyticsSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `DriveAnalyticsSection`
+  resolves (table "DriveAnalyticsSection") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept in
+  a per-surface table so each parallel surface prompt owns its own strings without editing the shared
+  catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/driving-dynamics/DriveAnalyticsSection.tsx). The remainder back the native
+  state envelope (freshness chip, connectivity banner, loading / empty / error chrome), the date range
+  picker, the unit glyphs the web embeds inline, and the accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"dynamics.driveAnalytics" = "Drive Analytics";
+"dynamics.speedDistribution" = "Speed Distribution";
+"dynamics.speedDistDesc" = "Drives grouped by average speed";
+"dynamics.speedDistribution.aria" = "Speed-bucket drive count distribution bar chart";
+"dynamics.col.range" = "Speed range";
+"dynamics.col.drives" = "Drives";
+"dynamics.drives" = "Drives";
+"dynamics.accelPatterns" = "Acceleration Patterns";
+"dynamics.accelPatternsDesc" = "Peak power vs trip distance";
+"dynamics.accelPatterns.aria" = "Per-drive scatter chart of peak power versus trip distance";
+"dynamics.distance" = "Distance";
+"dynamics.peakPower" = "Peak Power";
+"dynamics.avg" = "Avg";
+"dynamics.powerProfile" = "Power Profile";
+"dynamics.powerProfileDesc" = "Peak & regen power for recent drives";
+"dynamics.powerProfile.aria" = "Recent-drives peak and regen power dual-area chart";
+"dynamics.col.drive" = "Drive";
+"dynamics.col.maxKw" = "Max kW";
+"dynamics.col.regenKw" = "Regen kW";
+"dynamics.maxPower" = "Max Power (kW)";
+"dynamics.regenPower" = "Regen Power (kW)";
+
+/* --- Embedded unit glyphs the web writes inline (template literals) --- */
+"dynamics.kwUnit" = "kW";
+"dynamics.emDash" = "—";
+
+/* --- Date range picker (web `RangePicker`) --- */
+"dynamics.range.from" = "From";
+"dynamics.range.to" = "To";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"dynamics.live" = "Live";
+"dynamics.stale" = "Stale";
+"dynamics.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"dynamics.staleBanner" = "Reconnecting — drive analytics may be stale";
+"dynamics.offlineBanner" = "Offline — showing the last loaded drive analytics";
+
+/* --- Inner per-chart empty states (web `EmptyState`) --- */
+"dynamics.noSpeed" = "No speed data";
+"dynamics.noAccel" = "No power data";
+"dynamics.noPower" = "No power profile data";
+
+/* --- Accessibility summaries --- */
+"dynamics.noData" = "No data";
+"dynamics.a11yBuckets" = "speed ranges";
+
+/* --- Loading / empty / error chrome --- */
+"dynamics.loading" = "Loading drive analytics";
+"dynamics.noDrives" = "No drives in this range";
+"dynamics.emptyHint" = "Drives in the selected window will appear here as speed, acceleration, and power charts.";
+"dynamics.errorTitle" = "Couldn't load drive analytics";
+"dynamics.retry" = "Retry";
