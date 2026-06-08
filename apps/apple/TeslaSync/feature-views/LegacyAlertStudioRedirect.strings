@@ -1,0 +1,52 @@
+/*
+  LegacyAlertStudioRedirect.strings
+  TeslaSync — P4 feature view · 0186 · LegacyAlertStudioRedirect (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native LegacyAlertStudioRedirect
+  resolves (table "LegacyAlertStudioRedirect") lives here with its English value. These entries fold into
+  the app `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table
+  so each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The web source (features/notifications/components/LegacyAlertStudioRedirect.tsx) is anonymous: it renders
+  nothing and extracts no `t()` keys — its whole body is `<Navigate to={`/notifications/studio${search}`}
+  replace />`. Every key below therefore backs the native redirect chrome (title, the redirecting / resolved
+  / empty / error states, the freshness chip, the connectivity banner, the forwarded-params note) and the
+  accessibility summaries — none of which exist as English literals in the Swift sources.
+*/
+
+/* --- Surface title + destination identity --- */
+"legacyAlertStudioRedirect.title" = "Alert Studio";
+"legacyAlertStudioRedirect.destination" = "Alert Studio";
+"legacyAlertStudioRedirect.parent" = "Notifications";
+
+/* --- Redirecting (the web pre-navigation render) --- */
+"legacyAlertStudioRedirect.redirecting" = "Redirecting to Alert Studio…";
+
+/* --- Resolved (the dispatched redirect) --- */
+"legacyAlertStudioRedirect.resolvedTitle" = "Opening Alert Studio";
+"legacyAlertStudioRedirect.continue" = "Continue";
+"legacyAlertStudioRedirect.forwarding" = "Carrying over %d link parameter(s)";
+
+/* --- Empty (no inbound location — safe parent fallback) --- */
+"legacyAlertStudioRedirect.emptyTitle" = "Alert Studio is unavailable";
+"legacyAlertStudioRedirect.emptyMessage" = "We couldn't read where to send you. Open Notifications to continue.";
+"legacyAlertStudioRedirect.goToParent" = "Go to Notifications";
+
+/* --- Error (resolve failure — web QueryError) --- */
+"legacyAlertStudioRedirect.errorTitle" = "Couldn't open Alert Studio";
+"legacyAlertStudioRedirect.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"legacyAlertStudioRedirect.live" = "Live";
+"legacyAlertStudioRedirect.stale" = "Stale";
+"legacyAlertStudioRedirect.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"legacyAlertStudioRedirect.staleBanner" = "Reconnecting — the redirect still works";
+"legacyAlertStudioRedirect.offlineBanner" = "Offline — the redirect still works; it's a local route change";
+
+/* --- Accessibility summaries --- */
+"legacyAlertStudioRedirect.a11y.redirecting" = "Redirecting to %@";
+"legacyAlertStudioRedirect.a11y.resolved" = "Opening %@";
+"legacyAlertStudioRedirect.a11y.empty" = "Alert Studio is unavailable";
+"legacyAlertStudioRedirect.a11y.error" = "Couldn't open Alert Studio";
