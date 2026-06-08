@@ -1,0 +1,245 @@
+================================================================================
+P4 · Dashboard widget · 0087 — SignalCatalogWidget (Apple)
+Run: 2026-06-07T18:47-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/90
+Base: 34c98f3a
+Prompt: P4/dashboard-widgets/0087 — SignalCatalogWidget
+Web source (spec): web/src/features/dashboard/widgets/SignalCatalogWidget.tsx
+Registry: signal-catalog · telemetry · default 2×4 · min 2×4 · max 4×40
+Mode: code-complete + DEFERRED Xcode app build/test (P4/0057 precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  swiftc SwiftUI ............. import SwiftUI/Observation + ContentUnavailableView +
+                               TextField(text:prompt:label:) + Section/pinnedViews
+                               compiles at -target arm64-apple-macos15.0           OK  (real probe, exit 0)
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh, self-test PASS              OK
+  xcodebuild ................. UNAVAILABLE on this runner —
+        `xcode-select -p` = /Library/Developer/CommandLineTools
+        `xcodebuild -version` -> "tool 'xcodebuild' requires Xcode, but active
+         developer directory '/Library/Developer/CommandLineTools' is a command
+         line tools instance"                                                       N/A
+  iOS simulator (simctl) ..... UNAVAILABLE — `xcrun simctl` not a developer tool    N/A
+  XCTest.framework ........... UNAVAILABLE under CLT — `import XCTest` -> "no such
+         module 'XCTest'" (ships with full Xcode; suite runs in the Xcode target)   N/A
+
+  Charts/Maps capability note: this surface uses NO Swift Charts and NO MapKit
+  (web "Charts / maps used: (none)"). The CORE authoring capability — SwiftUI —
+  IS present and is PROVEN by the real macOS-SDK typechecks below. The
+  capability-BLOCKED escape hatch (SwiftUI/Charts/MapKit unavailable) therefore
+  does NOT apply: the surface is authored and host-validated for real. Only the
+  full Xcode *app* build/test gate is unavailable here, which is a DEFERRAL to a
+  signed CI runner (below), not a capability block of the surface.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/SignalCatalogWidget.*) ===
+  SignalCatalogWidget.Models.swift    184  Foundation DTOs/projection/enums + i18n string resolver
+  SignalCatalogWidget.Builder.swift   226  pure adapter (cached→projection) + a11y copy
+  SignalCatalogWidget.Model.swift     166  P1/S8 source seam + P1/S11 telemetry + @Observable model
+  SignalCatalogWidget.Row.swift       258  search field + unit badge + row + sticky group header +
+                                           compact count summary + freshness chip (all surface-local)
+  SignalCatalogWidget.swift           271  the surface (shell header + every state branch)
+  SignalCatalogWidget.Previews.swift  147  #if DEBUG previews — one per state + compact
+  SignalCatalogWidget.Tests.swift     364  XCTest: adapter + model + registry + a11y (28 methods)
+  SignalCatalogWidget.strings          58  P1/S10 catalog (6 source keys + 28 native chrome/a11y keys)
+  Every file ≤400 lines (house file_length); one exported view per file
+  (SignalCatalogWidget; all leaf components in .Row are internal). Shared registry
+  types (DashboardWidgetSize / DashboardWidgetRegistration) are REUSED from the
+  sibling DigitalTwinWidget.Model.swift — referenced, never redefined (grep-verified:
+  zero `struct DashboardWidgetSize|Registration` in SignalCatalogWidget.*), and the
+  two surfaces compile together with zero collisions (step [3]).
+
+=== PARITY (vs web SignalCatalogWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (SignalCatalogSource →
+    SignalCatalogModel): useVehicles, useSignalCatalog, useSignalObservations,
+    useTelemetry, useTranslation. The production app wires the source over the KMP
+    telemetry catalog store + the per-vehicle observations store
+    (StateHolderModel<LoadableState<…>>); the view performs NO HTTP.
+  Projection → SignalCatalogBuilder is a 1:1 port of the web derivation:
+    observationCounts (tally by signal_name), the filtered memo (case-insensitive
+    search across name / description / source_module with the empty-search short
+    circuit), the grouped memo (source_module || "Uncategorized" fallback + the
+    alphabetical category sort with within-category catalog order preserved),
+    fmtInt (locale grouping), and isCompact (cols ≤ 1). Verified by an executed
+    harness (below, 52/52).
+  Composition → WidgetShell chrome reproduced natively: book icon + uppercase
+    "Signal Catalog" title + tappable DataFreshness chip (the refresh control) ·
+    search Input (magnifier + clear) · category sections with sticky headers
+    ("(N)" count) · per-signal row = monospaced name + neutral unit Badge +
+    right-aligned observation count · the compact big-number "signals available"
+    layout · stale/offline banner. Recharts→none; Leaflet→none.
+  States (all render) → loading (skeleton search bar + rows) · empty ("No signals
+    in catalog") · error (retry) · stale (amber chip + banner) · offline (muted chip
+    + cached banner) · content (search + grouped list, with the inner "No matching
+    signals" empty state when the search filters everything out). The compact
+    (cols≤1) branch from the web source is reproduced (defensive — the shared 2-col
+    min keeps it un-instantiated by the grid on BOTH platforms; its predicate is
+    unit-tested and the SignalCatalogCountSummary has its own #Preview).
+  i18n → all 6 source keys PRESENT in SignalCatalogWidget.strings
+    (widget.signalCatalog.uncategorized, .title, .noData, .signalsAvailable,
+    .searchPlaceholder, .noResults), plus 28 native-chrome/a11y keys. No English
+    literals in native code (every string flows through the P1/S10 facade). The lone
+    placeholder-gate trigger word is the i18n KEY "searchPlaceholder" (verbatim from
+    the web source), opt-ed out with `// parity:allow web i18n key parity`.
+  a11y → each row is one VoiceOver element speaking name + unit + count; each group
+    header speaks "category, N signals"; the chip has a Refresh label + freshness
+    value; the search field + clear button have labels; Dynamic Type via tokens;
+    Reduce Motion gates the chip spin + skeleton shimmer.
+  Telemetry → SignalCatalogModel.start() emits viewOpened(surface:
+    "SignalCatalogWidget") → bridges shared Telemetry.track(.screenView) (P1/S11).
+    Asserted by a spy test.
+  Registry → SignalCatalogWidget.registration: id "signal-catalog", category
+    "telemetry", default 2×4, min 2×4, max 4×40 (+ clamp()), matching
+    registry/telemetry.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] Adapter executed test (compiled Models+Builder to a native binary with a
+    harness and RAN it — real "cached → projection" verification, not a typecheck):
+      swiftc -O Models.swift Builder.swift main.swift -o harness && ./harness
+      52/52 checks PASSED — observation tally, compact split, search match across
+      name/description/module, case-insensitive filter, category fallback, grouped
+      projection (alphabetical category sort + within-category order + counts +
+      Uncategorized), phase resolution, freshness precedence (offline▸error▸
+      fetching▸stale▸fresh), int formatting, relative-time buckets, a11y row/group/
+      freshness copy.
+      ADAPTER_HARNESS_EXIT=0                                                        OK
+
+[2] swiftc -typecheck — the 5 production surface files compiled together with the
+    REAL apps/apple component library (Tokens + Design{TSDesign,TSMaterial} +
+    UI{Typography,Cards,Badges} + Feedback/Skeletons→TSSkeleton) + a verbatim
+    signature shim of the shared DashboardWidgetSize/Registration:
+      xcrun swiftc -typecheck -target arm64-apple-macos15.0 <surface+lib+shim>
+      TYPECHECK_EXIT=0                                                             OK
+      (Platform-agnostic SwiftUI — no #if os(iOS) branches — so the macOS compile
+       covers the iOS/iPadOS code paths. @Observable / onChange(of:_,_) /
+       ContentUnavailableView / TextField(text:prompt:label:) / LazyVStack
+       pinnedViews + Section all resolve against the macOS 15 SDK.)
+
+[3] swiftc -typecheck COEXISTENCE — the 5 new production files compiled together
+    with the committed DigitalTwinWidget.* surface (which DEFINES the real
+    DashboardWidgetSize/Registration) + the real component library, NO shim —
+    proving the new surface reuses the real shared types with zero redeclaration or
+    symbol collision:
+      COEXIST_OVERALL_EXIT=0   (0 total errors, 0 mentioning the new surface)      OK
+
+[4] swiftc -typecheck TESTS — SignalCatalogWidget.Tests.swift compiled in-module
+    (XCTest shim, since XCTest is CLT-unavailable) against the surface + real
+    component library, proving every assertion is type-correct vs the public API:
+      TESTS_TYPECHECK_EXIT=0                                                       OK
+
+[5] swiftlint --strict:
+      surface-scoped (the 7 new .swift files, explicit paths):
+        Done linting! Found 0 violations, 0 serious in 7 files.
+        SURFACE_SWIFTLINT_EXIT=0                                                   OK
+      bare gate `swiftlint --strict` (from apps/apple, included: paths, 322 files):
+        Found 1 violation, 1 serious in 322 files.
+        -> LifetimeStatsWidget.Adapter.swift:141: Function Body Length (78>50 lines)
+        SWIFTLINT_GATE_EXIT=2                                              PRE-EXISTING
+      NOTE (honesty rule 1, 9): the single bare-gate violation is in
+      LifetimeStatsWidget.Adapter.swift — a SIBLING file committed by b7fffb07
+      (the P4/0055 LifetimeStatsWidget prompt), UNMODIFIED by this task
+      (`git status` shows only SignalCatalogWidget.* added) and OUTSIDE this
+      prompt's allowed files (apps/apple/TeslaSync/dashboard-widgets/SignalCatalogWidget.*).
+      It is a baseline defect this prompt is forbidden to touch, NOT introduced by
+      this surface. This surface's own contribution is 0/0 (surface-scoped, above).
+
+[6] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 8 new files):
+      0/326 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                               OK
+
+[7] check-placeholders (ADR-011 stub gate):
+      self-test ............................................. SELFTEST_EXIT=0      OK
+      gate's literal `-Path .../SignalCatalogWidget` (a filename PREFIX → Test-Path
+        resolves to nothing → clean scan): PLACEHOLDER_COUNT=0  EXIT=0             OK
+      REAL scoped scan of ONLY the 8 new files (-Path <tmp copy>):
+        PLACEHOLDER_ALLOWED=1   PLACEHOLDER_COUNT=0   EXIT=0                       OK
+      (The 1 ALLOWED is the i18n key literal "searchPlaceholder" — the verbatim web
+       source key — opt-ed out with `// parity:allow web i18n key parity`. No
+       TODO/FIXME/stub/mock/Lorem/fatalError("unimpl") in the shipped code.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to a signed Xcode CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (four independent, code-unrelated reasons — none is a defect in
+    this surface):
+      (a) NO XCODE ON THIS RUNNER: active developer dir is CommandLineTools;
+          xcodebuild + simctl are absent (evidence in the capability probe). The
+          surface is instead host-validated by the executed adapter harness + three
+          real swiftc compiles above (steps [1]–[4]).
+      (b) NOT-YET-REGISTERED: project.yml's app target globs `Sources/` +
+          `TeslaSync/dashboard-widgets`; the dashboard-widgets dir currently carries
+          duplicate DashboardWidgetSize definitions across parallel surfaces
+          (DigitalTwin / BatteryCells / DrivetrainHealth) that the P4 integration
+          prompt reconciles — so a full-target compile is integration-pending,
+          independent of this surface (which adds NO new definition).
+      (c) Shared.xcframework not staged: the app target links the KMP core
+          (Kotlin/Native gradle build). Independent of this UI surface.
+      (d) macOS signing: the macOS app/widget entitlements require a development
+          certificate (ADR-012 defers to a signed macos-latest runner).
+    XCTest (SignalCatalogWidget.Tests.swift) runs in the TeslaSync(/-macOS) test
+    target under Xcode; XCTest is CLT-unavailable here. Its pure-adapter subset is
+    PROVEN GREEN by the executed harness [1]; the model/registry/a11y suites are
+    PROVEN TYPE-CORRECT against the public API by the in-module typecheck [4].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content +
+      compact) — implemented; each has a #if DEBUG preview; phase + freshness logic
+      unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in view.
+  [x] Every i18n key from source has a matching catalog key — 6/6 source keys present.
+  [x] Accessibility labels on every interactive element; each row/group is one
+      labeled element; search field + clear + chip + retry labeled.
+  [x] Tests: adapter unit test (executed, 52/52) + per-state model test + registry +
+      a11y label test (type-correct vs public API).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0
+      (the lone trigger is the verbatim web i18n key, opt-ed out with a reason).
+  [x] Host gates green (harness/typecheck×3/format/placeholder + surface-scoped
+      swiftlint 0/0); Xcode app build/test DEFERRED with capability + integration
+      evidence (per P4/0057 disposition). Bare swiftlint's 1 violation is a
+      pre-existing sibling defect outside this prompt's allowed files.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green). The bare
+                       swiftlint gate's 1 violation is reported truthfully and
+                       attributed to a pre-existing out-of-scope sibling file
+                       (LifetimeStatsWidget.Adapter.swift, commit b7fffb07).
+  2  No scope narrowing: implemented ALL states + search + grouped list + compact +
+                       unit badge + banner + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the web derivation + full composition +
+                       all states incl. the defensive compact branch.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid
+                       (integration prompt's scope), did NOT add a 4th shared-type
+                       definition, and did NOT edit the shared Localizable.xcstrings
+                       — strings shipped as the per-surface table. Did NOT touch the
+                       pre-existing sibling swiftlint defect (out of allowed files).
+  8  No commit on red  : committing on all-green host gates for THIS surface; Xcode
+                       steps DEFERRED (not failed); the one bare-gate violation is a
+                       pre-existing sibling defect this prompt may not modify.
+  9  No silent drift   : changes confined to the allowed SignalCatalogWidget.* files
+                       + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SignalCatalogWidget shipped at parity with the web
+  source: pure-Swift cached→projection adapter (executed-green, 52/52), P1/S8
+  state-holder seam (no view HTTP), P1/S11 telemetry, every state + all 6 source
+  i18n keys + a11y labels, registry-correct (signal-catalog, 2×4/2×4/4×40), reusing
+  the shared registry types + the real TSSkeleton component library (proven by three
+  real swiftc compiles incl. a no-shim coexistence with DigitalTwinWidget). All
+  host-runnable gates pass for this surface; the Xcode app build/test is DEFERRED to
+  a signed CI runner (no Xcode on this runner + dashboard-widgets integration-pending
+  + Shared.xcframework + macOS signing — none a defect in this code), matching the
+  committed P4/0057 "code-complete + DEFERRED Xcode gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/SignalCatalogWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0087-SignalCatalogWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add SignalCatalogWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,58 @@
+/*
+  SignalCatalogWidget.strings
+  TeslaSync — P4 dashboard widget · 0087 · SignalCatalogWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  SignalCatalogWidget resolves (table "SignalCatalogWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The six keys extracted verbatim from the web source
+  (features/dashboard/widgets/SignalCatalogWidget.tsx) are
+  widget.signalCatalog.uncategorized, .title, .noData, .signalsAvailable,
+  .searchPlaceholder, and .noResults. The rest back the native chrome (registry
+  description, freshness chip, state copy, banners, and accessibility phrases).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.signalCatalog.uncategorized" = "Uncategorized";
+"widget.signalCatalog.title" = "Signal Catalog";
+"widget.signalCatalog.noData" = "No signals in catalog";
+"widget.signalCatalog.signalsAvailable" = "signals available";
+"widget.signalCatalog.searchPlaceholder" = "Search signals…";
+"widget.signalCatalog.noResults" = "No matching signals";
+
+/* --- Registry metadata (registry/telemetry.ts → "signal-catalog") --- */
+"widget.signalCatalog.description" = "Browse all available telemetry signals with categories and observation counts";
+
+/* --- Native chrome: freshness chip --- */
+"widget.signalCatalog.freshness.live" = "Live";
+"widget.signalCatalog.freshness.updating" = "updating…";
+"widget.signalCatalog.freshness.stale" = "Stale";
+"widget.signalCatalog.freshness.error" = "Error";
+"widget.signalCatalog.freshness.errorShort" = "error";
+"widget.signalCatalog.freshness.offline" = "Offline";
+"widget.signalCatalog.freshness.refresh" = "Refresh";
+"widget.signalCatalog.freshness.justNow" = "just now";
+"widget.signalCatalog.freshness.minutes" = "%lldm ago";
+"widget.signalCatalog.freshness.hours" = "%lldh ago";
+"widget.signalCatalog.freshness.days" = "%lldd ago";
+"widget.signalCatalog.freshness.weeks" = "%lldw ago";
+
+/* --- Native chrome: search + states + banners --- */
+"widget.signalCatalog.searchA11y" = "Search signals";
+"widget.signalCatalog.clear" = "Clear search";
+"widget.signalCatalog.loading" = "Loading signal catalog";
+"widget.signalCatalog.emptyHint" = "Signals appear here once your vehicle streams telemetry.";
+"widget.signalCatalog.errorTitle" = "Couldn't load the catalog";
+"widget.signalCatalog.retry" = "Retry";
+"widget.signalCatalog.noResultsHint" = "Try a different search term.";
+"widget.signalCatalog.offlineBanner" = "Offline — showing the last loaded catalog";
+"widget.signalCatalog.staleBanner" = "Reconnecting — the catalog may be out of date";
+
+/* --- Accessibility: counts --- */
+"widget.signalCatalog.observationsA11y" = "%lld observations";
+"widget.signalCatalog.signalsCountA11y" = "%lld signals";
+"widget.signalCatalog.countSummaryA11y" = "%lld signals available";
