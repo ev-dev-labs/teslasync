@@ -1,0 +1,54 @@
+/*
+  AuditPanel.strings
+  TeslaSync — P4 feature view · 0026 · AuditPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  AuditPanel resolves (table "AuditPanel") lives here with its web `t(key, default)`
+  English value. These entries fold into the app Localizable.xcstrings master
+  catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog
+  (parallel-safe across the concurrent slots).
+
+  Keys are the exact ones extracted from the web source
+  (web/src/features/admin/components/dlq-inspector/AuditPanel.tsx). The remaining
+  keys back the native-only chrome (panel title, freshness chip, retry/error/offline
+  copy) and the per-result token labels the web Badge renders verbatim.
+*/
+
+/* --- Column headers (web `DataTable` columns) --- */
+"admin.dlq.audit.cols.replayedAt" = "Replayed at";
+"admin.dlq.audit.cols.actor" = "Actor";
+"admin.dlq.audit.cols.dlqId" = "DLQ ID";
+"admin.dlq.audit.cols.result" = "Result";
+"admin.dlq.audit.cols.dstTopic" = "Destination";
+"admin.dlq.audit.cols.error" = "Error";
+"admin.dlq.audit.cols.traceId" = "Trace ID";
+
+/* --- Empty state (web `EmptyState`) --- */
+"admin.dlq.audit.empty.title" = "No replay attempts yet";
+"admin.dlq.audit.empty.scopedMessage" = "This entry has not been replayed. Use the Replay action above to send it back to its source topic.";
+"admin.dlq.audit.empty.globalMessage" = "Replay attempts will appear here once an operator triggers one.";
+
+/* --- Loading (web `DataTable` emptyMessage while fetching) --- */
+"admin.dlq.audit.loading" = "Loading audit log…";
+
+/* --- Result tokens (web Badge body `{row.result}`) --- */
+"admin.dlq.audit.result.ok" = "ok";
+"admin.dlq.audit.result.publishFailed" = "publish_failed";
+"admin.dlq.audit.result.rateLimited" = "rate_limited";
+"admin.dlq.audit.result.disabled" = "disabled";
+"admin.dlq.audit.result.notFound" = "not_found";
+"admin.dlq.audit.result.unparseable" = "unparseable";
+"admin.dlq.audit.result.unknown" = "—";
+
+/* --- Native chrome: title + freshness + actions --- */
+"admin.dlq.audit.title" = "Replay audit log";
+"admin.dlq.audit.live" = "Live";
+"admin.dlq.audit.stale" = "Stale";
+"admin.dlq.audit.offline" = "Offline";
+"admin.dlq.audit.refresh" = "Refresh";
+"admin.dlq.audit.retry" = "Retry";
+
+/* --- Native chrome: error + offline copy --- */
+"admin.dlq.audit.errorTitle" = "Couldn't load replay audit log";
+"admin.dlq.audit.offlineMessage" = "Offline — showing last known audit log";
