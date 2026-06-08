@@ -1,0 +1,247 @@
+=== P4 Feature view 0074 ChargingSection (Apple) ===
+Host: Darwin arm64 (Apple Silicon) · Xcode 26.5 (Build 17F42) present at
+/Applications/Xcode.app (activated for this run via DEVELOPER_DIR; the default
+xcode-select points at CommandLineTools). Swift 6.3.2. swiftlint + swiftformat +
+pwsh + xcodegen on PATH. iPhone 16 simulator + iOS/macOS 26.5 SDKs available.
+KMP shared-core toolchain present (apps/shared/gradlew + Java 17 OpenJDK).
+
+Web source (THE specification):
+  web/src/features/analytics/components/weekly-digest/ChargingSection.tsx
+Native output (allowed files):
+  apps/apple/TeslaSync/feature-views/ChargingSection.{swift,Adapter,Model,Views,
+    Chart,Previews,Tests}.swift
+  apps/apple/TeslaSync/feature-views/ChargingSection.strings
+  + this log.
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web -> native)
+---------------------------------------------------------------------------
+  props:  metrics: DigestMetrics + dailyEnergyData: DailyEnergyEntry[]      ->
+            ChargingMetrics + [ChargingDailyEnergy] pushed via ChargingUpdate
+  hooks:  useTranslation + useFormatting(formatCurrency)                    ->
+            ChargingStrings (P1/S10 facade) + ChargingFormat/ChargingFormatting
+  shell:  <FadeIn delay={0.15}> + <GlassPanel className="space-y-6 p-6">    ->
+            TSFadeIn(delay:0.15) + tokenized glass card (Color.TS.surface +
+            TSRadius.lg + Color.TS.border)
+  title:  <Zap class="text-neon-green"/> t('…chargingSection','Charging')    ->
+            ChargingHeader: bolt.fill (Color.TS.statusSuccess) + Font.TS.panel
+  chart:  Recharts <BarChart data=dailyEnergyData><Bar dataKey="energy"      ->
+            fill={CHART_COLORS[1]}>                                            Swift Charts Chart{ BarMark }.foregroundStyle(TSChartPalette.color(at:1))
+            label t('…dailyEnergyAdded','Daily Energy Added (kWh)')           (#E69F00 == web CB-safe palette index 1), .chartXSelection tooltip
+  stats:  4x <MiniStat> Sessions / Total Energy Added / Avg Charge Rate /    ->
+            Total Cost (fmtInt / fmtNumber+kWh / fmtNumber+kW / formatCurrency) ChargingStatsGrid(adaptive 1->4 cols) of ChargingStatTile; values via
+                                                                               ChargingProjection.stats (NumberFormatter == toLocaleString, half-up)
+  badge:  <Badge variant={added>=prev?'success':'warning'} size="sm">        ->
+            prev>0 ? pctChange% : '—'                                         ChargingWeekOverWeekRow + ChargingTrendBadge (statusSuccess/statusWarning)
+  tip:    <Tooltip content={<ChartTooltip/>}>                                -> ChargingTooltip via RuleMark annotation (day + Energy Added + kWh)
+  i18n:   8 exact web t() keys + fallbacks                                    -> resolved through ChargingStrings facade (table "ChargingSection")
+
+  Number parity probed on host: NumberFormatter(.decimal, grouping, halfUp)
+  == web toLocaleString — 1234.5@1="1,234.5", 12345.6@0="12,346",
+  42.567@1="42.6", 18.49@2="18.49". CHART_COLORS[1] #E69F00 ==
+  Color.TS.chartCategorical[1] (0.902,0.624,0.000) == TSChartPalette.color(at:1).
+
+STATES (every one renders — no hidden surface):
+  loading  -> ChargingLoading (TSSkeleton chart + 4 tiles + badge row; reduce-motion safe)
+  content  -> ChargingEnergyCard (bar chart) + ChargingStatsGrid + ChargingWeekOverWeekRow
+  empty    -> ChargingEmpty (ContentUnavailableView "No charging this week"); plus the
+              inline ChargingChartEmpty when content exists but no daily breakdown
+  error    -> ChargingError (QueryError-equiv, Retry -> model.refresh())
+  stale    -> freshness chip (Stale) + connectivity banner + one guarded auto-refresh
+  offline  -> freshness chip (Offline) + banner; keeps cached tiles, no refetch
+a11y: container summary (Charging + 4 stat label/value pairs), chart summary
+  (title + day count + total kWh), per-bar VoiceOver value, reduce-motion gate,
+  Dynamic Type via system-font tokens.
+telemetry: P1/S11 view.opened(surface:"ChargingSection") emitted once on appear.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (per-surface)
+    $ swiftformat --lint TeslaSync/feature-views/ChargingSection.*.swift ChargingSection.swift
+    -> 0/7 files require formatting.
+    MYFORMAT_EXIT=0   PASS
+
+[2] swiftformat --lint apps/apple   (THE gate command, whole tree)
+    -> SwiftFormat completed. 0/787 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0   PASS
+
+[3] swiftlint --strict (per-surface, explicit paths, --no-cache)
+    $ swiftlint lint --strict --no-cache TeslaSync/feature-views/ChargingSection.*.swift
+    -> Linting 7 files. Done linting! Found 0 violations, 0 serious in 7 files.
+    MYLINT_EXIT=0   PASS  (this surface is clean)
+    (One line-length violation was found + fixed during development by extracting
+     ChargingTooltip.energyText; re-linted clean.)
+
+[4] swiftlint --strict   (THE bare gate command, from apps/apple)
+    -> Linting 783 files. Found 1 violation, 1 serious.
+    LINT_EXIT=2   PRE-EXISTING SIBLING DEFECT, NOT THIS SURFACE:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+      error: Function Body Length Violation (currently 78 lines) (function_body_length)
+    This file is outside this prompt's allowed-files scope; editing it would
+    violate the no-sibling-edit / predecessor-bypass rule. All 7 ChargingSection
+    files lint clean (gate [3]). Reported, not hidden (Covenant #1). Same
+    pre-existing defect noted in sibling logs 0047-SentryModeChart / 0016-HttpStatusTool.
+
+[5] check-placeholders.ps1   (THE gate command)
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ChargingSection
+    -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    PLACEHOLDER_EXIT=0   PASS  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+[6] EXECUTED adapter self-test (Foundation only, Swift 6 strict concurrency)
+    $ swiftc -swift-version 6 -strict-concurrency=complete ChargingSection.Adapter.swift main.swift && ./selftest
+    32 assertions, all green: bar order + negative/non-finite clamp; pctChange
+      parity (up/down/prev0); number/int/currency formatting (1,234.5 / 12,346 /
+      $18.49 / NaN->0.0 / blank-symbol->$); the 4 stat tile values (1,234 /
+      42.5 kWh / 11.2 kW / $18.49); trend tone+text (6.3% positive, -20.0%
+      negative, '—' sentinel); hasContent + resolvePhase envelope; totalEnergy;
+      surface slug; section/chart/bar a11y summaries.
+    -> ADAPTER_SELFTEST=PASS
+    COMPILE_EXIT=0 / RUN_EXIT=0   PASS
+
+[7] OUT-OF-MODULE type-check of the full SwiftUI + Swift Charts view set
+    (REAL apps/design/generated/apple/Tokens.swift + REAL Sources/Design/TSDesign.swift
+    [TSChartPalette] + REAL Sources/Components/Motion/Motion.swift [TSFadeIn] + a
+    faithful TSSkeleton shim [the real Skeletons.swift also declares sibling
+    skeletons that depend on TSCard, an unrelated component] + the 6 ChargingSection
+    view/model/adapter/previews files), Swift 6 strict concurrency. Both gate platforms:
+    iOS Simulator (SDK iPhoneSimulator26.5, -target arm64-apple-ios18.0-simulator):
+      IOS_TYPECHECK_EXIT=0   PASS
+    macOS (SDK MacOSX26.5, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0   PASS
+    No symbol collisions: grep of Sources/TeslaSync/TeslaSyncWidgets for all 30+
+    public ChargingSection type names returned zero pre-existing definitions.
+
+===========================================================================
+XCODE APP-TARGET GATE — pre-existing RED at HEAD (proven), DEFERRED to the
+P4 integration prompt (Covenant #1/#8: not faked, not this surface's defect).
+===========================================================================
+  Gate as written:
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+
+  Real probe performed on this host (not assumed):
+    $ xcodebuild -version              -> Xcode 26.5 (17F42)                  present
+    $ xcodegen generate               -> Created TeslaSync.xcodeproj (gitignored)
+    $ xcodebuild -list                -> Schemes TeslaSync, TeslaSync-macOS, … resolve
+    $ grep -c ChargingSection …pbxproj -> 48  (this surface IS target-registered now;
+                                          project.yml lines 37/68 list TeslaSync/feature-views)
+    $ apps/shared/gradlew :core:assembleSharedXCFramework --offline
+                                      -> BUILD SUCCESSFUL in 7m39s; release
+                                          Shared.xcframework written + staged (149M).
+                                          (KMP Kotlin/Native compiles FROM-CACHE; release
+                                          links executed. So the ADR-004 pre-action is
+                                          satisfiable on this host.)
+    $ xcodebuild -scheme TeslaSync-macOS build   -> ** BUILD FAILED **, exit 65.
+
+  Why DEFERRED — TWO pre-existing, out-of-scope defects, BOTH proven independent
+  of this surface (this surface contributes ZERO errors):
+
+   (a) project.yml registers TeslaSync/feature-views as an APP-target source path
+       (lines 37/68) with NO `**/*Tests.swift` exclude, while the test targets
+       (TeslaSyncTests / TeslaSync-macOSTests, lines 224/244) source ONLY Tests/Unit.
+       So every feature-view *.Tests.swift (which `import XCTest`) is compiled into
+       the app target, which does not link XCTest:
+         TeslaSync/feature-views/AuditPanel.Tests.swift:19:8:
+           error: unable to resolve module dependency: 'XCTest'
+       PROOF it is pre-existing: moved all 8 ChargingSection.* files OUT (pbxproj
+       ChargingSection refs -> 0), regenerated, rebuilt -> IDENTICAL AuditPanel.Tests
+       .swift XCTest error (exit 65). The break exists at HEAD with this surface absent.
+
+   (b) Excluding the test files (xcodebuild … build EXCLUDED_SOURCE_FILE_NAMES='*Tests.swift',
+       a command-line setting, no file edits) surfaces 159 further pre-existing
+       compile errors — ALL in sibling dashboard-widgets (e.g.
+       Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:
+         error: 'DashboardWidgetSize' is ambiguous for type lookup in this context;
+       MotorPerformanceWidget.*, OdometerCounterWidget.*, WeeklyDigestWidget.*,
+       WeeklySummaryCardWidget.*, YearReviewWidget.* …). grep of the full failure log
+       for ChargingSection.*\.swift errors -> ZERO. This surface compiles clean inside
+       the same app module; the remaining red is duplicate-type defects in sibling
+       widgets.
+
+  Both (a) project test-target wiring and (b) sibling widget duplicate-type defects
+  are owned by the P4 integration prompt — outside this per-surface prompt's allowed
+  files (ChargingSection.* + this log). Fixing either would be a predecessor-bypass /
+  sibling edit (Covenant #7). A green app build here would therefore have required
+  editing out-of-scope files. This surface is instead verified green by gates [6]
+  (executed adapter logic) and [7] (Swift-6-strict iOS + macOS type-check of the
+  rendered SwiftUI/Charts view set) — real compiler verification on both gate
+  platforms — plus the zero-error evidence above from the real app-target compile.
+  Matches the user-approved 0047-SentryModeChart / 0016-HttpStatusTool
+  "code-complete + DEFERRED Xcode app gate" disposition.
+
+  IOS_EXIT=DEFERRED  MAC_EXIT=DEFERRED  (real probe above; not green, not faked)
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : Xcode app build/test reported DEFERRED with a REAL
+                          xcodebuild/xcodegen/gradle probe; the pre-existing sibling
+                          swiftlint failure + the 159 pre-existing widget compile
+                          errors + the XCTest test-file error are all reported (not
+                          hidden); every PASS is a command run on THIS host with its
+                          real exit code.
+  2 No scope narrowing  : implemented ALL composition (chart + 4 stat tiles + week-
+                          over-week badge + tooltip) + every state (loading/content/
+                          empty/error/stale/offline) + a11y + i18n + P1/S11 telemetry.
+  3 No skip-and-assume  : each host gate executed; the Xcode path was actually probed
+                          (xcodegen + -list + a real app build into the KMP pre-action,
+                          which was driven to BUILD SUCCESSFUL), not assumed; the
+                          pre-existing break was PROVEN by removing this surface.
+  4 No stubs as final   : complete implementations; placeholder gate COUNT=0; executed
+                          adapter self-test PASS (32 assertions).
+  5 No parity shortcuts : faithful port of the dailyEnergyData bar chart (CHART_COLORS[1]
+                          fill), the formatCurrency/fmtNumber/fmtInt formatting, the
+                          pctChange + success/warning badge with the '—' sentinel, and
+                          the exact 8 web i18n keys/fallbacks.
+  6 No delegation       : authored directly (no sub-agent delegation of the surface).
+  7 No predecessor bypass: did NOT edit project.yml to fix the app-target test-file
+                          wiring or the sibling widget defects (P4 integration scope);
+                          did NOT edit the shared Localizable.xcstrings (parallel-unsafe)
+                          — strings ship as the per-surface ChargingSection.strings table;
+                          did NOT edit any sibling file (incl. the lint/compile-broken ones).
+  8 No commit on red    : committing on all-green host gates for THIS surface; the Xcode
+                          app gate is explicitly DEFERRED (pre-existing, proven not this
+                          surface's defect), not falsely claimed green.
+  9 No silent drift     : changes confined to the allowed ChargingSection.* files + this
+                          log. Two pre-existing working-tree edits to web/ admin .tsx files
+                          (FleetApiSection.tsx, BackupRestorePage.tsx) predate this task and
+                          are left unstaged. Generated artifacts (TeslaSync.xcodeproj,
+                          Frameworks/Shared.xcframework, apps/shared/core/build) are gitignored.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native ChargingSection shipped at parity with the web source:
+  a pure, executed-green projection core (Foundation, Swift 6 strict) with web-exact
+  number/currency formatting, a P1/S8 state-holder seam (no view HTTP), a P1/S10 i18n
+  facade, P1/S11 view.opened telemetry, the native Swift Charts daily-energy bar chart
+  with selection tooltip, the four-tile stat grid, the success/warning week-over-week
+  badge, and every prompt state (loading/content/empty/error/stale/offline) with
+  VoiceOver + Dynamic Type + reduce-motion. All host-runnable gates pass under Swift 6
+  strict concurrency on BOTH iOS-Simulator and macOS SDKs. The Xcode app build/test is
+  DEFERRED to the P4 integration runner: the app target is red at HEAD from two
+  pre-existing, out-of-scope defects (feature-view *.Tests.swift swept into the app
+  target [XCTest], and sibling dashboard-widget duplicate-type ambiguities) — both
+  PROVEN independent of this surface, which contributes zero compile errors. The bare
+  swiftlint gate's single violation is a pre-existing sibling file
+  (LifetimeStatsWidget.Adapter.swift) outside this prompt's allowed-files scope.
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/ChargingSection.swift \
+          apps/apple/TeslaSync/feature-views/ChargingSection.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/ChargingSection.Model.swift \
+          apps/apple/TeslaSync/feature-views/ChargingSection.Views.swift \
+          apps/apple/TeslaSync/feature-views/ChargingSection.Chart.swift \
+          apps/apple/TeslaSync/feature-views/ChargingSection.Previews.swift \
+          apps/apple/TeslaSync/feature-views/ChargingSection.Tests.swift \
+          apps/apple/TeslaSync/feature-views/ChargingSection.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0074-ChargingSection.log
+  git commit -m "feat(apps/apple/feature-views): add ChargingSection surface (P4)"
+
+EXIT=0
+STATUS=DONE

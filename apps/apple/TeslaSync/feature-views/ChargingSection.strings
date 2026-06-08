@@ -1,0 +1,50 @@
+/*
+  ChargingSection.strings
+  TeslaSync — P4 feature view · 0074 · ChargingSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargingSection` resolves (table "ChargingSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/analytics/components/weekly-digest/ChargingSection.tsx). The remainder
+  back the native state envelope (freshness chip, connectivity banner, loading /
+  empty / error chrome) and the chart axes / accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"analytics.weeklyDigest.chargingSection" = "Charging";
+"analytics.weeklyDigest.dailyEnergyAdded" = "Daily Energy Added (kWh)";
+"analytics.weeklyDigest.energyAdded" = "Energy Added";
+"analytics.weeklyDigest.sessions" = "Sessions";
+"analytics.weeklyDigest.totalEnergyAdded" = "Total Energy Added";
+"analytics.weeklyDigest.avgChargeRate" = "Avg Charge Rate";
+"analytics.weeklyDigest.totalCost" = "Total Cost";
+"analytics.weeklyDigest.energyVsLastWeek" = "Energy vs. Last Week";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"analytics.weeklyDigest.live" = "Live";
+"analytics.weeklyDigest.stale" = "Stale";
+"analytics.weeklyDigest.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"analytics.weeklyDigest.charging.staleBanner" = "Reconnecting — charging summary may be stale";
+"analytics.weeklyDigest.charging.offlineBanner" = "Offline — showing last known charging summary";
+
+/* --- Chart axes + accessibility scaffolding --- */
+"analytics.weeklyDigest.charging.day" = "Day";
+"analytics.weeklyDigest.charging.energy" = "Energy";
+"analytics.weeklyDigest.charging.days" = "days";
+"analytics.weeklyDigest.charging.a11y" = "Bar chart of daily energy added in kilowatt-hours";
+"common.noData" = "No data available";
+
+/* --- Loading / empty / error chrome --- */
+"analytics.weeklyDigest.charging.loading" = "Loading charging summary";
+"analytics.weeklyDigest.charging.empty" = "No charging this week";
+"analytics.weeklyDigest.charging.emptyHint" = "Charging sessions will appear here once your vehicle charges this week.";
+"analytics.weeklyDigest.charging.noDailyBreakdown" = "No daily breakdown available";
+"analytics.weeklyDigest.charging.errorTitle" = "Couldn't load charging summary";
+"analytics.weeklyDigest.charging.retry" = "Retry";
