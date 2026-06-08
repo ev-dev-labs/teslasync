@@ -1,0 +1,221 @@
+================================================================================
+P4 · Dashboard widget · 0086 — SentryEventLogWidget (Apple)
+Run: 2026-06-07T19:10-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/89
+Base: 34c98f3a
+Prompt: P4/dashboard-widgets/0086 — SentryEventLogWidget
+Web source (spec): web/src/features/dashboard/widgets/SentryEventLogWidget.tsx
+Registry (canonical): web/src/features/dashboard/widgets/registry/security.ts → "sentry-event-log"
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (27/27) +
+      DEFERRED Xcode app build/test (0036/0054 precedent, ADR-012). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  iPhone 16 simulator ........ present (Booted)                                     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint (0.x)                     OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 42 references (target-registered; xcodegen EXIT=0)   OK
+
+  NOTE on active toolchain: `xcode-select -p` points at /Library/Developer/
+  CommandLineTools (no iPhoneSimulator SDK), so a bare `xcodebuild`/`xcrun
+  --sdk iphonesimulator` fails ("tool requires Xcode" / "SDK cannot be located").
+  Full Xcode 26.5 IS installed at /Applications/Xcode.app and is used here via the
+  DEVELOPER_DIR override (the 0054 GuardModeWidget precedent), which unlocks the
+  iOS 18 simulator SDK, the macOS 15 SDK, the iPhone 16 simulator, and `swift test`.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — the surface is authored, both-SDK-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/SentryEventLogWidget.*) ===
+  SentryEventLogWidget.Adapter.swift   271  testable projection core — deriveEvent precedence ladder
+                                            (SentryEventCatalog: openDoors/derive/visual/title/subtitle),
+                                            SentryFeedBuilder (newest-first sort + cap), SentryLayout
+                                            (eventLimit / showsSubtitle), relative-time, a11y summary
+  SentryEventLogWidget.Model.swift     279  P1/S8 state-holder seam (SentrySource→SentryModel) + P1/S11
+                                            telemetry seam + SecurityEvent DTO + registry + P1/S10 strings
+                                            facade + in-memory source
+  SentryEventLogWidget.Views.swift     139  presentational subviews — connectivity banner / event feed /
+                                            feed empty state / timeline event row
+  SentryEventLogWidget.swift           228  SentryEventLogWidget surface (shell chrome + freshness chip +
+                                            refresh/open + state switch + size-derived limit/subtitle)
+  SentryEventLogWidget.Previews.swift  147  #if DEBUG previews — one per state (content 2×4 / wide 4×4 /
+                                            empty / loading / error / offline / stale)
+  SentryEventLogWidget.Tests.swift     335  XCTest — adapter + layout + model + registry + a11y
+                                            (27 methods)
+  SentryEventLogWidget.strings          55  P1/S10 catalog contribution (3 source-parity keys + 6 event
+                                            titles + 4 subtitle fragments + native chrome + a11y)
+  Total 1454 lines across 7 files; every file <= 400 lines (house file_length).
+  Shared registry types (DashboardWidgetSize / DashboardWidgetRegistration) and tokens
+  (Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton) are REUSED from the
+  P4 core (no redeclaration → no duplicate symbols when compiled in the app module;
+  proven by `xcodegen generate` EXIT=0 with all 7 files registered).
+
+=== PARITY (vs web SentryEventLogWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (SentrySource -> SentryModel):
+    useVehicles, useTranslation, useQuery('/security?vehicle_id=&limit='). The production app wires
+    SentrySource by composing the vehicles store (web id = vehicleId ?? vehicles[0].id) with the
+    security-events query; the view performs NO HTTP.
+  Projection -> SentryEventCatalog.derive is a 1:1 port of the web `deriveEvent` precedence ladder:
+    open-doors (amber #f59e0b, warning) > sentry-on (cyan #06b6d4, info) > sentry-off (slate #6b7280,
+    info) > locked (green #22c55e, info) > unlocked (red #ef4444, critical) > "security state updated"
+    (purple #8b5cf6, info). openDoors() reproduces split(',')→trim→filter(includes 'open'); the door
+    title echoes the token list ("Door open: <tokens>"). Subtitle reproduces parts.join(' · ') || '—'
+    (🔒 Locked / 🔓 Unlocked + 🛡️ Sentry On / Sentry Off). displayTimestamp = created_at ?? ts;
+    stableID = id ?? "<vehicle_id>-<ts>". SentryFeedBuilder sorts newest-first + caps. All verified
+    by the EXECUTED XCTest below.
+  Layout -> SentryLayout.eventLimit(size) = isWide(cols>=3) ? 10 : isTall(rows>=2) ? 7 : 4, and
+    showsSubtitle = cols>=3 (web `isWide`). Default 2×4 → 7 rows, no subtitle. Verified by tests.
+  Composition -> shell chrome (shield icon + "Sentry Event Log" title + freshness chip + refresh +
+    optional Open) · newest-first event feed (timeline icon in the event color + localized title +
+    relative time + lock/sentry subtitle when wide) · feed empty state. SF Symbols: door.left.hand.open
+    / eye.fill / eye.slash.fill / lock.fill / lock.open.fill / door.left.hand.closed.
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone (real Badges.swift) /
+    TSSkeleton + ContentUnavailableView, compiled against the REAL design tokens in the typechecks
+    below. Recharts -> none / Leaflet -> none (no chart/map on this surface).
+  States (all render) -> loading (skeleton rows) · empty (ContentUnavailableView "No security events
+    recorded") · error (retry affordance) · stale (chip + banner) · offline (cached rows + chip +
+    banner) · content; PLUS the feed-level empty fallback. Model phase resolution keeps cached rows
+    visible behind refresh/errors, matching the web shell.
+  i18n -> all source strings resolve through the P1/S10 facade (table "SentryEventLogWidget") with the
+    web English fallback; the web `deriveEvent` titles + subtitle fragments are hardcoded literals in
+    the web source and are routed through keys here so the Swift view holds NO English literals:
+      widget.sentryEventLog, widget.sentryEventLog.description, widget.noSentryEvents,
+      widget.sentryDoorOpen, widget.sentryActivated, widget.sentryDeactivated, widget.sentryLockedTitle,
+      widget.sentryUnlockedTitle, widget.sentryUpdated, widget.sentryLocked, widget.sentryUnlocked,
+      widget.sentryOn, widget.sentryOff  + native chrome (live/stale/offline/refresh/retry/open/
+      loading/emptyHint/errorTitle/offlineBanner/staleBanner) + a11y (sentryOpenA11y) — ALL present
+      in SentryEventLogWidget.strings.
+  a11y -> each event row carries a combined title(+subtitle when shown) value (SentryAccessibility.
+    eventSummary); the freshness chip + refresh + retry + open buttons each carry an accessibilityLabel;
+    icons are accessibilityHidden; Dynamic Type via tokens; Reduce Motion gates the TSSkeleton shimmer.
+  Telemetry -> SentryModel.start() emits viewOpened(surface:"SentryEventLogWidget") -> bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once).
+  Registry -> SentryEventLogWidget.registration: id "sentry-event-log", category "security",
+    default 2×4, min 2×4, max 4×40 (+ clamp()), matching registry/security.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the surface — Model + Adapter + Views + Widget +
+    Previews — compiled together with the REAL design Tokens + the REAL TSTone Badges, plus minimal
+    real-interface registry/TSSkeleton shims; Swift 6 language mode):
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  Shims Tokens Badges  SentryEventLogWidget.{Model,Adapter,Views,,Previews}.swift
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+    harness (real production Adapter/Model/Views/Widget + real design Tokens + real TSTone Badges +
+    minimal real-interface registry/TSSkeleton shims), Swift 6 language mode (.swiftLanguageMode(.v6)):
+      Executed 27 tests, with 0 failures (0 unexpected) in 0.005 seconds
+        SentryAdapterTests   13/13  (derive precedence open-doors/sentry/lock/fallback, openDoors
+                                     trim/filter/empty, title door-list echo + key resolution, subtitle
+                                     composition + keys, feed sort-by-displayTimestamp, cap, id/timestamp
+                                     fallbacks, relative time)
+        SentryLayoutTests     2/2   (eventLimit wide=10 / tall=7 / small=4; showsSubtitle cols>=3)
+        SentryModelTests      7/7   (phase loading/empty/error/content, content-with-cache, telemetry-
+                                     once, refresh delegation, connection+projection tracking)
+        SentryRegistryTests   2/2   (canonical sentry-event-log metadata, clamp min 2×4 / max 4×40)
+        SentryAccessibilityTests 3/3 (summary includes/omits subtitle; omits em-dash sentinel)
+      SWIFT_TEST_EXIT=0                                                             OK
+[4] swiftlint --strict on the 6 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_SURFACE_EXIT=0                                                           OK
+    Full-tree note: a bare `swiftlint --strict` over apps/apple reports 1 violation —
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length, 78>50).
+      That file is a SIBLING surface (0055), is PRE-EXISTING (untracked diff shows ONLY
+      SentryEventLogWidget.* added by this prompt), and is OUTSIDE this prompt's allowed files. This
+      surface contributes 0 violations.
+[5] swiftformat --lint apps/apple (gate command, config apps/apple/.swiftformat):
+      0/325 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 OK
+[6] check-placeholders (ADR-011 stub gate; swift) — REAL scan of the surface directory:
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      (The bare gate invocation `-Path .../SentryEventLogWidget` resolves to a non-existent literal
+       path and trivially scans nothing; the real directory scan above is the meaningful evidence.)
+[7] xcodegen generate — project + 12 targets + schemes generate cleanly; all 7 surface files are
+    target-registered (42 references in the generated pbxproj):
+      XCODEGEN_EXIT=0                                                               OK
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host, full Xcode 26.5):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **   XCODEBUILD_TARGET_EXIT=65
+    Why deferred (code-unrelated, outside this prompt's allowed files — identical disposition to the
+    0036/0054 predecessors, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native Gradle build (apps/shared/gradlew :core:assembleSharedXCFramework), which the
+          scheme runs as a pre-build phase. This is the integration/CI runner's job (ADR-012,
+          apps/macos-pending-verifications.md) and is independent of this UI surface. Concrete
+          missing-framework error captured above.
+      (b) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+      Staging the framework or editing project.yml is OUTSIDE the allowed files
+      (apps/apple/TeslaSync/dashboard-widgets/SentryEventLogWidget.* + this log), so it is not done here.
+    The MEANINGFUL validation IS performed above: the surface compiles against BOTH the iOS 18
+    simulator and macOS 15 SDKs (steps [1]/[2]) and its full XCTest suite EXECUTES green (27/27,
+    step [3]). Under Xcode these same tests run in the TeslaSync(/-macOS) test target.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) + feed-level empty —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SentrySource->SentryModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — title + empty + the 6 deriveEvent titles
+      + 4 subtitle fragments, all present in SentryEventLogWidget.strings.
+  [x] Accessibility labels on every interactive element; each event row carries a combined value.
+  [x] Tests: adapter + layout + per-state model + registry + a11y — 27 methods, EXECUTED 27/27.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates + both-SDK compiles + executed tests green; Xcode app
+      build/test DEFERRED with captured evidence (code-unrelated infra blocker, outside allowed files).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       missing-framework error captured; every "OK" is a command actually run with its
+                       real exit code (incl. iOS+macOS SDK compiles and an EXECUTED 27/27 XCTest run).
+                       The 1 full-tree swiftlint violation is disclosed as a pre-existing sibling issue.
+  2  No scope narrowing: implemented ALL states/views + i18n + a11y + telemetry + registry + layout.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (Shims used ONLY in the
+                       throwaway typecheck/test harness — clearly labeled, NEVER in shipped files.)
+  5  No parity shortcuts: faithful port of the deriveEvent precedence ladder + feed projection +
+                       size-derived eventLimit/subtitle + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register Shared.xcframework / edit project.yml (integration
+                       runner's scope) and did NOT edit the shared Localizable.xcstrings (parallel-
+                       unsafe) — strings shipped as the per-surface table, exactly like 0036/0054.
+  8  No commit on red  : committing on green host gates + iOS/macOS compiles + executed 27/27 tests;
+                       Xcode app build/test explicitly DEFERRED (captured evidence), not failed; the
+                       lone full-tree lint hit is pre-existing in a sibling, outside allowed files.
+  9  No silent drift   : changes confined to the allowed SentryEventLogWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SentryEventLogWidget shipped at parity with the web source: pure-Swift
+  projection core (EXECUTED-green XCTest, 27/27), P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every state + i18n key + a11y label, registry-correct (sentry-event-log, 2×4 / 2×4 /
+  4×40). All host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and
+  macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency. The signed Xcode
+  app build/test is DEFERRED to the downstream integration/signed runner (un-staged KMP
+  Shared.xcframework + macOS signing — neither a defect in this code, both outside this prompt's
+  allowed files), matching the 0036/0054 "code-complete + DEFERRED Xcode gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/SentryEventLogWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0086-SentryEventLogWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add SentryEventLogWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
