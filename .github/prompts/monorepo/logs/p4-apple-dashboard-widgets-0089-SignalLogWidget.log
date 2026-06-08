@@ -1,0 +1,158 @@
+=== P4 Dashboard widget 0089 SignalLogWidget (Apple) ===
+Artifact : apps/apple/TeslaSync/dashboard-widgets/SignalLogWidget.*
+Web spec : web/src/features/dashboard/widgets/SignalLogWidget.tsx
+Registry : id="signal-log" category="telemetry" default=2x4 min=2x4 max=4x40
+Runner   : macOS (Darwin, arm64). Xcode 26.5 (Build 17F42) via
+           DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — the default
+           `xcode-select -p` is CLT-only, overridden WITHOUT sudo. iPhone 16
+           simulator (iOS 26.5) booted. swiftlint 0.61, swiftformat, pwsh 7, JDK 17
+           all present. Unlike the CLT-only runners of the earlier P4 surfaces,
+           this host CAN run xcodebuild + the KMP Gradle xcframework build, so the
+           Xcode app gate was EXECUTED here (real exit codes below), not assumed.
+
+--- Files shipped (8) ---
+SignalLogWidget.swift           main SwiftUI surface + registration + all states
+SignalLogWidget.Models.swift    Foundation value types + source taxonomy + i18n facade
+SignalLogWidget.Builder.swift   pure cached->projection adapter + a11y copy
+SignalLogWidget.Model.swift     P1/S8 source seam + P1/S11 telemetry + @Observable VM (pause/resume)
+SignalLogWidget.Feed.swift      row + source badge + compact big number + freshness chip
+SignalLogWidget.Previews.swift  per-state DEBUG previews
+SignalLogWidget.strings         P1/S10 per-surface i18n table
+SignalLogWidget.Tests.swift     adapter + model + registry + a11y XCTest suites
+
+========================================================================
+HOST-RUNNABLE GATES (all executed on this runner; all green)
+========================================================================
+
+[1] swiftformat --lint (the 7 shipped Swift files; config apps/apple/.swiftformat)
+    -> "0/7 files require formatting."
+    FORMAT_EXIT=0
+
+[2] swiftlint --strict (the 7 shipped Swift files; config apps/apple/.swiftlint.yml)
+    -> "Done linting! Found 0 violations, 0 serious in 7 files."
+    LINT_EXIT=0
+
+[3] placeholder/stub gate (apps/tools/check-placeholders.ps1)
+    (a) exactly as the prompt gate, -Path .../SignalLogWidget -Language swift
+        -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+        (note: the no-extension -Path is a non-existent literal, so the script
+        treats it as "nothing to scan = clean"; recorded but NOT relied on)
+    (b) real scan of the actual files, -Path apps/apple/TeslaSync/dashboard-widgets
+        -Language swift, filtered to this surface -> PLACEHOLDER_COUNT=0
+        (genuine pass: zero TODO/FIXME/XXX/"Coming soon"/Placeholder/Lorem/
+        "not implemented"/fatalError-unimpl in any shipped file)
+    PLACEHOLDER_EXIT=0
+
+[4] Executed headless adapter harness (the "Foundation-only, run headless" proof)
+    swiftc -O Models.swift Builder.swift main.swift  -> compile exit 0
+    ./harness                                         -> 47/47 PASS, exit 0
+    Covers (port parity with the web source): formatSignalValue precedence,
+    locale-independent number formatting, source label/tone/liveBadge + wire
+    fallback, projectRow id/title/value/visuals, projectFeed newest-first + 20-cap,
+    signals/sec aggregation + Math.round, isCompact threshold, resolvePhase,
+    resolveFreshness precedence, feed relative-time buckets.
+
+[5] swiftc -typecheck of the public adapter API (Models.swift + Builder.swift)
+    -> typecheck exit 0 (clean public surface against the macOS SDK)
+
+[6] swiftc -typecheck of the SwiftUI layer (SignalLogWidget.swift + .Feed.swift +
+    .Model.swift + .Previews.swift) compiled against the REAL design tokens
+    (apps/design/generated/apple/Tokens.swift: Color.TS / Font.TS / TSSpacing /
+    TSRadius) + the REAL TSSkeleton component + a thin shim for the two reused
+    registry value-types (DashboardWidgetSize / DashboardWidgetRegistration).
+    -> typecheck exit 0 (all 4 SwiftUI files, including the #Preview macro).
+    This step CAUGHT AND FIXED a real defect that lint/format did not: an earlier
+    draft used `Font.TS.metric`, which does not exist — corrected to
+    `Font.TS.display` (30pt bold == the web `text-3xl`). Re-linted clean after.
+
+========================================================================
+XCODE APP BUILD/TEST GATE — EXECUTED, then DEFERRED to CI (not green, not my code)
+========================================================================
+Both Xcode app targets were built for real on this host. Neither failure is
+caused by this surface, and NO compiler diagnostic references any SignalLogWidget.*
+file (grep "SignalLogWidget" over both build logs = 0). The KMP Shared.xcframework
+preAction SUCCEEDED here (debug+release, all platforms: "xcframework successfully
+written out" x2), so the framework toolchain is NOT the blocker.
+
+[iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+       Shared.xcframework staged OK -> app target 'TeslaSync' Swift compile FAILED.
+       Root cause (pre-existing, systemic, outside this prompt's allowed files):
+       the co-located `*.Tests.swift` of SIX sibling widgets compile XCTest INTO
+       the app target —
+         error: unable to resolve module dependency: 'XCTest'
+         (a dependency of main module 'TeslaSync'), also imported here:
+           DigitalTwinWidget.Tests.swift, GuardModeWidget.Tests.swift,
+           LifetimeStatsWidget.Tests.swift, LivePowerFlowWidget.Tests.swift,
+           LiveSignalSparklinesWidget.Tests.swift, LocationFavoritesWidget.Tests.swift
+         + "file '<X>.Tests.swift' is part of module 'TeslaSync'; ignoring import"
+           for the @testable self-imports.
+       (Also pre-existing: three duplicate `public struct DashboardWidgetSize`
+       defs already in the module — DrivetrainHealthWidgetModel.swift,
+       BatteryCellsWidgetRegistry.swift, DigitalTwinWidget.Model.swift.)
+       These P4 surfaces are authored as isolated units; wiring the co-located
+       tests into the XCTest target + de-duping the shared registry types is the
+       CI INTEGRATION step's job (see apps/macos-pending-verifications.md and the
+       P4/0036 + 0057 dispositions), not a per-surface prompt restricted to
+       SignalLogWidget.* . Verified independent of this change: every offending
+       file is a sibling that predates this task; removing/adding SignalLogWidget.*
+       does not change the failure.
+       IOS_EXIT=65  (DEFERRED — pre-existing sibling app-target test wiring)
+
+[macOS] xcodebuild -scheme TeslaSync-macOS build
+       error: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that
+       require signing with a development certificate. Enable development signing.
+       This is the documented macOS code-signing deferral (empty DEVELOPMENT_TEAM
+       + entitlements need a dev cert) — an environment/CI concern, exactly the
+       "macOS signing" reason the P4/0057 sibling recorded. No SignalLogWidget
+       reference in the log.
+       MAC_EXIT=65  (DEFERRED — macOS development-certificate signing, CI-only)
+
+Disposition: Xcode app build/test DEFERRED to the signed CI integration runner
+(per apps/macos-pending-verifications.md + the committed P4/0036 & P4/0057
+precedent). It is shown with its REAL non-zero exit codes and is NOT claimed green.
+
+========================================================================
+HONESTY COVENANT
+========================================================================
+ 1  No red-as-green : the Xcode app build/test is shown DEFERRED with its real
+                      exit codes (IOS_EXIT=65, MAC_EXIT=65) and root causes — never
+                      claimed green. Every host "OK" is a command actually run here.
+ 2  No scope narrowing: implemented ALL states (loading/empty/error/stale/offline/
+                      content) + compact signals/sec + pause/resume freeze + feed
+                      rows + source badge + freshness chip + connectivity banner +
+                      i18n + a11y + telemetry + registry.
+ 3  No skip-and-assume: each host gate executed; BOTH Xcode targets built for real
+                      (not assumed) to obtain the deferral evidence.
+ 4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+ 5  No parity shortcuts: faithful port of the web derivation (value formatter,
+                      source mapping, newest-first 20-cap feed, rate aggregation)
+                      + full composition + every state.
+ 6  No delegation     : authored directly; no sub-agent delegation of the surface.
+ 7  No predecessor bypass: did NOT self-register into project.yml / the dashboard
+                      grid and did NOT edit the shared Localizable.xcstrings —
+                      strings ship as the per-surface table (integration scope).
+ 8  No commit on red  : all in-scope host gates are green and this surface compiles
+                      clean (no diagnostic references SignalLogWidget.*); the Xcode
+                      app gate is DEFERRED for pre-existing/environmental reasons,
+                      not failed by this code — matching the 6 committed siblings.
+ 9  No silent drift   : changes confined to the allowed SignalLogWidget.* files +
+                      this log. (Two unrelated pre-existing web edits in the tree
+                      were left untouched and are NOT part of this commit.)
+ 10 Log ends with EXIT/STATUS below.
+
+========================================================================
+DISPOSITION
+========================================================================
+Production-polished native SignalLogWidget shipped at parity with the web source:
+a pure Swift cached->projection adapter (executed-green, 47/47), the P1/S8
+state-holder seam (no HTTP in the view), the P1/S11 view.opened telemetry, every
+render state, the pause/resume freeze, all FIVE source i18n keys (title,
+signals/sec, Resume, Pause, "No signal updates yet") + native-chrome keys, full
+VoiceOver labels + Reduce-Motion respect + 44pt pause target, registry-correct
+("signal-log", 2x4/2x4/4x40) reusing the shared registry types. All host-runnable
+gates pass; the Xcode app build/test is DEFERRED to a signed CI runner (iOS:
+pre-existing sibling XCTest-in-app-target wiring; macOS: development-certificate
+signing — neither a defect in this surface, both proven independent of it).
+
+EXIT=0
+STATUS=DONE
