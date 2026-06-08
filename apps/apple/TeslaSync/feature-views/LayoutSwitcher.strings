@@ -1,0 +1,63 @@
+/*
+  LayoutSwitcher.strings
+  TeslaSync — P4 feature view · 0126 · LayoutSwitcher (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "LayoutSwitcher").
+  Every key the native LayoutSwitcher resolves lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its strings without
+  editing the shared catalog.
+
+  The first group is the EXACT keys extracted from the web source
+  (web/src/features/dashboard/components/LayoutSwitcher.tsx). The web i18next
+  `${name} (Copy)` template is expressed natively as `%@` (resolved with
+  String(format:)). The remaining keys back the native chrome (the save-as alert
+  confirm button, VoiceOver tags, the stale/offline freshness chip, and the
+  load/empty/error states the P4 state list requires).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"layout.label" = "Layout";
+"layout.untitled" = "Untitled";
+"layout.modified" = "modified";
+"layout.switcherLabel" = "Switch dashboard layout";
+"layout.menuLabel" = "Saved layouts";
+"layout.noneVisible" = "No layouts available for this vehicle.";
+"layout.defaultBadge" = "default";
+"layout.newFromCurrent" = "New layout from current";
+"layout.pin" = "Pin to current vehicle";
+"layout.unpin" = "Unpin from vehicle";
+"layout.reset" = "Reset to default";
+"layout.saveAs" = "Save as new layout";
+"layout.saveAsShort" = "Save as";
+"layout.editEnter" = "Edit";
+"layout.editExit" = "Done";
+"layout.editTitle" = "Edit dashboard (E)";
+"layout.menuFooter" = "Manage layouts in the tab strip below";
+"layout.resetTitle" = "Reset dashboard to default?";
+"layout.resetMessage" = "This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.";
+"layout.resetConfirm" = "Reset";
+"layout.saveAsPrompt" = "Name for the new layout:";
+"layout.newLayoutDefault" = "New Layout";
+"common.cancel" = "Cancel";
+
+/* --- Native composition: save-as copy template (web `${name} (Copy)`) --- */
+"layout.copySuffix" = "%@ (Copy)";
+
+/* --- Native chrome: save-as alert confirm (web `window.prompt` OK) --- */
+"layout.saveAsConfirm" = "Save";
+
+/* --- Native chrome: VoiceOver row tags --- */
+"layout.pinnedTag" = "pinned";
+"layout.selectedTag" = "selected";
+
+/* --- Native chrome: live freshness chip (stale / offline) --- */
+"layout.freshness.stale" = "Stale";
+"layout.freshness.offline" = "Offline";
+
+/* --- Native chrome: load / empty / error states --- */
+"layout.loading" = "Loading layouts…";
+"layout.empty" = "No saved layouts";
+"layout.error" = "Couldn’t load layouts";
+"layout.retry" = "Retry";

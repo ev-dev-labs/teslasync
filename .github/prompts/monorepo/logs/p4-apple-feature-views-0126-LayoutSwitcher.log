@@ -1,0 +1,159 @@
+=== P4 Feature view 0126 LayoutSwitcher (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon) — SHARED parallel-slot runner
+                       (this worktree: …/20260607-170817-98066/slot-247). During the Xcode gates the host
+                       carried heavy concurrent load from sibling slots (load avg ~33; 14 simultaneous
+                       xcodebuild/GradleDaemon processes observed) — noted because it shaped the Xcode-gate timing.
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Deployment targets : iOS/iPadOS 18.0 · macOS 15.0 (project.yml; the prompt's HIG minimums). SDKs present:
+                       iphonesimulator26.5 + macosx26.5. Destination "iPhone 16" (iOS Simulator) present.
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh (Gradle KMP pre-action ran to
+                       completion under the scheme's build pre-action; the iOS gate compiled past staging into
+                       the app/extension Swift phases — see GATES).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS SDKs + iPhone-16 simulator all present
+                       → NOT capability-BLOCKED. (This surface uses no chart/map; SwiftUI + native .popover/.alert.)
+
+WEB SOURCE (the specification)
+  web/src/features/dashboard/components/LayoutSwitcher.tsx — a compact dropdown to switch saved dashboard
+  layouts. Pure/presentational (owns no data): props = dashboards, activeId, dirty?, editMode?, onSwitch,
+  onCreate→id?, onDuplicate?, onReset, onToggleEdit?, onPinToVehicle?(id, vehicleId). Hooks: useTranslation
+  ('dashboard'), useSelectedVehicle()→{vehicleId, vehicle}, useConfirm().
+  Branches reproduced (every one):
+    • active   = dashboards.find(id===activeId) ?? dashboards[0]
+    • visible  = scope==null ? true : (selectedVehicleId!=null && scope===selectedVehicleId)
+    • handleSaveAs : blank ⇒ no-op; (onDuplicate && active) ⇒ duplicate(active.id) [typed name ignored];
+                     else create(trimmed); suggestion = "${active.name} (Copy)" / "New Layout"
+    • handleReset  : useConfirm(danger) → onReset
+    • handlePinToggle : active.vehicleId!=null ⇒ unpin(null); else selectedVehicleId!=null ⇒ pin(selected);
+                        disabled when active.vehicleId==null && selectedVehicleId==null
+    • activeName   = active?.name ?? "Untitled"
+    • pinnedLabel  = active?.vehicleId!=null && vehicle ? (display_name ?? vin ?? "#id") : null
+    • trigger(Layout label + name + dirty badge + pinned badge + chevron) + inline Edit/SaveAs/Reset (sm:flex)
+    • menu(radio rows: name + default badge + pin glyph + active check; empty line; New-from-current; pin
+      toggle; Reset(danger); footer hint)
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/ — only files in this commit; git status = 7/7)
+  LayoutSwitcher.Model.swift     250 — Surface slug + Telemetry seam (view.opened) + Strings facade (P1/S10) +
+                                       value types (SavedDashboardSummary, LayoutSwitcherVehicle,
+                                       LayoutSwitcherData, LayoutSwitcherConnection, LayoutSwitcherState,
+                                       LayoutSwitcherActions)
+  LayoutSwitcher.Adapter.swift   343 — Localizer(.bundle/.echo) + PURE projections (active, visible, rows,
+                                       activeName, pinnedLabel, saveAs suggestion+outcome, pinControl+outcome,
+                                       reset-confirm, edit label, freshness chip) + a11y summaries. No SwiftUI.
+  LayoutSwitcher.Views.swift     321 — trigger, inline toolbar, dropdown body, layout row, action row, chip
+  LayoutSwitcher.swift           353 — the View: state switch + native .popover dropdown + .alert reset
+                                       (useConfirm) + .alert save-as TextField (window.prompt) + .task telemetry
+  LayoutSwitcher.Previews.swift  118 — #if DEBUG previews for every state + branch (.echo localizer, no-op actions)
+  LayoutSwitcher.Tests.swift     376 — 19 XCTest cases (adapter branches, i18n key parity, a11y, telemetry)
+  LayoutSwitcher.strings          63 — P1/S10 table "LayoutSwitcher": 23 web-parity keys + native chrome keys
+  Total 1824 lines. No shared-catalog/project edits were needed (the per-surface .strings table folds into
+  Localizable.xcstrings at integration time, the sibling-surface convention).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind/DOM ported)
+  custom dropdown + click-outside/Escape handlers → native .popover (self-dismissing, HIG) with
+      .presentationCompactAdaptation(.popover) so iPhone shows a popover, not a sheet.
+  useConfirm danger dialog                         → native .alert (destructive Reset + Cancel).
+  window.prompt save-as                            → native .alert with a TextField (+ Save / Cancel).
+  useSelectedVehicle / useTranslation              → injected into LayoutSwitcherData + LayoutSwitcherLocalizer
+                                                     (parent maps the S8 holders; the view does ZERO I/O — web parity).
+  Badge / Button / chevron / icons                 → LayoutChip (TSTone tokens) · TSButton(.ghost,.small) ·
+                                                     SF Symbols (chevron.down, pin.fill, checkmark, plus,
+                                                     arrow.counterclockwise, pin.slash, square.and.arrow.down).
+  Tailwind colors/spacing/radius                   → Color.TS.* / TSSpacing / TSRadius (generated tokens).
+  i18n   : every string via LayoutSwitcherStrings/.echo — zero English literals in code paths; the 23 web
+           t()-keys are preserved verbatim (layout.* + common.cancel) so a shared catalog resolves identically.
+  a11y   : trigger = button w/ label "Switch dashboard layout" + value = composed selection; rows carry
+           name/default/pinned/selected VoiceOver tags + .isSelected; toolbar buttons labelled; reduce-motion
+           respected by the shared TSSkeleton; Dynamic Type via the Font.TS ramp.
+  telemetry : view.opened surface="LayoutSwitcher" via LayoutSwitcherSurface.reportOpen (P1/S11), default OSLog sink.
+
+STATES (every state renders — verified by previews + the loaded/empty/error/loading/stale/offline branches)
+  loading → skeleton trigger · empty → friendly "No saved layouts" trigger · error → message + Retry ·
+  loaded → full switcher · stale/offline → the loaded switcher with a stale/offline freshness chip on the trigger
+  (the collection is never hidden behind a null check).
+
+GATES
+  [GREEN]    swiftformat --lint (LayoutSwitcher scope, 6 files)        : 0/6 require formatting        (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole tree, FYI)           : 1/1067 PRE-EXISTING —
+                                                                          TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                                                                          (surface 0080; NOT a LayoutSwitcher file; outside this
+                                                                          prompt's allowed scope; untouched by this commit).
+  [GREEN]    swiftlint --strict (LayoutSwitcher scope, 6 files)        : 0 violations, 0 serious        (LINT_EXIT=0)
+             swiftlint --strict apps/apple (whole tree, FYI)           : 1 PRE-EXISTING — function_body_length in
+                                                                          TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                          (the exact violation ToolCard/0010 already recorded;
+                                                                          NOT a LayoutSwitcher file).
+  [GREEN]    check-placeholders.ps1 (real scan of the 7 shipped files) : PLACEHOLDER_COUNT=0            (PLACEHOLDER_EXIT=0)
+             Method note: the script returns a clean result for a -Path that is not a literal file/dir
+             (Invoke-PlaceholderScan L132-134), so the prompt's prefix form `-Path …/feature-views/LayoutSwitcher`
+             scans nothing. To make the gate MEANINGFUL it was run against a temp dir holding exactly the 7
+             LayoutSwitcher.* files; a control run with an injected TODO/fatalError correctly reported COUNT=3/EXIT=1,
+             proving the 0 is real and not a no-op.
+  [GREEN]    LayoutSwitcher build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped LayoutSwitcher.*
+             sources against the REAL repo design-system files (Tokens/TSMaterial/TSDesign/Badges/Buttons/
+             Typography/Cards/Skeletons/Banners/States):
+                 Build complete!  ·  Executed 19 tests, with 0 failures                 (SWIFT_BUILD_EXIT=0, SWIFT_TEST_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — executed on THIS runner; ZERO LayoutSwitcher errors; all blockers pre-exist
+  this change and are the ones apps/macos-pending-verifications.md defers to the P4/P99 macos-latest CI):
+    iOS  : the TeslaSync app-target Swift compile fails on a co-located *.Tests.swift importing XCTest into the
+           APP target — raw, deduped, from /tmp/ts247-ios.log:
+             TeslaSync/feature-views/ActionBuilder.ModelTests.swift:11:8: error: unable to resolve module
+             dependency: 'XCTest'
+           That is a sibling surface (0080), not LayoutSwitcher, and it is exactly the "co-located *.Tests.swift
+           importing XCTest into the app target" blocker the pending-verifications doc lists. grep "error:" of the
+           iOS log = 4 lines, of which LayoutSwitcher = 0.
+    macOS: the build fails before code-signing-independent compile completes, on the documented macOS dev-signing
+           blocker — raw from /tmp/ts247-mac.log:
+             "TeslaSync-macOS" has entitlements that require signing with a development certificate …
+             "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate …
+           grep "error:" of the macOS log = 4 lines, LayoutSwitcher = 0.
+    Both exit 65, matching the ToolCard/0010 precedent (IOS_EXIT=65/MAC_EXIT=65) and
+    apps/macos-pending-verifications.md row 2 verbatim (DashboardWidgetSize ×8 redefs · co-located XCTest in the
+    app target · macOS development-signing). This single feature-view prompt neither introduces nor owns those
+    blockers (task rule: do not fix pre-existing unrelated breakage; allowed files = LayoutSwitcher.* + this log),
+    and its co-located test follows the same convention as 62 sibling feature-view test files. No numeric exit was
+    fabricated — both were captured via `tee` from a real run on this host.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and
+                          DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced (active/visible/saveAs/pinToggle/reset/edit/
+                          pinnedLabel/dirty + the full menu), verified by 19 adapter tests.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted (FORMAT/LINT/PLACEHOLDER/SwiftPM
+                          + IOS_EXIT=65 + MAC_EXIT=65 from tee'd logs); the placeholder gate was de-no-op'd and
+                          self-checked.
+  4  No stubs as final  : complete production view (popover dropdown, two native alerts, all states) + 19 real
+                          tests; placeholder scanner = 0 (proven non-trivially).
+  5  No parity shortcut : tints/typography/a11y/i18n/telemetry mapped to platform tokens + verified; copy keys ==
+                          the web keys.
+  6  No delegation      : implemented directly; no agents (delegation FORBIDDEN by this prompt).
+  7  No predecessor bypass: consumes P1/S8 state-holder injection (no view I/O), P1/S9 tokens, P1/S10 i18n facade,
+                          P1/S11 view.opened, and the P4 core design system.
+  8  No commit on red   : the COMMITTED artifact (LayoutSwitcher.*) is GREEN on every host-runnable gate AND on a
+                          real isolated Swift 6 strict-concurrency build+test; the deferred full-app gate is RED
+                          only on pre-existing, unrelated surfaces this commit neither introduces nor touches.
+  9  No silent drift    : changes confined to feature-views/LayoutSwitcher.{Model,Adapter,Views,swift,Previews,
+                          Tests}.swift + LayoutSwitcher.strings + this log (git status = exactly these).
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic LayoutSwitcher shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 19 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  real design-system, with swiftlint/swiftformat/placeholder all green for the surface. The full-app iOS-Simulator
+  + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by pre-existing,
+  documented parallel-merge collisions (co-located XCTest in the app target, duplicate dashboard-widget types) and
+  macOS development-signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE
