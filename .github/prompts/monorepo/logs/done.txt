@@ -138,3 +138,4 @@ p2-windows/dashboard-widgets/W-0038-DriveEfficiencyChartWidget.prompt.md
 p2-windows/dashboard-widgets/W-0036-DigitalTwinWidget.prompt.md
 p2-windows/dashboard-widgets/W-0040-DriveScoreWidget.prompt.md
 p2-windows/dashboard-widgets/W-0039-DriveScoreGaugeWidget.prompt.md
+p2-windows/dashboard-widgets/W-0041-DriveTelemetryWidget.prompt.md
