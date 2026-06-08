@@ -1,0 +1,216 @@
+=== P4 Feature view 0128 MiniGridPreview (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools, so a bare `xcodebuild` reports
+                       "tool requires Xcode"; overridden non-destructively, no sudo / no xcode-select -s, so the
+                       shared runner is untouched — the 0076/0086 precedent).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.x · swiftformat · xcodegen 2.45.4 · pwsh 7.x
+  Destinations       : iOS Simulator "iPhone 16" (83717DEE-70A3-4325-AA61-CBDDD3140989, Booted) present ·
+                       iPhoneSimulator26.5.sdk (iOS 18 deploy target) · MacOSX26.5.sdk (macOS 15 deploy target)
+  Shared.xcframework : NOT staged — apps/apple/Frameworks/ holds only .gitkeep (the full-app xcodebuild gate's
+                       pre-existing blocker; see GATES → DEFERRED).
+  surface in project : feature-views is a source path on BOTH app targets (project.yml L37 + L68); xcodegen
+                       registers all 7 MiniGridPreview.* files (42 project refs).
+  Capability         : SwiftUI present + PROVEN by the real iOS-18 simulator AND macOS-15 SDK typechecks below.
+                       This surface uses NEITHER Swift Charts NOR MapKit (web "Charts/maps used: (none)") and has
+                       NO data hooks (web "Data sources: (none — pure presentational component)"). → The
+                       capability-BLOCKED escape hatch does NOT apply; STATUS=DONE.
+
+WEB SOURCE (the specification)
+  web/src/features/dashboard/components/MiniGridPreview.tsx — a PURE presentational thumbnail of a
+  `SavedDashboard` layout. It imports `GRID_COLS` (lg = 4) and `getWidgetDef` (the shared widget registry) and:
+    lgLayout = dashboard.layouts.lg ?? []
+    cols     = GRID_COLS.lg                                  // 4
+    maxY     = lgLayout.length > 0 ? Math.max(...map(y+h)) : 2
+    safeMaxY = (maxY > 0 && Number.isFinite(maxY)) ? maxY : 2
+    container: relative w-full, aspectRatio cols/safeMaxY, rounded-lg, bg-white/[0.02], border-white/[0.06]
+    per item : absolute box at left=x/cols, top=y/safeMaxY, width=w/cols, height=h/safeMaxY (percentages),
+               padding 2px, rounded-sm, bg-white/[0.06], border-white/[0.08], centring
+               getWidgetDef(widget.widgetId)?.icon (h-3 w-3 text-muted) when the widget+def resolve.
+  No data hooks; the prompt records "Data sources: (none)" + "Shared components used: (none)" + "i18n keys:
+  (none extracted — surface is anonymous)". So the remote loading/empty/error/stale/offline branches belong to
+  the data-bound caller (the dashboard manager), NOT to the preview — the same disposition the sibling
+  presentational surfaces HighlightCard (0076) and ToolCard (0010) carry.
+
+ARTIFACTS SHIPPED (allowed scope: apps/apple/TeslaSync/feature-views/MiniGridPreview.* + this log only)
+  MiniGridPreview.Model.swift      275  MiniGridPreviewSurface (slug) · MiniGridLayout (cols=4, fallbackRows=2,
+                                        breakpoint "lg") · domain value types MiniGridLayoutItem /
+                                        MiniGridWidgetInstance / MiniGridDashboard (native parity of RGLLayout /
+                                        WidgetInstance / SavedDashboard, reduced to the read fields) · MiniGridTile
+                                        (Equatable/Identifiable fractional rect + optional symbol) ·
+                                        MiniGridProjection (pure port of maxY⇒safeMaxY guard, per-item fractions,
+                                        widget→icon join, aspectRatio, isEmpty/count) · MiniGridStrings (P1/S10
+                                        facade, table "MiniGridPreview") · MiniGridPreviewAccessibility (testable
+                                        a11y seam, empty + singular/plural summary)
+  MiniGridPreview.Catalog.swift    173  MiniGridIconResolving seam (native analogue of the shared web
+                                        `getWidgetDef`) + MiniGridWidgetIconCatalog: the FULL 118-id web registry
+                                        mapped to SF Symbols (lucide→SF parity, e.g. Bell→bell.fill, Zap→bolt.fill,
+                                        BarChart3→chart.bar.fill); unknown id ⇒ nil (web `getWidgetDef` miss)
+  MiniGridPreview.Telemetry.swift   38  MiniGridPreviewTelemetry seam + OSLogMiniGridPreviewTelemetry
+                                        (redaction-safe os_log "view.opened", slug only, no dashboard/widget/PII)
+  MiniGridPreview.swift            184  MiniGridPreview SwiftUI view: GeometryReader absolute layout mapping the
+                                        web percentage rects onto the aspect-fitted frame; subtle bordered
+                                        container (web rounded-lg + glass fill + border); per-tile rounded box +
+                                        scaled centred SF Symbol; friendly empty state; view.opened .task; a11y
+                                        container. MiniGridPreviewMetrics documents the thumbnail-intrinsic sizes.
+  MiniGridPreview.Previews.swift   114  #if DEBUG previews: populated multi-row, single widget, dense + unknown
+                                        tile (no icon), empty state, dark
+  MiniGridPreview.strings           27  P1/S10 catalog contribution (empty caption + a11y empty/one/other summary)
+  MiniGridPreview.Tests.swift      295  25 XCTest cases (projection geometry, widget→icon join, default catalog,
+                                        accessibility phrasing, telemetry slug)
+  Total 1079 Swift lines across 6 files + 27-line strings table. Every shipped .swift file <= 400 lines (house
+  file_length; max 295 = Tests). No CODE line > 120 cols (house line_length 120; longest code line 111). The
+  shipped runtime depends ONLY on the generated design tokens (Color.TS / Font.TS / TSSpacing / TSRadius) — no
+  KMP `Shared` import, no shared UI component (the web `getWidgetDef` maps to the injected MiniGridIconResolving
+  seam + catalog, the house convention for a shared dependency).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GRID_COLS.lg = 4               → MiniGridLayout.columns = 4
+  maxY … : 2 / safeMaxY guard    → MiniGridProjection: rows = max(y+heightUnits) (or 2 when empty / non-positive);
+                                   integer grid units are always finite, so the web `Number.isFinite` guard
+                                   reduces to `maxY > 0`. EXECUTED-green (empty ⇒ 2, zero-span ⇒ 2, max ⇒ rows).
+  aspectRatio cols/safeMaxY      → .aspectRatio(columns/rows, contentMode: .fit) on the GeometryReader
+  left/top/width/height %        → MiniGridTile fractional rect (x/cols, y/rows, w/cols, h/rows) × proxy.size;
+                                   .offset + .frame inside a topLeading ZStack (absolute positioning parity)
+  bg-white/[0.02] + border       → Color.TS.surfaceGlass fill + Color.TS.border stroke, clipped to rounded-lg
+  tile bg-white/[0.06] + border  → Color.TS.textPrimary.opacity(0.06) + Color.TS.border (theme-aware, light+dark)
+  rounded-lg / rounded-sm        → TSRadius.sm container · 3 pt tile (web rounded-sm has no semantic token)
+  padding: 2px (icon inset)      → MiniGridPreviewMetrics.iconInset = 2
+  getWidgetDef(widgetId)?.icon   → MiniGridIconResolving.systemImage(forWidgetID:) → SF Symbol; default catalog
+                                   covers all 118 registry ids; unknown ⇒ nil (web miss). lucide glyph → SF Symbol.
+  h-3 w-3 text-muted             → Image(systemName:) scaled to min(side)·0.5 (clamped 6…16), Color.TS.textMuted
+  empty layout (bare box)        → friendly empty state: faint grid glyph + muted caption (prompt's empty-state
+                                   mandate — "never a blank box"); the only deliberate enrichment over the source.
+  i18n                           : the web surface is anonymous (no t() calls). The preview's OWN chrome (empty
+                                   caption + VoiceOver summary) lives in the P1/S10 table "MiniGridPreview"; the
+                                   dashboard's name/widgets are caller-supplied (web takes them as a prop). Zero
+                                   English literals in code.
+  a11y                           : the thumbnail is non-interactive → a single combined element
+                                   (.accessibilityElement(children: .ignore)) labelled "Dashboard layout preview,
+                                   N widgets" with distinct empty / singular / plural phrasing (never "1 widgets");
+                                   tiles + glyphs are decorative (.accessibilityHidden). Dynamic Type via system
+                                   fonts; no motion (reduce-motion safe by construction).
+  telemetry                      : view.opened surface="MiniGridPreview" via MiniGridPreviewSurface.reportOpen
+                                   (P1/S11), default OSLog sink (slug only, redaction-safe).
+
+STATES / BRANCHES REPRODUCED (every branch the web source carries — none hidden)
+  • populated layout → positioned tiles, each WITH an icon (widget+def resolved) …
+  • … or WITHOUT an icon (no matching widget instance, or widgetId unknown to the resolver — web `def?.icon`)
+  • single-tile + multi-row spans (aspect + fraction maths) · dense grid
+  • empty layout → friendly empty state (faint grid glyph + caption), never a blank box
+  • loading/error/stale/offline are owned by the data-bound caller (pure-presentational contract; see WEB SOURCE)
+  Each has a #if DEBUG preview; the geometry/join/empty logic is unit-tested + EXECUTED green.
+
+GATES
+  [GREEN]    swiftformat --lint  (MiniGridPreview.* scope)        : 0/6 files require formatting                (FORMAT_EXIT=0)
+             swiftformat --lint  apps/apple (whole app, FYI)      : 1 PRE-EXISTING file — blankLinesBetweenScopes
+                                                                    in TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                                                                    (NOT a MiniGridPreview file; present before this change,
+                                                                    outside allowed files — task rule: do not fix unrelated breakage).
+  [GREEN]    swiftlint --strict  (MiniGridPreview.* scope)        : 0 violations, 0 serious in 6 files            (LINT_EXIT=0)
+             swiftlint --strict  apps/apple (whole app, FYI)      : 1 PRE-EXISTING violation — function_body_length
+                                                                    in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                    (the identical hit the 0076 predecessor recorded; NOT mine).
+  [GREEN]    check-placeholders.ps1 (MiniGridPreview.* scan)      : PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0   (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 (literal prompt -Path)        : PLACEHOLDER_COUNT=0 (EXIT=0)
+             check-placeholders.ps1 (feature-views dir, filtered) : 0 MiniGridPreview hits
+  [GREEN]    MiniGridPreview build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped MiniGridPreview.*
+             runtime sources against the REAL repo design tokens (apps/design/generated/apple/Tokens.swift):
+                 swift test            : Executed 25 tests, with 0 failures                                      (SWIFT_TEST_DEBUG_EXIT=0)
+                 swift test -c release : Executed 25 tests, with 0 failures                                      (SWIFT_TEST_RELEASE_EXIT=0)
+                 swift build (debug)   : Build complete! — compiles MiniGridPreview.Previews.swift (#if DEBUG)   (SWIFT_BUILD_DEBUG_EXIT=0)
+  [GREEN]    REAL SDK typechecks (full Xcode 26.5, swiftc -typecheck, -swift-version 6 -strict-concurrency=complete):
+                 iOS 18 simulator SDK (arm64-apple-ios18.0-simulator), runtime               : IOS_TYPECHECK_EXIT=0
+                 macOS 15 SDK         (arm64-apple-macos15.0),         runtime               : MAC_TYPECHECK_EXIT=0
+                 iOS 18 simulator SDK, runtime + DEBUG previews (-D DEBUG)                    : IOS_DEBUG_PREVIEWS_EXIT=0
+                 macOS 15 SDK,         runtime + DEBUG previews (-D DEBUG)                    : MAC_DEBUG_PREVIEWS_EXIT=0
+  [GREEN]    xcodegen generate — project + targets + schemes generate cleanly                                    (XCODEGEN_EXIT=0)
+                 generated TeslaSync.xcodeproj references to "MiniGridPreview" = 42 (feature-views is a source
+                 path on BOTH the iOS and macOS app targets — so all 7 files are registered + compiled by the app).
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT (see below)
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT (see below)
+
+  WHY DEFERRED (full-app Xcode gate — ZERO MiniGridPreview errors; all blockers pre-exist this change):
+    Captured evidence (real commands run on THIS host, full Xcode 26.5):
+      (1) iOS scheme gate: the "TeslaSync" scheme runs a pre-build SchemeAction "Stage Shared.xcframework" that
+          shells out to Gradle ("▸ Assembling Shared.xcframework via Gradle…", the Kotlin/Native KMP assembly the
+          0076 predecessor measured at ~7m33s). It was still assembling at the 240 s cap (IOS_EXIT=124, the
+          `timeout` SIGTERM — NOT a compile failure). grep ": error:" over the partial log → ZERO MiniGridPreview hits.
+      (2) Direct target build (skips the scheme's Gradle pre-action) pins the root blocker cleanly:
+            xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO →
+            error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+            ** BUILD FAILED **   XCODEBUILD_TARGET_EXIT=65
+          grep ": error:" over the full log → ZERO MiniGridPreview hits.
+    Both app targets link the KMP core (Frameworks/ holds only .gitkeep); staging Shared.xcframework needs a
+    Kotlin/Native Gradle build, and the macOS app/widget targets additionally require a development signing
+    certificate this runner does not provision. Both are independent of this UI surface, both are outside this
+    prompt's allowed files (Frameworks staging / project.yml / signing), and both are exactly the artifacts
+    apps/macos-pending-verifications.md defers to the ADR-012 signed CI runner + the P4/P99 acceptance gate.
+    The MEANINGFUL validation IS performed here: the surface compiles against BOTH the iOS 18 simulator and
+    macOS 15 SDKs under Swift 6 strict concurrency, its DEBUG previews compile, and its full 25-case XCTest
+    suite EXECUTES green in an isolated Swift 6 package. Under Xcode these same tests run in the
+    TeslaSync(/-macOS) test target once the framework is staged.
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders all branches the web source carries — positioned tiles with/without an icon, multi-row
+      spans, dense, and the empty layout (friendly empty state) — each with a #if DEBUG preview; logic
+      EXECUTED-green (25/25). loading/error/stale/offline are the data-bound caller's per the presentational
+      contract (web "Data sources: none").
+  [x] Hooks bind through a P1/S8-style injected seam — the surface performs NO HTTP; the one shared dependency
+      (`getWidgetDef`) is the injected MiniGridIconResolving seam (default = the full 118-id registry catalog).
+  [x] Every i18n key from source has a matching catalog key — the web surface is anonymous (no t() keys); the
+      preview's own chrome (empty caption + a11y summary) is in MiniGridPreview.strings (table "MiniGridPreview").
+  [x] Accessibility labels present — the thumbnail is non-interactive, so it is a single VoiceOver element with a
+      descriptive summary label (empty/singular/plural); decorative tiles + glyphs are hidden. a11y phrasing unit-tested.
+  [x] Tests: adapter/geometry unit + per-state + a11y + telemetry — 25 methods, EXECUTED 25/25 (debug + release).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (0 opt-outs).
+  [x] EXIT=0 / STATUS=DONE — host gates + both-SDK compiles + DEBUG-previews compile + executed 25/25 tests green;
+      Xcode app build/test DEFERRED with captured exit-65 evidence (pre-existing KMP-framework + signing infra,
+      outside allowed files).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported DEFERRED, NOT green — the real
+                          XCODEBUILD_TARGET_EXIT=65 "no XCFramework found" error + the Gradle-staging timeout
+                          (IOS_EXIT=124) are pasted; every "GREEN" is a command actually run with its real exit
+                          code. The two pre-existing whole-app lint/format hits are disclosed, not hidden.
+  2  No scope narrowing : implemented the full surface — the grid geometry + safeMaxY guard, the per-item
+                          fractional rects, the widget→icon join (present / instance-missing / unknown), the full
+                          118-id registry catalog, the empty state, i18n, a11y, telemetry.
+  3  No skip-and-assume : web source read end-to-end; each host gate executed on THIS runner; nothing assumed
+                          green; the SwiftPM harness compiled the EXACT shipped runtime against the real tokens.
+  4  No stubs as final  : complete production view + 25 real EXECUTED tests; placeholder COUNT=0; no TODO/stub
+                          in shipped code. The icon catalog is the full registry, not a token sample.
+  5  No parity shortcuts: faithful maxY⇒safeMaxY guard, x/cols·y/safeMaxY fraction maths, aspectRatio, the
+                          widget.id↔item.i join, getWidgetDef-miss ⇒ no-icon, and every web region.
+  6  No delegation      : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: reused the established presentational-surface pattern (HighlightCard 0076 /
+                          ToolCard 0010): P1/S8 injected seam, P1/S9 tokens, P1/S10 per-surface strings table,
+                          P1/S11 telemetry. Did NOT stage Shared.xcframework, did NOT edit project.yml /
+                          .swiftlint.yml / the shared Localizable.xcstrings (parallel-unsafe, integration scope).
+  8  No commit on red   : committing on GREEN host gates + both-SDK compiles + DEBUG-previews compile + executed
+                          25/25 tests; the Xcode app gate is DEFERRED (captured evidence), not failed by this code.
+                          The two whole-tree lint/format hits are pre-existing in sibling bundles, outside allowed files.
+  9  No silent drift    : changes confined to feature-views/MiniGridPreview.{swift,Model.swift,Catalog.swift,
+                          Telemetry.swift,Previews.swift,Tests.swift,strings} + this log. The xcodegen-generated
+                          TeslaSync.xcodeproj is .gitignored and was removed; no other working-tree changes.
+  10 Log ends with EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic MiniGridPreview shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: a pure-Swift, EXECUTED-green projection core (the maxY⇒safeMaxY guard, per-item fractional rects, the
+  widget→icon join, aspect ratio, empty/count — 25/25 XCTest), a GeometryReader view that maps the web percentage
+  rects onto an aspect-fitted frame with a friendly empty state, a full 118-id widget→SF-Symbol catalog behind an
+  injectable resolver seam (the native analogue of the shared `getWidgetDef`), P1/S11 view.opened telemetry, the
+  surface's own strings through the P1/S10 facade, and a single descriptive VoiceOver summary for the
+  non-interactive thumbnail. All host-runnable gates pass AND the surface compiles against BOTH the iOS 18
+  simulator and macOS 15 SDKs under Swift 6 strict concurrency, with its DEBUG previews. The signed Xcode app
+  build/test is DEFERRED to the downstream signed CI runner (Shared.xcframework KMP staging + macOS signing —
+  neither a defect in this code, both outside this prompt's allowed files), matching the 0010/0076 "code-complete
+  + DEFERRED Xcode gate" precedent.
+
+EXIT=0
+STATUS=DONE

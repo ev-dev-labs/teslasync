@@ -1,0 +1,27 @@
+/*
+  MiniGridPreview.strings
+  TeslaSync — P4 feature view · 0128 · MiniGridPreview (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. MiniGridPreview is a
+  reusable presentational thumbnail: the previewed dashboard's name/widgets are
+  supplied by the caller (the web component takes them as a `dashboard` prop), so
+  they are NOT listed here. Only the preview's *own* intrinsic chrome lives in
+  this table: the empty-state caption shown when a layout has no widgets, and the
+  VoiceOver summary (with distinct singular/plural forms so it never reads
+  "1 widgets").
+
+  These entries fold into the app Localizable.xcstrings master catalog (table
+  "MiniGridPreview") at integration time; they are kept in a per-surface table so
+  each parallel surface prompt owns its own strings without editing the shared
+  catalog.
+*/
+
+/* Empty state: shown in place of an empty layout so the thumbnail never renders
+   a blank box. */
+"miniGridPreview.empty" = "No widgets";
+
+/* VoiceOver summary for the thumbnail. The empty / singular / plural forms are
+   distinct so VoiceOver never says "1 widgets". %d is the widget count. */
+"miniGridPreview.a11y.empty" = "Dashboard layout preview, no widgets";
+"miniGridPreview.a11y.summary.one" = "Dashboard layout preview, 1 widget";
+"miniGridPreview.a11y.summary.other" = "Dashboard layout preview, %d widgets";
