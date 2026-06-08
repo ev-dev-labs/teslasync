@@ -1,0 +1,37 @@
+/*
+  BackendTool.strings
+  TeslaSync — P4 feature view · 0002 · BackendTool (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `BackendTool` resolves (table "BackendTool") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/admin/components/devtools/BackendTool.tsx) — the Run action, the
+  run-status badge, and the ResultPanel idle copy. The remaining keys back the
+  native-only chrome (freshness chip, banners, retry/copy, accessibility) the
+  state list requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Run" = "Run";
+"Success" = "Success";
+"Failed" = "Failed";
+"devtools.tool.noResult" = "No result yet";
+
+/* --- Native chrome: freshness chip --- */
+"devtools.tool.live" = "Live";
+"devtools.tool.stale" = "Stale";
+"devtools.tool.offline" = "Offline";
+
+/* --- Native chrome: actions + transient states --- */
+"devtools.tool.running" = "Running…";
+"devtools.tool.retry" = "Retry";
+"devtools.tool.copy" = "Copy result";
+
+/* --- Native chrome: banners --- */
+"devtools.tool.offlineBanner" = "Offline — showing last result";
+"devtools.tool.staleBanner" = "Result may be out of date";
