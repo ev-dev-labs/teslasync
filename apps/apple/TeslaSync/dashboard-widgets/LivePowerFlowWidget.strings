@@ -1,0 +1,47 @@
+/*
+  LivePowerFlowWidget.strings
+  TeslaSync — P4 dashboard widget · 0056 · LivePowerFlowWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `LivePowerFlowWidget` resolves (table "LivePowerFlowWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  Keys 1–8 are the exact keys extracted from the web source
+  (features/dashboard/widgets/LivePowerFlowWidget.tsx, namespace "dashboard").
+  The remaining keys back the native-only chrome (freshness chip, refresh/retry,
+  empty/error copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.livePowerFlow.title" = "Live Power Flow";
+"widget.livePowerFlow.description" = "Real-time solar→battery→home→grid power routing diagram";
+"widget.livePowerFlow.solar" = "Solar";
+"widget.livePowerFlow.grid" = "Grid";
+"widget.livePowerFlow.home" = "Home";
+"widget.livePowerFlow.battery" = "Battery";
+"widget.livePowerFlow.noSite" = "No Tesla Energy site linked";
+"widget.livePowerFlow.noData" = "No live power data";
+
+/* --- Native chrome: units + accessibility --- */
+"widget.livePowerFlow.unitKw" = "kW";
+"widget.livePowerFlow.diagramA11y" = "Energy flow diagram";
+"widget.livePowerFlow.openA11y" = "Open the Energy page";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.livePowerFlow.live" = "Live";
+"widget.livePowerFlow.stale" = "Stale";
+"widget.livePowerFlow.offline" = "Offline";
+"widget.livePowerFlow.refresh" = "Refresh";
+"widget.livePowerFlow.retry" = "Retry";
+"widget.livePowerFlow.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.livePowerFlow.loading" = "Loading power flow";
+"widget.livePowerFlow.noSiteHint" = "Link a Tesla Energy site (Powerwall or solar) to see live power.";
+"widget.livePowerFlow.noDataHint" = "Live power readings will appear here once the site reports.";
+"widget.livePowerFlow.errorTitle" = "Couldn't load power flow";
+"widget.livePowerFlow.offlineBanner" = "Offline — showing last known power flow";
+"widget.livePowerFlow.staleBanner" = "Reconnecting — values may be stale";
