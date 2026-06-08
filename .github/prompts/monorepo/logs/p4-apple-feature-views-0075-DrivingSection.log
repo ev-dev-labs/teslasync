@@ -1,0 +1,257 @@
+=== P4 Feature view 0075 DrivingSection (Apple) ===
+Run host: macOS (Darwin) arm64 · Command Line Tools ONLY (no Xcode.app).
+  $ uname -sm                  -> Darwin arm64
+  $ swift --version            -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+  $ xcode-select -p            -> /Library/Developer/CommandLineTools
+  $ ls -d /Applications/Xcode*.app 2>/dev/null -> (none)
+  $ xcodebuild -version        -> xcode-select: error: tool 'xcodebuild' requires
+                                  Xcode, but active developer directory
+                                  '/Library/Developer/CommandLineTools' is a
+                                  command line tools instance
+  On PATH: swiftc, swiftlint, swiftformat, pwsh, xcodegen.
+  The CommandLineTools macOS SDK (MacOSX26.5) DOES ship SwiftUI.framework +
+  Charts.framework, so the surface is real-compiler-verified against SwiftUI +
+  Swift Charts on this host (see gate [6]); the Xcode-only app build/test gate
+  is DEFERRED-macOS-pending (capability evidence above) — NOT faked, NOT green.
+  MapKit is not used by this surface (the web source has no map).
+
+Web source (THE specification):
+  web/src/features/analytics/components/weekly-digest/DrivingSection.tsx
+  (+ its data origin useWeeklyDigest.ts, MiniStat.tsx, helpers.ts, types.ts)
+Native output (allowed files — all match DrivingSection.*):
+  apps/apple/TeslaSync/feature-views/DrivingSection.swift
+  apps/apple/TeslaSync/feature-views/DrivingSection.Model.swift
+  apps/apple/TeslaSync/feature-views/DrivingSection.Models.swift
+  apps/apple/TeslaSync/feature-views/DrivingSection.Projection.swift
+  apps/apple/TeslaSync/feature-views/DrivingSection.Adapter.swift
+  apps/apple/TeslaSync/feature-views/DrivingSection.Views.swift
+  apps/apple/TeslaSync/feature-views/DrivingSection.Chart.swift
+  apps/apple/TeslaSync/feature-views/DrivingSection.States.swift
+  apps/apple/TeslaSync/feature-views/DrivingSection.Previews.swift
+  apps/apple/TeslaSync/feature-views/DrivingSection.Tests.swift
+  apps/apple/TeslaSync/feature-views/DrivingSection.strings
+  + this log.
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web -> native; the web source is THE spec)
+---------------------------------------------------------------------------
+  data:   DigestMetrics slice {avgEfficiency, prevAvgEfficiency, totalDuration,
+          totalDrives, topDrive} + DailyDistanceEntry[] (types.ts, built by
+          useWeeklyDigest) -> DrivingDigestDTO + DrivingDailyDistance/DrivingTopDrive
+          (DrivingSection.Models.swift). Props in web -> pushed by a P1/S8
+          DrivingSectionSource snapshot (no view HTTP).
+  units:  web renders RAW km / Wh·km / minutes (labels literally "(km)", "Wh/km",
+          "min"); NO useUnits() conversion here -> native reproduces km/Wh·km/min
+          verbatim (adding a unit boundary would diverge from the spec).
+  shell:  <FadeIn delay={0.1}> + <GlassPanel space-y-6 p-6>  -> TSFadeIn(delay:0.1)
+          + tokenized glass card (Color.TS.surface + TSRadius.lg + Color.TS.border).
+  title:  t('analytics.weeklyDigest.drivingSection','Driving') + lucide <Car/> ->
+          DrivingSectionStrings key + SF "car.fill" header.
+  chart:  Recharts <BarChart data={dailyDistanceData}> one <Bar dataKey="distance"
+          fill={CHART_COLORS[0]} radius=[4,4,0,0]>, YAxis fmtInt, <Tooltip
+          ChartTooltip> -> Swift Charts Chart{ BarMark }.foregroundStyle(
+          TSChartPalette.color(at:0)).cornerRadius(4), YAxis fmtInt, selection
+          tooltip via .chartXSelection RuleMark annotation (DrivingSection.Chart.swift).
+  empty1: dailyDistanceData.length>0 ? chart : <EmptyState noDailyDistance> ->
+          bars.isEmpty ? ContentUnavailableView(noDailyDistance) : chart.
+  stats:  4x <MiniStat> -> DrivingStatsGrid of DrivingStatTile (web MiniStat):
+            Avg Efficiency `${fmtNumber(avgEfficiency,1)} Wh/km`  (SF chart.bar.fill)
+            Total Driving Time `${fmtInt(floor(d/60))}h ${fmtInt(d%60)}m` (SF clock.fill)
+            Efficiency Change prevAvg>0 ? `${fmtNumber(pctChange,1)}%` : '—',
+              icon avg<=prev ? TrendingDown(emerald) : TrendingUp(red)
+              -> trend .down/.positive vs .up/.negative (lower-is-better)
+            Drives `fmtInt(totalDrives)`                          (SF waveform.path.ecg)
+  top:    metrics.topDrive ? <Badge success>Top Drive</Badge> + Date/Distance/
+          Duration/Efficiency grid : <EmptyState noTopDrive> -> DrivingTopDrivePanel
+          (emerald badge + labelled grid) vs ContentUnavailableView(noTopDrive).
+          formatDate(start_date) -> DrivingFormat.date (medium "Apr 4, 2026", '—' fallback).
+  i18n:   every web t(key,default) + the inline unit glyphs resolved through the
+          DrivingSectionStrings facade (table "DrivingSection"); shipped as the
+          per-surface DrivingSection.strings (the shared Localizable.xcstrings is
+          parallel-unsafe and out of scope).
+
+STATES (every one renders — no hidden surface):
+  loading  -> DrivingSectionLoading (TSSkeleton chart + 4 stat + top-drive blocks; reduce-motion safe)
+  content  -> chart(or inner empty) + 4 stats + top-drive(or inner empty)
+  empty    -> DrivingSectionEmpty (ContentUnavailableView; resolved-but-no-digest)
+  error    -> DrivingSectionErrorView (QueryError-equiv, Retry -> model.refresh())
+  stale    -> freshness chip (Stale) + connectivity banner + one guarded auto-refresh
+  offline  -> freshness chip (Offline) + banner; keeps cached content, no refetch
+  + inner empties: noDailyDistance (chart) and noTopDrive (top-drive card).
+a11y: section summary (title + each stat), chart summary (title + day count +
+  total km), per-bar VoiceOver value, stat/top-drive combined labels, reduce-motion
+  animation gate, Dynamic Type via system fonts/tokens.
+telemetry: P1/S11 view.opened(surface:"DrivingSection") emitted once on appear.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (per-surface, my 10 swift files)
+    $ swiftformat --lint TeslaSync/feature-views/DrivingSection.*.swift DrivingSection.swift
+    -> 0/10 files require formatting.
+    MYFORMAT_EXIT=0   OK
+
+[2] swiftformat --lint apps/apple   (THE gate command, whole tree)
+    -> SwiftFormat completed. 0/796 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0   OK
+
+[3] swiftlint --strict (per-surface, explicit paths)
+    $ swiftlint lint --strict --config .swiftlint.yml TeslaSync/feature-views/DrivingSection.*.swift DrivingSection.swift
+    -> Linting 10 files. Done linting! Found 0 violations, 0 serious in 10 files.
+    MYLINT_EXIT=0   OK  (this surface is clean; file_length all < 400 after split:
+      Models 197, Projection 173, Adapter 268, Views 265, Chart 166, States 124,
+      Model 266, swift 80, Previews 120, Tests 372)
+
+[4] swiftlint --strict   (THE bare gate command, from apps/apple)
+    -> Linting 792 files. Found 1 violation, 1 serious.
+    LINT_EXIT=2   PRE-EXISTING SIBLING DEFECT, NOT THIS SURFACE:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+      error: Function Body Length Violation (currently spans 78 lines)
+      (function_body_length)
+    This file is outside this prompt's allowed-files scope; editing it would
+    violate the no-sibling-edit / predecessor-bypass rule (Covenant #6/#7). The
+    DrivingSection.* files contribute ZERO violations (gate [3]). Reported, not
+    hidden (Covenant #1). Identical pre-existing defect is documented in sibling
+    log p4-apple-feature-views-0047-SentryModeChart.log.
+
+[5] check-placeholders.ps1   (THE gate command + a genuine per-file scan)
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/DrivingSection
+    -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+       (Note: the gate's literal -Path is a file-name prefix, not a directory, so
+       the script's Test-Path returns the documented "nothing to scan = clean"
+       result. To make the gate MEANINGFUL I also copied all 11 DrivingSection.*
+       files into a temp directory and scanned that:)
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path <tmp with all 11 files>
+    -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0   (11 files scanned)
+    PLACEHOLDER_EXIT=0   OK  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+[6] EXECUTED full-surface compile + behaviour verification (real SwiftUI + Swift
+    Charts on this host's macOS SDK; Swift 6, strict concurrency = complete)
+    A throwaway SwiftPM package (platforms [.macOS(.v15)]) compiled the COMPLETE
+    surface — all 8 source files (swift, Model, Models, Projection, Adapter,
+    Views, Chart, States) + Previews — against the REAL design tokens
+    (apps/design/generated/apple/Tokens.swift), the REAL TSFadeIn (Motion.swift),
+    TSDesign.swift, and a verbatim TSSkeleton. Then an executable harness ran 53
+    assertions over the public API:
+      $ swift run DrivingSectionVerify
+      Adapter parity (en_US, UTC):
+        - stat order [avgEfficiency, totalDrivingTime, efficiencyChange, drives]
+        - "200.0 Wh/km"; "4h 28m" (floor(268/60)=4, 268%60=28); "25.0%" up/negative;
+          "9"; improving 160<200 -> down/positive; no-prior prev=0 -> "—" + sign-only
+          arrow/tone; grouping "1,234"; "0h 0m"; infinity->"0.0"; pctChange zero-prev=100
+        - top drive: "Apr 4, 2026" / "73.2 km" / "64 min" / "168.4 Wh/km"; badge
+        - bars x7, "32.4 km", total 247.7; nil data -> .empty; empty bars + nil top
+          drive -> inner empties yet 4 stats; bad date -> "—"; copy injection localizes
+        - phase matrix loading/error-over-cache/empty/content
+        - chart + section VoiceOver summaries
+      State holder (@MainActor): loading/content/empty/error-over-cache phases;
+        view.opened emitted exactly once + source.start once; refresh delegates;
+        stale -> one guarded auto-refresh, re-armed after live; offline keeps
+        content with no refetch; connection/projection track updates.
+      -> ALL 53 CHECKS PASSED.
+    COMPILE_EXIT=0 / RUN_EXIT=0   OK
+    NOTE (env limitation, NOT a code defect): the CommandLineTools SwiftPM lacks
+    the Xcode-only `#Preview` macro plugin (PreviewsMacros) and XCTest.framework,
+    so for THIS harness only, #Preview was transformed to an implicit-return
+    `some View` function and the XCTest assertions were re-expressed as the
+    executable harness above. The shipped DrivingSection.Previews.swift keeps the
+    standard #Preview macros and DrivingSection.Tests.swift keeps XCTest +
+    @testable import TeslaSync (sibling convention) — both valid under Xcode.
+
+===========================================================================
+XCODE APP-TARGET GATE — DEFERRED-macOS-pending (capability-gated; NOT faked)
+===========================================================================
+  Gate as written:
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+  Cannot run on this host: full Xcode + iOS Simulator runtime are absent (only
+  Command Line Tools — API evidence at the top of this log). `xcodebuild` itself
+  errors out before any build. This is a runner capability gap, not a code defect.
+  Predecessor-consistent disposition (CommandLineTools-only host): record the
+  Xcode build/test halves DEFERRED-macOS-pending and rely on the host-runnable
+  gates [1]-[6]. project.yml DOES register `TeslaSync/feature-views` for both the
+  TeslaSync (iOS) and TeslaSync-macOS targets, so these files compile into the app
+  on a macos-latest CI runner with full Xcode; gate [6] already compiles + RUNS
+  the surface against the real SwiftUI + Swift Charts SDK here.
+  IOS_EXIT=DEFERRED  MAC_EXIT=DEFERRED  (capability-gated; see evidence; not green, not faked)
+
+  Precedent: p4-p6-0001-live-data-sse.log (identical CommandLineTools-only host)
+  recorded EXIT=0 / STATUS=DONE with the Xcode gate DEFERRED-macOS-pending; the
+  lone artifact that instead chose STATUS=BLOCKED on a CLT-only host
+  (p4-p8-0001 @ b545d750) was explicitly superseded for deviating from that
+  convention. This log follows the convention.
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : the Xcode app build/test is reported DEFERRED with REAL
+                          xcode-select / xcodebuild capability evidence; the bare
+                          swiftlint pre-existing sibling failure is reported, not
+                          hidden; every OK is a command run on THIS host with its
+                          real exit code; gate [6] both COMPILES and RUNS the code.
+  2 No scope narrowing  : implemented ALL composition + every state (loading/
+                          content/empty/error/stale/offline) + both inner empties
+                          + chart + tooltip + 4 stats + top-drive + a11y + i18n +
+                          P1/S11 telemetry.
+  3 No skip-and-assume  : each host gate executed; the Xcode path's unavailability
+                          was PROBED (xcode-select/xcodebuild), not assumed.
+  4 No stubs as final   : complete implementations; placeholder gate COUNT=0 over
+                          all 11 files; executed 53-assertion harness PASS.
+  5 No parity shortcuts : faithful port of the DigestMetrics/dailyDistance read,
+                          raw km/Wh·km/min (no unit conversion — the spec), the
+                          fmtNumber/fmtInt/pctChange/formatDate pipeline, the
+                          h/m split, the lower-is-better efficiency trend arrow,
+                          both EmptyState branches, and the exact web i18n keys.
+  6 No delegation       : authored directly (no sub-agent delegation of the surface).
+  7 No predecessor bypass: did NOT edit project.yml/.swiftlint.yml, the shared
+                          Localizable.xcstrings, or ANY sibling file (incl. the
+                          dashboard-widgets file carrying the pre-existing lint
+                          violation); strings ship as the per-surface table.
+  8 No commit on red    : committing on all-green host gates for THIS surface; the
+                          Xcode app gate is DEFERRED (capability gap, not a failure)
+                          and the only red is a pre-existing sibling defect outside
+                          the allowed files.
+  9 No silent drift     : changes confined to the allowed DrivingSection.* files +
+                          this log. Two pre-existing working-tree edits to web/
+                          admin .tsx files (FleetApiSection.tsx, BackupRestorePage
+                          .tsx) predate this task and are left unstaged.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native DrivingSection shipped at parity with the web source:
+  a pure, executed-green projection core (Foundation, Swift 6 strict concurrency),
+  a P1/S8 state-holder seam (no view HTTP), a P1/S9 token-driven SwiftUI surface,
+  a P1/S10 i18n facade, P1/S11 view.opened telemetry, the native Swift Charts
+  daily-distance bar chart with selection tooltip, the four driving mini-stats with
+  the lower-is-better efficiency trend, and the Top Drive card — every prompt state
+  (loading/content/empty/error/stale/offline) plus both inner empties, with
+  VoiceOver + Dynamic Type + reduce-motion. All host-runnable gates pass; the whole
+  surface COMPILES and its logic EXECUTES green against the real SwiftUI + Swift
+  Charts SDK. The Xcode iOS-Simulator / macOS app build+test is DEFERRED-macOS-
+  pending (Command Line Tools only on this runner — capability evidence above),
+  predecessor-consistent with p4-p6-0001. The bare swiftlint gate's single
+  violation is a pre-existing sibling file (LifetimeStatsWidget.Adapter.swift)
+  outside this prompt's allowed-files scope.
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/DrivingSection.swift \
+          apps/apple/TeslaSync/feature-views/DrivingSection.Model.swift \
+          apps/apple/TeslaSync/feature-views/DrivingSection.Models.swift \
+          apps/apple/TeslaSync/feature-views/DrivingSection.Projection.swift \
+          apps/apple/TeslaSync/feature-views/DrivingSection.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/DrivingSection.Views.swift \
+          apps/apple/TeslaSync/feature-views/DrivingSection.Chart.swift \
+          apps/apple/TeslaSync/feature-views/DrivingSection.States.swift \
+          apps/apple/TeslaSync/feature-views/DrivingSection.Previews.swift \
+          apps/apple/TeslaSync/feature-views/DrivingSection.Tests.swift \
+          apps/apple/TeslaSync/feature-views/DrivingSection.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0075-DrivingSection.log
+  git commit -m "feat(apps/apple/feature-views): add DrivingSection surface (P4)"
+
+EXIT=0
+STATUS=DONE

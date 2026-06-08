@@ -1,0 +1,58 @@
+/*
+  DrivingSection.strings
+  TeslaSync — P4 feature view · 0075 · DrivingSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `DrivingSection`
+  resolves (table "DrivingSection") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/analytics/components/weekly-digest/DrivingSection.tsx). The remainder back the native
+  state envelope (freshness chip, connectivity banner, loading / empty / error chrome), the chart
+  axes, the embedded unit glyphs the web writes inline, and the accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"analytics.weeklyDigest.drivingSection" = "Driving";
+"analytics.weeklyDigest.dailyDistance" = "Daily Distance (km)";
+"analytics.weeklyDigest.distance" = "Distance";
+"analytics.weeklyDigest.noDailyDistance" = "No driving distance data is available for this week.";
+"analytics.weeklyDigest.avgEfficiency" = "Avg Efficiency";
+"analytics.weeklyDigest.totalDrivingTime" = "Total Driving Time";
+"analytics.weeklyDigest.efficiencyChange" = "Efficiency Change";
+"analytics.weeklyDigest.drivesCount" = "Drives";
+"analytics.weeklyDigest.topDrive" = "Top Drive";
+"analytics.weeklyDigest.date" = "Date";
+"analytics.weeklyDigest.duration" = "Duration";
+"analytics.weeklyDigest.efficiency" = "Efficiency";
+"analytics.weeklyDigest.noTopDrive" = "No top drive is available for this week yet.";
+
+/* --- Embedded unit glyphs the web writes inline (template literals) --- */
+"analytics.weeklyDigest.driving.whKmUnit" = "Wh/km";
+"analytics.weeklyDigest.driving.kmUnit" = "km";
+"analytics.weeklyDigest.driving.minUnit" = "min";
+"analytics.weeklyDigest.driving.hoursGlyph" = "h";
+"analytics.weeklyDigest.driving.minutesGlyph" = "m";
+"analytics.weeklyDigest.driving.emDash" = "—";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"analytics.weeklyDigest.driving.live" = "Live";
+"analytics.weeklyDigest.driving.stale" = "Stale";
+"analytics.weeklyDigest.driving.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"analytics.weeklyDigest.driving.staleBanner" = "Reconnecting — weekly digest may be stale";
+"analytics.weeklyDigest.driving.offlineBanner" = "Offline — showing the last loaded weekly digest";
+
+/* --- Chart axes scaffolding --- */
+"analytics.weeklyDigest.driving.day" = "Day";
+"analytics.weeklyDigest.driving.days" = "days";
+
+/* --- Loading / empty / error chrome --- */
+"analytics.weeklyDigest.driving.loading" = "Loading driving summary";
+"analytics.weeklyDigest.driving.noData" = "No driving data for this week";
+"analytics.weeklyDigest.driving.emptyHint" = "Drives this week will appear here with distance, efficiency, and your top drive.";
+"analytics.weeklyDigest.driving.errorTitle" = "Couldn't load driving summary";
+"analytics.weeklyDigest.driving.retry" = "Retry";
