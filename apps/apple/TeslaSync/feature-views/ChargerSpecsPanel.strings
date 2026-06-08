@@ -1,0 +1,44 @@
+/*
+  ChargerSpecsPanel.strings
+  TeslaSync — P4 feature view · 0098 · ChargerSpecsPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargerSpecsPanel` resolves (table "ChargerSpecsPanel") lives here with its web English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they
+  are kept in a per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/charging/components/charging-list/ChargerSpecsPanel.tsx) — the canonical
+  `charging.specs.*` namespace. The remaining keys back the unit/metric formats and the native-only
+  chrome (freshness chip, stale/offline banner, loading + error + retry copy).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"charging.specs.title" = "Charger Specs Breakdown";
+"charging.specs.byVoltage" = "By Voltage";
+"charging.specs.noVoltage" = "No voltage data";
+"charging.specs.byPhase" = "By Phase";
+"charging.specs.noPhase" = "No phase data";
+"charging.specs.byCable" = "By Cable";
+"charging.specs.noCable" = "No cable data";
+"charging.specs.byBrand" = "By Brand";
+"charging.specs.noBrand" = "No brand data";
+"charging.specs.noData" = "No charger specification data available yet";
+
+/* --- Unit / metric formats (web `{count} sessions`, `fmtWithUnit(_, 'kWh')`, `kW avg`) --- */
+"charging.specs.sessionsFormat" = "%@ sessions";
+"charging.specs.energyFormat" = "%@ kWh";
+"charging.specs.powerFormat" = "%@ kW avg";
+
+/* --- Native chrome: freshness + connectivity --- */
+"charging.specs.live" = "Live";
+"charging.specs.stale" = "Stale";
+"charging.specs.offline" = "Offline";
+"charging.specs.staleBanner" = "Reconnecting — charger specs may be stale";
+"charging.specs.offlineBanner" = "Offline — showing last known charger specs";
+
+/* --- Native chrome: states --- */
+"charging.specs.loading" = "Loading charger specs";
+"charging.specs.errorTitle" = "Couldn't load charger specs";
+"charging.specs.retry" = "Retry";
