@@ -1,0 +1,149 @@
+================================================================================
+P4 · Feature view · 0231 — FSMTimelineChart (Apple)
+Run: 2026-06-07T23:36-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/352
+Base: 1b870c390
+Prompt: P4 · feature-views · 0231 — FSMTimelineChart (Apple)
+Web source (spec): web/src/features/system/components/FSMTimelineChart.tsx (101 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0180 AlertMessageEditor /
+      0080 ActionBuilder / 0040 RequestBuilder / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  Swift Charts ............... import Charts resolves on both SDKs (typecheck below) OK
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... 2.45.4                                               OK
+  pwsh (placeholder gate) .... 7.6.2                                               OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)         WARN
+
+  Charts/Maps capability note: this surface uses Swift Charts (a stacked AreaMark
+  timeline) and NO MapKit (web "Charts/maps used" lists none; the web source is a
+  Recharts stacked AreaChart). The core requirement — SwiftUI + Swift Charts — is
+  available and PROVEN by REAL iOS-18 + macOS-15 SDK `swiftc -typecheck` AND a
+  passing 38-test XCTest run below. The capability-BLOCKED escape hatch therefore
+  does NOT apply; the surface is authored and host-validated for real, STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/FSMTimelineChart.*) ===
+  FSMTimelineChart.Adapter.swift        343  Foundation-only pure projector — VERBATIM web `useMemo`
+                                             port: bucket-width selection (10m/30m/2h by hours), the
+                                             floor / epoch-ms helpers, the wall-clock "HH:mm" label, the
+                                             sorted-unique series, the start..now grid seeded zero per
+                                             FSM name, per-cell counts with out-of-window drops, the
+                                             trailing now-aligned cell, content/empty threshold, phase
+                                             resolution, the flattened (cell × series) area points, and
+                                             the total / peak / lookup / max-stack summaries.
+  FSMTimelineChart.Accessibility.swift  114  Foundation-only tail (split for the 400-line house budget):
+                                             locale-aware whole-number formatting, the P1/S11 surface
+                                             slug, and the VoiceOver summary builders (chart summary,
+                                             per-cell tooltip value, legend value).
+  FSMTimelineChart.Model.swift          309  P1/S11 telemetry seam + P1/S10 strings facade + source
+                                             snapshot + P1/S8 source protocol + @Observable
+                                             FSMTimelineChartModel (project on apply, phase, freshness,
+                                             tooltip cursor, hours, emptyMessage override, stale
+                                             auto-refresh / offline) + InMemory source. Injected clock.
+  FSMTimelineChart.Chart.swift          235  Swift Charts stacked AreaMark per FSM name (web `<Area
+                                             type="monotone" stackId="1">`), palette-indexed
+                                             `chartForegroundStyleScale` (== web CHART_COLORS Okabe-Ito),
+                                             index X with HH:mm labels, integer Y, `chartXSelection`
+                                             tooltip listing each FSM count + total, bottom legend.
+  FSMTimelineChart.Views.swift          196  Token-driven chrome: header + freshness chip, stale/offline
+                                             banner, loading skeleton, empty (ContentUnavailableView),
+                                             error (+retry).
+  FSMTimelineChart.swift                 82  The composed surface + GlassPanel card + fade-in +
+                                             phase switch (loading/error/empty/content) + view.opened
+                                             lifecycle + cursor binding.
+  FSMTimelineChart.Previews.swift       104  #if DEBUG previews: content / empty / loading / error /
+                                             stale / offline (six-hour multi-FSM log).
+  FSMTimelineChart.strings               50  P1/S10 catalog — the 3 web source keys + native chrome/a11y.
+  FSMTimelineChart.Tests.swift          315  XCTest: adapter (bucket width, floor, millis, HH:mm label,
+                                             grid span, sorted series, cell counts, out-of-window drop,
+                                             peak/max-stack, phase, area-point flatten, lookup, 24h
+                                             cells, slug) + formatting + a11y summaries.
+  FSMTimelineChart.ModelTests.swift     203  XCTest: model lifecycle (view.opened once, content/empty/
+                                             loading/failed phases, emptyMessage override, hours
+                                             passthrough), cursor move + auto-clear, stale auto-refresh
+                                             once + re-arm, offline keeps cache, retry, stop.
+  Total 1951 lines (10 files). Every .swift file <= 343 lines (house file_length 400);
+  largest Adapter.swift 343. Zero `// parity:allow` opt-outs.
+
+=== PARITY (vs web FSMTimelineChart.tsx) ===
+  Data sources (web → native P1/S8 source seam):
+    transitions/hours props (parent-owned) → FSMTimelineChartSource → FSMTimelineChartUpdate
+    useTranslation                          → FSMTimelineChartStrings facade (P1/S10)
+  Verbatim web logic ported + unit-pinned (the `useMemo` body):
+    bucketMs = hours<=6?10m:hours<=24?30m:2h · start = now − hours·3_600_000 ·
+    grid keys floor(ts/bucketMs)·bucketMs from start..now (inclusive) seeded 0 per FSM ·
+    fsmTypes = sorted unique fsm_name · per-cell increment iff cell exists (out-of-window drop) ·
+    label = local "HH:mm" of the cell start.
+  Recharts → Swift Charts mapping:
+    stacked `<Area type="monotone" stackId="1" fillOpacity=0.3>` → stacked AreaMark,
+    `.interpolationMethod(.monotone)`, palette via `chartForegroundStyleScale`
+    (Color.TS.chartCategorical == web CHART_COLORS Okabe-Ito, index-stable) ·
+    categorical `time` XAxis → bucket-index X with HH:mm axis labels (avoids
+    duplicate-label collision) · `allowDecimals={false}` YAxis → integer ticks ·
+    `<Tooltip>` → `.chartXSelection` RuleMark annotation listing each FSM + total ·
+    `<EmptyState>` → ContentUnavailableView (emptyMessage ?? web default).
+  States (all render, never a blank box): loading(skeleton) · empty(web "No transition
+    data for timeline" / parent emptyMessage) · error(+retry) · stale(chip+one
+    auto-refresh) · offline(cached+chip) — a freshness envelope (ADR-013) around the
+    web content/empty split.
+  i18n: the 3 source keys (fsm.timelineChart, fsm.timelineChart.aria, fsm.noTimelineData)
+    + native chrome/a11y all resolve via the P1/S10 facade; catalog carries the verbatim
+    web English. a11y: chart VoiceOver label (web ariaLabel) + spoken summary
+    (totals/machines/span/peak) + per-cell tooltip + legend labels; Dynamic Type via
+    Font.TS; reduce-motion-safe.
+  Telemetry: emits view.opened with surface slug "FSMTimelineChart" once (P1/S11), asserted.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/9 require formatting              FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious       LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0       PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency) ................. MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6) ........... 38/38 passed, TEST_EXIT=0
+      → FSMTimelineProjectorTests (17) · FSMTimelineFormatTests (2) ·
+        FSMTimelineChartAccessibilityTests (5) · FSMTimelineChartModelTests (14)
+      Harness links the REAL Tokens.swift + TSDesign.swift + Motion.swift primitives;
+      the single out-of-scope shared atom (TSSkeleton) is provided with its exact
+      public signature (the atom library is the P4 component-library bundle's scope).
+  xcodegen generate (project spec enumerates the 10 new files, 60 refs) ............ XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. They are blocked by PRE-EXISTING, UNRELATED parallel-merge
+    state in the shared app target — ZERO of which originates in this surface
+    (all verified present in THIS tree):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the
+        scheme pre-action builds it via the Kotlin/Native Gradle toolchain (the P1/S3
+        artifact already tracked macOS-pending).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 152 co-located feature-view *.Tests.swift / *.ModelTests.swift `import XCTest`
+        into the app target (this surface's 2 test files follow that SAME established
+        sibling convention; they do not introduce a new failure class).
+      • No macOS development-signing identity (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (38/38 XCTest). The full-app build/test is
+    recorded in apps/macos-pending-verifications.md for the P99 acceptance gate on a
+    macos-latest runner with signing identities.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/stale/offline).
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (3/3 + native chrome).
+  [x] Accessibility labels present on the chart + every interactive element + per-state summaries.
+  [x] Tests: adapter unit tests + per-state model tests + a11y label tests (38 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents (real-SDK typecheck both platforms + 38/38 XCTest) green.
+
+EXIT=0
+STATUS=DONE
