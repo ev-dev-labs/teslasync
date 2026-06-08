@@ -1,0 +1,43 @@
+/*
+  CostPerKwhChart.strings
+  TeslaSync — P4 feature view · 0110 · CostPerKwhChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `CostPerKwhChart` resolves (table "CostPerKwhChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/charging/components/cost-analysis/CostPerKwhChart.tsx), verified
+  against web/src/i18n/en.json. The remainder back the native state envelope
+  (freshness chip, connectivity banner, loading / empty / error chrome) and the
+  chart's accessibility summary.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"costAnalysis.charts.costPerKwh" = "Cost per kWh Trend";
+"costAnalysis.charts.rateLabel" = "$/kWh";
+"costAnalysis.charts.noData" = "Not enough data";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"costAnalysis.charts.live" = "Live";
+"costAnalysis.charts.stale" = "Stale";
+"costAnalysis.charts.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"costAnalysis.charts.staleBanner" = "Reconnecting — cost data may be stale";
+"costAnalysis.charts.offlineBanner" = "Offline — showing last known cost data";
+
+/* --- Loading / error chrome --- */
+"costAnalysis.charts.errorTitle" = "Couldn't load cost per kWh trend";
+"costAnalysis.charts.retry" = "Retry";
+
+/* --- Accessibility (VoiceOver summary) --- */
+"costAnalysis.charts.a11y.date" = "Date";
+"costAnalysis.charts.a11y.points" = "data points";
+"costAnalysis.charts.a11y.latest" = "latest";
+"costAnalysis.charts.a11y.range" = "range";
+"costAnalysis.charts.a11y.average" = "average";
+"costAnalysis.charts.a11y.loading" = "Loading cost per kWh trend";
