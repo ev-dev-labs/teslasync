@@ -1,0 +1,36 @@
+/*
+  ConflictWarnings.strings
+  TeslaSync — P4 feature view · 0084 · ConflictWarnings (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ConflictWarnings resolves (table "ConflictWarnings") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first entry is the exact key extracted from the web source
+  (features/automations/pages/ConflictWarnings.tsx). The remaining group backs the
+  native-only chrome (loading / empty / error / stale / offline + a11y) the Apple
+  HIG states contract requires of a standalone surface.
+*/
+
+/* --- Web source key (the banner title) --- */
+"automations.builder.conflict" = "Potential Conflict";
+
+/* --- Severity words (VoiceOver summary) --- */
+"automations.conflicts.severity.warning" = "Warning";
+"automations.conflicts.severity.info" = "Info";
+
+/* --- Empty state (native treatment of web `return null`) --- */
+"automations.conflicts.empty.title" = "No conflicts detected";
+"automations.conflicts.empty.message" = "This automation doesn't overlap with any existing automation.";
+
+/* --- Loading / error chrome --- */
+"automations.conflicts.loading" = "Checking for conflicts…";
+"automations.conflicts.error.message" = "Could not check for automation conflicts.";
+"automations.conflicts.retry" = "Retry";
+
+/* --- Stale + offline chips --- */
+"automations.conflicts.stale" = "Conflict check may be out of date";
+"automations.conflicts.offline" = "Offline — showing last known conflicts";
