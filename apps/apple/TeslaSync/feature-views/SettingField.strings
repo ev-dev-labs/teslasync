@@ -1,0 +1,32 @@
+/*
+  SettingField.strings
+  TeslaSync — P4 feature view · 0213 · SettingField (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "SettingField"). These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time;
+  they are kept in a per-surface table so each parallel surface prompt owns its own
+  strings without editing the shared catalog.
+
+  The web source (features/settings/components/SettingField.tsx) extracts NO strings of
+  its own — the `label` and the help `i18nKey`/`content` are supplied by the parent
+  call-site. The only keys this surface owns are the native accessibility chrome of its
+  inline help trigger, which the web `<HelpIcon>` resolves through the global `t()`:
+    • a11y.helpFor          — web `t('a11y.helpFor', { field })`  → "Help for {{field}}"
+    • help.tooltip.iconLabel — web `t('help.tooltip.iconLabel')`  → generic "More info"
+  Keeping these out of the Swift sources is what lets the views hold no English literals.
+
+  The settingField.preview.* keys back the DEBUG-only Xcode previews and are not part of
+  the shipped surface.
+*/
+
+/* --- Native chrome: inline help accessibility (web <HelpIcon> aria-label) --- */
+"a11y.helpFor" = "Help for %@";
+"help.tooltip.iconLabel" = "More info";
+
+/* --- DEBUG previews only --- */
+"settingField.preview.displayName" = "Display Name";
+"settingField.preview.apiToken" = "API Token";
+"settingField.preview.region" = "Region";
+"settingField.preview.nickname" = "Vehicle Nickname";
+"settingField.preview.help" = "This name appears on your dashboard and in shared links.";
+"settingField.preview.prompt" = "Enter a value";
