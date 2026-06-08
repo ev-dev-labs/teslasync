@@ -1,0 +1,39 @@
+/*
+  RegionSettings.strings
+  TeslaSync — P4 feature view · 0211 · RegionSettings (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `RegionSettings` resolves (table "RegionSettings") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/settings/components/RegionSettings.tsx, namespace "settings"). The
+  second group backs the native chrome: the P4 leaf freshness / loading / empty /
+  error copy and the descriptive accessibility label, so the Swift sources hold no
+  English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"region.title" = "Region & API";
+"region.subtitle" = "Tesla account region and Fleet API endpoint";
+"region.lastSynced" = "Synced";
+"region.refresh" = "Refresh";
+"region.regionCode" = "Region";
+"region.fleetApiUrl" = "Fleet API Base URL";
+"region.noData" = "No region data yet. Click Refresh to fetch from Tesla.";
+"toast.regionRefreshed" = "Region info refreshed";
+"toast.regionFailed" = "Failed to refresh region";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error + a11y --- */
+"region.live" = "Live";
+"region.stale" = "Stale";
+"region.offline" = "Offline";
+"region.staleBanner" = "Reconnecting — data may be stale";
+"region.offlineBanner" = "Offline — showing last known data";
+"region.loadingA11y" = "Loading region settings";
+"region.errorTitle" = "Couldn't load region settings";
+"region.retry" = "Retry";
+"region.refreshA11y" = "Refresh region info";
