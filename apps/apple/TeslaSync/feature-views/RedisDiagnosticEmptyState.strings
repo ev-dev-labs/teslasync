@@ -1,0 +1,71 @@
+/*
+  RedisDiagnosticEmptyState.strings
+  TeslaSync — P4 feature view · 0039 · RedisDiagnosticEmptyState (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  RedisDiagnosticEmptyState resolves (table "RedisDiagnosticEmptyState") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  The first groups are the exact keys extracted from the web source
+  (features/admin/components/RedisDiagnosticEmptyState.tsx). The final group backs the
+  native-only chrome (retry / chip fallback / loading + a11y) the Apple HIG states
+  contract requires.
+*/
+
+/* --- Branch 0.A — cache not wired --- */
+"redis.diagnostic.cacheNotWired.title" = "Redis cache is not configured";
+"redis.diagnostic.cacheNotWired.body" = "The TeslaSync API server started without a Redis connection. Set REDIS_ADDR (or REDIS_HOST + REDIS_PORT) in your environment, ensure the Redis service is reachable, and restart the API. This page reads exclusively from Redis and cannot function without it.";
+"redis.diagnostic.cacheNotWired.cta" = "See cache configuration docs";
+
+/* --- Branch 0.B — unreachable --- */
+"redis.diagnostic.unreachable.title" = "Redis is unreachable";
+"redis.diagnostic.unreachable.body" = "The API server is configured to use Redis, but the connection failed. Check that the Redis pod is running, that network policies allow the API to reach it, and review API server logs for \"redis signal cache: GetAll failed\".";
+
+/* --- Branch 0.C — generic request failure --- */
+"redis.diagnostic.requestFailed.title" = "Could not load Redis signals";
+"redis.diagnostic.requestFailed.body" = "The server returned an error: {{status}} {{message}}. The Redis Signal Viewer cannot recover automatically — try refreshing, and if the error persists check the API server logs.";
+
+/* --- Branch 0.D — network failure --- */
+"redis.diagnostic.networkError.title" = "Cannot reach the API server";
+"redis.diagnostic.networkError.body" = "The browser failed to fetch /api/v1/dev-tools/redis-signals. Check that the API server is running, the proxy/ingress is healthy, and there are no CORS or network errors in DevTools.";
+
+/* --- No-meta legacy fallback --- */
+"redis.noSignals" = "No signals cached for this vehicle";
+
+/* --- Branch 1 — mode=local --- */
+"redis.diagnostic.modeLocal.title" = "Redis L2 writes are disabled";
+"redis.diagnostic.modeLocal.body" = "LIVE_SIGNAL_STORE_MODE=local means the telemetry pipeline writes only to the in-process L1 store and never mirrors to Redis. This page reads exclusively from Redis, so it cannot show data while local mode is active.";
+"redis.diagnostic.modeLocal.cta" = "See live-state contract docs";
+
+/* --- Branch 2 — L2 mirror broken --- */
+"redis.diagnostic.mirrorBroken.title" = "L2 mirror is failing";
+"redis.diagnostic.mirrorBroken.body" = "The in-process L1 store has {{count}} signals for this vehicle but Redis is empty. The async mirror goroutine in HybridLiveSignalStore.UpdateNonBlocking may be timing out or the Redis connection may be saturated. Check pod logs for \"live signal store: Redis mirror failed\".";
+
+/* --- Branch 3 — no recent telemetry --- */
+"redis.diagnostic.noTelemetry.title" = "No recent telemetry for this vehicle";
+"redis.diagnostic.noTelemetry.bodyStale" = "Last L1 entry was {{date}}. The 7-day Redis TTL has likely expired. Wait for the next telemetry push or warm the cache from the cold-path reader.";
+"redis.diagnostic.noTelemetry.bodyAbsent" = "This vehicle has no L1 entries on this pod. Either telemetry has never streamed for it, or this pod restarted before any telemetry arrived.";
+
+/* --- Branch 4 — fallthrough --- */
+"redis.diagnostic.empty.title" = "No signals cached for this vehicle";
+"redis.diagnostic.empty.body" = "Both L1 and L2 are empty. If this vehicle is currently streaming, give the next batch a few seconds to arrive. Otherwise check the telemetry pipeline.";
+
+/* --- Other vehicles section + meta list labels --- */
+"redis.diagnostic.otherVehicles" = "Other vehicles with cached signals";
+"redis.diagnostic.meta.mode" = "Live store mode";
+"redis.diagnostic.meta.key" = "Redis key";
+"redis.diagnostic.meta.l1Count" = "L1 signals";
+"redis.diagnostic.meta.l2Count" = "L2 fields (raw)";
+"redis.diagnostic.meta.l1LastSeen" = "L1 last seen";
+"redis.diagnostic.meta.l2LastSeen" = "L2 last seen";
+"redis.diagnostic.meta.vin" = "VIN";
+
+/* --- Native chrome: retry / chip fallback / loading + accessibility --- */
+"redis.diagnostic.retry" = "Retry";
+"redis.diagnostic.vehicleFallback" = "Vehicle {{id}}";
+"redis.diagnostic.fieldsA11y" = "{{count}} cached fields";
+"redis.diagnostic.loadingOtherVehicles" = "Loading other vehicles with cached signals";
+"redis.diagnostic.otherVehicleHint" = "Switches the viewer to this vehicle's cached signals";
