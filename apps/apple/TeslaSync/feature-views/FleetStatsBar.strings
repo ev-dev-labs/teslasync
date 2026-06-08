@@ -1,0 +1,43 @@
+/*
+  FleetStatsBar.strings
+  TeslaSync — P4 feature view · 0123 · FleetStatsBar (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `FleetStatsBar` resolves (table "FleetStatsBar") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/dashboard/components/FleetStatsBar.tsx, namespace "dashboard"). The
+  remainder back the native state envelope (loading / empty / error chrome, the
+  stale / offline connectivity banner) and the accessibility summary. Unit symbols
+  ("km" / "kWh" / "Wh/km") are locale-invariant codes carried as data, so they are
+  not catalog entries (matching the web, which passes them as values).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"fleet.size" = "Fleet Size";
+"fleet.online" = "online";
+"fleet.distance" = "Distance (30d)";
+"fleet.energy" = "Energy (30d)";
+"fleet.efficiency" = "Efficiency";
+"fleet.average" = "fleet average";
+"fleet.alerts" = "Alerts";
+"fleet.unread" = "unread";
+
+/* --- Native state envelope (loading / empty / error chrome) --- */
+"fleet.loadingA11y" = "Loading fleet statistics";
+"fleet.emptyTitle" = "No fleet data yet";
+"fleet.emptyHint" = "Fleet totals appear here once a vehicle is connected and reporting.";
+"fleet.errorTitle" = "Couldn't load fleet statistics";
+"fleet.retry" = "Retry";
+
+/* --- Connectivity banner (stale / offline) --- */
+"fleet.staleBanner" = "Reconnecting — fleet totals may be out of date";
+"fleet.offlineBanner" = "Offline — showing the last loaded totals";
+
+/* --- Accessibility --- */
+"fleet.statsTitle" = "Fleet statistics";
+"common.noData" = "No data available";
