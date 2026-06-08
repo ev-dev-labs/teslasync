@@ -1,0 +1,142 @@
+=== P4 Feature view 0171 MotorEfficiencyInsights (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively
+                       per command, no sudo / no `xcode-select -s`, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen present · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (booted) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" succeeded; debug + release XCFrameworks staged
+                       to apps/apple/Frameworks/Shared.xcframework — ios-arm64, ios-arm64-simulator, macos-arm64).
+                       The KMP core builds on THIS runner, so it is NOT the blocker here.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS toolchain present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/driving-dynamics/MotorEfficiencyInsights.tsx — a PURE presentational leaf
+  fed `motorStats` + `throttleStyle` + the temperature display preference (`toTemperatureDisplay` / `tempUnit`)
+  by the /driving dynamics page. Composition:
+    FadeIn(delay 0.35) → Grid(cols default:1 / md:3, gap 4) → three GlassPanel(p-5):
+      1. Torque Distribution (Zap, blue)    : Avg Torque (Nm) · Max Torque (Nm) · High Torque Time (%)
+      2. Throttle Behavior   (Gauge, cyan)  : Avg Power (kW) · Style Badge(success/warning/danger)
+                                              · MetricBar(value=avgPower max=200, sublabel="" → no readout)
+      3. Motor Thermal       (Thermometer)  : Avg Motor Temp · Max Motor Temp (toTemperatureDisplay+tempUnit)
+                                              · Thermal Badge (max<100 Good / <140 Warm / else Hot)
+  Each panel renders its stats when `motorStats` is present and the shared <EmptyState/> ("No motor data
+  recorded yet") when it is null. Numbers use fmtNumber(v, 1). The `tempUnit` already includes '°' — the code
+  must never prefix a second one ("49.0°°C" was a real, test-guarded regression). Data sources: useTranslation.
+
+ARTIFACTS SHIPPED  (allowed scope: apps/apple/TeslaSync/feature-views/MotorEfficiencyInsights.* + this log)
+  TeslaSync/feature-views/MotorEfficiencyInsights.Adapter.swift   — Foundation-only domain + formatters:
+        MotorMetrics, MotorThrottleStyle(+getThrottleStyle port), MotorThermalStatus(+classify),
+        MotorTemperatureUnit(convert+suffix), MotorEfficiencyFormat(number/withUnit/percent/temperature/
+        powerFraction — port of numberFormat.ts fmtNumber(v,1)), MotorEfficiencyAccessibility.
+  TeslaSync/feature-views/MotorEfficiencyInsights.Model.swift     — P1/S8 source seam (MotorEfficiencySource +
+        InMemory…), P1/S11 telemetry seam (MotorEfficiencyTelemetry + OSLog…), connection axis, input snapshot,
+        resolved view-state + pure MotorEfficiencyProjection, the @MainActor @Observable model, P1/S10 facade.
+  TeslaSync/feature-views/MotorEfficiencyInsights.Views.swift     — the 3 panels + shared chrome (MotorPanel,
+        MotorMetricRow, MotorBadge, MotorPanelEmpty) + loading/error chrome.
+  TeslaSync/feature-views/MotorEfficiencyInsights.swift           — the surface view (header + freshness chip /
+        banner + width-adaptive grid + state switch) + the diagnostics surfaceSlug.
+  TeslaSync/feature-views/MotorEfficiencyInsights.Previews.swift  — 7 #Preview states (DEBUG).
+  TeslaSync/feature-views/MotorEfficiencyInsights.strings         — P1/S10 catalog: the 17 web parity keys +
+        the native-chrome freshness/loading/error keys.
+  TeslaSync/feature-views/MotorEfficiencyInsights.Tests.swift     — 33 XCTest cases (adapter + projection +
+        model + a11y). Co-located like every prior P4 feature-view (AcDcStatsPanel/0096, DriveOverviewChart/0138).
+  No shared-wiring edits needed: project.yml + .swiftlint.yml already glob TeslaSync/feature-views (added by 0010).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel(p-5)         → TSGlassPanel (Sources/Components/UI/Cards.swift)
+  h3 panel title          → Text(verbatim:).font(Font.TS.panel)+textPrimary+.isHeader (the AcDc precedent)
+  Lucide <Icon/>          → SF Symbols: Zap→bolt.fill · Gauge→gauge.medium · Thermometer→thermometer.medium
+  icon tints (decorative) → brand chart-series tokens (ADR-006 semantic, not literal): blue→chartSeriesSpeed,
+                            cyan→chartSeriesRegen, amber→chartSeriesEnergy
+  Badge variant           → MotorBadge(tone:) over TSTone (success/warning/danger) — verbatim peer of TSBadge
+  MetricBar value/max=200  → TSMetricBar(fraction:tone:) (powerFraction = clamp(avgPower/200)); no readout (web sublabel="")
+  EmptyState              → MotorPanelEmpty (icon waveform.path.ecg + "No motor data recorded yet") — never blank
+  QueryError              → MotorEfficiencyErrorView (retry affordance)
+  fmtNumber(v,1)          → MotorEfficiencyFormat.number (grouped, fixed 1-dp, NaN/∞⇒0); Nm/kW spaced, %/° not
+  toTemperatureDisplay+tempUnit → MotorTemperatureUnit.convert(fromCelsius:) + .suffix; never doubles '°'
+  getThrottleStyle / thermal thresholds → raw `<` (Swift NaN/∞ semantics == JS) for exact parity
+  i18n      : every string via the P1/S10 facade (table "MotorEfficiencyInsights"); zero English prose literals.
+  a11y      : icons .accessibilityHidden; rows/badges combined into VoiceOver labels; header .isHeader; the
+              surface is one .contain element labelled "Motor Efficiency"; Dynamic Type + Reduce Motion via tokens.
+  telemetry : view.opened surface="MotorEfficiencyInsights" via the model on first appear (P1/S11), OSLog sink.
+
+STATES (all render — no hidden surface)
+  loading → 3 skeleton panels · empty → 3 panels each with the EmptyState body · error → retry card ·
+  data → 3 populated panels (FadeIn 0.35) · stale/offline → freshness chip + banner + one-shot auto-refresh.
+
+GATES
+  [GREEN]    swiftformat --lint (MotorEfficiencyInsights.* scope, 6 files)        : 0/6 require formatting   (FORMAT_EXIT=0)
+             swiftformat --lint . (whole tree, FYI)                              : 1 PRE-EXISTING file —
+                                                                                   ActionBuilder.Previews.swift:48
+                                                                                   (blankLinesBetweenScopes); NOT mine.
+  [GREEN]    swiftlint --strict (MotorEfficiencyInsights.* scope, 6 files)        : 0 violations, 0 serious  (LINT_EXIT=0)
+             swiftlint --strict (whole tree, FYI)                                : 1 PRE-EXISTING violation —
+                                                                                   LifetimeStatsWidget.Adapter.swift:141
+                                                                                   function_body_length (same one the
+                                                                                   0010 ToolCard log noted); NOT mine.
+  [GREEN]    check-placeholders.ps1 -Path …/feature-views/MotorEfficiencyInsights : PLACEHOLDER_COUNT=0       (PLACEHOLDER_EXIT=0)
+  [GREEN]    MotorEfficiencyInsights build + test — ISOLATED SwiftPM harness, swift-tools 6.0 with
+             .swiftLanguageMode(.v6) (Swift 6 language mode → strict-concurrency complete = same as the app),
+             compiling the EXACT shipped MotorEfficiencyInsights.{swift,Adapter,Model,Views,Previews}.swift
+             sources against the REAL repo design-system files (Tokens, TSDesign, TSMaterial, Cards, Typography,
+             Badges, Buttons, Metrics, Motion, Skeletons), run under the Xcode toolchain so the SwiftUI #Preview
+             macro plugin (PreviewsMacros) IS present and the #Preview blocks compile too:
+                 Build complete!  ·  Executed 33 tests, with 0 failures                                    (SWIFT_TEST_EXIT=0)
+             (A plain CommandLineTools `swift build` cannot expand the Xcode-only #Preview macro — a toolchain
+             limitation, not a code issue; a release-config build, which excludes #if DEBUG previews, also passes.)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO MotorEfficiencyInsights errors; both blockers pre-exist this change):
+    iOS  : the app target fails because 163 co-located *.Tests.swift files (every P4 surface ships its tests next
+           to the surface) `import XCTest`, which the app (non-test) target cannot resolve →
+           "Unable to resolve module dependency: 'XCTest'" (4 hits). This is the exact blocker
+           apps/macos-pending-verifications.md records for ALL feature-views. (The parallel-merge duplicate-type
+           collision is also still present — `DashboardWidgetSize` is defined 15× across dashboard-widget files —
+           though the build stops at the XCTest module error first.)
+    macOS: additionally fails because "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require a
+           development SIGNING certificate (8 hits), which this runner does not provision.
+    grep of BOTH build logs for "MotorEfficiency … error:" = 0 hits. `xcodegen generate` succeeds with the new
+    files (the project integrates them). These blockers are owned by the P4/P99 Apple acceptance gate on a signed
+    macos-latest CI runner per apps/macos-pending-verifications.md (the P-0010-ToolCard row already defers exactly
+    this "Full-app iOS-Simulator + macOS xcodebuild build test" for every feature-view surface) — NOT by a single
+    feature-view prompt (task rule: do not fix pre-existing unrelated breakage; allowed scope is this surface only).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — 3 panels, all 6 metrics, the style + thermal
+                          badges with their exact thresholds, the suppressed MetricBar readout, the EmptyState.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the macOS/iOS failures were RUN
+                          and confirmed (XCTest + signing), not assumed; Shared.xcframework was actually built.
+  4  No stubs as final   : complete production surface + 33 real tests; placeholder scanner = 0; no TODO/mock.
+  5  No parity shortcut  : formatter spacing, °-suffix non-doubling, throttle/thermal thresholds, bar fraction,
+                          tints, typography, a11y, telemetry, and all 5 freshness states mapped + verified.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry all present
+                          and consumed; binds through the model, never HTTP from the view.
+  8  No commit on red    : the COMMITTED artifact (MotorEfficiencyInsights.* + this log) is GREEN on every host
+                          gate AND on a real isolated Swift 6 build+test (33/33, previews included); the deferred
+                          full-app gate is RED only on pre-existing, unrelated surfaces this commit neither
+                          introduces nor touches.
+  9  No silent drift     : changes are confined to the seven feature-views/MotorEfficiencyInsights.* files + this
+                          log (git status verified); no shared file edited.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic MotorEfficiencyInsights shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 33 tests pass (previews included) under the app's own Swift 6
+  strict-concurrency rules, against the real design-system, with lint/format/placeholder all green. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the
+  pre-existing co-located-XCTest-in-app-target pattern (shared by all 163 surface test files) and by macOS
+  development-signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date (0010 ToolCard, 0096 AcDcStatsPanel, 0138 DriveOverviewChart, …).
+
+EXIT=0
+STATUS=DONE
