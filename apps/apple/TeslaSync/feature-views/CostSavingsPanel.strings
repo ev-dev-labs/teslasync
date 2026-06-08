@@ -1,0 +1,41 @@
+/*
+  CostSavingsPanel.strings
+  TeslaSync — P4 feature view · 0136 · CostSavingsPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `CostSavingsPanel` resolves (table "CostSavingsPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/driving/components/drive-detail/CostSavingsPanel.tsx). The web uses
+  i18next `{{name}}` interpolation; the native facade resolves these with
+  positional `String(format:)` placeholders, so the interpolated values carry
+  `%@` (and `%1$@` / `%2$@` where two arguments are substituted). The second group
+  backs the native chrome: the P4 leaf freshness / loading / empty / error copy,
+  so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.costSavings" = "Cost & Savings";
+"driveDetail.tripCost" = "Trip Cost";
+"driveDetail.atRate" = "at %1$@%2$@/kWh";
+"driveDetail.costPerUnit" = "Cost / %@";
+"driveDetail.gasCostEquiv" = "Gas Cost (equiv)";
+"driveDetail.atMpg" = "at %@ MPG";
+"driveDetail.gasSavings" = "vs Gas Savings";
+"driveDetail.savingsPct" = "Savings %";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error --- */
+"costSavings.live" = "Live";
+"costSavings.stale" = "Stale";
+"costSavings.offline" = "Offline";
+"costSavings.staleBanner" = "Reconnecting — data may be stale";
+"costSavings.offlineBanner" = "Offline — showing last known data";
+"costSavings.refresh" = "Refresh";
+"costSavings.loadingA11y" = "Loading cost and savings";
+"costSavings.empty" = "No cost data for this drive yet.";
+"costSavings.errorTitle" = "Couldn't load cost & savings";
+"costSavings.retry" = "Retry";

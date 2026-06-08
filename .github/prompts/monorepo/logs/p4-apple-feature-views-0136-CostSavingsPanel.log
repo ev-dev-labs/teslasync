@@ -1,0 +1,222 @@
+================================================================================
+P4 · Feature view · 0136 — CostSavingsPanel (Apple)
+Run: 2026-06-07T22:05-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/257
+Base: fe75fdab8
+Prompt: P4/feature-views/0136 — Feature view: CostSavingsPanel
+Web source (spec): web/src/features/driving/components/drive-detail/CostSavingsPanel.tsx
+Mode: code-complete + host SDK compiles + EXECUTED host XCTest; DEFERRED Xcode app
+      build/test (BackendTool 0002 / sibling feature-view precedent, ADR-012,
+      Honesty rule 7 — predecessor parity). Charts/maps used by this surface: NONE.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.x (project generates cleanly, see deferred)     OK
+  feature-views in project.yml  2 references (app + macOS targets ARE registered)   OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui" + "@/components/motion". The core requirement is
+  SwiftUI, which is AVAILABLE and PROVEN by real iOS-18-simulator AND macOS-15 SDK
+  compiles below. The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit
+  unavailable") does NOT apply — the surface is authored, host-compiled on both
+  SDKs, and its full XCTest suite is EXECUTED green on the host.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/CostSavingsPanel.*) ===
+  CostSavingsPanel.Adapter.swift  306  settings/formatting/arithmetic core — ported
+                                       constants (m/mi, m/km, gal→L) + CostSavingsRawSettings
+                                       + CostSavingsConfig(make: web ?? defaults) + CostSavingsInputs
+                                       + CostSavingsFormat (fmtNumber / currency / plain / SI distance)
+                                       + CostSavingsMath (tripCost / costPerDistanceUnit / estimateGasCost
+                                       / savings). Pure, Foundation-only.
+  CostSavingsPanel.Tiles.swift    204  resolved-tile projection — CostSavingsTone + CostSavingsTile
+                                       + CostSavingsTiles.build (Trip Cost always; Cost/unit when
+                                       distanceM>0; gas trio when savings>0) + CostSavingsAccessibility.
+  CostSavingsPanel.Model.swift    273  P1/S8 state-holder seam (CostSavingsSource→CostSavingsModel)
+                                       + P1/S11 telemetry seam (view.opened) + P1/S10 strings facade
+                                       + Connection axis + Input snapshot + Resolved + Projection
+                                       + InMemoryCostSavingsSource.
+  CostSavingsPanel.Views.swift    182  presentational subviews — responsive stat grid (web
+                                       grid-cols-2/3/5 → adaptive LazyVGrid) + borderless stat cell
+                                       (label / tone value / sub-label) + loading skeleton / empty /
+                                       error chrome. Tone→token map (green/emerald→statusSuccess,
+                                       cyan→accent, red→statusDanger).
+  CostSavingsPanel.swift          153  CostSavingsPanel surface — glass panel shell + $-header +
+                                       freshness chip/banner + state switch (loading/empty/error/data)
+                                       + surfaceSlug + onAppear/onDisappear lifecycle.
+  CostSavingsPanel.Previews.swift 110  #if DEBUG previews — one per state (data / data-no-savings /
+                                       empty / loading / error / stale / offline).
+  CostSavingsPanel.Tests.swift    400  XCTest — adapter formatters + settings derivation + math +
+                                       tile builder + projection + model wiring/telemetry/freshness
+                                       + a11y (37 methods).
+  CostSavingsPanel.strings         41  P1/S10 catalog contribution (table "CostSavingsPanel").
+  Largest .swift = 400 lines (swiftlint file_length<=400 honored; the Adapter core was
+  split into .Adapter + .Tiles to stay within budget). No file imports the Shared
+  xcframework (seams are Swift protocols; the prod app injects the settings/drive-backed
+  source, previews/tests inject InMemoryCostSavingsSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  Data sources (web useTranslation + useSettings + useFormatting + useUnits): collapsed
+  into the P1/S8 CostSavingsSnapshot (derived CostSavingsConfig + SI CostSavingsInputs)
+  delivered through CostSavingsSource→CostSavingsModel. No HTTP / no hook calls in the view.
+  Render math (verbatim from source):
+    - energyKwh = stats.energyWh / 1000 ; tripCost = evCost = energyKwh * costPerKwh
+    - costPerDistanceUnit = (energyKwh*costPerKwh) / convertDistanceFromSI(distanceM, unit)
+      (nil when distanceM<=0)  [web useFormatting.costPerDistanceUnit]
+    - estimateGasCost: nil when mpg<=0||gasPrice<=0||distanceM<=0; else
+      (distanceM→mi)/mpg * gasPrice, × 3.78541 when gas_unit==liter  [web estimateGasCost]
+    - savings = gasCost==nil ? nil : gasCost - evCost
+  Settings defaults reproduced: base_cost_per_kwh ?? 0.12 ; currency_symbol||'$'
+  (untrimmed-when-trim-nonempty) ; floor(decimal_precision) if finite&>=0 else 2 ;
+  unit_of_length('mi'|'km') ; gas_efficiency_mpg ?? 0 ; gas_price_per_unit ?? 0 ;
+  gas_unit ?? 'gallon' ; locale||'en-US'. Constants: 1609.344 m/mi, 1000 m/km, 3.78541 gal→L.
+  Cells (web grid, render order + visibility branches):
+    1. Trip Cost  (always)            value formatEnergyCost(energyWh/1000) — green ;
+                                      sub "at {sym}{rate}/kWh"
+    2. Cost / {unit} (distanceM>0)    value formatCurrency(costPerDistanceUnit ?? 0, 3) — cyan
+    3. Gas Cost (equiv) (savings>0)   value formatCurrency(gasCost) — red ; sub "at {mpg} MPG"
+    4. vs Gas Savings   (savings>0)   value formatCurrency(savings) — emerald
+    5. Savings %        (savings>0)   value fmtNumber(savings/gasCost*100, 0)+"%" — emerald
+  i18n keys (referenced==declared, verified by cross-check; table "CostSavingsPanel"):
+    driveDetail.costSavings/tripCost/atRate/costPerUnit/gasCostEquiv/atMpg/gasSavings/savingsPct
+    + native chrome costSavings.{live,stale,offline,staleBanner,offlineBanner,refresh,
+    loadingA11y,empty,errorTitle,retry}. No English literals in Swift. i18next {{name}} →
+    positional String(format:) %@ / %1$@%2$@.
+  States (every one renders): loading (skeleton grid) / empty (degenerate drive, no
+  energy+no distance → ContentUnavailableView) / error (QueryError peer + retry) / data ;
+  orthogonal connection axis live/stale/offline → freshness chip + banner + one-shot
+  auto-refresh on the stale transition.
+  Accessibility: header isHeader trait ; each cell is one combined element with a
+  "{label}, {value}[, {detail}]" VoiceOver label ; refresh/retry labelled ; Dynamic Type
+  (token fonts) ; Reduce Motion honoured by TSFadeIn.
+  Telemetry: CostSavingsModel.start() emits P1/S11 view.opened(surface:"CostSavingsPanel"),
+  once (idempotent) — asserted by SpyCostSavingsTelemetry.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface compiled together with the REAL apps/apple component closure
+  (design Tokens + Design/{TSMaterial,TSDesign} + Components/UI/{Cards,Buttons,
+  Typography,Badges} + Motion/Motion + Feedback/Skeletons); none import the Shared
+  xcframework. DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete  <closure> <5 production files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin;
+        the 5 production files + Previews + closure):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (real production Model/Adapter/Tiles/Views/
+        surface + real design tokens + real TS component closure), Swift 6 language mode:
+          Test Suite 'CostSavingsFormatTests'        passed
+          Test Suite 'CostSavingsConfigMakeTests'    passed
+          Test Suite 'CostSavingsMathTests'          passed
+          Test Suite 'CostSavingsTilesTests'         passed
+          Test Suite 'CostSavingsProjectionTests'    passed
+          Test Suite 'CostSavingsModelTests'         passed
+          Test Suite 'CostSavingsAccessibilityTests' passed
+          Executed 37 tests, with 0 failures (0 unexpected) in 0.008 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: fmtNumber grouping/round/non-finite, currency symbol prefix, plain
+        trailing-zero trim, SI km/mi conversion, settings ?? defaults + currency trim
+        + precision floor, tripCost/costPerDistanceUnit/estimateGasCost(gallon|liter)/
+        savings nil-guards, tile builder all five branches + empty + km, projection
+        loading/empty/error/data, model start/telemetry-once/push/stale-auto-refresh-
+        once/offline-no-refresh/manual-refresh/stop-re-arm/slug, a11y tile-label.
+  [5] swiftlint --strict (8 surface files; explicit paths):
+          Done linting! Found 0 violations, 0 serious in 7 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/7 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate) — scanned copies of the 8 real files:
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+        (Self-test PASS — scanner proven to detect planted stubs, i.e. not vacuous.
+         The prompt's literal `-Path .../feature-views/CostSavingsPanel` is a path
+         PREFIX, not a real dir; the script returns "nothing to scan" (clean) for a
+         non-existent path — identical for all sibling prompts. The meaningful scan
+         above points at the actual 8 files.)
+
+  Pre-existing, OUT-OF-SCOPE lint note (full transparency, Honesty rule 1): the bare
+  repo-wide commands surface TWO violations in files this prompt may NOT edit (allowed
+  files = CostSavingsPanel.* + this log), neither introduced by this surface:
+    - swiftlint --strict (repo): TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+      function_body_length (pre-existing).
+    - swiftformat --lint apps/apple: TeslaSync/feature-views/ActionBuilder.Previews.swift
+      blankLinesBetweenScopes (pre-existing).
+  This surface's own 8 files are 0/0 on both linters (steps [5]/[6]).
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the staged/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (ONE code-unrelated reason; identical disposition to the BackendTool
+    0002 + 73 sibling feature-views, Honesty rule 7):
+      Shared.xcframework not staged — apps/apple/Frameworks holds only .gitkeep. The
+      app target links the KMP core; staging it needs a Kotlin/Native gradle build
+      (apps/shared :core:assembleSharedXCFramework). This is independent of this UI
+      surface; the concrete missing-framework error is captured above. Unlike some
+      earlier siblings, this surface IS already registered in project.yml (feature-views
+      x2), so once the xcframework is staged the scheme build/test will include it
+      unmodified. Steps [1]/[2] DO compile this surface against the real component
+      library on BOTH SDKs, step [3] compiles its previews, and step [4] EXECUTES its
+      full 37-test XCTest suite green — the meaningful validation.
+    (Generated TeslaSync.xcodeproj is git-ignored and was removed after capture.)
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced
+      (loading / empty / error / data + stale / offline freshness axis).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (CostSavingsSource→
+      CostSavingsModel); no view HTTP / no hook calls in the view.
+  [x] Every i18n key from source has a matching catalog key — referenced==declared
+      verified by cross-check; native chrome costSavings.* present; no English literals.
+  [x] Accessibility labels on every interactive element (refresh/retry) + each cell a
+      combined "{label}, {value}[, {detail}]" element; header carries isHeader.
+  [x] Tests: adapter unit + tile builder + per-state projection/model + a11y — 37
+      methods, EXECUTED 37/37, exit 0 (SwiftPM host harness).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green (iOS+macOS SDK compiles, previews,
+      executed XCTest, lint, format, placeholder); Xcode app build/test DEFERRED with
+      captured real evidence (xcframework not staged), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is
+                          shown DEFERRED with its real exit 65 + cause, not as pass.
+                          Pre-existing out-of-scope lint findings disclosed above.
+  2 No scope narrowing ... full surface (7 .swift + strings), all states, seams, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + render branch + the
+                          gasCost/costPerUnit/savings math reproduced and unit-tested.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. all five cells + visibility branches + sub-labels + the
+                          settings-default chain + SI conversions + 5 freshness states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as BackendTool 0002 host-gate + xcframework
+                          deferral; no escape-hatch abuse (SwiftUI IS available + proven).
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment xcframework build, deferred
+                          with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... Adapter split into .Adapter + .Tiles to honour file_length<=400
+                          (documented); only CostSavingsPanel.* + this log were touched.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
