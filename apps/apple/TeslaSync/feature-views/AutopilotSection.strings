@@ -1,0 +1,40 @@
+/*
+  AutopilotSection.strings
+  TeslaSync — P4 feature view · 0165 · AutopilotSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `AutopilotSection`
+  resolves (table "AutopilotSection") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table so each parallel surface prompt owns its own strings without editing the shared
+  catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/driving-dynamics/AutopilotSection.tsx). The remainder back the native
+  state envelope (freshness chip, connectivity banner, loading / empty / error chrome), the embedded
+  em-dash the web writes inline, and the accessibility copy.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"dynamics.autopilot" = "Autopilot & Cruise";
+"dynamics.currentSpeed" = "Current Speed";
+"dynamics.cruiseSetSpeed" = "Cruise Set Speed";
+"dynamics.followDistance" = "Follow Distance";
+"dynamics.autopilotNoData" = "No cruise / autopilot telemetry received yet";
+
+/* --- Embedded glyph the web writes inline --- */
+"dynamics.autopilot.emDash" = "—";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"dynamics.autopilot.live" = "Live";
+"dynamics.autopilot.stale" = "Stale";
+"dynamics.autopilot.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"dynamics.autopilot.staleBanner" = "Reconnecting — cruise telemetry may be stale";
+"dynamics.autopilot.offlineBanner" = "Offline — showing the last received cruise telemetry";
+
+/* --- Loading / empty / error chrome --- */
+"dynamics.autopilot.loading" = "Loading cruise and autopilot telemetry";
+"dynamics.autopilot.emptyHint" = "Current speed, cruise set speed, and follow distance appear here while Autopilot or cruise is active.";
+"dynamics.autopilot.errorTitle" = "Couldn't load cruise telemetry";
+"dynamics.autopilot.retry" = "Retry";
