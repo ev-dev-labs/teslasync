@@ -1,0 +1,58 @@
+/*
+  SecurityStatusCards.strings
+  TeslaSync — P4 feature view · 0046 · SecurityStatusCards (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SecurityStatusCards` resolves (table "SecurityStatusCards") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/security-access/SecurityStatusCards.tsx + the
+  windowSummary literals from ./helpers.ts). The second group backs the native-only
+  chrome (loading / empty / error / retry / freshness) the Apple HIG states contract
+  requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.security.card.lockStatus" = "Lock Status";
+"admin.security.card.sentryMode" = "Sentry Mode";
+"admin.security.card.doors" = "Doors";
+"admin.security.card.windows" = "Windows";
+"admin.security.card.homelink" = "HomeLink";
+"admin.security.card.guestMode" = "Guest Mode";
+
+"admin.security.locked" = "Locked";
+"admin.security.unlocked" = "Unlocked";
+"admin.security.active" = "Active";
+"admin.security.inactive" = "Inactive";
+"admin.security.closed" = "Closed";
+"admin.security.open" = "Open";
+"admin.security.nearby" = "Nearby";
+"admin.security.away" = "Away";
+"admin.security.enabled" = "Enabled";
+"admin.security.disabled" = "Disabled";
+
+"admin.security.card.lockDesc" = "Vehicle lock state";
+"admin.security.card.sentryDesc" = "Camera surveillance system";
+"admin.security.card.doorsDesc" = "All vehicle doors";
+"admin.security.card.windowsDesc" = "Window positions";
+"admin.security.card.homelinkDesc" = "Garage door opener";
+"admin.security.card.guestDesc" = "Temporary access mode";
+
+/* windowSummary (./helpers.ts) */
+"admin.security.windows.allClosed" = "All Closed";
+"admin.security.windows.openVenting" = "%lld Open/Venting";
+
+/* --- Native chrome: states + freshness + accessibility --- */
+"admin.security.cards.loadingA11y" = "Loading security status";
+"admin.security.cards.empty" = "No security telemetry yet";
+"admin.security.cards.errorTitle" = "Couldn't load security status";
+"admin.security.cards.retry" = "Retry";
+"admin.security.cards.live" = "Live";
+"admin.security.cards.stale" = "Stale";
+"admin.security.cards.offline" = "Offline";
+"admin.security.cards.staleBanner" = "Reconnecting — security status may be stale";
+"admin.security.cards.offlineBanner" = "Offline — showing last known security status";
