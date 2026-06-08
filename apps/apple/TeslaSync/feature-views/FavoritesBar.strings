@@ -1,0 +1,43 @@
+/*
+  FavoritesBar.strings
+  TeslaSync — P4 feature view · 0227 · FavoritesBar (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  FavoritesBar resolves (table "FavoritesBar") lives here with its web `t(key, default)`
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface prompt
+  owns its own strings without editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/system/components/FavoritesBar.tsx + its CommandTile). The remainder back the
+  native state envelope (loading / empty / error chrome, the freshness chip + connectivity
+  banner) and the accessibility summary the web presentational component does not carry.
+*/
+
+/* --- Web parity: header + favorite toggle (web FavoritesBar / CommandTile) --- */
+"commands.cat.quickActions" = "Quick Actions";
+"commands.toggleFavorite" = "Toggle favorite";
+
+/* --- Accessibility summary (VoiceOver) --- */
+"commands.favorites.a11yNone" = "no favorites yet";
+"commands.favorites.a11yCount" = "{{count}} favorites";
+
+/* --- Loading state (initial favorites fetch) --- */
+"commands.favorites.loading" = "Loading quick actions";
+
+/* --- Empty state (no favorites pinned) --- */
+"commands.favorites.empty" = "No favorites yet";
+"commands.favorites.emptyDescription" = "Tap the star on any command to pin it here for quick access.";
+
+/* --- Error state (favorites fetch failed → retry) --- */
+"commands.favorites.errorTitle" = "Couldn't load favorites";
+"commands.favorites.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"commands.favorites.live" = "Live";
+"commands.favorites.stale" = "Stale";
+"commands.favorites.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"commands.favorites.staleBanner" = "Reconnecting — favorites may be out of date";
+"commands.favorites.offlineBanner" = "Offline — showing your last saved favorites";

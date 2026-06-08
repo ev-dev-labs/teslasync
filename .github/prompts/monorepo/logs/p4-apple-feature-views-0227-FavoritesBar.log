@@ -1,0 +1,216 @@
+================================================================================
+P4 · Feature view · 0227 — FavoritesBar (Apple)
+Run: 2026-06-07T23:33-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/348
+Base: e36171d6c
+Prompt: P4/feature-views/0227 — Feature view: FavoritesBar
+Web source (spec): web/src/features/system/components/FavoritesBar.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0002 BackendTool precedent,
+      ADR-012, Honesty rule 7 — predecessor parity; Shared.xcframework not staged).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. 0.63.3 (/opt/homebrew/bin/swiftlint)                 OK
+  swiftformat ................ 0.61.1 (/opt/homebrew/bin/swiftformat)               OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views in project.yml  2 references (iOS + macOS APP targets, lines 37/68)  OK
+  feature-views in TEST target  0 references (test targets list only Tests/Unit)     WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/motion". The core requirement is SwiftUI, which is
+  AVAILABLE and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — the surface is authored, host-compiled on both SDKs, and host-tested.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/FavoritesBar.*) ===
+  FavoritesBar.Core.swift      112  pure types — FavoriteCommand (web CommandDef →
+                                    tile inputs) + variant + render phase/load/
+                                    freshness enums + P1/S11 surface slug (Foundation)
+  FavoritesBar.Adapter.swift    74  testable projection — favoriteCommands (web
+                                    `commands.filter(c=>favorites.includes(c.id))`) +
+                                    resolvePhase + a11y summary (pure, Foundation)
+  FavoritesBar.Seams.swift     158  P1/S11 telemetry seam + P1/S10 strings facade +
+                                    action sink (web onExecute/onToggleFavorite) +
+                                    FavoritesBarUpdate snapshot + P1/S8 source + in-memory
+  FavoritesBar.Model.swift     136  P1/S8 state holder (@Observable) — favorites/registry
+                                    state, derived favoriteCommands, phase, view.opened-once,
+                                    execute + optimistic toggle, stale auto-refresh/offline
+  FavoritesBar.swift            84  FavoritesBar surface — FadeIn + phase composition +
+                                    surfaceSlug + generic renderTile seam + default-tile init
+  FavoritesBar.Views.swift     398  presentational subviews — header (Star + uppercase
+                                    "Quick Actions" + count + freshness chip) + responsive
+                                    2/3/4-col grid + FavoriteCommandTile + connectivity
+                                    banner + loading/empty/error states + Text facade
+  FavoritesBar.Previews.swift  152  #if DEBUG previews — content/empty/loading/error/
+                                    stale/offline + a custom-tile (renderTile-seam) variant
+  FavoritesBar.Tests.swift     158  XCTest — projection (filter + phase) + layout +
+                                    a11y + surface slug (11 methods) + spies
+  FavoritesBar.ModelTests.swift 162 XCTest — state holder (phase, view.opened-once,
+                                    execute, optimistic toggle, stale/offline, adopt) (9)
+  FavoritesBar.strings          43  P1/S10 catalog contribution (table "FavoritesBar")
+  Largest .swift = 398 lines (swiftlint file_length<=400 honored). No file imports
+  the Shared xcframework (seams are Swift protocols; the prod app injects the
+  facade-backed source, previews/tests inject InMemoryFavoritesSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  The web FavoritesBar is a controlled, PRESENTATIONAL component (34 lines): its
+  parent command center owns `favorites: string[]` + `commands: CommandDef[]` and
+  passes a `renderTile` callback; it filters to favorited commands and returns
+  `null` when none, else renders <FadeIn> wrapping a Star + uppercase "Quick
+  Actions" label + (count) header over a 2/3/4-col grid of rendered tiles.
+  - Data sources (web `useTranslation`): the only web hook is i18n; the favorites
+    id-list + command registry are parent-owned props. The native surface binds
+    them through the P1/S8 seam FavoritesSource→FavoritesBarModel (no view HTTP).
+  - Composition: FadeIn (TSFadeIn) · Star → SF Symbol "star.fill" (amber
+    statusWarning) · label → t('commands.cat.quickActions','Quick Actions') as
+    TSLabel role, uppercased + tracked · count → "(N)" · grid → responsive
+    LazyVGrid at the web Tailwind breakpoints (base 2 / sm≥640 → 3 / lg≥1024 → 4,
+    measured via onGeometryChange; FavoritesLayout is pure + unit-tested) · tiles →
+    caller-supplied `renderTile` (generic Tile param) with a production default
+    FavoriteCommandTile (tinted icon chip + label/sublabel + filled favorite star
+    that unpins + dangerous indicator; tap runs the command — web CommandTile).
+  - States (ALL rendered — never a blank box; each has a #if DEBUG preview + an
+    EXECUTED unit test):
+      loading (redacted header + shimmer tile grid) · empty (resolved-but-empty →
+      friendly ContentUnavailableView; web returns `null` here, native renders the
+      prompt-mandated empty — documented deviation, not silent drift) · content
+      (header + grid) · error (message + Retry) · stale (freshness chip + "favorites
+      may be out of date" banner + one guarded auto-refresh) · offline (cached
+      favorites kept + "showing your last saved favorites" banner + offline chip).
+  - i18n (P1/S10): web keys preserved VERBATIM — commands.cat.quickActions ("Quick
+    Actions") + commands.toggleFavorite ("Toggle favorite"); native chrome
+    namespaced commands.favorites.* (loading/empty/emptyDescription/errorTitle/
+    retry/live/stale/offline/staleBanner/offlineBanner/a11yNone/a11yCount). Every
+    code-referenced key is declared in FavoritesBar.strings; NO English literals in
+    native code (all via FavoritesStrings facade + Text(verbatim:)).
+  - Accessibility: bar carries a combined VoiceOver summary ("Quick Actions: N
+    favorites"); each tile is a labeled button; the favorite star + retry carry
+    labels; icons are decorative (hidden); Dynamic-Type system fonts (Font.TS);
+    reduce-motion honored (TSFadeIn + TSSkeleton).
+  - Telemetry (P1/S11): FavoritesBarModel.start() emits view.opened with surface
+    slug "FavoritesBar" exactly once (OSLogFavoritesTelemetry default; prod app
+    injects the shared diagnostics adapter). Proven once-only by ModelTests.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 6 production/UI files compiled together with the REAL
+  apps/apple component closure (design Tokens + Sources/Design + Components/
+  {Motion, UI, Feedback\FeedbackOverlays}); none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6  <closure> <6 production/UI files>
+        IOS_TYPECHECK_EXIT=0   errors=0                                            OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0   errors=0                                            OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin;
+        the 6 files + FavoritesBar.Previews.swift + closure):
+        PREVIEWS_TYPECHECK_EXIT=0   errors=0                                       OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (real production Core/Adapter/Seams/Model/
+        Views/surface + real design tokens + real TS component closure), Swift 6
+        language mode:
+          Test Suite 'FavoritesProjectionFilterTests' passed —  4 tests, 0 failures
+          Test Suite 'FavoritesProjectionPhaseTests'  passed —  2 tests, 0 failures
+          Test Suite 'FavoritesLayoutTests'           passed —  1 test,  0 failures
+          Test Suite 'FavoritesAccessibilityTests'    passed —  2 tests, 0 failures
+          Test Suite 'FavoritesSurfaceTests'          passed —  2 tests, 0 failures
+          Test Suite 'FavoritesBarModelTests'         passed —  9 tests, 0 failures
+          Executed 20 tests, with 0 failures (0 unexpected) in 0.003 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: favorite filter parity (registry order; missing ids dropped; each
+        command once; empty), phase resolution (loading/loaded/failed × cached-or-
+        not), responsive column math at the Tailwind breakpoints, a11y summary,
+        surface slug + reportOpen; model phases, execute→sink, optimistic toggle
+        (unpin + collapse-to-empty), stale one-shot auto-refresh re-armed on live,
+        offline keeps cache + no refetch, adopt parent push, view.opened-once.
+  [5] swiftlint --strict (9 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` lists TeslaSync/feature-views, run scoped here so
+        the result is about THIS surface, not pre-existing siblings):
+          Done linting! Found 0 violations, 0 serious in 9 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/9 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+        (Repo-wide `swiftformat --lint apps/apple` surfaces 1 PRE-EXISTING violation
+         in a sibling, ActionBuilder.Previews.swift — unrelated to this surface and
+         outside this prompt's allowed files.)
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift), run on the real surface
+        files (the prompt's literal `-Path …/FavoritesBar` is a non-existent dir →
+        trivially 0; scanned the actual files for a meaningful result):
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+        (Script self-test also run: SELFTEST_EXIT=0.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0 (project + 12 targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build`   ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                         -> MAC_BUILD_EXIT=65
+    Why deferred (code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0002 BackendTool predecessor, Honesty rule 7):
+      (b) Shared.xcframework NOT staged: the app target links the KMP core; staging
+          it needs a Kotlin/Native gradle build (apps/shared :core:assembleShared
+          XCFramework). Independent of this UI surface; concrete missing-framework
+          error captured above (the build fails before reaching any FavoritesBar code).
+      (c) macOS app/widget signing requires a development certificate on a signed
+          runner (ADR-012); built here with CODE_SIGNING_ALLOWED=NO and it still
+          fails earlier on (b).
+    Test-target wiring note (drift, documented): this snapshot DOES register
+    TeslaSync/feature-views in the iOS+macOS APP targets (project.yml lines 37/68),
+    but the unit-test targets list only Tests/Unit — so the surface's *.Tests.swift /
+    *.ModelTests.swift are app-target members rather than test-target members. A clean
+    `xcodebuild … test` of these surface tests is therefore an integration-prompt
+    concern (move/glob feature-views *Tests*.swift into the test targets), exactly as
+    for every existing feature-view. The SAME tests are PROVEN GREEN (20/20) by the
+    executed SwiftPM harness in step [4], and the surface compiles against BOTH the
+    iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (content + empty) PLUS the
+      prompt-required loading/error/stale/offline — implemented; each has a #if DEBUG
+      preview; phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (FavoritesSource→
+      FavoritesBarModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web commands.cat.
+      quickActions + commands.toggleFavorite preserved verbatim; native chrome
+      commands.favorites.* present; referenced==declared verified.
+  [x] Accessibility labels on every interactive element (tile button / favorite
+      star / retry); bar carries a combined VoiceOver summary.
+  [x] Tests: adapter unit + per-state model + a11y — 20 methods, EXECUTED 20/20, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with
+      captured evidence (xcframework + signing + test-target wiring), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test
+                          is shown DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (9 swift + strings), all states, seams, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. Star/QuickActions/count header + responsive grid +
+                          FavoriteCommandTile + renderTile seam + 6 states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool host-gate + deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework build,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... empty→friendly-state vs web `null` documented (prompt
+                          mandate); test-target wiring for feature-views documented
+                          (integration prompt's job).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
