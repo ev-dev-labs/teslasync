@@ -1,0 +1,46 @@
+/*
+  EndpointSidebar.strings
+  TeslaSync — P4 feature view · 0029 · EndpointSidebar (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  EndpointSidebar resolves (table "EndpointSidebar") lives here with its web
+  t(key, default) English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first three keys are the EXACT strings extracted from the web source
+  (features/admin/components/EndpointSidebar.tsx). The remaining keys back the
+  native-only chrome (freshness, seam-driven states, accessibility) that the web
+  parent page owns.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"playground.search" = "Search endpoints...";
+"playground.endpoints" = "endpoints";
+"playground.noResults" = "No matching endpoints";
+
+/* --- Native chrome: search affordances --- */
+"playground.searchClear" = "Clear search";
+
+/* --- Native chrome: freshness chip + connectivity banners --- */
+"playground.live" = "Live";
+"playground.stale" = "Stale";
+"playground.offline" = "Offline";
+"playground.staleBanner" = "Reconnecting — endpoints may be out of date";
+"playground.offlineBanner" = "Offline — showing cached endpoints";
+
+/* --- Native chrome: seam-driven states (loading / empty / error) --- */
+"playground.endpointsLoading" = "Loading endpoints";
+"playground.noEndpoints" = "No endpoints available";
+"playground.noEndpointsHint" = "The API description hasn't loaded any endpoints yet.";
+"playground.errorTitle" = "Couldn't load endpoints";
+"playground.retry" = "Retry";
+
+/* --- Accessibility --- */
+"playground.a11yEndpoint" = "%@ %@";
+"playground.a11ySelected" = "Selected";
+"playground.a11yGroup" = "%@, %d endpoints";
+"playground.a11yExpanded" = "Expanded";
+"playground.a11yCollapsed" = "Collapsed";
+"playground.a11yToggleHint" = "Double tap to expand or collapse";
