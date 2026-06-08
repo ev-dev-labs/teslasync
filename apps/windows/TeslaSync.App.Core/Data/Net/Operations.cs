@@ -84,6 +84,12 @@ public static class Operations
         public const string MediaLatest = "get_api_v1_media_latest";
     }
 
+    /// <summary>Climate / HVAC snapshot reads.</summary>
+    public static class Climate
+    {
+        public const string Latest = "get_api_v1_climate_latest";
+    }
+
     /// <summary>Automations, history and presets.</summary>
     public static class Automations
     {
