@@ -1,0 +1,53 @@
+/*
+  VehicleUpgradesWidget.strings
+  TeslaSync — P4 dashboard widget · 0110 · VehicleUpgradesWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VehicleUpgradesWidget` resolves (table "VehicleUpgradesWidget") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  Keys 1–11 are the exact keys extracted from the web source
+  (features/dashboard/widgets/VehicleUpgradesWidget.tsx, table "dashboard"). The
+  remaining keys back the registry metadata + native-only chrome (freshness chip,
+  refresh / retry / empty / error copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.upgrades.title" = "Upgrades & Sharing";
+"widget.upgrades.available" = "available";
+"widget.upgrades.upToDate" = "Up to date";
+"widget.upgrades.upgradesHeading" = "Available Upgrades";
+"widget.upgrades.eligible" = "Eligible";
+"widget.upgrades.notEligible" = "Not eligible";
+"widget.upgrades.allApplied" = "All upgrades applied";
+"widget.upgrades.shareLinksHeading" = "Share Links";
+"widget.upgrades.activeLinks" = "Active links";
+"widget.upgrades.nearestExpiry" = "Nearest expiry";
+"widget.upgrades.noShareLinks" = "No active share links";
+
+/* --- Registry metadata (canonical: registry/vehicle.ts → "vehicle-upgrades") --- */
+"widget.upgrades.description" = "Available OTA upgrades with pricing + active drive share links";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.upgrades.live" = "Live";
+"widget.upgrades.stale" = "Stale";
+"widget.upgrades.offline" = "Offline";
+"widget.upgrades.refresh" = "Refresh";
+"widget.upgrades.retry" = "Retry";
+"widget.upgrades.open" = "Open";
+"widget.upgrades.openA11y" = "Open the Upgrades page";
+
+/* --- Native chrome: states --- */
+"widget.upgrades.loading" = "Loading upgrades";
+"widget.upgrades.noData" = "No upgrade data";
+"widget.upgrades.errorTitle" = "Couldn't load upgrades";
+"widget.upgrades.offlineBanner" = "Offline — showing last known data";
+"widget.upgrades.staleBanner" = "Reconnecting — data may be stale";
+
+/* --- Accessibility --- */
+"widget.upgrades.availableCount" = "%lld upgrades available";
+"widget.upgrades.eligibleCount" = "%lld eligible";
+"widget.upgrades.activeLinksCount" = "%lld active share links";
