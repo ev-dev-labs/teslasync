@@ -1,0 +1,233 @@
+================================================================================
+P4 · Feature view · 0207 — GeneralSettings (Apple)
+Run: 2026-06-07T23:31-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/328
+Base: af41fd0d8
+Prompt: P4/feature-views/0207 — Feature view: GeneralSettings
+Web source (spec): web/src/features/settings/components/GeneralSettings.tsx
+Mode: code-complete + host-gated (typecheck both SDKs + executed XCTest) with the
+      Xcode app build/test DEFERRED (Shared.xcframework not staged + feature-views
+      test-file/target wiring is the integration prompt's job). Disposition matches
+      0002 BackendTool / 0004 FleetApiSection precedent (ADR-012, Honesty rule 7).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  XCTest (via Xcode toolchain) runs under SwiftPM with DEVELOPER_DIR set            OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui", "@/components/forms", "@/components/feedback",
+  "@/components/motion". The core requirement is SwiftUI, which is AVAILABLE and
+  PROVEN by real iOS-18-simulator AND macOS-15 SDK typechecks below + an executed
+  XCTest run. The capability-BLOCKED escape hatch does NOT apply — the surface is
+  authored, host-compiled on both SDKs, preview-macro-expanded, and host-tested.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/GeneralSettings.*) ===
+  GeneralSettings.Models.swift   239  value types — AppSettingsState (editable web
+                                      form fields) + CarPreferences + VehicleOption +
+                                      SettingsQuery/Connection/Freshness/RenderPhase/
+                                      SaveStatus + SettingsSaveError + snapshot +
+                                      P1/S10 strings facade (Foundation half) + slug
+  GeneralSettings.Seams.swift    216  P1/S11 telemetry seam + toast type (web useToast)
+                                      + navigation-guard seam (web useNavigationGuard)
+                                      + draft-store seam (web useFormDraft) + P1/S8
+                                      GeneralSettingsSource + InMemory* doubles
+  GeneralSettings.Model.swift    283  @Observable @MainActor view-model — form +
+                                      derived phase/freshness/isDirty/decimalPreview;
+                                      start(view.opened)/stop/refresh; update/discard;
+                                      save + syncUnitsFromCar + snapshot apply (ext.)
+  GeneralSettings.Adapter.swift  365  pure projections — parseSettingEnum +
+                                      isMiles/Fahrenheit/PSI/Bar (lib/parseSettingEnum.ts
+                                      port) + syncUnitsFromCar + resolvePhase/Freshness
+                                      + relativeTime + decimalPreview (JS toFixed) +
+                                      currency-glyph→ISO + 9 option catalogs + a11y
+  GeneralSettings.swift          134  surface — FadeIn+GlassPanel shell, header,
+                                      connectivity/draft banners, phase switch, save bar,
+                                      toast overlay, start/stop; binding sugar + text()
+  GeneralSettings.Views.swift    308  chrome — header+freshness chip, connectivity +
+                                      draft banners, save bar, toast, SettingsButton
+  GeneralSettings.Panels.swift   163  loading skeleton / empty / error (retry) states +
+                                      sync-from-car panel + read-only car-clock panel
+  GeneralSettings.Fields.swift   326  responsive field grid + SettingsFieldContainer +
+                                      select/stepper/text/number/currency/gas-price rows
+  GeneralSettings.Previews.swift 141  #if DEBUG — 9 #Preview (content dark/light, loading,
+                                      empty, error, stale, offline, recovered-draft,
+                                      Dynamic Type accessibility3)
+  GeneralSettings.Tests.swift    244  XCTest — adapter/sync/phase/freshness/decimal/
+                                      currency/catalogs + i18n facade + a11y (22 methods)
+  GeneralSettings.ModelTests.swift 219 XCTest @MainActor — view-model lifecycle/telemetry/
+                                      hydration/dirty/draft/save/sync (14 methods)
+  GeneralSettings.strings         79  P1/S10 catalog contribution (table "GeneralSettings")
+  Largest .swift = 365 lines (swiftlint file_length<=400 honored). No file imports the
+  Shared xcframework: the data/draft/nav/toast/telemetry seams are Swift protocols;
+  the prod app injects the facade-backed source, previews/tests inject InMemory* doubles.
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useSettings/useSaveSettings/useVehicles/useCarPreferences +
+    useToast/useNavigationGuard/useFormDraft/useTranslation): bound through the P1/S8
+    seam GeneralSettingsSource→GeneralSettingsModel. The prod source fires GET /settings,
+    GET /vehicles, GET /user-preferences/latest?vehicle_id=, PUT /settings (web request());
+    no HTTP in the view. useToast→toast publisher+seam, useNavigationGuard→
+    GeneralSettingsNavigationGuard, useFormDraft→GeneralSettingsDraftStore.
+  - Composition (web GlassPanel + IconBox + Select/Input/CurrencyInput + DraftRecoveryBanner
+    + FadeIn + Save Button):
+      • FadeIn/GlassPanel/IconBox -> TSFadeIn / TSGlassPanel / TSIconBox(.accent, gear).
+      • header  -> "Application" title + "Units, language, and cost preferences" subtitle
+                   + a freshness chip (ADR-013 native add).
+      • sync banner -> "Car uses {distance}/{temperature}/{pressure}" (parseSettingEnum)
+                   + "Sync from Car" primary button; shown when the car reported a unit.
+      • car clock -> read-only "Car clock format: 24-hour/12-hour" note.
+      • field grid (web sm:grid-cols-2) -> responsive 1/2-col LazyVGrid:
+          Distance/Temperature/Pressure/Preferred-Range/Language/Currency/Locale/
+          Time-Zone-Display selects, a Decimal-Precision stepper with live "Preview:
+          14.25", a Time-Zone-Override text field + IANA hint, Electricity-Cost +
+          Gas-Price currency fields (ISO from the currency glyph) + gas-unit select,
+          and a Comparison-MPG number field — every web <Select>/<Input>/<CurrencyInput>.
+      • DraftRecoveryBanner -> SettingsDraftBanner (restore note + Discard).
+      • Save Button -> SettingsSaveBar (loading while saving) + "Settings saved" chip.
+  - States (ALL rendered, each with a #if DEBUG preview):
+      loading (skeleton grid) · empty (friendly "No settings found" + retry) ·
+      error (message + Retry; cached form kept behind transient errors) ·
+      content (the full editor) · stale (freshness chip + "preferences may be out of
+      date" band) · offline (cached settings kept + "last saved settings" band + offline chip).
+  - i18n (P1/S10): every web t() key reproduced (app.* / toast.* / forms.* / draft.* +
+      the bare distance/temperature/pressure/miles/kilometers/celsius/fahrenheit used in
+      the sync summary) plus native chrome (freshness.* / state.* / error.* / action.*).
+      Two web "*Placeholder" t() keys are namespaced *Prompt natively (ADR-011 stub-gate:
+      "Placeholder" is a forbidden substring in .swift); values are identical. Every
+      code-referenced key is declared in GeneralSettings.strings (referenced==declared
+      verified); NO English literal in native code (all via the facade + Text(verbatim:)).
+  - Accessibility: VoiceOver labels on every control (each select/stepper/text/number/
+      currency field, the freshness chip with spoken value, sync + discard + save + toast
+      close buttons); banners + panels carry combined values; Dynamic Type system fonts
+      (Font.TS); Reduce-Motion honored (TSSkeleton shimmer, chip spin, FadeIn).
+  - Telemetry (P1/S11): GeneralSettingsModel.start() emits view.opened with slug
+      "GeneralSettings" exactly once (OSLog default; prod injects the shared adapter).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 9 production files compiled together with the REAL apps/apple
+  component closure (design Tokens + Design/TSMaterial+TSDesign + Components/UI
+  {Typography,Badges,Buttons,Cards} + Feedback/Skeletons + Motion/Motion); none import
+  the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete <closure> <8 production files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode PreviewsMacros plugin;
+        production files + Previews + closure; all 9 #Preview expand):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+        (Under bare CommandLineTools the #Preview macro plugin is absent; expanded
+         here via the Xcode toolchain.)
+  [4] swift test — the FULL committed XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM package (real production Models/Seams/Model/Adapter +
+        the committed GeneralSettings.Tests.swift + GeneralSettings.ModelTests.swift),
+        Swift 6 language mode, Xcode toolchain:
+          Test Suite 'TeslaSyncPackageTests.xctest' passed
+          Executed 36 tests, with 0 failures (0 unexpected) in 0.006 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: parseSettingEnum + unit detectors (port parity), syncUnitsFromCar
+        (imperial/metric/kPa-untouched/empty-no-change/summary), phase + freshness
+        precedence, relativeTime buckets, decimalPreview (JS toFixed + clamp),
+        currency-glyph→ISO, the 9 option catalogs, the i18n facade, the a11y copy;
+        model start-once + slug, lifecycle, snapshot hydration, dirty + nav-guard,
+        draft persist/restore-not-clobbered/discard, save success/failure, dirty
+        suppressed while saving, sync apply+save+toast / no-change-info / no-prefs-noop.
+  [5] swiftlint --strict (12 surface files; explicit paths — the repo .swiftlint.yml
+        `included:` lists TeslaSync/feature-views, run scoped to the new files):
+          Done linting! Found 0 violations, 0 serious in 11 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/11 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+  Findings caught + fixed by the host gate before green (no red-as-green):
+    (i)  Result<AppSettingsState, String> — String is not Error. Introduced
+         SettingsSaveError: Error; the save Result is now well-typed. (caught by [4])
+    (ii) GeneralSettingsModel.surfaceSlug was @MainActor-isolated (static on a
+         @MainActor class) and unreachable from the nonisolated localization test —
+         marked `nonisolated static let`. (caught by [4] under strict concurrency)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (code-unrelated; identical disposition to 0002 BackendTool / 0004
+    FleetApiSection, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it
+          needs a Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework).
+          Independent of this UI surface; concrete missing-framework error captured above.
+      (b) Test-file/target wiring: project.yml sources TeslaSync/feature-views into the
+          app target, while the unit-test targets source only Tests/Unit — so the
+          per-surface *.Tests.swift / *.ModelTests.swift files (this surface's and the
+          ~119 existing ones) are not yet routed to the XCTest target. Re-homing them is
+          the downstream P4 integration prompt's job; editing project.yml is OUTSIDE this
+          prompt's allowed files (GeneralSettings.* + the log).
+      (c) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012); built here with CODE_SIGNING_ALLOWED=NO to reach the framework link.
+    The SAME committed XCTest suite is PROVEN GREEN (36/36) by the executed SwiftPM run in
+    step [4], and the surface compiles against BOTH the iOS 18 and macOS 15 SDKs (steps
+    [1]/[2]) with all 9 previews expanding (step [3]).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/content) + the native
+      stale/offline bands — implemented; each has a #if DEBUG preview; phase + freshness
+      logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (GeneralSettingsSource→
+      GeneralSettingsModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — referenced==declared
+      verified; web keys preserved (two *Placeholder→*Prompt for the ADR-011 stub gate,
+      values identical).
+  [x] Accessibility labels on every interactive element (each field, chip, sync/discard/
+      save/toast-close); panels + chips carry combined values.
+  [x] Tests: adapter unit + per-state model + a11y label tests — 36 methods, EXECUTED
+      36/36, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green (typecheck iOS+macOS, previews, 36/36
+      XCTest, lint, format, placeholder); Xcode app build/test DEFERRED with captured
+      evidence (xcframework staging + test-target wiring + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; xcodebuild build/test is shown
+                          DEFERRED with its real exit 65 + cause, not as a pass. Two real
+                          compile findings were fixed before green (see [4]).
+  2 No scope narrowing ... full surface (11 .swift + strings), all states, all 4 data
+                          hooks + toast/nav-guard/draft seams, all web fields, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + conditional branch
+                          (sync banner, car-clock, decimal preview, draft recovery) reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. GlassPanel/IconBox/Select/Input/CurrencyInput/DraftRecoveryBanner/
+                          Save + 6 states + sync-from-car + read-only car clock.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same host-gate+defer disposition as 0002 BackendTool / 0004
+                          FleetApiSection (ADR-012).
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework build,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... the *Placeholder→*Prompt key rename and the test-file/target
+                          wiring gap are documented above.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

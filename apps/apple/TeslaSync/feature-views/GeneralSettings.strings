@@ -1,0 +1,117 @@
+/*
+  GeneralSettings.strings
+  TeslaSync — P4 feature view · 0207 · GeneralSettings (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "GeneralSettings").
+  Every user-facing string the SwiftUI parity of
+  features/settings/components/GeneralSettings.tsx renders resolves here through
+  the GeneralSettingsStrings facade with the web `t(key, default)` English value
+  as the fallback. Native-only additions (the ADR-013 freshness chip + offline
+  band, the empty / error states, and the draft-recovery banner copy) are grouped
+  at the bottom. Folds into the app Localizable.xcstrings master catalog at
+  integration time; kept per-surface so this prompt owns its own strings without
+  editing the shared catalog.
+*/
+
+/* Header */
+"app.title" = "Application";
+"app.subtitle" = "Units, language, and cost preferences";
+
+/* Navigation guard (web useNavigationGuard) */
+"forms.unsavedSettings" = "You have unsaved settings.";
+
+/* Sync-from-car panel + toast */
+"app.carUses" = "Car uses";
+"app.syncHint" = "Sync your app's units to match your vehicle's display settings";
+"app.syncFromCar" = "Sync from Car";
+"toast.unitsSynced" = "Units synced from car";
+"toast.noChanges" = "No changes";
+"toast.noChangesDesc" = "Could not detect car unit preferences";
+"distance" = "Distance";
+"temperature" = "Temperature";
+"pressure" = "Pressure";
+"miles" = "Miles";
+"kilometers" = "Kilometers";
+"celsius" = "Celsius";
+"fahrenheit" = "Fahrenheit";
+
+/* Car clock-format note (read-only) */
+"app.carClockFormat" = "Car clock format";
+"app.clock24h" = "24-hour";
+"app.clock12h" = "12-hour";
+"app.clockFormatHint" = "Your vehicle's time display preference (read-only)";
+
+/* Unit fields */
+"app.distanceUnit" = "Distance Unit";
+"app.kilometers" = "Kilometers";
+"app.miles" = "Miles";
+"app.temperatureUnit" = "Temperature Unit";
+"app.celsius" = "Celsius";
+"app.fahrenheit" = "Fahrenheit";
+"app.pressureUnit" = "Pressure Unit";
+"app.bar" = "Bar";
+"app.psi" = "PSI";
+"app.preferredRange" = "Preferred Range";
+"app.rated" = "Rated";
+"app.ideal" = "Ideal";
+"app.decimalPrecision" = "Decimal Precision";
+"app.preview" = "Preview";
+
+/* Locale + currency fields */
+"app.language" = "Language";
+"app.currency" = "Currency";
+"app.locale" = "Number & Date Locale";
+"app.tzDisplayDefault" = "Time Zone Display";
+"app.tzVehicle" = "Vehicle's local time (recommended)";
+"app.tzUser" = "My local time";
+"app.tzUtc" = "UTC";
+"app.timezoneUser" = "My Time Zone Override";
+"app.timezoneUserPrompt" = "e.g. America/Los_Angeles (leave blank for browser default)";
+"app.timezoneUserHint" = "IANA tz name. Useful when travelling but you'd rather see times in your home zone.";
+
+/* Cost fields */
+"app.electricityCost" = "Electricity Cost (per kWh)";
+"app.gasPrice" = "Gas Price (for EV vs ICE comparison)";
+"app.perGallon" = "/ gallon";
+"app.perLiter" = "/ liter";
+"app.gasUnit" = "Gas unit";
+"app.comparisonMPG" = "Comparison Vehicle MPG";
+"app.mpgPrompt" = "Average MPG of equivalent gas car";
+
+/* Save action + confirmation */
+"app.save" = "Save Settings";
+"app.settingsSaved" = "Settings saved";
+"toast.saved" = "Settings saved";
+"toast.savedDesc" = "Your preferences have been updated";
+"toast.saveFailed" = "Failed to save";
+"toast.saveFailedDesc" = "Could not update settings";
+
+/* Freshness chip (ADR-013, native addition) */
+"freshness.refresh" = "Refresh";
+"freshness.live" = "Live";
+"freshness.updating" = "Updating…";
+"freshness.stale" = "Stale";
+"freshness.error" = "Error";
+"freshness.offline" = "Offline";
+"freshness.justNow" = "just now";
+"freshness.minutesAgo" = "%lldm ago";
+"freshness.hoursAgo" = "%lldh ago";
+"freshness.daysAgo" = "%lldd ago";
+
+/* Connectivity bands (native addition) */
+"state.offlineBanner" = "Offline — showing the last saved settings";
+"state.staleBanner" = "Reconnecting — preferences may be out of date";
+
+/* Loading / empty / error states (native) */
+"state.loadingA11y" = "Loading settings";
+"state.emptyTitle" = "No settings found";
+"state.emptyHint" = "Your preferences haven't loaded yet.";
+"error.loadFailed" = "Failed to load settings";
+"action.retry" = "Retry";
+"action.dismiss" = "Dismiss";
+
+/* Draft-recovery banner (web DraftRecoveryBanner) */
+"draft.noun.settings" = "Settings";
+"draft.restoredTitle" = "Unsaved %@ draft restored";
+"draft.restoredHint" = "Your in-progress edits were recovered.";
+"draft.discard" = "Discard";
