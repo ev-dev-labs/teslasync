@@ -1,0 +1,74 @@
+/*
+  OnboardingChecklistWidget.strings
+  TeslaSync — P4 dashboard widget · 0071 · OnboardingChecklistWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  OnboardingChecklistWidget resolves (table "OnboardingChecklistWidget") lives
+  here with its web t(key, default) English value. These entries fold into the
+  app Localizable.xcstrings master catalog at integration time; they are kept in
+  a per-surface table so each parallel surface prompt owns its own strings
+  without editing the shared catalog.
+
+  The "Keys from the web source" block is the verbatim set extracted from
+  features/dashboard/widgets/OnboardingChecklistWidget.tsx and
+  features/onboarding/checklist.ts. The remaining keys back the native-only
+  chrome (freshness chip, retry/empty/error copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"checklist.title" = "Get started";
+"checklist.dismiss" = "Dismiss";
+"checklist.restart" = "Restart checklist";
+"checklist.completeMessage" = "You're all set! 🎉";
+"checklist.dismissedTitle" = "Setup checklist hidden";
+"checklist.dismissedMessage" = "Remove this widget from your dashboard or restart the checklist to see your remaining setup steps.";
+"checklist.empty" = "No setup steps available right now.";
+
+/* --- Progress label (web "{{done}}/{{total}} complete") --- */
+"checklist.progress" = "%1$lld/%2$lld complete";
+
+/* --- Task catalogue (verbatim from features/onboarding/checklist.ts) --- */
+"checklist.tasks.connectVehicle.title" = "Connect your Tesla";
+"checklist.tasks.connectVehicle.description" = "Link your Tesla account to start syncing data.";
+"checklist.tasks.connectVehicle.cta" = "Connect";
+"checklist.tasks.pickTheme.title" = "Pick a theme";
+"checklist.tasks.pickTheme.description" = "Choose an accent color that fits your style.";
+"checklist.tasks.pickTheme.cta" = "Open";
+"checklist.tasks.firstAlert.title" = "Create your first alert rule";
+"checklist.tasks.firstAlert.description" = "Get notified when something changes — battery low, charge complete, etc.";
+"checklist.tasks.firstAlert.cta" = "Create";
+"checklist.tasks.notify.title" = "Add a notification channel";
+"checklist.tasks.notify.description" = "Without a channel (Discord, ntfy, email, …) your alerts go to /dev/null.";
+"checklist.tasks.notify.cta" = "Configure";
+"checklist.tasks.commandPalette.title" = "Try the command palette";
+"checklist.tasks.commandPalette.description" = "Press Ctrl+K (or ⌘K) to jump anywhere instantly.";
+"checklist.tasks.commandPalette.cta" = "Open";
+"checklist.tasks.enablePush.title" = "Enable web push notifications";
+"checklist.tasks.enablePush.description" = "Get alerts in your browser even when TeslaSync is closed.";
+"checklist.tasks.enablePush.cta" = "Enable";
+"checklist.tasks.customizeDashboard.title" = "Customize your dashboard";
+"checklist.tasks.customizeDashboard.description" = "Add widgets that match how you use TeslaSync.";
+"checklist.tasks.customizeDashboard.cta" = "Open";
+
+/* --- Registry metadata (registry/system.ts → "onboarding-checklist") --- */
+"widget.onboardingChecklist" = "Setup Checklist";
+"widget.onboardingChecklist.description" = "First-run setup checklist: connect Tesla, pick a theme, create an alert, and more";
+
+/* --- Native chrome: progress percent + freshness + actions --- */
+"widget.checklist.percent" = "%lld%%";
+"widget.checklist.live" = "Live";
+"widget.checklist.stale" = "Stale";
+"widget.checklist.offline" = "Offline";
+"widget.checklist.refresh" = "Refresh";
+"widget.checklist.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.checklist.loading" = "Loading setup checklist";
+"widget.checklist.errorTitle" = "Couldn't load your setup checklist";
+"widget.checklist.offlineBanner" = "Offline — showing your last saved progress";
+"widget.checklist.staleBanner" = "Reconnecting — your progress may be out of date";
+
+/* --- Accessibility --- */
+"widget.checklist.progressA11y" = "%1$lld of %2$lld steps complete";
+"widget.checklist.taskComplete" = "Completed";
+"widget.checklist.taskIncomplete" = "Not started";
