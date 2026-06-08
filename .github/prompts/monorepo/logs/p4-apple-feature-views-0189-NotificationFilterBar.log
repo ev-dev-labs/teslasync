@@ -1,0 +1,229 @@
+================================================================================
+P4 · Feature view · 0189 — NotificationFilterBar (Apple)
+Run: 2026-06-07T22:55-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/310
+Base: 3dc81786c
+Prompt: P4/feature-views/0189 — Feature view: NotificationFilterBar
+Web source (spec): web/src/features/notifications/components/NotificationFilterBar.tsx
+Mode: code-complete + host-compiled (iOS 18 + macOS 15 SDKs) + host-EXECUTED XCTest
+      (29/29) + DEFERRED full xcodebuild app build/test (Shared.xcframework + signing;
+      0002 BackendTool / 0054 GuardModeWidget precedent, Honesty rule 7).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` = /Library/Developer/CommandLineTools; Xcode driven
+     via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  SwiftUI .................... present in both SDKs; surface compiles on both        OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... present (project generates cleanly, see deferred)    OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views in project.yml  2 references (app + macOS app targets) — REGISTERED  OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui" + "@/components/forms". The core requirement is
+  SwiftUI, which is AVAILABLE and PROVEN by real iOS-18-simulator AND macOS-15 SDK
+  compiles below + an EXECUTED XCTest suite. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/NotificationFilterBar.*) ===
+  NotificationFilterBar.swift          61  surface: FadeIn + phase switch (loading/empty/
+                                           error/content) + onAppear start + a11y summary + surfaceSlug
+  NotificationFilterBar.Core.swift    111  pure support types — option models (vehicle/rule),
+                                           render phase / load status / freshness enums, active-filter
+                                           chip (web FilterChipDescriptor), diagnostics surface slug
+  NotificationFilterBar.Adapter.swift 303  testable projection core — NotificationSeverity, the
+                                           controlled NotificationFilters + pure patch math (toggle
+                                           severity/set vehicle+rule/query/from/to/clear-all keeping
+                                           parent pass-through), resolvePhase, active-chip builder
+  NotificationFilterBar.Seams.swift   172  P1/S11 telemetry seam (view.opened) + P1/S10 strings
+                                           facade + change sink (web onChange) + source snapshot +
+                                           P1/S8 source protocol + in-memory source + a11y summary
+  NotificationFilterBar.Model.swift   197  @MainActor @Observable state holder (P1/S8): binds source,
+                                           holds controlled filters, derives chips, control intents
+                                           (each echoes locally + forwards to sink), stale auto-refresh
+  NotificationFilterBar.Views.swift   268  state views (loading skeleton / empty / error+retry),
+                                           content orchestrator, filter row (responsive), freshness chip,
+                                           connectivity banner, Text() facade helper
+  NotificationFilterBar.Controls.swift 372 controls — severity chip group, vehicle/rule Menu pickers
+                                           (web Select), search field (web SearchInput), from/to date
+                                           range (web RangePicker), active-filter chips (ActiveFilterChips)
+  NotificationFilterBar.Previews.swift 122  #if DEBUG previews — one per state (content/active/empty/
+                                           loading/error/stale/offline)
+  NotificationFilterBar.Tests.swift   227  XCTest — patch math + projection + option labels + ISO
+                                           date boundary + a11y + spies (18 methods)
+  NotificationFilterBar.ModelTests.swift 188 XCTest — state holder: phases, telemetry-once, intents,
+                                           chip removal, clear-all pass-through, stale/offline, adopt (11 methods)
+  NotificationFilterBar.strings        64  P1/S10 catalog contribution (table "NotificationFilterBar")
+  Largest .swift = 372 lines (swiftlint file_length<=400 honored). No file imports
+  the Shared xcframework (seams are Swift protocols; the prod app injects the
+  facade-backed source + change sink, previews/tests inject InMemoryNotificationFilterSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useNotifications + useTranslation): bound through the P1/S8 seam
+    NotificationFilterSource -> NotificationFilterModel. The web bar is a CONTROLLED
+    component — its parent owns NotificationFilters + merges the onChange patches. The
+    native model holds the controlled filter state, echoes each patch locally
+    (optimistic), and forwards it to the host via NotificationFilterChangeSink (web
+    onChange). The source pushes the parent's filters + the vehicle/rule options +
+    load/freshness status. No HTTP in the view.
+  - Composition (web FilterBar + Select x2 + SearchInput + RangePicker + ActiveFilterChips):
+      • FilterBar      -> responsive control row (severity chips line + pickers/search).
+      • Severity chips -> 3 multi-select toggles (info/warn/critical) with SF Symbols
+                          (lucide Info/AlertTriangle/AlertOctagon -> info.circle/
+                          exclamationmark.triangle/exclamationmark.octagon) + status-token
+                          tints (blue/amber/rose -> statusInfo/statusWarning/statusDanger);
+                          web aria-pressed -> .isSelected trait; web role=group aria-label.
+      • Vehicle/Rule   -> native Menu pickers (web <Select>) with the "All vehicles"/
+                          "All rules" entry + a checkmark on the current value.
+      • SearchInput    -> magnifying glass + bound field (prompt = web searchPlaceholder)
+                          + clear button; edits route through setQuery (trim-to-nil parity).
+      • RangePicker    -> from/to DatePicker fields emitting ISO yyyy-MM-dd; both set and
+                          unset render (clear button / set affordance), never a blank box.
+      • ActiveFilterChips -> removable "{label}: {value}" tokens (web order severity,
+                          vehicle, rule, search, from, to) + Clear all.
+  - States (ALL rendered, each with a #if DEBUG preview + model unit test):
+      loading (option fetch, skeleton bar) · empty (no vehicles+rules -> friendly
+      ContentUnavailableView) · error (fetch failed -> Retry) · content (full controlled
+      bar) · stale (freshness chip + "Reconnecting…" banner + ONE auto-refresh, re-armed
+      on live) · offline (cached options kept + "Offline…" banner + offline chip).
+  - i18n (P1/S10): web keys preserved verbatim — notifications.inbox.filter.{allVehicles,
+    allRules, severity, severity.info/warn/critical, vehicle, rule, searchLabel, from, to,
+    searchPlaceholder}; native chrome namespaced under the same prefix (title/noneActive/
+    activeCount/clearAll/removeFilter/clearSearch/loading/empty/error/retry/live/stale/
+    offline/banners). Every code-referenced literal key (25) is declared in the catalog;
+    the 3 dynamically-built severity keys are declared; referenced \ declared = empty.
+    NO English string literals in native code (all via NotificationFilterStrings facade +
+    Text(verbatim:)). The lone "Placeholder" substring is the web-derived key name
+    `searchPlaceholder`, carried on a `// parity:allow web i18n key name, not a stub` line
+    (same disposition as 0106 SessionListSection).
+  - Accessibility: VoiceOver labels on every interactive element — severity chips
+    (label + selected trait), vehicle/rule pickers (label + value), search field + clear,
+    date fields (label + value) + clear, active chips (combined + remove), retry; the bar
+    carries a combined summary (title + active-filter count); Dynamic-Type system fonts
+    (Font.TS); reduce-motion honored (TSFadeIn + TSSkeleton).
+  - Telemetry (P1/S11): NotificationFilterModel.start() emits view.opened with surface
+    slug "NotificationFilterBar" exactly once (OSLogNotificationFilterTelemetry default;
+    prod app injects the shared diagnostics adapter). Unit-tested (start twice -> 1 emit).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 7 production files compiled together with the REAL apps/apple
+  component closure (design/generated/apple/Tokens.swift + Sources/Design/{TSDesign,
+  TSMaterial} + Components/Motion/Motion + Components/Feedback/Skeletons + Components/UI/*);
+  none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6  <real closure> <7 production files>
+        IOS_TYPECHECK_EXIT=0   (error count: 0)                                    OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0   (error count: 0)                                    OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode PreviewsMacros plugin;
+        the 7 production files + previews + closure, macOS 15):
+        PREVIEWS_TYPECHECK_EXIT=0   (error count: 0)                               OK
+        (Note: under bare CommandLineTools the #Preview macro plugin is absent;
+         compiled here via the Xcode 26.5 toolchain.)
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (real production Core/Adapter/Seams/Model/Views/
+        Controls/surface + REAL design tokens + REAL TS component closure), Swift 6 mode:
+          Test Suite 'NotificationFilterAccessibilityTests' passed —  2 tests, 0 failures
+          Test Suite 'NotificationFilterModelTests'         passed — 11 tests, 0 failures
+          Test Suite 'NotificationFilterOptionTests'        passed —  4 tests, 0 failures
+          Test Suite 'NotificationFilterProjectionTests'    passed —  5 tests, 0 failures
+          Test Suite 'NotificationFiltersPatchTests'        passed —  7 tests, 0 failures
+          Executed 29 tests, with 0 failures (0 unexpected) in 0.014 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: severity toggle (append/remove/order), single-select vehicle+rule,
+        query trim-to-nil, from/to set+clear, clear-all keeping parent pass-through
+        (read/archived/group_key/limit/offset), hasActiveBarFilters, phase resolution
+        (loading/loaded/failed x cached-or-not), active-chip order+values+ID fallback,
+        option label fallback, ISO date round-trip, a11y summary; model phases,
+        view.opened-once + slug, control intents -> sink, chip removal, clear-all,
+        stale ONE-refresh re-arm, offline-keeps-cache, adopt parent-pushed filters,
+        stop re-arms telemetry.
+        (A real strict-concurrency defect was caught + fixed during this step: an
+         os.Logger '+'-concatenated OSLogMessage in the change sink, rewritten to a
+         single plain-String interpolation before this green.)
+  [5] swiftlint --strict (10 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` lists TeslaSync/feature-views):
+          Done linting! Found 0 violations, 0 serious in 10 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/10 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift) — REAL scan of the 11 files
+        (the gate's literal -Path .../NotificationFilterBar is a name-prefix, not a
+         directory, so Test-Path short-circuits to an empty scan; the meaningful scan
+         copies the surface into a dir and scans it):
+          PLACEHOLDER_ALLOWED=1   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+        (ALLOWED=1 = the sanctioned `// parity:allow` on the searchPlaceholder key.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0 (project + targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at
+                 '.../apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync-macOS')
+          ** BUILD FAILED **                         -> MAC_BUILD_EXIT=65
+    Why deferred (two independent, code-unrelated reasons — neither is a defect in this
+    surface; identical disposition to the 0002 BackendTool / 0054 GuardModeWidget
+    predecessors, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it
+          needs a Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework).
+          Independent of this UI surface; the concrete missing-framework error is captured
+          above. NOTE: unlike some predecessors, feature-views IS already registered in
+          project.yml (2 refs), so the app target DOES enumerate this surface — the ONLY
+          thing standing between here and a green app build is the xcframework + signing.
+      (b) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012).
+    XCTest under xcodebuild runs in the TeslaSync(/-macOS) test target; here the SAME tests
+    are PROVEN GREEN (29/29) by the EXECUTED SwiftPM harness in step [4], and the surface
+    compiles against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2] against the real
+    design system.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/content + stale/offline
+      freshness) — implemented; each has a #if DEBUG preview; phase + freshness logic
+      unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (NotificationFilterSource ->
+      NotificationFilterModel); no view HTTP; controlled-component onChange via the sink.
+  [x] Every i18n key from source has a matching catalog key — web filter keys preserved
+      verbatim; native chrome namespaced; referenced(25)\declared = empty; severity.* declared.
+  [x] Accessibility labels on every interactive element (severity chips/pickers/search/
+      date fields/active chips/retry); bar carries a combined summary.
+  [x] Tests: adapter unit + per-state model + a11y — 29 methods, EXECUTED 29/29, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0
+      (the single ALLOWED is the sanctioned web key-name marker).
+  [x] EXIT=0 / STATUS=DONE — host gates green (typecheck iOS+macOS, previews, 29/29 tests,
+      lint, format, placeholder); xcodebuild app build/test DEFERRED with captured
+      evidence (xcframework + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test
+                          is shown DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (10 .swift + strings), all states, seams, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. severity chips + 2 Selects + Search + RangePicker +
+                          ActiveFilterChips + clear-all + 6 states, all wired to the model.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool host-gate + xcframework deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework build,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... a real strict-concurrency OSLog defect was found + fixed in
+                          step [4] (documented there), not hidden.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
