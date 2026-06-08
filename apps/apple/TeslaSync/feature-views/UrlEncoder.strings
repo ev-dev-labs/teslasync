@@ -1,0 +1,33 @@
+/*
+  UrlEncoder.strings
+  TeslaSync — P4 feature view · 0023 · UrlEncoder (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `UrlEncoderView` resolves (table "UrlEncoder") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys the web source passes to `t()`. The web
+  calls them as bare keys, so i18next renders the key itself for the ones absent
+  from en.json (`Url Encoder`, `Url Encoder Desc`, `Input Label`, `Output Label`,
+  `Invalid Input`); `Encode` / `Decode` exist in en.json as identity values. The
+  values below reproduce exactly what the web renders. The second group backs the
+  native-only chrome (friendly empty state + accessibility) the surface contract
+  requires (never a blank box).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Url Encoder" = "Url Encoder";
+"Url Encoder Desc" = "Url Encoder Desc";
+"Encode" = "Encode";
+"Decode" = "Decode";
+"Input Label" = "Input Label";
+"Output Label" = "Output Label";
+"Invalid Input" = "Invalid Input";
+
+/* --- Native-only chrome: empty state + accessibility --- */
+"urlEncoder.emptyTitle" = "Nothing to show yet";
+"urlEncoder.emptyHint" = "Enter text above to see the encoded or decoded result.";
+"urlEncoder.inputA11y" = "Text to encode or decode";
