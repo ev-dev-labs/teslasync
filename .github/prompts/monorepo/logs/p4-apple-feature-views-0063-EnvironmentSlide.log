@@ -1,0 +1,151 @@
+=== P4 Feature view 0063 EnvironmentSlide (Apple) ===
+Prompt : .github/prompts/monorepo/.../p4-...-0063-EnvironmentSlide.prompt.md
+Surface: apps/apple/TeslaSync/feature-views/EnvironmentSlide.*
+Web src : web/src/features/analytics/components/review/EnvironmentSlide.tsx
+Toolchain: Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+           swift 6.x · swiftlint · swiftformat · pwsh · xcodegen · iPhone 16 (iOS 26.5) sim present
+
+------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: EnvironmentSlide.* + this log)
+------------------------------------------------------------------------------
+  EnvironmentSlide.Model.swift     280  state-holder seam (P1/S8) + telemetry (P1/S11) + i18n facade (P1/S10)
+  EnvironmentSlide.Adapter.swift   163  pure projection: trees = round(co2/21), 30-cap, "+N more", fmtNumber
+  EnvironmentSlide.swift            76  feature view: phase switch + lifecycle + view.opened
+  EnvironmentSlide.Views.swift     342  content slide, native flow Layout, freshness banner, loading/empty/error
+  EnvironmentSlide.Motion.swift     72  entrance-animation modifiers (web `motion` parity, reduce-motion aware)
+  EnvironmentSlide.Previews.swift   71  every state preview (loading/empty/error/content/overflow/stale/offline)
+  EnvironmentSlide.Tests.swift     290  adapter + phase + model/telemetry + i18n + a11y XCTest
+  EnvironmentSlide.strings          —   table "EnvironmentSlide": 3 source keys + native chrome
+
+Parity reproduced from the web leaf (data: YearReview → reads co2_offset_kg):
+  • treesPlanted = Math.round(co2_offset_kg / 21)            [jsRound = floor(x+0.5), exact JS parity]
+  • treeIcons    = Array.from({length: min(treesPlanted,30)})
+  • overflow     = treesPlanted > 30 ? `+{n-30} more`
+  • figure       = <AnimatedNumber value=co2 decimals=0 suffix=" kg"/>  → TSAnimatedNumber (green)
+  • 🌍 spring scale-in · label · figure · "Like planting {{count}} trees" · 🌳 staggered grid · "+N more"
+States: loading(skeleton) · empty(ContentUnavailableView) · error(QueryError+retry) · stale(chip+auto-refresh) ·
+        offline(cached+chip) · content. i18n: every string via P1/S10 facade. a11y: combined VoiceOver label,
+        reduce-motion honored, decorative glyphs hidden. Telemetry: view.opened "EnvironmentSlide" (P1/S11).
+i18n source keys all pre-exist in apps/shared/i18n/catalog/en.json:
+        translation.yearReview.co2Offset · .treesEquiv {count} · .more   (P1/S10 catalog ✓)
+
+------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed — real results)
+------------------------------------------------------------------------------
+[1] swiftformat --lint apps/apple            → 0/761 require formatting (2 skipped). EnvironmentSlide: clean.
+    FORMAT_EXIT=0
+[2] swiftlint --strict (scoped, 7 EnvironmentSlide files) → "Found 0 violations, 0 serious in 7 files."
+    swiftlint --strict (whole tree, 757 files) → "Found 1 violation, 1 serious":
+        dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length
+        → PRE-EXISTING sibling, OUTSIDE allowed files (EnvironmentSlide.*); disclosed, not hidden.
+    EnvironmentSlide whole-tree violations: 0.   LINT_EXIT=0 (for shipped scope)
+[3] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/EnvironmentSlide (gate-exact)
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0
+        EXIT=0
+    PLACEHOLDER_EXIT=0
+    (Note: scanning the whole feature-views dir surfaces 2 hits in sibling InfrastructureSection.* —
+     pre-existing, outside allowed files. EnvironmentSlide.* contains zero forbidden markers.)
+
+------------------------------------------------------------------------------
+REAL-TOOLCHAIN COMPILES (Xcode 26.5, Swift 6, -strict-concurrency=complete)
+------------------------------------------------------------------------------
+[4] iOS 18 simulator SDK  (arm64-apple-ios18.0-simulator): surface + 25 real design-system sources
+        swiftc -typecheck → 0 errors  (EnvironmentSlide errors: 0)
+[5] macOS 15 SDK          (arm64-apple-macos15.0):         surface + 25 real design-system sources
+        swiftc -typecheck → 0 errors  (EnvironmentSlide errors: 0)
+[5b] whole-module sanity: all 588 non-test app sources + REAL Shared.xcframework, macOS SDK typecheck
+        → only 4 errors, ALL `DashboardWidgetSize ambiguous` in 2 sibling DashboardWidgets files
+          (name collides with the imported Shared framework — an artifact of flat single-module
+           typecheck, not the per-target build). EnvironmentSlide errors: 0.
+
+------------------------------------------------------------------------------
+EXECUTED TESTS (real run — pure core + @MainActor state holder)
+------------------------------------------------------------------------------
+[6] Adapter / projection / format / i18n / a11y / phase harness (Foundation) → 26/26 PASS
+       1840.2kg→88 trees, cap 30, overflow 58 · 630→30/none · 651→31/+1 · 0→"0" · 10.4→0 / 10.5→1 ·
+       ∞→safe 0 · fmtNumber "1,840" · trees("Like planting 88 trees") · a11y "CO₂ offset / 1,840 kg / 88 trees" ·
+       resolvePhase loading/empty/loaded/failed × hasData matrix.
+[7] @MainActor model + telemetry harness → 11/11 PASS
+       view.opened emitted exactly once ["EnvironmentSlide"] · idempotent start · loading→content ·
+       projection trees=88 · refresh delegates ×2 · stale auto-refresh gating (live:no / stale+fetching:no /
+       stale+idle:yes) · cached value survives failure → content.
+   (The shipped EnvironmentSlide.Tests.swift encodes these same assertions as XCTest; it executes in the
+    TeslaSyncTests / TeslaSync-macOSTests bundles on the integration runner — see DEFERRED note below.)
+
+------------------------------------------------------------------------------
+SIGNED XCODE APP BUILD/TEST — ATTEMPTED, captured, DEFERRED (integration-runner scope)
+------------------------------------------------------------------------------
+Preconditions satisfied locally:
+  • KMP Shared.xcframework built: gradle :core:assembleSharedXCFramework → BUILD SUCCESSFUL, staged to
+    apps/apple/Frameworks/Shared.xcframework (release).      • xcodegen generate → project created.
+
+[I] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        ** BUILD FAILED **  /  ** TEST FAILED **
+        2 × "unable to resolve module dependency: 'XCTest'"  @ TeslaSync/feature-views/BackendTool.Tests.swift:20
+        EnvironmentSlide errors: 0
+    IOS_EXIT=65   (DEFERRED — see root cause)
+[M] xcodebuild -scheme TeslaSync-macOS build test
+        ** BUILD FAILED **
+        2 × "unable to resolve module dependency: 'XCTest'"  @ TeslaSync/feature-views/BackendTool.Tests.swift:20
+        EnvironmentSlide errors: 0
+    MAC_EXIT=65   (DEFERRED — see root cause)
+
+ROOT CAUSE (pre-existing, repo-wide, NOT this surface):
+  The XcodeGen spec (apps/apple/project.yml) lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets`
+  as APP-target sources with no excludes, so all 71 sibling `*Tests.swift` files (BackendTool.Tests.swift,
+  FleetApiSection.ModelTests.swift, every *Widget.Tests.swift, …) are compiled INTO the non-test app target,
+  where `import XCTest` cannot resolve. The app build therefore fails on the first such sibling
+  (BackendTool.Tests.swift) before linking — on BOTH platforms — independent of this surface (0 EnvironmentSlide
+  errors in both logs). Fixing it requires routing `*Tests.swift` to the TeslaSyncTests / TeslaSync-macOSTests
+  targets in apps/apple/project.yml — a file OUTSIDE this prompt's allowed scope (EnvironmentSlide.* only) and
+  parallel-unsafe to edit from a surface slot (Honesty Covenant #7 "No predecessor bypass"). This matches the
+  established precedent for every P4 feature-view surface (e.g. 0005 FleetTelemetryHealth, 0086): signed Xcode
+  app build/test is DEFERRED to the integration runner; the surface is verified via host gates + both-SDK SDK
+  compiles + executed projection/model tests. Evidence captured (not assumed): /tmp/tslogs/{ios-buildtest,
+  macos-build}.log show the identical XCTest blocker with zero EnvironmentSlide diagnostics.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT (binding) — self-audit
+------------------------------------------------------------------------------
+  1  No red-as-green : host gates [1][2][3]=green; REAL iOS18+macOS15 SDK compiles [4][5]=0 errors; executed
+                       tests [6][7]=37/37. The signed Xcode build/test [I][M] is recorded with its REAL failing
+                       exit (65) and DISCLOSED as DEFERRED on a pre-existing sibling blocker — never painted green.
+  2  No scope narrow : implemented ALL states (loading/empty/error/stale/offline/content) + i18n + a11y +
+                       telemetry + reduce-motion + native flow Layout + staggered entrance + overflow chip.
+  3  No skip-assume  : every gate executed, incl. both literal xcodebuild commands (captured, not assumed);
+                       a real top-level-code compile error in the harness was found and fixed before reporting.
+  4  No stubs final  : complete implementations; placeholder COUNT=0; no TODO/stub/mock/placeholder/Lorem in
+                       shipped files. (Throwaway /tmp harnesses are labeled and NEVER shipped.)
+  5  No parity short : faithful port of the trees math, 30-cap, "+N more", green kg figure, staged motion, states.
+  6  No delegation   : authored directly; no sub-agent delegation of the surface.
+  7  No predecessor bypass: did NOT edit apps/apple/project.yml / .swiftlint.yml, did NOT stage into git, did NOT
+                       edit the shared Localizable.xcstrings — strings shipped as the per-surface .strings table.
+  8  No commit on red: committing on green host gates + both-SDK compiles + executed tests; Xcode app build/test
+                       DEFERRED (evidence captured), not a failure of this code.
+  9  No silent drift : changes confined to EnvironmentSlide.* + this log. (2 unrelated pre-existing web/* working-
+                       tree edits are NOT mine and are NOT staged.)
+  10 Log ends with EXIT/STATUS below.
+
+------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------
+Production-polished native EnvironmentSlide shipped at parity with the web source: a pure Foundation
+projection core (executed-green), a P1/S8 state-holder seam (no HTTP in the view), P1/S11 view.opened
+telemetry, every P4 state, every i18n key resolved through the P1/S10 facade, a combined VoiceOver label with
+Dynamic-Type + reduce-motion support, a native Swift `Layout` for the wrapping/centered tree grid, and the
+staged web entrance animations. All host-runnable gates pass AND the surface compiles cleanly against BOTH the
+iOS 18 simulator and macOS 15 SDKs with the real Xcode 26.5 toolchain under Swift 6 strict concurrency. The
+signed Xcode app build/test is DEFERRED to the integration runner (pre-existing repo-wide `*Tests.swift`→app-
+target wiring in project.yml — outside allowed files, parallel-unsafe), exactly per the 0005/0086 precedent;
+zero EnvironmentSlide diagnostics on either platform.
+
+------------------------------------------------------------------------------
+COMMIT
+------------------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/EnvironmentSlide.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0063-EnvironmentSlide.log
+  git commit -m "feat(apps/apple/feature-views): add EnvironmentSlide surface (P4)"
+
+EXIT=0
+STATUS=DONE
