@@ -1,0 +1,158 @@
+=== P4 Feature view 0195 Stepper (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Build 25F80) — Darwin 25.5.0 arm64, Apple Silicon
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively for
+                       this process only — no sudo, no `xcode-select -s` — so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2 · Java 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, booted) present · macOS 26.5 SDK present
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 deployment targets all present on the
+                       26.5 SDK → NOT capability-BLOCKED. (This surface uses no charts/maps — pure presentational.)
+  Parallel-exec note : /tmp is shared across sibling parallel slots; a neighbour (slot-299) was concurrently
+                       writing /tmp/ios-build.log + /tmp/dd-ios. All slot-316 builds below were therefore re-run
+                       under slot-unique paths (/tmp/slot316-*) and verified to contain only slot-316 references.
+
+WEB SOURCE (the specification)
+  web/src/features/onboarding/components/Stepper.tsx — a PURE presentational leaf (prompt: "Data sources:
+  (none — pure presentational component)"; shared components used: @/components/ui):
+    <ol aria-label="Onboarding steps" class="flex flex-col gap-6">
+      {steps.map(step => <li> [ indicator-column(circle + connector) | title + description + while-current CTA ] )}
+    stateOf(steps, i): step.done ? 'done' : (firstIndex(!done) === i ? 'current' : 'pending')
+       → a satisfied step that FOLLOWS the current step still reads 'done' (own-flag checked first).
+    indicator : done → <Check/> (emerald) · current → <Loader2 animate-spin/> (cyan) · pending → numeric {i+1} (muted)
+    connector : non-last row; done → emerald/40 else surface-2.   (indicator is aria-hidden)
+    title/desc colors per state; CTA renders ONLY while current && step.cta (default <Button variant=primary
+       size=sm icon={<ArrowRight/>}>; web Button renders {icon} BEFORE {children} → arrow is LEADING; `disabled`
+       supported; `renderCta` render-prop override → a keyed activation in native).
+    `OnboardingStep.icon?` is DECLARED in the interface but NEVER read by the component render → faithfully omitted.
+  Only ONE string is extracted from the source: the <ol aria-label> "Onboarding steps". Step titles/descriptions
+  arrive pre-localized as props (caller data), exactly as on the web — they are not catalog keys.
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/Stepper.*) — 7 files, ConflictWarnings/ToolCard convention
+  Stepper.Adapter.swift   — pure projection core: StepperStepState, StepperStep(+StepperStepCTA),
+                            StepperIndicatorKind, StepperRow(+StepperTone), StepperProjection.state/.rows (the
+                            verbatim `stateOf` ladder), StepperText/StepperCopy catalog, StepperAccessibility.
+                            Types are NAMESPACED `Stepper*` because the app target already defines an unrelated
+                            public `OnboardingStep` (FleetApiSection.Models.swift) — avoids a duplicate-type clash.
+  Stepper.Model.swift     — StepperTelemetry seam + OSLogStepperTelemetry (P1/S11 redacted "view.opened"),
+                            StepperPhase/StepperRender/StepperInput, StepperSource (P1/S8 state-holder seam,
+                            incl. activateStep), StepperModel (@MainActor @Observable: render resolution, stale
+                            rising-edge auto-refresh, CTA delegation), InMemoryStepperSource, StepperStrings
+                            (P1/S10 facade, table "Stepper").
+  Stepper.Views.swift     — presentational core: StepperIndicatorView (36pt tone circle; spinner collapses to a
+                            static glyph under Reduce Motion), StepperConnectorView, StepperRowView (combined
+                            VoiceOver summary; CTA kept a separate focus stop), StepperCTAButton (shared TSButton,
+                            leading arrow per web), StepperListView (carries the aria-label), and the P4 chrome —
+                            StepperLoadingView (TSSkeleton), StepperEmptyView (ContentUnavailableView),
+                            StepperErrorView + StepperRetryButton, StepperStatusChip (stale/offline).
+  Stepper.swift           — `Stepper` surface (slug "Stepper"); offline/stale chips + render switch; onAppear/
+                            onDisappear → model.start()/stop().
+  Stepper.Previews.swift  — #if DEBUG previews: steps(done·current·pending) / all-complete / empty / loading /
+                            error / stale / offline.
+  Stepper.Tests.swift     — 25 XCTest cases (state ladder · projection · render · model+telemetry+stale-edge+
+                            activation · accessibility · copy catalog).
+  Stepper.strings         — per-surface P1/S10 table (12 keys); first entry = the web aria-label key.
+  No wiring edits required: TeslaSync/feature-views is ALREADY a source path of both app targets (project.yml
+  L37/L68) and is ALREADY in .swiftlint.yml `included`. Strings are kept in the per-surface table (no shared
+  Localizable.xcstrings edit) — consistent with the sibling surfaces and with this prompt's allowed-files scope
+  (apps/apple/TeslaSync/feature-views/Stepper.* + this log only).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  <ol aria-label>            → StepperListView.accessibilityLabel("onboarding.stepper.label")
+  stateOf ladder            → StepperProjection.state(for:at:) — own-done→done; first !done→current; rest→pending
+  <Check/> / <Loader2/> / n  → StepperIndicatorKind.check / .spinner (Reduce-Motion → "circle.dashed") / .number
+  emerald / cyan / muted     → StepperTone.success(statusSuccess) / .accent(accent) / .muted(textMuted)
+  circle bg/20 border/50     → tone.opacity(0.2) fill + tone.opacity(0.5) stroke   (exact web scale)
+  connector emerald/40|s-2   → statusSuccess.opacity(0.4) when row done else Color.TS.border
+  title/desc per state       → done/current→textPrimary·textSecondary ; pending→textSecondary·textMuted
+  <Button icon={ArrowRight}> → StepperCTAButton over shared TSButton(.primary,.small), LEADING "arrow.right"
+                               (web renders icon before children); disabled per cta.isDisabled
+  gap-6 / gap-4 / mt-3       → TSSpacing.x2xl(24) / .lg(16) / .sm(8)
+  i18n                       → every literal via StepperStrings facade; step title/desc are caller data (verbatim)
+  a11y                       → indicator+connector .accessibilityHidden; row = one VoiceOver element "{title},
+                               Step N of M, {state}. {desc}"; CTA a separate labelled control; Dynamic Type via
+                               Font.TS tokens; Reduce Motion honored on the spinner
+  telemetry                  → view.opened surface="Stepper" via StepperModel.start (P1/S11), default OSLog sink
+  states                     → done/current/pending (web) + loading/empty/error/stale/offline (native P4 chrome,
+                               the leaf delegates these to its parent)
+
+GATES
+  [GREEN]    swiftformat --lint  (Stepper scope, 6 files)        : 0/6 files require formatting          (FORMAT_EXIT=0)
+             swiftformat --lint  (whole apps/apple, FYI)         : 1/1435 PRE-EXISTING — ActionBuilder.Previews.swift
+                                                                   (blankLinesBetweenScopes); NOT a Stepper file,
+                                                                   untouched by this change (git status clean on it).
+  [GREEN]    swiftlint --strict  (Stepper scope, 6 files)        : 0 violations, 0 serious in 6 files     (LINT_EXIT=0)
+             swiftlint --strict  (whole included scope, FYI)     : 1 PRE-EXISTING violation — function_body_length
+                                                                   in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                   (NOT a Stepper file; untouched; same one ToolCard logged).
+  [GREEN]    check-placeholders.ps1 -Path …/feature-views/Stepper : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0   (PLACEHOLDER_EXIT=0)
+  [GREEN]    Stepper build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             strict-concurrency complete, IDENTICAL to the app's SWIFT_STRICT_CONCURRENCY:complete), compiling the
+             EXACT shipped Stepper.{swift,Model,Adapter,Views,Previews} against the REAL repo design-system files
+             (Tokens · Badges[TSTone] · Buttons[TSButton] · Typography · Cards · Skeletons[TSSkeleton] · TSMaterial):
+                 Build complete!  ·  Executed 25 tests, with 0 failures (0 unexpected)               (SWIFT_TEST_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO Stepper errors; all blockers PRE-EXIST and are UNRELATED to this change;
+               both gates were actually executed on this runner, raw exits pasted, failures confirmed not assumed):
+    Shared.xcframework : assembled fresh by the scheme pre-action (Gradle :core:assembleSharedXCFramework, Kotlin/
+                         Native release link) before each app compile — so the framework dependency was satisfied.
+    iOS  (IOS_EXIT=65) : the app target source glob includes `TeslaSync/feature-views/**`, which sweeps the 111
+                         PRE-EXISTING co-located `*.Tests.swift` files (e.g. the first alphabetically,
+                         AcDcStatsPanel.Tests.swift:19) into the APP target; those `import XCTest`, which is not
+                         linkable into an application target → "unable to resolve module dependency: 'XCTest'".
+                         The ENTIRE failure is this one systemic class: total `error:` lines = 4, every one an
+                         XCTest module-resolution error across 111 distinct pre-existing test files; the compile
+                         aborts at module-resolution before ever typechecking a source file. grep for any error on
+                         a Stepper SOURCE file (Stepper.{swift,Model,Adapter,Views,Previews}) = 0 hits.
+                         This surface's own Stepper.Tests.swift co-locates per the DOMINANT repo convention (112
+                         pre-existing co-located feature-view test files) and per this prompt's allowed-files scope;
+                         correct target membership (compiling *.Tests.swift into TeslaSyncTests, not the app) is a
+                         project-wiring concern owned by the P4/P99 Apple acceptance gate, not a feature-view prompt.
+    macOS (MAC_EXIT=65): fails earlier still, at signing — total `error:` lines = 4, all "TeslaSync-macOS" /
+                         "TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+                         certificate, which this runner does not provision. 0 Stepper errors.
+    Disposition        : these are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012
+                         `macos-latest` CI runner (signing identities) + a project test-target-membership pass —
+                         the sanctioned "code-complete + DEFERRED Xcode gate" disposition every P4 surface to date
+                         has used (see p4-apple-feature-views-0010-ToolCard.log). Task rule honored: pre-existing,
+                         unrelated breakage was neither touched nor "fixed". (macos-pending-verifications.md itself
+                         was NOT edited — it is outside this prompt's allowed-files scope; the deferral is recorded
+                         here per its resolution protocol.)
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the stateOf ladder (incl. done-after-current),
+                           indicator trio, connector, per-state colors, leading-arrow CTA gated to current, the
+                           renderCta override (keyed activation), and the aria-label; declared-but-unused `icon?` omitted.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; both xcodebuild failures confirmed,
+                           not assumed; /tmp parallel-slot contamination detected and re-run under slot-unique paths.
+  4  No stubs as final   : complete production surface (7 files) + 25 real passing tests; placeholder scanner = 0.
+  5  No parity shortcut  : tone/opacity/typography/spacing/CTA-icon-order/a11y/Reduce-Motion/telemetry all mapped
+                           to platform tokens + the shared TSButton/TSSkeleton and verified by build+test.
+  6  No delegation       : implemented directly; no agents/subtasks.
+  7  No predecessor bypass: binds P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry; P4
+                           core shared components (TSButton/TSSkeleton/Color.TS/Font.TS) consumed, not re-rolled.
+  8  No commit on red    : the COMMITTED artifact (Stepper.* + this log) is GREEN on every host-runnable gate AND on
+                           a real isolated Swift-6 strict-concurrency build+test; the deferred full-app gate is RED
+                           only on pre-existing, unrelated surfaces this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to the 7 apps/apple/TeslaSync/feature-views/Stepper.* files + this log.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic `Stepper` shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles and its 25 tests pass under the app's own Swift 6 strict-concurrency rules, against the REAL design
+  system + shared components, with swiftformat/swiftlint/placeholder all green on the surface scope. Every web
+  branch and the full P4 states contract (done/current/pending + loading/empty/error/stale/offline) are reproduced
+  with VoiceOver, Dynamic Type, and Reduce-Motion support and a P1/S11 view.opened telemetry emission. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the
+  pre-existing app-target test-membership glob (111 unrelated co-located XCTest files) and by macOS development
+  signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE
