@@ -1,0 +1,59 @@
+/*
+  ComputedMetricEditor.strings
+  TeslaSync — P4 feature view · 0182 · ComputedMetricEditor (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ComputedMetricEditor resolves (table "ComputedMetricEditor") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  Group 1 mirrors the exact key set extracted from the web source
+  (features/notifications/components/ComputedMetricEditor.tsx) — the field labels, the
+  empty-choice prompts, the threshold prompt, and the live-preview line/verdict. Group
+  1b backs the operator labels (web `t('metricOps.<opKey>', opLabel)`); the dynamic
+  metric-name and window keys (`metricNames.<id>` / `metricWindows.<window>`) are
+  backend-driven, so — exactly as the web does — they resolve through their runtime
+  fallback rather than a static catalog entry. Group 2 backs the native-only chrome
+  (freshness / empty / error / offline / retry) the Apple HIG states contract requires
+  for the `useAlertMetrics` source + the preview mutation.
+*/
+
+/* --- Field labels + prompts (web notifications.alertStudio.computedMetric.*) --- */
+"notifications.alertStudio.computedMetric.metric" = "Metric";
+"notifications.alertStudio.computedMetric.loading" = "Loading metrics…";
+"notifications.alertStudio.computedMetric.metricPlaceholder" = "Choose a metric";
+"notifications.alertStudio.computedMetric.window" = "Window";
+"notifications.alertStudio.computedMetric.windowPlaceholder" = "Choose a window";
+"notifications.alertStudio.computedMetric.op" = "Operator";
+"notifications.alertStudio.computedMetric.threshold" = "Threshold";
+"notifications.alertStudio.computedMetric.thresholdPlaceholder" = "e.g. 200";
+
+/* --- Live preview (web preview line + verdict) --- */
+"notifications.alertStudio.computedMetric.preview" = "Live preview";
+"notifications.alertStudio.computedMetric.previewIdle" = "Pick a metric, window, operator, and threshold to preview.";
+"notifications.alertStudio.computedMetric.previewLoading" = "Computing…";
+"notifications.alertStudio.computedMetric.previewValue" = "Right now this metric is {{value}}{{suffix}} — would {{verdict}} fire.";
+"notifications.alertStudio.computedMetric.would" = "";
+"notifications.alertStudio.computedMetric.wouldNot" = "NOT";
+
+/* --- Operator labels (web metricOps.<opKey>, web opLabel defaults) --- */
+"notifications.alertStudio.metricOps.gt" = ">";
+"notifications.alertStudio.metricOps.gte" = ">=";
+"notifications.alertStudio.metricOps.lt" = "<";
+"notifications.alertStudio.metricOps.lte" = "<=";
+"notifications.alertStudio.metricOps.eq" = "=";
+"notifications.alertStudio.metricOps.neq" = "!=";
+"notifications.alertStudio.metricOps.pctGt" = "% change >";
+"notifications.alertStudio.metricOps.pctLt" = "% change <";
+
+/* --- Native chrome: registry/preview states + accessibility --- */
+"notifications.alertStudio.computedMetric.live" = "Live";
+"notifications.alertStudio.computedMetric.stale" = "Stale";
+"notifications.alertStudio.computedMetric.offline" = "Offline";
+"notifications.alertStudio.computedMetric.metricsEmpty" = "No metrics available yet.";
+"notifications.alertStudio.computedMetric.metricsError" = "Couldn't load metrics";
+"notifications.alertStudio.computedMetric.metricsOffline" = "Offline — showing no metrics";
+"notifications.alertStudio.computedMetric.previewOffline" = "Offline — showing the last preview";
+"notifications.alertStudio.computedMetric.retry" = "Retry";
