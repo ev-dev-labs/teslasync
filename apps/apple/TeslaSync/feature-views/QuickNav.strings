@@ -1,0 +1,43 @@
+/*
+  QuickNav.strings
+  TeslaSync — P4 feature view · 0129 · QuickNav (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `QuickNav` resolves (table "QuickNav") lives here with its web `t(key, default)`
+  English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/dashboard/components/QuickNav.tsx): the per-shortcut label/description
+  keys the `NAV_ITEMS` map resolves via `t(nav.x, …)` / `t(nav.xDesc, …)`. The second
+  group backs the native-only chrome — the VoiceOver copy and the loading / empty /
+  error / connectivity states the prompt requires — keyed so the Swift sources hold
+  no English literals.
+*/
+
+/* --- Keys from the web source (parity: NAV_ITEMS labels + descriptions) --- */
+"nav.drives" = "Drives";
+"nav.drivesDesc" = "Trip history";
+"nav.charging" = "Charging";
+"nav.chargingDesc" = "Sessions & costs";
+"nav.analytics" = "Analytics";
+"nav.analyticsDesc" = "Fleet insights";
+"nav.battery" = "Battery";
+"nav.batteryDesc" = "Health & degradation";
+
+/* --- Native chrome: accessibility --- */
+"dashboard.quickNav.openHint" = "Opens %@";
+"dashboard.quickNav.gridA11y" = "Quick navigation";
+"dashboard.quickNav.loadingA11y" = "Loading quick navigation";
+
+/* --- Native chrome: empty / error states --- */
+"dashboard.quickNav.emptyTitle" = "No shortcuts";
+"dashboard.quickNav.emptyHint" = "Navigation shortcuts will appear here.";
+"dashboard.quickNav.errorTitle" = "Couldn't load shortcuts";
+"dashboard.quickNav.retry" = "Retry";
+
+/* --- Native chrome: live-state connectivity chip --- */
+"dashboard.quickNav.live" = "Live";
+"dashboard.quickNav.stale" = "Stale";
+"dashboard.quickNav.offline" = "Offline";
