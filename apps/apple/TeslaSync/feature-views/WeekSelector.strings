@@ -1,0 +1,38 @@
+/*
+  WeekSelector.strings
+  TeslaSync — P4 feature view · 0079 · WeekSelector (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `WeekSelector` resolves (table "WeekSelector") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/analytics/components/weekly-digest/WeekSelector.tsx) — the two
+  navigation buttons + the `Current` badge. The remaining keys back the native
+  chrome (the loading / empty / error states + the stale/offline freshness
+  banners) and the VoiceOver copy the Apple HIG states + accessibility contract
+  requires around the bar.
+*/
+
+/* --- Navigation + badge from the web source (parity) --- */
+"analytics.weeklyDigest.prevWeek" = "Previous";
+"analytics.weeklyDigest.nextWeek" = "Next";
+"analytics.weeklyDigest.current" = "Current";
+
+/* --- Native chrome: freshness banners (stale / offline) --- */
+"analytics.weeklyDigest.staleBanner" = "Refreshing — this week's digest may be stale";
+"analytics.weeklyDigest.offlineBanner" = "Offline — showing the last loaded week";
+
+/* --- Native chrome: loading / empty / error states --- */
+"analytics.weeklyDigest.loadingHint" = "Loading this week's digest…";
+"analytics.weeklyDigest.emptyHint" = "No drives or charges recorded this week";
+"analytics.weeklyDigest.errorTitle" = "Couldn't load this week's digest";
+"analytics.weeklyDigest.retry" = "Retry";
+
+/* --- Accessibility (VoiceOver) --- */
+"analytics.weeklyDigest.a11yWeek" = "Selected week";
+"analytics.weeklyDigest.a11yPrev" = "Show previous week";
+"analytics.weeklyDigest.a11yNext" = "Show next week";
