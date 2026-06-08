@@ -1,0 +1,52 @@
+/*
+  CommandSearch.strings
+  TeslaSync — P4 feature view · 0225 · CommandSearch (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `CommandSearch`
+  resolves (table "CommandSearch") lives here with its English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table so
+  each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first key is the one extracted from the web source
+  (features/system/components/CommandSearch.tsx — `t('commands.search.placeholder', 'Search
+  commands...')`). The next two are the parent-driven keys the native result envelope reproduces
+  verbatim (features/system/components/VehicleCommandCenter.tsx — `commands.search.noResults` and
+  `commands.staleData`). The remaining `commandSearch.*` keys back the native state envelope (field
+  label / clear, idle / loading / empty / error chrome, the freshness chip, the offline banner) and
+  the accessibility summaries — none of which exist as English literals in the Swift sources.
+*/
+
+/* --- Key from the web source (parity) --- */
+"commands.search.placeholder" = "Search commands...";
+
+/* --- Parent-driven parity keys reproduced by the result envelope --- */
+"commands.search.noResults" = "No commands match your search";
+"commands.staleData" = "Vehicle data is %@ old. The vehicle may be asleep or offline.";
+
+/* --- Field chrome --- */
+"commandSearch.fieldLabel" = "Search commands";
+"commandSearch.commandRole" = "Command";
+"commandSearch.clear" = "Clear search";
+
+/* --- Result-area states (idle / loading / empty / error) --- */
+"commandSearch.idleHint" = "Type to search vehicle commands";
+"commandSearch.idleHintCount" = "Search across %d vehicle commands";
+"commandSearch.loading" = "Loading commands…";
+"commandSearch.noResultsHint" = "Try a different command name or category.";
+"commandSearch.errorTitle" = "Couldn't load commands";
+"commandSearch.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"commandSearch.live" = "Live";
+"commandSearch.stale" = "Stale";
+"commandSearch.offline" = "Offline";
+
+/* --- Connectivity banner (offline / wake-first) --- */
+"commandSearch.offlineBanner" = "Vehicle asleep — wake it to send commands";
+
+/* --- Accessibility summaries --- */
+"commandSearch.a11y.idle" = "Type to search vehicle commands";
+"commandSearch.a11y.loading" = "Loading commands";
+"commandSearch.a11y.results" = "%d commands match your search";
+"commandSearch.a11y.empty" = "No commands match your search";
+"commandSearch.a11y.error" = "Couldn't load commands";
