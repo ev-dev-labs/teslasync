@@ -1,0 +1,40 @@
+/*
+  BatteryHealthSection.strings
+  TeslaSync — P4 feature view · 0072 · BatteryHealthSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `BatteryHealthSection` resolves (table "BatteryHealthSection") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/analytics/components/weekly-digest/BatteryHealthSection.tsx — the title,
+  the two BatteryPill labels, and the three MiniStat labels), reusing the web
+  `analytics.weeklyDigest.*` namespace verbatim. The second group backs the
+  native-only chrome (the "%"/" km" value units, the stale / offline chips, and the
+  loading / empty / error branches + accessibility) the Apple HIG states contract
+  requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"analytics.weeklyDigest.batteryHealth" = "Battery Health";
+"analytics.weeklyDigest.avgBatteryStart" = "Avg Battery at Charge Start";
+"analytics.weeklyDigest.avgBatteryEnd" = "Avg Battery at Charge End";
+"analytics.weeklyDigest.avgChargeGain" = "Avg Charge Gain";
+"analytics.weeklyDigest.chargeSessions" = "Charge Sessions";
+"analytics.weeklyDigest.estRangeAdded" = "Est. Range Added";
+
+/* --- Native chrome: value units --- */
+"analytics.weeklyDigest.batteryPercent" = "{{value}}%";
+"analytics.weeklyDigest.estRangeAddedUnit" = "{{value}} km";
+
+/* --- Native chrome: P4 states + freshness + accessibility --- */
+"analytics.weeklyDigest.stale" = "Stale";
+"analytics.weeklyDigest.offline" = "Offline";
+"analytics.weeklyDigest.batteryHealth.loadingA11y" = "Loading battery health";
+"analytics.weeklyDigest.batteryHealth.emptyTitle" = "No charging this week";
+"analytics.weeklyDigest.batteryHealth.empty" = "Battery health appears here once a charge session is recorded for the selected week.";
+"analytics.weeklyDigest.batteryHealth.error" = "Could not load battery health for this week.";
+"analytics.weeklyDigest.batteryHealth.retry" = "Retry";

@@ -1,0 +1,250 @@
+================================================================================
+P4 · Feature view · 0072 — BatteryHealthSection (Apple)
+Run: 2026-06-07T20:24-0700   Host: Darwin arm64 (macOS 26.5.1, 25F80)   Slot: slot-193
+Prompt: P4/feature-views/0072 — Feature view: BatteryHealthSection
+Web source (spec): web/src/features/analytics/components/weekly-digest/BatteryHealthSection.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (ADR-012; 0009/0036/0038/ToolCard precedent).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (note: `xcode-select` points at /Library/Developer/CommandLineTools on this
+     slot; the full Xcode toolchain is reached with
+     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — proven by the
+     real iOS+macOS SDK compiles and the xcodebuild invocation below.)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                           OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  KMP toolchain (~/.konan) ... kotlin-native-prebuilt-macos-aarch64-2.4.0 present   note
+
+  Charts/maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, available and
+  PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, host-compiled (both SDKs), and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/BatteryHealthSection.*) ===
+  BatteryHealthSection.Adapter.swift   226  testable core — BatteryHealthMetrics (the DigestMetrics slice) +
+                                            BatteryHealthNumberFormat (fmtNumber/fmtInt + Math.round ports) +
+                                            BatteryBand (STATUS_COLORS ladder >=60/>=30) + BatteryPillKind/
+                                            BatteryPillProjection (rounded level + clamped bar fraction) +
+                                            MiniStatKind/MiniStatProjection + BatteryHealthTiles (pills/stats
+                                            builders) + BatteryHealthAccessibility.tileSummary
+  BatteryHealthSection.Model.swift     275  P1/S8 state-holder seam (BatteryHealthSource->Model) + P1/S11
+                                            telemetry seam + P1/S10 BHStrings facade (+{{}} interpolation) +
+                                            BatteryHealthInput snapshot + BatteryHealthProjection
+                                            (loading/error/empty/data + stale/offline overlays) +
+                                            in-memory source
+  BatteryHealthSection.Views.swift     204  header + state bodies — BHSectionHeader (battery glyph + title +
+                                            fetching spinner + stale/offline chips) / BHDataBody (pills grid
+                                            above stats grid) / BHGrid / BHTileSkeleton + BHLoadingBody /
+                                            BHEmptyBody / BHErrorBody (danger box + retry)
+  BatteryHealthSection.Tiles.swift     229  leaf tiles — BatteryBand->TSTone + glyph map / pill+stat kind ->
+                                            i18n-label + SF-Symbol + unit / BHChip (runtime stale+offline) /
+                                            BHLevelBar (fixed-width proportion bar) / BatteryPillView (web
+                                            BatteryPill) / MiniStatView (web MiniStat)
+  BatteryHealthSection.swift            61  BatteryHealthSection surface — TSFadeIn(0.2) + TSGlassPanel,
+                                            always-on header + phase switch, onAppear telemetry/start
+  BatteryHealthSection.Previews.swift   97  #if DEBUG previews — loading / data / data-low-band / empty /
+                                            error / stale / offline (7 previews)
+  BatteryHealthSection.Tests.swift     268  XCTest — number-format/band/pill/tiles + phase projection +
+                                            model wiring/telemetry + a11y (25 methods, 7 suites)
+  BatteryHealthSection.strings          40  P1/S10 catalog contribution (6 web-source keys + 9 native
+                                            chrome/unit/a11y keys, 15 total)
+  Every .swift file <= 400 lines (house file_length under swiftlint --strict). Total 1400 lines across 8
+  files (1360 Swift + 40 strings). Shared TSGlassPanel/TSFadeIn/TSSkeleton/TSButton/TSTone/tsGlassPanel are
+  REUSED from the real component library (no redeclaration -> no duplicate symbols when compiled in the app
+  module); the runtime stale/offline BHChip mirrors TSBadge tokens (the LocalizedStringKey-only TSBadge
+  cannot take the runtime string), exactly as the 0009/0038 predecessors did for their runtime chips.
+
+=== PARITY (vs web BatteryHealthSection.tsx) ===
+  Data sources -> useTranslation only (the web leaf is presentational; the parent useWeeklyDigest owns the
+    data: GET /drives, /charging, /alerts filtered to the week -> the computed DigestMetrics). The native
+    surface binds the coalesced digest query snapshot through the P1/S8 BatteryHealthSource seam
+    (isLoading/isFetching/error/metrics + isStale/isOffline). The view performs NO HTTP. useTranslation ->
+    the P1/S10 BHStrings facade.
+  Projection -> BatteryHealthProjection.resolve: loading -> error -> empty(no charging sessions / no
+    metrics) -> data; error deliberately takes precedence over cached metrics (a refetch failure shows the
+    error box, not stale tiles). BatteryPillProjection.make ports the web BatteryPill maths: level =
+    Math.round(value), band = level>=60 good / >=30 warn / else critical (STATUS_COLORS), bar fraction =
+    min(max(level,0),100)/100 (web bar `min(level,100)%`). BatteryHealthTiles.stats ports the three web
+    expressions verbatim: chargeGain = fmtNumber(batteryEnd-batteryStart, 1) (raw, NOT the rounded pill
+    levels), sessions = fmtInt(chargingSessionCount), rangeAdded = fmtNumber(chargeEnergyAdded*5.5, 0).
+    All verified by executed XCTest.
+  Composition -> the web GlassPanel (space-y-6 p-6): an always-visible header (battery glyph tinted
+    chartSeriesPower + "Battery Health" + a fetching spinner + the stale/offline chips) above the state
+    body. Data state = two BatteryPillViews (web sm:grid-cols-2) over three MiniStatViews (web
+    sm:grid-cols-3), each grid collapsing to one column on narrow widths. Each pill reproduces the web
+    BatteryPill: band-tinted level glyph, label + coloured fmtInt(level)% bold, and the fixed-width
+    proportion bar. Each stat reproduces the web MiniStat: muted SF-Symbol (TrendingUp->
+    chart.line.uptrend.xyaxis, Zap->bolt.fill, MapPin->mappin), label, and value. STATUS_COLORS hex map
+    (good #10b981 / warn #f59e0b / critical #ef4444) -> shared TSTone .success/.warning/.danger (same hex
+    in the generated dark tokens).
+  Shared components -> @/components/ui -> TSGlassPanel (web GlassPanel), TSButton variant .secondary (the
+    error retry), the runtime BHChip mirroring TSBadge; @/components/motion -> TSFadeIn(delay:0.2) (web
+    FadeIn delay={0.2}); @/components/feedback -> TSSkeleton (the loading chrome), ProgressView (background
+    fetch); Font.TS ramp via Text(verbatim:) for the runtime-interpolated strings the LocalizedStringKey
+    roles can't express. Compiled against the REAL apps/apple component closure (Tokens + TSDesign +
+    TSMaterial + the whole Components library; none import Shared) in the iOS+macOS typechecks below.
+    Recharts -> none / Leaflet -> none.
+  States (all render) -> loading(skeleton pills+stats in the same grids so layout never jumps) ·
+    data(pills+stats) · empty(friendly "No charging this week" + bolt.slash, web parent !hasData) ·
+    error(danger box + warning triangle + Retry) · stale(chip overlay on the live tiles) · offline(cached
+    tiles + offline chip). The web leaf renders data; the parent owns loading/error/empty; the P4 surface
+    contract requires all of them ON the surface, plus the stale/offline overlays for an auto-refreshing
+    surface (layered as header chips so cached values stay visible — never a blank surface). Each state has
+    a #if DEBUG preview and is unit-tested via the projection.
+  i18n -> all 6 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    analytics.weeklyDigest.{batteryHealth, avgBatteryStart, avgBatteryEnd, avgChargeGain, chargeSessions,
+    estRangeAdded} — ALL present in BatteryHealthSection.strings, plus 9 native chrome/unit/a11y keys
+    (batteryPercent, estRangeAddedUnit, stale, offline, loadingA11y, emptyTitle, empty, error, retry). No
+    English literals in native code (Text(verbatim:) over the facade; {{value}} interpolation matches the
+    web i18next signature). The "%" and " km" units live in the catalog ({{value}}% / {{value}} km), so the
+    verbatim web "km" display string is reproduced without any hardcoded literal in code.
+  a11y -> each tile is ONE combined element whose VoiceOver phrase is built by the tested
+    BatteryHealthAccessibility.tileSummary seam (label, value); the Retry button carries an
+    accessibilityLabel; the stale/offline chips combine + label; the title carries .isHeader; Dynamic Type
+    via Font.TS tokens; Reduce Motion is honoured by the shared TSFadeIn / TSSkeleton / ProgressView.
+  Telemetry -> BatteryHealthModel.start() emits viewOpened(surface:"BatteryHealthSection") -> bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once; startCount==1).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 5 shipped non-preview files compiled together with the
+    REAL apps/apple component closure — generated Tokens + Sources/Design + the Sources/Components library,
+    41 files; none import the Shared xcframework):
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  <component closure> <Adapter/Model/Tiles/Views/surface>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0 -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; the 6 surface files incl Previews + the real closure;
+    #Preview macro expands under the Xcode 26 toolchain):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness
+    (swift-tools-version 6.0 -> Swift 6 language mode + -strict-concurrency=complete; real production
+    Adapter/Model/Tiles/Views/surface + real design tokens + the real component library closure):
+      Executed 25 tests, with 0 failures (0 unexpected) in 0.005 seconds
+        BatteryHealthNumberFormatTests   6/6  (default 2dp / grouping / decimals override / int / non-finite
+                                              ->0 / roundedLevel == Math.round)
+        BatteryBandTests                 1/1  (>=60 good / >=30 warn / else critical thresholds)
+        BatteryPillProjectionTests       3/3  (round+band+fraction / clamp >100 -> 1 / clamp <0 -> 0)
+        BatteryHealthTilesTests          3/3  (pills start-then-end+levels / stats reproduce web exprs /
+                                              chargeGain uses RAW not rounded values)
+        BatteryHealthProjectionTests     7/7  (loading precedence / error precedence over data / empty (no
+                                              sessions) / empty (no metrics) / data / stale+offline require
+                                              content / fetching passthrough)
+        BatteryHealthModelTests          3/3  (start applies initial + telemetry-once + startCount==1 /
+                                              refresh delegation / push updates projection)
+        BatteryHealthAccessibilityTests  2/2  (tile summary joins label+value / drops empty fragment)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 7 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 7 surface .swift files (config: apps/apple/.swiftformat):
+      0/7 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) — run two ways:
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/BatteryHealthSection
+        (the prompt's literal -Path is a filename PREFIX, not a dir; the script Test-Paths a real path and
+         treats a non-dir as a clean scan) -> PLACEHOLDER_COUNT=0
+      ./apps/tools/check-placeholders.ps1 -Path <tmp copy of all 8 surface files> -Language swift
+        (honest scan of the actual shipped files) -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + targets + schemes generate cleanly).
+      - `grep -c BatteryHealthSection TeslaSync.xcodeproj/project.pbxproj` -> 48. UNLIKE the earlier 0038
+        surface, project.yml NOW sources `TeslaSync/feature-views/`, so THIS surface IS fully registered
+        into the TeslaSync (iOS), TeslaSync-macOS, and both XCTest targets.
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   MAC_BUILD_EXIT=65
+          (grep of the full build log: BatteryHealthSection error count = 0.)
+    Why deferred (independent, code-unrelated reasons — none a defect in this surface; the SAME disposition
+    recorded for ToolCard P-0010 in apps/macos-pending-verifications.md, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/apple/Scripts/build-shared-xcframework.sh ->
+          :core:assembleSharedXCFramework, run as the scheme's pre-build action). This is the documented
+          macOS-pending item (apps/macos-pending-verifications.md row 1). Concrete missing-framework error
+          captured above (MAC_BUILD_EXIT=65) — it fails BEFORE source compilation, so 0 BH errors.
+      (b) Pre-existing parallel-merge collisions OUTSIDE this prompt's allowed files: `public struct
+          DashboardWidgetSize` is redefined in 15 files under Sources/DashboardWidgets/* +
+          TeslaSync/dashboard-widgets/* (also PowerFlowConnection), and every feature-view ships a
+          co-located *.Tests.swift importing XCTest into the app target. Both are documented in
+          apps/macos-pending-verifications.md (ToolCard row) as the pre-existing full-app blockers. Editing
+          those files is OUTSIDE this prompt's allowed files (BatteryHealthSection.* + this log).
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are PROVEN GREEN
+    (25/25) by the executed SwiftPM harness in step [4], and the views/model/adapter/tiles compile against
+    BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2] with 0 BatteryHealthSection errors in the captured
+    app build.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source reproduced (loading/data/empty) + the P4
+      stale/offline + error overlays — implemented; each has a #if DEBUG preview; projection unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (BatteryHealthSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all 6 source keys present in the strings.
+  [x] Accessibility labels present on every interactive element (Retry) + combined tile + chip labels.
+  [x] Tests: adapter (number-format/band/pill/tiles) + phase projection + model wiring + a11y — 25 methods
+      across 7 suites, EXECUTED 25/25 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [~] EXIT=0 / STATUS=DONE — all host-runnable + surface-scoped gates green and the surface compiles for
+      BOTH target SDKs; the full Xcode app build/test is DEFERRED with captured evidence (pre-existing
+      Shared.xcframework + dup-symbol + signing, all outside the allowed files), per the ToolCard precedent.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the Xcode app build/test is shown DEFERRED (not green) with the real
+                       MAC_BUILD_EXIT=65 Shared.xcframework error captured; every "OK" is a command actually
+                       run with its real exit code (incl. a 25/25 executed XCTest run + iOS+macOS SDK
+                       compiles).
+  2  No scope narrowing: implemented ALL web composition (title + 2 pills + 3 stats) + the P4 loading/
+                       empty/error/stale/offline states + i18n + a11y + telemetry; the colour-band glyph,
+                       the proportion bar, and the verbatim *5.5 km range estimate are all reproduced.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (The SwiftPM package is a
+                       throwaway harness around the REAL surface files — no shipped stub.)
+  5  No parity shortcuts: faithful port of fmtNumber/fmtInt/Math.round + the BatteryPill colour-band+bar
+                       maths + the three MiniStat expressions (incl. chargeGain using the RAW, not rounded,
+                       averages) + the full render composition + the STATUS_COLORS->TSTone hex map.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings
+                       shipped as the per-surface table; did NOT touch the pre-existing dup-symbol files or
+                       project.yml (out of allowed files). The full-app build blockers are pre-existing and
+                       already tracked in apps/macos-pending-verifications.md.
+  8  No commit on red  : committing on all-green host + surface gates; the Xcode app build/test is
+                       explicitly DEFERRED (pre-existing/external), not a failure of this code.
+  9  No silent drift   : changes confined to the allowed BatteryHealthSection.* files + this log. (Two
+                       pre-existing working-tree edits under web/ predate this run and are NOT staged.)
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native BatteryHealthSection shipped at parity with the web source: pure-Swift
+  fmtNumber/fmtInt/Math.round ports + the BatteryPill colour-band + clamped bar projection + the three
+  MiniStat expressions (executed-green XCTest, 25/25), P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every state + all 6 i18n source keys + a11y label, two band-tinted pills above three range
+  stats inside a TSGlassPanel/TSFadeIn. All host-runnable + surface-scoped gates pass AND the surface
+  compiles against BOTH the iOS 18 simulator and macOS 15 SDKs with the real Xcode 26 toolchain under
+  Swift 6 strict concurrency, with 0 BatteryHealthSection errors in the captured app build. The full Xcode
+  app build/test is DEFERRED to the downstream integration/signed runner (Shared.xcframework KMP staging +
+  pre-existing DashboardWidgetSize/co-located-XCTest collisions + macOS signing — none a defect in this
+  code, all outside this prompt's allowed files and already tracked in apps/macos-pending-verifications.md),
+  matching the ToolCard P-0010 / 0009 / 0038 "code-complete + DEFERRED Xcode gate" precedent (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/BatteryHealthSection.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0072-BatteryHealthSection.log
+  git commit -m "feat(apps/apple/feature-views): add BatteryHealthSection surface (P4)"
+
+EXIT=0
+STATUS=DONE
