@@ -1,0 +1,44 @@
+/*
+  DetailCards.strings
+  TeslaSync — P4 feature view · 0153 · DetailCards (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DetailCards` resolves (table "DetailCards") lives here with its web value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns
+  its own strings without editing the shared catalog.
+
+  The first group is the exact keys + values extracted from the web source
+  (features/driving/components/drivetrain-health/DetailCards.tsx), verified against
+  web/src/i18n/en.json (the `drivetrain.*` namespace). The second group backs the
+  native-only chrome (the unit suffixes the web passes inline, the freshness
+  banners, loading / error copy, and accessibility).
+*/
+
+/* --- Web source (drivetrain.*, parity with en.json) --- */
+"drivetrain.temperatures" = "Temperature Details";
+"drivetrain.frontMotorTemp" = "Front Motor Temp";
+"drivetrain.rearMotorTemp" = "Rear Motor Temp";
+"drivetrain.inverterTemp" = "Inverter Temp";
+"drivetrain.batteryTemp" = "Battery Temp";
+"drivetrain.powerSummary" = "Power Summary";
+"drivetrain.peakPowerLabel" = "Peak Power";
+"drivetrain.avgPowerLabel" = "Avg Peak Power";
+"drivetrain.maxRegenLabel" = "Max Regen";
+"drivetrain.regenLabel" = "Total Regen";
+"drivetrain.co2Label" = "CO₂ Saved";
+
+/* --- Native chrome: unit suffixes (web renders these inline as literals) --- */
+"drivetrain.detailCards.unitKw" = "kW";
+"drivetrain.detailCards.unitKg" = "kg";
+
+/* --- Native chrome: accessibility + loading + error --- */
+"drivetrain.detailCards.a11y" = "Drivetrain temperature and power details";
+"drivetrain.detailCards.loading" = "Loading drivetrain details";
+"drivetrain.detailCards.errorTitle" = "Couldn't load drivetrain details";
+"drivetrain.detailCards.retry" = "Retry";
+
+/* --- Native chrome: freshness banners --- */
+"drivetrain.detailCards.refresh" = "Refresh";
+"drivetrain.detailCards.staleBanner" = "Reconnecting — drivetrain details may be out of date";
+"drivetrain.detailCards.offlineBanner" = "Offline — showing the last known drivetrain details";
