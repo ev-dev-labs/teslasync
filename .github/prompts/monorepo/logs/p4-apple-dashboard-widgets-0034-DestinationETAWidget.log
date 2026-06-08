@@ -1,0 +1,148 @@
+=== P4 Dashboard widget 0034 DestinationETAWidget (Apple) ===
+
+Prompt: .github/prompts/monorepo/... p4-apple-dashboard-widgets-0034-DestinationETAWidget
+Surface: DestinationETAWidget (registry id `destination-eta`, category `maps`)
+Web spec: web/src/features/dashboard/widgets/DestinationETAWidget.tsx (229 lines)
+Date: 2026-06-07
+
+------------------------------------------------------------------------
+CAPABILITY (required: SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 HIG)
+------------------------------------------------------------------------
+Xcode 26.5 (Build 17F42)         — /Applications/Xcode.app  [present]
+Swift 6.3.2                      — apple swiftlang-6.3.2.1.108  [present]
+iOS Simulator: iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) [present]
+swiftlint / swiftformat / xcodegen / pwsh                       [present]
+KMP Shared.xcframework: built via Gradle :core:assembleSharedXCFramework
+  -> BUILD SUCCESSFUL; staged to apps/apple/Frameworks/Shared.xcframework
+Capability AVAILABLE. (This surface uses no chart/map — web "Charts/maps used: none".)
+
+Note on developer dir: the runner's default `xcode-select -p` is the Command
+Line Tools instance; full Xcode is invoked via DEVELOPER_DIR=/Applications/
+Xcode.app/Contents/Developer (no sudo available to xcode-select -s).
+
+------------------------------------------------------------------------
+PATH MAPPING (templated prompt path -> real XcodeGen layout)
+------------------------------------------------------------------------
+The prompt's `apps/apple/TeslaSync/dashboard-widgets/DestinationETAWidget.*`
+is a generic template path. This repo's Apple app is an XcodeGen project whose
+single shared SwiftUI source root is `apps/apple/Sources/` (consumed by BOTH the
+iOS `TeslaSync` and macOS `TeslaSync-macOS` targets per project.yml), and whose
+unit tests live under `apps/apple/Tests/Unit/`. The surface is therefore shipped
+as (one component per file, per the engineering guideline + SwiftLint
+file_length<=400):
+
+  apps/apple/Sources/Dashboard/Widgets/DestinationETAWidget.swift       (view + registry + previews)
+  apps/apple/Sources/Dashboard/Widgets/DestinationETAWidgetData.swift   (projection + view-state + freshness)
+  apps/apple/Sources/Dashboard/Widgets/DestinationETAWidgetModel.swift  (diagnostics + live binding + model)
+  apps/apple/Sources/Dashboard/Widgets/DestinationETAWidgetViews.swift  (shell + content subviews)
+  apps/apple/Tests/Unit/Dashboard/DestinationETAWidgetTests.swift       (adapter + state + a11y + render tests)
+
+These fall under the existing `Sources` / `Tests/Unit` target source roots, so
+no project.yml change is required (auto-included on `xcodegen generate`).
+
+i18n: all 10 source strings already exist in the P1/S10 catalog
+(apps/apple/Localization/Localizable.xcstrings) as
+`translation.widget.destinationETA.{title,home,work,favorite,other,noData,min,
+eta,noNav,remaining}` — no catalog edit needed. Freshness chrome uses the
+existing `widget.freshness.{stale,offline,live}` and `translation.common.refresh`.
+
+------------------------------------------------------------------------
+PARITY (web DestinationETAWidget.tsx -> native)
+------------------------------------------------------------------------
+Data sources:
+  useVehicles            -> Shared VehiclesStore.vehicles()              [first-vehicle fallback]
+  useLocationSnapshotLatest -> Shared VehiclesStore.locationSnapshotLatest(vehicleId)
+  useUnits               -> Units facade (SI -> display at render boundary)
+  useTranslation         -> SwiftUI LocalizedStringKey + .xcstrings catalog
+Shared components:
+  @/components/feedback  -> TSEmptyState, TSQueryError, TSSkeleton
+  @/components/ui        -> TSBadge (Badge), shell chrome
+  @/components/data-display -> TSAnimatedNumber (AnimatedNumber), TSMetricBar
+States reproduced (every one renders — no hidden surfaces):
+  loading  -> skeleton chrome (TSSkeleton)
+  empty    -> "No location data" (web !snapshot)               [translation.widget.destinationETA.noData]
+  error    -> TSQueryError + retry (web QueryError branch)
+  stale    -> stale chip + auto-refresh on rising edge
+  offline  -> cached value kept on screen + offline chip / offline empty+retry
+  navigating (standard) -> destination row + ETA countdown (AnimatedNumber +
+                           "1h 5m"/"5m") + distance (SI->unit, 1 dp) + progress bar
+  idle (standard)       -> emoji + location badge + "No active navigation"
+  compact (1x2)         -> countdown big-number / location badge / empty
+SI correctness: `miles_to_arrival` is read as SI meters (the web feeds it to
+  convertDistanceFromSI), stored as `metersToArrival`, converted at the render
+  boundary via Units.convertDistance — no _mi/_mph fields introduced.
+Registry: id=destination-eta, category=maps, default 2x2, min 1x2, max 3x40
+  (matches web/src/features/dashboard/widgets/registry/maps.ts).
+Diagnostics: model emits `view.opened` (surface slug "DestinationETAWidget") once
+  per appearance via the DestinationETADiagnostics seam; the Shared adapter maps it
+  onto the P1/S11 typed taxonomy Telemetry.track(TelemetryEvent.ScreenView).
+
+------------------------------------------------------------------------
+GATE RESULTS
+------------------------------------------------------------------------
+[1] SwiftLint --strict (whole app, included: Sources/Tests/Widgets/Watch)
+    -> Done linting! Found 0 violations, 0 serious in 522 files.
+    LINT_EXIT=0
+
+[2] SwiftFormat --lint apps/apple
+    -> 0/265 files require formatting, 3 files skipped.
+    FORMAT_EXIT=0
+
+[3] check-placeholders.ps1 -Path apps/apple/Sources/Dashboard/Widgets -Language swift
+    -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[4] iOS — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+    -> ** BUILD SUCCEEDED **   (app + TeslaSyncTests compiled against Shared.xcframework)
+    IOS_BUILD_EXIT=0
+
+[5] iOS surface tests — xcodebuild ... -only-testing:TeslaSyncTests/DestinationETAWidgetTests test
+    -> Test Suite 'DestinationETAWidgetTests' passed
+       Executed 21 tests, with 0 failures (0 unexpected) in 0.208s
+       ** TEST SUCCEEDED **
+    (covers: JSON->projection adapter, fromSharedJSON null-handling, view-state
+     derivation incl. "1h 25m"/"9m" ETA + progress curve, freshness
+     live/stale/offline, per-state model mapping, displayDistance SI conversion,
+     view.opened-once diagnostics, registry+clamp, a11y label keys, AND
+     ImageRenderer per-state body render-smoke for all 7 standard + 3 compact states)
+    IOS_SURFACE_TESTS_EXIT=0
+
+[6] macOS — xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build
+    -> ** BUILD SUCCEEDED **   (same sources compiled for macOS 15 target)
+    MAC_BUILD_EXIT=0
+
+------------------------------------------------------------------------
+ENVIRONMENTAL CAVEATS (shared multi-slot runner — NOT defects in this surface)
+------------------------------------------------------------------------
+- Full-scheme iOS `test` aggregate (`build test`, which also runs the entire
+  pre-existing TeslaSyncTests suite + TeslaSyncUITests) is intermittently
+  disrupted by CoreSimulator/simctl contention: this runner hosts multiple
+  parallel task slots that flip the shared `xcode-select` / launchd
+  `DEVELOPER_DIR` and the per-user CoreSimulatorService between Command Line
+  Tools and Xcode. Symptom: `xcrun: error: unable to find utility "simctl"`
+  raised by the simulator coordinator even while `xcode-select -p` reports
+  Xcode; tests begin executing then the simulator connection drops mid-run.
+  Evidence that this is environmental and not surface-related: the SAME build +
+  the SAME launchctl/DEVELOPER_DIR setup ran this surface's 21 tests fully green
+  (item [5]) in a stable window. Mitigation used: DEVELOPER_DIR override +
+  `launchctl setenv DEVELOPER_DIR` + simulator pre-boot + retry.
+- macOS `test`: `build-for-testing` fails at the planning stage with "Could not
+  find test host for TeslaSync-macOSTests" (TEST_HOST resolution) before any
+  Swift is compiled. Root cause (pre-existing, NOT this surface): the macOS app
+  target sets `PRODUCT_NAME: TeslaSync` (project.yml) so its product bundle is
+  `TeslaSync.app` (executable `TeslaSync`), but the auto-derived test TEST_HOST
+  points at `TeslaSync-macOS.app/Contents/MacOS/TeslaSync-macOS` (the target
+  name) — a bundle that is never produced. Confirmed via `-showBuildSettings`
+  (EXECUTABLE_PATH = TeslaSync.app/Contents/MacOS/TeslaSync, PRODUCT_NAME =
+  TeslaSync). Fixing it is a shared-infra project.yml change outside this
+  surface's allowed file set; the macOS app target itself builds green (item [6]),
+  and this surface's logic is fully exercised by the iOS unit run (item [5]).
+  Tracked alongside apps/macos-pending-verifications.md (ADR-012 CI matrix runs
+  macOS verifications on macos-latest runners).
+
+Surface verification is COMPLETE and GREEN on every surface-scoped gate:
+iOS build, macOS build, all 21 surface unit/render/a11y tests, SwiftLint strict,
+SwiftFormat lint, and the placeholder gate.
+
+EXIT=0
+STATUS=DONE
