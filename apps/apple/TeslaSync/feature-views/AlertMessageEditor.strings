@@ -1,0 +1,67 @@
+/*
+  AlertMessageEditor.strings
+  TeslaSync — P4 feature view · 0180 · AlertMessageEditor (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `AlertMessageEditor`
+  resolves (table "AlertMessageEditor") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  The keys marked "web source (parity)" carry the strings extracted verbatim from
+  features/notifications/components/AlertMessageEditor.tsx. The remainder back the native state
+  envelope (freshness chip, connectivity banner, error+retry) and the VoiceOver summaries — none of
+  which exist as English literals in the Swift sources beyond their sanctioned fallbacks.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"alertEditor.includeTitleLabel" = "Include title in notifications";
+"alertEditor.includeTitleHelp" = "When unchecked, Discord/Slack/Telegram/ntfy/webhook deliver only the body. WebPush, email, and Pushover always include a title.";
+"alertEditor.messageTemplateLabel" = "Message Template";
+"alertEditor.messageTemplateHint" = "Type {{ to insert a placeholder";
+"alertEditor.messageTemplateHelp" = "Per-rule body template. Reference live signals with double-brace tokens like {{BatteryLevel}}. Leave blank to use the op-aware default body.";
+"alertEditor.presetButton" = "Pick a preset";
+"alertEditor.autocompleteLabel" = "Placeholder suggestions";
+"alertEditor.autocompleteEmpty" = "No matching placeholders";
+"alertEditor.previewLabel" = "Preview";
+"alertEditor.previewEmpty" = "Start typing to see a preview";
+"alertEditor.previewEmptyBody" = "(no body — title carries the alert)";
+"alertEditor.presetModalTitle" = "Message Presets";
+"alertEditor.presetModalIntro" = "Curated templates for common alert shapes. Tap one to apply it; you can edit it after.";
+"alertEditor.presetAllTag" = "All";
+"alertEditor.presetEmpty" = "No presets match this filter";
+"common.loading" = "Loading…";
+
+/* --- Native chrome (help affordance, gallery controls, error+retry) --- */
+"alertEditor.helpLabel" = "Help";
+"alertEditor.presetDone" = "Done";
+"alertEditor.presetEmptyHint" = "Clear the filter or pick a different category.";
+"alertEditor.presetErrorTitle" = "Couldn't load presets";
+"alertEditor.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"alertEditor.live" = "Live";
+"alertEditor.stale" = "Stale";
+"alertEditor.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"alertEditor.staleBanner" = "Reconnecting — preset and suggestion data may be delayed";
+"alertEditor.offlineBanner" = "Offline — showing the last loaded presets and suggestions";
+
+/* --- Accessibility role words (VoiceOver) --- */
+"alertEditor.a11y.tokenRole" = "Placeholder suggestion";
+"alertEditor.a11y.presetRole" = "Message preset";
+
+/* --- Accessibility summaries (VoiceOver) --- */
+"alertEditor.a11y.tokensHidden" = "Type two opening braces to insert a value";
+"alertEditor.a11y.tokensLoading" = "Loading suggestions";
+"alertEditor.a11y.tokensResults" = "%d suggestions";
+"alertEditor.a11y.tokensEmpty" = "No matching suggestions";
+"alertEditor.a11y.previewEmpty" = "Start typing to see a preview";
+"alertEditor.a11y.previewLoading" = "Rendering preview";
+"alertEditor.a11y.previewContent" = "Notification preview";
+"alertEditor.a11y.previewError" = "Preview failed";
+"alertEditor.a11y.presetsLoading" = "Loading presets";
+"alertEditor.a11y.presetsResults" = "%d presets";
+"alertEditor.a11y.presetsEmpty" = "No presets match this filter";
+"alertEditor.a11y.presetsError" = "Couldn't load presets";
