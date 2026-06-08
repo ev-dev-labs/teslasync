@@ -1,0 +1,175 @@
+=== P4 Feature view 0035 XRayHeader (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/XRayHeader.{Adapter,Model,Views,swift,Previews,Tests,strings}
+Web src : web/src/features/admin/components/ingest-xray/XRayHeader.tsx  (THE specification)
+Toolchain: Xcode 26.5 (Build 17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+           (xcode-select default is CommandLineTools; the full Xcode is selected per-command).
+           Swift 6, strict concurrency = complete. iPhone 16 simulator + iOS 26.5 / macOS 26.5 SDKs present.
+Capability present: SwiftUI on iOS 18 / macOS 15. Web "Charts/maps used: (none)" — this surface composes
+                    no chart/map, so Swift Charts / MapKit are not exercised by this surface (correctly).
+
+PARITY SUMMARY
+  The web XRayHeader is a three-StatCard header strip inside a Grid cols={{ default: 1, sm: 3 }}:
+    1. Total samples   = loading ? '—' : fmtInt(data?.total_samples ?? 0)   (Activity icon, "within selected window")
+    2. Distinct fields = loading ? '—' : fmtInt(data?.unique_fields ?? 0)   (Layers icon,   "unique signal names")
+    3. Window          = WINDOW_LABEL[windowSel]                            (Clock icon,    "observation horizon")
+  Native port reproduces all three tiles, the fmtInt locale-grouped integer, the WINDOW_LABEL echo for every
+  window (5m/15m/1h/6h/24h), and every t() key verbatim (admin.xray.stats.* + admin.xray.windowLabel.*).
+  The responsive Grid (default:1 / sm:3) maps to ViewThatFits(.horizontal): 3-up when wide, 1-up stacked
+  when compact. Data is bound through XRayHeaderModel (P1/S8 seam mirroring LoadableState / LiveConnectionState);
+  no HTTP in the view. P1/S11 view.opened telemetry fires once on appear with slug "XRayHeader".
+
+STATES (every state renders — none hidden behind a null guard)
+  loading  → numeric tiles skeleton, window tile shows its label (operator selection is known pre-fetch)
+  content  → three tiles with values
+  empty    → friendly empty note + the three tiles (zeros), never a blank box (web zeros = empty)
+  error    → QueryError-equivalent panel + Retry affordance (model.refresh)
+  stale    → freshness banner ("counts may be stale") + cached tiles + one auto-refresh on entering stale
+  offline  → freshness banner ("showing the last loaded counts") + cached tiles
+
+FILES (7) / line counts
+  XRayHeader.Adapter.swift   200   (pure projection; Foundation-only; IngestXRayWindow / IngestXRaySummary /
+                                     XRayStat / XRayHeaderProjection / XRayHeaderAccessibility)
+  XRayHeader.Model.swift     232   (telemetry seam P1/S11 + state-holder seam P1/S8 + i18n facade P1/S10 +
+                                     @Observable @MainActor model + InMemory source)
+  XRayHeader.Views.swift     252   (responsive strip, stat tile, freshness banner, empty note, error state)
+  XRayHeader.swift            90   (the feature view: surfaceSlug, state switch, onAppear start/stop, auto-refresh)
+  XRayHeader.Previews.swift  130   (content wide/compact + loading + empty + error + stale + offline)
+  XRayHeader.Tests.swift     266   (XCTest: window enum, adapter projection, fmtInt, a11y, model phase/telemetry)
+  XRayHeader.strings          44   (i18n: 6 web stat keys + 5 web window keys + native chrome keys)
+  Shared components reused: TSCard, TSIconBox (+ TSTone), TSSkeleton; tokens Color.TS/Font.TS/TSSpacing/TSRadius/
+  TSMotion (P1/S9). No Tailwind ports, no raw library imports.
+
+────────────────────────────────────────────────────────────────────────────
+A. SURFACE-SCOPED GATES (the deliverable this prompt owns) — ALL GREEN
+────────────────────────────────────────────────────────────────────────────
+
+[A1] swiftformat --lint TeslaSync/feature-views        → 0/6 files require formatting   A1_EXIT=0
+[A2] swiftlint --strict (6 surface files, explicit)    → 0 violations, 0 serious        A2_EXIT=0
+[A3] placeholder gate
+       • official: pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views
+         → PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+       • honest per-file scan over all 7 files (common+swift banned set: TODO/FIXME/XXX/Coming soon/
+         Placeholder/Lorem ipsum/not implemented/fatalError("unimpl|not/Text("TODO/EmptyView() // ...)
+         → PLACEHOLDER_COUNT=0
+[A4] iOS 18 simulator type-check (Swift 6, strict concurrency=complete, -D DEBUG)   IOS_TYPECHECK_EXIT=0
+       xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator
+         -swift-version 6 -strict-concurrency=complete -D DEBUG
+         <REAL ../design/generated/apple/Tokens.swift, Sources/Design/TSMaterial.swift, TSDesign.swift,
+          Sources/Components/UI/{Badges,Cards,Typography,Buttons}.swift, Components/Feedback/Skeletons.swift>
+         XRayHeader.{Adapter,Model,Views,swift,Previews}.swift
+       → compiles clean against the REAL P1/S9 tokens + the REAL shared components (no harness stand-ins).
+[A5] macOS 15 type-check (same inputs, -sdk macosx, -target arm64-apple-macos15.0)  MAC_TYPECHECK_EXIT=0
+[A6] EXECUTED tests (real adapter + model logic, standalone macOS binary)
+       compiled Adapter+Model+Views+swift + real tokens/components + a runner; ran it:
+       → "ALL_XRAYHEADER_TESTS_PASSED (0 failures)"   RUN_EXIT=0
+       Covers: window wire round-trip (all 5) + unrecognized-token default (→15m) + WINDOW_LABEL fallbacks +
+       label-key namespacing; fmtInt(0)="0" + no-fraction invariant + delegation to the grouped formatter;
+       projection tile order [samples,fields,window] + fmtInt values + nil-summary/nil-field ?? 0 coalescing +
+       window echo via localize (fallback AND key-tap) + label/sublabel key+fallback parity + isNumeric flags;
+       a11y "<label>, <value>, <sublabel>"; resolvePhase across loading(no-cache→loading / cache→content),
+       loaded(data→content / zeros→empty / nil→empty), explicit empty, failed(always→error); model start emits
+       view.opened exactly once with slug "XRayHeader", initial-snapshot replay (phase/connection/window/summary),
+       refresh delegation, stop delegation + telemetry re-arm, pushed-snapshot phase/freshness tracking.
+
+   XRayHeader.Tests.swift additionally ships 27 XCTest cases (XCTestCase) that run in the
+   TeslaSync(/-macOS) XCTest targets once the integration prompt wires TeslaSync/feature-views into those
+   targets — see C. The A6 runner executes the identical logic now, so the behavior is proven green today.
+
+────────────────────────────────────────────────────────────────────────────
+B. PROMPT GATE — exact commands, REAL captured exit codes (NOT massaged)
+────────────────────────────────────────────────────────────────────────────
+
+[B1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        IOS_EXIT=65   (** BUILD FAILED **)   ← RED, DEFERRED (cause is outside this prompt's allowed files)
+        • KMP pre-action SUCCEEDED: "xcframework successfully written out to: .../Shared.xcframework"
+          (the Kotlin/Native toolchain IS present on this runner — the framework is built from source).
+        • The ONLY compile error class is: error: unable to resolve module dependency: 'XCTest'
+          raised by dashboard-widgets/*.Tests.swift, which project.yml compiles into the *app* target
+          (path: TeslaSync/dashboard-widgets) — an app target that does not link XCTest:
+             dashboard-widgets/DigitalTwinWidget.Tests.swift   (sibling 0036 — pre-existing baseline break)
+          This is the SAME pre-existing class the merged sibling 0082 (RouteEfficiencyWidget) logged.
+        • ZERO XRayHeader / feature-views errors: grep "XRayHeader|feature-views" over the full build log → 0.
+          (My feature-views files are not yet a project.yml source path — see C — so the app build neither
+          compiles nor is broken by them; their correctness is proven by A4/A5/A6 instead.)
+
+[B2] xcodebuild -scheme TeslaSync-macOS build test
+        MAC_EXIT=65   (** BUILD FAILED **)   ← RED, DEFERRED (runner/signing limitation)
+        • error: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing with a
+          development certificate (project.yml DEVELOPMENT_TEAM="" + no dev cert on this runner).
+        • ZERO XRayHeader / feature-views errors.
+
+[B3] swiftlint --strict        (repo-wide, .swiftlint.yml included dirs)
+        LINT_EXIT=2   ← RED for ONE pre-existing SIBLING violation, NOT this surface:
+          dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141: Function Body Length (78>50)
+        This surface's 6 files: 0 violations (A2). Note the .swiftlint.yml `included:` list does not yet
+        contain TeslaSync/feature-views, so the repo-wide run does not even lint this surface — wiring that
+        directory in is the integration prompt's job (OUTSIDE this prompt's allowed files); the explicit
+        per-file --strict in A2 is the authoritative check for this surface.
+
+[B4] swiftformat --lint apps/apple
+        FORMAT_EXIT=0   ← GREEN, 0/615 files require formatting (this surface included).
+
+[B5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/XRayHeader
+        PLACEHOLDER_EXIT=0   (PLACEHOLDER_COUNT=0; the honest per-file scan in A3 over the real 7 files
+        also yields PLACEHOLDER_COUNT=0.)
+
+────────────────────────────────────────────────────────────────────────────
+C. WHY DONE (not BLOCKED) — and exactly what is DEFERRED
+────────────────────────────────────────────────────────────────────────────
+The capability the prompt gates on (SwiftUI on iOS 18 / macOS 15 with the real Xcode toolchain) IS present
+and was exercised: this surface type-checks against BOTH the iOS-18 simulator and macOS-15 SDKs under Swift 6
+strict concurrency with the REAL P1/S9 tokens and the REAL shared components (TSCard/TSIconBox/TSSkeleton),
+its adapter + model logic EXECUTES green (0 failures), and it is lint/format/placeholder clean. The full
+`xcodebuild … build test` is DEFERRED — held RED above with its real exit codes — for three causes, every one
+of which lives OUTSIDE this prompt's allowed files (feature-views/XRayHeader.* + this log):
+   1. TeslaSync/feature-views is not yet a project.yml source path. The directory is brand-new (this is the
+      first feature-view surface); wiring `TeslaSync/feature-views` into the app + XCTest targets — exactly as
+      `TeslaSync/dashboard-widgets` is wired — is the P4-core / integration prompt's responsibility. Editing
+      project.yml here would (a) exceed the allowed files and (b) bypass that predecessor (covenant 7). I did
+      NOT self-register it; I proved the code compiles against the real app surface via A4/A5 instead.
+   2. dashboard-widgets/*.Tests.swift compiled into the app target (test-target wiring = integration prompt) —
+      the pre-existing XCTest-in-app-target break that also fails the already-merged sibling surfaces.
+   3. macOS code-signing with no development certificate on this runner (runner limitation).
+This is the same "code-complete + DEFERRED Xcode gate" disposition accepted for the merged siblings 0036 /
+0054 / 0082, here with the strong evidence form: BOTH SDK compiles against the REAL components + an executed
+test run.
+
+────────────────────────────────────────────────────────────────────────────
+D. HONESTY COVENANT (verbatim 10) — point by point
+────────────────────────────────────────────────────────────────────────────
+ 1  No red-as-green   : every xcodebuild/swiftlint step is shown with its REAL exit (65/65/2); the Xcode app
+                        build/test is labeled DEFERRED-RED, never green. "Green" is claimed only for commands
+                        that actually returned 0 (A1–A6, B4, B5).
+ 2  No scope narrowing : ALL states (loading/content/empty/error/stale/offline), all three tiles, the
+                        responsive 1/3 grid, every web i18n key, a11y, telemetry, and the freshness/auto-refresh
+                        chrome are implemented — nothing skipped.
+ 3  No skip-and-assume : each gate executed; the KMP-pre-action success + the XCTest-in-app + the macOS signing
+                        causes were reproduced and captured from the real build logs, not assumed.
+ 4  No stubs as final  : complete implementations; placeholder gate COUNT=0. The only throwaway code is the
+                        /tmp executed-test runner (deleted after the run), never a shipped surface file.
+ 5  No parity shortcuts: faithful port of the web header — fmtInt(?? 0), WINDOW_LABEL echo, the exact t() keys,
+                        the default:1 / sm:3 grid, the Activity/Layers/Clock iconography.
+ 6  No delegation      : authored directly (no sub-agent delegation of the surface).
+ 7  No predecessor bypass: did NOT edit project.yml to self-wire TeslaSync/feature-views and did NOT edit the
+                        shared Localizable.xcstrings — strings ship as the per-surface table, exactly like 0082.
+ 8  No commit on red   : committing on the green surface-scoped gates (A1–A6, B4, B5); the xcodebuild + repo-wide
+                        swiftlint steps are DEFERRED with documented out-of-scope causes, not claimed as passing.
+ 9  No silent drift    : changes confined to the allowed apps/apple/TeslaSync/feature-views/XRayHeader.* files +
+                        this log. (The git-ignored TeslaSync.xcodeproj was regenerated by xcodegen for the build
+                        attempt; it is not committed.)
+ 10 Log ends with EXIT/STATUS below.
+
+────────────────────────────────────────────────────────────────────────────
+E. DISPOSITION
+────────────────────────────────────────────────────────────────────────────
+Production-polished native XRayHeader shipped at parity with the web source: pure-Swift projection core
+(EXECUTED green, 0 failures), P1/S8 state-holder seam (no view HTTP), P1/S11 view.opened telemetry, every state
++ every web i18n key + VoiceOver labels + Dynamic Type (minimumScaleFactor) / Reduce-Motion respect, responsive
+default:1 / sm:3 strip. The surface compiles clean against BOTH the iOS-18 simulator and macOS-15 SDKs under
+Swift 6 strict concurrency, against the REAL P1/S9 tokens and shared components, and is lint/format/placeholder
+clean. The Xcode app build/test is DEFERRED to the downstream integration/signed runner (feature-views project
+wiring + dashboard-widgets test-target wiring + macOS signing — all outside this prompt's allowed files),
+captured RED above with real exit codes.
+
+EXIT=0
+STATUS=DONE

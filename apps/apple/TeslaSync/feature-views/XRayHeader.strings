@@ -1,0 +1,44 @@
+/*
+  XRayHeader.strings
+  TeslaSync — P4 feature view · 0035 · XRayHeader (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `XRayHeader` resolves (table "XRayHeader") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first two groups are the exact set of keys extracted from the web source
+  (features/admin/components/ingest-xray/XRayHeader.tsx) — the three tile labels
+  + sublabels and the WINDOW_LABEL echo for every window. The remaining keys back
+  the native chrome (freshness banners, the empty note, the error/retry copy, and
+  accessibility) the web page renders around the strip.
+*/
+
+/* --- Tile labels + sublabels from the web source (parity) --- */
+"admin.xray.stats.samples" = "Total samples";
+"admin.xray.stats.samplesSub" = "within selected window";
+"admin.xray.stats.fields" = "Distinct fields";
+"admin.xray.stats.fieldsSub" = "unique signal names";
+"admin.xray.stats.window" = "Window";
+"admin.xray.stats.windowSub" = "observation horizon";
+
+/* --- Window label echo from the web source (WINDOW_LABEL, parity) --- */
+"admin.xray.windowLabel.5m" = "5 minutes";
+"admin.xray.windowLabel.15m" = "15 minutes";
+"admin.xray.windowLabel.1h" = "1 hour";
+"admin.xray.windowLabel.6h" = "6 hours";
+"admin.xray.windowLabel.24h" = "24 hours";
+
+/* --- Native chrome: freshness banners --- */
+"admin.xray.header.staleBanner" = "Refreshing — these counts may be stale";
+"admin.xray.header.offlineBanner" = "Offline — showing the last loaded counts";
+
+/* --- Native chrome: empty + error states --- */
+"admin.xray.header.emptyHint" = "No ingest samples observed in this window yet";
+"admin.xray.header.errorTitle" = "Couldn't load ingest X-Ray";
+"admin.xray.header.retry" = "Retry";
+
+/* --- Accessibility --- */
+"admin.xray.header.loadingValue" = "Loading";
