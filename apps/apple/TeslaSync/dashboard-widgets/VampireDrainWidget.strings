@@ -1,0 +1,51 @@
+/*
+  VampireDrainWidget.strings
+  TeslaSync — P4 dashboard widget · 0105 · VampireDrainWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VampireDrainWidget` resolves (table "VampireDrainWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  Keys under "widget.vampireDrain.*" / "help.vampireDrain.body" are the exact keys
+  extracted from the web source (features/dashboard/widgets/VampireDrainWidget.tsx,
+  namespace "dashboard"). The remaining keys back the native-only chrome
+  (freshness chip, refresh/retry/help, states, relative-time, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.vampireDrain.title" = "Vampire Drain";
+"widget.vampireDrain.description" = "Phantom drain rate: avg %/day, recent drain events";
+"widget.vampireDrain.avgDrain" = "Avg Drain";
+"widget.vampireDrain.perDay" = "/day";
+"widget.vampireDrain.min" = "m";
+"widget.vampireDrain.hr" = "h";
+"widget.vampireDrain.sentry" = "Sentry";
+"widget.vampireDrain.eventCount" = "%1$lld events · %2$@h total";
+"widget.vampireDrain.trend" = "Daily drain rate (last 30)";
+"widget.vampireDrain.noEvents" = "No recent drain events";
+"widget.vampireDrain.noData" = "No vampire drain data";
+
+/* --- Contextual help (web WidgetShell help.vampireDrain.body) --- */
+"help.vampireDrain.body" = "Idle energy lost while the car is parked and not charging. We compute it as the % of battery used per hour while the vehicle reports gear=Park and is not in motion.";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.vampireDrain.live" = "Live";
+"widget.vampireDrain.stale" = "Stale";
+"widget.vampireDrain.offline" = "Offline";
+"widget.vampireDrain.refresh" = "Refresh";
+"widget.vampireDrain.retry" = "Retry";
+"widget.vampireDrain.helpA11y" = "More info about Vampire Drain";
+
+/* --- Native chrome: states --- */
+"widget.vampireDrain.loading" = "Loading vampire drain";
+"widget.vampireDrain.errorTitle" = "Couldn't load vampire drain";
+"widget.vampireDrain.offlineBanner" = "Offline — showing last known drain";
+"widget.vampireDrain.staleBanner" = "Reconnecting — drain may be stale";
+
+/* --- Relative time (port of WidgetEventFeed.formatRelativeTime) --- */
+"widget.vampireDrain.justNow" = "Just now";
+"widget.vampireDrain.minutesAgo" = "%lldm ago";
+"widget.vampireDrain.hoursAgo" = "%lldh ago";
