@@ -1,0 +1,190 @@
+================================================================================
+P4 · Feature view · 0083 — ConditionBuilder (Apple)
+Run: 2026-06-07T21:1x-0700   Host: Darwin arm64 (Apple Silicon)   Branch: auto/20260607-170817-98066/204
+Prompt: P4/feature-views/0083 — ConditionBuilder
+Web source (spec): web/src/features/automations/pages/ConditionBuilder.tsx
+Mode: code-complete + INDEPENDENTLY VERIFIED (isolated SwiftPM build of the full
+      surface vs the REAL design system + 22/22 XCTest pass under Swift 6 strict
+      concurrency) + host gates (swiftlint --strict / swiftformat / placeholder) +
+      the verbatim full-app iOS/macOS xcodebuild EXECUTED on this runner and shown
+      DEFERRED (pre-existing/platform blockers, ZERO ConditionBuilder defects).
+================================================================================
+
+=== PREFLIGHT / CAPABILITY ===
+  Runner ............... macOS (Darwin arm64, Apple Silicon)
+  Xcode ............... 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                        (active dir was /Library/Developer/CommandLineTools; overridden non-destructively — no
+                        sudo / no `xcode-select -s`, so the shared runner is untouched).
+  Toolchain ........... swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Gradle/JDK
+  Destinations ........ iOS Simulator "iPhone 16" present · macOS 15 SDK present
+  Shared.xcframework .. ASSEMBLED + staged via Scripts/build-shared-xcframework.sh
+                        (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 7m29s; debug + release
+                        XCFrameworks written to apps/shared/core/build/XCFrameworks/{debug,release}).
+  Capability .......... SwiftUI present (Charts/MapKit NOT used by this surface — web "Charts/maps used: (none)").
+                        The capability-BLOCKED escape hatch does NOT apply: the surface is authored AND
+                        compiled/tested for real against the shipped component library (below).
+
+=== WEB SOURCE (the specification) ===
+  features/automations/pages/ConditionBuilder.tsx — a CONTROLLED editor: `{ conditions, onChange }` props +
+  ONE data hook (`useGeofences`). Renders a list of condition rows; each row is a kind <Select> + a per-kind
+  field editor, plus a remove button; an "Add Condition" affordance appends a default signal condition.
+  Four condition kinds, each a discriminated-union member:
+    condition_signal          → signal <Select> + operator <Select> + value editor that ADAPTS to the signal
+                                type: boolean signals → True/False <Select>; "state"/"in" → text <Input>;
+                                "between" → Min/Max numeric <Input>s; else → numeric <Input>.
+    condition_time_window     → start/end time <Input>s + timezone <Select> + day-of-week toggle buttons.
+    condition_geofence        → geofence <Select> (options from useGeofences) + geofence-state <Select>.
+    condition_other_automation→ automation-id <Input> + tracked-state <Select>.
+  Helpers ported verbatim: createDefaultCondition · conditionValueFromInput · the `value` getter ·
+  numericValue · parseFloat||0 / parseInt||0 · the operator filter (numericOnly hidden for bool) ·
+  the day toggle (append+sort / remove) · geofenceOptions (placeholder-prepended) · the timezone label keying.
+
+=== ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/ConditionBuilder.*) ===
+  ConditionBuilder.Types.swift     267  the discriminated condition union (web AutomationConditionStepInput) +
+                                        option enums (kind / signal-op / geofence-state / other-state) + the
+                                        LocalizedText descriptor + SignalField catalog shape + the editor's
+                                        Identifiable row wrapper. Pure + Foundation-only.
+  ConditionBuilder.Adapter.swift   282  every web transform port (defaults / value coercion / signal+operator
+                                        change / value setters / numeric parsing / toggleDay / timezoneSelection
+                                        / geofence value mapping) + the SIGNAL_FIELDS / DAYS / COMMON_TIMEZONES
+                                        catalogs. Pure + Foundation-only; unit-tested.
+  ConditionBuilder.Model.swift     ~300 P1/S10 i18n facade (CBStrings) · P1/S11 telemetry seam + view.opened
+                                        reporter · the Shared-free P1/S8 GeofenceOptionsSource seam + load-state
+                                        + error taxonomy + GeofencePresentation resolver (EVERY state) +
+                                        @Observable GeofenceOptionsModel + in-memory source.
+  ConditionBuilder.swift           ~85  the ConditionBuilder View (Binding-driven row list + Add affordance,
+                                        view.opened on .task, geofence model start/stop).
+  ConditionBuilder.Views.swift     ~360 the row glass panel · the multi-state geofence picker (loading / content
+                                        / empty / error / stale / offline) · freshness chip · inline state ·
+                                        day toggle · SwiftUI i18n bridges.
+  ConditionBuilder.Fields.swift    ~309 the four per-kind field editors + the wrapping field row + numeric field.
+  ConditionBuilder.Previews.swift  ~89  #if DEBUG previews — content + every geofence-source state + empty list.
+  ConditionBuilder.strings         ~75 keys  the P1/S10 catalog: 17 builder keys + 4 condition-type + 8 operator +
+                                        3 geofence-state + 3 other-state + 9 signal + 2 bool + 7 day + 11 timezone
+                                        + 8 native-chrome. Every web `t(key, default)` reproduced.
+  ConditionBuilder.Tests.swift     ~335  XCTest: adapter (defaults/coercion/operators/setters/parse/toggle/tz/
+                                        geofence/catalogs) + GeofencePresentation every-branch + model wiring +
+                                        web-prop mapping + the view.opened telemetry reporter. 22 tests.
+  Each file ≤ 400 lines (house file_length). One exported surface per file; helpers decomposed by concern.
+
+=== PARITY MAPPING (web → Apple platform tokens; no Tailwind ported) ===
+  GlassPanel                → TSGlassPanel            Select → TSSelect           Input → TSTextField / CBNumberField
+  Button(ghost/sm)          → TSButton(.ghost,.small) Trash2 → SF Symbol "trash"  Plus → SF Symbol "plus"
+  flex flex-wrap items-end  → CBFieldRow (ViewThatFits HStack→VStack reflow on compact widths)
+  day buttons (aria-pressed)→ CBDayToggle (.isSelected trait)        FadeIn → TSFadeIn (reduce-motion honored)
+  useGeofences (the 1 hook) → GeofenceOptionsModel (P1/S8 Shared-free source seam; view performs ZERO HTTP)
+  useTranslation            → CBStrings facade (NSLocalizedString table "ConditionBuilder", web default fallback)
+  i18n  : every source key + the signal labels (English in lib/signals.ts) routed through the facade — zero
+          hardcoded English literals in code; per-surface .strings table (shared Localizable.xcstrings untouched).
+  a11y  : every interactive control labeled (kind/signal/operator/value/min/max/time/timezone/geofence/state/id
+          selects + the remove/add buttons + day toggles + retry); day toggles carry .isSelected; reduce-motion
+          honored; rows are .accessibilityElement(children: .contain).
+  telem : view.opened surface="ConditionBuilder" via ConditionBuilderOpenReporter (P1/S11), default OSLog sink.
+
+=== STATES (every state renders — no hidden surfaces; the data source is `useGeofences`) ===
+  loading  → geofence picker shows a spinner + "Loading saved places…"          (GeofencePresentation.loading)
+  content  → placeholder-prepended options; live/stale/offline freshness chip    (.content)
+  empty    → geofences resolved but none → placeholder-only select + "No saved places yet."  (.empty)
+  error    → inline "Couldn't load saved places" + Retry (retryable)             (.error)
+  stale    → amber stale chip on the loaded options + auto-refresh affordance     (.content/.stale)
+  offline  → cached options + offline chip, OR (no cache) offline message + Retry (.content/.offline / .offlineNoData)
+  Resolver unit-tested across ALL branches (GeofencePresentationTests: loading/loaded/empty/failed × cached/none).
+
+=== GATES (commands actually run on THIS host; real exit codes) ===
+  [GREEN] ISOLATED SwiftPM build — swift-tools 6.0, .swiftLanguageMode(.v6) (= the app's Swift 6 strict-
+          concurrency), compiling the EXACT shipped surface (Types/Adapter/Model/swift/Views/Fields/Previews)
+          against the REAL repo design system (generated Tokens.swift + Design/TSDesign+TSMaterial +
+          Components/UI/{Typography,Cards,Buttons,Pickers,Fields,Badges} + Components/Motion):
+                "Build complete! (12.05s)"                                                   SWIFT_BUILD_EXIT=0
+  [GREEN] ISOLATED SwiftPM test — `swift test` of ConditionBuilder.Tests.swift vs the same real module:
+                "Executed 22 tests, with 0 failures"                                          SWIFT_TEST_EXIT=0
+  [GREEN] swiftlint --strict (8 surface files)            "Found 0 violations, 0 serious in 8 files"   LINT_EXIT=0
+          (caught + fixed during authoring: file_length — split Adapter > 400 lines into Types + Adapter.)
+  [GREEN] swiftformat --lint apps/apple (whole tree)      "0/833 files require formatting"           FORMAT_EXIT=0
+  [GREEN] check-placeholders.ps1 -Path …/feature-views/ConditionBuilder   PLACEHOLDER_COUNT=0      PLACEHOLDER_EXIT=0
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (the verbatim full-app gate WAS executed on this runner — ZERO ConditionBuilder errors; every
+  blocker pre-exists this change and is owned by the P4/P99 acceptance gate, NOT a single feature-view prompt):
+    iOS : the Gradle Shared.xcframework built (BUILD SUCCESSFUL 7m29s) and the app whole-module compiled; the
+          SOLE failure is "unable to resolve module dependency: 'XCTest'" — the co-located *.Tests.swift files
+          are compiled INTO the app target (project.yml lists TeslaSync/feature-views as an app-target source).
+          This is target-level, shared by ALL 28 co-located test files (27 PRE-EXISTING surfaces + this one); the
+          first cited file is AuditPanel.Tests.swift:19 (a predecessor surface), proving the breakage predates and
+          is independent of ConditionBuilder. grep 'ConditionBuilder.*error:' = 0.
+    macOS: the app compiled; the SOLE failure is development SIGNING ("TeslaSync-macOS / TeslaSyncWidgets-macOS
+          have entitlements that require signing with a development certificate"), which this runner does not
+          provision. grep 'XCTest|ConditionBuilder.*error:' in the macOS log = 0.
+    Both are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI
+    runner (precedent: p4-apple/feature-views/0010-ToolCard, 0026-AuditPanel). The fix — routing
+    feature-views/*.Tests.swift to the XCTest test target + provisioning signing — lives in apps/apple/project.yml
+    and the P99 acceptance gate, OUTSIDE this prompt's allowed files (ConditionBuilder.* + this log). The surface
+    itself is INDEPENDENTLY GREEN on a real Swift 6 build + 22 tests (above).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with ALL states from the web source reproduced — the 4 condition kinds + the
+      geofence-source loading/content/empty/error/stale/offline; resolver executed-green for every branch.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view (useGeofences →
+      GeofenceOptionsModel; useTranslation → CBStrings facade; the conditions/onChange props → a SwiftUI Binding).
+  [x] Every i18n key from source has a matching catalog key — all 18 extracted strings + the condition-type /
+      operator / geofence-state / other-state / signal / day / timezone option labels + native chrome (75 keys).
+  [x] Accessibility labels on every interactive element; day toggles carry .isSelected; reduce-motion honored.
+  [x] Tests: adapter unit test + per-state resolver test + model/web-prop test + telemetry test — 22, all pass
+      on a REAL Swift 6 strict-concurrency build (per-state SNAPSHOT/UI test deferred to the Xcode UI target).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Host-runnable gates GREEN + a real isolated Swift 6 build/test; the full-app iOS/macOS xcodebuild is
+      DEFERRED with platform/predecessor evidence (NOT a ConditionBuilder defect) per macos-pending-verifications.md.
+
+=== HONESTY COVENANT (binding) ===
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with evidence — never reported as passing. Every GREEN above is a
+                          command actually run on THIS host with its real exit (SwiftPM build+test, lint, format,
+                          placeholder).
+  2  No scope narrowing : all 4 condition kinds + the adaptive value editor (bool/text/number/range) + time-window
+                          + days + geofence (with every source state) + other-automation implemented; nothing skipped.
+  3  No skip-and-assume : every gate executed; raw exits pasted; the Shared.xcframework was actually built and the
+                          full-app build actually run; the macOS signing + iOS XCTest failures were observed, not assumed.
+  4  No stubs as final  : complete production editor + 22 real tests; placeholder scanner = 0.
+  5  No parity shortcut : the value-coercion ladder, the operator numericOnly filter, the bool/state/in/between
+                          branches, the day toggle, the placeholder-prepended geofence options, and the timezone
+                          default-normalization are all faithful ports, each unit-tested.
+  6  No delegation      : authored directly; no sub-agent delegation of the surface.
+  7  No predecessor bypass: P1/S8 state-holder seam + P1/S9 tokens + P1/S10 i18n + P1/S11 telemetry all consumed;
+                          shared Localizable.xcstrings NOT edited (per-surface .strings table); project.yml NOT
+                          self-edited (test-target wiring is the acceptance-gate's job, outside allowed files).
+  8  No commit on red   : the COMMITTED artifact (ConditionBuilder.* + this log) is GREEN on every host gate AND on
+                          a real isolated Swift 6 build + 22 tests; the deferred full-app gate is RED only on
+                          pre-existing app-target test wiring (shared by 27 predecessor surfaces) + macOS signing —
+                          neither introduced nor owned by this commit.
+  9  No silent drift    : changes confined to the allowed feature-views/ConditionBuilder.* files + this log. The
+                          xcodegen-generated .xcodeproj and the Gradle Shared.xcframework are git-ignored (verified).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished, Apple-idiomatic ConditionBuilder shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: the exact shipped surface compiles and its 22 tests pass under the app's own Swift 6 strict-concurrency
+  rules against the REAL design system, with swiftlint/swiftformat/placeholder all green. The verbatim full-app
+  iOS-Simulator + macOS xcodebuild gate WAS run on this host (Xcode 26.5; the KMP Shared.xcframework built
+  successfully) and is DEFERRED — not failed by this code: iOS is blocked by the pre-existing co-located
+  *.Tests.swift → XCTest-in-app-target convention (shared by 27 predecessor surfaces; first cited on
+  AuditPanel.Tests.swift) and macOS by development signing — both owned by the P4/P99 acceptance gate on a signed
+  macos-latest CI runner per apps/macos-pending-verifications.md + ADR-012. Zero ConditionBuilder errors in either
+  build. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4
+  surface to date.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/ConditionBuilder.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0083-ConditionBuilder.log
+  git commit -m "feat(apps/apple/feature-views): add ConditionBuilder surface (P4)"
+
+IOS_EXIT=65
+MAC_EXIT=65
+SWIFT_BUILD_EXIT=0
+SWIFT_TEST_EXIT=0
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
