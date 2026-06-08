@@ -33,6 +33,7 @@ targets:
     deploymentTarget: "18.0"
     sources:
       - path: Sources
+      - path: TeslaSync/dashboard-widgets
       - path: Localization
       - path: ../design/generated/apple
         name: DesignTokens
@@ -62,6 +63,7 @@ targets:
     deploymentTarget: "15.0"
     sources:
       - path: Sources
+      - path: TeslaSync/dashboard-widgets
       - path: Localization
       - path: ../design/generated/apple
         name: DesignTokens
