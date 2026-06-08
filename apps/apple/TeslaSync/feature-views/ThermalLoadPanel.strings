@@ -1,0 +1,40 @@
+/*
+  ThermalLoadPanel.strings
+  TeslaSync — P4 feature view · 0163 · ThermalLoadPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ThermalLoadPanel` resolves (table "ThermalLoadPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the set of keys extracted from the web source
+  (features/driving/components/drivetrain-health/ThermalLoadPanel.tsx) plus the four
+  sensor-label keys the parent Drivetrain Health page feeds into the panel's
+  `sensors`. The second group backs the native chrome: the P4 leaf freshness /
+  loading / empty / error copy, so the Swift sources hold no English prose.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"drivetrain.thermalMetrics" = "Thermal Load Indicators";
+"drivetrain.frontMotor" = "Front Motor";
+"drivetrain.rearMotor" = "Rear Motor";
+"drivetrain.inverter" = "Inverter";
+"drivetrain.battery" = "Battery";
+"drivetrain.peakPower" = "Peak Power";
+"drivetrain.avgPower" = "Avg Power";
+"drivetrain.drivesLabel" = "Drives";
+"drivetrain.regenRatio" = "Regen Ratio";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error --- */
+"thermal.live" = "Live";
+"thermal.stale" = "Stale";
+"thermal.offline" = "Offline";
+"thermal.staleBanner" = "Reconnecting — data may be stale";
+"thermal.offlineBanner" = "Offline — showing last known data";
+"thermal.refresh" = "Refresh";
+"thermal.loadingA11y" = "Loading thermal load";
+"thermal.empty" = "No thermal load data available yet";
+"thermal.errorTitle" = "Couldn't load thermal data";
+"thermal.retry" = "Retry";
