@@ -1,0 +1,47 @@
+/*
+  BatteryTab.strings
+  TeslaSync — P4 feature view · 0052 · BatteryTab (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `BatteryTab`
+  resolves (table "BatteryTab") lives here with its web English value. These entries fold into
+  the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/analytics/components/analytics/BatteryTab.tsx) — the canonical `analytics.battery.*`
+  namespace. The remaining keys back the native-only chrome (freshness chip, stale/offline
+  banner, loading + error + retry copy) and the chart accessibility descriptors.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"analytics.battery.healthScore" = "Health Score";
+"analytics.battery.capacity" = "Capacity";
+"analytics.battery.degradation" = "Degradation";
+"analytics.battery.estRange" = "Est. Range";
+"analytics.battery.cycles" = "Cycles";
+"analytics.battery.noData" = "No battery trend data available";
+"analytics.battery.healthTimeline" = "Health Score Timeline";
+"analytics.battery.health" = "Health %";
+"analytics.battery.capacityTrend" = "Capacity Trend";
+"analytics.battery.rangeTrend" = "Range Trend";
+"analytics.battery.range" = "Range";
+"analytics.battery.degradationCycles" = "Degradation & Cycles";
+"analytics.battery.degradPct" = "Degradation %";
+"analytics.battery.cycleCount" = "Cycle Count";
+
+/* --- Native chrome: surface + chart descriptors --- */
+"analytics.battery.title" = "Battery";
+"analytics.battery.date" = "Date";
+
+/* --- Native chrome: freshness + connectivity --- */
+"analytics.battery.live" = "Live";
+"analytics.battery.stale" = "Stale";
+"analytics.battery.offline" = "Offline";
+"analytics.battery.staleBanner" = "Reconnecting — battery analytics may be stale";
+"analytics.battery.offlineBanner" = "Offline — showing last known battery analytics";
+
+/* --- Native chrome: states + accessibility --- */
+"analytics.battery.loading" = "Loading battery analytics";
+"analytics.battery.errorTitle" = "Couldn't load battery analytics";
+"analytics.battery.retry" = "Retry";
