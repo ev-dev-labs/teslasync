@@ -1,0 +1,43 @@
+/*
+  RangeEstimateWidget.strings
+  TeslaSync — P4 dashboard widget · 0077 · RangeEstimateWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `RangeEstimateWidget` resolves (table "RangeEstimateWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/RangeEstimateWidget.tsx + registry/battery.ts). The
+  remaining keys back the native-only chrome (freshness chip, retry/empty/error copy,
+  connectivity banners, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.rangeEstimate" = "Range Estimate";
+"widget.rangeEstimate.description" = "Rated, ideal, and estimated range";
+"widget.rangeEstimate.title" = "Range Estimate";
+"widget.ratedRange" = "Rated Range";
+"widget.idealRange" = "Ideal Range";
+"widget.noRange" = "No range data";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.rangeEstimate.live" = "Live";
+"widget.rangeEstimate.updating" = "Updating";
+"widget.rangeEstimate.stale" = "Stale";
+"widget.rangeEstimate.offline" = "Offline";
+"widget.rangeEstimate.refresh" = "Refresh";
+"widget.rangeEstimate.retry" = "Retry";
+"widget.rangeEstimate.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.rangeEstimate.loading" = "Loading range estimate";
+"widget.rangeEstimate.emptyHint" = "Range data will appear once your vehicle reports in.";
+"widget.rangeEstimate.errorTitle" = "Couldn't load range estimate";
+"widget.rangeEstimate.offlineBanner" = "Offline — showing last known range";
+"widget.rangeEstimate.staleBanner" = "Reconnecting — range may be stale";
+
+/* --- Accessibility --- */
+"widget.rangeEstimate.openA11y" = "Open the Range page";
