@@ -1,0 +1,245 @@
+================================================================================
+P4 · Dashboard widget · 0099 — SystemHealthWidget (Apple)
+Run: 2026-06-07T19:30-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/102
+Prompt: P4/dashboard-widgets/0099 — SystemHealthWidget
+Web source (spec): web/src/features/dashboard/widgets/SystemHealthWidget.tsx
+Mode: code-complete + host-validated + DEFERRED Xcode app build/test
+      (0036 DigitalTwinWidget / 0068 MQTTStatusWidget precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift (full Xcode) ......... Apple Swift 6.3.2, iPhoneSimulator 26.5 SDK present     OK
+  xcodebuild / Xcode.app ..... /Applications/Xcode.app — Xcode 26.5 (17F42)            OK
+                               (DEVELOPER_DIR pointed at the full Xcode; the bare
+                               `xcode-select -p` is CommandLineTools, so the gate is
+                               run with DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+  iOS Simulator (iPhone 16) .. booted (83717DEE-…)                                     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                             OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                           OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                       OK
+
+  Capability note: this surface uses NEITHER Swift Charts NOR MapKit (web
+  "Charts/maps used: (none)"). The core requirement is SwiftUI, which IS available
+  and proven by a real iPhoneSimulator-SDK Swift-6 compile below. The capability-
+  BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore does NOT
+  apply — the surface is authored and host-validated for real. Unlike the no-Xcode
+  CI runners of earlier siblings, FULL XCODE IS PRESENT here, so the Xcode app
+  build was EXECUTED (not assumed) — see the dedicated section below; it is RED
+  for a pre-existing, predecessor/integration-scope reason that is provably NOT in
+  this surface, and is deferred to the P4 integration prompt accordingly.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/SystemHealthWidget.*) ===
+  SystemHealthWidget.Projection.swift  397  Foundation-only adapter: DTOs (web SystemHealth /
+                                            DBStats / ConnectionPool+runtime) + `vitals` projection
+                                            (port of the web component body: SERVICE_KEYS map, status
+                                            default, healthyCount, dbSize fallback, conns/memory/
+                                            goroutines) + fmtInt formatters + overall labelling +
+                                            P1/S10 i18n facade + testable a11y summary.
+  SystemHealthWidget.Model.swift       223  P1/S11 telemetry seam + P1/S8 state-holder seam
+                                            (load/connection enums, SystemHealthUpdate, source proto +
+                                            InMemory) + SystemHealthModel (@Observable phase + freshness
+                                            + vitals) + SystemHealthStrings.text. References (does NOT
+                                            redefine) the shared DashboardWidgetSize/Registration — the
+                                            majority co-located pattern (GuardMode, …).
+  SystemHealthWidget.Components.swift  185  SystemHealthStatusDot (web StatusDot glow) + ServiceRow
+                                            (status grid cell) + StatTile (web StatCard) + Badge (web
+                                            StatusBadge online/away/offline) + FreshnessChip — over the
+                                            shared design tokens.
+  SystemHealthWidget.swift             310  SystemHealthWidget surface: glass shell + header (server
+                                            icon + title [hidden when compact] + freshness chip +
+                                            refresh + optional open) + every state + responsive
+                                            compact(1×2)/standard(2×4) layouts.
+  SystemHealthWidget.Previews.swift    147  #if DEBUG previews — content(standard/degraded/compact)/
+                                            loading/empty/error/stale/offline.
+  SystemHealthWidget.Tests.swift       399  XCTest: projection adapter + service-status normalization +
+                                            formatters + overall labelling + model phases/freshness/
+                                            telemetry + registry + a11y (106 assertions, 37 methods,
+                                            7 suites).
+  SystemHealthWidget.strings            63  P1/S10 catalog contribution (10 source keys + 4 service
+                                            labels + registry desc + native chrome + a11y).
+  Every file ≤400 lines (house file_length, enforced by swiftlint --strict, below); largest 399.
+  One exported View (SystemHealthWidget).
+
+=== PARITY (vs web SystemHealthWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (SystemHealthSource → SystemHealthModel):
+    useSystemHealth, useDBStats, useConnectionPool, useTranslation, useAdmin. The production app wires
+    SystemHealthSource over the shared AdminStore (system-health/db-stats/connection-pool queries on the
+    web INTERVALS.STANDARD cadence); the view performs NO HTTP. No direct transport in the view.
+  Projection → SystemHealthProjection.vitals is a 1:1 port of the web component body:
+    services = SERVICE_KEYS.map (database/mqtt/tesla_api/fleet_telemetry), status =
+    components[key]?.status ?? 'unhealthy', healthyCount = ok|healthy count, overallStatus =
+    health.status ?? 'unknown', dbSize = health.databaseSize ?? dbStats.databaseSize ?? '—',
+    activeConns = pool.inUse, maxConns = pool.maxOpen, goroutines/memory off the runtime object.
+    Default service labels are the web title-cased keys (database→"Database", tesla_api→"Tesla Api",
+    mqtt→"Mqtt", fleet_telemetry→"Fleet Telemetry"). Verified by an EXECUTED harness (73/73).
+  Composition → glass shell (server.rack icon + "System Health" title [hidden when compact] +
+    freshness chip + refresh + optional Open) · compact layout (overall StatusBadge + Healthy/Degraded/
+    Down label + "N/M services") · standard layout (2-col service status grid with glow StatusDots +
+    bottom-pinned 2-col stat grid: DB Size / Active Conns / Memory / Goroutines).
+  Shared components → maps web @/components/data-display + @/components/feedback to native:
+    StatusBadge→SystemHealthBadge, StatCard→SystemHealthStatTile, StatusDot→SystemHealthStatusDot,
+    EmptyState→ContentUnavailableView, DataFreshness→SystemHealthFreshnessChip, Skeleton→TSSkeleton
+    (shared). The chip/tile are authored locally over the SAME tokens as the shared TSStatusBadge/
+    TSStatCard so every label resolves through the per-surface SystemHealthStrings table (the shared
+    components take only a LocalizedStringKey) — identical rationale to siblings MQTTStatusWidget /
+    DigitalTwinWidget. Recharts→none / Leaflet→none (no chart/map on this surface).
+  States (all render) → loading (skeleton chrome: service-grid + stat-grid skeletons / compact badge
+    skeleton) · empty ("No system health data" + ContentUnavailableView) · error (icon + retry) ·
+    content · stale (warning freshness chip over cached content) · offline (muted freshness chip +
+    cached content). Model phase resolution keeps cached content visible behind background refresh/
+    errors; a hard failure with no cache → error. "Has data" mirrors the web `health.data != null`.
+  i18n → all 10 source keys (en.json widget.systemHealth.*) resolve through the P1/S10 facade with the
+    web t(key,default) fallback: title, healthy, degraded, down, services, dbSize, activeConns, memory,
+    goroutines, noData. The 4 template-literal service labels (db/mqtt/teslaApi/workers) ship too. Key
+    cross-check (referenced-in-code vs defined-in-.strings): 0 referenced keys missing. No English
+    literals in native code (every Text routes through SystemHealthStrings).
+  a11y → dot/tiles/rows carry combined VoiceOver labels; refresh/open buttons have accessibilityLabels;
+    the testable SystemHealthAccessibility.summary composes overall status + service count + each
+    service status + DB Size/Active Conns/Memory/Goroutines; Dynamic Type via Font.TS tokens +
+    minimumScaleFactor; Reduce Motion honored by the shared TSSkeleton shimmer; status dots are
+    accessibilityHidden (the row label conveys the status word).
+  Telemetry → SystemHealthModel.start() emits viewOpened(surface:"SystemHealthWidget") → bridges shared
+    Telemetry.track(.screenView) (P1/S11). Asserted by a spy test + the executed model wiring.
+  Registry → SystemHealthWidget.registration: id "system-health", category "system", default 2×4,
+    min 1×2, max 4×40 (+ clamp()), matching registry/system.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck (the 4 non-preview surface files compiled together with the REAL apps/apple
+    component library — Tokens + Design{TSDesign,TSMaterial} + Components/UI{Typography,Cards} +
+    Feedback/Skeletons — none of which import the Shared xcframework; the shared
+    DashboardWidgetSize/Registration primitives are supplied by a 1-file host shim standing in for the
+    P4 core that provides them in the real build):
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 \
+        -strict-concurrency=complete  <Tokens + Design + UI/Typography + UI/Cards + Feedback/Skeletons>
+        DashboardCoreShim.swift  SystemHealthWidget.{Projection,Model,Components,swift}
+      TYPECHECK_EXIT=0                                                              OK
+      (Platform-agnostic SwiftUI — no `#if os(iOS)` branches — so the macOS 15 compile fully covers the
+       iOS/iPadOS code paths. @Observable / ContentUnavailableView / Grid / @MainActor all resolve under
+       Swift 6 strict concurrency. #if DEBUG previews are excluded from the host typecheck — the
+       #Preview macro plugin is DEBUG-only; their content is re-validated by the Xcode build.)
+
+[2] Adapter EXECUTED test (compiled SystemHealthWidget.Projection.swift + a harness main to a native
+    binary and RAN it — real "cached → projection" verification, not a typecheck):
+      73/73 checks PASSED — service keys/labelKeys order, missing-component→unhealthy default,
+      healthyCount (ok|healthy only), unknown-status→unhealthy, title-cased default labels, overall
+      status→badge (online/away/offline), unknown overall when health absent, dbSize fallback chain
+      (health→dbStats→'—', blank-string fall-through), runtime counters + defaults, titleCase helper,
+      ServiceStatus normalization, fmtInt grouping + Double round-half-up + NaN→0, activeConns
+      (with/without max + grouping), memory '… MB'/'—', goroutines/'—', serviceCount, overall labels +
+      badge words, a11y summary content (with + without runtime).
+      ADAPTER_HARNESS_EXIT=0                                                        OK
+
+[3] swiftlint --strict on the 6 surface swift files (explicit paths; the repo .swiftlint.yml
+    `included:` does not yet list TeslaSync/dashboard-widgets — that wiring is the P4 integration
+    prompt's job — so run explicitly here to prove the files are clean for integration):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      SWIFTLINT_EXIT=0                                                              OK
+      (Resolved during authoring: file_length [Projection/Tests ≤400] + line_length [Previews].)
+
+[4] swiftformat --lint on the 6 surface swift files (repo .swiftformat config):
+      0/6 files require formatting.
+      SWIFTFORMAT_EXIT=0                                                            OK
+      (Auto-formatted to the repo rules: redundantReturn → switch-expressions; wrapFunctionBodies.)
+
+[5] check-placeholders (ADR-011 stub gate; swift):
+      [literal gate] ./apps/tools/check-placeholders.ps1 -Path …/dashboard-widgets/SystemHealthWidget
+        → -Path resolves to no file/dir (filename PREFIX) → clean scan: PLACEHOLDER_COUNT=0  EXIT=0
+      [targeted]     scan of the 6 shipped .swift files in isolation:
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      (Independent word-scan of all 7 shipped files for TODO/FIXME/stub/mock/placeholder/Lorem/
+       fatalError/"Coming soon"/"not implemented": NONE FOUND. "No system health data" is the web
+       empty-state copy, not a stub.)
+
+=== GATE — XCODE APP BUILD/TEST (EXECUTED on this runner; RED — predecessor/integration-scope; DEFERRED) ===
+    Commands (run with DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer):
+      xcodegen generate                                                            (regenerated; 48 SystemHealthWidget refs in the app target)
+      xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+    Result: ** BUILD FAILED **    IOS_BUILD = RED    (MAC/test not reached)
+
+    ROOT CAUSE — NOT this surface (provably):
+      • First/root compile error: dashboard-widgets/DigitalTwinWidget.Tests.swift:17:
+          error: unable to resolve module dependency: 'XCTest'
+        i.e. a SIBLING file. The TeslaSync app target's source glob (project.yml: `- path:
+        TeslaSync/dashboard-widgets`) pulls EVERY co-located `*.Tests.swift` (13 surfaces, incl. this
+        one) into the APP target, which cannot link XCTest (a test-bundle-only module). The XCTest
+        files belong in the TeslaSyncTests bundle; wiring `dashboard-widgets/*.Tests.swift` into the
+        test target is the P4 dashboard-grid INTEGRATION prompt's scope, not this surface's
+        (Honesty rule 7). The same is true of the pre-existing duplicate `DashboardWidgetSize` /
+        `DashboardWidgetRegistration` declarations (MQTTStatusWidget.Model + DigitalTwinWidget.Model +
+        Sources/DashboardWidgets/*) that the integration prompt must dedup into one P4-core definition.
+      • grep of the FULL build log for any error in SystemHealthWidget NON-test code: NONE.
+        The 4 surface files (Projection/Model/Components/swift) compile clean — independently proven by
+        host step [1] above (real iPhoneSimulator/macOS-SDK Swift-6 strict-concurrency typecheck).
+      • This is the SAME pre-existing aggregated-worktree breakage every sibling surface deferred; a
+        baseline `xcodebuild build` BEFORE this surface existed already failed on the identical
+        DigitalTwinWidget.Tests.swift XCTest error. This surface adds zero new failure modes beyond the
+        shared co-located-test infra gap.
+    Disposition: the Xcode app build/test is DEFERRED to the P4 integration prompt (route
+    dashboard-widgets test files into the XCTest target + dedup the shared registry primitives +
+    register the surface into the dashboard grid) and a Shared.xcframework/macOS-signing CI runner —
+    matching the user-approved 0036/0068 "code-complete + DEFERRED Xcode gate" disposition. It is shown
+    RED here, not painted green: the meaningful, surface-specific validation available on this host
+    (steps [1]–[5]) was executed and is green.
+    XCTest (SystemHealthWidget.Tests.swift, 106 assertions) runs in the TeslaSync(/-macOS) test target
+    under Xcode once the integration prompt wires the dir into the test bundle; the pure adapter/
+    formatter/overall/a11y subset is independently PROVEN GREEN by the executed harness in step [2],
+    and the model/registry suites compile against the same public API exercised by the host typecheck
+    in step [1].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/content) + stale/offline freshness —
+      implemented; each has a #if DEBUG preview; phase/freshness logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SystemHealthSource); no direct HTTP in
+      the view.
+  [x] Every i18n key from source has a matching catalog key — 10/10 source keys + 4 service labels in
+      SystemHealthWidget.strings; referenced-vs-defined cross-check reports 0 missing.
+  [x] Accessibility labels on every interactive element; dot/tiles/rows combined; testable a11y summary.
+  [x] Tests: adapter unit test (EXECUTED, 73/73) + per-state model test + registry + a11y + formatters
+      (106 XCTest assertions shipped for the Xcode test target).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (typecheck/lint/format/placeholder/adapter-run); Xcode app build/test EXECUTED,
+      shown RED for predecessor/integration-scope reasons (not this surface), DEFERRED per 0036/0068.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the Xcode app build is shown RED with its real `** BUILD FAILED **` + the exact
+                       predecessor error; every "OK" above is a command actually run on this host with
+                       its real exit code. EXIT=0 reflects the host-runnable gate + the standing
+                       deferral disposition, NOT a claim that the Xcode build passed.
+  2  No scope narrowing: implemented ALL layouts/states + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; the Xcode build was run, not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the component body (services/healthyCount/dbSize fallback/
+                       conns/memory/goroutines) + compact/standard layouts + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT redefine the shared DashboardWidgetSize/Registration (referenced
+                       them, matching the majority co-located pattern), did NOT self-register into
+                       project.yml / the dashboard grid (integration prompt's scope), did NOT edit the
+                       shared Localizable.xcstrings (parallel-unsafe) nor any sibling widget file.
+  8  No commit on red  : the RED is pre-existing predecessor/integration-scope breakage outside the
+                       allowed files (sibling co-located *.Tests.swift in the app target + duplicate
+                       registry types), provably not this surface; the surface's own host gates are all
+                       green. Committing the surface + this log only.
+  9  No silent drift   : changes confined to the allowed SystemHealthWidget.* files + this log; follows
+                       the established 0036/0068 disposition rather than inventing a new one.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SystemHealthWidget shipped at parity with the web source: pure-Swift
+  projection (executed-green adapter, 73/73), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  every state + i18n key + a11y label, registry-correct (system-health, 2×4 / 1×2 / 4×40). All
+  host-runnable gates pass under Swift 6 strict concurrency. The Xcode app build/test was EXECUTED on
+  this full-Xcode runner and is RED solely due to pre-existing predecessor/integration-scope breakage
+  (sibling co-located *.Tests.swift compiled into the app target by the not-yet-updated project.yml +
+  duplicate shared registry primitives) — outside this surface's allowed files and provably not caused
+  by SystemHealthWidget.* — and is DEFERRED to the P4 integration prompt + a Shared.xcframework/signed
+  CI runner, matching the user-approved 0036/0068 disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/SystemHealthWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0099-SystemHealthWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add SystemHealthWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

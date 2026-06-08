@@ -1,0 +1,63 @@
+/*
+  SystemHealthWidget.strings
+  TeslaSync — P4 dashboard widget · 0099 · SystemHealthWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SystemHealthWidget` resolves (table "SystemHealthWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/SystemHealthWidget.tsx, cross-checked against
+  web/src/i18n/en.json → widget.systemHealth.*); the second block backs the
+  per-service labels the web derives via a template-literal key with a
+  title-cased fallback (widget.systemHealth.${i18n}); the remainder back the
+  native-only chrome (freshness chip, status words, refresh/retry/empty/error
+  copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity, values verbatim from en.json) --- */
+"widget.systemHealth.title" = "System Health";
+"widget.systemHealth.healthy" = "Healthy";
+"widget.systemHealth.degraded" = "Degraded";
+"widget.systemHealth.down" = "Down";
+"widget.systemHealth.services" = "services";
+"widget.systemHealth.dbSize" = "DB Size";
+"widget.systemHealth.activeConns" = "Active Conns";
+"widget.systemHealth.memory" = "Memory";
+"widget.systemHealth.goroutines" = "Goroutines";
+"widget.systemHealth.noData" = "No system health data";
+
+/* --- Per-service labels (web `t(\`widget.systemHealth.${svc.i18n}\`, <title-cased key>)`) --- */
+/* The web has no en.json entry for these, so it renders the title-cased component
+   key fallback: database→"Database", mqtt→"Mqtt", tesla_api→"Tesla Api",
+   fleet_telemetry→"Fleet Telemetry". Mirrored verbatim. */
+"widget.systemHealth.db" = "Database";
+"widget.systemHealth.mqtt" = "Mqtt";
+"widget.systemHealth.teslaApi" = "Tesla Api";
+"widget.systemHealth.workers" = "Fleet Telemetry";
+
+/* --- Registry metadata (registry/system.ts → "system-health") --- */
+"widget.systemHealth.description" = "Server health: DB, MQTT, Tesla API status, memory, connections";
+
+/* --- Native chrome: overall badge words (web StatusBadge online/away/offline, capitalized) --- */
+"widget.systemHealth.online" = "Online";
+"widget.systemHealth.away" = "Away";
+"widget.systemHealth.offline" = "Offline";
+
+/* --- Native chrome: freshness chip + actions --- */
+"widget.systemHealth.live" = "Live";
+"widget.systemHealth.stale" = "Stale";
+"widget.systemHealth.refresh" = "Refresh";
+"widget.systemHealth.retry" = "Retry";
+"widget.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.systemHealth.loading" = "Loading system health";
+"widget.systemHealth.errorTitle" = "Couldn't load system health";
+"widget.systemHealth.emptyHint" = "Waiting for server health data.";
+
+/* --- Accessibility --- */
+"widget.systemHealth.openA11y" = "Open the system status page";
