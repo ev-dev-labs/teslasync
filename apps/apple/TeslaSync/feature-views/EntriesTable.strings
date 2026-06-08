@@ -1,0 +1,48 @@
+/*
+  EntriesTable.strings
+  TeslaSync — P4 feature view · 0027 · EntriesTable (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `EntriesTable` resolves (table "EntriesTable") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (web/src/features/admin/components/dlq-inspector/EntriesTable.tsx). The remaining
+  keys back the native-only chrome (title, freshness chip, offline/stale banners,
+  error/retry copy) and the accessibility labels.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.dlq.cols.arrived" = "Arrived";
+"admin.dlq.cols.reason" = "Reason";
+"admin.dlq.cols.vin" = "VIN";
+"admin.dlq.cols.topic" = "Source topic";
+"admin.dlq.cols.redeliveries" = "Redel.";
+"admin.dlq.cols.size" = "Payload";
+"admin.dlq.cols.replayable" = "Replayable";
+"admin.dlq.cols.actions" = "Actions";
+"common.yes" = "Yes";
+"common.no" = "No";
+"admin.dlq.actions.inspect" = "Inspect";
+"admin.dlq.table.loading" = "Loading…";
+"admin.dlq.table.empty" = "No DLQ entries — the pipeline is clean.";
+
+/* --- Native chrome: title, freshness + actions --- */
+"admin.dlq.table.title" = "Dead-letter queue";
+"admin.dlq.freshness.live" = "Live";
+"admin.dlq.freshness.stale" = "Stale";
+"admin.dlq.freshness.offline" = "Offline";
+"admin.dlq.actions.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"admin.dlq.table.errorTitle" = "Couldn't load DLQ entries";
+"admin.dlq.table.offlineBanner" = "Offline — showing last known entries";
+"admin.dlq.table.staleBanner" = "Reconnecting — entries may be stale";
+
+/* --- Accessibility --- */
+"admin.dlq.a11y.inspect" = "Inspect entry %lld";
+"admin.dlq.a11y.count" = "%lld entries";
+"admin.dlq.a11y.refresh" = "Refresh entries";
