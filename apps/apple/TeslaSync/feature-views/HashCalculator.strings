@@ -1,0 +1,41 @@
+/*
+  HashCalculator.strings
+  TeslaSync — P4 feature view · 0015 · HashCalculator (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `HashCalculatorView` resolves (table "HashCalculator") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so this parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  Web source: features/admin/components/devtools/tools/HashCalculator.tsx
+*/
+
+/* --- Keys exactly as they appear in the web source (parity) --- */
+/* t('Hash Calculator')                                  */
+"Hash Calculator" = "Hash Calculator";
+/* t('Hash Calculator Desc')                             */
+"Hash Calculator Desc" = "Compute a SHA-256 digest of any text, locally";
+/* t('Hash Input')                                       */
+"Hash Input" = "Hash Input";
+/* t('Hash Placeholder')  (the web Textarea placeholder) */
+"Hash Placeholder" = "Paste text to hash";
+/* t('devtools.utils.computeSha256', 'Compute Sha256')   */
+"devtools.utils.computeSha256" = "Compute Sha256";
+/* t('Hash Error')  (web catch fallback)                 */
+"Hash Error" = "Hash Error";
+
+/* --- Native keys the view resolves (namespaced mirrors of the web strings) --- */
+"devtools.hash.title" = "Hash Calculator";
+"devtools.hash.description" = "Compute a SHA-256 digest of any text, locally";
+"devtools.hash.inputLabel" = "Hash Input";
+"devtools.hash.inputPrompt" = "Paste text to hash";
+"devtools.hash.error" = "Hash Error";
+
+/* --- Native chrome: states, retry, accessibility (no web literal, kept localized) --- */
+"devtools.hash.inputHint" = "Enter text to compute its SHA-256 hash";
+"devtools.hash.computing" = "Computing…";
+"devtools.hash.emptyResult" = "Your SHA-256 digest will appear here";
+"devtools.hash.retry" = "Try again";
+"devtools.hash.resultLabel" = "SHA-256 digest";

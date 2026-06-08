@@ -1,0 +1,213 @@
+================================================================================
+P4 · Feature view · 0015 — HashCalculator (Apple)
+Run: 2026-06-07T20:04-0700   Host: Darwin arm64
+Prompt: .github/prompts/monorepo/p4-apple/feature-views/P-0015-HashCalculator.prompt.md
+Web source (spec): web/src/features/admin/components/devtools/tools/HashCalculator.tsx
+Native output: apps/apple/TeslaSync/feature-views/HashCalculator.*
+ADR refs: ADR-002 (shared SwiftUI source), ADR-004 (KMP core), ADR-009
+Mode: code-complete + real-SDK host validation + DEFERRED Xcode app build/test.
+      The feature-views/ tier is not yet registered into the XcodeGen targets /
+      swiftlint included: / the shared Localizable.xcstrings catalog — that wiring
+      is the P4 integration prompt's job (Honesty rule 7). Same disposition the
+      dashboard-widgets tier predecessor 0072 (PositionHeatmapWidget) shipped under.
+================================================================================
+
+=== CAPABILITY PROBE (real, on this host) ===
+  swift (CommandLineTools) ..... Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  /Applications/Xcode.app ...... Xcode 26.5 Build version 17F42  via DEVELOPER_DIR (no sudo)   ✅
+  macOS 15 SDK ................. MacOSX26.5.sdk   ✅
+  iphonesimulator SDK ......... iPhoneSimulator26.5.sdk   ✅
+  iPhone 16 simulator ......... 1 present   ✅
+  CryptoKit + SwiftUI ......... AVAILABLE (proven by the real macOS-15 + iOS-18 SDK compiles below)
+  swiftlint / swiftformat ..... 0.63.3 / 0.61.1   ✅
+  pwsh (placeholder gate) ..... PowerShell 7.6.2   ✅
+
+  Capability note: the web "Charts/maps: (none)" holds — HashCalculator is a pure
+  local-compute devtool (web crypto.subtle.digest('SHA-256', …)), no chart/map, no
+  network. SwiftUI + CryptoKit are AVAILABLE and PROVEN by the real-SDK compiles
+  below, so the capability-BLOCKED escape hatch does NOT apply: the surface is
+  authored and host-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/HashCalculator.*) ===
+  HashCalculator.Engine.swift              36 lines
+  HashCalculator.Model.swift              158 lines
+  HashCalculator.swift                    251 lines
+  HashCalculator.Previews.swift            46 lines
+  HashCalculator.Tests.swift              135 lines
+  HashCalculator.strings                   41 lines
+  Roles:
+    .Engine.swift   — PURE SwiftUI-free SHA-256 → lowercase-hex adapter (host-executed)
+    .Model.swift    — P1/S11 telemetry seam + HashDigesting compute seam + @Observable
+                      HashCalculatorModel (P1/S8) + Phase + P1/S10 i18n facade
+    .swift          — the surface: red ToolCard shell + input + Compute Sha256 + every
+                      state (idle / computing / result / error), binds via the model
+    .Previews.swift — #if DEBUG previews, one per state
+    .Tests.swift    — XCTest: engine vectors + model phases/guard + telemetry spy + i18n
+    .strings        — P1/S10 catalog: the web source keys (parity) + native chrome
+  All files ≤ 400 lines (house file_length); all code lines ≤ 120 cols
+  (house line_length); one exported View per file.
+
+=== PARITY (vs web HashCalculator.tsx) ===
+  Data sources → web uses only useTranslation (no data hook, no HTTP). Native binds
+    through HashCalculatorModel (the P1/S8 state-holder seam); the view performs no
+    work of its own. The compute runs through the injected HashDigesting seam.
+  Composition → web ToolCard(icon=Hash, color="red", title, description) + Textarea +
+    primary Button(loading, Hash icon)="Compute Sha256" + mono <code> result chip +
+    CopyButton. Native: TSGlassPanel shell + a red icon chip (ICON_COLOR_MAP.red →
+    statusDanger 0.1 fill + 0.2 ring) + label + TSTextArea (with empty-state prompt) +
+    TSButton(primary, isLoading, "number" icon) + a monospaced digest chip
+    (statusDanger, selectable) + TSCopyButton. Shared @/components/ui → TSGlassPanel /
+    TSButton / TSTextArea / TSCopyButton; tokens Color.TS / Font.TS / TSSpacing /
+    TSRadius (compiled against the REAL DesignTokens + component library in [3]/[4]).
+  Engine → HashCalculatorEngine.sha256Hex is a 1:1 port of the web compute block
+    (TextEncoder UTF-8 → SHA-256 → b.toString(16).padStart(2,'0').join('')). Byte-for-
+    byte identical output, EXECUTED-verified against NIST vectors in [6].
+  States (all render) → idle (friendly hint, never a blank box) · computing (spinner +
+    "Computing…") · result (digest chip + copy) · error (web catch → "Hash Error" +
+    retry). The empty-input guard (web 'if (!inputVal) return') is reproduced via
+    canCompute (trimmed) and disables the button. stale / offline are N/A for a local
+    pure-compute surface — there is no data source, query, freshness, or network — so
+    inventing them would be drift (rule 9); the tool functions fully offline by design.
+  i18n → every web t() key has a matching catalog key (table "HashCalculator"):
+    'Hash Calculator', 'Hash Calculator Desc', 'Hash Input', 'Hash Placeholder',
+    'devtools.utils.computeSha256' (default 'Compute Sha256'), 'Hash Error' are all
+    present in HashCalculator.strings, alongside namespaced devtools.hash.* mirrors the
+    view resolves through the P1/S10 facade (web fallback preserved). No English
+    literals in native code.
+  a11y → input carries a label + hint; the digest chip exposes a "SHA-256 digest"
+    label + the hex value; the icon is decorative (hidden); Compute / Copy / Retry are
+    labeled buttons; Dynamic Type via Font.TS tokens; the prompt overlay is a11y-hidden
+    and non-hit-testing.
+  Telemetry → HashCalculatorModel.start() emits viewOpened(surface: "HashCalculator")
+    via the P1/S11 seam (default os.Logger 'screen_view'); idempotent; asserted by a
+    spy test. No input text or digest is ever logged.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real exit codes) ===
+[1] swiftformat --lint TeslaSync/feature-views (gate rules from .swiftformat):
+      0/5 files require formatting.
+      FORMAT_EXIT=0   ✅
+
+[2] swiftlint --strict TeslaSync/feature-views (repo .swiftlint.yml rules, scoped by absolute path):
+      Done linting! Found 0 violations, 0 serious in 5 files.
+      SWIFTLINT_EXIT=0   ✅
+      NOTE: the bare gate `swiftlint --strict` (whole included: set) is RED on a
+      PRE-EXISTING violation OUTSIDE this surface's allowed files —
+        /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-136/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+      That file (LifetimeStatsWidget.Adapter.swift, dashboard-widget 0055) is not in
+      this prompt's allowed-files scope, so it is left unmodified (Honesty rule 7).
+      The 5 shipped HashCalculator files lint clean (0 violations, shown above).
+
+[3] swiftc -typecheck — surface + the REAL apps/apple component library (Tokens +
+    Design + Components/UI/{Typography,Badges,Buttons,Fields,Cards,Utility}), macOS 15
+    SDK, Swift 6 (= complete strict concurrency), -D DEBUG (Engine+Model+View+Previews):
+      compiled clean against the real shared library + design tokens
+      STRONG_TYPECHECK_EXIT=0   ✅
+
+[4] swiftc -typecheck — iphonesimulator iOS 18 SDK (exercises TSCopyButton's UIKit
+    UIPasteboard branch; macOS [3] covers the AppKit branch). No #if os() in the
+    surface itself, so the two compiles fully cover iOS / iPadOS / macOS:
+      IOS_TYPECHECK_EXIT=0   ✅
+
+[5] swiftc -typecheck — test bodies vs the REAL surface symbols (Engine/Model/View/
+    Strings/HashDigesting/telemetry). The XCTest assertion *macros* only resolve inside
+    an xcodebuild test target, so they are shimmed; every other reference is the real API:
+      TESTS_LOGIC_TYPECHECK_EXIT=0   ✅
+
+[6] engine harness — compiled the PURE HashCalculatorEngine to a native arm64 binary
+    and RAN it (real input → digest, not a typecheck), NIST + pangram vectors:
+        [PASS] abc
+        [PASS] empty
+        [PASS] fox
+        [PASS] data-abc
+        [PASS] utf8-multibyte/idempotent/length64/lowercase
+      ENGINE_HARNESS: 5 passed, 0 failed
+      ADAPTER_HARNESS_EXIT=0   ✅
+
+[7] check-placeholders.ps1 (ADR-011 stub gate; pwsh) — real per-file scan of the
+    shipped directory (.swift files; .strings is not scanned, so the web 'Hash
+    Placeholder' key lives there safely; the Swift code uses no forbidden words):
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      EXIT=0
+      PLACEHOLDER_EXIT=0   ✅
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Three independent, code-unrelated reasons (none a defect in this surface), each
+    verified on this host:
+      (a) NOT-YET-REGISTERED: project.yml's app targets list Sources/ +
+          TeslaSync/dashboard-widgets/ + Localization + DesignTokens; this surface
+          lives at TeslaSync/feature-views/ — `grep -c feature-views project.yml` = 0.
+          Registration into the XcodeGen target is the P4 integration prompt's job
+          (Honesty rule 7). Running xcodebuild now would build the app WITHOUT these
+          files → zero evidence about this deliverable. The real-SDK compiles in
+          [3]/[4] DO compile this surface against the real library.
+      (b) Shared.xcframework not staged: the app target links the KMP core; building it
+          needs a Kotlin/Native gradle build. apps/apple/Frameworks/ holds only: .gitkeep.
+          Independent of this UI surface.
+      (c) macOS signing: `security find-identity -p codesigning` →   Valid identities only
+     0 valid identities found;
+          the app/widget entitlements require a development certificate (ADR-012 defers
+          this to a signed runner).
+    The XCTest bundle (HashCalculator.Tests.swift) runs in the TeslaSync(/-macOS) test
+    target once integrated (its sources move under Tests/Unit). The pure-engine subset
+    is independently PROVEN GREEN by the executed harness [6]; every test body is
+    typechecked against the real APIs in [5].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source — idle / computing / result /
+      error implemented, each with a #if DEBUG preview + a phase unit test. stale /
+      offline are N/A for a local pure-compute surface (justified above, not invented).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (HashCalculatorModel); the
+      view performs no HTTP (there is none in the web source either).
+  [x] Every i18n key from source has a matching catalog key — 6/6 web keys present in
+      HashCalculator.strings (+ namespaced mirrors + native chrome).
+  [x] Accessibility labels on every interactive element (input, Compute, Copy, Retry)
+      + a digest label/value; Dynamic Type via tokens.
+  [x] Tests: engine vector unit test + per-phase model test + telemetry-spy + i18n
+      facade test (executed-green engine harness + typechecked XCTest bodies).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Host gates green (format / lint / typecheck×3 / engine-run / placeholder); Xcode
+      app build/test DEFERRED with capability evidence (per the 0072 disposition).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with 3 verified
+                       reasons; the bare swiftlint pre-existing RED is reported, not hidden.
+                       Every "✅" is a command actually run on this host with its real exit code.
+  2  No scope narrowing: implemented every web behavior — input, guard, compute, result,
+                       copy, error+retry, i18n, a11y, telemetry. (stale/offline absent in
+                       the source; not fabricated.)
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: byte-exact SHA-256 port, EXECUTED against NIST vectors.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT register into project.yml / swiftlint included:,
+                       did NOT edit the shared Localizable.xcstrings (co-located .strings
+                       instead), did NOT touch the pre-existing LifetimeStatsWidget lint
+                       violation (out of scope).
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED;
+                       the only RED is a pre-existing, out-of-scope predecessor file.
+  9  No silent drift   : changes confined to the allowed HashCalculator.* files + this log;
+                       the stale/offline non-applicability is stated, not hidden.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native HashCalculator shipped at parity with the web source: a
+  pure, executed-green SHA-256 engine (5/5 vectors), a P1/S8 state-holder seam (no view
+  HTTP), P1/S11 view.opened telemetry, every state + every web i18n key + a11y labels,
+  composed entirely from the shared component library + design tokens. All host-runnable
+  gates pass — including STRONG typechecks against the REAL component library on both the
+  macOS 15 and iOS 18 SDKs. The Xcode app build/test is DEFERRED to the signed CI runner
+  (surface not yet target-registered + Shared.xcframework + macOS signing — none a defect
+  in this code), matching the established 0072 "code-complete + DEFERRED Xcode gate"
+  disposition for not-yet-registered Apple surfaces.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/HashCalculator.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0015-HashCalculator.log
+  git commit -m "feat(apps/apple/feature-views): add HashCalculator surface (P4)"
+
+EXIT=0
+STATUS=DONE
