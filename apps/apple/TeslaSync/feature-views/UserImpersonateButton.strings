@@ -1,0 +1,51 @@
+/*
+  UserImpersonateButton.strings
+  TeslaSync — P4 feature view · 0050 · UserImpersonateButton (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `UserImpersonateButton` resolves (table "UserImpersonateButton") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/admin/components/UserImpersonateButton.tsx) — the button labels, the
+  aria label, and the ConfirmDialog props. The web i18next `{{subject}}`
+  interpolation is expressed natively as `%@` (resolved with `String(format:)`).
+  The remaining keys back the native-only chrome (freshness chip, banners, status
+  load states, unavailable notes, start feedback) the state list requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"impersonation.button.aria" = "Impersonate %@";
+"impersonation.button.starting" = "Starting…";
+"impersonation.button.start" = "Impersonate";
+"impersonation.confirm.title" = "Start impersonation session?";
+"impersonation.confirm.message" = "You will see TeslaSync as %@ for up to 15 minutes. The action is logged to the audit log. End the session from the banner when you are done.";
+"impersonation.confirm.confirm" = "Start impersonation";
+"impersonation.confirm.cancel" = "Cancel";
+
+/* --- Native chrome: freshness chip --- */
+"impersonation.freshness.live" = "Live";
+"impersonation.freshness.stale" = "Stale";
+"impersonation.freshness.offline" = "Offline";
+
+/* --- Native chrome: status load states --- */
+"impersonation.status.loading" = "Checking impersonation status…";
+"impersonation.status.error" = "Couldn’t load impersonation status.";
+"impersonation.status.empty" = "Impersonation status is unavailable.";
+"impersonation.action.retry" = "Retry";
+
+/* --- Native chrome: unavailable notes (web hidden-in-open-mode → friendly state) --- */
+"impersonation.unavailable.openMode" = "Impersonation is disabled in open-access mode.";
+"impersonation.unavailable.active" = "An impersonation session is already active.";
+"impersonation.unavailable.disabled" = "Impersonation isn’t available for this account.";
+
+/* --- Native chrome: banners --- */
+"impersonation.banner.offline" = "Offline — showing last known status.";
+"impersonation.banner.stale" = "Status may be out of date.";
+
+/* --- Native chrome: start feedback --- */
+"impersonation.start.started" = "Impersonation started";
+"impersonation.start.failed" = "Couldn’t start impersonation";
