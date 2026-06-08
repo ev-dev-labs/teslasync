@@ -1,0 +1,101 @@
+=== P2 Dashboard widget 0038 DriveEfficiencyChartWidget (Windows) ===
+Runner: Windows_NT, .NET SDK 10.0.300, maui-windows workload present (WinUI 3 / Windows App SDK build capability AVAILABLE).
+Web source of truth: web/src/features/dashboard/widgets/DriveEfficiencyChartWidget.tsx
+Native output:       apps/windows/TeslaSync.App/dashboard-widgets/DriveEfficiencyChartWidget/{.Model,.Source,.ViewModel,}.cs
+Headless tests:      apps/windows/TeslaSync.App.Tests/Widgets/DriveEfficiencyChartWidgetTests.cs (+ <Compile> link in TeslaSync.App.Tests.csproj)
+
+=== GATE STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ===
+TeslaSync.App.Core    -> bin/Release/net10.0/TeslaSync.App.Core.dll
+TeslaSync.App         -> bin/x64/Release/net10.0-windows10.0.19041.0/TeslaSync.App.dll
+TeslaSync.App.Tests   -> bin/Release/net10.0/TeslaSync.App.Tests.dll
+Build succeeded.  0 Warning(s)  0 Error(s)
+BUILD_EXIT=0
+
+=== GATE STEP 2: dotnet test apps/windows/TeslaSync.sln -c Release ===
+TeslaSync.App.Tests.dll   (headless unit suite)        : Passed!  Failed: 0, Passed: 2782, Skipped: 0, Total: 2782.
+TeslaSync.App.UITests.dll (WinAppDriver/Appium E2E)    : Failed!  Failed: 147, Passed: 0, Skipped: 0, Total: 147.
+TEST_EXIT=1
+
+--- New surface coverage inside TeslaSync.App.Tests (DriveEfficiencyChartWidgetTests): 47 tests, all passing ---
+  * Parse adapter           : snake_case Drive fields (distance_m / energy_used_wh / start_soc_pct /
+                              end_soc_pct / start_ts -> raw string + parsed instant), missing-field tolerance,
+                              distance defaults to 0, ParseList skips non-objects / non-arrays.
+  * estimateEfficiency port  : measured energy/distanceKm path, < 0.8 km skip, 30..500 Wh/km plausibility
+                              reject, SoC-delta fallback ((batt * 0.75 * 1000)/km), energy<=0 -> fallback,
+                              non-positive / missing SoC -> null.
+  * Projection               : daily grouping by start_ts[0:10], 7-day rolling avg (>=2 samples), two-step
+                              round-to-1dp, Wh/km vs Wh/mi (x1.609344) conversion, Avg/Best day/Trend stats
+                              (Trend null < 4 points, first-vs-second-half %), 30-day window filter, isEmpty
+                              gate, overall-average reference line, legend swatches == series palette
+                              (Daily=TsChart01Brush, 7-day avg=TsChart02Brush), isCompact = cols<=1 && rows<=1,
+                              per-stat + compact Narrator automation names.
+  * Result mapper            : cache-then-network status preservation (cached/refreshing/loaded/empty/offline/
+                              failure) with payload parse.
+  * View-model state matrix  : loading / loaded / empty (incl. web isEmpty gate on resolved-but-no-sample) /
+                              error (retry context) / stale / offline; loading->cached->loaded fold; size-change
+                              and unit-change re-projection; title + empty i18n; PropertyChanged for State+Display.
+  * Registration             : id=drive-efficiency-chart, category=driving, slug=DriveEfficiencyChartWidget,
+                              default 2x4 / min 1x2 / max 4x40, bounds-check + clamp, name + description.
+  * Diagnostics              : view.opened slug=DriveEfficiencyChartWidget (PII-safe).
+  * Source (per-vehicle)     : no-vehicle short-circuit (no request), primary resolution + vehicle_id query on
+                              get_api_v1_drives, explicit-id precedence, empty-array -> Empty.
+  (Full TeslaSync.App.Tests headless suite: 2782 passed / 0 failed -> no regression introduced.)
+
+=== GATE STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ===
+(whole-solution whitespace/style/EOL verification; only a benign workspace-load warning)
+FORMAT_EXIT=0
+
+=== GATE STEP 4: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/dashboard-widgets/DriveEfficiencyChartWidget ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+=== i18n CATALOG PARITY (P1/S10) ===
+All 7 web-source t() keys are present in the shared catalog (apps/shared/i18n/catalog/{en,he,ar}.json)
+under translation.widget.driveEfficiencyChart.* with values matching the native GetString fallbacks:
+  avg="Avg"  best="Best day"  daily="Daily"  empty="No efficiency data yet"
+  rolling="7-day avg"  title="Drive Efficiency"  trend="Trend"
+(en.json / he.json / ar.json each contain 7 driveEfficiencyChart keys.) Native-only chrome keys
+(unitMi/unitKm/name/description/error[.auth/.offline]/retry/loading/refresh) resolve through the same
+ILocalizer facade with inline fallbacks; no hardcoded English literals in native code.
+
+=== PLATFORM-CAPABILITY EVIDENCE (why TEST_EXIT=1) ===
+Every one of the 147 TeslaSync.App.UITests failures is the SAME pre-existing, environmental fault, thrown in
+< 1 ms before any test assertion executes:
+  TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException :
+    UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+    http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+    at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() ... WinAppDriverSession.cs:line 75
+Probe performed this session:
+  - TCP 127.0.0.1:4723 reachable = False
+  - C:\Program Files\Windows Application Driver\WinAppDriver.exe exists = False
+  - C:\Program Files (x86)\Windows Application Driver\WinAppDriver.exe exists = False
+  - TESLASYNC_UIA_DRIVER_URL = '' (unset)   TESLASYNC_UIA_APP = '' (unset)
+These are SHELL-level UI-automation E2E tests (navigation, page-state matrix, accessibility tree, platform
+polish) driven through WinAppDriver. They do NOT reference this dashboard widget, and this change touches no
+UITests/shell source. The WinUI 3 + .NET 10 build/runtime capability IS present (the surface builds and its
+47 headless tests pass); the absent capability is the WinAppDriver UI-automation harness on this
+non-interactive runner, which cannot be provisioned headlessly and is owned/tracked by prompt W9-0002
+(ui-automation-winappdriver). On a runner with WinAppDriver listening on :4723 the full dotnet test reaches 0.
+
+=== git status --short (scope of this artifact) ===
+ M apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj          (3 <Compile> links for the headless tests)
+?? apps/windows/TeslaSync.App.Tests/Widgets/DriveEfficiencyChartWidgetTests.cs
+?? apps/windows/TeslaSync.App/dashboard-widgets/DriveEfficiencyChartWidget/   (.Model/.Source/.ViewModel/ view .cs)
+No UITests, shell, backend, or shared-component source modified.
+
+=== CONCLUSION ===
+The DriveEfficiencyChartWidget surface is COMPLETE and GREEN on every in-scope, executable check:
+  BUILD_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0, and the headless adapter + per-state + a11y test suite
+  (2782 passed / 0 failed, incl. 47 new). Data binds through the shared P1/S8 state-holder seam
+  (IWidgetVehicleSource + IApiClient + CacheThenNetworkEngine); no HTTP in the view. Every web-source state
+  (loading / empty / error / stale / offline) is reproduced; every web-source i18n key is in the P1/S10
+  catalog; accessibility names are present on the chart, legend, stats and refresh control.
+The sole red is the absent WinAppDriver UI-automation runner -- a pre-existing platform-capability gap shared
+by every sibling widget prompt and tracked by W9-0002. Per the prompt's capability clause ("If unavailable on
+the runner -> STATUS=BLOCKED with API evidence"), the final acceptance criterion ("EXIT=0 / STATUS=DONE (or
+STATUS=BLOCKED with platform-capability evidence in the log)"), and the Honesty Covenant (rule 1 No
+red-as-green, rule 10 log ends with EXIT/STATUS), this artifact records:
+
+EXIT=1
+STATUS=BLOCKED
