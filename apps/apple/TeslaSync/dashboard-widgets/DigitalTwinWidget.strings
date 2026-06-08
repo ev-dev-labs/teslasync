@@ -1,0 +1,57 @@
+/*
+  DigitalTwinWidget.strings
+  TeslaSync — P4 dashboard widget · 0036 · DigitalTwinWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DigitalTwinWidget` resolves (table "DigitalTwinWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared 186 KB catalog.
+
+  Keys 1–17 are the exact keys extracted from the web source
+  (features/dashboard/widgets/DigitalTwinWidget.tsx). The remaining keys back the
+  native-only chrome (freshness chip, retry/empty/error copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.digitalTwin" = "Digital Twin";
+"widget.digitalTwin.description" = "Visual car state: doors, windows, lights";
+"widget.lockUnknown" = "Lock Unknown";
+"widget.locked" = "Locked";
+"widget.unlocked" = "Unlocked";
+"widget.windowsUnknown" = "Windows Unknown";
+"widget.windowsClosed" = "Windows Closed";
+"widget.windowsOpen" = "Open";
+"widget.driving" = "Driving";
+"widget.charging" = "Charging";
+"widget.sentryOn" = "Sentry";
+"widget.headlightsOn" = "Lights On";
+"widget.hazardsOn" = "Hazards";
+"widget.doorsOpen" = "Doors Open";
+"widget.frunkOpen" = "Frunk Open";
+"widget.trunkOpen" = "Trunk Open";
+"widget.noVehicle" = "No vehicle data";
+"widget.open" = "Open";
+
+/* --- Count-formatted variants (native localizable counts) --- */
+"widget.windowsOpenCount" = "%lld Open";
+"widget.doorsOpenCount" = "%lld Doors Open";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.twin.live" = "Live";
+"widget.twin.stale" = "Stale";
+"widget.twin.offline" = "Offline";
+"widget.twin.refresh" = "Refresh";
+"widget.twin.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.twin.loading" = "Loading vehicle state";
+"widget.twin.emptyHint" = "Connect a vehicle to see its live state.";
+"widget.twin.errorTitle" = "Couldn't load vehicle state";
+"widget.twin.offlineBanner" = "Offline — showing last known state";
+"widget.twin.staleBanner" = "Reconnecting — values may be stale";
+
+/* --- Accessibility --- */
+"widget.twin.a11yLabel" = "Vehicle digital twin showing current physical state";
+"widget.twin.openA11y" = "Open the Digital Twin page";
