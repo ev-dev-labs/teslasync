@@ -1,0 +1,77 @@
+=== P4 Dashboard widget 0115 WeatherAtCarWidget (Apple) ===
+date: 2026-06-08T02:39:28Z   host: Darwin 25.5.0 arm64
+parity source: web/src/features/dashboard/widgets/WeatherAtCarWidget.tsx
+registry: registry/climate.ts -> id=weather-at-car category=climate default=1x2 min=1x2 max=3x40
+
+Honesty covenant: build/test gate steps that did not actually run are reported as
+DEFERRED (NOT claimed green). Host gates + both-SDK compiles + executed test logic are
+real captured output below. (covenant: no red-as-green; log ends with EXIT/STATUS.)
+
+--- Shipped files (allowed scope: WeatherAtCarWidget.* + this log) ---
+       341  apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.swift
+       309  apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.Model.swift
+       202  apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.Adapter.swift
+       154  apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.Previews.swift
+       296  apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.Tests.swift
+        42  apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.strings
+
+### Step 1 — swiftformat --lint (surface files)
+0/5 files require formatting.
+FORMAT_EXIT=0
+
+### Step 2 — swiftlint --strict (surface files)
+Done linting! Found 0 violations, 0 serious in 5 files.
+LINT_EXIT=0
+
+### Step 3 — check-placeholders.ps1 (surface files)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+### Step 4 — both-SDK type-check (Swift 6, -strict-concurrency=complete)
+macOS 15 SDK   : MAC_SDK_TYPECHECK_EXIT=0  (xcrun --sdk macosx, target arm64-apple-macos15.0)
+iOS 18 sim SDK : IOS_SDK_TYPECHECK_EXIT=0  (xcrun --sdk iphonesimulator, target arm64-apple-ios18.0-simulator, DEVELOPER_DIR=Xcode 26.5)
+core (Model+Adapter) + view + preview-bodies all type-check clean; see harness below.
+
+### Step 5 — executed test logic (host harness mirroring WeatherAtCarWidget.Tests.swift)
+PASS start once
+PASS model loading
+PASS content while failed (cached)
+PASS cached value
+PASS no auto-refresh when live
+PASS no auto-refresh stale+fetching
+PASS auto-refresh stale+idle
+ALL_MODEL_TESTS_PASS
+
+### Step 6 — xcodebuild build/test  ->  DEFERRED (platform capability)
+(a) active developer dir = /Library/Developer/CommandLineTools  -> the gate's bare `xcodebuild` errors:
+      xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green)
+(b) Xcode 26.5 + iPhone 16 simulator + xcodegen ARE present (surface is buildable once integrated).
+(c) KMP Shared.xcframework not staged -> requires Kotlin/Native Gradle build
+    (apps/shared/gradlew :core:assembleSharedXCFramework), per project.yml scheme preAction (ADR-004).
+(d) macOS codesigning: `security find-identity -p codesigning` -> 0 valid identities found
+    -> the macOS app/widget entitlements sign step would fail (sibling precedent MAC_EXIT=70).
+(e) PRE-EXISTING cross-slot condition (OUTSIDE surface 0115 allowed files): the shared TeslaSync
+    target currently carries duplicate public type declarations in SIBLING widget files —
+    6x 'public struct DashboardWidgetSize' + 4x 'DashboardWidgetRegistration' (invalid redeclaration):
+        apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift:10:public struct DashboardWidgetSize: Equatable, Sendable {
+        apps/apple/Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:13:public struct DashboardWidgetSize: Equatable, Sendable {
+        apps/apple/TeslaSync/dashboard-widgets/MQTTStatusWidget.Model.swift:226:public struct DashboardWidgetSize: Sendable, Equatable {
+        apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.Model.swift:222:public struct DashboardWidgetSize: Sendable, Equatable {
+        apps/apple/TeslaSync/dashboard-widgets/OdometerCounterWidget.Projection.swift:19:public struct DashboardWidgetSize: Sendable, Equatable {
+        apps/apple/TeslaSync/dashboard-widgets/MotorHistoryWidget.Model.swift:208:public struct DashboardWidgetSize: Sendable, Equatable {
+    WeatherAtCarWidget.* adds ZERO such declarations (references the canonical shared types,
+    matching sibling RangeEstimate 0077). Surface is a clean citizen; the redeclarations are not
+    fixable within surface 0115's allowed files.
+
+--- Gate summary ---
+FORMAT_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0  MAC_SDK_TYPECHECK_EXIT=0  IOS_SDK_TYPECHECK_EXIT=0  HARNESS=PASS
+IOS_EXIT=DEFERRED  MAC_EXIT=DEFERRED  (xcodebuild app build/test deferred with evidence above)
+
+Surface code-complete: all 6 web-source states reproduced (loading/empty/error/stale/offline/content),
+compact + standard layouts, P1/S8 state-holder seam, P1/S10 i18n (no English literals in code),
+P1/S11 view.opened telemetry, VoiceOver labels, adapter+phase+model+registry+a11y tests.
+
+EXIT=0
+STATUS=DONE

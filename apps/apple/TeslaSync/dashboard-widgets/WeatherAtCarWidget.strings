@@ -1,0 +1,42 @@
+/*
+  WeatherAtCarWidget.strings
+  TeslaSync — P4 dashboard widget · 0115 · WeatherAtCarWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `WeatherAtCarWidget` resolves (table "WeatherAtCarWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/WeatherAtCarWidget.tsx + registry/climate.ts). The
+  remaining keys back the native-only chrome (freshness chip, retry/empty/error copy,
+  connectivity banners, conditions glyph accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.weatherAtCar" = "Weather at Car";
+"widget.weatherAtCar.description" = "Current weather at vehicle location: temp, conditions icon";
+"widget.outsideTemp" = "Outside Temperature";
+"widget.noWeather" = "No weather data";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.weatherAtCar.live" = "Live";
+"widget.weatherAtCar.updating" = "Updating";
+"widget.weatherAtCar.stale" = "Stale";
+"widget.weatherAtCar.offline" = "Offline";
+"widget.weatherAtCar.refresh" = "Refresh";
+"widget.weatherAtCar.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.weatherAtCar.loading" = "Loading weather";
+"widget.weatherAtCar.emptyHint" = "Weather appears once your vehicle reports its outside temperature.";
+"widget.weatherAtCar.errorTitle" = "Couldn't load weather";
+"widget.weatherAtCar.offlineBanner" = "Offline — showing last known weather";
+"widget.weatherAtCar.staleBanner" = "Reconnecting — weather may be stale";
+
+/* --- Accessibility: conditions glyph descriptions (temperature band) --- */
+"widget.weatherAtCar.condition.freezing" = "Freezing";
+"widget.weatherAtCar.condition.warm" = "Warm";
+"widget.weatherAtCar.condition.mild" = "Mild";
