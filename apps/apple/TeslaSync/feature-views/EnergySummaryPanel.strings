@@ -1,0 +1,37 @@
+/*
+  EnergySummaryPanel.strings
+  TeslaSync — P4 feature view · 0142 · EnergySummaryPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `EnergySummaryPanel` resolves (table "EnergySummaryPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/driving/components/drive-detail/EnergySummaryPanel.tsx). The second group
+  backs the native chrome (the P4 leaf freshness / loading / empty / error copy) so the
+  Swift sources hold no English prose literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.energySummary" = "Energy Summary";
+"driveDetail.energyConsumed" = "Energy Consumed";
+"driveDetail.energyRecovered" = "Energy Recovered";
+"driveDetail.netConsumption" = "Net Consumption";
+"driveDetail.efficiency" = "Efficiency";
+"driveDetail.batteryUsed" = "Battery Used";
+"driveDetail.rangeUsed" = "Range Used";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error --- */
+"energySummary.live" = "Live";
+"energySummary.stale" = "Stale";
+"energySummary.offline" = "Offline";
+"energySummary.staleBanner" = "Reconnecting — data may be stale";
+"energySummary.offlineBanner" = "Offline — showing last known data";
+"energySummary.refresh" = "Refresh";
+"energySummary.loadingA11y" = "Loading energy summary";
+"energySummary.empty" = "No energy data for this drive yet.";
+"energySummary.errorTitle" = "Couldn't load energy summary";
+"energySummary.retry" = "Retry";
