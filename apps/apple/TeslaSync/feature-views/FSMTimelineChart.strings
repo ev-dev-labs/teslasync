@@ -1,0 +1,50 @@
+/*
+  FSMTimelineChart.strings
+  TeslaSync — P4 feature view · 0231 · FSMTimelineChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `FSMTimelineChart` resolves (table "FSMTimelineChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/system/components/FSMTimelineChart.tsx). The remainder back the native
+  state envelope (axis titles, freshness chip, connectivity banner, loading / empty
+  / error chrome) plus the accessibility summaries — keyed here so no English literal
+  lives in native code.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"fsm.timelineChart" = "Transitions Over Time";
+"fsm.timelineChart.aria" = "FSM transitions over time stacked area chart";
+"fsm.noTimelineData" = "No transition data for timeline";
+
+/* --- Axis titles (web XAxis / YAxis) --- */
+"fsm.timelineChart.axis.time" = "Time";
+"fsm.timelineChart.axis.count" = "Transitions";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"fsm.timelineChart.live" = "Live";
+"fsm.timelineChart.stale" = "Stale";
+"fsm.timelineChart.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"fsm.timelineChart.staleBanner" = "Reconnecting — the transition timeline may be stale";
+"fsm.timelineChart.offlineBanner" = "Offline — showing the last loaded transitions";
+
+/* --- Tooltip + accessibility summary --- */
+"fsm.timelineChart.transitions" = "transitions";
+"fsm.timelineChart.machines" = "state machines";
+"fsm.timelineChart.from" = "from";
+"fsm.timelineChart.to" = "to";
+"fsm.timelineChart.peak" = "busiest";
+"fsm.timelineChart.total" = "total";
+"fsm.timelineChart.noneInBucket" = "no transitions";
+
+/* --- Loading / empty / error chrome --- */
+"fsm.timelineChart.loading" = "Loading transitions";
+"fsm.timelineChart.emptyHint" = "The stacked timeline appears here once transitions are recorded in the window.";
+"fsm.timelineChart.errorTitle" = "Couldn't load transitions";
+"fsm.timelineChart.retry" = "Retry";
