@@ -1,0 +1,99 @@
+/*
+  ActionBuilder.strings
+  TeslaSync — P4 feature view · 0080 · ActionBuilder (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ActionBuilder resolves (table "ActionBuilder") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first groups are the exact keys extracted from the web source
+  (features/automations/pages/ActionBuilder.tsx). The last group backs the
+  native-only empty state + the VoiceOver row label.
+*/
+
+/* --- Action types (web ACTION_TYPES) --- */
+"automations.actions.command" = "Vehicle Command";
+"automations.actions.notify" = "Send Notification";
+"automations.actions.setSetting" = "Set Setting";
+"automations.actions.callAutomation" = "Call Automation";
+
+/* --- Command groups (web COMMAND_GROUPS labels) --- */
+"automations.commandGroups.security" = "Security & Access";
+"automations.commandGroups.climate" = "Climate";
+"automations.commandGroups.charging" = "Charging";
+"automations.commandGroups.doors" = "Doors & Trunk";
+"automations.commandGroups.alerts" = "Alerts";
+"automations.commandGroups.navigation" = "Navigation";
+"automations.commandGroups.driveSoftware" = "Drive & Software";
+
+/* --- Commands (web COMMAND_GROUPS commands) --- */
+"automations.commands.lock" = "Lock Doors";
+"automations.commands.unlock" = "Unlock Doors";
+"automations.commands.sentryOn" = "Sentry Mode On";
+"automations.commands.sentryOff" = "Sentry Mode Off";
+"automations.commands.valetOn" = "Valet Mode On";
+"automations.commands.valetOff" = "Valet Mode Off";
+"automations.commands.climateOn" = "Climate On";
+"automations.commands.climateOff" = "Climate Off";
+"automations.commands.setTemps" = "Set Temperature";
+"automations.commands.seatHeater" = "Seat Heater";
+"automations.commands.seatCooler" = "Seat Cooler";
+"automations.commands.steeringWheelHeat" = "Steering Wheel Heater";
+"automations.commands.dogMode" = "Dog Mode";
+"automations.commands.campMode" = "Camp Mode";
+"automations.commands.chargeStart" = "Start Charging";
+"automations.commands.chargeStop" = "Stop Charging";
+"automations.commands.setChargeLimit" = "Set Charge Limit";
+"automations.commands.setChargingAmps" = "Set Charging Amps";
+"automations.commands.openChargePort" = "Open Charge Port";
+"automations.commands.closeChargePort" = "Close Charge Port";
+"automations.commands.frunkOpen" = "Open Frunk";
+"automations.commands.trunkOpen" = "Open Trunk";
+"automations.commands.honk" = "Honk Horn";
+"automations.commands.flash" = "Flash Lights";
+"automations.commands.navigationRequest" = "Navigate to Address";
+"automations.commands.navigationGpsRequest" = "Navigate to GPS";
+"automations.commands.triggerHomelink" = "Trigger HomeLink";
+"automations.commands.remoteStartDrive" = "Remote Start";
+"automations.commands.wakeUp" = "Wake Up";
+
+/* --- Builder chrome (web builder.* keys) --- */
+"automations.builder.actionType" = "Action Type";
+"automations.builder.moveUp" = "Move up";
+"automations.builder.moveDown" = "Move down";
+"automations.builder.removeAction" = "Remove action";
+"automations.builder.addAction" = "Add Action";
+"automations.builder.selectCommand" = "Select command...";
+"automations.builder.command" = "Command";
+"automations.builder.commandParams" = "Params (JSON, optional)";
+"automations.builder.commandParamsObjectError" = "Params must be a JSON object.";
+"automations.builder.invalidJson" = "Invalid JSON";
+"automations.builder.commandParamsPlaceholder" = "{\"temp\": 21}";
+"automations.builder.channel" = "Channel";
+"automations.builder.noChannels" = "No channels configured";
+"automations.builder.notifyMessage" = "Message";
+"automations.builder.notifyPlaceholder" = "Car is warming up!";
+"automations.builder.settingKey" = "Setting Key";
+"automations.builder.settingKeyPlaceholder" = "charge_limit";
+"automations.builder.valueType" = "Value Type";
+"automations.builder.valueText" = "Text";
+"automations.builder.valueNumber" = "Number";
+"automations.builder.valueBoolean" = "Boolean";
+"automations.builder.value" = "Value";
+"automations.builder.valueNumberPlaceholder" = "80";
+"automations.builder.valueTextPlaceholder" = "enabled";
+"automations.builder.targetAutomationId" = "Target Automation ID";
+
+/* --- Shared boolean labels (web common.true / common.false) --- */
+"common.true" = "True";
+"common.false" = "False";
+
+/* --- Native chrome: inline empty state --- */
+"automations.builder.emptyTitle" = "No actions yet";
+"automations.builder.emptyMessage" = "Add an action to define what this automation does.";
+
+/* --- Accessibility: VoiceOver row label --- */
+"a11y.actionBuilder.action" = "Action";
