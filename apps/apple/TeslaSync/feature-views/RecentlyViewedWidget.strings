@@ -1,0 +1,43 @@
+/*
+  RecentlyViewedWidget.strings
+  TeslaSync — P4 feature view · 0131 · RecentlyViewedWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  RecentlyViewedWidget resolves (table "RecentlyViewedWidget") lives here with its web
+  `t(key, default)` English value. These entries fold into the app Localizable.xcstrings
+  master catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  Group 1 is the exact set of keys extracted from the web source
+  (features/dashboard/components/RecentlyViewedWidget.tsx). Group 2 backs the per-kind
+  VoiceOver category labels (the web icon carries the kind visually; native announces it).
+  Group 3 backs the native-only chrome (loading / error / retry / stale / offline + the row
+  navigation hint) the Apple HIG states contract requires.
+*/
+
+/* --- Group 1: keys from the web source (parity) --- */
+"recentPages.widgetTitle" = "Recently Viewed";
+"recentPages.justNow" = "Just now";
+"recentPages.shortMinute" = "m";
+"recentPages.shortHour" = "h";
+"recentPages.shortDay" = "d";
+"recentPages.empty" = "Pages you visit will appear here for quick access.";
+
+/* --- Group 2: per-kind VoiceOver category labels (native a11y) --- */
+"recentPages.kind.page" = "Page";
+"recentPages.kind.vehicle" = "Vehicle";
+"recentPages.kind.drive" = "Drive";
+"recentPages.kind.trip" = "Trip";
+"recentPages.kind.charging" = "Charging session";
+"recentPages.kind.geofence" = "Geofence";
+"recentPages.kind.yearReview" = "Year in review";
+
+/* --- Group 3: native chrome — states + accessibility --- */
+"recentPages.rowA11yHint" = "Opens this page";
+"recentPages.loadingA11y" = "Loading recently viewed pages";
+"recentPages.stale" = "Stale";
+"recentPages.offline" = "Offline";
+"recentPages.staleBanner" = "Refreshing — recent pages may be out of date";
+"recentPages.offlineBanner" = "Offline — showing your saved recent pages";
+"recentPages.errorTitle" = "Couldn't load recent pages";
+"recentPages.retry" = "Retry";
