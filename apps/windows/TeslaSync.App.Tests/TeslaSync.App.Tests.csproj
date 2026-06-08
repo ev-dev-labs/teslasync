@@ -120,6 +120,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DestinationETAWidget\DestinationETAWidget.Model.cs" Link="Widgets\DestinationETAWidget\DestinationETAWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DestinationETAWidget\DestinationETAWidget.ViewModel.cs" Link="Widgets\DestinationETAWidget\DestinationETAWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DestinationETAWidget\DestinationETAWidget.Source.cs" Link="Widgets\DestinationETAWidget\DestinationETAWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Model.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.ViewModel.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Source.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Source.cs" />
   </ItemGroup>
 
   <!--
