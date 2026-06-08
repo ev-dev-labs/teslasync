@@ -1,0 +1,74 @@
+/*
+  ActiveSessionsSection.strings
+  TeslaSync — P4 feature view · 0197 · ActiveSessionsSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ActiveSessionsSection resolves (table "ActiveSessionsSection") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first groups are the exact keys extracted from the web source
+  (features/settings/components/ActiveSessionsSection.tsx). The remainder back the
+  native state envelope (freshness chip, connectivity banner, error retry) and the
+  device-label heuristic + accessibility strings.
+*/
+
+/* --- Header (web Heading + HelperText + revoke-all button) --- */
+"sessions.title" = "Active sessions";
+"sessions.subtitle" = "Devices currently signed in to TeslaSync. Revoking a session signs that browser out on its next request — your upstream identity provider's session is unaffected.";
+"sessions.revokeAllOthers" = "Sign out all other devices";
+"sessions.revokeAllOthersBusy" = "Signing out…";
+
+/* --- Open mode (web AUTH_MODE_OPEN notice) --- */
+"sessions.openMode.title" = "Active sessions";
+"sessions.openMode.message" = "Active session tracking requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload.";
+
+/* --- Loading (web Spinner row) --- */
+"sessions.loading" = "Loading sessions…";
+
+/* --- Columns + current pill (web `DataTable` columns) --- */
+"sessions.columns.device" = "Device";
+"sessions.columns.ip" = "IP address";
+"sessions.columns.createdAt" = "Signed in";
+"sessions.columns.lastSeenAt" = "Last seen";
+"sessions.current" = "This device";
+
+/* --- Row action (web per-row `Button`) --- */
+"sessions.row.revoke" = "Sign out";
+"sessions.row.revokeAria" = "Sign out {{device}}";
+
+/* --- List error + empty (web inline `ErrorText` / `DataTable` emptyMessage) --- */
+"sessions.errors.load" = "Failed to load active sessions.";
+"sessions.empty" = "No active sessions for this account.";
+
+/* --- Per-row revoke confirm (web `ConfirmDialog`) --- */
+"sessions.confirm.revokeTitle" = "Sign out this device?";
+"sessions.confirm.revokeMessage" = "{{device}} will be signed out on its next request. Your other devices will stay signed in.";
+"sessions.confirm.revokeConfirm" = "Sign out";
+"sessions.confirm.revokeCancel" = "Keep signed in";
+
+/* --- All-others revoke confirm (web `ConfirmDialog`) --- */
+"sessions.confirm.allOthersTitle" = "Sign out all other devices?";
+"sessions.confirm.allOthersMessage" = "Every browser other than this one will be signed out on its next request. You can sign back in immediately.";
+"sessions.confirm.allOthersConfirm" = "Sign out all others";
+"sessions.confirm.allOthersCancel" = "Cancel";
+
+/* --- Device-label heuristic (web `describeDevice` template + fallbacks) --- */
+"sessions.device.template" = "{{browser}} on {{os}}";
+"sessions.device.unknown" = "Unknown device";
+"sessions.device.browser" = "Browser";
+"sessions.device.os" = "Unknown OS";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"sessions.live" = "Live";
+"sessions.stale" = "Stale";
+"sessions.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"sessions.staleBanner" = "Reconnecting — this list may be out of date";
+"sessions.offlineBanner" = "Offline — showing the last loaded sessions";
+
+/* --- Error-state retry (web `QueryError`) --- */
+"sessions.retry" = "Retry";
