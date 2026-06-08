@@ -1,0 +1,36 @@
+/*
+  Base64Tool.strings
+  TeslaSync — P4 feature view · 0011 · Base64Tool (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `Base64Tool` resolves (table "Base64Tool") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/admin/components/devtools/tools/Base64Tool.tsx). The remainder back
+  the native-only chrome (copy affordance, empty state, accessibility summary).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"devtools.utils.base64" = "Base64";
+"devtools.utils.base64Desc" = "Base64Desc";
+"Encode" = "Encode";
+"Decode" = "Decode";
+"Input Label" = "Input";
+"Output Label" = "Output";
+"Invalid Input" = "Invalid Input";
+
+/* --- Native chrome: copy affordance --- */
+"action.copy" = "Copy";
+"action.copied" = "Copied";
+
+/* --- Native chrome: empty state --- */
+"base64.emptyTitle" = "No output yet";
+"base64.emptyHint" = "Enter text above to see the result here.";
+
+/* --- Accessibility: VoiceOver summary --- */
+"a11y.base64.emptyEncode" = "Enter text to Base64-encode";
+"a11y.base64.emptyDecode" = "Enter Base64 to decode";

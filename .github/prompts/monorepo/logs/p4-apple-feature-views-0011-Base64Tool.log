@@ -1,0 +1,216 @@
+================================================================================
+P4 · Feature view · 0011 — Base64Tool (Apple)
+Run: 2026-06-07T19:46-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/132
+Base: e9f16657
+Prompt: P4/feature-views/0011 — Base64Tool
+Web source (spec): web/src/features/admin/components/devtools/tools/Base64Tool.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0036/0054 precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh 7.6.2                          OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (not yet target-registered)             WARN
+
+  NOTE — the active developer dir defaults to CommandLineTools (no xcodebuild);
+  the full Xcode 26.5 toolchain (xcodebuild, simctl, iOS+macOS SDKs) is reached
+  with `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (no sudo).
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — SwiftUI is present and PROVEN by real iOS-18-simulator AND macOS-15
+  SDK compiles below. This surface uses NEITHER Swift Charts NOR MapKit (web
+  "Charts/maps used: (none)").
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/Base64Tool.*) ===
+  Base64Tool.Adapter.swift   139  testable projection core — Base64Mode, Base64Result (+ value/
+                                  hasOutput/isInvalid flags), Base64Codec.transform (port of web
+                                  btoa/atob + try/catch), Base64Surface.slug, Base64Accessibility
+  Base64Tool.Model.swift     110  P1/S8 state holder (Base64ToolModel: input + mode, derived result
+                                  = web useMemo) + P1/S11 telemetry seam + P1/S10 strings facade
+  Base64Tool.Views.swift     245  presentational subviews — ToolCard-style header, encode/decode
+                                  toggle, input editor (+ example overlay), output panel, copy
+                                  button (UIKit/AppKit), empty + invalid states
+  Base64Tool.swift            62  Base64Tool surface (glass-card shell + state switch + view.opened)
+  Base64Tool.Previews.swift   51  #if DEBUG previews — empty·encode, content·encode, content·decode,
+                                  invalid·decode, empty·decode (one per web state + mode)
+  Base64Tool.Tests.swift     153  XCTest — codec (8) + model (5) + accessibility (4) = 17 methods
+  Base64Tool.strings          36  P1/S10 catalog contribution (7 web-source keys + 7 native chrome/
+                                  a11y keys)
+  Total 796 lines across 7 files. Every shipped .swift file <= 400 lines (house file_length);
+  no line > 120 cols (house line_length). The surface depends only on the design Tokens +
+  the shared TSButton (Components/UI/Buttons) — no KMP `Shared` import.
+
+=== PARITY (vs web Base64Tool.tsx) ===
+  Data sources -> the web source's ONLY hook is `useTranslation`; it is a pure, synchronous,
+    local transform (`btoa`/`atob` in a `useMemo`) with NO data hook, NO network, NO cache. The
+    native parity therefore binds through a local P1/S8 state holder (Base64ToolModel) that owns
+    `input` + `mode` and DERIVES `result` on read (the @Observable analogue of the web `useMemo`).
+    The view performs no HTTP — there is none to perform.
+  Transform -> Base64Codec.transform is a faithful port: encode rejects code points above 0xFF
+    (the `btoa` domain; web throws -> here `.invalid`), decode is strict base64 (`atob`; malformed
+    -> `.invalid`), blank input -> `.empty` (web `if (!inputVal) return ''`). Decode renders UTF-8
+    when valid else a Latin-1 binary string (the `atob` return contract). Verified by executed XCTest
+    (round-trip, non-Latin-1 reject, malformed reject, ASCII vectors `Hello World`<->`SGVsbG8gV29ybGQ=`).
+  Composition -> ToolCard-style header (amber `curlybraces` glyph = web lucide `Braces` + color
+    "amber" -> statusWarning token, title + description) · encode/decode segmented control (web two
+    `Button`s, variant flips primary/ghost with the active mode, size sm -> TSButton .small) · input
+    editor (web `Textarea` rows=3 + mode example overlay) · output panel (web recessed panel: "Output"
+    label + CopyButton + monospaced cyan result -> mono font + accent token) · invalid + empty states.
+  Shared components -> TSButton (Components/UI/Buttons) for the mode toggle; ContentUnavailableView
+    for the empty state; everything else composed from the P1/S9 design tokens (Color.TS / Font.TS /
+    TSSpacing / TSRadius). The reusable native `ToolCard` and `CopyButton` are separate surfaces
+    (prompts 0010 / their own), so the card chrome + a UIKit/AppKit copy affordance are composed
+    inline here rather than depended upon. Recharts -> none / Leaflet -> none (no chart/map).
+  States (all render) -> the web source produces exactly THREE result states, reproduced here, each
+    with a #if DEBUG preview and a unit test:
+      • empty   (web hides the output panel) -> friendly ContentUnavailableView (contract: never a
+                blank box), per encode/decode mode.
+      • content (web `<pre>` output)         -> Base64OutputPanel (encoded OR decoded), copyable.
+      • invalid (web `catch -> t('Invalid Input')`) -> inline danger treatment.
+    The generic loading / stale / offline states from the prompt's state checklist have NO trigger
+    on this surface: it is a synchronous local transform with no async data source (no spinner), no
+    freshness window (nothing can be stale), and no network dependency (it works fully offline by
+    nature). Reproducing them would fabricate behavior absent from the web spec; parity = matching
+    the source, so they are intentionally omitted (Honesty rule 3, "no skip-and-assume": the source
+    was read end-to-end; these branches genuinely do not exist).
+  i18n -> all source keys resolve through the P1/S10 facade (Base64Strings, table "Base64Tool")
+    with the web `t(key, default)` fallback: devtools.utils.base64 ("Base64"),
+    devtools.utils.base64Desc ("Base64Desc", verbatim source default), Encode, Decode, Input Label,
+    Output Label, Invalid Input -> ALL present in Base64Tool.strings, plus the native chrome/a11y
+    keys (action.copy/copied, base64.emptyTitle/emptyHint, a11y.base64.emptyEncode/emptyDecode).
+    No English literals in native code (every string from the facade; example vectors are data).
+  a11y -> mode buttons carry .isSelected when active; the input editor an accessibilityLabel; the
+    copy button a state-dependent label (Copy/Copied); the output panel is a contained element; the
+    surface exposes Base64Accessibility.summary (mode + result/value, or the invalid message) as its
+    combined VoiceOver label. Dynamic Type via tokens; the copy confirmation has no motion to respect.
+  Telemetry -> Base64ToolModel.start() emits viewOpened(surface: "Base64Tool") exactly once via the
+    P1/S11 seam (OSLog default; production injects the shared Telemetry.track(.screenView) adapter).
+    Asserted by a spy test (fires once across two start() calls; slug == "Base64Tool").
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 5 shipping source files compiled together with the
+    REAL component closure — design Tokens + Components/UI/Buttons; no Shared xcframework; no -D DEBUG
+    so #Preview blocks compile out):
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  ../design/generated/apple/Tokens.swift Sources/Components/UI/Buttons.swift \
+        TeslaSync/feature-views/Base64Tool.{Adapter,Model,Views,,Previews}.swift
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; same files + closure, exercises every #Preview
+    body incl. Buttons' own preview against the macOS 15 SDK):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained, throwaway
+    SwiftPM harness (real production Adapter + Model copied verbatim; the test file's
+    `@testable import TeslaSync` rewritten to the harness module; Swift 6 language mode .v6;
+    platforms macOS 14). NO shims were needed — the surface's projection core + state holder compile
+    standalone (no Shared, no UI components):
+      Test Suite 'All tests' passed
+        Base64CodecTests        8/8  (empty both modes, encode=btoa, decode=atob, round-trip,
+                                      non-Latin-1 reject, malformed reject, result value/flags, examples)
+        Base64ToolModelTests    5/5  (result follows input+mode, select re-derives, invalid surfaces,
+                                      view.opened once + slug, example follows mode)
+        Base64AccessibilityTests 4/4 (encoded value, decoded value, invalid message, empty per mode)
+      Executed 17 tests, with 0 failures (0 unexpected) in 0.003 seconds
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; the repo .swiftlint.yml
+    `included:` does not list TeslaSync/feature-views — that wiring is the P4 integration prompt's
+    job — so the bare `swiftlint --strict` SKIPS this dir; run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) on the surface dir (the prompt's `-Path …/Base64Tool`
+    stem is not a directory -> a vacuous scan; the surface DIR is scanned here for a real result):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host with DEVELOPER_DIR=Xcode):
+      - `xcodegen generate` -> EXIT=0 (project + 12 targets + schemes generate cleanly).
+      - generated TeslaSync.xcodeproj references to "Base64Tool" = 0 (surface NOT target-registered).
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0036/0054 precedent surfaces, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets glob `Sources/` + `TeslaSync/dashboard-widgets`;
+          this surface lives at TeslaSync/feature-views/ and has 0 references in project.yml. It is
+          registered into the XcodeGen target by the downstream P4 integration prompt. Editing
+          project.yml is OUTSIDE this prompt's allowed files (and parallel-unsafe across slots).
+          Running xcodebuild now would build the app WITHOUT these files — ZERO evidence about this
+          deliverable. Steps [1]/[2] DO compile this surface against the real library, and step [4]
+          EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared gradlew :core:assembleSharedXCFramework). Independent
+          of this UI surface; concrete missing-framework error captured above (BUILD_EXIT=65).
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync/-macOS test target; here the SAME tests are PROVEN GREEN
+    (17/17) by the executed SwiftPM harness in step [4], and the views/model/adapter compile against
+    both the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (empty / content[encoded+decoded] / invalid)
+      across encode + decode modes — implemented; each has a #if DEBUG preview; logic unit-tested +
+      executed green. (loading/stale/offline N/A — synchronous local tool, no async/freshness/network.)
+  [x] Hooks bind through the shared P1/S8 state-holder seam (Base64ToolModel); no view HTTP (none exists).
+  [x] Every i18n key from source has a matching catalog key — 7 source keys + 7 native keys, all in
+      Base64Tool.strings.
+  [x] Accessibility labels on every interactive element; mode buttons carry .isSelected; surface
+      exposes a combined VoiceOver summary.
+  [x] Tests: adapter unit + per-state model + a11y — 17 methods, EXECUTED 17/17.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       framework error captured; every "OK" is a command actually run with its real
+                       exit code (incl. a 17/17 executed XCTest run and iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented the full surface — header, mode toggle, input, output, copy,
+                       empty + invalid states, i18n, a11y, telemetry; only the states the web source
+                       genuinely lacks are absent (documented, not silently dropped).
+  3  No skip-and-assume: web source read end-to-end; each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (No shims were needed —
+                       the harness compiled the real Adapter + Model unmodified.)
+  5  No parity shortcuts: faithful btoa/atob port (domain checks + strict decode + Latin-1 contract)
+                       + full encode/decode composition + every web state + verbatim source i18n keys.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml (integration prompt's scope) and
+                       did NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings
+                       shipped as the per-surface table, exactly like the 0036/0054 widgets.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed feature-views/Base64Tool.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native Base64Tool shipped at parity with the web source: a pure-Swift,
+  executed-green projection core (btoa/atob port, 17/17 XCTest), a P1/S8 state holder (no view HTTP),
+  P1/S11 view.opened telemetry, every state the web source produces (empty / encoded / decoded /
+  invalid across both modes), every source i18n key, and a11y labels + a combined VoiceOver summary.
+  All host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and the
+  macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency. The Xcode app
+  build/test is DEFERRED to the downstream integration/signed runner (surface not yet target-
+  registered + Shared.xcframework KMP staging + macOS signing — none a defect in this code, all
+  outside this prompt's allowed files), matching the 0036/0054 "code-complete + DEFERRED Xcode gate"
+  precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/Base64Tool.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0011-Base64Tool.log
+  git commit -m "feat(apps/apple/feature-views): add Base64Tool surface (P4)"
+
+EXIT=0
+STATUS=DONE
