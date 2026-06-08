@@ -1,0 +1,178 @@
+=== P4 Feature view 0209 PrivacySection (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon) — shared parallel-slot farm
+                       (sibling worktrees slot-2xx/3xx build concurrently; DerivedData is keyed
+                       per-project-path so each slot is isolated, but /tmp is shared — see the
+                       xcodebuild note below for how the gate logs were de-collided).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir is /Library/Developer/CommandLineTools; overridden non-destructively for
+                       this session only — no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : Apple Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 ·
+                       pwsh 7.6.2 · OpenJDK 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, booted) present · macOS 26.5 SDK present ·
+                       iPhoneSimulator26.5 SDK present
+  Shared.xcframework : assembled + staged for THIS slot via the scheme preAction
+                       (Scripts/build-shared-xcframework.sh → Gradle ":core:assembleSharedXCFramework",
+                       debug + release iOS/iOS-sim/macOS slices written and staged to
+                       apps/apple/Frameworks/Shared.xcframework ✓; Kotlin/Native tasks largely FROM-CACHE).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators + KMP toolchain all present
+                       → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/settings/components/PrivacySection.tsx — a settings feature component (named export +
+  default) rendered inside the Settings page. It composes FOUR client/remote seams and surfaces toasts:
+    • useVersionInfo() → require_cookie_consent  (the lone remote read; /system/version)
+    • lib/recentPages  → getRecentPages / clearRecentPages / subscribeRecentPages  (client LRU count)
+    • lib/cookieConsent→ getConsent / setConsent / clearConsent / subscribeConsent  (tri-state)
+    • lib/confirmSilence (via <ConfirmDialog silenceKey="clear-recent-pages">) — isSilenced / silence
+    • useToast().success  (post-action feedback)   · useTranslation (t)
+  Structure: GlassPanel.p-5 { header (IconBox cyan ShieldCheck + title + subtitle) ; recent-pages panel
+  (title + body + "%count entries stored" + secondary "Clear recent pages" button disabled at count 0) ;
+  consent panel (title + bodyOn/bodyOff by require_cookie_consent + tri-state label + primary "Re-grant
+  consent" / secondary "Withdraw consent" / ghost "Reset", each disabled when its state is already active) }
+  + a warning <ConfirmDialog> (silence checkbox; when previously silenced it fires onConfirm without
+  rendering). Every conditional branch (consent on/off, the 3 consent-state labels, the 4 disabled
+  predicates, the silence short-circuit) and every t() key was read end-to-end and reproduced 1:1.
+  Charts/maps: none. States in source: the section is ALWAYS rendered (no data-gated hide).
+
+ARTIFACTS SHIPPED  (allowed scope: apps/apple/TeslaSync/feature-views/PrivacySection.* + this log)
+  PrivacySection.Model.swift    (362)  PrivacyDiagnostics.surface (P1/S11 slug "PrivacySection"),
+                                       PrivacyTelemetry + OSLogPrivacyTelemetry, PrivacyStrings P1/S10 facade
+                                       (string/count/text), the freshness + status + update value types, the
+                                       four @MainActor P1/S8 seam protocols (environment / recent-pages /
+                                       consent / confirm-silence), PrivacyToast, and the @Observable
+                                       PrivacyModel (phase + clear-flow + silence + consent + toast + one-shot
+                                       stale auto-refresh + view.opened).
+  PrivacySection.Adapter.swift  (234)  pure projection: PrivacyConsentState (parse/storage round-trip),
+                                       PrivacyConsentAction, PrivacyPhase + resolver, consent label/body,
+                                       count text + empty predicate, the disabled predicates, the
+                                       PrivacyStatusBanner projection + precedence, the VoiceOver summaries.
+  PrivacySection.Sources.swift  (120)  the four InMemory* seam impls (previews + tests; no UserDefaults/bundle).
+  PrivacySection.Views.swift    (275)  PrivacyActionButton (design-system TSButton + disabled dim), header,
+                                       row panel, recent row + consent row (ViewThatFits row→column, web
+                                       flex-wrap).
+  PrivacySection.Chrome.swift   (240)  status banner (error/stale/offline), the clear-confirmation sheet
+                                       (web ConfirmDialog + silence toggle), the auto-dismissing toast, the
+                                       Reduce-Motion-aware loading skeleton.
+  PrivacySection.swift          (126)  the surface: phase switch (loading skeleton / ready), the status banner,
+                                       the toast overlay (.task auto-dismiss), the confirmation .sheet
+                                       (#if os(iOS) presentationDetents), onAppear start → view.opened.
+  PrivacySection.Previews.swift  (99)  10 #if DEBUG previews — consent required/accepted/declined, preview-off,
+                                       empty recents, loading, error(cached), stale, offline, Dynamic Type a11y2.
+  PrivacySection.AdapterTests.swift (180)  XCTest: 7 classes over the pure adapter.
+  PrivacySection.Tests.swift    (239)  XCTest: 3 classes over PrivacyModel (harness struct → no large tuples).
+  PrivacySection.strings         (60)  the "PrivacySection" i18n table — 31 keys (24 web-parity + 7 native chrome).
+  Total 9 swift + 1 strings = 10 files. The generated TeslaSync.xcodeproj wires all 10 into the TeslaSync (iOS)
+  + TeslaSync-macOS targets (60 pbxproj refs). No edits to project.yml / .swiftlint.yml / .swiftformat /
+  Localizable.xcstrings were required: feature-views is ALREADY in both targets' sources + the lint scope, and
+  the surface owns its strings in its per-surface table (folded into the master catalog at integration time).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel / IconBox    → tsGlassPanel() material + a tinted SF-Symbol box (checkmark.shield.fill, accent)
+  Button (variants)       → TSButton (.primary/.secondary/.ghost/.destructive) via PrivacyActionButton, with the
+                            web `disabled` dim applied at the wrapper (TSButtonStyle is state-agnostic)
+  ConfirmDialog + silence → a destructive .sheet (warning callout + "Don't ask again" Toggle); isSilenced →
+                            immediate clear without the sheet; confirm + toggle → silence(key) then clear (1:1)
+  useToast().success      → an auto-dismissing capsule toast overlay (Reduce-Motion aware, VoiceOver-labeled)
+  useVersionInfo (remote) → PrivacyEnvironmentSource carrying status(loading/loaded/failed)+freshness; the P4
+                            states contract (loading skeleton / error+retry / stale+auto-refresh / offline) is
+                            rendered as a banner above the always-on controls (cached require_cookie_consent kept)
+  recent count==0         → a friendly inline empty hint (never a blank box) + disabled clear button
+  flex-wrap / min-w-14rem → ViewThatFits(.horizontal) row→column · space-y / p-* → TSSpacing tokens
+  i18n                    : zero English literals in code; every string resolves via PrivacyStrings (table
+                            "PrivacySection"); %lld counter via String(format:)
+  a11y                    : section is one VoiceOver container; each row .combine's title+state; every button
+                            has an accessibilityLabel + .isButton; banner/toast combined; skeleton bars hidden;
+                            Dynamic Type (fixedSize wraps) + Reduce Motion (shimmer/toast/expand) respected
+  telemetry               : view.opened surface="PrivacySection" once on start (P1/S11), default OSLog sink;
+                            previews use a no-op sink, tests a spy
+  states                  : loading / empty / error / stale / offline ALL render (previews + tests cover each)
+                            plus every web branch — no scope narrowing, no hidden surfaces
+
+GATES  (all in-scope gates EXECUTED on this runner; raw exits pasted)
+  [GREEN]    swiftformat --lint  (PrivacySection scope, 9 swift files)  : 0/9 require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (PrivacySection scope, 9 swift files)  : 0 violations, 0 serious   (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1                                     : PLACEHOLDER_COUNT=0       (PLACEHOLDER_EXIT=0)
+             • literal gate path + a non-vacuous scan over the 9 real shipped .swift files, both 0
+             • scanner -SelfTest = all PASS (SELFTEST_EXIT=0); the .strings file is out of code-extension scope
+  [GREEN]    PrivacySection build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = the app's own settings), compiling the EXACT shipped PrivacySection.*
+             sources (incl. all #if DEBUG previews) against the REAL repo design system (Tokens · TSMaterial ·
+             Buttons):
+                 Build complete!  ·  Executed 38 tests, with 0 failures                            (SWIFT_TEST_EXIT=0)
+  [GREEN]    iOS 18 SDK typecheck — xcrun --sdk iphonesimulator swiftc -typecheck -target
+             arm64-apple-ios18.0-simulator -swift-version 6 (surface + design system) — exercises the
+             #if os(iOS) presentationDetents/dragIndicator branch the macOS host build excludes : IOS_TYPECHECK_EXIT=0
+  [GREEN]    xcodegen generate — TeslaSync.xcodeproj created; all 10 PrivacySection.* files wired into the
+             TeslaSync (iOS) + TeslaSync-macOS targets (60 pbxproj refs)                          (XCODEGEN_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO PrivacySection errors; every blocker pre-exists this change):
+    These two were EXECUTED on this slot (unique per-run log filenames + an isolated -derivedDataPath, because the
+    shared /tmp meant the first run's default log was overwritten by a concurrent sibling slot — a shared-runner
+    artifact, not a build fact). The Shared.xcframework staged successfully for this slot; the failures are:
+    iOS  : the app target fails to resolve `import XCTest` — 4× "Unable to resolve module dependency: 'XCTest'"
+           in target 'TeslaSync' (e.g. AcDcStatsPanel.Tests.swift:19, … and this surface's PrivacySection.Tests
+           / .AdapterTests). Root cause is the repo-wide composition: project.yml adds the WHOLE
+           TeslaSync/feature-views directory — which holds 175+ co-located *.Tests.swift across peer surfaces —
+           to the APP target's sources, and XCTest is not available to an iOS-sim app target. The slot-330
+           project.pbxproj confirms PrivacySection.Tests.swift is a member of both APP targets' Sources phases
+           (the same convention every P4 feature-view ships with). grep of the slot-330 iOS log for
+           "PrivacySection*.swift:NN:CC: error" = 0 hits — the surface itself has no compile error.
+    macOS: the build is gated at the development-signing check — the ONLY two errors are
+           "\"TeslaSync-macOS\" has entitlements that require signing with a development certificate" and the
+           same for "TeslaSyncWidgets-macOS" (these targets set CODE_SIGNING_REQUIRED + ENABLE_HARDENED_RUNTIME,
+           which this runner cannot satisfy without a provisioned dev cert; ad-hoc signing is incompatible with
+           the hardened runtime). XCTest resolves for macOS app targets, so it is NOT the iOS blocker here; grep
+           of the macOS log for any PrivacySection compile error = 0 hits (the surface's compilation is proven
+           independently by the SwiftPM harness + the iOS 18 SDK typecheck above).
+    Both blockers are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 signed
+    macos-latest CI runner, and the *.Tests.swift → test-target re-homing is owned by the P4/P99 Apple acceptance
+    gate (a project.yml source-membership change), NOT a single feature-view prompt (task rule: do not fix
+    pre-existing unrelated breakage). The shipped surface is INDEPENDENTLY proven to compile (SwiftPM harness +
+    iOS 18 SDK typecheck) and its 38 tests pass. This matches the sanctioned disposition of every prior P4
+    feature-view (cf. 0088 LoadingSkeleton, 0010 ToolCard, 0003 ClientUtilitiesSection).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65)
+                          and explicitly DEFERRED with its real exits + root causes — never reported as passing.
+  2  No scope narrowing : every web seam (version/recent/consent/silence/toast), every branch (consent on/off,
+                          3 state labels, 4 disabled predicates, silence short-circuit) and every t() key
+                          reproduced 1:1; the P4 loading/empty/error/stale/offline states added without hiding
+                          the always-on controls.
+  3  No skip-and-assume : web source + ConfirmDialog + recentPages + cookieConsent + useVersionInfo read
+                          end-to-end; every gate EXECUTED on THIS slot with raw exits pasted (incl. both
+                          xcodebuilds — the deterministic XCTest/signing blockers OBSERVED, not assumed).
+  4  No stubs as final  : complete production surface (10 files) + 38 real tests; placeholder scanner = 0 over
+                          the real shipped files; no TODO/stub/mock/placeholder/Lorem.
+  5  No parity shortcut : material/buttons/confirm+silence/toast/spacing/columns/i18n/a11y/telemetry all mapped
+                          to platform tokens + verified by the harness build+test.
+  6  No delegation      : authored directly; delegation FORBIDDEN; none used.
+  7  No predecessor bypass: P1/S8 state holders (four seams), P1/S9 tokens (Tokens/TSMaterial/TSButton), P1/S10
+                          i18n facade, P1/S11 view.opened — all present and consumed.
+  8  No commit on red   : the COMMITTED artifact (PrivacySection.* + this log) is GREEN on every in-scope gate
+                          AND on a real isolated Swift 6 strict-concurrency build+test (38/38) + iOS 18 SDK
+                          typecheck; the deferred full-app gate is RED only on pre-existing, repo-wide
+                          conditions (XCTest-in-iOS-app-target across 175+ peers; macOS dev-signing) which this
+                          commit neither introduces nor touches.
+  9  No silent drift    : changes confined to feature-views/PrivacySection.{swift,Model,Adapter,Sources,Views,
+                          Chrome,Previews,AdapterTests,Tests,strings} + this log. The generated
+                          TeslaSync.xcodeproj, DerivedData, and staged Frameworks/Shared.xcframework are build
+                          artifacts and are NOT committed.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic PrivacySection shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles under the app's own Swift 6 strict-concurrency rules against the real design system, its
+  38 tests pass, it typechecks against the iOS 18 simulator SDK, and lint/format/placeholder are all green. The
+  full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked
+  by the pre-existing repo-wide XCTest-in-iOS-app-target source composition (175+ peer surfaces) and by macOS
+  development-signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

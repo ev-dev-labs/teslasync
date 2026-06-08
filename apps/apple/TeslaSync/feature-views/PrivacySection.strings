@@ -1,0 +1,60 @@
+/*
+  PrivacySection.strings
+  TeslaSync — P4 feature view · 0209 · PrivacySection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `PrivacySection` resolves (table "PrivacySection") lives here with its web
+  `t(key, default)` value. These entries fold into the app `Localizable.xcstrings`
+  master catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first groups are the exact keys extracted from the web source
+  (features/settings/components/PrivacySection.tsx + the ConfirmDialog it mounts). The
+  trailing group backs the native-only chrome the Apple HIG states contract requires
+  (consent-policy status banner, loading + empty copy, accessibility).
+*/
+
+/* --- Header (web source, parity) --- */
+"privacy.title" = "Privacy";
+"privacy.subtitle" = "Manage local browsing history surfaces. These settings only affect this browser.";
+
+/* --- Recent pages control (web source, parity) --- */
+"recentPages.clearTitle" = "Recently viewed pages";
+"recentPages.clearBody" = "Wipe the list of pages used by the dashboard widget and the Recent section in the command palette.";
+"recentPages.storedCount" = "%lld entries stored";
+"recentPages.clearButton" = "Clear recent pages";
+
+/* --- Cookie / analytics consent control (web source, parity) --- */
+"consent.section.title" = "Cookies & analytics consent";
+"consent.section.bodyOn" = "This deployment collects anonymous performance and error reports with your consent. Strictly necessary storage (auth, settings) is always on.";
+"consent.section.bodyOff" = "This deployment does not require consent collection — these controls let you preview the user-facing flow.";
+"consent.state.accepted" = "Accepted — performance & error reporting on";
+"consent.state.declined" = "Declined — only essential storage in use";
+"consent.state.unknown" = "Not decided — banner will appear on next visit";
+"consent.action.accept" = "Re-grant consent";
+"consent.action.decline" = "Withdraw consent";
+"consent.action.reset" = "Reset";
+
+/* --- Toasts (web source, parity) --- */
+"recentPages.cleared" = "Recent pages cleared";
+"consent.toast.accepted" = "Consent granted";
+"consent.toast.declined" = "Consent withdrawn";
+"consent.toast.reset" = "Consent reset — banner will reappear";
+
+/* --- Clear confirmation dialog (web ConfirmDialog, parity) --- */
+"recentPages.clearConfirmTitle" = "Clear recent pages?";
+"recentPages.clearConfirmBody" = "This will wipe the list immediately. The dashboard widget and palette Recent section will be empty until you visit new pages.";
+"recentPages.clearConfirmCta" = "Clear pages";
+"common.cancel" = "Cancel";
+"confirm.silence.checkbox" = "Don't ask again for this action";
+
+/* --- Native chrome: consent-policy status banner (P4 states contract) --- */
+"privacy.status.error" = "Couldn't check the deployment's consent policy";
+"privacy.status.offline" = "Offline — showing the last known consent policy";
+"privacy.status.stale" = "Refreshing the consent policy…";
+"privacy.status.retry" = "Retry";
+
+/* --- Native chrome: loading + empty + accessibility --- */
+"privacy.loading" = "Loading privacy settings";
+"privacy.section.a11y" = "Privacy settings";
+"recentPages.emptyHint" = "No recently viewed pages yet — pages you visit will appear here.";
