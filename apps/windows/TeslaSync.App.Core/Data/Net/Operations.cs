@@ -70,12 +70,13 @@ public static class Operations
         public const string Lifetime = "get_api_v1_analytics_lifetime";
     }
 
-    /// <summary>Saved locations and geofences.</summary>
+    /// <summary>Saved locations, geofences and the latest per-vehicle location snapshot.</summary>
     public static class Locations
     {
         public const string List = "get_api_v1_locations";
         public const string Geofences = "get_api_v1_geofences";
         public const string GeofenceDetail = "get_api_v1_geofences_geofenceID";
+        public const string SnapshotLatest = "get_api_v1_location_snapshots_latest";
     }
 
     /// <summary>Vehicle subsystem snapshots (media/guard/specs/options).</summary>
