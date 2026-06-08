@@ -123,6 +123,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Model.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.ViewModel.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Source.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.Model.cs" Link="Widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.ViewModel.cs" Link="Widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.Source.cs" Link="Widgets\DriveEfficiencyChartWidget\DriveEfficiencyChartWidget.Source.cs" />
   </ItemGroup>
 
   <!--
