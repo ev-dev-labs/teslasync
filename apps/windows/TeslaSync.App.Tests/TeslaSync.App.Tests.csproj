@@ -123,6 +123,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Model.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.ViewModel.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Source.cs" Link="Widgets\DoorWindowStatusWidget\DoorWindowStatusWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveTelemetryWidget\DriveTelemetryWidget.Model.cs" Link="Widgets\DriveTelemetryWidget\DriveTelemetryWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveTelemetryWidget\DriveTelemetryWidget.ViewModel.cs" Link="Widgets\DriveTelemetryWidget\DriveTelemetryWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveTelemetryWidget\DriveTelemetryWidget.Source.cs" Link="Widgets\DriveTelemetryWidget\DriveTelemetryWidget.Source.cs" />
   </ItemGroup>
 
   <!--
