@@ -1,0 +1,218 @@
+===========================================================================
+=== P4 Feature view 0124 KioskOverlay (Apple) ===
+===========================================================================
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/P-0124-KioskOverlay.prompt.md
+Web src: web/src/features/dashboard/components/KioskOverlay.tsx
+Native : apps/apple/TeslaSync/feature-views/KioskOverlay.*
+HEAD   : 103548f8 (merge(parallel): p4-apple/feature-views/P-0073-BatteryPill.prompt.md)
+Host   : macOS / Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app
+         Swift 6.3.2 · iOS 26.5 Simulator (iPhone 16) · iOS 18.0 + macOS 15.0
+         deployment targets · swiftlint + swiftformat + pwsh + xcodegen +
+         Gradle/Kotlin-Native all present.
+
+The platform capability IS available on this runner (SwiftUI + Swift Charts +
+MapKit, iOS 18 / macOS 15 SDKs), so this is NOT a STATUS=BLOCKED capability
+case. Every gate step that is a function of THIS surface's code is green; the
+real Xcode app build/test is RED on PRE-EXISTING, out-of-scope baseline defects
+in sibling files (120 unguarded *Tests.swift swept into the app target by
+project.yml + a duplicate type decl), VERIFIED below — the identical deferral
+the merged sibling P-0073-BatteryPill recorded, now reproduced at this HEAD with
+this surface present and contributing ZERO errors.
+
+Files shipped (allowed-files: apps/apple/TeslaSync/feature-views/KioskOverlay.*):
+  KioskOverlay.swift            — SwiftUI overlay surface: non-interactive dim
+                                  layer, macOS pointer-hide modifier, per-second
+                                  corner clock (TimelineView), rotation-indicator
+                                  dots, and an exit chip (TSButton ghost + glass
+                                  material) that reveals on interaction and
+                                  auto-hides after 3s. a11y + reduce-motion aware.
+  KioskOverlay.Model.swift      — pure projection (KioskOverlayPresentation):
+                                  dim-opacity 1-dimLevel clamp, cursor/clock/
+                                  rotation gates, clock-corner→alignment map,
+                                  locale-aware clock formatters (formatTime /
+                                  formatDateWithDay ports), exit auto-hide delay,
+                                  surface slug, + the P1/S10 i18n facade
+                                  (KioskOverlayStrings, NSLocalizedString table).
+  KioskOverlay.Telemetry.swift  — P1/S11 view.opened diagnostics seam + os_log sink.
+  KioskOverlay.Previews.swift   — DEBUG previews for every branch (dim on/off, all
+                                  4 clock corners, dots vs single-dashboard, cursor
+                                  hidden, light/dark, Dynamic Type accessibility2).
+  KioskOverlay.Tests.swift      — 21 XCTest cases (guarded #if canImport(XCTest)).
+  KioskOverlay.strings          — P1/S10 catalog table: kiosk.exit / kiosk.exitLabel
+                                  (web t() calls) + VoiceOver clock/rotation labels.
+
+===========================================================================
+PARITY NOTES (web KioskOverlay.tsx → native)
+===========================================================================
+  KioskOverlay is a PURE presentational overlay — it receives config + flags as
+  props and fetches nothing (its only hooks are useTranslation [i18n facade] and
+  useDateFormat [formatters], neither of which is networking). So the prompt's
+  loading/empty/error/stale/offline states are the EMBEDDING Kiosk page's concern,
+  not the overlay's; the branches the web source ACTUALLY carries are reproduced
+  here in full and unit-tested (same disposition as the merged P-0073-BatteryPill
+  and the web ToolCard/pill components):
+
+  • dim layer    web `isDimmed && <div bg-black style{opacity:1-dimLevel}>` →
+                 Color.black.opacity(dimOpacity), allowsHitTesting(false),
+                 ignoresSafeArea. dimOpacity = clamp(1-dimLevel, 0…1); a non-finite
+                 dimLevel ⇒ 0 (never blacks out the screen). Verified 0.5⇒0.5,
+                 0⇒1, 1⇒0, 1.5⇒0, −0.5⇒1, NaN/±Inf⇒0.
+  • cursor hide  web `isCursorHidden` injects `cursor:none` → .kioskPointerHidden
+                 modifier hides the macOS pointer (NSCursor) on hover; a correct
+                 no-op on touch platforms (no system pointer). Decision tested via
+                 presentation.hidesPointer.
+  • clock        web `showClock` + `clockPosition` (4 corners) + formatTime/
+                 formatDateWithDay, ticking each second → TimelineView(.periodic
+                 by:1); KioskClockPosition.alignment maps to .top/bottomLeading/
+                 Trailing; KioskClock ports use setLocalizedDateFormatFromTemplate
+                 "jjmm" / "EEEMMMd" so a 24h locale yields "14:30" and a 12h locale
+                 "02:30 PM" / "Sat, Apr 4" from the same call (locale-aware, like
+                 toLocale*String). text-2xl mono + tabular digits → 24pt monospaced;
+                 text-[var(--text-muted)] → Color.TS.textMuted.
+  • rotation     web `dashboardCount > 1 && rotateInterval > 0` indicator dots,
+                 active `w-6` vs inactive `w-1.5`, both `bg-[var(--surface-2)]` →
+                 Capsule fill Color.TS.surface, width 24 vs 6, height 6; the gate +
+                 active-dot test reproduce the web exactly (count=1⇒hidden,
+                 interval=0⇒hidden, count≥2&interval>0⇒shown). eased width change
+                 gated on reduce-motion.
+  • exit         web ghost `Button` (X + "Exit Kiosk"), `bg-[var(--surface-overlay)]
+                 backdrop-blur-sm`, fades in on mousemove/touchstart, hides after
+                 3000ms; aria-label `kiosk.exit` → TSButton(.ghost,.small) with the
+                 icon+label foregrounded text-secondary, .ultraThinMaterial glass
+                 chip, top-trailing; reveal on tap/hover via an interaction sensor,
+                 auto-hide after KioskOverlayExit.autoHideDelay (= .seconds(3),
+                 tested) re-armed by an interaction token + .task(id:). The chip
+                 stays accessibility-visible (and focusable) while VoiceOver runs so
+                 it can never become unreachable. accessibilityLabel = "Exit kiosk
+                 mode" (web aria-label), visible text = "Exit Kiosk".
+  • tokens map   --text-muted→textMuted, --text-secondary→textSecondary,
+                 --surface-2→Color.TS.surface, --surface-overlay+blur→ultraThinMaterial.
+  • i18n         every t()/aria string resolves through KioskOverlayStrings (P1/S10
+                 table "KioskOverlay") with the web English literal as the fallback;
+                 zero hardcoded user-facing literals in code.
+  • a11y         clock = one combined element labelled "Time <t>, <date>"; dots =
+                 ignored children labelled "Dashboard X of Y"; dim is hidden;
+                 exit carries an explicit label + .isButton; Dynamic Type preview;
+                 reduce-motion honored on dim/dots/exit animations.
+
+===========================================================================
+GATE — host-runnable steps (all green)
+===========================================================================
+--- swiftc -typecheck (Swift 6, -strict-concurrency=complete) ----------------
+  closure: KioskOverlay.{swift,Model,Telemetry} + real deps Tokens.swift (design
+           tokens) + Buttons.swift (TSButton).
+  iOS  arm64-apple-ios18.0-simulator  (iPhoneSimulator26.5.sdk) : IOS_TYPECHECK_EXIT=0
+  macOS arm64-apple-macos15.0         (MacOSX26.5.sdk)          : MAC_TYPECHECK_EXIT=0
+  + DEBUG closure incl. KioskOverlay.Previews.swift:
+  macOS DEBUG : MAC_DEBUG_EXIT=0      iOS DEBUG : IOS_DEBUG_EXIT=0
+
+--- unit tests (executed, real value types) ----------------------------------
+  Standalone SwiftPM module (swift-tools-version 6.0 ⇒ Swift 6 language mode /
+  strict concurrency): KioskOverlay.Model + .Telemetry as the library "TeslaSync",
+  KioskOverlay.Tests as the test target, so the tests RUN without the pre-existing
+  app-target breakage below.
+    swift test : Executed 21 tests, with 0 failures (0 unexpected)
+  Coverage: dim-opacity (1-dimLevel) incl. clamp + non-finite; dimmed / cursor /
+  clock gates; rotation-indicator gate (count & interval) + dotIndices/active-dot +
+  count-floor; clock-corner → frame & horizontal alignment + web-string decode +
+  default; clock formatters (12h "PM" vs 24h "14:30", weekday/month/day, weekday
+  derived independently to avoid a circular assertion); exit auto-hide = 3s;
+  config defaults == DEFAULT_KIOSK_CONFIG; Equatable; i18n fallback wiring; surface
+  slug; view.opened slug via a buffered telemetry sink.
+  UNIT_TESTS=21/21 PASS
+
+--- swiftlint --strict -------------------------------------------------------
+  KioskOverlay scope (5 shipped .swift files) : Found 0 violations, 0 serious.
+  LINT_EXIT=0
+
+--- swiftformat --lint apps/apple -------------------------------------------
+  0/5 KioskOverlay files require formatting (config apps/apple/.swiftformat).
+  FORMAT_EXIT=0
+
+--- check-placeholders.ps1 (pwsh) -------------------------------------------
+  ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/KioskOverlay
+  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+--- xcodegen generate -------------------------------------------------------
+  Project regenerated with the 6 KioskOverlay files folded in (36 pbxproj refs).
+  XCODEGEN_EXIT=0
+
+===========================================================================
+GATE — full Xcode app build/test (RED on pre-existing baseline; DEFERRED)
+===========================================================================
+  KMP dependency built for real (not skipped):
+    apps/shared/gradlew :core:assembleSharedXCFramework  → BUILD SUCCESSFUL (3m04s)
+    Shared.xcframework staged into apps/apple/Frameworks/  ✓ (git-ignored)
+
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+             build
+    → ** BUILD FAILED ** (exit 65) in the *app target* SwiftDriver compile, on
+      PRE-EXISTING sibling code, before any KioskOverlay code is reached:
+        ActionBuilder.ModelTests.swift:11:8: error: Unable to resolve module
+          dependency: 'XCTest'
+      Root cause (outside allowed-files): apps/apple/project.yml adds the whole
+      `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` directories to
+      the iOS/macOS APP targets (lines 36-37, 67-68), which sweeps in 120
+      pre-existing `*Tests.swift` files that `import XCTest`. The app targets do
+      not link/resolve XCTest, and that dependency-scan failure aborts the whole
+      module compile before any per-file type error (incl. the pre-existing
+      duplicate `DashboardWidgetSize` decl at WeeklySummaryCardWidget.Model.swift:
+      239) is even reached. The correct home for those tests is the XCTest bundle
+      (project.yml `TeslaSyncTests` only includes `Tests/Unit`, lines 220-224).
+      This is project-target wiring, not surface code.
+    grep "KioskOverlay.*error:" /tmp/xcodebuild-ios.log  →  0   (this surface
+      contributes ZERO errors).
+
+  PROOF this surface is correct and does NOT contribute to the breakage:
+    • canImport(XCTest) probe in an app-target compile (no test framework search
+      path): the `#else` branch is taken ⇒ XCTest is NOT importable there
+      (PROBE_EXIT=0). Therefore KioskOverlay.Tests.swift, wrapped in
+      `#if canImport(XCTest)`, compiles to NOTHING in the app target:
+        swiftc -typecheck (iOS app config) KioskOverlay.Tests.swift  → EXIT=0
+      while a pre-existing UNGUARDED sibling fails in the same config:
+        swiftc -typecheck (iOS app config) AlertsSection.Tests.swift → EXIT=1
+          ("no such module 'XCTest'").
+    • KioskOverlay itself is proven on BOTH SDKs by the green swiftc typechecks
+      above and by the 21/21 executed unit tests against the real value types.
+  XCODE_IOS_BUILDTEST=DEFERRED (pre-existing baseline; not a KioskOverlay defect)
+  XCODE_MAC_BUILDTEST=DEFERRED (same shared sources / app target, ADR-002; same
+                                pre-existing sweep + macOS signing — the deferral
+                                the merged sibling P-0073 recorded)
+
+===========================================================================
+ACCEPTANCE
+===========================================================================
+  [x] Surface renders every branch the web source carries (dim, cursor-hide,
+      clock×4 corners, rotation dots, exit reveal/auto-hide), each unit-tested;
+      loading/empty/error/stale/offline are the embedder's concern for this pure
+      presentational overlay (documented, matching the merged precedent).
+  [x] Hooks bind to facades, not HTTP: useTranslation → KioskOverlayStrings
+      (P1/S10), useDateFormat → KioskClock formatters. No direct HTTP in the view.
+  [x] Every i18n key from source (kiosk.exit, kiosk.exitLabel) has a matching key
+      in the P1/S10 catalog (KioskOverlay.strings) + native VoiceOver chrome keys.
+  [x] Accessibility labels on every interactive element (exit chip labelled "Exit
+      kiosk mode", .isButton; clock + dots labelled; dim hidden); Dynamic Type +
+      reduce-motion honored; VoiceOver keeps the exit reachable.
+  [x] Tests: adapter/projection unit tests + per-branch coverage + a11y/i18n +
+      telemetry slug — 21/21 executed green against the real value types.
+  [x] No TODO/stub/mock/placeholder/Lorem (placeholder gate = 0).
+  [x] Host-runnable gates green on iOS-sim AND macOS SDKs under Swift 6 strict
+      concurrency; Xcode app build/test deferred to the integration runner for
+      pre-existing, out-of-scope baseline reasons (real evidence above, verified
+      at this HEAD — not assumed).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/KioskOverlay.swift \
+          apps/apple/TeslaSync/feature-views/KioskOverlay.Model.swift \
+          apps/apple/TeslaSync/feature-views/KioskOverlay.Telemetry.swift \
+          apps/apple/TeslaSync/feature-views/KioskOverlay.Previews.swift \
+          apps/apple/TeslaSync/feature-views/KioskOverlay.Tests.swift \
+          apps/apple/TeslaSync/feature-views/KioskOverlay.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0124-KioskOverlay.log
+  git commit -m "feat(apps/apple/feature-views): add KioskOverlay surface (P4)"
+
+EXIT=0
+STATUS=DONE
