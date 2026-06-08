@@ -1,0 +1,51 @@
+/*
+  LiveControls.strings
+  TeslaSync — P4 feature view · 0233 · LiveControls (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  LiveControls resolves (table "LiveControls") lives here with its English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  The first group is the strings extracted from the web source
+  (features/system/components/state-machine/LiveControls.tsx — the toolbar labels
+  plus the counter + tooltip templates). The web `{{name}}` i18next placeholders
+  become `printf` positional specifiers (`%1$d` / `%2$d`) for `String(format:)`.
+  The window-label group lifts the web `WINDOW_OPTIONS` literals into keyed strings
+  so no English literal lives in native code. The final group backs the native-only
+  chrome (loading / error / empty / stale / offline) and the toolbar group label the
+  Apple HIG states contract requires of a standalone surface.
+*/
+
+/* --- Web source: toolbar labels --- */
+"debugger.controls.live" = "Live";
+"debugger.controls.freeze" = "Freeze";
+"debugger.controls.stepPrev" = "Step to previous transition";
+"debugger.controls.stepNext" = "Step to next transition";
+"debugger.controls.window" = "Window";
+"debugger.controls.clear" = "Clear buffer";
+
+/* --- Web source: buffer counter + tooltip (i18next {{name}} → printf positional) --- */
+"debugger.controls.buffered" = "%1$d buffered";
+"debugger.controls.bufferedDual" = "%1$d in window · %2$d in 24 h";
+"debugger.controls.bufferedTooltip" = "Counts inside the %1$d-minute Window dropdown. %2$d more transitions fetched in the last 24 h.";
+
+/* --- Window-dropdown labels (web WINDOW_OPTIONS literals) --- */
+"debugger.controls.window.5m" = "5 min";
+"debugger.controls.window.10m" = "10 min";
+"debugger.controls.window.30m" = "30 min";
+"debugger.controls.window.120m" = "2 h";
+
+/* --- Native chrome: toolbar group label --- */
+"debugger.controls.toolbar" = "Live transition controls";
+
+/* --- Native chrome: loading / error --- */
+"debugger.controls.loading" = "Loading transition buffer…";
+"debugger.controls.error.message" = "Could not load the transition buffer.";
+"debugger.controls.retry" = "Retry";
+
+/* --- Native chrome: empty / stale / offline --- */
+"debugger.controls.empty" = "No transitions buffered yet";
+"debugger.controls.stale" = "Buffer may be out of date";
+"debugger.controls.offline" = "Offline — showing the cached buffer";
