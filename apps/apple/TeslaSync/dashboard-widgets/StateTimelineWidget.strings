@@ -1,0 +1,51 @@
+/*
+  StateTimelineWidget.strings
+  TeslaSync — P4 dashboard widget · 0096 · StateTimelineWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `StateTimelineWidget` resolves (table "StateTimelineWidget") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block holds the keys extracted verbatim from the web source
+  (features/dashboard/widgets/StateTimelineWidget.tsx). The remaining keys back
+  the registry metadata + the native chrome (freshness chip, refresh/retry/open,
+  loading/error/banner copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.stateTimeline.title" = "State Timeline";
+"widget.stateTimeline.timeline" = "24h Timeline";
+"widget.stateTimeline.noData" = "No state data available";
+"widget.stateTimeline.hr" = "h";
+"widget.stateTimeline.min" = "m";
+
+/* --- Per-state labels (web t('…state.<s>', seg.state)) --- */
+"widget.stateTimeline.state.driving" = "Driving";
+"widget.stateTimeline.state.charging" = "Charging";
+"widget.stateTimeline.state.asleep" = "Asleep";
+"widget.stateTimeline.state.idle" = "Idle";
+"widget.stateTimeline.state.offline" = "Offline";
+
+/* --- Registry metadata (registry/analytics.ts → "state-timeline") --- */
+"widget.stateTimeline" = "State Timeline";
+"widget.stateTimeline.description" = "Vehicle state distribution: driving, charging, asleep, idle breakdown";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.stateTimeline.live" = "Live";
+"widget.stateTimeline.stale" = "Stale";
+"widget.stateTimeline.offline" = "Offline";
+"widget.stateTimeline.refresh" = "Refresh";
+"widget.stateTimeline.retry" = "Retry";
+"widget.stateTimeline.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.stateTimeline.loading" = "Loading state timeline";
+"widget.stateTimeline.errorTitle" = "Couldn't load state timeline";
+"widget.stateTimeline.offlineBanner" = "Offline — showing last known states";
+"widget.stateTimeline.staleBanner" = "Reconnecting — states may be stale";
+
+/* --- Accessibility --- */
+"widget.stateTimeline.openA11y" = "Open the timeline page";
