@@ -1,0 +1,53 @@
+/*
+  BrowserPushChannelCard.strings
+  TeslaSync — P4 feature view · 0181 · BrowserPushChannelCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `BrowserPushChannelCard` resolves (table "BrowserPushChannelCard") lives here with
+  its web value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  Group 1 is the exact keys + values extracted from the web source
+  (features/notifications/components/BrowserPushChannelCard.tsx, namespace "webpush").
+  Group 2 backs the `formatRelative` port (web lib/dateFormat) reproduced inline.
+  Group 3 backs the native-only chrome (registered-device empty state, freshness
+  chip, loading / error / retry).
+*/
+
+/* --- Group 1: web source (webpush.*) --- */
+"webpush.title" = "Browser push";
+"webpush.subtitle" = "Get OS-level notifications even when TeslaSync is closed.";
+"webpush.status.subscribed" = "Active on this device";
+"webpush.status.notSubscribed" = "Not subscribed";
+"webpush.status.unsupported" = "Unavailable";
+"webpush.unsupported.notification" = "This browser doesn't support notifications.";
+"webpush.unsupported.serverDisabled" = "Browser push is not configured on this server. Ask your administrator to set the VAPID keys.";
+"webpush.unsupported.pushApi" = "This browser doesn't support the Push API.";
+"webpush.unsupported.permissionDenied" = "Notifications are blocked for this site. Re-enable them in your browser settings to use browser push.";
+"webpush.enable" = "Enable on this device";
+"webpush.disable" = "Disable on this device";
+"webpush.iosNote" = "iOS Safari requires version 16.4 or later, and you must add TeslaSync to your Home Screen.";
+"webpush.devices.title" = "Registered devices";
+"webpush.devices.unknownAgent" = "Unknown browser";
+"webpush.devices.lastUsed" = "Last used %@";
+"webpush.devices.neverUsed" = "Not yet used";
+"webpush.devices.thisDevice" = "(this device)";
+"webpush.devices.remove" = "Remove this device";
+
+/* --- Group 2: formatRelative port (web lib/dateFormat) --- */
+"webpush.relative.justNow" = "just now";
+"webpush.relative.minutes" = "%@m ago";
+"webpush.relative.hours" = "%@h ago";
+"webpush.relative.days" = "%@d ago";
+"webpush.relative.invalid" = "—";
+
+/* --- Group 3: native chrome (empty / freshness / loading / error) --- */
+"webpush.devices.empty.title" = "No devices registered";
+"webpush.devices.empty.message" = "Enable browser push on a device to see it listed here.";
+"webpush.refresh" = "Refresh";
+"webpush.stale" = "Reconnecting — these settings may be out of date";
+"webpush.offline" = "Offline — showing the last known settings";
+"webpush.loading" = "Loading browser push settings";
+"webpush.error.title" = "Couldn't load browser push settings";
+"webpush.error.retry" = "Retry";
