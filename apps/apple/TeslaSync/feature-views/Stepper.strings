@@ -1,0 +1,41 @@
+/*
+  Stepper.strings
+  TeslaSync — P4 feature view · 0195 · Stepper (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  Stepper resolves (table "Stepper") lives here with its English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first entry is the one string extracted from the web source
+  (features/onboarding/components/Stepper.tsx — the `<ol aria-label>`). The
+  remaining groups back the native-only chrome (loading / empty / error / stale
+  / offline) and the VoiceOver summary the Apple HIG states contract requires of
+  a standalone surface. Step titles/descriptions are caller-localized user data,
+  not catalog keys, exactly as on the web where they arrive pre-localized.
+*/
+
+/* --- Web source key (the ordered-list accessibility label) --- */
+"onboarding.stepper.label" = "Onboarding steps";
+
+/* --- Per-state words (VoiceOver summary) --- */
+"onboarding.stepper.state.done" = "Completed";
+"onboarding.stepper.state.current" = "In progress";
+"onboarding.stepper.state.pending" = "Not started";
+
+/* --- VoiceOver position clause (formatted with index + total) --- */
+"onboarding.stepper.position" = "Step %1$d of %2$d";
+
+/* --- Empty state (no remaining onboarding steps) --- */
+"onboarding.stepper.empty.title" = "You're all set";
+"onboarding.stepper.empty.message" = "There are no onboarding steps left to complete.";
+
+/* --- Loading / error chrome --- */
+"onboarding.stepper.loading" = "Loading setup steps…";
+"onboarding.stepper.error.message" = "Could not load your onboarding steps.";
+"onboarding.stepper.retry" = "Retry";
+
+/* --- Stale + offline chips --- */
+"onboarding.stepper.stale" = "Setup status may be out of date";
+"onboarding.stepper.offline" = "Offline — showing last known setup status";
