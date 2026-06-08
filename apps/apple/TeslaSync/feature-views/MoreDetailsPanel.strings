@@ -1,0 +1,48 @@
+/*
+  MoreDetailsPanel.strings
+  TeslaSync — P4 feature view · 0145 · MoreDetailsPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `MoreDetailsPanel` resolves (table "MoreDetailsPanel") lives here with its web English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time;
+  they are kept in a per-surface table so each parallel surface prompt owns its own strings
+  without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/driving/components/drive-detail/MoreDetailsPanel.tsx) — the canonical
+  `driveDetail.*` namespace. The remaining keys back the native-only chrome (freshness chip,
+  stale/offline banner, loading + error + retry copy, empty hint, and the elevation gain/loss
+  VoiceOver labels).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.moreDetails" = "More Details";
+"driveDetail.odometer" = "Odometer (From → To)";
+"driveDetail.rangeStartEnd" = "Range (Start → End)";
+"driveDetail.elevSummary" = "Elevation Summary";
+"driveDetail.energyConsumed" = "Energy Consumed";
+"driveDetail.energyRecovered" = "Energy Recovered";
+"driveDetail.consumptionRate" = "Consumption";
+"driveDetail.avgPower" = "Avg Power";
+"driveDetail.avgOutsideTemp" = "Avg Outside Temp";
+"driveDetail.avgInsideTemp" = "Avg Inside Temp";
+"driveDetail.minSpeed" = "Min Speed";
+"driveDetail.batteryUsed" = "Battery Used";
+"driveDetail.netEnergy" = "Net Consumption";
+
+/* --- Native chrome: freshness + connectivity --- */
+"driveDetail.moreDetails.live" = "Live";
+"driveDetail.moreDetails.stale" = "Stale";
+"driveDetail.moreDetails.offline" = "Offline";
+"driveDetail.moreDetails.staleBanner" = "Reconnecting — drive details may be stale";
+"driveDetail.moreDetails.offlineBanner" = "Offline — showing the last loaded drive details";
+
+/* --- Native chrome: states --- */
+"driveDetail.moreDetails.loading" = "Loading drive details";
+"driveDetail.moreDetails.errorTitle" = "Couldn't load drive details";
+"driveDetail.moreDetails.retry" = "Retry";
+"driveDetail.moreDetails.empty" = "No additional detail for this drive yet";
+
+/* --- Native chrome: elevation gain/loss VoiceOver labels --- */
+"driveDetail.moreDetails.elevGain" = "Gain";
+"driveDetail.moreDetails.elevLoss" = "Loss";
