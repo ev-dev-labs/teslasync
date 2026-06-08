@@ -1,12 +1,12 @@
 //
 //  HeroGauges.Model.swift
-//  TeslaSync — P4 feature view · 0103 · HeroGauges (Apple)
+//  TeslaSync — P4 feature view · 0143 · HeroGauges (Apple)
 //
 //  State-holder seam (P1/S8) + telemetry seam (P1/S11 diagnostics) + i18n facade
 //  (P1/S10). The view binds through `HeroGaugesModel`; no networking lives in the view.
-//  SwiftUI parity of features/charging/components/charging-list/HeroGauges.tsx — the four
-//  headline charging "hero" gauges (Sessions, Energy, Total Cost, Avg Power) plus the
-//  Avg $/kWh readout the charging list renders above its session table.
+//  SwiftUI parity of features/driving/components/drive-detail/HeroGauges.tsx — the drive-detail
+//  headline "hero" radial gauges (Distance, Max Speed, Duration, Consumption, and the conditional
+//  Efficiency gauge) the drive-detail page renders above the rest of the drive breakdown.
 //
 //  Deliberately SwiftUI-free (Foundation + Observation + OSLog only) so the model + the
 //  projection it drives compile and run on a plain host and are pinned by unit tests; the
@@ -40,11 +40,37 @@ public struct OSLogHeroGaugesTelemetry: HeroGaugesTelemetry {
     }
 }
 
+// MARK: - Display-unit preferences (web `useUnits().unitPrefs` + `useSettings().isMiles`)
+
+/// Distance display unit the surface labels gauges with — the subset of the web
+/// `DistanceUnitPref` (`'km' | 'mi' | 'ft'`) `useUnits` derives from the user's length setting.
+public enum DistanceUnit: String, Sendable, Equatable {
+    case km
+    case mi
+    case ft
+
+    /// The literal suffix the web `RadialGauge` shows (`unitPrefs.distance`).
+    public var label: String {
+        rawValue
+    }
+}
+
+/// Speed display unit — the web `SpeedUnitPref` (`'km/h' | 'mph'`).
+public enum SpeedUnit: String, Sendable, Equatable {
+    case kmh = "km/h"
+    case mph
+
+    /// The literal suffix the web `RadialGauge` shows (`unitPrefs.speed`).
+    public var label: String {
+        rawValue
+    }
+}
+
 // MARK: - State-holder seam (P1/S8 layer)
 
-/// The load lifecycle for the surface's charging query, mirroring the shared `LoadableState`
-/// cases the production source projects from the `useCharging` hook (web `isLoading` skeleton /
-/// resolved `stats` / `stats === null` empty / failure).
+/// The load lifecycle for the surface's drive-detail query, mirroring the shared `LoadableState`
+/// cases the production source projects from `useDriveDetailData` (web `isLoading` skeleton /
+/// resolved `stats` / no stats empty / failure).
 public enum HeroLoadStatus: Sendable, Equatable {
     case loading
     case loaded
@@ -60,53 +86,70 @@ public enum HeroConnection: Sendable, Equatable {
     case offline
 }
 
-/// The computed charging summary this surface reads — the exact subset of the web `ChargingStats`
-/// DTO (from `computeStats(sessions)`) that `HeroGauges` consumes. `count` is the session count,
-/// `totalEnergy` is kWh, `totalCost` is in the user's currency, `avgPower` is kW, and
-/// `avgCostPerKwh` is currency-per-kWh. The shared `ChargingStore` projects these from the API
-/// the same way the web hook does; display formatting happens in `HeroGaugesProjector`.
-public struct ChargingStatsDTO: Sendable, Equatable {
-    public var count: Int
-    public var totalEnergy: Double
-    public var totalCost: Double
-    public var avgPower: Double
-    public var avgCostPerKwh: Double
+/// The exact subset of the web drive metrics this surface consumes — the `DriveDetail` plus the
+/// computed `DriveStats` fields the component reads. `distanceM` is SI meters and `durationS` is SI
+/// seconds (both read straight off the canonical `DriveDetail`); `maxSpeed` is the already
+/// display-unit max speed `useDriveDetailData` computed via `toSpeedDisplay(maxSpeedMps)`;
+/// `consumptionWhKm` is Wh/km; `efficiencyPctPer100` is the optional %-per-100 gauge (the web
+/// renders the fifth gauge only when it is non-nil). The shared `DriveDetailStore` projects these
+/// from the API the same way the web hook does; display formatting happens in `HeroGaugesProjector`.
+public struct DriveGaugeStats: Sendable, Equatable {
+    public var distanceM: Double
+    public var durationS: Double?
+    public var maxSpeed: Double
+    public var consumptionWhKm: Double
+    public var efficiencyPctPer100: Double?
 
     public init(
-        count: Int = 0,
-        totalEnergy: Double = 0,
-        totalCost: Double = 0,
-        avgPower: Double = 0,
-        avgCostPerKwh: Double = 0
+        distanceM: Double = 0,
+        durationS: Double? = nil,
+        maxSpeed: Double = 0,
+        consumptionWhKm: Double = 0,
+        efficiencyPctPer100: Double? = nil
     ) {
-        self.count = count
-        self.totalEnergy = totalEnergy
-        self.totalCost = totalCost
-        self.avgPower = avgPower
-        self.avgCostPerKwh = avgCostPerKwh
+        self.distanceM = distanceM
+        self.durationS = durationS
+        self.maxSpeed = maxSpeed
+        self.consumptionWhKm = consumptionWhKm
+        self.efficiencyPctPer100 = efficiencyPctPer100
     }
 }
 
-/// The user's display preferences for this surface, mirroring `useFormatting()`. The web component
-/// renders the currency symbol literally as "$"; the production app resolves the real symbol +
-/// locale and pushes them with each snapshot so the view never reads settings directly.
+/// The user's display preferences for this surface, mirroring `useUnits()` + `useSettings()`. The
+/// production app resolves the length pref (→ `distance`/`speed`), the `isMiles` flag the efficiency
+/// gauge keys its unit off, and the formatting locale, then pushes them with each snapshot so the
+/// view never reads settings directly.
 public struct HeroUnitPrefs: Sendable, Equatable {
-    public var currencySymbol: String
+    public var distance: DistanceUnit
+    public var speed: SpeedUnit
+    public var isMiles: Bool
     public var localeIdentifier: String
 
-    public init(currencySymbol: String = "$", localeIdentifier: String = "en_US") {
-        self.currencySymbol = currencySymbol
+    public init(
+        distance: DistanceUnit = .km,
+        speed: SpeedUnit = .kmh,
+        isMiles: Bool = false,
+        localeIdentifier: String = "en_US"
+    ) {
+        self.distance = distance
+        self.speed = speed
+        self.isMiles = isMiles
         self.localeIdentifier = localeIdentifier
     }
+
+    /// Convenience metric preset (km / km/h).
+    public static let metric = HeroUnitPrefs(distance: .km, speed: .kmh, isMiles: false)
+    /// Convenience imperial preset (mi / mph) keyed for the `%/100mi` efficiency unit.
+    public static let imperial = HeroUnitPrefs(distance: .mi, speed: .mph, isMiles: true)
 }
 
-/// One coalesced snapshot pushed by a `HeroGaugesSource`: the computed charging stats + display
-/// prefs plus their load/connection status. The model turns this into the projection.
+/// One coalesced snapshot pushed by a `HeroGaugesSource`: the drive metrics + display prefs plus
+/// their load/connection status. The model turns this into the projection.
 public struct HeroGaugesUpdate: Sendable, Equatable {
     public var status: HeroLoadStatus
     public var connection: HeroConnection
     public var isFetching: Bool
-    public var stats: ChargingStatsDTO?
+    public var stats: DriveGaugeStats?
     public var units: HeroUnitPrefs
     public var updatedAt: Date?
 
@@ -114,7 +157,7 @@ public struct HeroGaugesUpdate: Sendable, Equatable {
         status: HeroLoadStatus = .loading,
         connection: HeroConnection = .live,
         isFetching: Bool = false,
-        stats: ChargingStatsDTO? = nil,
+        stats: DriveGaugeStats? = nil,
         units: HeroUnitPrefs = HeroUnitPrefs(),
         updatedAt: Date? = nil
     ) {
@@ -128,9 +171,9 @@ public struct HeroGaugesUpdate: Sendable, Equatable {
 }
 
 /// The seam the view binds through. The production app implements this over the shared P1/S8 state
-/// holders (`StateHolderModel<LoadableState<ChargingStats>>` from the KMP `ChargingStore` composed
-/// with the `SettingsStore` for `useFormatting`); previews and tests use
-/// `InMemoryHeroGaugesSource`. The view never talks to the network directly.
+/// holders (`StateHolderModel<LoadableState<DriveDetail>>` from the KMP `DriveDetailStore` composed
+/// with the `SettingsStore` for `useUnits`); previews and tests use `InMemoryHeroGaugesSource`. The
+/// view never talks to the network directly.
 @MainActor
 public protocol HeroGaugesSource: AnyObject {
     /// Set by the model; invoked on the main actor for every coalesced snapshot.

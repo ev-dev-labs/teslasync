@@ -1,33 +1,33 @@
 /*
   HeroGauges.strings
-  TeslaSync — P4 feature view · 0103 · HeroGauges (Apple)
+  TeslaSync — P4 feature view · 0143 · HeroGauges (Apple)
 
   The P1/S10 i18n catalog contribution for this surface. Every key the native `HeroGauges`
   resolves (table "HeroGauges") lives here with its web English value. These entries fold into the
   app `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface
   table so each parallel surface prompt owns its own strings without editing the shared catalog.
 
-  The first group holds the keys extracted verbatim from the web source
-  (features/charging/components/charging-list/HeroGauges.tsx) — the canonical `charging.gauges.*`
-  labels and the `charging.noStats` empty message. The remaining keys back the native-only chrome
-  (freshness chip, loading + error + retry copy).
+  The first group holds the gauge-label keys extracted verbatim from the web source
+  (features/driving/components/drive-detail/HeroGauges.tsx) — the canonical `driveDetail.*` labels —
+  and the section-error key the drive-detail page's SectionErrorBoundary shows. The remaining keys
+  back the native-only chrome (freshness chip, loading + empty + retry copy).
 */
 
 /* --- Keys from the web source (parity) --- */
-"charging.gauges.sessions" = "Sessions";
-"charging.gauges.energy" = "Energy";
-"charging.gauges.totalCost" = "Total Cost";
-"charging.gauges.avgPower" = "Avg Power";
-"charging.gauges.avgCostPerKwh" = "Avg $/kWh";
-"charging.noStats" = "No charging statistics available yet";
+"driveDetail.distance" = "Distance";
+"driveDetail.maxSpeed" = "Max Speed";
+"driveDetail.duration" = "Duration";
+"driveDetail.consumption" = "Consumption";
+"driveDetail.efficiency" = "Efficiency";
+"driveDetail.section.heroGaugesFailed" = "Hero gauges failed to load";
 
 /* --- Native chrome: freshness chip --- */
-"charging.gauges.live" = "Live";
-"charging.gauges.stale" = "Stale";
-"charging.gauges.offline" = "Offline";
-"charging.gauges.updating" = "Updating";
+"driveDetail.gauges.live" = "Live";
+"driveDetail.gauges.stale" = "Stale";
+"driveDetail.gauges.offline" = "Offline";
+"driveDetail.gauges.updating" = "Updating";
 
 /* --- Native chrome: states --- */
-"charging.gauges.loading" = "Loading charging stats";
-"charging.gauges.errorTitle" = "Couldn't load charging stats";
-"charging.gauges.retry" = "Retry";
+"driveDetail.gauges.loading" = "Loading drive metrics";
+"driveDetail.gauges.noData" = "No drive metrics available yet";
+"driveDetail.gauges.retry" = "Retry";

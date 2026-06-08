@@ -1,11 +1,11 @@
 //
 //  HeroGauges.swift
-//  TeslaSync — P4 feature view · 0103 · HeroGauges (Apple)
+//  TeslaSync — P4 feature view · 0143 · HeroGauges (Apple)
 //
-//  The composable charging "Hero Gauges" surface — the SwiftUI parity of
-//  features/charging/components/charging-list/HeroGauges.tsx. Renders every state from the web
-//  source (loading skeleton / empty / error / stale / offline / content) for the four headline
-//  charging gauges plus the Avg $/kWh readout, binding through `HeroGaugesModel` (P1/S8). No
+//  The composable drive-detail "Hero Gauges" surface — the SwiftUI parity of
+//  features/driving/components/drive-detail/HeroGauges.tsx. Renders every state from the web source
+//  (loading skeleton / empty / error / stale / offline / content) for the four headline drive
+//  gauges plus the conditional Efficiency gauge, binding through `HeroGaugesModel` (P1/S8). No
 //  networking lives here; the freshness chip + auto-refresh reflect the bound source's live-state.
 //
 
@@ -22,12 +22,13 @@ public extension HeroGaugesStrings {
     }
 }
 
-// MARK: - HeroGauges (the charging surface)
+// MARK: - HeroGauges (the drive-detail surface)
 
-/// The composable charging Hero Gauges surface — the SwiftUI parity of
-/// `features/charging/components/charging-list/HeroGauges.tsx`. Renders every state from the web
-/// source and the four-gauge responsive row plus the Avg $/kWh readout, binding through
-/// `HeroGaugesModel` (P1/S8). No networking lives here.
+/// The composable drive-detail Hero Gauges surface — the SwiftUI parity of
+/// `features/driving/components/drive-detail/HeroGauges.tsx`. Renders every state from the web
+/// source and the responsive gauge row (Distance / Max Speed / Duration / Consumption + the
+/// conditional Efficiency gauge), binding through `HeroGaugesModel` (P1/S8). No networking lives
+/// here.
 public struct HeroGauges: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
     public static let surfaceSlug = HeroGaugesSurface.slug
@@ -92,7 +93,7 @@ private extension HeroGauges {
         case let .error(message):
             errorState(message)
         case .content:
-            if let projection = model.projection {
+            if let projection = model.projection, !projection.gauges.isEmpty {
                 HeroGaugesGrid(projection: projection)
             } else {
                 emptyState
@@ -100,25 +101,28 @@ private extension HeroGauges {
         }
     }
 
-    /// The web empty branch: `<EmptyState message={t('charging.noStats', …)} />`.
+    /// The friendly empty branch — the web component always has props, so this is native chrome for
+    /// a resolved-but-empty drive (no metrics computed yet); never a blank panel.
     var emptyState: some View {
         TSEmptyState(
             title: LocalizedStringKey(
-                HeroGaugesStrings.string("charging.noStats", "No charging statistics available yet")
+                HeroGaugesStrings.string("driveDetail.gauges.noData", "No drive metrics available yet")
             ),
-            systemImage: "bolt.fill"
+            systemImage: "speedometer"
         )
         .frame(maxWidth: .infinity)
         .padding(.vertical, TSSpacing.lg)
     }
 
+    /// The drive-detail section error — uses the canonical `driveDetail.section.heroGaugesFailed`
+    /// copy the web `SectionErrorBoundary` shows when this section throws, plus a retry affordance.
     func errorState(_ message: String) -> some View {
         VStack(spacing: TSSpacing.sm) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 26))
                 .foregroundStyle(Color.TS.statusDanger)
                 .accessibilityHidden(true)
-            HeroGaugesStrings.text("charging.gauges.errorTitle", "Couldn't load charging stats")
+            HeroGaugesStrings.text("driveDetail.section.heroGaugesFailed", "Hero gauges failed to load")
                 .font(Font.TS.panel)
                 .foregroundStyle(Color.TS.textPrimary)
                 .multilineTextAlignment(.center)
@@ -131,7 +135,7 @@ private extension HeroGauges {
             Button {
                 model.refresh()
             } label: {
-                HeroGaugesStrings.text("charging.gauges.retry", "Retry")
+                HeroGaugesStrings.text("driveDetail.gauges.retry", "Retry")
                     .font(Font.TS.caption)
                     .fontWeight(.semibold)
                     .padding(.horizontal, TSSpacing.md)
@@ -140,7 +144,7 @@ private extension HeroGauges {
                     .foregroundStyle(Color.TS.accent)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(HeroGaugesStrings.text("charging.gauges.retry", "Retry"))
+            .accessibilityLabel(HeroGaugesStrings.text("driveDetail.gauges.retry", "Retry"))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, TSSpacing.lg)

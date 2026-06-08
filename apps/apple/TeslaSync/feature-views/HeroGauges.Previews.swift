@@ -1,9 +1,10 @@
 //
 //  HeroGauges.Previews.swift
-//  TeslaSync — P4 feature view · 0103 · HeroGauges (Apple)
+//  TeslaSync — P4 feature view · 0143 · HeroGauges (Apple)
 //
-//  Xcode previews for each surface state (content / empty / loading / error / stale / offline).
-//  DEBUG-only; compiled by the app targets and skipped by the shipped-surface gate scope.
+//  Xcode previews for each surface state (content / empty / loading / error / stale / offline) plus
+//  the metric/imperial unit variants and the no-efficiency four-gauge variant. DEBUG-only; compiled
+//  by the app targets and skipped by the shipped-surface gate scope.
 //
 
 import Foundation
@@ -18,22 +19,26 @@ import SwiftUI
         return model
     }
 
-    private func previewStats() -> ChargingStatsDTO {
-        ChargingStatsDTO(
-            count: 42,
-            totalEnergy: 318.6,
-            totalCost: 87.4,
-            avgPower: 48.2,
-            avgCostPerKwh: 0.274
+    private func previewStats(efficiency: Double? = 14.2) -> DriveGaugeStats {
+        DriveGaugeStats(
+            distanceM: 41840,
+            durationS: 2220,
+            maxSpeed: 118,
+            consumptionWhKm: 168,
+            efficiencyPctPer100: efficiency
         )
     }
 
-    private func loadedUpdate(connection: HeroConnection = .live) -> HeroGaugesUpdate {
+    private func loadedUpdate(
+        connection: HeroConnection = .live,
+        units: HeroUnitPrefs = .metric,
+        efficiency: Double? = 14.2
+    ) -> HeroGaugesUpdate {
         HeroGaugesUpdate(
             status: .loaded,
             connection: connection,
-            stats: previewStats(),
-            units: HeroUnitPrefs(),
+            stats: previewStats(efficiency: efficiency),
+            units: units,
             updatedAt: Date()
         )
     }
@@ -47,19 +52,16 @@ import SwiftUI
         .background(Color.TS.bg)
     }
 
-    #Preview("Content") {
+    #Preview("Content (metric)") {
         previewSurface(loadedUpdate())
     }
 
-    #Preview("Content (euro)") {
-        previewSurface(
-            HeroGaugesUpdate(
-                status: .loaded,
-                stats: previewStats(),
-                units: HeroUnitPrefs(currencySymbol: "€", localeIdentifier: "de_DE"),
-                updatedAt: Date()
-            )
-        )
+    #Preview("Content (imperial)") {
+        previewSurface(loadedUpdate(units: .imperial))
+    }
+
+    #Preview("Content (no efficiency)") {
+        previewSurface(loadedUpdate(efficiency: nil))
     }
 
     #Preview("Empty") {

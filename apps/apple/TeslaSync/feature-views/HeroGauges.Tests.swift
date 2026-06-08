@@ -1,12 +1,13 @@
 //
 //  HeroGauges.Tests.swift
-//  TeslaSync — P4 feature view · 0103 · HeroGauges (Apple)
+//  TeslaSync — P4 feature view · 0143 · HeroGauges (Apple)
 //
-//  Unit + UI coverage for the charging HeroGauges surface:
-//    • Adapter (cached → projection) — `HeroGaugesFormat` number/integer/currency parity with the
-//      web `fmtNumber`/`fmtInt`/`formatCurrency`, the half-away-from-zero pre-round, and the
-//      `HeroGaugesProjector` gauge math (clamped value, value/max fill fraction, units, accents,
-//      and the Avg $/kWh 2-then-3 decimal pipeline).
+//  Unit + UI coverage for the drive-detail HeroGauges surface:
+//    • Adapter (cached → projection) — `HeroGaugesFormat` SI converters + number formatting parity
+//      with the web `convertDistanceFromSI`/`convertSpeedFromSI`/`fmtNumber`, the JS `Math.round`
+//      half-up, the `Number(fmtNumber(x))` grouping→NaN quirk, and the `HeroGaugesProjector` gauge
+//      math (clamped value, value/max fill fraction, units, accents, metric/imperial conversion,
+//      and the conditional fifth Efficiency gauge).
 //    • State holder — `HeroGaugesModel` phase resolution across loading / empty / error / content,
 //      projection recompute, refresh delegation, the stale auto-refresh guard, and the P1/S11
 //      `view.opened` telemetry.
@@ -21,7 +22,7 @@ import SwiftUI
 import XCTest
 @testable import TeslaSync
 
-// MARK: - Adapter: formatting + pre-round (web parity)
+// MARK: - Adapter: SI converters + formatting (web parity)
 
 final class HeroGaugesFormatTests: XCTestCase {
     func testNumberGroupsAndFixesFractionDigits() {
@@ -35,27 +36,39 @@ final class HeroGaugesFormatTests: XCTestCase {
         XCTAssertEqual(HeroGaugesFormat.number(2.5, decimals: 0), "3")
     }
 
-    func testIntegerGroups() {
-        XCTAssertEqual(HeroGaugesFormat.integer(1234), "1,234")
-        XCTAssertEqual(HeroGaugesFormat.integer(0), "0")
-    }
-
-    func testCurrencyPrefixesSymbol() {
-        XCTAssertEqual(HeroGaugesFormat.currency(0.27, symbol: "$", decimals: 3), "$0.270")
-        XCTAssertEqual(HeroGaugesFormat.currency(1234.4, symbol: "€", decimals: 0), "€1,234")
-    }
-
     func testSafeNumberCollapsesNonFinite() {
         XCTAssertEqual(HeroGaugesFormat.safeNumber(.nan), 0)
         XCTAssertEqual(HeroGaugesFormat.safeNumber(.infinity), 0)
         XCTAssertEqual(HeroGaugesFormat.safeNumber(42.5), 42.5)
     }
 
-    func testRoundHalfAwayFromZeroToPlaces() {
-        XCTAssertEqual(HeroGaugesFormat.round(0.274, places: 2), 0.27, accuracy: 1e-9)
-        XCTAssertEqual(HeroGaugesFormat.round(0.156, places: 2), 0.16, accuracy: 1e-9)
-        XCTAssertEqual(HeroGaugesFormat.round(0.125, places: 2), 0.13, accuracy: 1e-9)
-        XCTAssertEqual(HeroGaugesFormat.round(.nan, places: 2), 0)
+    func testMathRoundHalfUpTowardPositiveInfinity() {
+        XCTAssertEqual(HeroGaugesFormat.mathRound(2.5), 3)
+        XCTAssertEqual(HeroGaugesFormat.mathRound(2.4), 2)
+        XCTAssertEqual(HeroGaugesFormat.mathRound(0.5), 1)
+        XCTAssertEqual(HeroGaugesFormat.mathRound(36.999), 37)
+        XCTAssertEqual(HeroGaugesFormat.mathRound(.nan), 0)
+    }
+
+    func testConvertDistanceFromSI() {
+        XCTAssertEqual(HeroGaugesFormat.convertDistanceFromSI(1000, to: .km), 1.0, accuracy: 1e-9)
+        XCTAssertEqual(HeroGaugesFormat.convertDistanceFromSI(1609.344, to: .mi), 1.0, accuracy: 1e-9)
+        XCTAssertEqual(HeroGaugesFormat.convertDistanceFromSI(1, to: .ft), 1.0 / 0.3048, accuracy: 1e-9)
+    }
+
+    func testConvertSpeedFromSI() {
+        XCTAssertEqual(HeroGaugesFormat.convertSpeedFromSI(10, to: .kmh), 36.0, accuracy: 1e-9)
+        XCTAssertEqual(HeroGaugesFormat.convertSpeedFromSI(10, to: .mph), 36000.0 / 1609.344, accuracy: 1e-9)
+        // The speed gauge's max bound: convertSpeedFromSI(250, …) — reproduced verbatim from the web.
+        XCTAssertEqual(HeroGaugesFormat.convertSpeedFromSI(250, to: .kmh), 900.0, accuracy: 1e-9)
+    }
+
+    func testNumberFromFormattedMirrorsNumberOfFmtNumber() {
+        // Small values round-trip through the en-US formatter to a parseable double.
+        XCTAssertEqual(HeroGaugesFormat.numberFromFormatted(14.2), 14.2, accuracy: 1e-9)
+        XCTAssertEqual(HeroGaugesFormat.numberFromFormatted(9.0), 9.0, accuracy: 1e-9)
+        // A grouped (≥ 1000) value stringifies with a comma; JS `Number("1,234.50")` is NaN.
+        XCTAssertTrue(HeroGaugesFormat.numberFromFormatted(1234.5).isNaN)
     }
 }
 
@@ -66,73 +79,83 @@ final class HeroGaugesProjectorTests: XCTestCase {
         projection.gauges.first { $0.id == id }
     }
 
-    private func sample() -> ChargingStatsDTO {
-        ChargingStatsDTO(count: 42, totalEnergy: 318.6, totalCost: 87.4, avgPower: 48.2, avgCostPerKwh: 0.274)
+    /// 41.84 km / 37 min / 118 km/h / 168 Wh/km / 14.2 %/100.
+    private func sample(efficiency: Double? = 14.2) -> DriveGaugeStats {
+        DriveGaugeStats(
+            distanceM: 41840,
+            durationS: 2220,
+            maxSpeed: 118,
+            consumptionWhKm: 168,
+            efficiencyPctPer100: efficiency
+        )
     }
 
-    func testGaugeOrderAccentsAndUnits() {
-        let projection = HeroGaugesProjector.project(stats: sample(), units: HeroUnitPrefs())
-        XCTAssertEqual(projection.gauges.map(\.id), ["sessions", "energy", "total-cost", "avg-power"])
-        XCTAssertEqual(projection.gauges.map(\.accent), [.cyan, .green, .amber, .purple])
-        XCTAssertNil(gauge("sessions", in: projection)?.unit)
-        XCTAssertEqual(gauge("energy", in: projection)?.unit, "kWh")
-        XCTAssertEqual(gauge("total-cost", in: projection)?.unit, "$")
-        XCTAssertEqual(gauge("avg-power", in: projection)?.unit, "kW")
+    func testGaugeOrderAccentsAndUnitsMetric() {
+        let projection = HeroGaugesProjector.project(stats: sample(), units: .metric)
+        XCTAssertEqual(projection.gauges.map(\.id), ["distance", "max-speed", "duration", "consumption", "efficiency"])
+        XCTAssertEqual(projection.gauges.map(\.accent), [.cyan, .purple, .amber, .red, .green])
+        XCTAssertEqual(gauge("distance", in: projection)?.unit, "km")
+        XCTAssertEqual(gauge("max-speed", in: projection)?.unit, "km/h")
+        XCTAssertEqual(gauge("duration", in: projection)?.unit, "min")
+        XCTAssertEqual(gauge("consumption", in: projection)?.unit, "Wh/km")
+        XCTAssertEqual(gauge("efficiency", in: projection)?.unit, "%/100km")
     }
 
-    func testGaugeValuesAreClampedWholeNumbers() {
-        let projection = HeroGaugesProjector.project(stats: sample(), units: HeroUnitPrefs())
-        XCTAssertEqual(gauge("sessions", in: projection)?.value, "42")
-        XCTAssertEqual(gauge("energy", in: projection)?.value, "319") // round(318.6)
-        XCTAssertEqual(gauge("total-cost", in: projection)?.value, "87") // round(87.4)
-        XCTAssertEqual(gauge("avg-power", in: projection)?.value, "48") // round(48.2)
+    func testGaugeValuesMetric() {
+        let projection = HeroGaugesProjector.project(stats: sample(), units: .metric)
+        XCTAssertEqual(gauge("distance", in: projection)?.value, "42") // round(41.84)
+        XCTAssertEqual(gauge("max-speed", in: projection)?.value, "118")
+        XCTAssertEqual(gauge("duration", in: projection)?.value, "37") // 2220 / 60
+        XCTAssertEqual(gauge("consumption", in: projection)?.value, "168")
+        XCTAssertEqual(gauge("efficiency", in: projection)?.value, "14.20") // 2-decimal global precision
     }
 
     func testGaugeFillFractionsMatchValueOverMax() {
-        let projection = HeroGaugesProjector.project(stats: sample(), units: HeroUnitPrefs())
-        XCTAssertEqual(gauge("sessions", in: projection)?.fraction ?? -1, 42.0 / 50.0, accuracy: 1e-9)
-        XCTAssertEqual(gauge("energy", in: projection)?.fraction ?? -1, 319.0 / 500.0, accuracy: 1e-9)
-        XCTAssertEqual(gauge("total-cost", in: projection)?.fraction ?? -1, 87.0 / 100.0, accuracy: 1e-9)
-        XCTAssertEqual(gauge("avg-power", in: projection)?.fraction ?? -1, 48.0 / 250.0, accuracy: 1e-9)
+        let projection = HeroGaugesProjector.project(stats: sample(), units: .metric)
+        XCTAssertEqual(gauge("distance", in: projection)?.fraction ?? -1, 42.0 / 100.0, accuracy: 1e-9)
+        XCTAssertEqual(gauge("max-speed", in: projection)?.fraction ?? -1, 118.0 / 900.0, accuracy: 1e-9)
+        XCTAssertEqual(gauge("duration", in: projection)?.fraction ?? -1, 37.0 / 60.0, accuracy: 1e-9)
+        XCTAssertEqual(gauge("consumption", in: projection)?.fraction ?? -1, 168.0 / 300.0, accuracy: 1e-9)
+        XCTAssertEqual(gauge("efficiency", in: projection)?.fraction ?? -1, 14.2 / 30.0, accuracy: 1e-9)
     }
 
-    func testSessionsFloorIsFiftyAndAvgPowerClampsAt250() {
-        let small = ChargingStatsDTO(count: 3, totalEnergy: 0, totalCost: 0, avgPower: 300, avgCostPerKwh: 0)
-        let projection = HeroGaugesProjector.project(stats: small, units: HeroUnitPrefs())
-        // sessions: max(count, 50) floor → 3/50
-        XCTAssertEqual(gauge("sessions", in: projection)?.fraction ?? -1, 3.0 / 50.0, accuracy: 1e-9)
-        // avg power: fixed max 250, clamped value + full ring
-        XCTAssertEqual(gauge("avg-power", in: projection)?.value, "250")
-        XCTAssertEqual(gauge("avg-power", in: projection)?.fraction ?? -1, 1.0, accuracy: 1e-9)
+    func testImperialConvertsDistanceAndConsumptionAndEfficiencyUnit() {
+        let projection = HeroGaugesProjector.project(stats: sample(), units: .imperial)
+        // 41840 m / 1609.344 = 25.998… → round → 26 mi
+        XCTAssertEqual(gauge("distance", in: projection)?.value, "26")
+        XCTAssertEqual(gauge("distance", in: projection)?.unit, "mi")
+        // 168 Wh/km * 1.609344 = 270.37 → round → 270 Wh/mi
+        XCTAssertEqual(gauge("consumption", in: projection)?.value, "270")
+        XCTAssertEqual(gauge("consumption", in: projection)?.unit, "Wh/mi")
+        XCTAssertEqual(gauge("max-speed", in: projection)?.unit, "mph")
+        XCTAssertEqual(gauge("efficiency", in: projection)?.unit, "%/100mi")
     }
 
-    func testAvgCostMetricUsesTwoThenThreeDecimalPipeline() {
-        // 0.156 → round2 0.16 → render 3 decimals → "$0.160"
-        let stats = ChargingStatsDTO(count: 1, totalEnergy: 1, totalCost: 1, avgPower: 1, avgCostPerKwh: 0.156)
-        let projection = HeroGaugesProjector.project(stats: stats, units: HeroUnitPrefs())
-        XCTAssertEqual(projection.cost.id, "avg-cost-per-kwh")
-        XCTAssertEqual(projection.cost.value, "$0.160")
+    func testEfficiencyGaugeOmittedWhenNil() {
+        let projection = HeroGaugesProjector.project(stats: sample(efficiency: nil), units: .metric)
+        XCTAssertEqual(projection.gauges.map(\.id), ["distance", "max-speed", "duration", "consumption"])
+        XCTAssertNil(gauge("efficiency", in: projection))
     }
 
-    func testCurrencySymbolAppliesToCostGaugeAndMetric() {
-        let units = HeroUnitPrefs(currencySymbol: "€", localeIdentifier: "en_US")
-        let projection = HeroGaugesProjector.project(stats: sample(), units: units)
-        XCTAssertEqual(gauge("total-cost", in: projection)?.unit, "€")
-        XCTAssertEqual(projection.cost.value.first.map(String.init), "€")
+    func testNilDurationFloorsToZeroMinutes() {
+        let stats = DriveGaugeStats(distanceM: 1000, durationS: nil, maxSpeed: 0, consumptionWhKm: 0)
+        let projection = HeroGaugesProjector.project(stats: stats, units: .metric)
+        XCTAssertEqual(gauge("duration", in: projection)?.value, "0")
+        XCTAssertEqual(gauge("duration", in: projection)?.fraction ?? -1, 0, accuracy: 1e-9)
     }
 
     func testNonFiniteInputsCollapseToZero() {
-        let bad = ChargingStatsDTO(
-            count: 0,
-            totalEnergy: .nan,
-            totalCost: .infinity,
-            avgPower: .nan,
-            avgCostPerKwh: .nan
+        let bad = DriveGaugeStats(
+            distanceM: .nan,
+            durationS: .infinity,
+            maxSpeed: .nan,
+            consumptionWhKm: .nan,
+            efficiencyPctPer100: .nan
         )
-        let projection = HeroGaugesProjector.project(stats: bad, units: HeroUnitPrefs())
-        XCTAssertEqual(gauge("energy", in: projection)?.value, "0")
-        XCTAssertEqual(gauge("energy", in: projection)?.fraction ?? -1, 0, accuracy: 1e-9)
-        XCTAssertEqual(projection.cost.value, "$0.000")
+        let projection = HeroGaugesProjector.project(stats: bad, units: .metric)
+        XCTAssertEqual(gauge("distance", in: projection)?.value, "0")
+        XCTAssertEqual(gauge("consumption", in: projection)?.value, "0")
+        XCTAssertEqual(gauge("consumption", in: projection)?.fraction ?? -1, 0, accuracy: 1e-9)
     }
 }
 
@@ -149,8 +172,8 @@ final class HeroGaugesModelTests: XCTestCase {
         return (model, source)
     }
 
-    private func sample() -> ChargingStatsDTO {
-        ChargingStatsDTO(count: 5, totalEnergy: 30, totalCost: 4, avgPower: 20, avgCostPerKwh: 0.2)
+    private func sample() -> DriveGaugeStats {
+        DriveGaugeStats(distanceM: 12000, durationS: 900, maxSpeed: 80, consumptionWhKm: 150, efficiencyPctPer100: 12)
     }
 
     func testResolvePhaseMatrix() {
@@ -163,12 +186,12 @@ final class HeroGaugesModelTests: XCTestCase {
         XCTAssertEqual(HeroGaugesModel.resolvePhase(status: .failed("e"), hasData: true), .content)
     }
 
-    func testInitialContentProjectsGaugesAndCost() {
+    func testInitialContentProjectsGauges() {
         let (model, _) = makeModel(HeroGaugesUpdate(status: .loaded, stats: sample()))
         model.start()
         XCTAssertEqual(model.phase, .content)
-        XCTAssertEqual(model.projection?.gauges.count, 4)
-        XCTAssertEqual(model.projection?.cost.id, "avg-cost-per-kwh")
+        XCTAssertEqual(model.projection?.gauges.count, 5)
+        XCTAssertEqual(model.projection?.gauges.first?.id, "distance")
     }
 
     func testEmptyAndLoadingAndErrorPhases() {
@@ -202,11 +225,11 @@ final class HeroGaugesModelTests: XCTestCase {
                 connection: .stale,
                 isFetching: true,
                 stats: sample(),
-                units: HeroUnitPrefs(currencySymbol: "£"),
+                units: .imperial,
                 updatedAt: Date()
             )
         )
-        XCTAssertEqual(model.units.currencySymbol, "£")
+        XCTAssertEqual(model.units.distance, .mi)
         XCTAssertEqual(model.connection, .stale)
         XCTAssertTrue(model.isFetching)
         XCTAssertNotNil(model.updatedAt)
@@ -249,21 +272,21 @@ final class HeroGaugesModelTests: XCTestCase {
 // MARK: - Accessibility summary
 
 final class HeroGaugesAccessibilityTests: XCTestCase {
-    func testSummaryIncludesEveryGaugeAndCost() {
-        let stats = ChargingStatsDTO(
-            count: 42,
-            totalEnergy: 318.6,
-            totalCost: 87.4,
-            avgPower: 48.2,
-            avgCostPerKwh: 0.27
+    func testSummaryIncludesEveryGauge() {
+        let stats = DriveGaugeStats(
+            distanceM: 41840,
+            durationS: 2220,
+            maxSpeed: 118,
+            consumptionWhKm: 168,
+            efficiencyPctPer100: 14.2
         )
-        let projection = HeroGaugesProjector.project(stats: stats, units: HeroUnitPrefs())
+        let projection = HeroGaugesProjector.project(stats: stats, units: .metric)
         let summary = HeroGaugesAccessibility.summary(for: projection)
-        XCTAssertTrue(summary.contains("Sessions 42"))
-        XCTAssertTrue(summary.contains("Energy 319 kWh"))
-        XCTAssertTrue(summary.contains("Total Cost 87 $"))
-        XCTAssertTrue(summary.contains("Avg Power 48 kW"))
-        XCTAssertTrue(summary.contains("Avg $/kWh $0.270"))
+        XCTAssertTrue(summary.contains("Distance 42 km"))
+        XCTAssertTrue(summary.contains("Max Speed 118 km/h"))
+        XCTAssertTrue(summary.contains("Duration 37 min"))
+        XCTAssertTrue(summary.contains("Consumption 168 Wh/km"))
+        XCTAssertTrue(summary.contains("Efficiency 14.20 %/100km"))
     }
 }
 
@@ -276,7 +299,7 @@ final class HeroGaugesAccessibilityTests: XCTestCase {
             let source = InMemoryHeroGaugesSource(initial: update)
             let model = HeroGaugesModel(source: source)
             model.start()
-            let renderer = ImageRenderer(content: HeroGauges(model: model).frame(width: 380, height: 260))
+            let renderer = ImageRenderer(content: HeroGauges(model: model).frame(width: 420, height: 280))
             #if canImport(UIKit)
                 return renderer.uiImage != nil
             #else
@@ -284,12 +307,22 @@ final class HeroGaugesAccessibilityTests: XCTestCase {
             #endif
         }
 
-        private func sample() -> ChargingStatsDTO {
-            ChargingStatsDTO(count: 42, totalEnergy: 318.6, totalCost: 87.4, avgPower: 48.2, avgCostPerKwh: 0.27)
+        private func sample(efficiency: Double? = 14.2) -> DriveGaugeStats {
+            DriveGaugeStats(
+                distanceM: 41840,
+                durationS: 2220,
+                maxSpeed: 118,
+                consumptionWhKm: 168,
+                efficiencyPctPer100: efficiency
+            )
         }
 
         func testContentRenders() {
             XCTAssertTrue(renders(HeroGaugesUpdate(status: .loaded, stats: sample())))
+        }
+
+        func testContentWithoutEfficiencyRenders() {
+            XCTAssertTrue(renders(HeroGaugesUpdate(status: .loaded, stats: sample(efficiency: nil))))
         }
 
         func testEmptyRenders() {

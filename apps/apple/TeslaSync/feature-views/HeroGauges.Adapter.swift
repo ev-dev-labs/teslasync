@@ -1,27 +1,67 @@
 //
 //  HeroGauges.Adapter.swift
-//  TeslaSync — P4 feature view · 0103 · HeroGauges (Apple)
+//  TeslaSync — P4 feature view · 0143 · HeroGauges (Apple)
 //
-//  The testable projection core: a computed `ChargingStatsDTO` + `HeroUnitPrefs` → the four
-//  view-ready `HeroGaugeTileModel`s plus the Avg $/kWh `HeroCostMetric`, reproducing the web
-//  source's numeric pipeline VERBATIM so the native surface shows the exact same values as
-//  features/charging/components/charging-list/HeroGauges.tsx.
+//  The testable projection core: the drive-detail metrics (`DriveGaugeStats`) + `HeroUnitPrefs` →
+//  the four-or-five view-ready `HeroGaugeTileModel`s, reproducing the web source's numeric pipeline
+//  VERBATIM so the native surface shows the exact same values as
+//  features/driving/components/drive-detail/HeroGauges.tsx.
 //
 //  Deliberately free of SwiftUI (Foundation only) so the conversion + formatting compile and run
 //  on a plain host and are pinned by unit tests. `HeroAccent` carries only the web colour name
-//  (cyan/green/amber/purple); the token mapping lives in HeroGauges.Views.swift.
+//  (cyan/purple/amber/red/green); the token mapping lives in HeroGauges.Views.swift.
 //
 
 import Foundation
 
-// MARK: - Number / currency formatting (ported from web lib/numberFormat.ts + useFormatting.ts)
+// MARK: - SI converters + number formatting (ported from lib/unitConversion.ts + lib/numberFormat.ts)
 
-/// Locale-aware number + currency formatting that mirrors the web `fmtNumber`
-/// (`Number.toLocaleString`) and `useFormatting().formatCurrency` (`symbol + fmtNumber`).
+/// The SI → display converters + locale-aware number formatting the web component composes
+/// (`convertDistanceFromSI` / `convertSpeedFromSI` from `lib/unitConversion.ts`, the inline
+/// Wh/km → Wh/mi efficiency factor, and `fmtNumber` from `lib/numberFormat.ts`). Every constant is
+/// the exact NIST value the web uses so the two surfaces convert identically.
 public enum HeroGaugesFormat {
+    /// 1 mile = 1609.344 m exactly (international yard, NIST) — `METERS_PER_MILE`.
+    public static let metersPerMile = 1609.344
+    /// 1 km = 1000 m exactly — `METERS_PER_KM`.
+    public static let metersPerKm = 1000.0
+    /// 1 ft = 0.3048 m exactly (international foot, NIST) — `METERS_PER_FOOT`.
+    public static let metersPerFoot = 0.3048
+    /// Seconds per hour — `SECONDS_PER_HOUR`.
+    public static let secondsPerHour = 3600.0
+    /// Seconds per minute — `SECONDS_PER_MINUTE`.
+    public static let secondsPerMinute = 60.0
+    /// km per mile — the inline `whPerKm * 1.609344` factor the component uses for Wh/km → Wh/mi.
+    public static let kmPerMile = 1.609344
+    /// The web global decimal precision default (`numberFormat.ts` `_globalPrecision = 2`).
+    public static let globalPrecision = 2
+
     /// `safeNumber` from numberFormat.ts (and the charts `safe`): non-finite inputs collapse to 0.
     public static func safeNumber(_ value: Double) -> Double {
         value.isFinite ? value : 0
+    }
+
+    /// JavaScript `Math.round` — round half toward +∞ (`floor(x + 0.5)`), so the half-up behaviour
+    /// of every `Math.round(...)` the component applies to a gauge value is reproduced exactly.
+    public static func mathRound(_ value: Double) -> Double {
+        (safeNumber(value) + 0.5).rounded(.down)
+    }
+
+    /// SI meters → the user's display distance (`convertDistanceFromSI`).
+    public static func convertDistanceFromSI(_ meters: Double, to unit: DistanceUnit) -> Double {
+        switch unit {
+        case .km: meters / metersPerKm
+        case .mi: meters / metersPerMile
+        case .ft: meters / metersPerFoot
+        }
+    }
+
+    /// SI m/s → the user's display speed (`convertSpeedFromSI`).
+    public static func convertSpeedFromSI(_ mps: Double, to unit: SpeedUnit) -> Double {
+        switch unit {
+        case .kmh: (mps * secondsPerHour) / metersPerKm
+        case .mph: (mps * secondsPerHour) / metersPerMile
+        }
     }
 
     /// `fmtNumber(v, decimals, locale)` — fixed fraction digits, grouped, rounding half away from
@@ -38,39 +78,28 @@ public enum HeroGaugesFormat {
         return formatter.string(from: NSNumber(value: safe)) ?? String(format: "%.\(max(0, decimals))f", safe)
     }
 
-    /// `fmtInt(v)` — `fmtNumber(v, 0)`.
-    public static func integer(_ value: Int, localeIdentifier: String = "en_US") -> String {
-        number(Double(value), decimals: 0, localeIdentifier: localeIdentifier)
-    }
-
-    /// `formatCurrency(amount, decimals)` — `currencySymbol + fmtNumber(amount, decimals)`.
-    public static func currency(
-        _ amount: Double,
-        symbol: String,
-        decimals: Int,
-        localeIdentifier: String = "en_US"
-    ) -> String {
-        symbol + number(amount, decimals: decimals, localeIdentifier: localeIdentifier)
-    }
-
-    /// Rounds half away from zero to `places` decimals — the value `parseFloat(fmtNumber(v, places))`
-    /// produces before the web hands it to `AnimatedNumber` for the Avg $/kWh readout.
-    public static func round(_ value: Double, places: Int) -> Double {
-        let factor = pow(10.0, Double(max(0, places)))
-        return (safeNumber(value) * factor).rounded(.toNearestOrAwayFromZero) / factor
+    /// `Number(fmtNumber(v))` — the value the component derives for the efficiency gauge before it
+    /// hands it to `RadialGauge`. `fmtNumber` groups with the global locale, then JS `Number(...)`
+    /// parses it back; a grouped string (≥ 1000) yields `NaN`, exactly as `Double("1,234.50")`
+    /// returns `nil` here → collapsed to NaN so the downstream `safeNumber` floors it to 0.
+    public static func numberFromFormatted(_ value: Double) -> Double {
+        let formatted = number(value, decimals: globalPrecision, localeIdentifier: "en_US")
+        let parsable = formatted.contains(",") ? "" : formatted
+        return Double(parsable) ?? .nan
     }
 }
 
 // MARK: - Accent (web `RadialGauge color`) — token mapping lives in the view layer
 
 /// The colour name the web `RadialGauge` carries for a gauge's progress arc (`#00f0ff` cyan /
-/// `#10b981` green / `#f59e0b` amber / `#a855f7` purple). Kept as a pure value here so the
-/// projection stays SwiftUI-free; the SwiftUI token mapping is in `HeroGauges.Views.swift`.
+/// `#a855f7` purple / `#f59e0b` amber / `#ef4444` red / `#10b981` green). Kept as a pure value here
+/// so the projection stays SwiftUI-free; the SwiftUI token mapping is in `HeroGauges.Views.swift`.
 public enum HeroAccent: String, Sendable, Equatable {
     case cyan
-    case green
-    case amber
     case purple
+    case amber
+    case red
+    case green
 }
 
 // MARK: - Projected gauge tile (web `RadialGauge`)
@@ -117,40 +146,15 @@ public struct HeroGaugeTileModel: Identifiable, Equatable, Sendable {
     }
 }
 
-// MARK: - Projected cost readout (web Avg $/kWh `AnimatedNumber`)
-
-/// The Avg $/kWh metric the web renders as a plain `$<AnimatedNumber decimals={3}>` instead of a
-/// gauge. The value is pre-formatted (currency symbol + 3 fraction digits) so the view only
-/// animates the string.
-public struct HeroCostMetric: Equatable, Sendable {
-    public let id: String
-    public let labelKey: String
-    public let labelFallback: String
-    public let value: String
-
-    public init(id: String, labelKey: String, labelFallback: String, value: String) {
-        self.id = id
-        self.labelKey = labelKey
-        self.labelFallback = labelFallback
-        self.value = value
-    }
-
-    public var label: String {
-        HeroGaugesStrings.string(labelKey, labelFallback)
-    }
-}
-
 // MARK: - Projection
 
-/// The fully-projected surface content: the four gauges (web render order) plus the Avg $/kWh
-/// readout that closes the row.
+/// The fully-projected surface content: the four headline gauges plus the optional fifth Efficiency
+/// gauge (present only when the web `stats.efficiencyPctPer100` is non-nil), in the web render order.
 public struct HeroGaugesProjection: Equatable, Sendable {
     public let gauges: [HeroGaugeTileModel]
-    public let cost: HeroCostMetric
 
-    public init(gauges: [HeroGaugeTileModel], cost: HeroCostMetric) {
+    public init(gauges: [HeroGaugeTileModel]) {
         self.gauges = gauges
-        self.cost = cost
     }
 }
 
@@ -165,73 +169,121 @@ private struct GaugeSpec {
     let accent: HeroAccent
 }
 
-/// Pure projector: `ChargingStatsDTO` + `HeroUnitPrefs` → `HeroGaugesProjection`. Every value is
+/// Pure projector: `DriveGaugeStats` + `HeroUnitPrefs` → `HeroGaugesProjection`. Every value is
 /// computed with the exact same arithmetic + formatting as the web component so the web and native
 /// surfaces show identical numbers side by side.
 public enum HeroGaugesProjector {
-    public static func project(stats: ChargingStatsDTO, units: HeroUnitPrefs) -> HeroGaugesProjection {
+    public static func project(stats: DriveGaugeStats, units: HeroUnitPrefs) -> HeroGaugesProjection {
         let context = Context(stats: stats, units: units)
-        return HeroGaugesProjection(gauges: context.gauges(), cost: context.cost())
+        return HeroGaugesProjection(gauges: context.gauges())
     }
 
     /// Pure per-projection context bundling the inputs so the gauge math stays short while keeping
     /// every value byte-for-byte identical to the web source.
     private struct Context {
-        let stats: ChargingStatsDTO
+        let stats: DriveGaugeStats
         let units: HeroUnitPrefs
 
         private var locale: String {
             units.localeIdentifier
         }
 
-        /// The four radial gauges in the web's render order (Sessions, Energy, Total Cost,
-        /// Avg Power). Each mirrors a web `<RadialGauge value max unit color>`.
-        func gauges() -> [HeroGaugeTileModel] {
-            specs().map(gauge)
+        /// `convertDistanceFromSI(drive.distanceM, unitPrefs.distance)` — the component's
+        /// `toDistanceDisplay`.
+        private var distanceDisplay: Double {
+            HeroGaugesFormat.convertDistanceFromSI(stats.distanceM, to: units.distance)
         }
 
-        private func specs() -> [GaugeSpec] {
-            let energy = HeroGaugesFormat.safeNumber(stats.totalEnergy).rounded(.toNearestOrAwayFromZero)
-            let cost = HeroGaugesFormat.safeNumber(stats.totalCost).rounded(.toNearestOrAwayFromZero)
-            let power = HeroGaugesFormat.safeNumber(stats.avgPower).rounded(.toNearestOrAwayFromZero)
-            return [
-                GaugeSpec(
-                    id: "sessions",
-                    labelKey: "charging.gauges.sessions",
-                    labelFallback: "Sessions",
-                    rawValue: Double(stats.count),
-                    maxValue: max(Double(stats.count), 50),
-                    unit: nil,
-                    accent: .cyan
-                ),
-                GaugeSpec(
-                    id: "energy",
-                    labelKey: "charging.gauges.energy",
-                    labelFallback: "Energy",
-                    rawValue: energy,
-                    maxValue: max(stats.totalEnergy, 500),
-                    unit: "kWh",
-                    accent: .green
-                ),
-                GaugeSpec(
-                    id: "total-cost",
-                    labelKey: "charging.gauges.totalCost",
-                    labelFallback: "Total Cost",
-                    rawValue: cost,
-                    maxValue: max(stats.totalCost, 100),
-                    unit: units.currencySymbol,
-                    accent: .amber
-                ),
-                GaugeSpec(
-                    id: "avg-power",
-                    labelKey: "charging.gauges.avgPower",
-                    labelFallback: "Avg Power",
-                    rawValue: power,
-                    maxValue: 250,
-                    unit: "kW",
-                    accent: .purple
-                )
-            ]
+        /// `(drive.durationS ?? 0) / 60` — drive minutes.
+        private var durationMinutes: Double {
+            (stats.durationS ?? 0) / HeroGaugesFormat.secondsPerMinute
+        }
+
+        /// `unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm` — the component's inline
+        /// `toEfficiencyDisplay`.
+        private var consumptionDisplay: Double {
+            units.distance == .mi
+                ? stats.consumptionWhKm * HeroGaugesFormat.kmPerMile
+                : stats.consumptionWhKm
+        }
+
+        /// `unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km'` — the consumption gauge unit.
+        private var efficiencyUnit: String {
+            units.distance == .mi ? "Wh/mi" : "Wh/km"
+        }
+
+        /// The headline gauges in the web render order. The fifth Efficiency gauge is appended only
+        /// when `stats.efficiencyPctPer100` is non-nil (`{stats.efficiencyPctPer100 != null && …}`).
+        func gauges() -> [HeroGaugeTileModel] {
+            var specs = [distanceSpec(), maxSpeedSpec(), durationSpec(), consumptionSpec()]
+            if let efficiency = efficiencySpec() {
+                specs.append(efficiency)
+            }
+            return specs.map(gauge)
+        }
+
+        private func distanceSpec() -> GaugeSpec {
+            let display = distanceDisplay
+            return GaugeSpec(
+                id: "distance",
+                labelKey: "driveDetail.distance",
+                labelFallback: "Distance",
+                rawValue: HeroGaugesFormat.mathRound(display),
+                maxValue: max(display * 1.5, 100),
+                unit: units.distance.label,
+                accent: .cyan
+            )
+        }
+
+        private func maxSpeedSpec() -> GaugeSpec {
+            GaugeSpec(
+                id: "max-speed",
+                labelKey: "driveDetail.maxSpeed",
+                labelFallback: "Max Speed",
+                rawValue: HeroGaugesFormat.mathRound(stats.maxSpeed),
+                maxValue: HeroGaugesFormat.convertSpeedFromSI(250, to: units.speed),
+                unit: units.speed.label,
+                accent: .purple
+            )
+        }
+
+        private func durationSpec() -> GaugeSpec {
+            let minutes = durationMinutes
+            return GaugeSpec(
+                id: "duration",
+                labelKey: "driveDetail.duration",
+                labelFallback: "Duration",
+                rawValue: HeroGaugesFormat.mathRound(minutes),
+                maxValue: max(minutes * 1.5, 60),
+                unit: "min",
+                accent: .amber
+            )
+        }
+
+        private func consumptionSpec() -> GaugeSpec {
+            let display = consumptionDisplay
+            return GaugeSpec(
+                id: "consumption",
+                labelKey: "driveDetail.consumption",
+                labelFallback: "Consumption",
+                rawValue: HeroGaugesFormat.mathRound(display),
+                maxValue: max(display * 1.5, 300),
+                unit: efficiencyUnit,
+                accent: .red
+            )
+        }
+
+        private func efficiencySpec() -> GaugeSpec? {
+            guard let pct = stats.efficiencyPctPer100 else { return nil }
+            return GaugeSpec(
+                id: "efficiency",
+                labelKey: "driveDetail.efficiency",
+                labelFallback: "Efficiency",
+                rawValue: HeroGaugesFormat.numberFromFormatted(pct),
+                maxValue: 30,
+                unit: units.isMiles ? "%/100mi" : "%/100km",
+                accent: .green
+            )
         }
 
         /// Builds one gauge tile the way the web `RadialGauge` renders: `clamped = max(0, min(value,
@@ -241,7 +293,7 @@ public enum HeroGaugesProjector {
             let safeValue = HeroGaugesFormat.safeNumber(spec.rawValue)
             let safeMax = HeroGaugesFormat.safeNumber(spec.maxValue)
             let clamped = min(max(safeValue, 0), safeMax)
-            let decimals = clamped == clamped.rounded() ? 0 : 2
+            let decimals = clamped == clamped.rounded() ? 0 : HeroGaugesFormat.globalPrecision
             return HeroGaugeTileModel(
                 id: spec.id,
                 labelKey: spec.labelKey,
@@ -252,23 +304,6 @@ public enum HeroGaugesProjector {
                 accent: spec.accent
             )
         }
-
-        /// The Avg $/kWh readout: the web pre-rounds to 2 decimals (`parseFloat(fmtNumber(x, 2))`)
-        /// then renders it through `AnimatedNumber` at 3 decimals behind a "$" prefix.
-        func cost() -> HeroCostMetric {
-            let preRounded = HeroGaugesFormat.round(stats.avgCostPerKwh, places: 2)
-            return HeroCostMetric(
-                id: "avg-cost-per-kwh",
-                labelKey: "charging.gauges.avgCostPerKwh",
-                labelFallback: "Avg $/kWh",
-                value: HeroGaugesFormat.currency(
-                    preRounded,
-                    symbol: units.currencySymbol,
-                    decimals: 3,
-                    localeIdentifier: locale
-                )
-            )
-        }
     }
 }
 
@@ -277,11 +312,11 @@ public enum HeroGaugesProjector {
 /// Builds the VoiceOver summary spoken for the gauge grid. Pure + public so the a11y label content
 /// can be unit-tested without rendering the view.
 public enum HeroGaugesAccessibility {
-    /// One spoken phrase per gauge plus the cost readout, e.g.
-    /// "Sessions 42. Energy 251 kWh. Total Cost 413 $. Avg Power 48 kW. Avg $/kWh $0.160".
+    /// One spoken phrase per gauge, e.g.
+    /// "Distance 42 km. Max Speed 118 km/h. Duration 37 min. Consumption 168 Wh/km. Efficiency 14.2 %/100km".
     public static func summary(for projection: HeroGaugesProjection) -> String {
-        let gaugePhrases = projection.gauges.map { "\($0.label) \($0.spokenValue)" }
-        let costPhrase = "\(projection.cost.label) \(projection.cost.value)"
-        return (gaugePhrases + [costPhrase]).joined(separator: ". ")
+        projection.gauges
+            .map { "\($0.label) \($0.spokenValue)" }
+            .joined(separator: ". ")
     }
 }
