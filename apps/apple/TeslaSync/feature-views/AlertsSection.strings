@@ -1,0 +1,46 @@
+/*
+  AlertsSection.strings
+  TeslaSync — P4 feature view · 0071 · AlertsSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `AlertsSection` resolves (table "AlertsSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/analytics/components/weekly-digest/AlertsSection.tsx). The remainder
+  back the native state envelope (freshness chip, connectivity banner, loading /
+  empty / error chrome), the severity labels (web capitalized severity), and the
+  chart accessibility summary.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"analytics.weeklyDigest.alertsSection" = "Alerts";
+"analytics.weeklyDigest.noAlerts" = "No alerts this week — everything looks great!";
+"analytics.weeklyDigest.alertsBySeverity" = "Alerts by Severity";
+"analytics.weeklyDigest.alertDistribution" = "Alert Distribution";
+
+/* --- Severity labels (web capitalized `alert.severity`) --- */
+"analytics.weeklyDigest.severity.critical" = "Critical";
+"analytics.weeklyDigest.severity.warning" = "Warning";
+"analytics.weeklyDigest.severity.info" = "Info";
+"analytics.weeklyDigest.severity.other" = "Other";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"analytics.weeklyDigest.live" = "Live";
+"analytics.weeklyDigest.stale" = "Stale";
+"analytics.weeklyDigest.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"analytics.weeklyDigest.staleBanner" = "Reconnecting — alert counts may be stale";
+"analytics.weeklyDigest.offlineBanner" = "Offline — showing last known alerts";
+
+/* --- Loading / empty / error chrome --- */
+"analytics.weeklyDigest.loading" = "Loading alerts";
+"analytics.weeklyDigest.errorTitle" = "Couldn't load alerts";
+"analytics.weeklyDigest.retry" = "Retry";
+
+/* --- Accessibility summaries --- */
+"analytics.weeklyDigest.distribution.a11y" = "Donut chart of alert counts by severity";
