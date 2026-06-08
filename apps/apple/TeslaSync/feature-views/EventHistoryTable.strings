@@ -1,0 +1,42 @@
+/*
+  EventHistoryTable.strings
+  TeslaSync — P4 feature view · 0042 · EventHistoryTable (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `EventHistoryTable` resolves (table "EventHistoryTable") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/security-access/EventHistoryTable.tsx — its columns,
+  badges, panel heading, and DataTable emptyMessage). The "All Closed" / "Open/
+  Venting" window summaries come from the web `helpers.ts::windowSummary` (hardcoded
+  English there); routed through the facade here so the native code holds no literals.
+  The last group backs the native-only chrome (loading / error / retry) the Apple HIG
+  states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.security.eventHistory" = "Security Event History";
+"admin.security.col.time" = "Time";
+"admin.security.col.lock" = "Lock";
+"admin.security.locked" = "Locked";
+"admin.security.unlocked" = "Unlocked";
+"admin.security.col.sentry" = "Sentry";
+"admin.security.on" = "On";
+"admin.security.off" = "Off";
+"admin.security.col.doors" = "Doors";
+"admin.security.closed" = "Closed";
+"admin.security.col.windows" = "Windows";
+"admin.security.noEvents" = "No security events recorded yet.";
+
+/* --- Window summary (web helpers.ts::windowSummary) --- */
+"admin.security.windows.allClosed" = "All Closed";
+"admin.security.windows.openVenting" = "%lld Open/Venting";
+
+/* --- Native chrome: states + accessibility --- */
+"admin.security.loadingA11y" = "Loading security events";
+"admin.security.errorTitle" = "Couldn't load security events";
+"admin.security.retry" = "Retry";

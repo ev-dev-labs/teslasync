@@ -1,0 +1,218 @@
+================================================================================
+P4 · Feature view · 0042 — EventHistoryTable (Apple)
+Run: 2026-06-07T20:21-0700   Host: Darwin arm64 (macOS 26.x)   Slot: slot-163
+Prompt: P4/feature-views/0042 — Feature view: EventHistoryTable
+Web source (spec): web/src/features/admin/components/security-access/EventHistoryTable.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (ADR-012; 0005/0009 precedent).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iphonesimulator26.5 (iOS 18.0 deploy target)         OK
+  macOS SDK .................. macosx26.5 (macOS 15.0 deploy target)                OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (feature-views/ not yet target-registered)  WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — the surface is authored, host-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/EventHistoryTable.*) ===
+  EventHistoryTable.Adapter.swift   384  testable projection core — SecuritySignal wire value +
+                                         helpers.ts ports (asNonEmptyString / parseWindowState /
+                                         doorClosed [bool|number|object|string|JSON-string] /
+                                         allWindowsClosed / windowSummary / doorDisplay) + JS-truthiness
+                                         Lock/Sentry gate + EventHistoryRow projection + Time comparator +
+                                         TimeStamp parse/absolute/relative + display-text/a11y seam. Foundation-only.
+  EventHistoryTable.Model.swift     216  P1/S8 state-holder seam (EventHistorySource->EventHistoryModel) +
+                                         P1/S11 telemetry seam (view.opened) + P1/S10 EHStrings facade +
+                                         EventHistoryProjection (loading/data/empty/error) + input snapshot +
+                                         in-memory source + EventHistoryDiagnostics.surface slug
+  EventHistoryTable.Views.swift     216  presentational subviews — status badge (web Badge, runtime text) /
+                                         Time cell / colored Doors+Windows cells / data table (reuses shared
+                                         TSDataTable, 5 web columns, compact, sortable Time) / loading
+                                         (8-line TSSkeleton) / empty / error(+retry)
+  EventHistoryTable.swift            71  EventHistoryTable surface — TSFadeIn(0.3) + TSGlassPanel + heading +
+                                         state switch + onAppear/onDisappear telemetry
+  EventHistoryTable.Previews.swift   86  #if DEBUG previews — one per state (loading / data / empty / error)
+  EventHistoryTable.Tests.swift     285  XCTest — adapter helpers + format + projection + model + a11y (23 methods)
+  EventHistoryTable.strings          42  P1/S10 catalog contribution (12 web-source keys + 2 windowSummary
+                                         keys + 3 native chrome/a11y keys)
+  Every file <= 400 lines (house file_length). Total 1300 lines across 7 files (1258 Swift + 42 strings).
+  Shared TSDataTable/TSColumn/TSTone/TSSkeleton/TSGlassPanel/TSFadeIn are REUSED from the real component
+  library (no redeclaration -> no duplicate symbols when compiled in the app module).
+
+=== PARITY (vs web EventHistoryTable.tsx) ===
+  Data sources -> NONE beyond useTranslation. The web source is a pure presentational leaf: its only hook is
+    useTranslation; `history` + `isLoading` arrive as PROPS from its parent (SecurityAccessPage's security-
+    history query). The native surface mirrors this — the P1/S8 EventHistorySource carries that parent prop
+    snapshot (events / isLoading / an optional error); the view performs NO HTTP.
+  Projection -> EventHistoryProjection.resolve is the native port of the web render ladder
+    `isLoading ? <Skeleton lines={8}/> : <DataTable data=history emptyMessage=… />`: loading wins (web checks
+    isLoading first), then the native error branch, then rows.isEmpty ? empty : data. The helpers.ts logic is
+    ported 1:1 in EventHistoryAdapter and exercised end-to-end by executed XCTest:
+      • parseWindowState: closed/"0"->Closed, contains "vent"->Venting, any other non-empty->Open.
+      • doorClosed: null->true; bool-> !state; number-> ==0; object-> every member false/null; string->
+        trimmed sentinels (""/closed/closedall/0/false), `{`-prefixed JSON whose members are all false/null,
+        else open.
+      • allWindowsClosed / windowSummary (All Closed | N Open/Venting) over fd/fp/rd/rp.
+      • Lock/Sentry use JS truthiness exactly as the web `row.locked ?` / `row.sentryMode ?` (a non-empty
+        string such as "off" is truthy — preserved, with a regression test pinning it).
+  Composition -> FadeIn(delay 0.3) -> GlassPanel(p-4) -> <h2>Security Event History</h2> (isHeader trait) ->
+    body switch. Columns reproduce the web eventColumns: Time (TimeStamp, sortable) · Lock (Badge
+    success/danger Locked/Unlocked) · Sentry (Badge success/neutral On/Off) · Doors (green/amber text,
+    asNonEmptyString(doorState) ?? Closed/—) · Windows (green/amber text, windowSummary). Rendered through the
+    shared TSDataTable (web DataTable, compact).
+  Shared components -> @/components/ui -> shared TSDataTable (web DataTable), TSGlassPanel (web GlassPanel),
+    runtime status badge mirroring TSBadge tokens (web Badge — taking the facade-resolved string the
+    LocalizedStringKey-only TSBadge can't express); @/components/feedback -> TSSkeleton (web Skeleton);
+    @/components/motion -> TSFadeIn (web FadeIn). Compiled against the REAL apps/apple component library in the
+    iOS+macOS typechecks below. Recharts -> none / Leaflet -> none.
+  States (all render) -> loading (8-line skeleton) · data (table) · empty (web DataTable emptyMessage —
+    "No security events recorded yet.") · error (native QueryError-equivalent + retry).
+    NOTE on stale/offline (the generic P4 states list): the web leaf has NO stale/offline chrome — it is
+    presentational (only hook useTranslation; no query/connectivity at this level), and its parent owns the
+    security-history query. An upstream/connectivity failure is surfaced through the native `error` snapshot
+    (with a retry affordance, the QueryError-equivalent the states contract asks for). Inventing separate
+    stale/offline chrome here would be drift from the spec ("web source is THE specification"); it is
+    deliberately not added — identical disposition to the 0009 presentational-leaf predecessor. Each state has
+    a #if DEBUG preview and is unit-tested via the projection.
+  i18n -> all 12 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    admin.security.eventHistory, .col.time, .col.lock, .locked, .unlocked, .col.sentry, .on, .off, .col.doors,
+    .closed, .col.windows, .noEvents — ALL present in EventHistoryTable.strings, plus the two windowSummary
+    phrases (helpers.ts hardcodes "All Closed" / "{n} Open/Venting"; routed through the facade here so native
+    code holds no literals) and 3 native chrome/a11y keys (loading / error title / retry). No English literals
+    in native code (Text(verbatim:) over the facade).
+  a11y -> the <h2> carries the header trait; the retry button has an accessibilityLabel; the loading state is
+    one labeled element; the empty/error states are combined elements; Doors/Windows/Time cells carry value
+    labels; EventHistoryAccessibility.rowSummary is a tested combined-value seam (Time/Lock/Sentry/Doors/
+    Windows); Dynamic Type via tokens; Reduce Motion gates the TSSkeleton shimmer + the FadeIn.
+  Telemetry -> EventHistoryModel.start() emits viewOpened(surface:"EventHistoryTable") -> bridges the shared
+    Telemetry.track(.viewOpened) (P1/S11). Asserted by a spy test (fires exactly once; startCount==1).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 4 shipped non-preview files compiled together with the
+    REAL apps/apple component closure — generated Tokens + TSDesign + TSMaterial + Typography + Badges +
+    Cards + DataTable + Skeletons + Motion; none import the Shared xcframework):
+      xcrun swiftc -typecheck -sdk <iphonesimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  <component closure> <surface/Adapter/Model/Views>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; the 5 surface files + the real component closure + Buttons,
+    so this surface's #Preview blocks compile alongside the components' own DEBUG previews):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness
+    (real production Adapter + Model + Tests; both are SwiftUI-free, so no render shims are needed),
+    Swift 6 language mode (.swiftLanguageMode(.v6)):
+      Executed 23 tests, with 0 failures (0 unexpected) in 0.010 seconds
+        EventHistoryAdapterTests        10/10 (parseWindowState / doorClosed scalar / doorClosed string /
+                                              doorClosed object+JSON-string / allWindowsClosed / windowSummary /
+                                              doorDisplay / truthiness gate / asNonEmptyString / row projection
+                                              + time comparator)
+        EventHistoryFormatTests          3/3  (empty+invalid -> nil/—; valid ISO -> human readable; epoch secs)
+        EventHistoryProjectionTests      4/4  (loading precedence / error / data / empty)
+        EventHistoryModelTests           3/3  (start applies initial + telemetry-once + startCount==1 /
+                                              refresh delegation / push updates projection)
+        EventHistoryAccessibilityTests   3/3  (lock+sentry text / door+window text / row summary all columns)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; the repo .swiftlint.yml `included:`
+    does not list TeslaSync/feature-views — that wiring is the P4 integration prompt's job — so the bare
+    gate `swiftlint --strict` SKIPS this dir; run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) on the 6 shipped surface .swift files; self-test also run to
+    prove the gate detects stubs (dirty tree -> COUNT=4, clean -> 0):
+      ./apps/tools/check-placeholders.ps1 -Path <surface .swift> -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + targets + schemes generate cleanly).
+      - `grep -c EventHistoryTable TeslaSync.xcodeproj/project.pbxproj` -> 0 (surface not registered);
+        `grep -c feature-views …` -> 0;  `grep -c dashboard-widgets …` -> 3 (control: a registered sibling dir).
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build` ->
+          error: "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require signing with a
+                 development certificate.
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   MAC_BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0005/0009 predecessor surfaces, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets source `Sources/` + `TeslaSync/dashboard-widgets`;
+          this surface lives at `TeslaSync/feature-views/` with 0 references in project.yml (proven: 0
+          pbxproj refs). It is registered into the XcodeGen target + the admin surface by the downstream
+          P4 integration/acceptance prompt. Editing project.yml is OUTSIDE this prompt's allowed files.
+          Running xcodebuild now would build the app WITHOUT these files — ZERO evidence about this
+          deliverable. Steps [1]/[2] DO compile this surface against the real library, and step [4]
+          EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework). Independent of this UI
+          surface; concrete missing-framework error captured above.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are PROVEN GREEN
+    (23/23) by the executed SwiftPM harness in step [4], and the views/model/adapter compile against both the
+    iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/data/empty + native error/retry) — implemented; each has a
+      #if DEBUG preview; projection unit-tested + executed green. (stale/offline absent from the web leaf by
+      design — see PARITY note; upstream failure flows through `error`.)
+  [x] Hooks bind through the shared P1/S8 state-holder seam (EventHistorySource->EventHistoryModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all 12 source keys present in the strings.
+  [x] Accessibility labels on every interactive element (retry button; table sort/selection via shared
+      TSDataTable) + tested rowSummary seam + header trait on the heading.
+  [x] Tests: adapter (helpers/format) + projection per-state + model wiring + a11y — 23 methods, EXECUTED 23/23 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (self-test proves it detects).
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real MAC_BUILD_EXIT=65
+                       framework+signing error captured; every "OK" is a command actually run with its real
+                       exit code (incl. a 23/23 executed XCTest run and iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented ALL web states/columns + helpers.ts logic + i18n + a11y + telemetry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of parseWindowState/doorClosed/allWindowsClosed/windowSummary +
+                       JS-truthiness Lock/Sentry gate + TimeStamp formatting + all render branches + columns.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml (integration prompt's scope) and did NOT
+                       edit the shared Localizable.xcstrings (parallel-unsafe) — strings shipped as the
+                       per-surface table, exactly like 0005/0009.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed EventHistoryTable.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native EventHistoryTable shipped at parity with the web source: pure-Swift defensive
+  security-signal helpers + row projection + timestamp formatter (executed-green XCTest, 23/23), P1/S8
+  state-holder seam (no view HTTP), P1/S11 telemetry, every web state + i18n key + a11y label, columns
+  reproducing the web eventColumns through the shared TSDataTable. All host-runnable gates pass AND the
+  surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs with the real Xcode 26 toolchain under
+  Swift 6 strict concurrency. The Xcode app build/test is DEFERRED to the downstream integration/signed runner
+  (surface not yet target-registered + Shared.xcframework KMP staging + macOS signing — none a defect in this
+  code, all outside this prompt's allowed files), matching the 0005/0009 "code-complete + DEFERRED Xcode gate"
+  precedent (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/EventHistoryTable.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0042-EventHistoryTable.log
+  git commit -m "feat(apps/apple/feature-views): add EventHistoryTable surface (P4)"
+
+EXIT=0
+STATUS=DONE
