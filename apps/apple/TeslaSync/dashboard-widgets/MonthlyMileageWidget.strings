@@ -1,0 +1,45 @@
+/*
+  MonthlyMileageWidget.strings
+  TeslaSync — P4 dashboard widget · 0065 · MonthlyMileageWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `MonthlyMileageWidget` resolves (table "MonthlyMileageWidget") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  Keys 1–6 are the exact keys extracted from the web source
+  (features/dashboard/widgets/MonthlyMileageWidget.tsx + registry/analytics.ts).
+  The remaining keys back the native-only chrome (freshness chip, refresh/retry,
+  empty/error/banner copy, chart + accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.monthlyMileage.title" = "Monthly Mileage";
+"widget.monthlyMileage.description" = "Bar chart of monthly driving distance over last 12 months";
+"widget.monthlyMileage.noData" = "No mileage data";
+"widget.monthlyMileage.thisMonth" = "This Month";
+"widget.monthlyMileage.total12m" = "12-Mo Total";
+"widget.monthlyMileage.distance" = "Distance";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.monthlyMileage.live" = "Live";
+"widget.monthlyMileage.stale" = "Stale";
+"widget.monthlyMileage.offline" = "Offline";
+"widget.monthlyMileage.refresh" = "Refresh";
+"widget.monthlyMileage.retry" = "Retry";
+"widget.monthlyMileage.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.monthlyMileage.loading" = "Loading monthly mileage";
+"widget.monthlyMileage.emptyHint" = "Drive history will appear here once trips are recorded.";
+"widget.monthlyMileage.errorTitle" = "Couldn't load monthly mileage";
+"widget.monthlyMileage.staleBanner" = "Updating — values may be stale";
+"widget.monthlyMileage.offlineBanner" = "Offline — showing last saved mileage";
+
+/* --- Chart + accessibility --- */
+"widget.monthlyMileage.month" = "Month";
+"widget.monthlyMileage.chartA11y" = "Bar chart of monthly driving distance over the last 12 months";
+"widget.monthlyMileage.currentMonthA11y" = "current month";
+"widget.monthlyMileage.openA11y" = "Open the mileage analytics page";
