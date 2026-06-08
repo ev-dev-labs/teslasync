@@ -1,0 +1,50 @@
+/*
+  WidgetPicker.strings
+  TeslaSync — P4 feature view · 0134 · WidgetPicker (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every chrome string the
+  native WidgetPicker resolves (table "WidgetPicker") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/dashboard/components/WidgetPicker.tsx). `{{name}}`, `{{count}}`, and
+  `{{query}}` are i18next interpolation tokens, substituted at runtime by
+  WidgetPickerAdapter.interpolate (kept verbatim so the values match the web
+  defaults 1:1). The last group backs native-only chrome (the size "grid" word,
+  the clear-search + close affordances) so the view holds no hardcoded English.
+
+  NOTE: widget names, descriptions, category labels, and preset names are DATA —
+  the web source renders them verbatim from the registry (they are not passed
+  through t()), so they live in WidgetPicker.Catalog.swift, not here.
+*/
+
+/* --- Chrome (web t(key, default) call sites) --- */
+"dashboard.addWidget" = "Add Widget";
+"widgets.recentlyAdded" = "Recently Added";
+"dashboard.presets" = "Layout Presets";
+"dashboard.widgets" = "widgets";
+"widgets.search" = "Search widgets... (e.g. battery, chart, map)";
+"widgets.available" = "widgets available";
+"widgets.categoryFilter" = "Filter by category";
+"widgets.allCategories" = "All";
+"dashboard.added" = "Added";
+"widgets.addAllCount" = "+ Add all {{count}}";
+"widgets.searchResults" = "{{count}} results for \"{{query}}\"";
+"widgets.noResults" = "No widgets match \"{{query}}\"";
+"dashboard.done" = "Done";
+
+/* --- Plural footer count (web widgets.addedCount_one / _other) --- */
+"widgets.addedCount_one" = "{{count}} widget added";
+"widgets.addedCount_other" = "{{count}} widgets added";
+
+/* --- Live-region announcements (web addedAnnouncement / addedBatchAnnouncement) --- */
+"widgets.addedAnnouncement" = "{{name}} added to dashboard";
+"widgets.addedBatchAnnouncement" = "{{count}} widgets added to dashboard";
+
+/* --- Native chrome: size label + affordance accessibility --- */
+"widgets.gridLabel" = "grid";
+"widgets.clearSearch" = "Clear search";
+"a11y.close" = "Close";
