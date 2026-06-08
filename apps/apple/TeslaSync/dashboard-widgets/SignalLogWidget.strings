@@ -1,0 +1,52 @@
+/*
+  SignalLogWidget.strings
+  TeslaSync — P4 dashboard widget · 0089 · SignalLogWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  SignalLogWidget resolves (table "SignalLogWidget") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The five keys extracted verbatim from the web source
+  (features/dashboard/widgets/SignalLogWidget.tsx) are widget.signalLog.title,
+  widget.signalLog.signalsPerSec, widget.signalLog.resume, widget.signalLog.pause,
+  and widget.signalLog.noSignals. The rest back the native chrome (registry
+  description, freshness chip, relative time, state copy, and accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.signalLog.title" = "Signal Log";
+"widget.signalLog.signalsPerSec" = "signals/sec";
+"widget.signalLog.resume" = "Resume";
+"widget.signalLog.pause" = "Pause";
+"widget.signalLog.noSignals" = "No signal updates yet";
+
+/* --- Registry metadata (registry/telemetry.ts → "signal-log") --- */
+"widget.signalLog.description" = "Live feed of raw signal updates: timestamp, signal, old→new value, source";
+
+/* --- Native chrome: freshness chip --- */
+"widget.signalLog.freshness.live" = "Live";
+"widget.signalLog.freshness.updating" = "Updating…";
+"widget.signalLog.freshness.stale" = "Stale";
+"widget.signalLog.freshness.error" = "Error";
+"widget.signalLog.freshness.errorShort" = "error";
+"widget.signalLog.freshness.offline" = "Offline";
+"widget.signalLog.freshness.refresh" = "Refresh";
+
+/* --- Native chrome: relative time (feed rows + chip) --- */
+"widget.signalLog.justNow" = "Just now";
+"widget.signalLog.minutes" = "%lldm ago";
+"widget.signalLog.hours" = "%lldh ago";
+
+/* --- Native chrome: states + actions --- */
+"widget.signalLog.loading" = "Loading signal updates";
+"widget.signalLog.emptyHint" = "Connect a vehicle streaming telemetry to watch its raw signals arrive live.";
+"widget.signalLog.errorTitle" = "Couldn't load signal updates";
+"widget.signalLog.retry" = "Retry";
+"widget.signalLog.open" = "Open";
+"widget.signalLog.openA11y" = "Open the signals page";
+"widget.signalLog.feedA11y" = "Signal update feed";
+"widget.signalLog.offlineBanner" = "Offline — showing last received updates";
+"widget.signalLog.staleBanner" = "Reconnecting — updates may be delayed";
