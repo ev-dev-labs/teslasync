@@ -1,0 +1,233 @@
+================================================================================
+P4 · Feature view · 0046 — SecurityStatusCards (Apple)
+Run: 2026-06-07T19:53-0700   Host: Darwin 25.5.0 arm64 (macOS 26.5.1, 25F80)   Slot: slot-167
+Prompt: P4/feature-views/0046 — Feature view: SecurityStatusCards
+Web source (spec): web/src/features/admin/components/security-access/SecurityStatusCards.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (ADR-012; 0009/0036/0054 precedent).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iphonesimulator (iOS 18.0 deploy target)             OK
+  macOS SDK .................. macosx (macOS 15.0 deploy target)                     OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                           OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift build/test (SwiftPM) . compiles + runs XCTest on the macOS host             OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/Shared.xcframework absent)  WARN
+  surface in project.yml ..... 0 references (feature-views/ not yet target-registered)  WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK typechecks +
+  the executed SwiftPM build/test below. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply — the surface is authored,
+  host-compiled (both SDKs), and host-tested (30/30) for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/SecurityStatusCards.*) ===
+  SecurityStatusCards.Adapter.swift    384  testable projection core (Foundation-only, no SwiftUI):
+                                            SecurityCardsSignalValue (string|boolean|null union) +
+                                            SecurityCardsLatest (SecurityEvent subset) + helpers port
+                                            (doorClosed / parseWindowState / allWindowsClosed /
+                                            openWindowCount / asNonEmptyString) + SecurityCardsProjection
+                                            (the six cards: lock/sentry/doors/windows/homelink/guest with
+                                            value/tone/SF-symbol/a11y) + SecurityCardsTone (semantic)
+  SecurityStatusCards.Model.swift      243  P1/S8 state-holder seam (SecurityCardsSource->Model) +
+                                            P1/S11 telemetry seam (viewOpened) + P1/S10 SecurityCardsStrings
+                                            facade + load/connection enums + resolvePhase (loading/empty/
+                                            error/content) + stale one-shot auto-refresh + in-memory source
+  SecurityStatusCards.Views.swift      238  presentational subviews — responsive card grid (LazyVGrid
+                                            .adaptive = web 1/2/3 cols) / glass card tile (TSGlassPanel) /
+                                            loading skeleton grid (TSSkeleton x6) / friendly empty hint /
+                                            QueryError-equivalent error+retry / freshness chip (Live/Stale/
+                                            Offline) / stale+offline banner; tone -> Color.TS token map
+  SecurityStatusCards.swift             75  SecurityStatusCards surface (state switch + TSFadeIn + onAppear
+                                            telemetry; surfaceSlug "SecurityStatusCards")
+  SecurityStatusCards.Previews.swift    99  #if DEBUG previews — one per state (loading / content-secure /
+                                            content-open / empty / error / stale / offline)
+  SecurityStatusCards.Tests.swift      332  XCTest — door/window/signal logic + projection (all six cards,
+                                            secure/open/absent + sentry quirk) + resolvePhase + model wiring
+                                            + telemetry spy + stale/offline auto-refresh + a11y (30 methods)
+  SecurityStatusCards.strings           58  P1/S10 catalog contribution (22 web-source keys + 9 native
+                                            chrome/freshness/a11y keys)
+  Every file <= 384 lines (house file_length 400). Total 1429 lines (1371 Swift across 6 + 58 strings).
+  Distinct SecurityCards* type prefix (vs the in-module SecurityStatusWidget dashboard widget's Security*
+  types) — verified 0 public-type-name collisions, so no duplicate symbols in the app module.
+  Shared TSGlassPanel/TSSkeleton/TSFadeIn + Color.TS/Font.TS/TSSpacing/TSRadius are REUSED from the real
+  component library (no redeclaration).
+
+=== PARITY (vs web SecurityStatusCards.tsx + ./helpers.ts) ===
+  Data sources -> useTranslation only. The web source is a pure presentational leaf: props
+    { latest: SecurityEvent | undefined, isLoading }. The native surface binds the P1/S8
+    SecurityCardsSource carrying the parent's useSecurityLatest snapshot (latest + load + connection); the
+    view performs NO HTTP. The web's defensive `signal.SignalValue` narrowing (string|boolean|null) is
+    reproduced natively (SecurityCardsSignalValue) so the parsing is exercised end-to-end.
+  Projection -> 1:1 port of ./helpers.ts: doorClosed (absent/false/closed-strings/all-falsy-JSON -> closed),
+    parseWindowState (closed|0 -> Closed, vent -> Venting, other -> Open), allWindowsClosed, windowSummary
+    ("All Closed" / "<n> Open/Venting" / "—"), asNonEmptyString (length>0, untrimmed). JS truthiness for
+    sentry/lock/homelink/guest reproduced incl. the web `latest?.sentryMode ?` quirk (any non-empty string,
+    even "Off", renders Active). Verified by executed XCTest (30/30).
+  Composition -> the six web GlassPanel cells, in web order: Lock (lock.fill/lock.open.fill, Locked/Unlocked)
+    · Sentry (checkmark.shield/exclamationmark.shield, Active/Inactive) · Doors (door.left.hand.closed/open,
+    Closed/raw doorState/Open) · Windows (recolored, All Closed/<n> Open/Venting/—) · HomeLink (house.fill,
+    Nearby/Away) · Guest (person.fill.checkmark, Enabled/Disabled). Loading -> 6 skeleton blocks (web six
+    <Skeleton height=120>); resolved grid wrapped in TSFadeIn(delay:0.1) (web FadeIn delay 0.1). An absent
+    event renders the same six cards with the web optional-chaining fallbacks (Unlocked/Inactive/Closed/—/
+    Away/Disabled) so the empty state is never a blank box.
+  Shared components -> @/components/ui/GlassPanel -> TSGlassPanel; @/components/feedback/Skeleton ->
+    TSSkeleton; @/components/motion/FadeIn -> TSFadeIn. Compiled against the REAL apps/apple component
+    library in the iOS-18 + macOS-15 typechecks below. Recharts -> none / Leaflet -> none.
+  States (all render) -> loading (skeleton grid) · content (6 cards) · empty (resolved, no event -> fallback
+    grid + friendly hint) · error (QueryError-equivalent + retry, web parent's QueryError) · stale (freshness
+    chip + banner over cached cards + one-shot auto-refresh) · offline (chip + banner over cached cards).
+    NOTE on stale/offline: the web LEAF itself is loading+content only, but THIS prompt's States section
+    explicitly requires loading/empty/error/stale/offline and "bind via the shared P1/S8 state holders".
+    The stale/offline chrome is added as a strict SUPERSET that never distorts the web card rendering (the
+    in-module SecurityStatusWidget already models the same SecurityConnection live/stale/offline for this
+    exact `security/latest` data). Each state has a #if DEBUG preview and is unit-tested via resolvePhase /
+    the projection.
+  i18n -> all 22 source keys resolve through the P1/S10 facade with the web t(key,default) fallback (card
+    titles lockStatus/sentryMode/doors/windows/homelink/guestMode; values locked/unlocked/active/inactive/
+    closed/open/nearby/away/enabled/disabled; descriptions lockDesc/sentryDesc/doorsDesc/windowsDesc/
+    homelinkDesc/guestDesc; windowSummary allClosed/openVenting) — ALL present in SecurityStatusCards.strings,
+    plus 9 native chrome keys (loadingA11y/empty/errorTitle/retry/live/stale/offline/staleBanner/
+    offlineBanner). No English literals in native code (Text(verbatim:) over the facade).
+  a11y -> each card tile is ONE VoiceOver element with the composed "title: value. detail" label; the
+    loading grid is one labeled element; freshness chip + connectivity banner + retry each carry an
+    accessibilityLabel; icons accessibilityHidden; Dynamic Type via Font.TS tokens; Reduce Motion gates the
+    TSSkeleton shimmer + TSFadeIn.
+  Telemetry -> SecurityCardsModel.start() emits viewOpened(surface:"SecurityStatusCards") -> bridges the
+    shared Telemetry.track (P1/S11). Asserted by a spy test (fires exactly once across double start()).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK. The 5 shipped surface files compiled together with the REAL
+    apps/apple component closure (generated Tokens + Sources/Design + Sources/Components, 46 files; none
+    import the Shared xcframework):
+      xcrun swiftc -typecheck -sdk <iphonesimulator> -target arm64-apple-ios18.0-simulator -swift-version 6
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0 -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swift build — DEBUG, the FULL surface incl. #if DEBUG #Preview blocks + the real design-system module
+    (SwiftPM, Swift 6 language mode, .macOS(.v15)):
+      Build complete!
+      BUILD_EXIT=0                                                                  OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host (real production Adapter/Model/Views/
+    surface as module "TeslaSync"; @testable import TeslaSync):
+      Executed 30 tests, with 0 failures (0 unexpected)
+        SecurityCardsDoorLogicTests        7  (absent/bool/closed-strings/open/all-falsy-JSON/true+number/
+                                              malformed-JSON)
+        SecurityCardsWindowLogicTests      4  (parseWindowState / allWindowsClosed / openWindowCount /
+                                              asNonEmptyString)
+        SecurityCardsSignalValueTests      1  (truthiness incl. the "Off" non-empty-string quirk)
+        SecurityCardsProjectionTests       5  (order+count / absent fallbacks / secure / open raw-door +
+                                              window count / sentry truthiness quirk)
+        SecurityCardsAccessibilityTests    1  (composed title:value. detail label)
+        SecurityCardsPhaseTests            7  (loading±data / empty / loaded±data / failed±data)
+        SecurityCardsModelTests            5  (start applies initial + telemetry-once + startCount==1 /
+                                              refresh delegation / empty fallback cards / stale one-shot
+                                              auto-refresh resets on live / offline no auto-refresh)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+      Note: the bare gate `cd apps/apple && swiftlint --strict` reports 1 violation, but it is PRE-EXISTING
+      and OUT OF SCOPE — dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length) —
+      and the .swiftlint.yml `included:` list does NOT contain TeslaSync/feature-views (that registration is
+      the downstream P4 integration prompt's job). `git status` confirms ONLY the 7 SecurityStatusCards.*
+      files are added; this surface introduces 0 violations.
+[6] swiftformat --lint (config apps/apple/.swiftformat):
+      6 surface files: 0/6 files require formatting.  |  whole tree `swiftformat --lint apps/apple`: 0/671.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views  (covers this surface)
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      (The literal gate path .../SecurityStatusCards — no extension — also returns EXIT=0; it is a file
+      prefix, not a directory, so Get-ChildItem -Recurse matches nothing. The feature-views scan above is
+      the meaningful run and is clean.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + targets + schemes generate cleanly).
+      - `grep -c SecurityStatusCards TeslaSync.xcodeproj/project.pbxproj` -> 0 (surface not registered).
+      - `grep -c feature-views   TeslaSync.xcodeproj/project.pbxproj` -> 0 (whole dir excluded).
+      - `grep -c Shared.xcframework project.pbxproj` -> 10 (the app targets LINK the KMP core) while
+        `ls Frameworks/Shared.xcframework` -> No such file or directory (NOT staged).
+      - the TeslaSync scheme build preAction runs Scripts/build-shared-xcframework.sh
+        (apps/shared/gradlew :core:assembleSharedXCFramework — Kotlin/Native, heavy).
+      - iPhone 16 simulator present (so the simulator is NOT the blocker).
+    Why deferred (three independent, code-unrelated reasons — none a defect in this surface; identical
+    disposition to the 0009/0036/0054 predecessor surfaces, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets source `Sources/` + `TeslaSync/dashboard-widgets`;
+          this surface lives at `TeslaSync/feature-views/` with 0 references in project.yml (proven: 0
+          pbxproj refs). Registration into the XcodeGen target is the downstream P4 integration/acceptance
+          prompt. Editing project.yml is OUTSIDE this prompt's allowed files. Running xcodebuild now would
+          build the app WITHOUT these files — ZERO evidence about this deliverable. Steps [1]/[2] DO compile
+          this surface against the real library on BOTH SDKs, and steps [3]/[4] BUILD + EXECUTE its full
+          XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a Kotlin/Native
+          gradle build. Independent of this UI surface; concrete absent-framework state captured above.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are PROVEN GREEN
+    (30/30) by the executed SwiftPM harness in step [4], and the surface typechecks against BOTH the iOS 18
+    simulator and macOS 15 SDKs in steps [1]/[2] under Swift 6 strict concurrency.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states (loading/content/empty/error/stale/offline) — implemented; each has a
+      #if DEBUG preview; phase + projection unit-tested + executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SecurityCardsSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all 22 source keys present in the strings.
+  [x] Accessibility labels on every interactive/element surface (per-card combined label, loading, chip,
+      banner, retry).
+  [x] Tests: adapter logic + projection per-card + resolvePhase + model wiring + telemetry + stale/offline
+      + a11y — 30 methods, EXECUTED 30/30 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with captured pbxproj/framework
+                       evidence; every "OK" is a command actually run with its real exit code (iOS+macOS SDK
+                       typechecks, a DEBUG SwiftPM build, an executed 30/30 XCTest run, lint/format/
+                       placeholder gates). The pre-existing whole-tree swiftlint violation is disclosed, not
+                       hidden, and attributed to out-of-scope code (git-proven).
+  2  No scope narrowing: implemented ALL six cards + loading + empty + error + stale + offline + i18n + a11y
+                       + telemetry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (No shims used — the SwiftPM
+                       harness compiles the REAL component library; only UnitFormatters.swift, an unused
+                       component needing the KMP Units facade, was excluded from the throwaway harness.)
+  5  No parity shortcuts: faithful port of doorClosed/parseWindowState/allWindowsClosed/windowSummary/
+                       asNonEmptyString + JS truthiness (incl. the sentry "Off" quirk) + all six cards.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml (integration prompt's scope) and did NOT
+                       edit the shared Localizable.xcstrings (parallel-unsafe) — strings shipped as the
+                       per-surface table, exactly like 0009/0036/0054.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed SecurityStatusCards.* files + this log (git status
+                       shows exactly 7 new files; the generated .xcodeproj was removed after evidence).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SecurityStatusCards shipped at parity with the web source: a Foundation-only
+  helpers/projection core (executed-green XCTest, 30/30), a P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, the six security cards + loading/empty/error/stale/offline states + all 22 i18n keys + per-card
+  a11y, on the shared TSGlassPanel/TSSkeleton/TSFadeIn components. All host-runnable gates pass AND the
+  surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs with the real Xcode 26 toolchain
+  under Swift 6 strict concurrency. The Xcode app build/test is DEFERRED to the downstream integration/
+  signed runner (surface not yet target-registered + Shared.xcframework KMP staging + macOS signing — none a
+  defect in this code, all outside this prompt's allowed files), matching the 0009/0036/0054 "code-complete
+  + DEFERRED Xcode gate" precedent (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/SecurityStatusCards.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0046-SecurityStatusCards.log
+  git commit -m "feat(apps/apple/feature-views): add SecurityStatusCards surface (P4)"
+
+EXIT=0
+STATUS=DONE
