@@ -1,0 +1,259 @@
+================================================================================
+P4 · Feature view · 0082 — AutomationCard (Apple)
+Run: 2026-06-07T20:59-0700   Host: Darwin arm64 (macOS 26.x)   Branch: auto/20260607-170817-98066/203
+Base: a0b7c48f5d455162e84cb4aa9af29a584c56d070
+Prompt: P4/feature-views/0082 — Feature view: AutomationCard
+Web source (spec): web/src/features/automations/pages/AutomationCard.tsx
+Native output: apps/apple/TeslaSync/feature-views/AutomationCard.*
+Mode: code-complete + DEFERRED full-app Xcode build/test (0002 BackendTool / 0010
+      ToolCard / 0026 AuditPanel / 0050 UserImpersonateButton precedent, ADR-012,
+      macos-pending-verifications.md, Honesty rule 7).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (toolchain) .......... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+    (default `xcode-select -p` = /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)      OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)             OK
+  iOS Simulator runtime ...... iOS 26.5 present; iPhone 16 device present            OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)      OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... project generates cleanly; AutomationCard registered  OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)       OK
+  Shared.xcframework ......... NOT staged (Frameworks/ holds only .gitkeep)         WARN
+  feature-views in project.yml  REGISTERED (app + macOS targets enumerate the dir)   OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui". The core requirement is SwiftUI, which is AVAILABLE
+  and PROVEN by real iOS-18-simulator AND macOS-15 SDK typechecks below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, host-compiled on BOTH SDKs, and host-tested
+  (19 XCTest methods executed green). STATUS=DONE, not BLOCKED.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/AutomationCard.*) ===
+  AutomationCard.Model.swift     255  Surface slug (P1/S11), telemetry seam + OSLog
+                                      default, P1/S10 strings facade, input value
+                                      types (AutomationCardData + AutomationConflictData
+                                      + AutomationLiveConnection + AutomationCardState),
+                                      and the AutomationCardActions callback bag.
+  AutomationCard.Adapter.swift   365  Pure, testable projection core — status map
+                                      (web getUIStatus + statusStyles), handleToggle
+                                      branch + displayed-checked, kebab-menu item set
+                                      (auto-disabled-only Re-enable), conflict tint,
+                                      live freshness chip, timeAgo + formatDateTime,
+                                      delete ConfirmDialog content, a11y summaries.
+  AutomationCard.Views.swift     322  Presentational subviews — header (name + badge
+                                      + firing pulse + description), pin/toggle/kebab
+                                      controls, vehicle row, stat row, auto-disabled
+                                      warning, conflict rows.
+  AutomationCard.swift           197  The surface — state switch (loading/empty/error/
+                                      loaded), TSGlassPanel + firing ring + auto-disabled
+                                      border, native .alert delete confirm, .task →
+                                      view.opened, web-parity convenience init.
+  AutomationCard.Previews.swift  144  #if DEBUG previews — active/disabled/auto-disabled/
+                                      never-run + firing live/stale/offline + loading/
+                                      empty/error (echo localizer, no-op actions).
+  AutomationCard.Tests.swift     267  XCTest — adapter + formatting + a11y + i18n key
+                                      parity + telemetry (19 methods).
+  AutomationCard.strings          64  P1/S10 catalog contribution (table "AutomationCard",
+                                      36 keys: 22 web-parity + 14 native chrome).
+  Largest .swift = 365 lines (swiftlint file_length<=400 honored). No file imports the
+  Shared xcframework — the card is presentational (web parity: it owns no data); the
+  parent maps the shared S8 Automation holder into AutomationCardData + supplies callbacks.
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources: web `useTranslation` ONLY (the card is presentational — it receives
+    `automation` + `isFiring` + `vehicleName` + 4 callbacks as props and performs no
+    I/O). Native mirrors this exactly: no store binding, no HTTP; the i18n hook maps to
+    the P1/S10 `AutomationCardStrings` facade. (Same disposition as 0010 ToolCard, which
+    is likewise a data-less presentational card.)
+  - Composition (web GlassPanel + Badge + Toggle + ConfirmDialog + PinButton + kebab):
+      • GlassPanel       -> TSGlassPanel + firing `ring-2 ring-neon-cyan/50` (accent .5
+                            stroke) + auto-disabled `border-red-500/30` (danger .3 stroke).
+      • Badge (status)   -> TSBadge(tone:) via AutomationStatus (active=success /
+                            disabled=neutral / auto-disabled=danger) — web statusStyles.
+      • Toggle           -> native Toggle; displayed checked = auto_disabled?false:enabled;
+                            onChange resolves handleToggle (auto_disabled&&on -> onReEnable,
+                            else onToggle(id,checked)) — web `handleToggle`.
+      • kebab menu       -> native Menu: Test Run, [Re-enable iff auto_disabled], Duplicate,
+                            Export, Delete(destructive) — web actions menu + conditional.
+      • ConfirmDialog    -> native .alert (danger): title "Delete Automation", `{{name}}`
+                            message, Delete(destructive) + Cancel — web ConfirmDialog.
+      • PinButton        -> native pin/pin.fill button (isPinned + onTogglePin).
+  - Branches (ALL reproduced, each unit-tested where pure):
+      status active/disabled/auto-disabled · firing chip + ring · description present/
+      absent · menu open + conditional Re-enable · vehicle name / "All vehicles" ·
+      last-run("Last: {timeAgo}") / "Never run" · "Runs: N" · "Fails: N" (N>0) ·
+      "Next: {formatDateTime}" · auto-disabled warning (server reason verbatim) ·
+      conflicts (severity warning=amber / else info=blue; `Conflict with "X" — reason`).
+  - timeAgo: web `— / just now / Xm ago / Xh ago / Xd ago` ported with an injectable
+    `now` + localizer (unit-tested across all 5 buckets).
+  - States (P4 requirement — ALL render, each with a #if DEBUG preview):
+      loading(skeleton chrome) · empty(friendly empty card, never blank) · error(message
+      + Retry) · loaded(full card). The live `isFiring` flag carries a freshness layer
+      (live=animated Firing pulse / stale / offline chip) so the SSE-driven indicator
+      degrades honestly. (The fetch states are native chrome; the web card itself is
+      always `loaded`, owned by the parent list surface — documented per 0010 ToolCard.)
+  - i18n (P1/S10): web keys preserved VERBATIM — automations.status.{active,disabled,
+    auto-disabled}, automations.{firing,toggleLabel,menu,testRun,reEnable,duplicate,
+    export,delete,allVehicles,lastRun,neverRun,runs,fails,nextFire,conflictWith,
+    deleteTitle,deleteMessage,deleteConfirm}, common.cancel; native chrome namespaced
+    automations.{value.none,timeAgo.*,pin,unpin,freshness.*,card.*}. Referenced==declared
+    verified mechanically (33 literal keys + 3 interpolated status keys; 0 missing).
+    No English string literals in native code (facade + Text(verbatim:) / LocalizedStringKey).
+  - Accessibility: combined header VoiceOver label (name + status + firing); toggle
+    aria "Toggle automation"; menu aria "Actions menu"; pin/unpin labels; stat + warning
+    + conflict rows combine; Dynamic-Type system fonts (Font.TS); reduce-motion honored
+    (firing pulse + skeleton shimmer gate on accessibilityReduceMotion).
+  - Telemetry (P1/S11): AutomationCardSurface.reportOpen emits `view.opened` with slug
+    "AutomationCard" from the view's `.task` (OSLog default; prod injects the shared
+    diagnostics adapter) — unit-asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on THIS machine; real output) ===
+  Shipped surface = the 5 production files compiled with the REAL apps/apple component
+  closure (design Tokens + Design/TSMaterial + Components/UI {Typography,Badges,Buttons,
+  Cards} + Feedback/{Skeletons,States,Banners}); none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK (Swift 6, strict-concurrency=complete,
+        -D DEBUG incl. previews):
+        xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+          -strict-concurrency=complete -target arm64-apple-ios18.0-simulator -D DEBUG \
+          <closure> <5 prod files>
+        IOS_TYPECHECK_EXIT=0                                                        OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure + flags,
+        -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                        OK
+  [3] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production Model/Adapter/Views/surface + real design tokens
+        + real TS component closure), Swift 6 tools/language mode:
+          Test Suite 'AutomationCardAdapterTests'        passed — 11 tests, 0 failures
+          Test Suite 'AutomationCardFormattingTests'     passed —  3 tests, 0 failures
+          Test Suite 'AutomationCardAccessibilityTests'  passed —  4 tests, 0 failures
+          Test Suite 'AutomationCardTelemetryTests'      passed —  1 test,  0 failures
+          Executed 19 tests, with 0 failures (0 unexpected) in 0.009 seconds
+        SWIFT_TEST_EXIT=0                                                           OK
+        Covers: status precedence + label keys/fallbacks, displayed-checked, handleToggle
+        resolve (all 4 branches) + dispatch callbacks, menu item gating + metadata,
+        conflict severity, freshness chip projection + metadata, state accessor, timeAgo
+        (5 buckets), formatDateTime (+ fallback), delete-confirm interpolation, header
+        a11y (with/without chip), toggle/menu a11y, web-key parity, view.opened + slug.
+  [4] swiftlint --strict (6 surface .swift files, explicit paths):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                                 OK
+  [5] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                               OK
+  [6] check-placeholders.ps1 (ADR-011 stub gate; swift) — run two ways:
+        (a) literal prompt invocation:
+            ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AutomationCard
+            PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+        (b) real scoped scan of the 6 shipped .swift files (temp dir, -Language swift):
+            PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+        manual grep (TODO/FIXME/XXX/placeholder/lorem/stub/mock/not implemented): NONE
+        PLACEHOLDER_EXIT=0                                                          OK
+
+=== GATE — FULL-APP XCODE STEPS (DEFERRED to the signed macos-latest runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on THIS host via the Xcode 26.5 toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0.
+      - AutomationCard registration in the generated TeslaSync.xcodeproj/project.pbxproj:
+        42 references; all 7 files present (Model/Adapter/Views/swift/Previews/Tests/
+        strings). UNLIKE the 0050 era, feature-views IS now wired into the app + macOS
+        targets — this surface IS target-registered.
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator
+        build CODE_SIGNING_ALLOWED=NO` (target, not scheme, to skip the gradle pre-action):
+            error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+            ** BUILD FAILED **                          -> IOS_TARGET_EXIT=65
+      - same for `-target TeslaSync-macOS`            -> MAC_TARGET_EXIT=65 (same xcframework).
+    Why DEFERRED (environment/infra, NOT a defect in this surface — identical disposition
+    to the 0002/0010/0026/0050 predecessors + macos-pending-verifications.md, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app/macOS targets link the KMP core; staging
+          it requires a Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework).
+          This is the SINGLE hard blocker captured above (BUILD FAILED before source
+          compilation). It is explicitly DEFERRED to `p5-hardening/H8-0001` on a
+          `macos-latest` runner by macos-pending-verifications.md row 1 — outside this
+          prompt's allowed files (AutomationCard.* + the log) and unrelated to the surface.
+      (b) Co-located *.Tests.swift in the app-target source dir: project.yml enumerates the
+          whole `TeslaSync/feature-views/` dir into the app target, so the 28 co-located
+          `*.Tests.swift` (27 pre-existing predecessors + this one) — which `import XCTest`
+          + `@testable import TeslaSync` — cannot compile into the app module. This is a
+          systemic, pre-existing condition this surface CONFORMS to (the prompt's allowed
+          files mandate co-located AutomationCard.*; the acceptance criteria mandate tests).
+          The downstream P4 integration/acceptance prompt owns excluding `*.Tests.swift`
+          from the app target (or moving them to the test bundle) for the whole suite.
+      (c) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012); independent of this surface.
+    The SAME 19 tests are PROVEN GREEN by the executed SwiftPM harness in step [3], and
+    the surface compiles against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2] — the
+    meaningful, code-owned validation. No green result is claimed for the full-app build;
+    its real exit-65 cause is shown.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (loaded with every branch) + the P4
+      load/empty/error chrome + live/stale/offline freshness — implemented; each has a
+      #if DEBUG preview; pure branches unit-tested + EXECUTED green.
+  [x] Hooks bind through the P1/S8/S10 seam layer (presentational card: i18n via the
+      AutomationCardStrings facade; automation supplied by the parent as AutomationCardData);
+      no view HTTP — matches the web component's prop-driven, data-less contract.
+  [x] Every i18n key from source has a matching catalog key — web keys preserved verbatim;
+      referenced==declared verified mechanically (0 missing of 36).
+  [x] Accessibility labels on every interactive element (toggle, kebab menu, pin) +
+      combined header/stat/warning/conflict summaries.
+  [x] Tests: adapter unit + per-branch projection + a11y label + i18n + telemetry — 19
+      methods, EXECUTED 19/19, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0
+      (two ways) + manual grep clean.
+  [x] EXIT=0 / STATUS=DONE — host gates green; full-app Xcode build/test DEFERRED with
+      captured evidence (missing Shared.xcframework + co-located tests + signing), per
+      predecessor parity + macos-pending-verifications.md.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the full-app xcodebuild is shown
+                          DEFERRED with its real exit 65 + missing-xcframework cause, never
+                          as a pass.
+  2 No scope narrowing ... full surface (7 files), every web branch + all P4 states, 19 tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + conditional reproduced;
+                          every gate executed on THIS runner with raw exits pasted.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0 (two ways).
+  5 No parity shortcuts .. status map + handleToggle branch + kebab(+conditional Re-enable)
+                          + ConfirmDialog→.alert + firing ring + conflict tint + timeAgo +
+                          PinButton + a11y + telemetry all mapped to platform tokens/idioms.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same code-complete + DEFERRED-full-app disposition as 0002/0010/
+                          0026/0050 + macos-pending-verifications.md.
+  8 No commit on red ..... the COMMITTED surface is GREEN on every runnable gate (dual-SDK
+                          typecheck, 19/19 SwiftPM tests, lint, format, placeholder); the
+                          only non-green step is the environment-blocked Shared.xcframework
+                          build, DEFERRED with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... changes confined to feature-views/AutomationCard.* (7 files) +
+                          this log. project.yml already enumerates feature-views (no edit);
+                          the generated .xcodeproj is git-ignored.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+=== DISPOSITION ===
+  Production-polished, Apple-idiomatic AutomationCard shipped at parity with the web source
+  and INDEPENDENTLY VERIFIED: it typechecks on BOTH the iOS 18 simulator and macOS 15 SDKs
+  under Swift 6 strict-concurrency=complete against the REAL design system + shared component
+  library, and its 19 XCTest methods EXECUTE green via a SwiftPM harness — with swiftlint
+  --strict / swiftformat --lint / placeholder all clean. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the
+  unstaged KMP Shared.xcframework (macos-pending-verifications.md row 1 → p5-hardening on a
+  signed macos-latest runner), plus the pre-existing co-located-test + macOS-signing
+  conditions — none owned by this surface or fixable within the prompt's allowed files.
+
+IOS_BUILD_TEST=DEFERRED   (target build evidence: EXIT=65, missing Shared.xcframework)
+MAC_BUILD_TEST=DEFERRED   (target build evidence: EXIT=65, missing Shared.xcframework)
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+SWIFT_TEST_EXIT=0
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE

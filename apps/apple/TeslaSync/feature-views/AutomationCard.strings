@@ -1,0 +1,64 @@
+/*
+  AutomationCard.strings
+  TeslaSync — P4 feature view · 0082 · AutomationCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "AutomationCard").
+  Every key the native AutomationCard resolves lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its strings without
+  editing the shared catalog.
+
+  The first group is the EXACT keys extracted from the web source
+  (web/src/features/automations/pages/AutomationCard.tsx). The web i18next
+  `{{name}}` interpolation is expressed natively as `%@` (resolved with
+  String(format:)). The remaining keys back the native chrome (relative time,
+  pin affordance, freshness chip, and the load/empty/error states the P4 state
+  list requires).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"automations.status.active" = "Active";
+"automations.status.disabled" = "Disabled";
+"automations.status.auto-disabled" = "Auto-Disabled";
+"automations.firing" = "Firing";
+"automations.toggleLabel" = "Toggle automation";
+"automations.menu" = "Actions menu";
+"automations.testRun" = "Test Run";
+"automations.reEnable" = "Re-enable";
+"automations.duplicate" = "Duplicate";
+"automations.export" = "Export";
+"automations.delete" = "Delete";
+"automations.allVehicles" = "All vehicles";
+"automations.lastRun" = "Last";
+"automations.neverRun" = "Never run";
+"automations.runs" = "Runs";
+"automations.fails" = "Fails";
+"automations.nextFire" = "Next";
+"automations.conflictWith" = "Conflict with";
+"automations.deleteTitle" = "Delete Automation";
+"automations.deleteMessage" = "Are you sure you want to delete \"%@\"? This cannot be undone.";
+"automations.deleteConfirm" = "Delete";
+"common.cancel" = "Cancel";
+
+/* --- Native chrome: relative + absolute time (web `timeAgo`) --- */
+"automations.value.none" = "—";
+"automations.timeAgo.justNow" = "just now";
+"automations.timeAgo.minutes" = "%@m ago";
+"automations.timeAgo.hours" = "%@h ago";
+"automations.timeAgo.days" = "%@d ago";
+
+/* --- Native chrome: pin affordance (web embedded PinButton) --- */
+"automations.pin" = "Pin";
+"automations.unpin" = "Unpin";
+
+/* --- Native chrome: live freshness chip (stale / offline) --- */
+"automations.freshness.stale" = "Stale";
+"automations.freshness.offline" = "Offline";
+
+/* --- Native chrome: load / empty / error states --- */
+"automations.card.loading" = "Loading automation…";
+"automations.card.empty.title" = "No automation";
+"automations.card.empty.message" = "This automation is no longer available.";
+"automations.card.error.title" = "Couldn’t load automation";
+"automations.card.error.message" = "Something went wrong loading this automation.";
