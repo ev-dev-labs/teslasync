@@ -1,0 +1,245 @@
+================================================================================
+P4 · Feature view · 0039 — RedisDiagnosticEmptyState (Apple)
+Run: 2026-06-07T20:30-0700   Host: Darwin arm64 (macOS 26.x)   Slot: slot-160
+Prompt: P4/feature-views/0039 — Feature view: RedisDiagnosticEmptyState
+Web source (spec): web/src/features/admin/components/RedisDiagnosticEmptyState.tsx
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (31/31) +
+      DEFERRED Xcode app build/test (0005/0009 feature-view precedent, ADR-012). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 via DEVELOPER_DIR override                OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                           OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (feature-views/ not yet target-registered)  WARN
+  surface in .swiftlint.yml .. feature-views/ not in `included:` scope (lint via explicit paths)  WARN
+
+  NOTE on active toolchain: a bare `xcodebuild`/`xcrun simctl` fails because
+  `xcode-select -p` points at /Library/Developer/CommandLineTools (no SDKs). Full
+  Xcode 26.5 IS installed at /Applications/Xcode.app and is used here via the
+  DEVELOPER_DIR override (the 0005/0009 precedent), which unlocks the iOS 18
+  simulator SDK, the macOS 15 SDK, the iPhone 16 simulator, and `swift test`.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, both-SDK-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.*) ===
+  RedisDiagnosticEmptyState.Adapter.swift   374  testable projection core — wire value types
+                                                 (RedisSignalsMeta / RedisSignalKeyEntry / RedisApiError /
+                                                 RedisLiveStoreMode), RedisDiagnosticTone (border+fill),
+                                                 RDText(key+fallback+{{args}}) + RDInterpolate, the
+                                                 RedisDiagnosticResolved branch + the SF-Symbol map, and
+                                                 RedisDiagnosticProjection.resolve (the nine-branch ladder)
+                                                 + otherKeys filter
+  RedisDiagnosticEmptyState.Copy.swift      213  per-branch copy catalog — every t(key,default) as an RDText
+                                                 constant + the three interpolating bodies
+                                                 ({{status}} {{message}} / {{count}} / {{date}}) + chip-name
+                                                 fallback (display_name||vin||Vehicle {{id}})
+  RedisDiagnosticEmptyState.Model.swift     247  P1/S8 state-holder seam (RedisDiagnosticSource → Model) +
+                                                 P1/S11 telemetry seam + keys-query lifecycle + chips-phase
+                                                 resolution + in-memory source + P1/S10 RDStrings facade
+  RedisDiagnosticEmptyState.Support.swift    63  formatDateTime (medium+short / em-dash), docs-URL resolver
+                                                 (app-relative ctaHref → absolute Link), a11y summaries
+  RedisDiagnosticEmptyState.Views.swift     169  DiagnosticBanner (toned border+fill) + DiagnosticMetaList
+                                                 (Grid) + mode badge + <code> value + legacy EmptyState
+                                                 (ContentUnavailableView)
+  RedisDiagnosticEmptyState.Chrome.swift    171  docs CTA Link + native retry (QueryError equivalent) +
+                                                 "other vehicles" section (LazyVGrid chips + loading
+                                                 skeleton) + the tappable vehicle chip
+  RedisDiagnosticEmptyState.swift            52  RedisDiagnosticEmptyState surface (legacy-empty vs banner
+                                                 switch + onAppear telemetry; web props via the model)
+  RedisDiagnosticEmptyState.Previews.swift  132  #if DEBUG previews — 11 (each of the 9 branches + the
+                                                 no-telemetry absent variant + the chips-loading state)
+  RedisDiagnosticEmptyState.Tests.swift     369  XCTest — projection + otherKeys + chips-phase + adapter +
+                                                 model + a11y (31 methods)
+  RedisDiagnosticEmptyState.strings          71  P1/S10 catalog contribution (28 web-source keys + 5 native
+                                                 chrome/a11y keys = 33)
+  Total 1861 lines across 10 files; every .swift file <= 400 lines (house file_length).
+  Shared tokens (Color.TS / Font.TS / TSSpacing / TSRadius) + TSSkeleton + ContentUnavailableView are
+  REUSED from the P4 core (no redeclaration in shipped files → no duplicate symbols in the app module).
+  Copy + Support are split off the Adapter purely to hold each .swift file under the 400-line house limit.
+
+=== PARITY (vs web RedisDiagnosticEmptyState.tsx) ===
+  Data sources -> bound via the shared state-holder seam (RedisDiagnosticSource -> RedisDiagnosticModel):
+    useTranslation (P1/S10 RDStrings), useDateFormat (RedisDiagnosticFormat), useQuery(['redis-signal-keys'])
+    (RedisDiagnosticKeysState). The production source composes the parent's redis-signals query snapshot
+    (meta / serverError / networkError / vehicleId) with the keys query; the view performs NO HTTP.
+  Projection -> RedisDiagnosticProjection.resolve is a 1:1 port of the web if-ladder, error branches first:
+    0.A cacheNotWired (503 & /not available/i, danger, CTA /docs/caching#configuration) ·
+    0.B unreachable (502/503/504 & /unreachable|upstream/i, danger) ·
+    0.C requestFailed (any other ApiError, warning, body {{status}} {{message}}) ·
+    0.D networkError (warning) · then no-meta legacy EmptyState · then
+    1 modeLocal (mode==local, danger, CTA /docs/caching) ·
+    2 mirrorBroken (l1>0 && l2==0, warning, body {{count}}, otherKeys) ·
+    3 noTelemetry (l1==0 && (l1LastSeen==nil || now-l1LastSeen>7d), info, bodyStale{{date}}/bodyAbsent, otherKeys) ·
+    4 fallthrough (neutral, otherKeys). Error branches always win over meta (verified by EXECUTED XCTest).
+  otherKeys -> keysFailed/idle/loading ? [] : keys.filter(id != self && field_count>0); chips capped at 6;
+    tap -> onSelectVehicle. The meta list (mode badge + key + l1/l2 counts + l1/l2 last-seen + VIN?) renders
+    in EVERY banner branch when meta is present (web `{meta && <DiagnosticMetaList/>}`).
+  Composition -> toned bordered banner (web GlassPanel `border-{tone}-500/30 bg-{tone}-500/5`): leading
+    SF Symbol (ServerCrash->externaldrive.badge.xmark, AlertTriangle->exclamationmark.triangle.fill,
+    Zap->bolt.fill, Radio->dot.radiowaves.left.and.right, Database->externaldrive) in text-secondary
+    (tone-invariant, web parity), title (text-primary), body (text-secondary), meta Grid, retry, docs Link,
+    other-vehicle chips. The no-meta fallback renders ContentUnavailableView (web EmptyState).
+  Shared components -> @/components/ui (GlassPanel/Badge/Button) + @/components/feedback (EmptyState) map to
+    the toned banner box, the mode/chip badges, the secondary docs Link, and ContentUnavailableView; the
+    loading chrome reuses the shared TSSkeleton. Compiled against the REAL apps/apple library in the
+    iOS+macOS typechecks below. Recharts -> none / Leaflet -> none (no chart/map on this surface).
+  States (all render) -> the nine web branches each have a #if DEBUG preview + projection unit test. The
+    generic P4 states map faithfully onto the web leaf (this is a pure presentational empty-state leaf, like
+    the 0009 TelemetryErrorsPanel precedent — it owns no live/SSE state, so NO global stale/offline banner
+    chrome is invented):
+      loading -> the keys query's initial fetch (skeleton chips in the otherKeys branches);
+      empty   -> the legacy no-meta EmptyState + the neutral fallthrough "No signals cached";
+      error   -> cacheNotWired / unreachable / requestFailed (+ a native retry affordance, the
+                 states-contract QueryError equivalent, delegating to the source's refresh);
+      offline -> the networkError branch ("Cannot reach the API server");
+      stale   -> the noTelemetry bodyStale branch (l1 last-seen > 7-day Redis TTL).
+  i18n -> ALL 28 web-source keys resolve through the P1/S10 facade with the web t(key,default) fallback —
+    mechanically verified: comm(web_keys, native_strings) is empty (full coverage). Plus 5 native chrome/
+    a11y keys (retry / vehicleFallback / fieldsA11y / loadingOtherVehicles / otherVehicleHint). No English
+    literal in Swift (Text(verbatim:) over the facade; the only inline English lives in the RDText fallbacks).
+  a11y -> banner is one contain element; title is a header; the icon is hidden; the retry button, the docs
+    Link, the mode badge, and each vehicle chip carry an accessibilityLabel; each chip is one labeled button
+    with a hint + the tested chipSummary; the loading chips are one labeled element; Dynamic Type via tokens;
+    Reduce Motion gates the TSSkeleton shimmer.
+  Telemetry -> RedisDiagnosticModel.start() emits viewOpened(surface:"RedisDiagnosticEmptyState") -> bridges
+    the shared Telemetry.track (P1/S11). Asserted by a spy test (fires exactly once).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 7 shipped files compiled with the REAL apps/apple
+    component closure — generated Tokens + Badges + Buttons + Cards + Typography + Skeletons + TSMaterial;
+    none import the Shared xcframework), Swift 6 language mode:
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 ...
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; the 7 shipped files + the Previews file + real closure,
+    so this surface's 11 #Preview blocks expand against the real tokens):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness (the
+    real production Adapter/Copy/Model/Support/surface/Views/Chrome + the real design tokens + the real
+    Badges/Buttons/Cards/Typography/Skeletons/TSMaterial, module name "TeslaSync"), Swift 6 language mode:
+      Executed 31 tests, with 0 failures (0 unexpected) in 0.008 seconds
+        RedisDiagnosticProjectionTests   15/15  (cacheNotWired / unreachable 503+502-upstream / generic-500
+                                               requestFailed+interpolation / 502 "not available"->requestFailed
+                                               / networkError / error-precedence-over-meta / no-meta legacy /
+                                               modeLocal / mirrorBroken+{{count}} / noTelemetry stale+absent /
+                                               fallthrough / TTL boundary 6d/8d / mirror-beats-no-telemetry)
+        RedisDiagnosticOtherKeysTests     1/1   (filters self + zero-field-count entries)
+        RedisDiagnosticChipsPhaseTests    5/5   (hidden when branch omits / loading / failed-hides /
+                                               loaded-but-filtered-empty hidden / loaded chips)
+        RedisDiagnosticAdapterTests       5/5   (chip-name fallback / dateTime nil+ISO / docs-URL resolution /
+                                               {{token}} interpolation / catalog copy keys non-empty)
+        RedisDiagnosticModelTests         3/3   (start applies initial + telemetry-once + startCount==1 /
+                                               push updates resolved+chips+meta / refresh+selectVehicle delegate)
+        RedisDiagnosticAccessibilityTests 2/2   (banner summary / chip summary name+count)
+      SWIFT_TEST_EXIT=0                                                             OK
+      (This step first caught a REAL Swift-6 concurrency bug — a non-@Sendable global test closure — which was
+       fixed (`@Sendable`) before reporting green. Honest red->green, not assumed.)
+[5] swiftlint --strict on the 9 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml; the
+    `included:` scope does not list feature-views/, so a bare run skips them — explicit-path strict run is the
+    meaningful evidence). Caught + fixed a real file_length (422>400, split Support.swift out) and an
+    opening_brace conflict (rewrote a multi-line `if` condition into a one-line `isUnreachable` helper):
+      Done linting! Found 0 violations, 0 serious in 9 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 9 surface .swift files (config apps/apple/.swiftformat):
+      0/9 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) — REAL scan of the 9 shipped files (copied to a temp dir to
+    scope the scan to this surface; the bare gate `-Path .../RedisDiagnosticEmptyState` is a non-existent
+    literal path that trivially scans nothing). The whole feature-views/ dir also scans clean:
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+[8] xcodegen generate — project + 12 targets + schemes generate cleanly; surface refs in pbxproj = 0
+    (confirms feature-views/ is not yet target-registered, see the deferral note):
+      XCODEGEN_EXIT=0                                                               OK
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host, full Xcode 26.5):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **   XCODEBUILD_MAC_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none a defect in this surface; identical
+    disposition to the 0005/0009 predecessor feature-views, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a Kotlin/Native
+          Gradle build (the scheme runs it as a pre-build phase). Integration/CI-runner scope (ADR-012,
+          apps/macos-pending-verifications.md), independent of this UI surface. Concrete error captured above.
+      (b) NOT-YET-REGISTERED: project.yml's app targets source `Sources/` + `TeslaSync/dashboard-widgets`;
+          this surface lives at `TeslaSync/feature-views/` with 0 pbxproj references. Registering the directory
+          (project.yml + the .swiftlint.yml `included:` scope) is a one-time wiring step shared by ALL ~290
+          feature-view surfaces — editing it here is OUTSIDE this prompt's allowed files and would collide with
+          every parallel feature-view prompt on the same lines. Left to the P4-core/integration runner.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    The MEANINGFUL validation IS performed above: the surface compiles against BOTH the iOS 18 simulator and
+    macOS 15 SDKs (steps [1]/[2]/[3]) and its full XCTest suite EXECUTES green (31/31, step [4]). Under Xcode
+    these same tests run in the TeslaSync(/-macOS) test target.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (the 9 branches incl. error precedence, mode-local, mirror-broken,
+      no-telemetry stale/absent, fallthrough, legacy fallback) — implemented; each has a #if DEBUG preview;
+      projection unit-tested + EXECUTED green. Generic loading/empty/error/stale/offline mapped faithfully to
+      the pure-leaf web branches (see PARITY note); no invented connectivity chrome.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (RedisDiagnosticSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 28/28 web keys present (comm verified empty diff)
+      + 5 native chrome keys.
+  [x] Accessibility labels on every interactive element (retry, docs Link, mode badge, each vehicle chip).
+  [x] Tests: adapter + projection per-branch + chips-phase + model wiring + a11y — 31 methods, EXECUTED 31/31.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates + both-SDK compiles + executed tests green; Xcode app build/test
+      DEFERRED with captured evidence (code-unrelated infra blocker, outside allowed files).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real XCODEBUILD_MAC_EXIT=65
+                       missing-framework error captured; every "OK" is a command actually run with its real
+                       exit code (incl. iOS+macOS SDK compiles and an EXECUTED 31/31 XCTest run). The
+                       unregistered feature-views path + un-staged framework are disclosed, not hidden.
+  2  No scope narrowing: implemented ALL nine branches + meta list + otherKeys chips + i18n + a11y + telemetry
+                       + retry + docs CTA + the loading/stale/offline state mappings.
+  3  No skip-and-assume: each host gate executed; nothing assumed green (a real @Sendable concurrency bug was
+                       found by step [4] and fixed before reporting green).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (The throwaway SwiftPM harness
+                       uses ONLY the real production + real shared files — no shims — and is never shipped.)
+  5  No parity shortcuts: faithful port of the error ladder + the meta ladder + the 7-day TTL rule + the
+                       otherKeys filter + the meta list + the three interpolating bodies + the docs CTA.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register feature-views/ in project.yml / .swiftlint.yml and did NOT
+                       stage Shared.xcframework / edit the shared Localizable.xcstrings (parallel-unsafe,
+                       integration-runner scope) — strings shipped as the per-surface table, exactly like 0005/0009.
+  8  No commit on red  : committing on green host gates + iOS/macOS+previews compiles + executed 31/31 tests;
+                       Xcode app build/test explicitly DEFERRED (captured evidence), not failed.
+  9  No silent drift   : changes confined to the allowed RedisDiagnosticEmptyState.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native RedisDiagnosticEmptyState shipped at parity with the web source: a pure-Swift
+  nine-branch projection core (EXECUTED-green XCTest, 31/31), the P1/S8 state-holder seam (no view HTTP), the
+  P1/S11 telemetry, every branch + meta list + otherKeys chips, all 28 web i18n keys, a11y labels on every
+  interactive element, and the docs CTA + native retry. All host-runnable gates pass AND the surface compiles
+  against BOTH the iOS 18 simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict
+  concurrency. The signed Xcode app build/test is DEFERRED to the downstream integration/signed runner
+  (un-staged KMP Shared.xcframework + the one-time feature-views project registration + macOS signing — none a
+  defect in this code, all outside this prompt's allowed files), matching the 0005/0009 "code-complete +
+  DEFERRED Xcode gate" precedent (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0039-RedisDiagnosticEmptyState.log
+  git commit -m "feat(apps/apple/feature-views): add RedisDiagnosticEmptyState surface (P4)"
+
+EXIT=0
+STATUS=DONE
