@@ -1,0 +1,225 @@
+================================================================================
+P4 · Dashboard widget · 0072 — PositionHeatmapWidget (Apple)
+Run: 2026-06-07T18:34-0700   Host: Darwin arm64
+Prompt: P4/dashboard-widgets/0072 — PositionHeatmapWidget
+Web source (spec): web/src/features/dashboard/widgets/PositionHeatmapWidget.tsx
+Registry: position-heatmap · category maps · default 2×4 · min 2×4 · max 4×40
+Mode: code-complete + real-SDK host validation + DEFERRED Xcode app build/test
+      (same directory + same not-yet-registered constraint as predecessor 0036
+      DigitalTwinWidget; ADR-012 macOS-signing-pending).
+================================================================================
+
+=== CAPABILITY PROBE (real, on this host) ===
+  swift (CommandLineTools) ... Apple Swift 6.3.2, macOS SDK present              ✅
+  /Applications/Xcode.app ..... Xcode 26.5 (17F42) via DEVELOPER_DIR override     ✅
+  macOS 15 / iphonesimulator SDKs (MacOSX26.5) ... SwiftUI + MapKit available     ✅
+  iPhone 16 simulator ......... present (via DEVELOPER_DIR simctl)                ✅
+  swiftlint ................... /opt/homebrew/bin/swiftlint                        ✅
+  swiftformat ................. /opt/homebrew/bin/swiftformat (0.61.1)             ✅
+  pwsh (placeholder gate) ..... /opt/homebrew/bin/pwsh                             ✅
+  default xcode-select ........ /Library/Developer/CommandLineTools  (so bare
+                                xcodebuild/simctl resolve to CLT; the full Xcode
+                                toolchain is driven via DEVELOPER_DIR — no sudo)   ⚠
+  Shared.xcframework .......... NOT staged (apps/apple/Frameworks/ holds only
+                                .gitkeep)                                          ⚠ (app-target link dep)
+  codesign identities ......... "0 valid identities found"                        ⚠ (macOS app gate blocker, ADR-012)
+
+  Capability note: this surface requires SwiftUI + MapKit (web "Charts/maps:
+  (none)" is a registry-scan artifact — the widget IS a Leaflet map via the
+  shared @/components/maps wrapper; Recharts→none, Leaflet→MapKit). BOTH SwiftUI
+  and MapKit are AVAILABLE and PROVEN by real macOS-15-SDK compiles below, so the
+  capability-BLOCKED escape hatch does NOT apply — the surface is authored and
+  host-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/PositionHeatmapWidget.*) ===
+  PositionHeatmapWidget.Models.swift    103  HeatPosition / HeatCluster / tier / status / Update
+  PositionHeatmapWidget.Builder.swift   180  PURE adapter: clusterPositions / centroid / intensityColor /
+                                             precision / zoom / radius / fillOpacity / region (port)
+  PositionHeatmapWidget.Model.swift     195  P1/S8 source seam + P1/S11 telemetry + @Observable model +
+                                             InMemory source + P1/S10 strings facade
+  PositionHeatmapWidget.swift           314  the surface: glass shell + header (freshness/refresh/count
+                                             badge/open) + every state + responsive tiers
+  PositionHeatmapWidget.Map.swift        93  MapKit density renderer (screen-space CircleMarker-parity blobs)
+  PositionHeatmapWidget.Previews.swift  117  #if DEBUG previews — one per state + wide layout
+  PositionHeatmapWidget.Tests.swift     275  XCTest: adapter(12) + model(8) + registry(2) + i18n(2)
+  PositionHeatmapWidget.strings          43  P1/S10 catalog (3 source keys + description + native chrome)
+  Every file ≤400 lines (house file_length; largest 314). Every code line ≤120
+  cols (house line_length; max 120). One exported view per file.
+
+=== PARITY (vs web PositionHeatmapWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (PositionHeatmapSource →
+    PositionHeatmapModel): useVehicles + useVehiclePositions + useTranslation. The
+    production app wires PositionHeatmapSource over the KMP VehicleStore positions
+    stream (StateHolderModel<LoadableState<…>>); the view performs NO HTTP.
+  Projection → clusterPositions / centroid / intensityColor + the responsive
+    precision(200|500) / zoom(11|12) / radius / fillOpacity tables are a 1:1 port
+    of the web module-level functions. Grid bucketing (truncated lat*precision),
+    running-average centre, (0,0) null-island skip, count→intensity normalisation,
+    and the teal→magenta RGB ramp are all reproduced and EXECUTED-verified.
+  Composition → WidgetShell chrome (map icon + "Position Heatmap" title + freshness
+    chip + refresh + wide-only "{{count}} positions" badge + Open) · MapKit map with
+    per-cluster screen-space density blobs (radius + fill encode density exactly like
+    Leaflet's pixel-radius CircleMarkers) · stale/offline banner over cached data.
+    Compact (cols≤1) tier reproduced (non-interactive map, coarser grid, no title) for
+    fidelity even though the registry min (2 cols) clamps it away at runtime.
+  Shared components → reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion
+    (compiled against the REAL apps/apple DesignTokens + component library in the
+    strong typecheck below). Map = MapKit (Map/Annotation/MapStyle), web Leaflet → MapKit.
+  States (all render) → loading (shimmer skeleton) · empty ("No position data") ·
+    error (retry) · stale (chip + banner) · offline (cached blobs + chip + banner) ·
+    content. Model phase keeps cached positions visible behind refresh/errors.
+  i18n → all 3 source keys resolve through the P1/S10 facade with the web
+    t(key, default) fallback: widget.positionHeatmap.title / .noData / .count —
+    ALL PRESENT in PositionHeatmapWidget.strings (+ .description + native chrome +
+    a11y). No English literals in native code.
+  a11y → the map is one accessibility element with a localized label
+    ("Position density heatmap") + a density value ("{n} positions across {m} areas");
+    every button (refresh/open/retry) has an accessibilityLabel; Dynamic Type via
+    tokens; Reduce Motion gates the loading shimmer.
+  Telemetry → PositionHeatmapModel.start() emits viewOpened(surface:
+    "PositionHeatmapWidget") → bridges shared Telemetry.track(.screenView) (P1/S11).
+    Asserted by a spy test.
+  Registry → PositionHeatmapWidget.registration: id "position-heatmap", category
+    "maps", default 2×4, min 2×4, max 4×40 (+ clamp()), matching registry/maps.ts.
+    Asserted. Reuses the shared DashboardWidgetSize/DashboardWidgetRegistration the
+    first widget in this dir (DigitalTwinWidget) defines — does NOT redefine them.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real exit codes) ===
+[1] swiftformat --lint (the 7 new .swift/.strings files, exact gate rules):
+      0/7 files require formatting.
+      FORMAT_EXIT=0                                                              ✅
+
+[2] swiftlint --strict (the 7 new files, repo .swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      SWIFTLINT_EXIT=0                                                           ✅
+    (The bare gate `swiftlint --strict` `included:` list does not yet name
+     TeslaSync/dashboard-widgets — that wiring is the P4 integration prompt's job
+     [Honesty rule 7] — so the new dir is linted by explicit path here.)
+
+[3] swiftc -typecheck — core runtime surface (Swift 6 language mode, real macOS 15
+    SDK): Tokens.swift + Models + Builder + Model + swift + Map + a faithful stand-in
+    for the shared dashboard-tier types (DashboardWidgetSize/Registration):
+      xcrun --sdk macosx swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0 …
+      CORE_TYPECHECK_EXIT=0                                                      ✅
+      (Platform-agnostic SwiftUI — no #if os() branches — so the macOS compile fully
+       covers iOS/iPadOS. Map/Annotation/MapStyle/MapCameraPosition/@Observable all
+       resolve against the real SDK under complete strict concurrency.)
+
+[4] swiftc -typecheck — + Previews (-D DEBUG):
+      PREVIEWS_TYPECHECK_EXIT=0                                                  ✅
+      (Caught + fixed a real Swift-6 actor-isolation bug: the preview factory must be
+       @MainActor since it builds @MainActor types. NOTE: the predecessor
+       DigitalTwinWidget.Previews.swift carries the identical latent bug — 0036 never
+       typechecked its previews — but that file is out of this prompt's allowed-files
+       scope and parallel-unsafe to touch, so it is left unmodified.)
+
+[5] swiftc -typecheck — STRONG: the REAL apps/apple component library
+    (Tokens + Sources/Design/* + Components/UI/{Badges,Cards,Typography,Buttons} +
+    Feedback/Skeletons + Motion) + the REAL DigitalTwinWidget files + PositionHeatmapWidget,
+    all compiled together (-D DEBUG, Swift 6):
+      STRONG_TYPECHECK_EXIT=0                                                    ✅
+      Proves (a) PositionHeatmapWidget compiles against the real component library
+      (not just a shim), and (b) COEXISTENCE — both widgets share the single
+      DashboardWidgetSize/DashboardWidgetRegistration definition with zero
+      duplicate-symbol errors. (DigitalTwinWidget.Previews.swift excluded for its
+      pre-existing, unrelated concurrency bug noted in [4].)
+
+[6] swiftc -typecheck — Tests bodies (Models+Builder+Model+swift+Map + Tokens + a
+    minimal XCTest assertion shim; @testable import stripped so every reference
+    resolves to the real source symbols):
+      TESTS_LOGIC_TYPECHECK_EXIT=0                                              ✅
+      (Validates the 24 test methods' use of the real adapter/model/registry/strings
+       APIs. The XCTest assertion *macros* themselves are only surfaced inside a real
+       test target — not a bare swiftc — so they are shimmed here.)
+
+[7] Adapter EXECUTED harness (compiled Models + Builder to a native arm64 binary and
+    RAN it — real "cached → projection" verification, not a typecheck):
+      ADAPTER HARNESS: 19 passed, 0 failed
+      ADAPTER_HARNESS_EXIT=0                                                     ✅
+      Covers: tier/precision tables · clustering (bucketing, running-average centre,
+      null-island skip, count→intensity normalisation) · centroid + SF fallback ·
+      intensityColor RGB endpoints (teal→magenta) · fillOpacity/radius/zoom per tier ·
+      region span from slippy-map zoom.
+
+[8] check-placeholders.ps1 (ADR-011 stub gate; pwsh) — both the literal prompt path
+    and a real per-file scan of all 8 shipped files:
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                         ✅
+      (No TODO/FIXME/stub/mock/placeholder/Lorem/Coming-soon/fatalError — confirmed
+       by an independent grep as well.)
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Three independent, code-unrelated reasons (none a defect in this surface):
+      (a) NOT-YET-REGISTERED: project.yml's app targets glob `Sources/`; this surface
+          lives at TeslaSync/dashboard-widgets/ (matching the 0036 precedent + this
+          prompt's allowed-files list) and is registered into the XcodeGen target +
+          the dashboard grid by the P4 integration prompt (predecessor, Honesty rule 7;
+          `grep -c dashboard-widgets project.yml` = 0). Running xcodebuild now would
+          build the app WITHOUT these files — ZERO evidence about this deliverable. The
+          strong host compile in [5] DOES compile this surface against the real library.
+      (b) Shared.xcframework not staged: the app target links the KMP core; building it
+          needs a Kotlin/Native gradle build. apps/apple/Frameworks/ holds only .gitkeep.
+          Independent of this UI surface.
+      (c) macOS signing: `security find-identity -p codesigning` → 0 valid identities;
+          the macOS app/widget entitlements require a development certificate. ADR-012
+          defers this to a signed runner.
+    XCTest (PositionHeatmapWidget.Tests.swift) runs in the TeslaSync(/-macOS) test target
+    under Xcode (its sources live in Tests/Unit once integrated); the pure-adapter subset
+    is independently PROVEN GREEN by the executed harness in [7], and every test body is
+    typechecked against the real APIs in [6].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 3/3 source keys present in
+      PositionHeatmapWidget.strings (+ description + native chrome + a11y).
+  [x] Accessibility labels on every interactive element; the map carries a label +
+      density-summary value.
+  [x] Tests: adapter unit test (executed-green harness + typechecked XCTest) + per-state
+      model test + registry + i18n facade test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Host gates green (format/lint/typecheck×4/adapter-run/placeholder); Xcode app
+      build/test DEFERRED with capability + predecessor evidence (per 0036 disposition).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); reasons given.
+                       Every "✅" is a command actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL states + responsive tiers + count badge + i18n +
+                       a11y + telemetry + registry + the full MapKit density renderer.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of clusterPositions/centroid/intensityColor +
+                       every responsive branch + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid
+                       (integration prompt's scope), did NOT edit the shared
+                       Localizable.xcstrings (parallel-unsafe), and did NOT modify the
+                       pre-existing DigitalTwinWidget.Previews.swift bug (out of scope) —
+                       reused the shared dashboard-tier types unchanged.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED.
+  9  No silent drift   : changes confined to the allowed PositionHeatmapWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native PositionHeatmapWidget shipped at parity with the web source:
+  pure-Swift density-clustering port (executed-green adapter, 19/19), P1/S8 state-holder
+  seam (no view HTTP), P1/S11 telemetry, every state + i18n key + a11y label, a MapKit
+  density renderer faithful to the Leaflet pixel-radius CircleMarkers, registry-correct
+  (position-heatmap, 2×4/2×4/4×40). All host-runnable gates pass — including a STRONG
+  typecheck against the REAL component library that also proves coexistence with the
+  existing DigitalTwinWidget. The Xcode app build/test is DEFERRED to the signed CI
+  runner (surface not yet target-registered + Shared.xcframework + macOS signing — none
+  a defect in this code), matching the user-approved 0036 "code-complete + DEFERRED Xcode
+  gate" disposition for this directory.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/PositionHeatmapWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0072-PositionHeatmapWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add PositionHeatmapWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
