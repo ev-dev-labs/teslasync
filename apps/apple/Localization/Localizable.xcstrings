@@ -187350,6 +187350,75 @@
           }
         }
       }
+    },
+    "toolCard.preview.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decode VIN"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Decode VIN"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Decode VIN"
+          }
+        }
+      }
+    },
+    "toolCard.preview.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inspect manufacturer, model, plant and year"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Inspect manufacturer, model, plant and year"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Inspect manufacturer, model, plant and year"
+          }
+        }
+      }
+    },
+    "toolCard.preview.body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste a 17-character VIN to decode it."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Paste a 17-character VIN to decode it."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Paste a 17-character VIN to decode it."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
