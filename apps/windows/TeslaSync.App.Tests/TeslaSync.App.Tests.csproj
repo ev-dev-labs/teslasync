@@ -120,6 +120,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DestinationETAWidget\DestinationETAWidget.Model.cs" Link="Widgets\DestinationETAWidget\DestinationETAWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DestinationETAWidget\DestinationETAWidget.ViewModel.cs" Link="Widgets\DestinationETAWidget\DestinationETAWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DestinationETAWidget\DestinationETAWidget.Source.cs" Link="Widgets\DestinationETAWidget\DestinationETAWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.Model.cs" Link="Widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.ViewModel.cs" Link="Widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.Source.cs" Link="Widgets\DriveScoreGaugeWidget\DriveScoreGaugeWidget.Source.cs" />
   </ItemGroup>
 
   <!--
