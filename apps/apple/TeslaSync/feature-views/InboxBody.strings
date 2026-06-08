@@ -1,0 +1,103 @@
+/*
+  InboxBody.strings
+  TeslaSync — P4 feature view · 0183 · InboxBody (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  inbox resolves (table "InboxBody") lives here with its web value. These entries
+  fold into the app `Localizable.xcstrings` master catalog at integration time;
+  they are kept per-surface so each parallel prompt owns its strings without
+  editing the shared catalog.
+
+  The first group is the exact keys + web English defaults extracted from the web
+  source (features/notifications/components/InboxBody.tsx, plus the NotificationRow
+  / NotificationGroupRow rows it composes). The second group backs native-only
+  chrome (the read-state control, the freshness banners, accessibility, the
+  segmented-control labels) that the web expresses through the URL / DOM.
+*/
+
+/* --- Web source: states + errors --- */
+"notifications.inbox.error.title" = "Could not load notifications";
+"notifications.inbox.empty.title" = "No notifications";
+"notifications.inbox.empty.message" = "When alert rules fire, the resulting notifications appear here.";
+"notifications.inbox.empty.archivedTitle" = "No archived notifications";
+"notifications.inbox.empty.archivedMessage" = "Archived notifications will appear here.";
+"notifications.inbox.empty.cta" = "Configure alert rules";
+"notifications.group.emptyTitle" = "No notification threads";
+"notifications.group.emptyMessage" = "When alert rules fire repeatedly, related notifications will be grouped here.";
+
+/* --- Web source: header (select-all · count · view toggle · mark-all) --- */
+"notifications.inbox.selectAll" = "Select all visible";
+"notifications.inbox.countLabel" = "{{count}} notifications";
+"notifications.view.label" = "View";
+"notifications.view.grouped" = "Grouped";
+"notifications.view.flat" = "Flat";
+"notifications.markAllRead.action" = "Mark all read";
+
+/* --- Web source: bulk actions + toasts + announcements --- */
+"notifications.inbox.bulk.markRead" = "Mark read";
+"notifications.inbox.bulk.archive" = "Archive";
+"notifications.inbox.bulk.restore" = "Restore";
+"bulk.actions.delete" = "Delete";
+"notifications.inbox.bulk.deleteConfirmTitle" = "Delete notifications?";
+"notifications.inbox.bulk.deleteConfirmBody" = "These notifications will be permanently removed. Archive is usually the safer choice.";
+"notifications.bulkRead.success" = "{{count}} marked as read";
+"notifications.markAllRead.success" = "All notifications marked as read";
+"notifications.bulk.announceArchived" = "{{count}} items archived";
+"notifications.bulk.announceRestored" = "{{count}} items restored";
+"toast.notifications.markRead.error" = "Failed to mark as read";
+"bulk.noun.notification_one" = "notification";
+"bulk.noun.notification_other" = "notifications";
+
+/* --- Web source: per-row context menu + quick actions --- */
+"notifications.inbox.row.select" = "Select notification";
+"notifications.inbox.row.markRead" = "Mark as read";
+"notifications.inbox.row.markUnread" = "Mark as unread";
+"notifications.inbox.row.archive" = "Archive";
+"notifications.inbox.row.unarchive" = "Restore";
+"alerts.viewContext" = "View context";
+"mobile.swipe.archive" = "Archive";
+"mobile.swipe.restore" = "Restore";
+
+/* --- Web source: grouped thread chrome --- */
+"notifications.group.similar" = "+{{count}} similar";
+"notifications.group.expand" = "Show {{count}} similar";
+"notifications.group.collapse" = "Hide similar";
+"notifications.group.vehicleAffected" = "{{count}} vehicles affected";
+"notifications.group.markRead" = "Mark group read";
+"notifications.group.markReadSuccess" = "Marked {{count}} thread members as read";
+"notifications.group.markReadError" = "Could not mark group as read";
+"notifications.group.noMembers" = "No thread members found";
+
+/* --- Web source: common --- */
+"common.undo" = "Undo";
+"common.delete" = "Delete";
+"common.retry" = "Retry";
+"common.today" = "Today";
+"common.yesterday" = "Yesterday";
+
+/* --- Native chrome: read-state control + active-filter summary --- */
+"notifications.read.label" = "Read state";
+"notifications.read.all" = "All";
+"notifications.read.read" = "Read";
+"notifications.read.unread" = "Unread";
+"notifications.filters.clearAll" = "Clear all";
+
+/* --- Native chrome: severity chip labels (web renders the raw severity word) --- */
+"notifications.severity.info" = "info";
+"notifications.severity.warn" = "warn";
+"notifications.severity.critical" = "critical";
+
+/* --- Native chrome: accessibility --- */
+"notifications.inbox.a11y.surface" = "Notifications inbox";
+"notifications.inbox.a11y.read" = "Read";
+"notifications.inbox.a11y.unread" = "Unread";
+"notifications.inbox.row.moreActions" = "More actions";
+"notifications.group.unreadA11y" = "{{count}} unread";
+"bulk.clearSelection" = "Clear selection";
+"common.cancel" = "Cancel";
+
+/* --- Native chrome: loading + freshness banners --- */
+"notifications.inbox.loading" = "Loading notifications";
+"notifications.inbox.refresh" = "Refresh";
+"notifications.inbox.staleBanner" = "Reconnecting — notifications may be out of date";
+"notifications.inbox.offlineBanner" = "Offline — showing the last known notifications";

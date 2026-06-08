@@ -1,0 +1,262 @@
+=== P4 Feature view 0183 InboxBody (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/InboxBody.*
+Web src : web/src/features/notifications/components/InboxBody.tsx (754 lines)
+Runner  : Darwin arm64 · swift 6.3.2 · Xcode 26.5 (17F42) at /Applications/Xcode.app
+          · xcode-select active dir = /Library/Developer/CommandLineTools (so the
+            bare gate needs DEVELOPER_DIR) · iOS 26.5 + macOS 26.5 SDKs present
+          · swiftlint + swiftformat + pwsh 7 + xcodegen present
+          · KMP Shared.xcframework NOT pre-staged (Frameworks/ holds only .gitkeep)
+ADR refs: ADR-002 (shared SwiftUI source, iOS+macOS) · ADR-004 (KMP Shared.xcframework)
+          · ADR-009 · ADR-013 (live freshness)
+Pattern : self-contained protocol-seam surface (predecessor parity:
+          feature-views/DetailCards 0153 + AutomationActivityFeed 0081) — no direct
+          `import Shared`, so the projection/model/store are host-testable without
+          the Kotlin/Native core.
+
+----------------------------------------------------------------------
+SHIPPED FILES (allowed scope: InboxBody.* + this log) — 18 swift + 1 strings
+----------------------------------------------------------------------
+  InboxBody.Adapter.swift     pure DTOs (InboxNotification / InboxRule / InboxVehicle /
+                              InboxGroup), the severity / read-filter / view-mode enums,
+                              and InboxFilters (URL-param mirror + isGrouped + activeCount).
+  InboxBody.Projection.swift  Foundation ports of groupByDay (Today/Yesterday/dated),
+                              unread/visible/select-all helpers, ISO+relative+dated date
+                              formatting, and the full lib/alertDrillthrough signal→page map.
+  InboxBody.Menu.swift        rowMenuItems (web buildRowContextMenu), bulkActions (web
+                              useMemo) + delete confirm, and the VoiceOver row/group summaries.
+  InboxBody.Model.swift       the seams: P1/S8 source (InboxUpdate + InMemory source),
+                              P1/S11 telemetry, toast + announcer presenters, the mark-on-
+                              open/click preference seam, the mutation seam, and the P1/S10
+                              strings facade (+ {{count}} interpolation).
+  InboxBody.Store.swift       @Observable InboxBodyModel: filters, selection, phase
+                              resolution (flat/grouped), lifecycle (view.opened), auto-mark-
+                              on-open, stale auto-refresh; selection + filter extensions.
+  InboxBody.Actions.swift     mutation/bulk flows: per-row activate/mark/archive/delete, the
+                              bulk mark-read (undo toast + error toast), archive/restore
+                              (announce), delete, mark-all-read, and per-thread group mark read.
+  InboxBody.Resolve.swift     ruleMap/vehicleMap + per-row rule/vehicle/severity/drill-target/
+                              relative-time/menu/a11y resolvers (keeps row views dumb).
+  InboxBody.swift             main feature view, surfaceSlug "InboxBody", state switch.
+  InboxBody.Views.swift       severity tint/symbol, the stale/offline freshness banner, and
+                              the filter summary bar (read-state segmented + removable chips).
+  InboxBody.Header.swift      panel header (select-all · count · grouped/flat toggle ·
+                              mark-all) + the day-bucket section header.
+  InboxBody.Toolbar.swift     bulk-actions toolbar (count + noun · clear · actions) with the
+                              destructive delete confirmation dialog.
+  InboxBody.States.swift      loading skeleton (5 rows) · error (Could not load + Retry) ·
+                              empty (inbox/archived/grouped variants + Configure-rules CTA).
+  InboxBody.Rows.swift        the list (flat day-grouped / grouped) + NotificationRow parity
+                              (checkbox · severity chip · time · vehicle/rule · title/message).
+  InboxBody.RowMenu.swift     the shared per-row action menu + long-press context menu.
+  InboxBody.Group.swift       NotificationGroupRow parity: thread head + "+N similar" expand,
+                              unread badge, vehicles-affected, mark-group-read, member list.
+  InboxBody.Previews.swift    9 DEBUG previews (flat/grouped content · selection · loading ·
+                              empty inbox · empty archived · error · stale · offline).
+  InboxBody.strings           P1/S10 per-surface catalog — 67 keys (web keys + native chrome).
+  InboxBody.Tests.swift       16 projection/adapter/drill/menu/bulk/a11y/i18n XCTests.
+  InboxBody.ModelTests.swift  13 store XCTests (phases/selection/filters/bulk/telemetry/
+                              auto-mark/stale/navigate). Split out for the file_length limit.
+
+----------------------------------------------------------------------
+PARITY (web InboxBody.tsx -> native)
+----------------------------------------------------------------------
+  [x] Props `archived / vehicles / rules` -> InboxBodyModel(archived:) + the source-pushed
+      InboxUpdate.rules/.vehicles (web component is itself fed these by its parent page).
+  [x] URL filter state (severity/vehicle_id/rule_id/q/read/from/to/view) -> InboxFilters
+      value type; the read-state control + grouped/flat toggle + active-filter chips reflect
+      it; deeper multi-select editing is the separate NotificationFilterBar surface.
+  [x] useNotificationLogs + useNotificationGroups (enabled-gated on isGrouped) -> InboxSource
+      InboxUpdate.flatStatus/.groupStatus; listPhase picks the active query (no view HTTP).
+  [x] useBulkSelection -> selection Set<Int> + toggle/selectAllVisible/masterState; selection
+      clears on query-filter change (NOT on view toggle), exactly like the web effect.
+  [x] auto-mark-read on open (inbox · flat · pref-gated · once) -> autoMarkOnOpenIfNeeded.
+  [x] bulkActions (mark-read/archive on inbox, restore on archive, delete+confirm both) ->
+      InboxProjection.bulkActions + the toolbar confirmation dialog.
+  [x] buildRowContextMenu (mark read/unread · archive/restore · view-context · delete) ->
+      InboxProjection.rowMenuItems -> trailing menu + long-press context menu.
+  [x] getAlertDrillthroughHref (SIGNAL_TO_PAGE + /signal-explorer fallback + vehicle_id/t/
+      signal query, zero-vehicle omitted) -> InboxDrillthrough (unit-tested incl. the
+      unmapped-signal-kept-in-query web behavior).
+  [x] groupByDay (Today/Yesterday/dated, skip unparseable) -> InboxProjection.groupByDay.
+  [x] NotificationRow -> InboxNotificationRowView (checkbox · severity chip · time · vehicle ·
+      rule · bold-when-unread title · message · unread accent bar · tap=activate).
+  [x] NotificationGroupRow -> InboxGroupRowView (head + "+N similar"/unread/vehicles chips +
+      mark-group-read + expandable members; singleton hides chrome).
+  [x] useToast / useAnnouncer -> InboxToastPresenting (success / success+undo / error) +
+      InboxAnnouncing; the bulk-read undo + archive/restore announcements are wired + tested.
+  [x] PullToRefresh / SwipeRow (@/components/mobile) -> refresh wired to the freshness banner
+      + error retry (host page owns pull-to-refresh); archive/restore available via the row
+      menu + long-press context menu (documented mobile-component boundary).
+  [x] AIInboxAutoCategorization (@/components/ai, withAiFeature) -> ABSENT by default (web
+      renders null when ai_mode='off'); the canonical hand-off `applyAICategories(ruleIds)`
+      lives on the model (unit-tested) for that separate surface to call. No stub rendered.
+  [x] every t(key, default) -> InboxStrings facade (table "InboxBody"); 67 keys (see strings).
+
+----------------------------------------------------------------------
+STATES (every state renders — no hidden surfaces)
+----------------------------------------------------------------------
+  [x] loading   InboxLoadingView — 5 redacted TSSkeleton rows (web 5× <Skeleton h-14/>)
+  [x] content   flat day-grouped rows AND grouped thread rows (both previewed + phase-tested)
+  [x] empty     InboxEmptyView — inbox / archived / grouped copy variants + Configure-rules CTA
+  [x] error     InboxErrorView — "Could not load notifications" + technical message + Retry
+  [x] stale     InboxFreshnessBanner (warning) + one guarded auto-refresh; cached rows shown
+  [x] offline   InboxFreshnessBanner (muted) + Refresh; cached rows shown
+  Phase resolution + projections + drill + menu + bulk + a11y unit-tested (29 cases).
+
+----------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on this runner — real exit codes)
+----------------------------------------------------------------------
+[1] swiftformat --lint  (config apps/apple/.swiftformat, my 18 swift files)
+      0/18 files require formatting.
+      FORMAT_EXIT=0
+      (resolved during authoring: the comment reflow once mangled "mark-all-read" into a
+       stray `// MARK: -`; reworded the doc header so swiftlint's mark rule stays clean.)
+
+[2] swiftlint --strict  (config apps/apple/.swiftlint.yml, my 18 swift files, --no-cache)
+      Found 0 violations, 0 serious in 18 files.
+      LINT_EXIT=0
+      (every file < the 400-line file_length limit; max is ModelTests at 336 — the store
+       tests were split from the projection tests for exactly this reason.)
+
+[3] placeholder gate — apps/tools/check-placeholders.ps1 (pwsh 7) over my 18 swift files
+    + the strings catalog:
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0
+
+[4] swift test — throwaway SwiftPM package, module "TeslaSync" = my 16 shipped surface/
+    preview files + the REAL Shared-free deps (the generated Tokens.swift + the pure-SwiftUI
+    Sources/Design + Sources/Components/{UI,Motion,Feedback/Skeletons}); test target = my 2
+    *.Tests.swift; Swift 6 mode, macOS host, DEBUG (previews compiled). Driven by
+    InMemoryInboxSource + recording action/toast/announcer doubles (no network).
+      Test Suite 'All tests' passed.
+      Executed 29 tests, with 0 failures (0 unexpected).
+      TEST_EXIT=0
+      (one assertion was corrected to MATCH the web: getAlertDrillthrough keeps an UNMAPPED
+       signal in the query on the /signal-explorer fallback — the impl was already correct.)
+
+[5] SDK compile — swiftc -typecheck -swift-version 6 -D DEBUG of the surface + real deps (34
+    files) against BOTH gate destinations' SDKs:
+      iOS 18 Simulator (arm64-apple-ios18.0-simulator) : IOS_TYPECHECK_EXIT=0
+      macOS 15         (arm64-apple-macos15.0)          : MAC_TYPECHECK_EXIT=0
+    (SwiftUI confirmed on both SDKs — 0 errors. The web source uses no Recharts/Leaflet, so
+     no Swift Charts / MapKit was needed for this surface.)
+
+[6] xcodegen registration — `xcodegen generate` OK (XCODEGEN_EXIT=0); the generated pbxproj
+    contains 114 InboxBody references and registers all 18 InboxBody*.swift + InboxBody.strings
+    for both app targets. Generated TeslaSync.xcodeproj removed afterward (git-ignored).
+
+----------------------------------------------------------------------
+XCODE APP BUILD/TEST — DEFERRED (NOT green; honest evidence below)
+----------------------------------------------------------------------
+Gate command literally runs (no DEVELOPER_DIR set):
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+
+(a) BARE gate command — active dir is CommandLineTools, so it fails before any work:
+      xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+      directory '/Library/Developer/CommandLineTools' is a command line tools instance
+      BARE_IOS_EXIT=1 · BARE_MAC_EXIT=1
+
+(b) Driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (Xcode 26.5):
+      • xcodegen generate -> OK; the surface IS target-registered (114 refs, all 19 files).
+      • The TeslaSync scheme runs a pre-build action "Stage Shared.xcframework" that assembles
+        the KMP core via Gradle (:core:assembleSharedXCFramework, multi-minute). Frameworks/
+        holds only .gitkeep here, so the build stalls at that Gradle assembly and cannot reach
+        the link step on this runner.  IOS_BUILD terminated at the Gradle stage.
+      • Even past the framework, the app build is ALREADY red before this surface for a
+        pre-existing, out-of-scope reason: project.yml compiles feature-views/*.Tests.swift
+        INTO the app target (`sources: TeslaSync/feature-views`, lines 37 + 68) and the app
+        target does not link XCTest, so the whole-module compile aborts at the FIRST such file
+        alphabetically (AcDcStatsPanel.Tests.swift — NOT mine). macOS additionally needs
+        signing (DEVELOPMENT_TEAM is "" in project.yml).
+      IOS_EXIT=DEFERRED · MAC_EXIT=DEFERRED
+
+  Why DEFERRED, not fixed here: the remaining app-build blockers are (1) the not-pre-staged
+  KMP Shared.xcframework, (2) project.yml compiling *.Tests.swift into the app target instead
+  of an XCTest bundle, and (3) DEVELOPMENT_TEAM / signing — ALL outside this prompt's allowed
+  files (InboxBody.*), and editing them is a predecessor-bypass (covenant #7). Same deferral
+  disposition as every prior P4 surface (e.g. 0153-DetailCards, 0081-AutomationActivityFeed).
+  Platform capability (SwiftUI; the source needs no Swift Charts / MapKit) is PRESENT, so this
+  is DONE, not a capability BLOCK.
+
+  Verification substituted here is strictly stronger than a registered-but-unbuilt scheme: the
+  EXACT shipped files were (i) compiled against BOTH target SDKs in Swift 6 mode [step 5], and
+  (ii) exercised by a 29-case XCTest run that executed green [step 4], with the surface
+  confirmed registered in the generated project [step 6].
+
+----------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+----------------------------------------------------------------------
+  [x] Surface renders on Apple with all web states reproduced (loading / flat content /
+      grouped content / empty / error / stale / offline) — 9 previews + phase tests.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (InboxSource); no direct HTTP in the
+      view — data + rules + vehicles all arrive via the pushed InboxUpdate snapshot.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog — all web
+      InboxBody.tsx keys (+ the NotificationRow/Group keys it composes) present, 67 total;
+      severity / menu / bulk label keys are asserted by the projection tests.
+  [x] Accessibility labels on every interactive element (row checkbox, row menu, bulk actions,
+      clear, view toggle, mark-all, retry, CTA, expand, mark-group-read) + a combined VoiceOver
+      summary per row/thread; Dynamic Type via tokens; Reduce Motion honored by TSFadeIn /
+      TSSkeleton; a11y unit-tested.
+  [x] Tests: adapter/projection unit tests + per-state store tests + drill/menu/bulk/a11y/i18n
+      (29 cases, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (test
+      doubles are named InMemory*/Recording*/Spy*, never "Mock").
+  [x] EXIT=0 / STATUS=DONE — host gates green (format/lint/placeholder/29-test/dual-SDK
+      typecheck/xcodegen); Xcode app build/test DEFERRED with captured evidence (KMP framework
+      not staged + pre-existing project.yml test-target membership + signing). Platform
+      capability is PRESENT — DONE.
+
+----------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------
+  1  No red-as-green : the Xcode app build/test is shown DEFERRED (NOT green) with the real
+                       BARE_*_EXIT=1 and the captured Gradle-stage stall + the pre-existing
+                       XCTest test-membership failure; every "OK" is a command actually run
+                       with its real exit (a 29/29 XCTest run + iOS-18-sim & macOS-15 SDK
+                       compiles + format/lint/placeholder/xcodegen).
+  2  No scope narrowing: implemented the filter state, AI hand-off, bulk toolbar + selection,
+                       grouped + flat lists, day grouping, per-row menu + drill-through, both
+                       row types, every state, i18n, a11y, and telemetry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; the ai slot is
+                       absent-by-default (web parity), not an empty placeholder box.
+  5  No parity shortcuts: faithful ports of groupByDay, the drill-through signal map (incl. the
+                       unmapped-signal-in-query behavior), buildRowContextMenu, bulkActions, the
+                       undo toast + announcements, and the exact web i18n keys/defaults.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat / signing
+                       and did NOT edit the shared Localizable.xcstrings — strings shipped as
+                       the per-surface table, exactly like 0153 / 0081.
+  8  No commit on red  : committing on all-green host gates; the Xcode app steps are explicitly
+                       DEFERRED with evidence, not falsely green.
+  9  No silent drift   : changes confined to the allowed InboxBody.* files + this log. The
+                       generated TeslaSync.xcodeproj is git-ignored and was removed after the
+                       registration check (not committed).
+  10 Log ends with EXIT/STATUS below.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+  Production-polished native InboxBody shipped at parity with the web source: a pure-Swift
+  projection core (executed-green XCTest, 29/29), a P1/S8 InboxSource seam (no view HTTP), an
+  @Observable store that owns the filter + selection + phase + mutation orchestration, P1/S11
+  view.opened telemetry (slug "InboxBody"), every state + i18n key + a11y label, the flat
+  day-grouped list AND the grouped thread list with the full per-row + bulk + group action
+  set, the drill-through, the undo toast, and the announcements. All host-runnable gates pass
+  AND the surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs under Swift 6
+  AND is registered in the generated app project. The Xcode app build/test is DEFERRED to the
+  integration/signed runner — blocked only by the not-pre-staged KMP Shared.xcframework + the
+  pre-existing project.yml test-target membership (*.Tests.swift in the app target, affecting
+  all surfaces) + signing, all outside this prompt's allowed files.
+
+----------------------------------------------------------------------
+COMMIT
+----------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/InboxBody.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0183-InboxBody.log
+  git commit -m "feat(apps/apple/feature-views): add InboxBody surface (P4)"
+
+EXIT=0
+STATUS=DONE
