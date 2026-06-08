@@ -1,0 +1,41 @@
+/*
+  QuickNavWidget.strings
+  TeslaSync — P4 dashboard widget · 0075 · QuickNavWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `QuickNavWidget` resolves (table "QuickNavWidget") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/dashboard/components/QuickNav.tsx — the `dashboard` namespace
+  `nav.*` label/description pairs). The registry group mirrors registry/system.ts
+  ("quick-nav"). The remaining keys back the native-only chrome (loading / empty /
+  error states + accessibility), which the presentational web source does not need.
+*/
+
+/* --- Keys from the web source (parity, web `t('nav.X', default)`) --- */
+"nav.drives" = "Drives";
+"nav.drivesDesc" = "Trip history";
+"nav.charging" = "Charging";
+"nav.chargingDesc" = "Sessions & costs";
+"nav.analytics" = "Analytics";
+"nav.analyticsDesc" = "Fleet insights";
+"nav.battery" = "Battery";
+"nav.batteryDesc" = "Health & degradation";
+
+/* --- Registry (registry/system.ts → "quick-nav") --- */
+"widget.quickNav" = "Quick Navigation";
+"widget.quickNav.description" = "Shortcut links to key pages";
+
+/* --- Native chrome: states --- */
+"widget.quickNavLoading" = "Loading quick navigation";
+"widget.quickNavEmptyTitle" = "No shortcuts";
+"widget.quickNavEmptyHint" = "Navigation shortcuts will appear here.";
+"widget.quickNavErrorTitle" = "Couldn't load shortcuts";
+"widget.quickNavRetry" = "Retry";
+
+/* --- Accessibility --- */
+"widget.quickNavOpenHint" = "Opens %@";
