@@ -1,0 +1,161 @@
+=== P4 Feature view 0197 ActiveSessionsSection (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2 · Gradle 8.14.5
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, Booted) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 8m21s; release + debug
+                       XCFrameworks staged to apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators present → NOT capability-BLOCKED.
+                       (This surface uses no charts/maps — Data sources are list + mutation hooks only.)
+
+WEB SOURCE (the specification)
+  web/src/features/settings/components/ActiveSessionsSection.tsx — the active-sessions / device-management
+  GlassPanel rendered under <section id="security"> on the Settings page. THREE top-level branches:
+    1. Loading       — <GlassPanel><Spinner/> "Loading sessions…"</GlassPanel> (placeholder INSIDE the panel
+                       chrome so the layout doesn't reflow when data arrives).
+    2. Open-mode     — backend reported 501 AUTH_MODE_OPEN ⇒ per-device sessions can't be tracked; inline
+                       amber AlertTriangle + "Active sessions" heading + forward-auth helper message.
+    3. Forward-auth  — header (Laptop IconBox + "Active sessions" + subtitle) + (hasOthers ? secondary
+                       "Sign out all other devices" button, "Signing out…" while pending) + (isError ?
+                       inline ErrorText) + DataTable[device(+"This device" badge) / IP / Signed in / Last seen
+                       / per-row "Sign out" (hidden for the current row, disabled while that row revokes)].
+  Two ConfirmDialogs (per-row "Sign out this device?" + bulk "Sign out all other devices?"), NO silenceKey —
+  security primitives ALWAYS confirm. describeDevice(user_agent) is a dependency-free browser/OS match ladder.
+  Hooks: useSessions (GET /auth/sessions → {mode:'open'} | {mode:'session',sessions}), useRevokeSession
+  (DELETE /auth/sessions/{id}), useRevokeAllOtherSessions (DELETE /auth/sessions/all-others), useTranslation,
+  useDateFormat.
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/, all within the prompt's allowed ActiveSessionsSection.*)
+  ActiveSessionsSection.Adapter.swift   — pure core: ActiveSessionItem, ActiveSessionDevice (describeDevice
+                                          port), ActiveSessions{Mode,Phase,LoadStatus,Connection},
+                                          ActiveSessionsProjection (resolvePhase + hasOtherDevices), surface slug
+  ActiveSessionsSection.Seams.swift     — P1/S11 telemetry seam, P1/S10 i18n facade, date-format facade
+                                          (useDateFormat), revoke seam (useRevokeSession + …AllOtherSessions),
+                                          source snapshot + P1/S8 source protocol, in-memory source, a11y builder
+  ActiveSessionsSection.Model.swift     — @MainActor @Observable ActiveSessionsModel (state holder): phase /
+                                          mode / connection / rows / confirm-dialog + in-flight state, the
+                                          revoke + all-others flows, stale auto-refresh, view.opened (once)
+  ActiveSessionsSection.Views.swift     — content orchestrator, header (icon chip + title + freshness chip +
+                                          subtitle), revoke-all button, rows list, Text helper
+  ActiveSessionsSection.Row.swift       — one device row (label + "This device" badge + IP/Signed in/Last seen
+                                          + per-row "Sign out"), badge, metric line
+  ActiveSessionsSection.States.swift    — loading / open-mode / empty (ContentUnavailableView) / error
+                                          (QueryError + retry) / inline list-error / freshness chip / banner
+  ActiveSessionsSection.Actions.swift   — the two security confirmationDialogs bound through the model
+  ActiveSessionsSection.swift           — the public View: TSFadeIn + GlassPanel-equivalent card, banner when
+                                          not live, phase switch, confirmations, a11y; surfaceSlug
+  ActiveSessionsSection.Previews.swift  — #if DEBUG previews: content / empty / loading / error / open-mode /
+                                          stale / offline
+  ActiveSessionsSection.Tests.swift     — adapter (device ladder) + projection + accessibility XCTests
+  ActiveSessionsSection.ModelTests.swift— state-holder XCTests (lifecycle / revoke / all-others / stale / offline)
+  ActiveSessionsSection.strings         — P1/S10 catalog (table "ActiveSessionsSection"): every web t() key +
+                                          native freshness/banner/retry/device/a11y keys
+
+  No shared wiring edits were required: project.yml + .swiftlint.yml already include TeslaSync/feature-views
+  (added by predecessor surfaces); strings are kept per-surface so no master-catalog edit is needed. Changes
+  are confined to the 12 ActiveSessionsSection.* files + this log (no silent drift).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  FadeIn                  → TSFadeIn(delay: 0.05)            StaggerContainer/Item → TSStaggerContainer/Item
+  GlassPanel              → Color.TS.surface card + TSRadius.lg + Color.TS.border stroke (the SessionListSection
+                            inline-chrome convention)        IconBox cyan → accent chip (0.10 bg / 0.20 ring)
+  Heading/HelperText      → Font.TS.panel / Font.TS.caption with textPrimary / textMuted
+  Badge variant=success   → ActiveSessionsBadge (statusSuccess 0.14 fill / 0.25 stroke pill)
+  Button (secondary)      → token capsule buttons (statusDanger for both destructive actions)
+  Spinner                 → ProgressView().controlSize(.small)   DataTable → reflowing per-device cards
+  EmptyState              → ContentUnavailableView    QueryError → ActiveSessionsErrorState + Retry
+  ConfirmDialog ×2        → .confirmationDialog ×2 (role: .destructive / .cancel), always-confirm (no silence)
+  describeDevice ladder   → ActiveSessionDevice.describe (browser/OS proper nouns verbatim; "{{browser}} on
+                            {{os}}" template + the 3 fallbacks via the P1/S10 facade — zero English in code)
+  freshness/stale/offline → ActiveSessionsFreshnessChip + ActiveSessionsConnectivityBanner + one guarded
+                            stale auto-refresh (ADR-013; prompt "stale chip + auto-refresh", "offline + cached")
+  i18n      : all 18 extracted keys + subtitle + native keys resolve via ActiveSessionsStrings (NSLocalizedString
+              table "ActiveSessionsSection"); no hardcoded user-facing English in code.
+  a11y      : decorative glyphs .accessibilityHidden; the section + each row expose combined VoiceOver labels;
+              every interactive element (revoke / revoke-all / retry / confirm buttons) has an explicit label;
+              Dynamic Type via Font.TS; Reduce Motion honored by TSFadeIn/TSStagger.
+  telemetry : view.opened surface="ActiveSessionsSection" via the model on first appearance (P1/S11), default
+              OSLog sink.
+
+STATES (every state renders — no blank surfaces)
+  loading · open-mode · empty · error(+retry) · content · stale(chip+banner+auto-refresh) · offline(cached+chip)
+  + inline list-error above a populated table. All seven exercised by previews AND unit tests.
+
+GATES
+  [GREEN]    swiftformat --lint (ActiveSessionsSection.* — 11 swift files)   : 0/11 require formatting   (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole tree, FYI)                 : 1 PRE-EXISTING violation —
+                                                                               ActionBuilder.Previews.swift:48
+                                                                               (blankLinesBetweenScopes); NOT mine,
+                                                                               0 ActiveSessionsSection findings.
+  [GREEN]    swiftlint --strict (ActiveSessionsSection.* — 11 files)         : 0 violations, 0 serious   (LINT_EXIT=0)
+             swiftlint --strict (whole app, FYI)                             : 1 PRE-EXISTING violation —
+                                                                               function_body_length in
+                                                                               TeslaSync/dashboard-widgets/
+                                                                               LifetimeStatsWidget.Adapter.swift:141
+                                                                               (same as ToolCard 0010); NOT mine.
+  [GREEN]    check-placeholders.ps1 (real scan of the 11 shipped .swift)     : PLACEHOLDER_COUNT=0       (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 -Path …/feature-views/ActiveSessionsSection (gate's literal path) : PLACEHOLDER_COUNT=0
+  [GREEN]    ActiveSessionsSection build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language
+             mode, strict-concurrency complete = same as the app), Xcode-26.5 toolchain, compiling the EXACT
+             shipped ActiveSessionsSection.* sources (incl. #Preview) against the REAL repo design-system files
+             (apps/design/generated/apple/Tokens.swift + Sources/Components/Motion/Motion.swift). Harness lib
+             module named "TeslaSync" so the co-located `@testable import TeslaSync` tests compile verbatim:
+                 Build complete!  ·  Executed 32 tests, with 0 failures                                  (SWIFT_TEST_EXIT=0)
+             (10 device-ladder + 5 projection + 3 accessibility + 14 state-holder tests.)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO ActiveSessionsSection errors; all blockers pre-exist this change):
+    iOS  : the TeslaSync app target fails at module-dependency resolution on the FIRST co-located feature-view
+           test file — "AcDcStatsPanel.Tests.swift:19:8: error: unable to resolve module dependency: 'XCTest'".
+           Every Section surface co-locates a `*.Tests.swift` (`import XCTest` + `@testable import TeslaSync`)
+           in the app-target source group; ActiveSessionsSection follows that same dominant convention, and the
+           build never reaches it (AcDcStatsPanel sorts first). This is the documented "co-located *.Tests.swift
+           importing XCTest into the app target" blocker. grep "ActiveSessionsSection.*error:" /tmp/ios-build.log
+           = 0 hits.
+    macOS: additionally fails before compilation on development SIGNING — "'TeslaSync-macOS' has entitlements
+           that require signing with a development certificate" (also TeslaSyncWidgets-macOS), which this runner
+           does not provision. grep "ActiveSessionsSection.*error:" /tmp/mac-build.log = 0 hits.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI
+    runner, owned by the P4/P99 Apple acceptance gate (test-target/app-target separation + signing/archive) —
+    NOT by a single feature-view prompt (task rule: do not fix pre-existing unrelated breakage). The same two
+    deferrals are recorded by predecessor P4 surfaces (e.g. ToolCard 0010).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and
+                          explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing : every web branch (loading / open-mode / forward-auth), the device ladder, both
+                          confirms, the per-row + bulk revokes, IP "—" fallback, and the current-device badge
+                          are reproduced; the prompt's stale/offline/empty/error states are added.
+  3  No skip-and-assume : every host gate executed on THIS runner; raw exits pasted; both xcodebuild failures
+                          confirmed + grepped (0 ActiveSessions errors), not assumed.
+  4  No stubs as final  : complete production surface + 32 real tests; placeholder scanner = 0 on the real files.
+  5  No parity shortcut : tokens/typography/badges/confirms/a11y/i18n/telemetry/freshness all mapped + verified.
+  6  No delegation      : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder pattern, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4 core
+                          (TSFadeIn/TSStagger) all consumed.
+  8  No commit on red   : the COMMITTED artifact (ActiveSessionsSection.* + this log) is GREEN on every host
+                          gate AND on a real isolated Swift 6 strict-concurrency build+test; the deferred
+                          full-app gate is RED only on pre-existing, unrelated surfaces this commit neither
+                          introduces nor touches.
+  9  No silent drift    : changes are confined to the 12 ActiveSessionsSection.* files + this log (enumerated
+                          above); no project.yml/.swiftlint.yml/master-catalog edits were needed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ActiveSessionsSection shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 32 tests pass under the app's own Swift 6 strict-concurrency rules,
+  against the real design-system, with swiftformat / swiftlint / placeholder all green on the shipped files. The
+  full-app iOS-Simulator + macOS xcodebuild build gate is DEFERRED (not failed by this code): it is blocked by a
+  pre-existing co-located-test/app-target XCTest collision and by macOS development-signing — both owned by the
+  P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches
+  the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE
