@@ -1,0 +1,35 @@
+/*
+  FSMSubFSMPanel.strings
+  TeslaSync — P4 feature view · 0230 · FSMSubFSMPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `FSMSubFSMPanel` resolves (table "FSMSubFSMPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/system/components/FSMSubFSMPanel.tsx). The second group backs the native
+  chrome: the active/idle accessibility status, the P4 leaf freshness / loading /
+  error copy, and the refresh affordance, so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"fsm.subFSMs" = "Active Sub-FSMs";
+"fsm.noSubFSMs" = "No active drive or charge sessions";
+"fsm.activeDrive" = "Drive Session";
+"fsm.activeCharge" = "Charge Session";
+
+/* --- Native chrome: accessibility status + P4 leaf freshness / loading / error --- */
+"fsm.statusActive" = "Active";
+"fsm.statusIdle" = "Idle";
+"fsm.live" = "Live";
+"fsm.stale" = "Stale";
+"fsm.offline" = "Offline";
+"fsm.staleBanner" = "Reconnecting — data may be stale";
+"fsm.offlineBanner" = "Offline — showing last known data";
+"fsm.refresh" = "Refresh";
+"fsm.loadingA11y" = "Loading active sub-FSMs";
+"fsm.errorTitle" = "Couldn't load active sub-FSMs";
+"fsm.retry" = "Retry";

@@ -1,0 +1,92 @@
+=== P4 Feature view 0230 FSMSubFSMPanel (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/FSMSubFSMPanel.*
+Web spec: web/src/features/system/components/FSMSubFSMPanel.tsx
+          (+ sibling StateBadge.tsx, web TimeStamp, types/fsm registries)
+Host    : Darwin (Apple-silicon). Xcode 26.5 via
+          DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+Date    : 2026-06-07
+
+Files shipped (7):
+  FSMSubFSMPanel.swift            — main view (TSGlassPanel chrome, header, freshness,
+                                    connectivity banner, phase switch, notApplicable→EmptyView)
+  FSMSubFSMPanel.Adapter.swift    — pure logic (kinds, entry, semantic-variant table,
+                                    terminal/active rule, ISO parse + relative-time buckets,
+                                    isVehicleView guard, a11y summary)
+  FSMSubFSMPanel.Model.swift      — P1/S8 source seam + P1/S11 telemetry + P1/S10 i18n facade,
+                                    input snapshot, projection (notApplicable/loading/empty/
+                                    error/data), @Observable model, in-memory source
+  FSMSubFSMPanel.Views.swift      — grid, session card, inlined StateBadge port, active pulse,
+                                    loading/empty/error chrome, variant→TSTone map
+  FSMSubFSMPanel.Previews.swift   — data/empty/loading/error/stale/offline/notApplicable
+  FSMSubFSMPanel.Tests.swift      — 37 XCTest cases (adapter + projection + model + a11y)
+  FSMSubFSMPanel.strings          — P1/S10 catalog: 4 parity keys + native chrome
+
+Parity mapping (web → native):
+  GlassPanel             → TSGlassPanel
+  EmptyState (feedback)  → ContentUnavailableView (verbatim message, no double-localization)
+  Grid {default:1, md:2} → LazyVGrid(.adaptive(minimum: 240)) (1 col compact, 2 col wide)
+  TimeStamp(start_time)  → FSMSubFSMTimestamp.relative (port of lib/dateFormat formatRelative)
+  StateBadge (sibling)   → inlined FSMSubFSMStateBadge (tinted pill + dot, semantic tone)
+  getStateColor          → FSMSubFSMStateModel.variant (drive/charge base-variant tables,
+                           lowercased lookup, unknown→neutral) — ADR-006 semantic, not literal
+  Car / Zap (lucide)     → SF Symbols car.fill / bolt.fill
+  isVehicleView guard    → projection .notApplicable phase (web `return null`)
+  useTranslation         → FSMSubFSMStrings facade (table "FSMSubFSMPanel")
+
+States reproduced (all render): notApplicable (web null guard), loading, empty, error,
+  data, + orthogonal connection axis (live/stale/offline) with stale one-shot auto-refresh.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> .................. 0/6 require formatting              FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ............. Found 0 violations, 0 serious in 6 files  LINT_EXIT=0
+  check-placeholders.ps1 -Path …/FSMSubFSMPanel . PLACEHOLDER_COUNT=0 ALLOWED=0      PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, -D DEBUG incl Previews) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, -D DEBUG incl Previews) ................. MAC_TYPECHECK_EXIT=0
+  swiftc -typecheck Tests vs sources + XCTest (macos15.0) ............................. TESTS_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 strict concurrency)
+        Executed 37 tests, with 0 failures ........................................... SWIFT_TEST_EXIT=0
+          → FSMSubFSMTimestampParseTests(3) · FSMSubFSMRelativeTimeTests(7) ·
+            FSMSubFSMStateVariantTests(4) · FSMSubFSMActiveStateTests(4) ·
+            FSMSubFSMApplicabilityTests(2) · FSMSubFSMProjectionTests(7) ·
+            FSMSubFSMModelTests(9) · FSMSubFSMAccessibilityTests(1)
+  xcodegen generate (project spec picks up the 7 new files; 42 pbxproj refs) ......... XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. They are blocked by PRE-EXISTING, UNRELATED parallel-merge
+    state in the shared app target — ZERO of which originates in this surface (verified:
+    a bounded `xcodebuild ... build` hung in the "Stage Shared.xcframework" scheme
+    pre-action and never reached any FSMSubFSM source; IOS_EXIT=124 timeout):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the
+        scheme pre-action assembles it via the Kotlin/Native Gradle toolchain (the P1/S3
+        artifact already tracked macOS-pending; `gradlew :core:assembleSharedXCFramework`
+        cannot complete in this sandbox without the Kotlin/Native download).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 135 co-located feature-view *.Tests.swift `import XCTest` into the app target (the
+        established convention this surface follows; an app-target-vs-test-target wiring
+        matter for the acceptance gate, not a surface defect).
+      • No macOS development-signing identity (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (37/37 XCTest). The full-app build/test is
+    a deferred verification recorded in apps/macos-pending-verifications.md for the P99
+    apple-acceptance gate on a macos-latest runner with signing identities — identical to
+    the precedent set by 0010-ToolCard and 0180-AlertMessageEditor.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced
+      (notApplicable/loading/empty/error/data + stale/offline).
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog
+      (fsm.subFSMs, fsm.noSubFSMs, fsm.activeDrive, fsm.activeCharge) + native chrome.
+  [x] Accessibility labels present on every interactive element + per-row summaries
+      (VoiceOver row label, header trait, refresh/retry labels, reduce-motion pulse).
+  [x] Tests: adapter unit tests + projection per-state tests + model tests + a11y label
+      test (37 total, green via SwiftPM).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents (real-SDK typecheck both platforms + 37/37 XCTest) green.
+
+EXIT=0
+STATUS=DONE
