@@ -1,0 +1,78 @@
+=== P4 Dashboard widget 0071 OnboardingChecklistWidget (Apple) ===
+date: 2026-06-08T02:11:22Z
+
+## Runner capability
+host: Darwin 25.5.0 arm64
+xcode: Xcode 26.5 Build version 17F42 
+swift: Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint: 0.63.3   swiftformat: 0.61.1   xcodegen: Version: 2.45.4
+sim: iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Shutdown) 
+
+## Verification model (READ THIS)
+OnboardingChecklistWidget is a STAGED P4 surface under apps/apple/TeslaSync/dashboard-widgets/,
+the same staging area as the predecessor DigitalTwinWidget. That directory is intentionally NOT
+referenced by apps/apple/project.yml (it is folded into the app target at integration time), and
+the prompt restricts edits to OnboardingChecklistWidget.* only. Therefore 'xcodebuild -scheme
+TeslaSync' against the repo project would not compile these files, and the repo app additionally
+depends on the KMP Shared.xcframework. To run a REAL xcodebuild build+test of the ACTUAL committed
+sources, a scoped xcodegen project was generated that compiles the real widget files (+ the real
+design Tokens.swift and the real TSSkeleton) into iOS + macOS framework targets and runs the
+committed XCTest file (OnboardingChecklistWidget.Tests.swift) verbatim on the real Xcode 26.5
+toolchain. This is faithful (real iOS-Simulator + macOS build+test of the real code/tests) and
+strictly stronger than the predecessor's documented 'swiftc host gate'.
+
+## Artifact files (lines)
+     210 OnboardingChecklistWidget.Builder.swift
+     308 OnboardingChecklistWidget.Components.swift
+     331 OnboardingChecklistWidget.Model.swift
+     194 OnboardingChecklistWidget.Models.swift
+     118 OnboardingChecklistWidget.Previews.swift
+      74 OnboardingChecklistWidget.strings
+     253 OnboardingChecklistWidget.swift
+     303 OnboardingChecklistWidget.Tests.swift
+    1791 total
+
+## iOS — xcodebuild build test (platform=iOS Simulator,name=iPhone 16)
+Test Suite 'All tests' passed at 2026-06-07 19:11:43.803.
+	 Executed 25 tests, with 0 failures (0 unexpected) in 0.172 (0.316) seconds
+** TEST SUCCEEDED **
+IOS_EXIT=0
+
+## macOS — xcodebuild build test (platform=macOS)
+	 Executed 25 tests, with 0 failures (0 unexpected) in 0.037 (0.107) seconds
+** TEST SUCCEEDED **
+MAC_EXIT=0
+
+## swiftlint --strict (widget files; dedicated config mirroring repo rules — repo 'included:' omits the staged dir)
+Done linting! Found 0 violations, 0 serious in 16 files.
+LINT_EXIT=0
+
+## swiftformat --lint (widget files)
+0/16 files require formatting.
+FORMAT_EXIT=0
+
+## check-placeholders.ps1 (widget dir, all languages)
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+## Host-gate cross-check — Command Line Tools toolchain (no Xcode), predecessor parity
+swift build (lib, real widget sources): Build complete! (1.08s)
+swift-testing (mirror of committed XCTest): ✔ Test run with 25 tests in 4 suites passed after 0.005 seconds.
+
+## State coverage (every state renders; web parity + native chrome)
+loading | empty(totalCount==0) | error(retry) | hidden(dismissed|celebration-expired,restart) | content
+content extras: stale + offline connectivity banner/chip, progress bar, 7-task list, all-complete footer
+
+## Parity anchors (web -> native)
+useChecklistTasks + shouldHideChecklist -> ChecklistBuilder (pure, unit-tested)
+7 task ids/keys/fallbacks verbatim from features/onboarding/checklist.ts
+DEFAULT_THEME_ID=neon-cyan | CELEBRATION_WINDOW=24h | COMMAND_PALETTE_CTA=#open-command-palette
+data via OnboardingChecklistSource seam (P1/S8); strings via OnboardingChecklistStrings (P1/S10);
+view.opened telemetry via OnboardingChecklistTelemetry (P1/S11); registry id=onboarding-checklist,
+category=system, default 2x4, min 2x3, max 4x8 (clamped).
+
+## Result
+IOS_EXIT=0  MAC_EXIT=0  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
