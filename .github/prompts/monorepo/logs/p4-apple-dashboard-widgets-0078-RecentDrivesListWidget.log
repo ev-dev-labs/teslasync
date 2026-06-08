@@ -1,0 +1,172 @@
+=== P4 Dashboard widget 0078 RecentDrivesListWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.*
+Web spec: web/src/features/dashboard/widgets/RecentDrivesListWidget.tsx
+Registry: registry/driving.ts → "recent-drives-list" · category=driving · 2x4 / 1x4 / 4x40
+Runner  : Darwin · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftformat + swiftlint + pwsh + xcodegen present
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: RecentDrivesListWidget.* + this log)
+--------------------------------------------------------------------------------
+  RecentDrivesListWidget.swift          — SwiftUI surface: glass widget shell, header (Route glyph +
+                                          title + freshness chip + refresh + "View all"); all states;
+                                          responsive narrow/wide list; full a11y; i18n.
+  RecentDrivesListWidget.Views.swift    — the presentational drive-row subview (distance/duration |
+                                          optional address column | SoC/battery-used/date), tap → onOpen.
+  RecentDrivesListWidget.Model.swift    — P1/S8 state-holder seam (RecentDrivesSource), @Observable
+                                          RecentDrivesModel (+ nonisolated resolvePhase, autoRefreshIfStale),
+                                          P1/S11 telemetry seam, InMemory source, RecentDrivesStrings (P1/S10),
+                                          RecentDrivesSurface (slug + canonical registration).
+  RecentDrivesListWidget.Adapter.swift  — pure projection: cached [RecentDriveDTO] + unit prefs → per-row
+                                          display strings, reproducing the web numeric pipeline VERBATIM
+                                          (parity), + the layout (driveLimit/isWide) + a11y label/summary.
+  RecentDrivesListWidget.Previews.swift — #if DEBUG previews for every state + the narrow/wide layouts.
+  RecentDrivesListWidget.Tests.swift    — XCTest: adapter value parity + format helpers + layout + phase.
+  RecentDrivesListWidget.ModelTests.swift — XCTest: model phases/telemetry/refresh + registry + accessibility
+                                          (split from Tests.swift to stay within the 400-line lint envelope).
+  RecentDrivesListWidget.strings        — per-surface i18n table (every web t() key + native chrome).
+
+Parity arithmetic reproduced exactly from the web source (cross-platform value parity, NOT a "corrected"
+version):
+  distance      = convertDistanceFromSI(d.distance_m ?? 0, unitPref) [ /1000 km · /1609.344 mi · /0.3048 ft ]
+                  then fmtNumber(dist, 1)
+  duration      = formatDurationMinutes((d.duration_s ?? 0)/60, { subMinuteLabel:'<1m' })
+                  [ '—' for non-finite/negative · '<1m' for <1 · 'Hh Mm' / 'Mm' with minutes rounded en-US ]
+  address       = truncateAddress(addr, 30)  [ '—' for missing/empty · slice(0,30)+'…' for over-long ]
+  SoC           = `${start ?? '?'}% → ${end ?? '?'}%`
+  battery used  = (start != null && end != null) ? fmtInt(start-end)+'%' : null, shown only when dist > 0
+  date          = formatDateShort(d.start_ts)  [ '—' for missing · locale+tz { month:'short', day:'numeric' } ]
+  driveLimit    = isWide(cols>=3) ? 10 : isTall(rows>=2) ? 7 : 5 ; address column shown only when isWide
+
+States reproduced (every one renders — no hidden surfaces):
+  loading (skeleton list) · empty ("No recent drives recorded") · error (retry) · stale (chip + banner +
+  auto-refresh) · offline (cached rows + banner) · content (responsive list). Each has a #if DEBUG preview.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+       (surface = RecentDrivesListWidget.swift + .Views + .Model + .Adapter + .Previews, type-checked
+        against the REAL design system: 40 files from Sources/Components + Sources/Design + the generated
+        DesignTokens (apps/design/generated/apple/Tokens.swift) + a registry-types shim, Xcode MacOSX26.5 SDK,
+        strict concurrency complete)
+       → error count = 0
+       TYPECHECK_EXIT=0
+       (One design-system file is excluded: Sources/Components/DataDisplay/UnitFormatters.swift consumes the
+        KMP `UnitPreferences` type — it is delivered by the `Shared.xcframework` and is unused by this surface.
+        Every other design file + all five shipped surface files type-check green; ZERO errors originate in
+        RecentDrivesListWidget.*. The registry-types shim reproduces DashboardWidgetSize/Registration verbatim
+        from the sibling DigitalTwinWidget.Model.swift that owns them in the app target.)
+
+[HOST] swiftc -swift-version 6 -strict-concurrency=complete + execute adapter/model harness
+       (RegistryShim + RecentDrivesListWidget.Model + .Adapter + driver, compiled to a native executable)
+       → === RecentDrivesListWidget host harness ===  CHECKS=105 FAILURES=0  HARNESS_OK
+       HARNESS_EXIT=0
+       Verified GREEN by execution: km/mi distance pipeline + 1-dp formatting ("12.0"/"7.5"), duration
+       shapes ("31m"/"<1m"/"2h 2m"/"1h 0m"/"—"/"1h 30m"), SoC "82% → 75%" + "60% → ?%", battery-used gating
+       (shown 7% / hidden when end is nil / hidden when distance 0), formatDateShort "Jun 7" + "—",
+       truncateAddress 30+'…' + '—', half-away-from-zero rounding, non-finite→0, driveLimit 10/7/5 + isWide,
+       phase matrix (loading/empty/loaded/failed × rows?), telemetry-once + start/refresh delegation,
+       stale auto-refresh gating, offline-cached-content, units/connection tracking, registry metadata +
+       clamp, and the per-row + list-summary a11y content.
+
+[HOST] swiftformat --lint apps/apple
+       → 0/298 files require formatting, 2 files skipped
+       FORMAT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint --strict           (project config: Sources/Tests/Watch* included dirs)
+       → Done linting! Found 0 violations, 0 serious in 267 files.
+       GATE_LINT_EXIT=0
+[HOST] cd apps/apple && swiftlint lint --strict <the 7 shipped RecentDrivesListWidget*.swift files>
+       (the staging dir TeslaSync/dashboard-widgets is outside the config's `included:` list, so the shipped
+        files are linted EXPLICITLY to hold them to the same --strict bar)
+       → Done linting! Found 0 violations, 0 serious in 7 files.
+       MYFILES_LINT_EXIT=0
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path .../RecentDrivesListWidget -Language swift
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0 · EXIT=0
+       PLACEHOLDER_EXIT=0
+       (also re-scanned the whole dashboard-widgets dir → PLACEHOLDER_COUNT=0; manual case-insensitive
+        forbidden-word scan of the shipped files [TODO/FIXME/stub/mock/placeholder/lorem/coming soon/
+        not implemented/unimpl] → NONE.)
+
+[DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green — see reasoning)
+       Capability IS present on this runner (Xcode 26.5; iPhone 16 simulator booted
+       83717DEE-70A3-4325-AA61-CBDDD3140989; `xcodegen generate` → EXIT=0). The scheme-level build/test is
+       DEFERRED — not failed — for two scope/dependency reasons, neither a defect in this surface's code:
+         (1) The surface lives in the staging dir apps/apple/TeslaSync/dashboard-widgets/, which is NOT a
+             source path in project.yml (sources = Sources / Localization / DesignTokens). Verified: after
+             `xcodegen generate`, the generated TeslaSync.xcodeproj/project.pbxproj contains 0 references to
+             RecentDrivesListWidget — so running the scheme as-is would build the app WITHOUT these files and
+             would not exercise them. Registering the surface (or editing the shared Localizable.xcstrings) is
+             the integration prompt's scope and is OUTSIDE this prompt's allowed files (RecentDrivesListWidget.*
+             + this log). Covenant #7 (no predecessor/integration bypass) forbids self-registering.
+         (2) The TeslaSync scheme's pre-action builds the KMP Shared.xcframework via
+             Scripts/build-shared-xcframework.sh (`gradlew :core:assembleSharedXCFramework`, Kotlin/Native) and
+             the targets require signing; Frameworks/Shared.xcframework is absent in this checkout (only
+             .gitkeep). Building it is out of scope for this surface prompt.
+       Equivalent in-scope verification was performed instead and is GREEN above: a Swift-6 strict-concurrency
+       `swiftc -typecheck` of the surface against the real design tokens + shared components (the exact symbols
+       the app build would resolve), plus an executed adapter/model harness (105/105). This matches the
+       user-approved P3 "code-complete + DEFERRED Xcode gate" disposition used by predecessors 0036
+       (DigitalTwinWidget), 0054 (GuardModeWidget) and 0055 (LifetimeStatsWidget).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) + the responsive
+      narrow/wide list — implemented; each state/layout has a #if DEBUG preview; phase + projection logic
+      unit-tested AND executed (105/105).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (RecentDrivesSource); no HTTP in the view —
+      the size-dependent projection is a pure derive from the model's cached drives (web useMemo parity).
+  [x] Every i18n key from source has a matching catalog key — 4 parity keys (widget.recentDrivesList,
+      .description, widget.viewAll, widget.noDrivesList) + native chrome in RecentDrivesListWidget.strings;
+      the view holds no English literals (all via RecentDrivesStrings).
+  [x] Accessibility labels on every interactive element (refresh + "View all" buttons), every row (full
+      spoken summary, isButton trait when tappable), and the list container (summary count); icons are
+      accessibilityHidden.
+  [x] Tests: adapter value-parity unit tests + per-phase model tests + registry + a11y label tests
+      (RecentDrivesListWidget.Tests.swift + .ModelTests.swift; the same assertions executed green in the host
+      harness).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Telemetry: view.opened emitted once with surface slug "RecentDrivesListWidget" (P1/S11) — tested + executed.
+  [x] Host-runnable gates green (typecheck swift6 / executed harness / format / lint / placeholder);
+      Xcode scheme build/test DEFERRED with capability + scope evidence (per approved P3 disposition).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild scheme steps are shown DEFERRED (not green) with reasons; every
+                       "EXIT=0" above is a command actually executed on this host.
+  2  No scope narrowing: implemented ALL states + the narrow/wide list + i18n + a11y + telemetry + registry +
+                       the full per-row field set (distance/duration/addresses/SoC/battery-used/date).
+  3  No skip-and-assume: each host gate executed and its real output captured; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness executes real logic.
+  5  No parity shortcuts: distance/duration/address/SoC/battery-used/date pipeline + rounding + driveLimit
+                       ported VERBATIM and pinned by executed assertions to the exact web display strings.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid and did NOT edit the
+                       shared Localizable.xcstrings (both out of allowed scope); strings shipped as the
+                       per-surface table, matching predecessors 0036/0054/0055.
+  8  No commit on red  : committing on all-green host gates; the Xcode scheme steps are DEFERRED (a documented
+                       scope/dependency deferral with capability evidence), not failed.
+  9  No silent drift   : changes confined to the allowed RecentDrivesListWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native RecentDrivesListWidget shipped at parity with the web source: a SwiftUI surface
+  (glass shell + header + responsive narrow/wide drive list) over a P1/S8 state-holder seam (no view HTTP),
+  P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens; every state, every i18n key, every interactive a11y label;
+  registry-correct (recent-drives-list, 2x4 / 1x4 / 4x40). The surface type-checks GREEN under Swift 6 strict
+  concurrency against the real design system and its adapter/model logic executes GREEN (105/105) with exact
+  web value parity. The Xcode scheme build/test is DEFERRED to the signed CI runner (surface not yet target-
+  registered — verified 0 refs in the generated project — + the KMP Shared.xcframework, neither a defect in
+  this code), matching the user-approved P3 "code-complete + DEFERRED Xcode gate" disposition.
+
+EXIT=0
+STATUS=DONE
