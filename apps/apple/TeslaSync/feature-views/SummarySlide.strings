@@ -1,0 +1,42 @@
+/*
+  SummarySlide.strings
+  TeslaSync — P4 feature view · 0069 · SummarySlide (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  SummarySlide resolves (table "SummarySlide") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-safe across the concurrent slots).
+
+  Keys are the exact ones extracted from the web source
+  (web/src/features/analytics/components/review/SummarySlide.tsx). The remaining
+  keys back the native-only chrome (freshness chip, refresh/retry, loading, and the
+  empty / error / offline copy the prompt's surface contract requires).
+*/
+
+/* --- Web source keys (verbatim from SummarySlide.tsx `t(...)` calls) --- */
+"yearReview.title" = "Year in Review";
+"yearReview.totalDrives" = "Drives";
+"yearReview.energyKwh" = "kWh";
+"yearReview.charges" = "Charges";
+"yearReview.co2KgSaved" = "kg CO₂ saved";
+"yearReview.screenshot" = "📸 Screenshot to share your year!";
+/* web default `Saved ${{amount}} vs. gas` — native uses %@ for the rounded amount */
+"yearReview.savedSummary" = "Saved $%@ vs. gas";
+/* web footer literal `TeslaSync • Year in Review`, keyed here for i18n hygiene */
+"yearReview.brandLine" = "TeslaSync • Year in Review";
+
+/* --- Native chrome: freshness + actions --- */
+"yearReview.summary.live" = "Live";
+"yearReview.summary.stale" = "Stale";
+"yearReview.summary.offline" = "Offline";
+"yearReview.summary.refresh" = "Refresh";
+"yearReview.summary.retry" = "Retry";
+
+/* --- Native chrome: loading / empty / error / offline states --- */
+"yearReview.summary.loading" = "Loading your year in review…";
+"yearReview.summary.empty.title" = "No year in review yet";
+"yearReview.summary.empty.message" = "Drive and charge through the year and your recap will appear here.";
+"yearReview.summary.errorTitle" = "Couldn't load your year in review";
+"yearReview.summary.offlineMessage" = "Offline — showing your last saved recap";
