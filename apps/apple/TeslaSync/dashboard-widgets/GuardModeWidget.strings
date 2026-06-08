@@ -1,0 +1,61 @@
+/*
+  GuardModeWidget.strings
+  TeslaSync — P4 dashboard widget · 0054 · GuardModeWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `GuardModeWidget` resolves (table "GuardModeWidget") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first two groups are the exact keys extracted from the web source
+  (features/dashboard/widgets/GuardModeWidget.tsx) — the status/feed copy and the
+  per-`event_type` labels (web `widget.guardEvent.${ev.event_type}`). The
+  remaining keys back the native-only chrome (freshness chip, refresh/retry/empty/
+  error copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.guardMode" = "Guard Mode";
+"widget.guardMode.description" = "Anti-theft guard status, recent security events, panic button";
+"widget.guardArmed" = "Armed";
+"widget.guardDisarmed" = "Disarmed";
+"widget.guardOn" = "ON";
+"widget.guardOff" = "OFF";
+"widget.guardSensitivity" = "Sensitivity";
+"widget.guardAutoPanic" = "Auto-panic";
+"widget.guardEvents" = "events";
+"widget.guardAcknowledged" = "Acknowledged";
+"widget.guardUnacknowledged" = "Unacknowledged";
+"widget.guardNoEvents" = "No guard events";
+"widget.noGuardData" = "No guard data";
+
+/* --- Event-type labels (web `widget.guardEvent.${event_type}`) --- */
+"widget.guardEvent.vehicle_moved" = "Vehicle Moved";
+"widget.guardEvent.unauthorized_unlock" = "Unauthorized Unlock";
+"widget.guardEvent.unauthorized_drive" = "Unauthorized Drive";
+"widget.guardEvent.sentry_triggered" = "Sentry Triggered";
+"widget.guardEvent.manual_panic" = "Panic Alert";
+"widget.guardEvent.test_alert" = "Test Alert";
+"widget.guardEvent.locked" = "Lock State Changed";
+"widget.guardEvent.sentry_mode" = "Sentry Mode";
+"widget.guardEvent.valet_mode_enabled" = "Valet Mode";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.open" = "Open";
+"widget.guardLive" = "Live";
+"widget.guardStale" = "Stale";
+"widget.guardOffline" = "Offline";
+"widget.guardRefresh" = "Refresh";
+"widget.guardRetry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.guardLoading" = "Loading guard status";
+"widget.guardEmptyHint" = "Guard data will appear once your vehicle reports in.";
+"widget.guardErrorTitle" = "Couldn't load guard status";
+"widget.guardOfflineBanner" = "Offline — showing last known status";
+"widget.guardStaleBanner" = "Reconnecting — status may be stale";
+
+/* --- Accessibility --- */
+"widget.guardOpenA11y" = "Open the Guard Mode page";
