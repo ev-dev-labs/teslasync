@@ -111,6 +111,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\CommandHistoryWidget\CommandHistoryWidget.Model.cs" Link="Widgets\CommandHistoryWidget\CommandHistoryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\CommandHistoryWidget\CommandHistoryWidget.ViewModel.cs" Link="Widgets\CommandHistoryWidget\CommandHistoryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\CommandHistoryWidget\CommandHistoryWidget.Source.cs" Link="Widgets\CommandHistoryWidget\CommandHistoryWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\CostBreakdownWidget\CostBreakdownWidget.Model.cs" Link="Widgets\CostBreakdownWidget\CostBreakdownWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\CostBreakdownWidget\CostBreakdownWidget.ViewModel.cs" Link="Widgets\CostBreakdownWidget\CostBreakdownWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\CostBreakdownWidget\CostBreakdownWidget.Source.cs" Link="Widgets\CostBreakdownWidget\CostBreakdownWidget.Source.cs" />
   </ItemGroup>
 
   <!--
