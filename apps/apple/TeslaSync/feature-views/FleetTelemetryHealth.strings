@@ -1,0 +1,48 @@
+/*
+  FleetTelemetryHealth.strings
+  TeslaSync — P4 feature view · 0005 · FleetTelemetryHealth (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `FleetTelemetryHealth` resolves (table "FleetTelemetryHealth") lives here with its
+  web English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/admin/components/devtools/FleetTelemetryHealth.tsx) — the canonical
+  `devtools.health.*` namespace, which already exists in the shared catalog. The
+  remaining keys back the native-only chrome (freshness chip, stale/offline banner,
+  loading + error + retry copy, accessibility hint).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"devtools.health.errorVinsTitle" = "Error VINs";
+"devtools.health.errorVinsDesc" = "Vehicles with fleet telemetry configuration errors";
+"devtools.health.affectedVehicles" = "affected";
+"devtools.health.filteredBy" = "Filtered";
+"devtools.health.clearVinFilter" = "Clear VIN filter";
+"devtools.health.refreshVins" = "Refresh from Tesla";
+"devtools.health.vin" = "VIN";
+"devtools.health.firstSeen" = "First Seen";
+"devtools.health.lastSeen" = "Last Seen";
+"devtools.health.noErrorVins" = "No vehicles with telemetry errors";
+"devtools.health.errorLogTitle" = "Error Log";
+"devtools.health.errorLogDesc" = "Detailed fleet telemetry error history";
+"devtools.health.refreshErrors" = "Refresh from Tesla";
+"devtools.health.errorCode" = "Error Code";
+"devtools.health.message" = "Message";
+"devtools.health.reportedAt" = "Reported At";
+"devtools.health.noErrors" = "No fleet telemetry errors recorded";
+
+/* --- Native chrome: freshness + connectivity --- */
+"devtools.health.live" = "Live";
+"devtools.health.stale" = "Stale";
+"devtools.health.offline" = "Offline";
+"devtools.health.staleBanner" = "Reconnecting — telemetry health may be stale";
+"devtools.health.offlineBanner" = "Offline — showing last known telemetry health";
+
+/* --- Native chrome: states + accessibility --- */
+"devtools.health.loading" = "Loading telemetry health";
+"devtools.health.errorTitle" = "Couldn't load telemetry health";
+"devtools.health.retry" = "Retry";
+"devtools.health.filterHint" = "Filters the error log by this VIN";
