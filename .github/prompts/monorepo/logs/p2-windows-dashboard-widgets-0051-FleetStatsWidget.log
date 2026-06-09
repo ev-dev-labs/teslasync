@@ -1,0 +1,79 @@
+=== P2 Dashboard widget 0051 FleetStatsWidget (Windows) ===
+date: 2026-06-08T18:12:12.2520570-07:00
+dotnet sdk: 10.0.300
+
+--- BUILD: dotnet build TeslaSync.sln -c Release ---
+D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\Forms\VehicleOption.cs(29,26): warning CA1720: Identifier 'Short' contains type name (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1720) [D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\Live\SseEventDecoder.cs(322,69): warning CA1859: Change type of field 'CompactKindByName' from 'System.Collections.Generic.IReadOnlyDictionary<string, TeslaSync.App.Core.Live.SignalKind>' to 'System.Collections.Generic.Dictionary<string, TeslaSync.App.Core.Live.SignalKind>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\Live\SseEventDecoder.cs(307,66): warning CA1859: Change type of field 'ValueKindIntToCompact' from 'System.Collections.Generic.IReadOnlyDictionary<int, TeslaSync.App.Core.Live.SignalKind>' to 'System.Collections.Generic.Dictionary<int, TeslaSync.App.Core.Live.SignalKind>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\Live\SseEventDecoder.cs(290,69): warning CA1859: Change type of field 'ValueKindLongToCompact' from 'System.Collections.Generic.IReadOnlyDictionary<string, TeslaSync.App.Core.Live.SignalKind>' to 'System.Collections.Generic.Dictionary<string, TeslaSync.App.Core.Live.SignalKind>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+    17 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:01:17.77
+BUILD_EXIT=0
+
+--- UNIT TESTS: dotnet test TeslaSync.App.Tests (widget unit suite) ---
+
+Passed!  - Failed:     0, Passed:  3335, Skipped:     0, Total:  3335, Duration: 1 s - TeslaSync.App.Tests.dll (net10.0)
+
+UNIT_TEST_EXIT=0
+
+--- FULL SUITE: dotnet test TeslaSync.sln -c Release (includes WinAppDriver UITests) ---
+
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 325 ms - TeslaSync.App.UITests.dll (net10.0)
+
+TEST_EXIT=1
+   (147/147 failures are TeslaSync.App.UITests — WinAppDriver runner absent; 0 unit-test failures)
+
+--- FORMAT: dotnet format TeslaSync.sln --verify-no-changes ---
+
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 -Path .../FleetStatsWidget ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- PLATFORM-CAPABILITY EVIDENCE (UI-automation runner) ---
+WinAppDriver.exe at standard install paths: False
+WinAppDriver.exe on PATH: False
+Endpoint http://127.0.0.1:4723/ listening: False
+TESLASYNC_UIA_DRIVER_URL: (unset)
+=> TeslaSync.App.UITests (147 WinAppDriver E2E tests) cannot run on this runner and fail-fast by design
+   (UiAutomationUnavailableException). This is the sole source of the full-suite TEST_EXIT=1.
+
+--- RESULT SUMMARY ---
+WinUI3 + Windows App SDK + .NET 10 build capability: PRESENT (build succeeded).
+FleetStatsWidget surface (Model/Source/ViewModel/View): COMPLETE — no stubs/placeholders.
+BUILD_EXIT=0            (TeslaSync.sln, Release, 0 errors)
+UNIT_TEST_EXIT=0        (TeslaSync.App.Tests: 3335 passed / 0 failed — incl. 53 FleetStatsWidgetTests)
+FORMAT_EXIT=0           (dotnet format --verify-no-changes: clean)
+PLACEHOLDER_EXIT=0      (PLACEHOLDER_COUNT=0)
+TEST_EXIT=1             (full sln: 147/147 TeslaSync.App.UITests blocked on absent WinAppDriver; 0 unit failures)
+
+Widget deliverable + all code-level gates (build, unit tests, format, placeholder): GREEN.
+Full prescribed gate blocked only by the absent WinAppDriver UI-automation runner (orthogonal E2E layer).
+
+EXIT=1
+STATUS=BLOCKED
