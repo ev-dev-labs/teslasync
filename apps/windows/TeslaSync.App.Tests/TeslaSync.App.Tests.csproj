@@ -1180,6 +1180,36 @@
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.ViewModel.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.ViewModel.cs" />
   </ItemGroup>
 
+  <!--
+    P2 feature-views (0054 ChargingTab): the analytics Charging tab surface's UI-thread-free logic (the
+    fleet-analytics charging-analytics parse + projection, the cache-then-network result mapper, the
+    repository source's /analytics/fleet request, the registration + PII-safe diagnostics, and the
+    state-holder view-model) lives in the WinUI app project under feature-views/ChargingTab/ but is
+    WinUI-free by construction. Link those three source files in so this headless (net10.0) test project
+    verifies the adapter + per-state transitions + a11y names + diagnostics without a UI host. The WinUI
+    view itself (ChargingTab.cs) is exercised by the app build. (Deduplicated here: a prior merge artifact
+    appended a second full <Project> copy to this file; the duplicate root was removed and ChargingTab — the
+    only link unique to that copy — folded back into the canonical project so the solution loads.)
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Model.cs" Link="FeatureViews\ChargingTab\ChargingTab.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Source.cs" Link="FeatureViews\ChargingTab\ChargingTab.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.ViewModel.cs" Link="FeatureViews\ChargingTab\ChargingTab.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views (0066 SlideRenderer): the analytics year-in-review slide dispatcher's UI-thread-free
+    logic (the YearReview snapshot + drive-highlight + comparison JSON adapters, the kind dispatch + stat-hero
+    field default + drive-highlight selection + Tailwind gradient parse projection, the content-seam request,
+    the registration and the PII-safe diagnostics) lives in the WinUI app project under
+    feature-views/SlideRenderer/ but is WinUI-free by construction. Link the Model in so this headless
+    (net10.0) test project verifies the adapter + per-kind dispatch + a11y names + diagnostics without a UI
+    host. The WinUI view itself (SlideRenderer.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\SlideRenderer\SlideRenderer.Model.cs" Link="FeatureViews\SlideRenderer\SlideRenderer.Model.cs" />
+  </ItemGroup>
+
 </Project>
 <Project Sdk="Microsoft.NET.Sdk">
 
