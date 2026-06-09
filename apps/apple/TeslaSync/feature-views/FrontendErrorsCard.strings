@@ -1,0 +1,35 @@
+/*
+  FrontendErrorsCard.strings
+  TeslaSync — P4 feature view · 0243 · FrontendErrorsCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `FrontendErrorsCard`
+  resolves (table "FrontendErrorsCard") lives here with its web English value. These entries fold
+  into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the shared
+  catalog.
+
+  The web source (features/system/components/status/FrontendErrorsCard.tsx) is "anonymous" — it uses
+  hardcoded English literals (no t() calls). Per the native no-English-literals rule, every one of
+  those literals is promoted to a key here. The first group is the parity set extracted from the web
+  source; the second group backs the native chrome (the P4 leaf freshness / loading / error copy)
+  so the Swift sources hold no English prose literals.
+*/
+
+/* --- Parity: strings extracted from the web source --- */
+"frontendErrors.title" = "Frontend errors (last hour)";
+"frontendErrors.reportedBy" = "reported by browser sessions";
+"frontendErrors.noErrors" = "No frontend errors reported in the last hour.";
+"frontendErrors.unableToLoad" = "Unable to load frontend error summary.";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"frontendErrors.live" = "Live";
+"frontendErrors.stale" = "Stale";
+"frontendErrors.offline" = "Offline";
+"frontendErrors.staleBanner" = "Reconnecting — errors may be stale";
+"frontendErrors.offlineBanner" = "Offline — showing last known errors";
+"frontendErrors.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error states --- */
+"frontendErrors.loadingA11y" = "Loading frontend error summary";
+"frontendErrors.errorTitle" = "Couldn't load frontend errors";
+"frontendErrors.retry" = "Retry";
