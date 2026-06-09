@@ -1,0 +1,38 @@
+/*
+  DrivingTips.strings
+  TeslaSync — P4 feature view · 0168 · DrivingTips (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DrivingTips` resolves (table "DrivingTips") lives here with its web `t(key, default)`
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/driving/components/driving-dynamics/DrivingTips.tsx) — the panel title plus
+  every recommendation string passed to `t(key, default)`. The second group backs the
+  native chrome: the P4 leaf freshness / loading / error copy, so the Swift sources hold
+  no English prose literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"dynamics.recommendations" = "Driving Style Recommendations";
+"dynamics.tipNoData" = "Drive your vehicle to start collecting dynamics data.";
+"dynamics.tipEaseAccel" = "Ease into the accelerator — gradual inputs save energy and tire wear.";
+"dynamics.tipBrakeEarly" = "Brake earlier and lighter to improve regen capture.";
+"dynamics.tipSmoothThrottle" = "Smooth throttle transitions can improve efficiency by 10–15%.";
+"dynamics.tipCoast" = "Lift off the pedal earlier to let regen do the work.";
+"dynamics.tipGreat" = "Excellent driving style! Maintaining this maximizes range and comfort.";
+"dynamics.tipKeep" = "Keep monitoring your scores — consistency is key.";
+"dynamics.tipThermal" = "Motor temps are running high — consider easing off sustained high power.";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"drivingTips.live" = "Live";
+"drivingTips.stale" = "Stale";
+"drivingTips.offline" = "Offline";
+"drivingTips.staleBanner" = "Reconnecting — data may be stale";
+"drivingTips.offlineBanner" = "Offline — showing last known data";
+"drivingTips.refresh" = "Refresh";
+"drivingTips.loadingA11y" = "Loading driving recommendations";
+"drivingTips.errorTitle" = "Couldn't load driving recommendations";
+"drivingTips.retry" = "Retry";
