@@ -1,0 +1,225 @@
+================================================================================
+P4 · Feature view · 0173 — PedalUsage (Apple)
+Run: 2026-06-09T02:15-0700   Host: Darwin arm64   Branch: auto/20260608-211853-78201/102
+Prompt: P4/feature-views/0173 — Feature view: PedalUsage
+Web source (spec): web/src/features/driving/components/driving-dynamics/PedalUsage.tsx
+Mode: code-complete + host-executed gates (typecheck both SDKs + executed XCTest) +
+      Shared.xcframework BUILT & STAGED + xcodegen OK + full xcodebuild app build
+      ATTEMPTED — blocked ONLY by pre-existing errors in UNRELATED dashboard-widget
+      surfaces (out of this prompt's allowed-files scope). Predecessor parity with
+      0170 LiveMotorStatus (Honesty rule 7); this run goes further (framework staged,
+      app build attempted, breakage isolated to other surfaces with evidence).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)      OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)             OK
+  iPhone simulator ........... iPhone 17 / 17 Pro / 17e present (gate names "iPhone
+                               16"; that device is NOT installed on this runner —
+                               substituted iPhone 17, same iOS 18 runtime)          NOTE
+  SwiftUI .................... present in both SDKs (this surface's core requirement) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER —
+                               prompt "Charts/maps used: (none)")                    OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... 2.45.4 (project + 12 targets generate cleanly)        OK
+  Shared.xcframework ......... BUILT via Gradle (:core:assembleSharedXCFramework,
+                               BUILD SUCCESSFUL 14m33s) and STAGED to
+                               apps/apple/Frameworks/Shared.xcframework              OK
+
+  Capability note: the prompt's core requirement is SwiftUI + Swift Charts + MapKit on
+  iOS 18 / iPadOS 18 / macOS 15. SwiftUI is AVAILABLE and PROVEN by the real iOS-18
+  simulator AND macOS-15 SDK compiles below. This surface draws its gauges with native
+  SwiftUI shapes (no Charts/MapKit dependency). The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit/Xcode unavailable") does NOT apply — the surface is authored,
+  host-compiled on BOTH SDKs, and its full 32-test suite is EXECUTED green on the host.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/PedalUsage.*) ===
+  PedalUsage.Model.swift     320  P1/S8 state-holder seam (PedalSource→PedalUsageModel)
+                                  + P1/S11 telemetry seam (view.opened) + P1/S10 strings
+                                  facade + load/connection enums + PedalSnapshotInput DTO
+                                  (throttle/brake position + brakeActive, hasAny gate) +
+                                  unit prefs + in-memory source
+  PedalUsage.Adapter.swift   242  testable projection core — fmtNumber parity (web
+                                  numberFormat.ts), RadialGauge clamp/fill/decimals math,
+                                  '%' vs '—' unit branch, brake-active badge tone/text,
+                                  a11y summary (pure, SwiftUI-free)
+  PedalUsage.Views.swift     256  presentational chrome — accent→token map (#06b6d4→
+                                  chartSeriesRegen, #ef4444→chartSeriesTemperature), the
+                                  responsive pedal row (web Grid default:1/sm:3), the
+                                  radial gauge (web RadialGauge), the brake-status badge
+                                  (web Badge + Footprints/shoeprints.fill glyph),
+                                  freshness chip, loading skeleton row
+  PedalUsage.swift           162  PedalUsage surface (FadeIn delay 0.1 + GlassPanel +
+                                  always-on <h2> title header + freshness chip + state
+                                  switch loading/empty/error/content + surfaceSlug)
+  PedalUsage.Previews.swift   94  #if DEBUG previews — one per state (content / brake-
+                                  engaged / partial / empty / no-snapshot / loading /
+                                  error / stale / offline)
+  PedalUsage.Tests.swift     353  XCTest — format + hasAny gate + projector + model +
+                                  a11y + per-state view render (32 methods)
+  PedalUsage.strings          39  P1/S10 catalog contribution (table "PedalUsage")
+  Largest .swift = 353 lines (swiftlint file_length honored). NO file imports the Shared
+  xcframework (the seam is a Swift protocol; the prod app injects the facade-backed
+  source, previews/tests inject InMemoryPedalSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data source (web useTranslation + useVehicles + useDriveDynamicsLatest, reading
+    pedal_position / brake_pedal_position / brake_pedal_active off /drive-dynamics/latest):
+    bound through the P1/S8 seam PedalSource→PedalUsageModel. The view never issues HTTP;
+    the source resolves the snapshot + number-format prefs and pushes coalesced updates.
+  - Composition (web FadeIn[delay 0.1] + GlassPanel + <h2> + Grid[RadialGauge ×2 +
+    Footprints + Badge]):
+      • FadeIn       -> TSFadeIn(delay: 0.1).
+      • GlassPanel   -> TSGlassPanel.
+      • <h2> title   -> always-visible header, web t('dynamics.pedalUsage','Pedal Usage').
+      • RadialGauge  -> native ring (track + accent arc fills clamped/max) + centre value
+                        (fmtNumber(clamped, isInteger?0:precision) + unit) + label + caption
+                        span; throttle #06b6d4→chartSeriesRegen, brake #ef4444→
+                        chartSeriesTemperature (token sRGB == web hex exactly).
+      • Throttle gge -> value=pedal_position??0, max 100, unit = pedal_position!=null?'%':'—'
+                        (the web ternary), caption t('dynamics.throttlePosition').
+      • Brake gge    -> value=brake_pedal_position??0, max 100, unit = '%' / '—',
+                        caption t('dynamics.brakePedalPosition').
+      • Brake badge  -> Footprints (shoeprints.fill) + Badge variant danger(active)/
+                        success(inactive) text brakeActive? t('dynamics.brakeActive',
+                        'Brake Active') : t('dynamics.brakeInactive','Brake Inactive')
+                        over the t('dynamics.brakePedal','Brake Pedal Status') caption.
+                        nil brake flag reads inactive (web falsy branch).
+      • hasAny gate  -> throttle!=null||brakePos!=null||brakeActive!=null chooses gauges
+                        vs the empty state, reproduced as PedalSnapshotInput.hasAny.
+  - States (ALL rendered, each with a #if DEBUG preview + a model/view test):
+      loading (skeleton ring grid) · empty (web EmptyState t('dynamics.pedalNoData','No
+      pedal telemetry received yet'), incl. loaded-but-all-pedals-nil) · content (gauge
+      grid) · error (message + Retry; native QueryError affordance) · stale (freshness
+      chip + one guarded auto-refresh) · offline (cached readings kept + offline chip).
+  - i18n (P1/S10): web keys preserved VERBATIM — dynamics.{pedalUsage,throttle,
+      throttlePosition,brake,brakePedalPosition,brakeActive,brakeInactive,brakePedal,
+      pedalNoData}; native chrome namespaced dynamics.pedal.* (noReading/live/stale/
+      offline/updating/loading/errorTitle/retry). referenced==declared VERIFIED (17==17,
+      zero orphans, zero undeclared). NO English string literals in native code (all via
+      PedalUsageStrings facade + Text(verbatim:); grep for Text("…") UI literals = NONE).
+  - Accessibility: VoiceOver labels on every gauge (label + spoken value, "No reading"
+      when absent), the brake badge, the freshness chip, and the Retry button; the grid
+      carries a combined summary ("Throttle 42.50%. Brake 0%. Brake Pedal Status Brake
+      Inactive"); Dynamic-Type system fonts (Font.TS); reduce-motion honored (ring fill +
+      TSSkeleton shimmer).
+  - Telemetry (P1/S11): PedalUsageModel.start() emits view.opened with surface slug
+      "PedalUsage" exactly once (OSLogPedalTelemetry default; prod app injects the shared
+      diagnostics adapter). Asserted by testStartEmitsViewOpenedOnce.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 4 production files (+ DEBUG previews) compiled together with the
+  REAL apps/apple component closure (design Tokens + Components/{UI,Feedback,DataDisplay,
+  Charts,Maps,Motion,Forms,Layout}); none import the Shared xcframework (UnitFormatters.swift,
+  the only Shared-dependent component file, is host-shimmed in the harness — the PedalUsage
+  surface does not reference it).
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK (full component closure + 5 surface files):
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6  <closure> <surface files>
+        IOS_TYPECHECK_EXIT=0   (0 errors)                                           OK
+  [2] swift build — macOS 15 SDK (SwiftPM harness: real component closure + surface):
+        Build complete!                                                            OK
+  [3] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production Model/Adapter/Views/surface + DEBUG previews +
+        real design tokens + real TS component closure), Swift 6 language mode:
+          Test Suite 'PedalFormatTests'          passed —  3 tests, 0 failures
+          Test Suite 'PedalSnapshotInputTests'   passed —  1 test,  0 failures
+          Test Suite 'PedalProjectorTests'       passed —  9 tests, 0 failures
+          Test Suite 'PedalUsageModelTests'      passed — 10 tests, 0 failures
+          Test Suite 'PedalAccessibilityTests'   passed —  2 tests, 0 failures
+          Test Suite 'PedalUsageViewStateTests'  passed —  7 tests, 0 failures
+          Executed 32 tests, with 0 failures (0 unexpected)
+        SWIFT_TEST_EXIT=0                                                           OK
+        Covers: fmtNumber grouping/half-away-from-zero + safeNumber; hasAny gate (nil vs
+        present-false brake flag); projector gauge order/accents/units, '%' vs '—' branch,
+        integer-vs-decimal centre, clamp to 100, non-finite→0, precision pass-through,
+        brake tone/text (active/inactive/nil); model phase matrix, cached-behind-offline,
+        loaded-but-all-nil→empty, units/freshness tracking, refresh delegation, the
+        once-until-live stale auto-refresh + fetching guard, view.opened-once + slug; the
+        a11y summary (incl. "No reading"); and an ImageRenderer render smoke for ALL SIX
+        states (content / empty / loading / error / stale / offline).
+  [4] swiftlint --strict (6 surface .swift files; repo .swiftlint.yml):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                                OK
+  [5] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                              OK
+  [6] check-placeholders.ps1 (ADR-011 stub gate; pwsh):
+          ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/PedalUsage
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                         OK
+
+=== GATE — FULL XCODE APP BUILD (ATTEMPTED on this host; blocked by UNRELATED surfaces) ===
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+    xcodegen generate                                            -> XCODEGEN_EXIT=0 (12 targets)
+    Shared.xcframework                                           -> STAGED (built above)
+    xcodebuild -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 17' build  -> ** BUILD FAILED **
+
+  Failure analysis (real output captured in /tmp/pedal-ios-build.log):
+    - 113 compiler errors, EVERY ONE in apps/apple/TeslaSync/dashboard-widgets/* —
+      ZERO in apps/apple/TeslaSync/feature-views/* and ZERO in any PedalUsage.* file.
+    - Failing files (all dashboard-widgets, authored by OTHER parallel prompts):
+        ChargeSessionChartWidget.*, ChargeStatusLiveWidget.*, ChargeStatusWidget.*,
+        FleetStatsBarWidget.*, SafetyFeaturesWidget.*, SafetyHistoryWidget.*
+    - Representative errors: "'SafetyModel' is ambiguous for type lookup in this context",
+      "'SafetyConnection'/'SafetyLoadStatus'/'SafetyUpdate' is ambiguous", "cannot infer
+      contextual base in reference to member 'loaded'/'live'/…". These are duplicate-type
+      collisions BETWEEN sibling dashboard-widget surfaces — pre-existing on the branch and
+      independent of this surface (my change only ADDS feature-views/PedalUsage.* files;
+      `git status` shows exactly 7 new untracked files, no edits elsewhere).
+  Why this does NOT gate THIS surface:
+    - This prompt's allowed files are PedalUsage.* + this log ONLY. The failing files are
+      dashboard-widgets owned by other prompts; fixing them is out of scope and forbidden.
+    - The PedalUsage surface itself is PROVEN to compile on BOTH the iOS 18 simulator SDK
+      (step [1]) and the macOS 15 SDK (step [2]), and its full 32-test suite is EXECUTED
+      green (step [3]) against the real component closure.
+    - The macOS scheme (xcodebuild -scheme TeslaSync-macOS build test) is blocked by the
+      SAME module-wide dashboard-widget errors PLUS macOS dev-certificate signing (ADR-012)
+      — neither is a defect in this surface.
+  Disposition: full-app xcodebuild DEFERRED to a runner whose dashboard-widget surfaces all
+  compile (predecessor 0170 parity, Honesty rule 7). Surface-scoped build + the entire test
+  suite are GREEN here; the only red is unrelated, pre-existing, and out-of-scope.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading / empty / error / stale / offline / content)
+      — implemented; each has a #if DEBUG preview; phase + per-state render EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (PedalSource→PedalUsageModel);
+      no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web dynamics.* preserved
+      verbatim; native chrome dynamics.pedal.* present; referenced==declared (17==17).
+  [x] Accessibility labels on every interactive element (gauges, brake badge, freshness
+      chip, Retry); grid carries a combined summary.
+  [x] Tests: adapter unit + per-state model + a11y + per-state view render — 32 methods,
+      EXECUTED 32/32, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; full-app xcodebuild attempted and shown
+      blocked ONLY by unrelated, out-of-scope dashboard-widget breakage (real evidence).
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green (32/32 tests executed; both SDKs
+                          compile); the full-app xcodebuild is shown FAILED with its real
+                          113 errors + cause (all in other surfaces), NOT as a pass.
+  2 No scope narrowing ... full surface (6 .swift + strings), all states, seams, 32 tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + branch + numeric guard
+                          (hasAny, '%'/'—', clamp, isInteger decimals) reproduced + pinned.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. RadialGauge ×2 + Footprints + brake Badge + hasAny empty branch +
+                          6 states; web hex == token sRGB exactly (#06b6d4 / #ef4444).
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0170 LiveMotorStatus; went further (Shared
+                          framework built+staged, app build attempted, breakage isolated).
+  8 No commit on red ..... committed work is green on every in-scope gate; the only red is
+                          pre-existing, unrelated dashboard-widget code I am forbidden to
+                          touch (allowed files = PedalUsage.* + this log).
+  9 No silent drift ...... iPhone 16→17 substitution + the dashboard-widget deferral are
+                          documented above with captured evidence.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
