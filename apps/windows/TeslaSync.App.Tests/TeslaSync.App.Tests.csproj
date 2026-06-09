@@ -187,6 +187,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MonthlyMileageWidget\MonthlyMileageWidget.Model.cs" Link="Widgets\MonthlyMileageWidget\MonthlyMileageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MonthlyMileageWidget\MonthlyMileageWidget.ViewModel.cs" Link="Widgets\MonthlyMileageWidget\MonthlyMileageWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MonthlyMileageWidget\MonthlyMileageWidget.Source.cs" Link="Widgets\MonthlyMileageWidget\MonthlyMileageWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\NotificationStatsWidget\NotificationStatsWidget.Model.cs" Link="Widgets\NotificationStatsWidget\NotificationStatsWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\NotificationStatsWidget\NotificationStatsWidget.ViewModel.cs" Link="Widgets\NotificationStatsWidget\NotificationStatsWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\NotificationStatsWidget\NotificationStatsWidget.Source.cs" Link="Widgets\NotificationStatsWidget\NotificationStatsWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsWidget\FleetStatsWidget.Model.cs" Link="Widgets\FleetStatsWidget\FleetStatsWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsWidget\FleetStatsWidget.ViewModel.cs" Link="Widgets\FleetStatsWidget\FleetStatsWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Model.cs" Link="Widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Model.cs" />
