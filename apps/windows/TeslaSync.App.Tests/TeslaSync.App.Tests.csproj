@@ -339,6 +339,9 @@
       exercised by TirePressureVisualWidgetTests. The three WinUI-free source files are linked in here once
       (NETSDK1022: do not duplicate these identical Compile items elsewhere — duplicates break the test build).
     -->
+      exercised by TirePressureVisualWidgetTests; the three WinUI-free source files are linked in here once
+      (a prior edit dropped these Compile items, which the TirePressureVisualWidgetTests build requires).
+    -->
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
@@ -638,6 +641,18 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.Model.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.ViewModel.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0027 EntriesTable: the DLQ-inspector entries-table surface's UI-thread-free logic (the
+    DlqEntrySummary mirror, the sort/format/pagination helpers, the per-state projection, the diagnostics and
+    the registration) lives in the WinUI app project under feature-views/EntriesTable/ but is WinUI-free by
+    construction. Link the model source file into the headless (net10.0) test project so the projection adapter
+    + per-state branches + sort/format + a11y names + the view.opened diagnostics are verified without a UI
+    host. The WinUI view itself (EntriesTable.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\EntriesTable\EntriesTable.Model.cs" Link="FeatureViews\EntriesTable\EntriesTable.Model.cs" />
   </ItemGroup>
 
 </Project>
