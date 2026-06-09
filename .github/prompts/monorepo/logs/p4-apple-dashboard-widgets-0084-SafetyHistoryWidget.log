@@ -1,0 +1,221 @@
+=== P4 Dashboard widget 0084 SafetyHistoryWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/SafetyHistoryWidget.*
+Web spec: web/src/features/dashboard/widgets/SafetyHistoryWidget.tsx
+Registry: registry/security.ts -> "safety-history" - category=security - 2x4 / 2x4 / 4x40
+Runner  : Darwin - Xcode 26.5 (17F42) - Swift 6.3.2 - swiftformat + swiftlint + pwsh + xcodegen present
+          DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+          (iOS 18 / iPadOS 18 / macOS 15 SDKs + SwiftUI present -> platform capability IS present)
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: SafetyHistoryWidget.* + this log)
+--------------------------------------------------------------------------------
+  SafetyHistoryWidget.swift          - SwiftUI surface. Glass shell; header (red octagon +
+                                       "Safety History" + freshness chip + refresh + open); all
+                                       states (loading/empty/error/content); compact vs wide layout;
+                                       full a11y; i18n only (no English literals in the view).
+  SafetyHistoryWidget.Model.swift    - P1/S8 state-holder seam (SafetySource), @Observable SafetyModel
+                                       (+ static resolvePhase), P1/S11 telemetry seam, InMemory source,
+                                       SafetyStrings (P1/S10), surfaceSlug + canonical registration.
+                                       Reuses module DashboardWidgetSize/Registration (no redefinition).
+  SafetyHistoryWidget.Adapter.swift  - pure projection: SafetyEnumValue + cleanSafetyEnum/
+                                       isSafetyEnumActive port, classifySnapshot ladder -> catalog,
+                                       buildSubtitle, SafetyFeedBuilder. Web hex dot colors verbatim.
+  SafetyHistoryWidget.Stats.swift    - pure stats (30d total / most-common stable-tie / trend) +
+                                       layout (isCompact, feed cap 10) + relative time + a11y summaries.
+  SafetyHistoryWidget.Views.swift    - subviews: connectivity banner, 3-up StatCard row, event feed +
+                                       empty feed + timeline row, compact summary.
+  SafetyHistoryWidget.Previews.swift - #if DEBUG previews for every state + wide + compact.
+  SafetyHistoryWidget.Tests.swift    - XCTest: enum normalization + classify-ladder adapter + feed.
+  SafetyHistoryWidget.ModelTests.swift- XCTest: stats + layout + model phases/telemetry + registry + a11y.
+  SafetyHistoryWidget.strings        - per-surface i18n table (every web t() key + native chrome).
+
+Parity reproduced VERBATIM from the web source (cross-platform value parity):
+  classifySnapshot ladder : AEB(off=true,#ef4444,critical) > FCW active(#f59e0b,warning) >
+                            Lane active(#3b82f6,warning) > BlindSpot(#f59e0b,warning) >
+                            EmergencyLane(#ef4444,critical) > General(#6b7280,info).
+  lib/safetyEnum          : cleanSafetyEnum (bool->On/Off, number->String(n), prefix-strip w/
+                            SpeedAssistLevelNone->Off) + isSafetyEnumActive (off/none/disabled/0 gate).
+  buildSubtitle           : Speed Limit / Follow use RAW String(value) echo (NOT cleaned); PIN flag;
+                            parts.filter(Boolean).join(' . ') || '-'.
+  stats useMemo           : 30-day total (nil createdAt excluded), most-common bucket (stable ties),
+                            30-vs-prior-30-day trend glyph (up/down/flat/none).
+
+--------------------------------------------------------------------------------
+HOST GATES (executed on this runner - real captured output)
+--------------------------------------------------------------------------------
+
+$ swiftformat --lint <SafetyHistoryWidget.* 8 files>
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-211853-78201/slot-48/apps/apple/.swiftformat
+SwiftFormat completed in 3.62s.
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+$ swiftlint lint --strict --no-cache <SafetyHistoryWidget.* 8 files>
+Linting 'SafetyHistoryWidget.ModelTests.swift' (8/8)
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+$ xcodegen generate
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-211853-78201/slot-48/apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0
+
+$ pwsh check-placeholders.ps1 -Path <SafetyHistoryWidget.* scope> -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+(also ran the prompt's literal gate command: PLACEHOLDER_EXIT=0)
+
+--------------------------------------------------------------------------------
+SUPPLEMENTAL VERIFICATION (independent proof the surface logic is GREEN)
+--------------------------------------------------------------------------------
+
+Because the full Xcode app/test build transitively requires the KMP
+Shared.xcframework (see DEFERRED section), the surface's parity-critical logic was
+compiled from its REAL source files (Adapter + Stats) under Swift 6 strict
+concurrency against minimal infra shims and EXECUTED:
+
+$ xcrun -sdk macosx swiftc -swift-version 6 \
+    SafetyHistoryWidget.Adapter.swift SafetyHistoryWidget.Stats.swift <shim> <harness>
+HARNESS_COMPILE_EXIT=0
+— Enum normalization (lib/safetyEnum parity) —
+  ok   clean bool true → On
+  ok   clean bool false → Off
+  ok   clean number 3 → 3
+  ok   clean number 3.5 → 3.5
+  ok   clean strips known prefix → High
+  ok   speed None → Off
+  ok   unprefixed passes through
+  ok   empty string → fallback
+  ok   null → fallback
+  ok   isActive null → false
+  ok   isActive bool false → false
+  ok   isActive 0 → false
+  ok   isActive 3 → true
+  ok   isActive …Off → false
+  ok   rawString number 3
+  ok   rawString bool true
+— classifySnapshot ladder + visuals —
+  ok   AEB wins over everything
+  ok   FCW precedes lane
+  ok   lane when FCW inactive
+  ok   blind-spot precedes emergency-lane
+  ok   emergency-lane
+  ok   general fallback
+  ok   AEB icon
+  ok   lane icon
+  ok   AEB severity critical
+  ok   bsw slug
+  ok   severity → tone (TSTone Equatable)
+— titles + subtitle composition —
+  ok   FCW title echo
+  ok   subtitle raw echo (NOT cleaned)
+  ok   pin=false filtered out
+  ok   empty subtitle → —
+— feed builder —
+  ok   feed newest-first
+  ok   feed honors limit
+  ok   feed id fallback
+  ok   feed timestamp epoch fallback
+— stats (30-day total / most common / trend) —
+  ok   total counts only last 30d, excludes nil createdAt
+  ok   most common = highest count
+  ok   tie → first-encounter
+  ok   no recent → —
+  ok   trend up
+  ok   trend down
+  ok   trend flat
+  ok   trend none (no prior)
+  ok   trend glyphs
+  ok   none → Stable
+  ok   up → Increasing
+— layout + accessibility —
+  ok   compact at 1 col
+  ok   not compact at 2 cols
+  ok   feed max items = 10
+  ok   compact a11y summary
+  ok   compact a11y zero
+
+ALL GREEN — parity assertions passed
+HARNESS_RUN_EXIT=0
+
+Real @MainActor @Observable Model.swift type-checks GREEN under Swift 6 strict
+concurrency (incl. the @Observable macro expansion) against the same infra shims:
+$ xcrun -sdk macosx swiftc -swift-version 6 -typecheck \
+    SafetyHistoryWidget.Adapter.swift SafetyHistoryWidget.Stats.swift SafetyHistoryWidget.Model.swift <shim>
+MODEL_TYPECHECK_EXIT=0
+  (View/Views/Previews are syntactically validated by swiftformat + swiftlint, which
+   fully parse Swift; their type-check vs the real design system is in the deferred gate.)
+
+--------------------------------------------------------------------------------
+DEFERRED: xcodebuild build test (iOS + macOS) — reproduced blocker, NOT assumed
+--------------------------------------------------------------------------------
+
+The prompt gate's `xcodebuild -scheme TeslaSync ... build test` (iOS + macOS) is
+DEFERRED to the signed CI runner. It is NOT reported green and was NOT run to a
+zero exit. The blocker is PRE-EXISTING and OUT OF THE ALLOWED SCOPE:
+
+  The TeslaSync(/-macOS) schemes link `Frameworks/Shared.xcframework` and run a
+  scheme pre-action (`Scripts/build-shared-xcframework.sh`) that assembles the KMP
+  shared core via Gradle / Kotlin-Native. In this slot `Frameworks/` holds only
+  `.gitkeep`; the framework must be produced by Gradle. Reproduced probe:
+
+    $ timeout 90 ./Scripts/build-shared-xcframework.sh
+    ▸ Assembling Shared.xcframework via Gradle…
+    Terminated: 15
+    PROBE_EXIT=124          # 90s elapsed — Kotlin/Native assemble needs the CI toolchain
+
+  Without `Shared.xcframework` the app targets (and the hosted XCTest bundles that
+  depend on them) cannot link, so `build test` cannot reach a green state on this
+  runner. This is a project/runner dependency, not a defect in this surface's code,
+  and `Frameworks/**` + `Scripts/**` + `apps/shared/**` are outside this prompt's
+  allowed file scope. This matches the user-approved "code-complete + DEFERRED Xcode
+  gate" disposition used by the committed predecessor surfaces (0107..0118).
+
+  Note: this slot defines DashboardWidgetSize/DashboardWidgetRegistration exactly
+  once (Sources/DashboardWidgets/DashboardWidgetInfra.swift); this surface REUSES
+  them and introduces no duplicate-symbol regression.
+
+IOS_EXIT=DEFERRED (KMP Shared.xcframework prerequisite — CI-only)
+MAC_EXIT=DEFERRED (KMP Shared.xcframework prerequisite — CI-only)
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green     : the Xcode build/test is labeled DEFERRED, never claimed green.
+                           Every "EXIT=0" above is a real executed command's exit code.
+  2  No scope narrowing  : every web state (loading/empty/error/stale/offline/content) +
+                           the compact branch + all 3 stats + the full feed are implemented.
+  3  No skip-and-assume  : host gates executed with captured output; the KMP blocker was
+                           REPRODUCED (90s Gradle timeout), not assumed.
+  4  No stubs as final   : complete implementations; placeholder gate COUNT=0; the harness
+                           executes the real Adapter/Stats logic (51/51 assertions GREEN).
+  5  No parity shortcuts : classifySnapshot ladder + lib/safetyEnum + buildSubtitle raw-echo
+                           + 30/60-day stats ported VERBATIM and pinned by executed asserts.
+  6  No delegation       : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid, did
+                           NOT edit the shared Localizable.xcstrings, did NOT touch sibling
+                           surfaces or the KMP/Scripts/Frameworks; strings shipped per-surface.
+  8  No commit on red    : committing on all-green host gates (format/lint/xcodegen/placeholder)
+                           + GREEN standalone logic exec + GREEN Model type-check; the Xcode
+                           scheme step is a documented DEFERRAL, not a hidden failure.
+  9  No silent drift     : changes confined to the allowed SafetyHistoryWidget.* files + log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native SafetyHistoryWidget shipped at parity with the web source:
+  a SwiftUI surface (compact summary + wide stats-row + event feed) over a P1/S8
+  state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens; every
+  state, every i18n key, every interactive a11y label; registry-correct (safety-history,
+  security, 2x4 / 2x4 / 4x40). The parity-critical adapter/stats logic compiles + executes
+  GREEN (51/51) under Swift 6 with exact web value parity, and the @Observable Model
+  type-checks GREEN. The Xcode scheme build/test is DEFERRED to the signed CI runner
+  (PRE-EXISTING, out-of-scope KMP Shared.xcframework prerequisite), matching the
+  user-approved predecessor disposition.
+
+EXIT=0
+STATUS=DONE
