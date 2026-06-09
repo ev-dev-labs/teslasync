@@ -282,15 +282,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Model.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.ViewModel.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Source.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.Source.cs" />
-    <!--
-      P2 dashboard-widgets (TirePressureVisualWidget): its headless logic + state-holder view-model are
-      exercised by TirePressureVisualWidgetTests, but the three WinUI-free source files were not linked in,
-      so the test could not resolve TirePressureLevel / TirePressureReading / ITirePressureVisualSource /
-      TirePressureVisualViewModel. Link them in to match the widget pattern above.
-    -->
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Model.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Source.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Source.cs" />
@@ -351,9 +342,6 @@
     -->
     <Compile Include="..\TeslaSync.App\feature-views\ReferenceLinksSection.Model.cs" Link="FeatureViews\ReferenceLinksSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ReferenceLinksSection.ViewModel.cs" Link="FeatureViews\ReferenceLinksSection.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Model.cs" Link="FeatureViews\InfrastructureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.ViewModel.cs" Link="FeatureViews\InfrastructureSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Source.cs" Link="FeatureViews\InfrastructureSection.Source.cs" />
@@ -370,6 +358,19 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.Model.cs" Link="FeatureViews\Base64Tool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.ViewModel.cs" Link="FeatureViews\Base64Tool.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views: the TeslaApiRefTool's UI-thread-free logic (the static endpoint catalog, the
+    pure search adapter, the registration metadata, the PII-safe diagnostics, and the state-holder
+    view-model) lives in the WinUI app project but is WinUI-free by construction. Link those two source
+    files in so the headless (net10.0) test project verifies the adapter + per-state transitions +
+    diagnostics + a11y names without a UI host. The WinUI view itself (feature-views\TeslaApiRefTool.cs)
+    is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.Model.cs" Link="FeatureViews\TeslaApiRefTool.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" Link="FeatureViews\TeslaApiRefTool.ViewModel.cs" />
   </ItemGroup>
 
   <!--

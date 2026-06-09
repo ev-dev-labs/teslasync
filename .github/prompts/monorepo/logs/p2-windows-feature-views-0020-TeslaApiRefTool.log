@@ -1,0 +1,118 @@
+=== P2 Feature view 0020 TeslaApiRefTool (Windows) ===
+Runner: dotnet 10.0.300 / Windows. Platform capability WinUI 3 (Windows App SDK) + .NET 10 is PRESENT
+(the solution builds and the headless test assembly runs). Artifact is a native WinUI 3 parity port of
+web/src/features/admin/components/devtools/tools/TeslaApiRefTool.tsx.
+
+Native output (subdir, matching the Base64Tool/BackendTool tool convention so the gate/commit paths
+`feature-views/TeslaApiRefTool` resolve to a directory):
+  apps/windows/TeslaSync.App/feature-views/TeslaApiRefTool/TeslaApiRefTool.Model.cs
+  apps/windows/TeslaSync.App/feature-views/TeslaApiRefTool/TeslaApiRefTool.ViewModel.cs
+  apps/windows/TeslaSync.App/feature-views/TeslaApiRefTool/TeslaApiRefTool.cs
+Tests:
+  apps/windows/TeslaSync.App.Tests/FeatureViews/TeslaApiRefToolTests.cs   (27 tests)
+
+SURFACE (web-source parity; no stubs / skeletons / placeholders)
+- Chrome: shared ToolCard (cyan accent, Segoe Fluent "Library" glyph = the house Segoe analogue of the
+  web Lucide BookOpen, title 'Tesla Api Ref', description 'Tesla Api Ref Desc').
+- Body: a search field (TsInput, leading glyph, 'Search Endpoints' hint) over a paged 3-column reference
+  table built from the static TESLA_ENDPOINTS catalog (11 rows):
+    * Method        -> TsBadge, info(GET)/warning(write verbs)   [web variant={method==='GET'?'info':'warning'}]
+    * Path          -> monospace accent text + TsCopyButton       [web <code> + <CopyButton text={path}/>]
+    * Endpoint Desc -> secondary text
+  Pagination via TsPagination (web DataTable `pagination`, page size 25).
+- States (every state renders, never a blank box): Populated, and Empty -> TsEmptyState with a friendly
+  title + message when the search filter matches nothing. The tool performs NO I/O over a static constant
+  (its only web hook is useTranslation), so there is no loading/error/stale/offline branch to reproduce —
+  honest parity, identical to the sibling Base64Tool's documented reasoning.
+- Shared components only: ToolCard, TsInput, TsBadge, TsCopyButton, TsPagination, TsEmptyState,
+  DisplayTokens. No direct library imports, no raw HTML, tokenized (no ad-hoc hex / inline styles).
+- i18n: every string resolves through the P1/S10 ILocalizer facade. Keys mirror the web t() call sites
+  exactly: 'Tesla Api Ref', 'Tesla Api Ref Desc', 'Search Endpoints', 'Method', 'Path', 'Endpoint Desc',
+  'common.copyButton.copy', 'common.copyButton.copied', pagination.first/previous/next/last,
+  a11y.pagination, plus the native empty-state keys devtools.teslaApiRef.emptyTitle/emptyMessage.
+  Catalog parity: the keys the WEB en.json defines for this surface (Method, Path, common.copyButton.*)
+  are present in the Windows catalog (apps/windows/Strings/*/Resources.resw); the four descriptive keys
+  ('Tesla Api Ref', 'Tesla Api Ref Desc', 'Search Endpoints', 'Endpoint Desc') are ABSENT in BOTH the web
+  en.json AND the Windows catalog, so the facade fallback renders text identical to the web (i18next
+  missing-key -> key string). No catalog edit is required; adding those keys would diverge from the source.
+- Accessibility: Narrator names on the search field, the table region, every per-row copy button (each
+  names the path it copies), and the pager; decorative glyphs marked AccessibilityView.Raw.
+- Diagnostics (P1/S11): emits `view.opened slug=TeslaApiRefTool`, PII-safe (never the search query or rows).
+
+DATA ADAPTER + STATE HOLDER (UI-free, unit-tested)
+- TeslaApiEndpoint (record) + TeslaApiEndpointCatalog (11 endpoints, verbatim TESLA_ENDPOINTS).
+- TeslaApiRefFilter.Apply — pure port of the web useMemo filter: empty/whitespace query -> full catalog
+  (web `if (!search.trim()) return TESLA_ENDPOINTS`); otherwise the (un-trimmed) query is matched
+  case-insensitively against method/path/desc.
+- TeslaApiRefToolViewModel — search -> filtered/paged projection + state + localized labels + a11y names;
+  resets to page one on search change (web DataTable behaviour).
+
+PRE-EXISTING INTEGRATION-BRANCH BLOCKERS CLEARED (required to BUILD and therefore to verify this surface,
+which compiles into the same TeslaSync.App assembly and is exercised by the headless test project — not
+optional; without them `dotnet build`/`dotnet test` cannot reach this surface at all):
+- apps/windows/TeslaSync.App/feature-views/FleetTelemetryHealth.cs (sibling 0005): 4 analyzer errors under
+  TreatWarningsAsErrors — CA1822 x2 (BuildRefreshButton, BuildLoading -> static), CA1859 x2
+  (BuildFilterChip return -> TsBadge; BuildRow `cells` -> UIElement[], with cells.Count -> cells.Length).
+  5 surgical, behaviour-preserving line changes.
+- apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj: NETSDK1022 — the TirePressureVisualWidget
+  <Compile> block was included 3x (a merge artifact); reduced to 1x. Plus the two TeslaApiRefTool
+  Model/ViewModel <Compile> links (the headless net10.0 test project links WinUI-free source directly; it
+  has no ProjectReference to the WinUI app, so the WinUI view TeslaApiRefTool.cs is intentionally NOT linked).
+
+GATE RESULTS (each command run individually; exit codes captured without pipeline interference)
+[GATE 1] dotnet build apps/windows/TeslaSync.sln -c Release
+  Build succeeded.  0 Error(s).  (17 Warning(s) are pre-existing CA advisories in TeslaSync.App.Core, which
+  does not set TreatWarningsAsErrors; this surface adds zero warnings — the App project, which DOES treat
+  warnings as errors, builds clean.)
+  BUILD_EXIT=0
+
+[GATE 2] dotnet test apps/windows/TeslaSync.sln -c Release
+  Passed!  - Failed:    0, Passed: 6717, Skipped: 0, Total: 6717  - TeslaSync.App.Tests.dll (headless logic)
+           includes the 27 new TeslaApiRefToolTests: catalog, pure filter adapter, per-state matrix
+           (populated/empty), pagination clamp, a11y names, PII-safe diagnostics, and i18n-key parity.
+  Failed!  - Failed:  147, Passed:    0, Skipped: 0, Total:  147  - TeslaSync.App.UITests.dll (UI automation)
+           Every UITest fails at fixture setup with, verbatim:
+           TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+           WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+           WinAppDriver.exe was not found at its standard install paths or on PATH.
+           This is a RUNNER-CAPABILITY gap (no WinAppDriver/Appium UI-automation host on this machine),
+           pre-existing and identical before/after this surface — the UITests project and the app's
+           launchability are untouched by this change. The sibling Base64Tool gate recorded the same
+           condition (.github/prompts/monorepo/logs/p2-windows-feature-views-0011-Base64Tool.log).
+  TEST_EXIT=1  (solely the 147 UI-automation tests; the headless surface coverage is fully green)
+
+[GATE 3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  1243 ENDOFLINE (CRLF) findings in 5 PRE-EXISTING sibling files only:
+    apps/windows/TeslaSync.App/feature-views/BackendTool/BackendTool.cs
+    apps/windows/TeslaSync.App/feature-views/BackendTool/BackendTool.Model.cs
+    apps/windows/TeslaSync.App/feature-views/BackendTool/BackendTool.Source.cs
+    apps/windows/TeslaSync.App/feature-views/BackendTool/BackendTool.ViewModel.cs
+    apps/windows/TeslaSync.App.Tests/FeatureViews/BackendToolTests.cs
+  Cause: those files are committed with CRLF while .gitattributes has no *.cs eol rule and
+  core.autocrlf=false. THIS surface's files (TeslaApiRefTool/*, TeslaApiRefToolTests, and the touched
+  FleetTelemetryHealth.cs / Tests.csproj) are format-clean — none appear in the flagged list. They were
+  NOT reformatted, to keep the commit surgical (the Base64Tool precedent commits own files only) and
+  because doing so cannot change the BLOCKED outcome below. On a CRLF-free integration base this step is
+  green for this surface.
+  FORMAT_EXIT=2  (entirely pre-existing sibling CRLF; not this surface)
+
+[GATE 4] check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TeslaApiRefTool
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+CONCLUSION
+TeslaApiRefTool is complete and at web-source parity: ToolCard chrome, search filter, a paged
+Method/Path/Description reference table (info/warning badge + copyable monospace path + description),
+Populated and Empty states, shared-component composition, full i18n through the facade, Narrator labels on
+every interactive element, and the view.opened slug=TeslaApiRefTool diagnostic. BUILD, the headless surface
+tests (27 new + 6690 existing = 6717 passing), and the PLACEHOLDER gate are green, and this surface's files
+are format-clean. The two non-zero gate steps are NOT this surface and cannot be fixed from within it:
+TEST is red solely because the WinAppDriver/Appium UI-automation runner is absent on this machine
+(platform-capability evidence above), and FORMAT is red solely on pre-existing committed CRLF in sibling
+BackendTool files outside this surface's allowed scope. Per the Honesty Covenant (#1 no red-as-green,
+#8 no commit-on-red for one's own work, #10), these are recorded with evidence rather than reported as
+green — matching the sibling Base64Tool outcome (EXIT=1 / STATUS=BLOCKED).
+
+EXIT=1
+STATUS=BLOCKED
