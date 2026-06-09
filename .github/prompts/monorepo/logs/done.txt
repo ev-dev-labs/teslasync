@@ -302,3 +302,4 @@ p2-windows/feature-views/W-0114-LifetimeSummary.prompt.md
 p2-windows/feature-views/W-0109-CostForecastSection.prompt.md
 p2-windows/feature-views/W-0111-CostSummaryCards.prompt.md
 p2-windows/feature-views/W-0112-EnvironmentalImpact.prompt.md
+p2-windows/feature-views/W-0113-ForecastDetails.prompt.md
