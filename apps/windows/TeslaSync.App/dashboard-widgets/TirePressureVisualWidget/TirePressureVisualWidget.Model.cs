@@ -419,9 +419,9 @@ public static class TirePressureVisualProjection
         return new TirePressureCorner(label, level, FormatPressure(raw, units), LevelToStatus(level));
     }
 
-    private static string BuildAutomationName(IReadOnlyList<TirePressureCorner> corners, string unitLabel, string badgeText)
+    private static string BuildAutomationName(TirePressureCorner[] corners, string unitLabel, string badgeText)
     {
-        var parts = new List<string>(corners.Count + 1);
+        var parts = new List<string>(corners.Length + 1);
         foreach (var corner in corners)
         {
             parts.Add(string.Create(CultureInfo.InvariantCulture, $"{corner.Label} {corner.ValueText} {unitLabel}"));
