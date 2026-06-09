@@ -373,6 +373,17 @@
   </ItemGroup>
 
   <!--
+    P2 feature-views: the TelemetryErrorsPanel surface's UI-thread-free logic (its branch projection, row
+    formatting, download payload, accessible names and diagnostics) lives in the WinUI app project but is
+    WinUI-free by construction. Link the Model in so the headless (net10.0) test project verifies the
+    adapter + per-state projection row-for-row without a UI host. The WinUI view itself is exercised by the
+    app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
+  </ItemGroup>
+
+  <!--
     Language-neutral SI golden vectors (apps/shared/spec/units-golden.json) copied
     next to the test assembly so the C# behavior port is verified row-for-row
     against the web truth (ADR-004), exactly as the shared Kotlin port is.
