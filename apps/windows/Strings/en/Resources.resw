@@ -7863,6 +7863,24 @@
   <data name="translation.devtools.partnerKey.verify" xml:space="preserve">
     <value>Verify</value>
   </data>
+  <data name="translation.devtools.ref.devPortal" xml:space="preserve">
+    <value>Developer Portal</value>
+  </data>
+  <data name="translation.devtools.ref.empty" xml:space="preserve">
+    <value>No reference links available</value>
+  </data>
+  <data name="translation.devtools.ref.fleetOverview" xml:space="preserve">
+    <value>Fleet API Overview</value>
+  </data>
+  <data name="translation.devtools.ref.partnerEndpoints" xml:space="preserve">
+    <value>Partner Endpoints</value>
+  </data>
+  <data name="translation.devtools.ref.regionLabel" xml:space="preserve">
+    <value>Reference links</value>
+  </data>
+  <data name="translation.devtools.ref.telemetryGuide" xml:space="preserve">
+    <value>Fleet Telemetry Guide</value>
+  </data>
   <data name="translation.devtools.searchTools" xml:space="preserve">
     <value>Search tools...</value>
   </data>

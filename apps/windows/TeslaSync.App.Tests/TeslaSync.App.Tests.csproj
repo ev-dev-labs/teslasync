@@ -331,6 +331,16 @@
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Model.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Source.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.ViewModel.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.ViewModel.cs" />
+
+    <!--
+      P2 feature-views: the ReferenceLinksSection's UI-thread-free logic (the static catalog, the localized
+      projection and the state-holder view-model) lives in the WinUI app project but is WinUI-free by
+      construction. Link those two source files in so the headless (net10.0) test project verifies the adapter
+      + Ready/Empty branches without a UI host — the same pattern used for the dashboard-widget logic. The
+      WinUI view itself (ReferenceLinksSection.cs) is exercised by the app build.
+    -->
+    <Compile Include="..\TeslaSync.App\feature-views\ReferenceLinksSection.Model.cs" Link="FeatureViews\ReferenceLinksSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ReferenceLinksSection.ViewModel.cs" Link="FeatureViews\ReferenceLinksSection.ViewModel.cs" />
   </ItemGroup>
 
   <!--
