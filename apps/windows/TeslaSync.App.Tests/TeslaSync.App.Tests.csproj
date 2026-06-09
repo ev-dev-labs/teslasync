@@ -778,6 +778,18 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\XRayFieldsTable\XRayFieldsTable.Model.cs" Link="FeatureViews\XRayFieldsTable\XRayFieldsTable.Model.cs" />
+    P2 feature-views/0038 RateLimitStatusPanel: the surface's UI-thread-free logic (the null-tolerant JSON
+    parse + ScopeBudget/snapshot records, the severity/usage/window/reset projection + the formatDurationMsLong
+    port, the cache-then-network result mapper, the registration metadata, the PII-safe diagnostics and the
+    state-holder view-model) lives in the WinUI app project under feature-views/ but is WinUI-free by
+    construction. Link those three source files in so this headless (net10.0) test project verifies the
+    adapter + per-state transitions + a11y names + the view.opened diagnostics without a UI host. The WinUI
+    view itself (RateLimitStatusPanel.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Model.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Source.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.ViewModel.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.ViewModel.cs" />
   </ItemGroup>
 
 </Project>

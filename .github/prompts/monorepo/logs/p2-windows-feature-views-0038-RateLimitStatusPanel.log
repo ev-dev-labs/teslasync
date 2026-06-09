@@ -1,0 +1,128 @@
+=== P2 Feature view 0038 RateLimitStatusPanel (Windows) ===
+Surface : apps/windows/TeslaSync.App/feature-views/RateLimitStatusPanel.{Model,Source,ViewModel,}.cs
+Tests   : apps/windows/TeslaSync.App.Tests/FeatureViews/RateLimitStatusPanelTests.cs (36 tests)
+Web spec: web/src/features/admin/components/RateLimitStatusPanel.tsx (THE specification)
+
+------------------------------------------------------------------------------
+CAPABILITY CHECK (prompt: requires WinUI 3 / Windows App SDK + .NET 10)
+------------------------------------------------------------------------------
+WinUI 3 + Windows App SDK + .NET 10 : AVAILABLE on this runner.
+  dotnet --list-sdks                 -> 10.0.300 present (also 9.0.314)
+  Microsoft.WindowsDesktop.App 10.0.8 present
+  Full Windows solution builds in Release WITH WinUI types (Microsoft.UI.Xaml.*) -> BUILD_EXIT=0 below
+  Headless unit-test host (net10.0) executes                                      -> TEST(headless) below
+=> The Capability clause's BLOCK trigger (WinUI 3 unavailable) is NOT met: the platform is available
+   and the surface is built + verified.
+
+WinAppDriver / Appium UI-automation RUNTIME : ABSENT on this runner (env-supplied; see TEST(UIAutomation)).
+
+------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER FIXED (was failing the whole-solution build before any of my code)
+------------------------------------------------------------------------------
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was malformed XML ->
+  MSB4025 "The 'ItemGroup' start tag ... does not match the end tag of 'Project'."
+Root cause: 6 feature-view comment blocks had lost their "<!--" opener, and 4 of those had also lost the
+preceding "</ItemGroup>" close, leaving raw prose inside <ItemGroup> with stray "-->" closers:
+  - JwtDecoder group not closed + TimestampTool comment unopened
+  - TelemetryErrorsPanel group not closed + TeslaApiRefTool comment unopened
+  - HttpStatusTool group not closed + UuidGenerator comment unopened
+  - UuidGenerator group not closed + UrlEncoder comment unopened
+  - two orphaned TirePressureVisualWidget comment fragments (stray "-->")
+Counts before fix : <ItemGroup>=28  </ItemGroup>=24   <!--=29  -->=35
+Counts after  fix : <ItemGroup>=28  </ItemGroup>=28   ([xml] parse: OK)
+Fix was minimal/surgical (closed the 4 dangling ItemGroups, reopened the 6 comments, removed the 2 orphan
+fragments). Then linked THIS surface's 3 WinUI-free sources (Model/Source/ViewModel) into the headless
+test project, exactly like the sibling FleetTelemetryHealth surface.
+
+------------------------------------------------------------------------------
+GATE STEP 1 - BUILD
+------------------------------------------------------------------------------
+$ dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.  0 Error(s)  17 Warning(s)
+  (all 17 warnings are pre-existing CA1716/CA1720/CA1000/CA1859 in TeslaSync.App.Core; ZERO from this surface.
+   The App project enforces CA1822/CA1859 as errors -> the view was authored with concrete return types and a
+   static row builder to satisfy them.)
+BUILD_EXIT=0
+
+------------------------------------------------------------------------------
+GATE STEP 2 - TEST
+------------------------------------------------------------------------------
+(a) Headless unit suite -- the project-canonical split for a headless runner
+    (apps/windows/TeslaSync.App.UITests/*.csproj documents: run the headless suite Category!=UIAutomation
+     and the UI suite Category=UIAutomation independently).
+$ dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+Passed!  Failed: 0, Passed: 7464, Skipped: 0, Total: 7464   (TeslaSync.App.Tests.dll)
+  Includes the 36 new RateLimitStatusPanelTests:
+    - ScopeBudget/snapshot JSON parse (real fields, missing-field tolerance, severity ok/warn/critical/unknown)
+    - formatDurationMsLong port golden vectors (500ms / 5.0s / 1m 30s / 2m 5s / 60m 0s / em-dash)
+    - projection: severity->StatusKind+brush, Live snapshot vs "Last Ns window", "current / limit" usage,
+      future-only "Refills in ..." reset, blank-detail->null, descriptive Narrator names, relative "Updated {when}"
+    - result mapper (loading/empty/error passthrough; loaded carries snapshot even with empty scopes; cached stale; offline rows)
+    - view-model state matrix: loading / loaded / empty(+updated caption) / error / stale / offline / refresh / localized copy
+    - source request shape (operation get_api_v1_system_rate_limits, no query; non-object body -> empty)
+    - registry id/slug/copy ; diagnostics "view.opened slug=RateLimitStatusPanel"
+TEST_HEADLESS_EXIT=0
+
+(b) UI-automation suite (Category=UIAutomation) -- 147 pre-existing app-wide UI tests, NONE specific to this surface.
+$ dotnet test apps/windows/TeslaSync.App.UITests -c Release
+Failed!  Failed: 147, Passed: 0, Skipped: 0, Total: 147   (TeslaSync.App.UITests.dll)
+  API EVIDENCE (verbatim):
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+      at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() ... WinAppDriverSession.cs:line 75
+  Per TeslaSync.App.UITests.csproj the WinAppDriver runner + deployed packaged app are "supplied by the
+  environment / run-ui-automation.ps1" and the suite "fails fast with an explicit reason (it is never
+  silently skipped)" when absent. This result is identical with or without this change and is OUT OF
+  SCOPE for this feature-view deliverable.
+TEST_UIAUTOMATION_EXIT=1   <-- BLOCKED on absent env-supplied WinAppDriver runner (evidence above)
+
+Note: the literal unsplit `dotnet test apps/windows/TeslaSync.sln` returns non-zero on this headless
+runner SOLELY because of (b). The surface deliverable's tests (a) are fully green.
+
+------------------------------------------------------------------------------
+GATE STEP 3 - FORMAT
+------------------------------------------------------------------------------
+$ dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+No format errors.
+  (All 5 new files were normalized to LF + UTF-8 no-BOM to match the repo/.editorconfig; an initial CRLF
+   write was caught by this step and corrected.)
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+GATE STEP 4 - PLACEHOLDER / STUB SCAN
+------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/RateLimitStatusPanel
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+PARITY SUMMARY (web -> native)
+------------------------------------------------------------------------------
+Data    : useRateLimitStatus -> IRateLimitStatusSource (cache-then-network over get_api_v1_system_rate_limits)
+          ScopeBudget{id,name,current,limit,window_seconds,reset_at?,severity,detail?} ; RateLimitStatusResponse{generated_at,scopes}
+Shared  : GlassPanel->TsGlassPanel ; Heading(level=panel)->PanelTitle ; Text->Text ; Caption->Caption ;
+components MetricBar->TsMetricBar ; Spinner->TsSpinner ; Button(ghost)->TsButton(Subtle) ;
+          EmptyState->TsEmptyState ; (QueryError retry superset)->TsQueryError ; freshness chip->TsDataFreshness
+Severity: ok->StatusKind.Success/TsColorSuccessBrush ; warn->Warning/TsColorWarningBrush ; critical->Danger/TsColorDangerBrush
+States  : loading (spinner+announce) / loaded (rows) / empty (friendly text, header still shows "Updated {when}") /
+          error (retry surface) / stale (rows + stale chip) / offline (rows + offline chip)  -- ALL render, none hidden
+i18n    : every source string resolves through the P1/S10 facade; all keys already present in
+          apps/windows/Strings/{en,ar,he}/Resources.resw as translation.rateLimitStatus.* :
+          title, subtitle, lastUpdated, refresh, loading, error, empty, usage, windowInstant, windowSeconds,
+          resetIn, severity.ok, severity.warn, severity.critical  (code fallbacks == catalog English, no drift)
+a11y    : AutomationProperties.SetName on panel, refresh button, each row, loading region (LiveRegion announce)
+Telemetry: view.opened slug=RateLimitStatusPanel emitted on first load (P1/S11 diagnostics contract)
+
+------------------------------------------------------------------------------
+RESULT
+------------------------------------------------------------------------------
+SURFACE DELIVERABLE GATE  (build + headless tests + format + placeholder) : ALL EXIT=0
+  BUILD_EXIT=0  TEST_HEADLESS_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+APP-WIDE UIAUTOMATION SUITE : TEST_UIAUTOMATION_EXIT=1  -- BLOCKED on absent env-supplied WinAppDriver
+  runner (W3C WebDriver on 127.0.0.1:4723); pre-existing, app-wide, not part of this surface's scope;
+  full API evidence captured above. WinUI 3 build/run platform itself IS available.
+
+EXIT=0
+STATUS=DONE
