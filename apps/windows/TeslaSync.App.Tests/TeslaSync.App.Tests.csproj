@@ -212,6 +212,8 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ExportStatusWidget\ExportStatusWidget.Source.cs" Link="Widgets\ExportStatusWidget\ExportStatusWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsBarWidget\FleetStatsBarWidget.Model.cs" Link="Widgets\FleetStatsBarWidget\FleetStatsBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsBarWidget\FleetStatsBarWidget.ViewModel.cs" Link="Widgets\FleetStatsBarWidget\FleetStatsBarWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TelemetryErrorsWidget\TelemetryErrorsWidget.Model.cs" Link="Widgets\TelemetryErrorsWidget\TelemetryErrorsWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TelemetryErrorsWidget\TelemetryErrorsWidget.ViewModel.cs" Link="Widgets\TelemetryErrorsWidget\TelemetryErrorsWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\LifetimeStatsWidget\LifetimeStatsWidget.Model.cs" Link="Widgets\LifetimeStatsWidget\LifetimeStatsWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\LifetimeStatsWidget\LifetimeStatsWidget.ViewModel.cs" Link="Widgets\LifetimeStatsWidget\LifetimeStatsWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\LifetimeStatsWidget\LifetimeStatsWidget.Source.cs" Link="Widgets\LifetimeStatsWidget\LifetimeStatsWidget.Source.cs" />
