@@ -300,3 +300,4 @@ p2-windows/feature-views/W-0110-CostPerKwhChart.prompt.md
 p2-windows/feature-views/W-0107-ChargingSessionCard.prompt.md
 p2-windows/feature-views/W-0114-LifetimeSummary.prompt.md
 p2-windows/feature-views/W-0109-CostForecastSection.prompt.md
+p2-windows/feature-views/W-0111-CostSummaryCards.prompt.md
