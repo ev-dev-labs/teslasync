@@ -1,0 +1,239 @@
+================================================================================
+P4 · Feature view · 0121 — AddWidgetButton (Apple)
+Run: 2026-06-09T01:33-0700   Host: macOS 26.5.1 (25F80) Darwin arm64   Slot: slot-86
+Prompt: P4/feature-views/0121 — Feature view: AddWidgetButton
+Web source (spec): web/src/features/dashboard/components/AddWidgetButton.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (ADR-012; 0009/0026/0038/0054/0061/0076 precedent).
+================================================================================
+
+=== CAPABILITY PROBE (real, on this runner) ===
+  swift ...................... Swift version 6.3.2                                   OK
+  Xcode ..................... 26.5 (Build 17F42) at /Applications/Xcode.app          OK
+  iPhoneSimulator SDK ....... iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)       OK
+  macOS SDK ................. MacOSX26.5.sdk (macOS 15.0 deploy target)              OK
+  iPhone 16 simulator ....... present + Booted (83717DEE-70A3-4325-AA61-CBDDD3140989) OK
+  swiftlint ................. 0.63.3                                                 OK
+  swiftformat ............... 0.61.1                                                OK
+  xcodegen .................. 2.45.4                                                 OK
+  pwsh (placeholder gate) ... PowerShell 7.6.2                                       OK
+  SwiftUI ................... resolves against both the iOS 18 sim + macOS 15 SDKs   OK
+  Shared.xcframework ........ NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+
+  Charts / Maps capability note: the prompt's "Charts / maps used: (none)" is CORRECT
+  here — the web source imports neither Recharts nor Leaflet (only useTranslation +
+  @/components/ui Button + Tooltip). SwiftUI is available and PROVEN by the real iOS-18
+  simulator AND macOS-15 SDK typechecks + the executed SwiftPM test run below, so the
+  capability-BLOCKED escape hatch does NOT apply. STATUS=DONE.
+
+=== WEB SOURCE (the specification) ===
+  web/src/features/dashboard/components/AddWidgetButton.tsx — a PURE presentational
+  floating "+" action button:
+      if (isEditing) return null;                       // the ONLY branch
+      <div fixed bottom-20 right-6 z-[56]>
+        <Tooltip content={t('dashboard.addWidget','Add Widget')} side="left">
+          <Button variant="primary" size="lg"
+                  className="h-14 w-14 rounded-full p-0 shadow-xl"
+                  aria-label={label} onClick={onClick}>
+            <Icons.add className="h-8 w-8" strokeWidth={2.5} aria-hidden />
+          </Button>
+        </Tooltip>
+      </div>
+  Props: onClick, isEditing. Data sources: useTranslation only (NO data hooks). i18n:
+  the single key dashboard.addWidget = "Add Widget" backs BOTH the aria-label and the
+  Tooltip content. The FAB hides in edit mode because the edit-mode header already
+  exposes an "Add Widget" action.
+
+  Pure-presentational disposition: the prompt's generic loading/empty/error/stale/
+  offline states are a TEMPLATE artifact — this surface fetches nothing, so (exactly
+  like the sibling ToolCard 0010 + HighlightCard 0076 surfaces) those data-bound phases
+  belong to the dashboard that embeds the FAB, NOT to the button. The only state the
+  web source carries is the isEditing hide vs. the visible FAB, and BOTH are reproduced
+  + unit-tested. This is documented (Honesty rule 9, no silent drift), not narrowed
+  (rule 2): every branch the source actually has is shipped.
+
+=== ARTIFACTS SHIPPED (allowed scope: apps/apple/TeslaSync/feature-views/AddWidgetButton.* + this log) ===
+  AddWidgetButton.Model.swift      — AddWidgetButtonSurface (slug "AddWidgetButton" +
+                                     reportOpen) · AddWidgetButtonPresentation (pure,
+                                     Equatable: isEditing -> isVisible, web `return null`
+                                     branch, + the layout constants the web Button class
+                                     override encodes: diameter 56 = h-14/w-14, glyph 28pt,
+                                     insets = right-6/bottom-20, SF Symbol "plus") ·
+                                     AddWidgetButtonStrings (P1/S10 facade, table
+                                     "AddWidgetButton") · AddWidgetButtonAccessibility
+                                     (label backs aria-label + tooltip; native hint)
+  AddWidgetButton.Telemetry.swift  — AddWidgetButtonTelemetry seam + OSLogAddWidgetButton-
+                                     Telemetry (redaction-safe os_log "view.opened", slug
+                                     only, no payload/VIN/location)
+  AddWidgetButton.swift            — the SwiftUI FAB: circular Color.TS.accent Button +
+                                     white SF Symbol "plus" (web primary fill + Icons.add),
+                                     shadow-xl read, reduce-motion-safe press scale, self-
+                                     anchored bottom-trailing (web fixed bottom-20 right-6),
+                                     .help tooltip (web Tooltip), accessibilityLabel + Hint,
+                                     view.opened on .task; renders nothing when isEditing
+  AddWidgetButton.Previews.swift   — #if DEBUG previews: Visible (light), Visible · dark,
+                                     Editing · hidden (the `return null` branch)
+  AddWidgetButton.strings          — P1/S10 catalog table "AddWidgetButton": the web key
+                                     dashboard.addWidget + the native a11y hint key
+  AddWidgetButton.Tests.swift      — 12 XCTest methods / 4 suites (see GATES [1])
+  No shared-wiring edits were needed or made: "TeslaSync/feature-views" is already in
+  project.yml (both app targets + both test bundles) and .swiftlint.yml `included`. This
+  prompt touched nothing outside AddWidgetButton.* + this log (git status verified).
+
+=== PARITY MAPPING (web -> Apple platform tokens; no Tailwind ported) ===
+  if (isEditing) return null     -> AddWidgetButtonPresentation.isVisible == !isEditing;
+                                    body renders nothing in edit mode (no spurious view.opened)
+  <Button variant="primary">     -> SwiftUI Button + bespoke AddWidgetFABStyle (the native
+                                    analogue of the web shared-Button + className override;
+                                    the shared TSButtonStyle is a rounded-RECT, not a circle)
+  bg-blue-600 text-white         -> Color.TS.accent fill + .white glyph (same primary mapping
+                                    the shared TSButtonStyle uses for .primary)
+  h-14 w-14 rounded-full         -> 56pt Circle (diameter constant)
+  p-0 + Icons.add h-8 w-8 sw2.5  -> SF Symbol "plus", 28pt .bold (~50% of the FAB, the web's
+                                    own rationale for the bumped size/weight)
+  shadow-xl                      -> .shadow(.black opacity .28, radius 12, y 6)
+  fixed bottom-20 right-6 z-[56] -> self-anchor: frame(maxW/maxH .infinity, .bottomTrailing)
+                                    + trailing 24 (right-6) + bottom 24 (web bottom-20 clears
+                                    the in-DOM tab/status stack; on Apple that chrome lives in
+                                    the safe area, so 24pt above the safe-area inset). The
+                                    expanding frame is transparent + non-interactive (taps
+                                    pass through), so dropping the view into the dashboard's
+                                    root ZStack reproduces the web fixed FAB.
+  <Tooltip side="left">          -> .help(Text(label)) — the HIG pointer tooltip (macOS/iPadOS)
+  aria-label                     -> .accessibilityLabel(label)   (both from dashboard.addWidget)
+  (native a11y chrome)           -> .accessibilityHint("Opens the widget catalogue")
+  i18n  : the one web key dashboard.addWidget="Add Widget" is in AddWidgetButton.strings,
+          + 1 native a11y-hint key. No English literals in shipped code (the view reads the
+          facade; the only verbatim string is a #if DEBUG preview caption).
+  a11y  : the "+" glyph is decorative -> .accessibilityHidden(true); the Button carries the
+          name + hint + automatic .isButton trait; Dynamic Type via the system glyph; Reduce
+          Motion suppresses the press-scale animation.
+  telem : view.opened surface="AddWidgetButton" via AddWidgetButtonSurface.reportOpen on
+          .task (P1/S11), default OSLog sink.
+
+=== STATES / BRANCHES REPRODUCED (every branch the web source carries — none hidden) ===
+  • isEditing == false  -> the visible circular FAB (light + dark previews)
+  • isEditing == true   -> renders nothing (web `return null`; "Editing · hidden" preview)
+  • pressed / unpressed -> reduce-motion-safe press scale (HIG control affordance)
+  • loading/empty/error/stale/offline -> owned by the data-bound dashboard that embeds the
+    FAB (pure-presentational contract; see WEB SOURCE) — the same disposition ToolCard 0010
+    + HighlightCard 0076 document.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+    harness (swift-tools 6.0 -> Swift 6 language mode = same complete-concurrency rules as the
+    app), compiling the EXACT shipped AddWidgetButton.{Model,Telemetry,swift,Previews} sources
+    against the REAL generated design Tokens.swift (Color.TS / Font.TS / TSSpacing):
+      Executed 12 tests, with 0 failures (0 unexpected) in 0.004 seconds
+        AddWidgetButtonPresentationTests   5/5  (visible !editing · hidden editing · Equatable ·
+                                                layout constants == web override · slug stable)
+        AddWidgetButtonStringsTests        3/3  (web fallback for dashboard.addWidget · unknown
+                                                key -> fallback · table scoped "AddWidgetButton")
+        AddWidgetButtonAccessibilityTests  2/2  (label == "Add Widget" · hint present + != label)
+        AddWidgetButtonTelemetryTests      2/2  (reportOpen emits slug · exact slug each time)
+      SWIFT_TEST_EXIT=0                                                             OK
+[2] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 4 production files + Previews + the real
+    Tokens.swift, -D DEBUG so #Preview expands; -swift-version 6 -strict-concurrency=complete):
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator ...
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0 -D DEBUG):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[4] swiftformat --lint apps/apple (config apps/apple/.swiftformat):
+      0/2219 files require formatting, 2 files skipped                              (FORMAT_EXIT=0)
+[5] swiftlint --strict (config apps/apple/.swiftlint.yml):
+      surface scope (the 5 AddWidgetButton .swift files): 0 violations, 0 serious in 5 files  (LINT_EXIT=0)
+      whole app (FYI): 1 PRE-EXISTING violation — opening_brace in
+        TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158 (NOT an
+        AddWidgetButton file; present before this change; task rule: don't fix unrelated breakage).
+[6] check-placeholders.ps1 (ADR-011 stub gate; pwsh) over the 6 AddWidgetButton.* files (copied to
+    a temp dir, scanned -Language swift — the prompt's `-Path .../AddWidgetButton` is a filename
+    prefix, not a dir):
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0                                   (PLACEHOLDER_EXIT=0)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + targets + schemes generate cleanly).
+      - `grep -c AddWidgetButton TeslaSync.xcodeproj/project.pbxproj` -> 36 (all 6 files ARE
+        registered; the 4 production files + .strings into both app targets, the Tests file into
+        both XCTest bundles). The generated, git-ignored TeslaSync.xcodeproj was removed after
+        capturing this evidence.
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync build CODE_SIGNING_ALLOWED=NO`:
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   IOS_BUILD_EXIT=65
+    Why deferred (code-unrelated; identical disposition to 0009/0026/0038/0054/0061/0076):
+      Shared.xcframework not staged: both app targets link the KMP core (project.yml
+      `dependencies: framework: Frameworks/Shared.xcframework`), but Frameworks/ holds only
+      .gitkeep. Staging it needs a Kotlin/Native gradle build (Scripts/build-shared-xcframework.sh
+      -> :core:assembleSharedXCFramework). This aborts the app build during dependency resolution
+      — BEFORE any feature-views file is compiled — so it gives ZERO signal about THIS deliverable.
+      Steps [2]/[3] DO compile this surface against the real Tokens for both the iOS 18 + macOS 15
+      SDKs, and step [1] EXECUTES its full XCTest suite (12/12) — the meaningful validation. macOS
+      additionally needs a development signing certificate this runner does not provision (ADR-012).
+      Editing project.yml / staging Frameworks is OUTSIDE this prompt's allowed files; both are owned
+      by the P4/P99 Apple acceptance gate (apps/macos-pending-verifications.md).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states the web source carries (visible FAB + edit-mode hidden) — each
+      has a #if DEBUG preview; the isVisible branch is unit-tested. (Data-bound loading/empty/error/
+      stale/offline are caller-owned per the pure-presentational contract — documented above.)
+  [x] No view HTTP: the FAB owns no data; isEditing is a prop and the P1/S11 telemetry is the only
+      side effect, via the AddWidgetButtonTelemetry seam (default OSLog sink).
+  [x] Every i18n key from source has a matching catalog key — dashboard.addWidget in
+      AddWidgetButton.strings (+ 1 native a11y-hint key).
+  [x] Accessibility labels on the interactive element — accessibilityLabel + accessibilityHint on
+      the Button; decorative glyph hidden.
+  [x] Tests: presentation/visibility (the adapter) + per-branch + i18n facade + a11y + telemetry —
+      12 methods / 4 suites, EXECUTED 12/12 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — every host gate green; Xcode app build/test DEFERRED with captured
+      missing-Shared.xcframework evidence (IOS_BUILD_EXIT=65), not reported as passing.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the Xcode app build/test is shown DEFERRED (not green) with the real
+                       IOS_BUILD_EXIT=65 missing-XCFramework error captured; every "OK" is a command
+                       actually run with its real exit (incl. an executed 12/12 XCTest run + iOS+macOS
+                       SDK typechecks).
+  2  No scope narrowing: every branch the web source has (isEditing hide + the visible FAB) is shipped;
+                       the template's data states are caller-owned for a stateless FAB and that is
+                       DOCUMENTED, not silently dropped.
+  3  No skip-and-assume: each host gate executed on THIS runner; raw exits pasted.
+  4  No stubs as final : complete production FAB + 12 real tests; placeholder gate COUNT=0; no
+                       TODO/stub/mock. (The SwiftPM package is a throwaway harness around the REAL
+                       surface files — no shipped stub.)
+  5  No parity shortcuts: primary fill / circular override / glyph size+weight / shadow / fixed
+                       positioning / tooltip / aria-label / hide-in-edit all mapped to platform tokens.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml (already sources feature-views) and did NOT edit
+                       the shared Localizable.xcstrings (parallel-unsafe) — strings shipped as the
+                       per-surface table; REUSED (not re-declared) the P1/S9 tokens + the P1/S11
+                       telemetry pattern.
+  8  No commit on red  : committing on all-green host gates; the Xcode steps are explicitly DEFERRED
+                       (capability/integration), not failed; the lone whole-app swiftlint violation is
+                       pre-existing + in an unrelated file this commit never touches.
+  9  No silent drift   : changes confined to the 6 AddWidgetButton.* files + this log; the generated
+                       (git-ignored) TeslaSync.xcodeproj and the /tmp harness were removed after
+                       capturing evidence (git status verified: only the 6 files new).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished, Apple-idiomatic AddWidgetButton shipped at parity with the web source: a
+  circular accent FAB (web primary Button + h-14/w-14 rounded-full + shadow-xl override) carrying the
+  lucide-Plus "+" as an SF Symbol, self-anchored to the bottom-trailing safe area (web fixed bottom-20
+  right-6), with the .help pointer tooltip (web Tooltip), the dashboard.addWidget accessible name + a
+  native VoiceOver hint, a reduce-motion-safe press, the P1/S11 view.opened telemetry on appear, and
+  the web `if (isEditing) return null` hide-in-edit branch — all behind a pure, host-tested
+  Presentation projection. It compiles against BOTH the iOS 18 simulator and macOS 15 SDKs under
+  Swift 6 strict concurrency and its 12 XCTests execute green; swiftformat / swiftlint (surface) /
+  placeholder gates are clean. The Xcode app build/test is DEFERRED to the downstream integration/
+  signed runner (un-staged KMP Shared.xcframework + macOS signing — neither a defect in this code,
+  both outside this prompt's allowed files), matching the 0009/0026/0038/0054/0061/0076
+  "code-complete + DEFERRED Xcode gate" precedent (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/AddWidgetButton.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0121-AddWidgetButton.log
+  git commit -m "feat(apps/apple/feature-views): add AddWidgetButton surface (P4)"
+EXIT=0
+STATUS=DONE
