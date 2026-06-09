@@ -123,6 +123,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeStatusWidget\ChargeStatusWidget.Model.cs" Link="Widgets\ChargeStatusWidget\ChargeStatusWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeStatusWidget\ChargeStatusWidget.ViewModel.cs" Link="Widgets\ChargeStatusWidget\ChargeStatusWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeStatusWidget\ChargeStatusWidget.Source.cs" Link="Widgets\ChargeStatusWidget\ChargeStatusWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SubscriptionsWidget\SubscriptionsWidget.Model.cs" Link="Widgets\SubscriptionsWidget\SubscriptionsWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SubscriptionsWidget\SubscriptionsWidget.ViewModel.cs" Link="Widgets\SubscriptionsWidget\SubscriptionsWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SubscriptionsWidget\SubscriptionsWidget.Source.cs" Link="Widgets\SubscriptionsWidget\SubscriptionsWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Model.cs" Link="Widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.ViewModel.cs" Link="Widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Source.cs" Link="Widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Source.cs" />
