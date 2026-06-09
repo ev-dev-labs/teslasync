@@ -6,7 +6,7 @@ using TeslaSync.App.Core.Data.Net;
 using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Notifications;
 using TeslaSync.App.Core.Widgets;
-using TeslaSync.App.DashboardWidgets;
+using TeslaSync.App.DashboardWidgets.EnergyFlowAnimated;
 using TeslaSync.App.Tests.Data;
 using Xunit;
 

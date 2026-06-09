@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Notifications;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.EnergyFlowAnimated;
 
 /// <summary>
 /// The data port the <see cref="EnergyFlowAnimatedViewModel"/> binds to (P1/S8 state-holder seam). It yields
