@@ -1,0 +1,43 @@
+/*
+  TemperatureGauges.strings
+  TeslaSync — P4 feature view · 0160 · TemperatureGauges (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `TemperatureGauges`
+  resolves (table "TemperatureGauges") lives here with its web English value. These entries fold
+  into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/driving/components/drivetrain-health/TemperatureGauges.tsx) — the `drivetrain.tempGauges`
+  header and the `drivetrain.maxLabel` ceiling label. The second group holds the four canonical
+  sensor labels the web parent (DrivetrainHealthPage) feeds via `t(sensor.labelKey, defaultLabel)`.
+  The remaining keys back the native-only chrome (freshness chip, connectivity banner, loading +
+  empty + error + retry copy).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"drivetrain.tempGauges" = "Temperature Gauges";
+"drivetrain.maxLabel" = "Max";
+
+/* --- Canonical sensor labels (web DrivetrainHealthPage sensor defaultLabels) --- */
+"drivetrain.frontMotor" = "Front Motor";
+"drivetrain.rearMotor" = "Rear Motor";
+"drivetrain.inverter" = "Inverter";
+"drivetrain.battery" = "Battery";
+
+/* --- Native chrome: freshness chip --- */
+"tempGauges.live" = "Live";
+"tempGauges.stale" = "Stale";
+"tempGauges.offline" = "Offline";
+"tempGauges.updating" = "Updating";
+
+/* --- Native chrome: connectivity banner --- */
+"tempGauges.staleBanner" = "Reconnecting — temperatures may be stale";
+"tempGauges.offlineBanner" = "Offline — showing last known temperatures";
+
+/* --- Native chrome: states --- */
+"tempGauges.loading" = "Loading temperatures";
+"tempGauges.empty" = "No temperature sensors reporting";
+"tempGauges.errorTitle" = "Couldn't load temperatures";
+"tempGauges.retry" = "Retry";
