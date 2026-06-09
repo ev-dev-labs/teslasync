@@ -1,0 +1,49 @@
+/*
+  HealthRecommendations.strings
+  TeslaSync — P4 feature view · 0156 · HealthRecommendations (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `HealthRecommendations`
+  resolves (table "HealthRecommendations") lives here with its web English value. These entries fold
+  into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the shared
+  catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/driving/components/drivetrain-health/HealthRecommendations.tsx) — the panel title and the
+  nine prioritized maintenance tips, each with its web `t(key, default)` English fallback. The
+  remaining keys back the native-only chrome (the priority a11y prefixes, freshness chip, connectivity
+  banner, loading + empty + error + retry copy).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"drivetrain.recommendations" = "Health Recommendations";
+"drivetrain.tips.criticalStop" = "Temperatures are critically high. Consider pulling over safely and letting the vehicle cool down.";
+"drivetrain.tips.serviceUrgent" = "Schedule an urgent service appointment. Critical temperatures may indicate a coolant system issue.";
+"drivetrain.tips.reduceLoad" = "Reduce driving intensity and avoid hard acceleration to allow components to cool.";
+"drivetrain.tips.checkCoolant" = "Schedule a service appointment to inspect the coolant system and fluid levels.";
+"drivetrain.tips.avoidSupercharging" = "Avoid Supercharging while temperatures are elevated. Use Level 2 charging instead.";
+"drivetrain.tips.regularService" = "Keep up with regular service intervals for optimal drivetrain health and longevity.";
+"drivetrain.tips.gentleAccel" = "Gentle acceleration helps maintain lower motor temperatures and extends component life.";
+"drivetrain.tips.precondition" = "Precondition the battery in cold weather for better thermal performance and driving efficiency.";
+"drivetrain.tips.monitorTemps" = "Monitor drivetrain temperatures after spirited driving sessions or long highway stretches.";
+
+/* --- Native chrome: priority VoiceOver prefixes (visual priority conveyed by color + glyph on web) --- */
+"drivetrain.healthRecommendations.priority.high" = "High priority";
+"drivetrain.healthRecommendations.priority.medium" = "Medium priority";
+"drivetrain.healthRecommendations.priority.low" = "Tip";
+
+/* --- Native chrome: freshness chip --- */
+"drivetrain.healthRecommendations.live" = "Live";
+"drivetrain.healthRecommendations.stale" = "Stale";
+"drivetrain.healthRecommendations.offline" = "Offline";
+"drivetrain.healthRecommendations.updating" = "Updating";
+
+/* --- Native chrome: connectivity banner --- */
+"drivetrain.healthRecommendations.staleBanner" = "Reconnecting — drivetrain recommendations may be stale";
+"drivetrain.healthRecommendations.offlineBanner" = "Offline — showing last known recommendations";
+
+/* --- Native chrome: states --- */
+"drivetrain.healthRecommendations.loading" = "Loading recommendations";
+"drivetrain.healthRecommendations.empty" = "No recommendations available yet";
+"drivetrain.healthRecommendations.errorTitle" = "Couldn't load recommendations";
+"drivetrain.healthRecommendations.retry" = "Retry";
