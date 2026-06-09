@@ -862,6 +862,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.Model.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.Source.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0053 ChargingDetailSection: the charging-analytics detail surface's UI-thread-free
     logic (the charging_analytics JSON parse, the brand-leaderboard / monthly-trend / cost-stats /
     charger-type projection, the cache-then-network result mapper, the repository source's /analytics/fleet
@@ -913,6 +916,19 @@
     <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.Model.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.Source.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.ViewModel.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0063 EnvironmentSlide: the year-review environmental slide's UI-thread-free logic (the
+    presentational input model, the loading/empty/ready projection with the web Math.round(co2/21) tree
+    maths + SI offset formatting + {0}-interpolated caption, the PII-safe view.opened diagnostics and the
+    registration metadata) lives in the WinUI app project under feature-views/ but is WinUI-free by
+    construction. Link the model source in so this headless (net10.0) test project verifies the adapter +
+    per-state branches + a11y names without a UI host. The WinUI view itself (EnvironmentSlide.cs) is
+    exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\EnvironmentSlide\EnvironmentSlide.Model.cs" Link="FeatureViews\EnvironmentSlide\EnvironmentSlide.Model.cs" />
   </ItemGroup>
 
 </Project>
