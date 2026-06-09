@@ -1,0 +1,42 @@
+/*
+  DetailedStatistics.strings
+  TeslaSync — P4 feature view · 0101 · DetailedStatistics (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `DetailedStatistics`
+  resolves (table "DetailedStatistics") lives here with its web `t(key, default)` English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they
+  are kept in a per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/charging/components/charging-list/DetailedStatistics.tsx). The remainder back the native
+  state envelope (freshness chip, connectivity banner, loading / error chrome, refresh) and the
+  VoiceOver empty message.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"charging.stats.detailedStatistics" = "Detailed Statistics";
+"charging.stats.totalSessions" = "Total Sessions";
+"charging.stats.avgDuration" = "Avg Duration";
+"charging.stats.avgPower" = "Avg Power";
+"charging.stats.topCharger" = "Top Charger";
+"charging.stats.totalCost" = "Total Cost";
+"charging.stats.avgCostPerKwh" = "Avg $/kWh";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"charging.stats.live" = "Live";
+"charging.stats.stale" = "Stale";
+"charging.stats.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"charging.stats.staleBanner" = "Reconnecting — statistics may be stale";
+"charging.stats.offlineBanner" = "Offline — showing last known statistics";
+
+/* --- Loading / error / refresh chrome --- */
+"charging.stats.loading" = "Loading detailed statistics";
+"charging.stats.errorTitle" = "Couldn't load detailed statistics";
+"charging.stats.retry" = "Retry";
+"charging.stats.refresh" = "Refresh";
+
+/* --- Empty state --- */
+"charging.stats.noData" = "No charging statistics available yet";
