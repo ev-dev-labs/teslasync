@@ -46,7 +46,7 @@ public sealed class UptimeMonitorWidgetTests
         string key, string status = "healthy", int failures = 0, string? lastError = null) =>
         new(key, status, failures, lastError);
 
-    private static SystemHealthSnapshot Snapshot(
+    private static UptimeHealthSnapshot Snapshot(
         string overall = "healthy",
         IReadOnlyList<SystemHealthComponent>? components = null,
         string? databaseSize = "1.2 GB",
@@ -60,7 +60,7 @@ public sealed class UptimeMonitorWidgetTests
     {
         using var doc = JsonDocument.Parse(FullBody);
 
-        var components = SystemHealthSnapshot.ParseComponents(doc.RootElement);
+        var components = UptimeHealthSnapshot.ParseComponents(doc.RootElement);
         Assert.Equal(4, components.Count);
 
         var mqtt = Assert.Single(components, c => c.Key == "mqtt");
@@ -79,7 +79,7 @@ public sealed class UptimeMonitorWidgetTests
     {
         using var doc = JsonDocument.Parse("""{"components":{"database":{}}}""");
 
-        var component = Assert.Single(SystemHealthSnapshot.ParseComponents(doc.RootElement));
+        var component = Assert.Single(UptimeHealthSnapshot.ParseComponents(doc.RootElement));
         Assert.Equal("database", component.Key);
         Assert.Equal("unhealthy", component.Status);
         Assert.Equal(0, component.ConsecutiveFailures);
@@ -92,7 +92,7 @@ public sealed class UptimeMonitorWidgetTests
         using var doc = JsonDocument.Parse(
             """{"components":{"mqtt":{"status":"degraded","consecutiveFailures":3,"lastError":"x"}}}""");
 
-        var component = Assert.Single(SystemHealthSnapshot.ParseComponents(doc.RootElement));
+        var component = Assert.Single(UptimeHealthSnapshot.ParseComponents(doc.RootElement));
         Assert.Equal(3, component.ConsecutiveFailures);
         Assert.Equal("x", component.LastError);
     }
@@ -101,7 +101,7 @@ public sealed class UptimeMonitorWidgetTests
     public void ParseComponents_non_object_is_empty()
     {
         using var doc = JsonDocument.Parse("[]");
-        Assert.Empty(SystemHealthSnapshot.ParseComponents(doc.RootElement));
+        Assert.Empty(UptimeHealthSnapshot.ParseComponents(doc.RootElement));
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public sealed class UptimeMonitorWidgetTests
     {
         using var doc = JsonDocument.Parse(FullBody);
 
-        var snapshot = SystemHealthSnapshot.FromJson(doc.RootElement);
+        var snapshot = UptimeHealthSnapshot.FromJson(doc.RootElement);
         Assert.True(snapshot.HasData);
         Assert.Equal("healthy", snapshot.OverallStatus);
         Assert.Equal("1.2 GB", snapshot.DatabaseSize);
@@ -124,7 +124,7 @@ public sealed class UptimeMonitorWidgetTests
     {
         using var doc = JsonDocument.Parse("{}");
 
-        var snapshot = SystemHealthSnapshot.FromJson(doc.RootElement);
+        var snapshot = UptimeHealthSnapshot.FromJson(doc.RootElement);
         Assert.True(snapshot.HasData);                       // web: `{}` is truthy → content
         Assert.Equal("unknown", snapshot.OverallStatus);     // web: data.status ?? 'unknown'
         Assert.Empty(snapshot.Components);
@@ -137,7 +137,7 @@ public sealed class UptimeMonitorWidgetTests
     {
         using var doc = JsonDocument.Parse("null");
 
-        var snapshot = SystemHealthSnapshot.FromJson(doc.RootElement);
+        var snapshot = UptimeHealthSnapshot.FromJson(doc.RootElement);
         Assert.False(snapshot.HasData);                      // web: falsy data → empty state
         Assert.Equal("unknown", snapshot.OverallStatus);
     }
@@ -148,7 +148,7 @@ public sealed class UptimeMonitorWidgetTests
         using var doc = JsonDocument.Parse(
             """{"overall":"degraded","table_count":"7","database_size":"512 MB"}""");
 
-        var snapshot = SystemHealthSnapshot.FromJson(doc.RootElement);
+        var snapshot = UptimeHealthSnapshot.FromJson(doc.RootElement);
         Assert.Equal("degraded", snapshot.OverallStatus);    // falls back to `overall` when `status` absent
         Assert.Equal(7, snapshot.TableCount);                // numeric string tolerated
         Assert.Equal("512 MB", snapshot.DatabaseSize);
@@ -157,9 +157,9 @@ public sealed class UptimeMonitorWidgetTests
     [Fact]
     public void Snapshot_empty_is_absent_body()
     {
-        Assert.False(SystemHealthSnapshot.Empty.HasData);
-        Assert.Equal("unknown", SystemHealthSnapshot.Empty.OverallStatus);
-        Assert.Empty(SystemHealthSnapshot.Empty.Components);
+        Assert.False(UptimeHealthSnapshot.Empty.HasData);
+        Assert.Equal("unknown", UptimeHealthSnapshot.Empty.OverallStatus);
+        Assert.Empty(UptimeHealthSnapshot.Empty.Components);
     }
 
     // ---- Status mapping (web statusVariant / StatusDot) -----------------------------
@@ -346,7 +346,7 @@ public sealed class UptimeMonitorWidgetTests
     [Fact]
     public void Project_absent_snapshot_is_unknown_and_no_data()
     {
-        var display = UptimeMonitorProjection.Project(SystemHealthSnapshot.Empty, UptimeMonitorSize.Default, Localizer);
+        var display = UptimeMonitorProjection.Project(UptimeHealthSnapshot.Empty, UptimeMonitorSize.Default, Localizer);
         Assert.False(display.HasData);
         Assert.Equal("unknown", display.OverallStatus);
         Assert.Equal("No system health data", display.EmptyMessage);
@@ -357,7 +357,7 @@ public sealed class UptimeMonitorWidgetTests
     [Fact]
     public async Task ViewModel_loading_only_stays_loading()
     {
-        using var vm = NewViewModel(RepositoryResult<SystemHealthSnapshot>.Loading());
+        using var vm = NewViewModel(RepositoryResult<UptimeHealthSnapshot>.Loading());
         await vm.LoadAsync();
 
         Assert.Equal(UptimeMonitorState.Loading, vm.State);
@@ -380,7 +380,7 @@ public sealed class UptimeMonitorWidgetTests
     [Fact]
     public async Task ViewModel_loaded_without_body_is_empty()
     {
-        using var vm = NewViewModel(RepositoryResult<SystemHealthSnapshot>.Loaded(SystemHealthSnapshot.Empty, Now));
+        using var vm = NewViewModel(RepositoryResult<UptimeHealthSnapshot>.Loaded(UptimeHealthSnapshot.Empty, Now));
         await vm.LoadAsync();
 
         Assert.Equal(UptimeMonitorState.Empty, vm.State);
@@ -391,7 +391,7 @@ public sealed class UptimeMonitorWidgetTests
     [Fact]
     public async Task ViewModel_empty_status_renders_empty_defensively()
     {
-        using var vm = NewViewModel(RepositoryResult<SystemHealthSnapshot>.Empty(Now));
+        using var vm = NewViewModel(RepositoryResult<UptimeHealthSnapshot>.Empty(Now));
         await vm.LoadAsync();
 
         Assert.Equal(UptimeMonitorState.Empty, vm.State);
@@ -402,7 +402,7 @@ public sealed class UptimeMonitorWidgetTests
     public async Task ViewModel_failure_renders_error_with_retry_context()
     {
         using var vm = NewViewModel(
-            RepositoryResult<SystemHealthSnapshot>.Failure(new RepositoryError(RepositoryErrorKind.Server, "boom")));
+            RepositoryResult<UptimeHealthSnapshot>.Failure(new RepositoryError(RepositoryErrorKind.Server, "boom")));
         await vm.LoadAsync();
 
         Assert.Equal(UptimeMonitorState.Error, vm.State);
@@ -415,7 +415,7 @@ public sealed class UptimeMonitorWidgetTests
     public async Task ViewModel_stale_cache_renders_stale_with_content()
     {
         using var vm = NewViewModel(
-            RepositoryResult<SystemHealthSnapshot>.Cached(FromFull(), Now, stale: true));
+            RepositoryResult<UptimeHealthSnapshot>.Cached(FromFull(), Now, stale: true));
         await vm.LoadAsync();
 
         Assert.Equal(UptimeMonitorState.Stale, vm.State);
@@ -426,7 +426,7 @@ public sealed class UptimeMonitorWidgetTests
     [Fact]
     public async Task ViewModel_offline_renders_offline_with_content()
     {
-        using var vm = NewViewModel(RepositoryResult<SystemHealthSnapshot>.OfflineCached(
+        using var vm = NewViewModel(RepositoryResult<UptimeHealthSnapshot>.OfflineCached(
             FromFull(), Now, new RepositoryError(RepositoryErrorKind.Network, "offline")));
         await vm.LoadAsync();
 
@@ -441,9 +441,9 @@ public sealed class UptimeMonitorWidgetTests
     public async Task ViewModel_folds_loading_cached_loaded_to_loaded()
     {
         using var vm = NewViewModel(
-            RepositoryResult<SystemHealthSnapshot>.Loading(),
-            RepositoryResult<SystemHealthSnapshot>.Cached(FromFull(), Now, stale: false),
-            RepositoryResult<SystemHealthSnapshot>.Loaded(FromFull(), Now));
+            RepositoryResult<UptimeHealthSnapshot>.Loading(),
+            RepositoryResult<UptimeHealthSnapshot>.Cached(FromFull(), Now, stale: false),
+            RepositoryResult<UptimeHealthSnapshot>.Loaded(FromFull(), Now));
         await vm.LoadAsync();
 
         Assert.Equal(UptimeMonitorState.Loaded, vm.State);
@@ -580,26 +580,26 @@ public sealed class UptimeMonitorWidgetTests
 
     // ---- Fakes / helpers -----------------------------------------------------------
 
-    private static SystemHealthSnapshot FromFull()
+    private static UptimeHealthSnapshot FromFull()
     {
         using var doc = JsonDocument.Parse(FullBody);
-        return SystemHealthSnapshot.FromJson(doc.RootElement);
+        return UptimeHealthSnapshot.FromJson(doc.RootElement);
     }
 
-    private static UptimeMonitorDisplay Project(SystemHealthSnapshot snapshot) =>
+    private static UptimeMonitorDisplay Project(UptimeHealthSnapshot snapshot) =>
         Project(snapshot, UptimeMonitorSize.Default);
 
-    private static UptimeMonitorDisplay Project(SystemHealthSnapshot snapshot, UptimeMonitorSize size) =>
+    private static UptimeMonitorDisplay Project(UptimeHealthSnapshot snapshot, UptimeMonitorSize size) =>
         UptimeMonitorProjection.Project(snapshot, size, Localizer);
 
-    private static RepositoryResult<SystemHealthSnapshot> Loaded(SystemHealthSnapshot snapshot) =>
-        RepositoryResult<SystemHealthSnapshot>.Loaded(snapshot, Now);
+    private static RepositoryResult<UptimeHealthSnapshot> Loaded(UptimeHealthSnapshot snapshot) =>
+        RepositoryResult<UptimeHealthSnapshot>.Loaded(snapshot, Now);
 
     private static CacheThenNetworkEngine NewEngine() => new(new FakeCacheStore(), () => Now);
 
-    private static async Task<List<RepositoryResult<SystemHealthSnapshot>>> Drain(IUptimeMonitorSource source)
+    private static async Task<List<RepositoryResult<UptimeHealthSnapshot>>> Drain(IUptimeMonitorSource source)
     {
-        var results = new List<RepositoryResult<SystemHealthSnapshot>>();
+        var results = new List<RepositoryResult<UptimeHealthSnapshot>>();
         await foreach (var result in source.StreamAsync())
         {
             results.Add(result);
@@ -608,18 +608,18 @@ public sealed class UptimeMonitorWidgetTests
         return results;
     }
 
-    private static UptimeMonitorViewModel NewViewModel(params RepositoryResult<SystemHealthSnapshot>[] emissions) =>
+    private static UptimeMonitorViewModel NewViewModel(params RepositoryResult<UptimeHealthSnapshot>[] emissions) =>
         NewViewModel(UptimeMonitorSize.Default, emissions);
 
     private static UptimeMonitorViewModel NewViewModel(
         UptimeMonitorSize size,
-        params RepositoryResult<SystemHealthSnapshot>[] emissions) =>
+        params RepositoryResult<UptimeHealthSnapshot>[] emissions) =>
         new(new FakeUptimeMonitorSource(emissions), Localizer, size);
 
-    private sealed class FakeUptimeMonitorSource(params RepositoryResult<SystemHealthSnapshot>[] emissions)
+    private sealed class FakeUptimeMonitorSource(params RepositoryResult<UptimeHealthSnapshot>[] emissions)
         : IUptimeMonitorSource
     {
-        public async IAsyncEnumerable<RepositoryResult<SystemHealthSnapshot>> StreamAsync(
+        public async IAsyncEnumerable<RepositoryResult<UptimeHealthSnapshot>> StreamAsync(
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             foreach (var emission in emissions)

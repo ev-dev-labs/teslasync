@@ -156,7 +156,7 @@ public sealed record SystemHealthComponent(string Key, string Status, int Consec
 /// <c>data</c> truthiness) from the absent-body fallback used for the first projection and the friendly empty
 /// surface. Round-trips losslessly through the cache via System.Text.Json over its own serialization.
 /// </summary>
-public sealed record SystemHealthSnapshot(
+public sealed record UptimeHealthSnapshot(
     string OverallStatus,
     IReadOnlyList<SystemHealthComponent> Components,
     string? DatabaseSize,
@@ -169,7 +169,7 @@ public sealed record SystemHealthSnapshot(
     public const string UnhealthyStatus = "unhealthy";
 
     /// <summary>The absent-body fallback (no payload yet) — flagged <see cref="HasData"/> = false.</summary>
-    public static SystemHealthSnapshot Empty { get; } =
+    public static UptimeHealthSnapshot Empty { get; } =
         new(UnknownStatus, Array.Empty<SystemHealthComponent>(), null, null) { HasData = false };
 
     /// <summary>True when an object body was fetched (web <c>data</c> truthiness). False only for <see cref="Empty"/>.</summary>
@@ -194,7 +194,7 @@ public sealed record SystemHealthSnapshot(
     /// an unexpected array) yields an absent-body snapshot (web falsy <c>data</c>); an object — even an empty
     /// <c>{}</c> — yields a content snapshot whose missing fields default exactly as the web's <c>?? </c> reads.
     /// </summary>
-    public static SystemHealthSnapshot FromJson(JsonElement root)
+    public static UptimeHealthSnapshot FromJson(JsonElement root)
     {
         if (root.ValueKind != JsonValueKind.Object)
         {
@@ -209,7 +209,7 @@ public sealed record SystemHealthSnapshot(
         string? dbSize = UptimeMonitorJson.GetString(root, "database_size", "databaseSize");
         long? tableCount = UptimeMonitorJson.GetLong(root, "table_count", "tableCount");
 
-        return new SystemHealthSnapshot(overall, components, dbSize, tableCount);
+        return new UptimeHealthSnapshot(overall, components, dbSize, tableCount);
     }
 
     /// <summary>Project the <c>components</c> object into a tolerant list of <see cref="SystemHealthComponent"/>.</summary>
@@ -299,7 +299,7 @@ public sealed record UptimeMonitorDisplay(
     string EmptyMessage);
 
 /// <summary>
-/// Pure projection from a parsed <see cref="SystemHealthSnapshot"/> to the display model — the native port of
+/// Pure projection from a parsed <see cref="UptimeHealthSnapshot"/> to the display model — the native port of
 /// the <c>services</c> / <c>overallStatus</c> / <c>healthyCount</c> <c>useMemo</c> work plus the
 /// <c>statusVariant</c>, <c>StatusDot</c> and service-label helpers in
 /// web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx. Every label resolves through the i18n facade;
@@ -383,7 +383,7 @@ public static class UptimeMonitorProjection
 
     /// <summary>Project <paramref name="snapshot"/> for <paramref name="size"/> using the i18n facade.</summary>
     public static UptimeMonitorDisplay Project(
-        SystemHealthSnapshot snapshot,
+        UptimeHealthSnapshot snapshot,
         UptimeMonitorSize size,
         ILocalizer localizer)
     {
@@ -405,7 +405,7 @@ public static class UptimeMonitorProjection
             }
         }
 
-        string overall = snapshot.HasData ? snapshot.OverallStatus : SystemHealthSnapshot.UnknownStatus;
+        string overall = snapshot.HasData ? snapshot.OverallStatus : UptimeHealthSnapshot.UnknownStatus;
         string overallBadgeText = string.Equals(overall, StatusHealthy, StringComparison.Ordinal)
             ? localizer.GetString("widget.uptime.allOk", "All OK")
             : overall;
@@ -445,13 +445,13 @@ public static class UptimeMonitorProjection
             EmptyMessage: emptyMessage);
     }
 
-    private static List<UptimeServiceRow> BuildServices(SystemHealthSnapshot snapshot, ILocalizer localizer)
+    private static List<UptimeServiceRow> BuildServices(UptimeHealthSnapshot snapshot, ILocalizer localizer)
     {
         var rows = new List<UptimeServiceRow>(ServiceKeys.Count);
         foreach (var key in ServiceKeys)
         {
             var component = snapshot.Component(key);
-            string status = component?.Status ?? SystemHealthSnapshot.UnhealthyStatus;
+            string status = component?.Status ?? UptimeHealthSnapshot.UnhealthyStatus;
             string label = ServiceLabel(key, localizer);
             string badgeText = IsHealthy(status)
                 ? localizer.GetString("widget.uptime.ok", "OK")
