@@ -126,7 +126,7 @@ import XCTest
     func testGaugeLabelJoinsScore() {
         let gauge = DrivingCoachGauge(score: 82, scoreText: "82", fraction: 0.82, band: .good)
         XCTAssertEqual(
-            DrivingCoachAccessibility.gaugeLabel(for: gauge, localize: localize),
+            DrivingCoachSectionAccessibility.gaugeLabel(for: gauge, localize: localize),
             "Driving Score, 82"
         )
     }
@@ -135,7 +135,7 @@ import XCTest
         let projection = DrivingCoachProjector.project(
             data: coachSampleData(), copy: .fallback, localeIdentifier: coachEnUS, timeZone: coachUTC
         )
-        let summary = DrivingCoachAccessibility.sectionSummary(for: projection, localize: localize)
+        let summary = DrivingCoachSectionAccessibility.sectionSummary(for: projection, localize: localize)
         XCTAssertTrue(summary.contains("Driving Coach"))
         XCTAssertTrue(summary.contains("Driving Score, 82"))
         XCTAssertTrue(summary.contains("48 drives analyzed"))

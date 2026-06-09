@@ -186,7 +186,7 @@ public enum MonthlyCostSort {
 
 /// Builds the VoiceOver row string from already-formatted parts, so the spoken content is
 /// asserted without rendering the view.
-public enum MonthlyCostAccessibility {
+public enum MonthlyCostTableAccessibility {
     /// The per-row spoken label: "{month}, {sessions}, {energy}, {cost}, {savings}".
     public static func rowLabel(
         month: String,

@@ -201,7 +201,7 @@ extension DriveScoreGaugeWidget {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: TSSpacing.md) {
                 if model.connection != .live {
-                    DriveScoreConnectivityBanner(connection: model.connection)
+                    GaugeDriveScoreConnectivityBanner(connection: model.connection)
                 }
                 DriveScoreRadialGauge(gauge: projection.gauge, diameter: isCompact ? 70 : 100)
                 if !isCompact {

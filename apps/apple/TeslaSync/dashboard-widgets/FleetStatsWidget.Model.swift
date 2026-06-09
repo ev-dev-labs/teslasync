@@ -14,7 +14,7 @@
 //  FleetStatsWidget.swift.
 //
 //  The widget owns no data pipeline of its own: it reuses the FleetStatsBar state
-//  holder (FleetStatsBarModel + FleetStatsSource, P1/S8) for the vehicles +
+//  holder (FleetStatsBarViewModel + FleetStatsSource, P1/S8) for the vehicles +
 //  fleet-analytics + recent drives/charges feed, exactly as the web widget hands its
 //  resolved queries down to the FleetStatsBar leaf.
 //
@@ -87,7 +87,7 @@ public enum FleetStatsWidgetSurface {
 
 // MARK: - State holder (P1/S8)
 
-/// The widget's observable view-model. It composes the shared `FleetStatsBarModel`
+/// The widget's observable view-model. It composes the shared `FleetStatsBarViewModel`
 /// (the data feed + the five-card projection) and adds the widget-level concerns the
 /// web `WidgetShell` owns: the one-shot `view.opened` diagnostics for the widget slug
 /// and the freshness/refresh control wiring. The data lifecycle (start/stop/refresh of
@@ -97,13 +97,13 @@ public enum FleetStatsWidgetSurface {
 @Observable
 public final class FleetStatsWidgetModel {
     /// The shared bar state holder this widget renders + reads its freshness from.
-    public let bar: FleetStatsBarModel
+    public let bar: FleetStatsBarViewModel
 
     @ObservationIgnored private let telemetry: any FleetStatsWidgetTelemetry
     @ObservationIgnored private var trackedOpen = false
 
     public init(
-        bar: FleetStatsBarModel,
+        bar: FleetStatsBarViewModel,
         telemetry: any FleetStatsWidgetTelemetry = OSLogFleetStatsWidgetTelemetry()
     ) {
         self.bar = bar
@@ -118,7 +118,7 @@ public final class FleetStatsWidgetModel {
         barTelemetry: any FleetStatsTelemetry = OSLogFleetStatsTelemetry(),
         locale: Locale = .current
     ) {
-        let barModel = FleetStatsBarModel(source: source, telemetry: barTelemetry, locale: locale)
+        let barModel = FleetStatsBarViewModel(source: source, telemetry: barTelemetry, locale: locale)
         self.init(bar: barModel, telemetry: telemetry)
     }
 

@@ -10,7 +10,7 @@
 //  `DataFreshness`), with the embedded `FleetStatsBar` rendering every state from the
 //  source (loading / empty / error / stale / offline / content) and both sparklines.
 //
-//  Binds through `FleetStatsWidgetModel` (which composes `FleetStatsBarModel`, P1/S8);
+//  Binds through `FleetStatsWidgetModel` (which composes `FleetStatsBarViewModel`, P1/S8);
 //  no networking lives here.
 //
 

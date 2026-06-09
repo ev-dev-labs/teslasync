@@ -11,16 +11,16 @@ import SwiftUI
 
 #if DEBUG
     @MainActor
-    private func chargePreviewModel(_ update: ChargeStatusUpdate) -> ChargeStatusLiveModel {
+    private func chargePreviewModel(_ update: LiveChargeStatusUpdate) -> ChargeStatusLiveModel {
         let source = InMemoryChargeStatusLiveSource(initial: update)
         let model = ChargeStatusLiveModel(source: source)
         model.start()
         return model
     }
 
-    private let chargeSampleUnits = ChargeUnitPrefs(distance: .miles, localeIdentifier: "en_US")
+    private let chargeSampleUnits = LiveChargeUnitPrefs(distance: .miles, localeIdentifier: "en_US")
 
-    private let chargeSampleChargingState = ChargeStateDTO(
+    private let chargeSampleChargingState = LiveChargeStateDTO(
         isCharging: true,
         chargerPowerKw: 11.2,
         voltage: nil,
@@ -30,21 +30,21 @@ import SwiftUI
         batteryLevelPercent: 64
     )
 
-    private let chargeSampleIdleState = ChargeStateDTO(
+    private let chargeSampleIdleState = LiveChargeStateDTO(
         isCharging: false,
         chargerPowerKw: 0,
         batteryLevelPercent: 78
     )
 
-    private let chargeSampleSession = ChargeSessionDTO(totalEnergyAddedWh: 41500)
+    private let chargeSampleSession = LiveChargeSessionDTO(totalEnergyAddedWh: 41500)
 
-    private let chargeSampleChargingProjection = ChargeStatusProjector.project(
+    private let chargeSampleChargingProjection = LiveChargeStatusProjector.project(
         state: chargeSampleChargingState,
         session: chargeSampleSession,
         units: chargeSampleUnits
     )
 
-    private let chargeSampleIdleProjection = ChargeStatusProjector.project(
+    private let chargeSampleIdleProjection = LiveChargeStatusProjector.project(
         state: chargeSampleIdleState,
         session: chargeSampleSession,
         units: chargeSampleUnits
@@ -53,7 +53,7 @@ import SwiftUI
     #Preview("Charging (2×2)") {
         ChargeStatusLiveWidget(
             model: chargePreviewModel(
-                ChargeStatusUpdate(
+                LiveChargeStatusUpdate(
                     status: .loaded,
                     connection: .live,
                     state: chargeSampleChargingState,
@@ -73,12 +73,12 @@ import SwiftUI
     #Preview("Charging (3×4)") {
         ChargeStatusLiveWidget(
             model: chargePreviewModel(
-                ChargeStatusUpdate(
+                LiveChargeStatusUpdate(
                     status: .loaded,
                     connection: .live,
                     state: chargeSampleChargingState,
                     latestSession: chargeSampleSession,
-                    units: ChargeUnitPrefs(distance: .kilometers, localeIdentifier: "en_US"),
+                    units: LiveChargeUnitPrefs(distance: .kilometers, localeIdentifier: "en_US"),
                     updatedAt: Date()
                 )
             ),
@@ -93,7 +93,7 @@ import SwiftUI
     #Preview("Idle (2×2)") {
         ChargeStatusLiveWidget(
             model: chargePreviewModel(
-                ChargeStatusUpdate(
+                LiveChargeStatusUpdate(
                     status: .loaded,
                     connection: .live,
                     state: chargeSampleIdleState,
@@ -111,7 +111,7 @@ import SwiftUI
 
     #Preview("Loading") {
         ChargeStatusLiveWidget(
-            model: chargePreviewModel(ChargeStatusUpdate(status: .loading, state: nil)),
+            model: chargePreviewModel(LiveChargeStatusUpdate(status: .loading, state: nil)),
             size: DashboardWidgetSize(cols: 2, rows: 2)
         )
         .frame(width: 340, height: 280)
@@ -121,7 +121,7 @@ import SwiftUI
 
     #Preview("Empty") {
         ChargeStatusLiveWidget(
-            model: chargePreviewModel(ChargeStatusUpdate(status: .loaded, state: nil)),
+            model: chargePreviewModel(LiveChargeStatusUpdate(status: .loaded, state: nil)),
             size: DashboardWidgetSize(cols: 2, rows: 2)
         )
         .frame(width: 340, height: 280)
@@ -132,7 +132,7 @@ import SwiftUI
     #Preview("Error") {
         ChargeStatusLiveWidget(
             model: chargePreviewModel(
-                ChargeStatusUpdate(status: .failed("Network unavailable"), state: nil)
+                LiveChargeStatusUpdate(status: .failed("Network unavailable"), state: nil)
             ),
             size: DashboardWidgetSize(cols: 2, rows: 2)
         )
@@ -144,7 +144,7 @@ import SwiftUI
     #Preview("Offline (cached)") {
         ChargeStatusLiveWidget(
             model: chargePreviewModel(
-                ChargeStatusUpdate(
+                LiveChargeStatusUpdate(
                     status: .loaded,
                     connection: .offline,
                     state: chargeSampleChargingState,

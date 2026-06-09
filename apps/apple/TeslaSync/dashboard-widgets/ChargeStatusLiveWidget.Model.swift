@@ -40,7 +40,7 @@ public struct OSLogChargeStatusLiveTelemetry: ChargeStatusLiveTelemetry {
 
 /// The load lifecycle for the widget's data, mirroring the shared `LoadableState` cases the
 /// production source projects from `Resource<T>`.
-public enum ChargeLoadStatus: Sendable, Equatable {
+public enum LiveChargeLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case empty
@@ -49,7 +49,7 @@ public enum ChargeLoadStatus: Sendable, Equatable {
 
 /// Freshness of the underlying query, mirroring `LiveConnectionState` (ADR-013) and the web
 /// `DataFreshness` chip the `WidgetShell` renders from `isFetching`/`isStale`/`isError`.
-public enum ChargeConnection: Sendable, Equatable {
+public enum LiveChargeConnection: Sendable, Equatable {
     case live
     case stale
     case offline
@@ -58,7 +58,7 @@ public enum ChargeConnection: Sendable, Equatable {
 /// The user's distance display preference. Mirrors the web `DistanceUnitPref` resolved by
 /// `useUnits()` (`unitPrefs.distance`, derived from `settings.unit_of_length`). The widget feeds
 /// it `state.charge_rate` (range added per hour, in SI METERS/h) for the "Rate" tile.
-public enum ChargeDistanceUnit: String, Sendable, Equatable, CaseIterable {
+public enum LiveChargeDistanceUnit: String, Sendable, Equatable, CaseIterable {
     case kilometers = "km"
     case miles = "mi"
     case feet = "ft"
@@ -89,11 +89,11 @@ public enum ChargeEnergyUnit: String, Sendable, Equatable, CaseIterable {
 
 /// The cached vehicle-state subset this surface consumes, mirroring the fields the web widget
 /// reads off `GET /vehicles/{id}/state` (`useVehicleState`). All physical quantities are SI/raw
-/// as delivered by the API — display conversion happens in `ChargeStatusProjector`. A non-nil DTO
+/// as delivered by the API — display conversion happens in `LiveChargeStatusProjector`. A non-nil DTO
 /// marks "state present" (the web `state ? … : <EmptyState/>` branch). `voltage`/`amps` mirror the
 /// web's `number | null` shape (the source pins them to `null` today; the seam can supply them
 /// later without a layout change).
-public struct ChargeStateDTO: Sendable, Equatable {
+public struct LiveChargeStateDTO: Sendable, Equatable {
     public var isCharging: Bool
     public var chargerPowerKw: Double?
     public var voltage: Double?
@@ -123,7 +123,7 @@ public struct ChargeStateDTO: Sendable, Equatable {
 
 /// The latest charging session this surface consumes (web `useChargingSessionsPaginated(id,
 /// { limit: 1 })[0]`). Only the energy-added field is read; it arrives in SI WATT-HOURS.
-public struct ChargeSessionDTO: Sendable, Equatable {
+public struct LiveChargeSessionDTO: Sendable, Equatable {
     public var totalEnergyAddedWh: Double?
 
     public init(totalEnergyAddedWh: Double? = nil) {
@@ -133,11 +133,11 @@ public struct ChargeSessionDTO: Sendable, Equatable {
 
 /// The user's display preferences, mirroring `useUnits()`. The view never reads settings directly;
 /// the source resolves these and pushes them with each snapshot.
-public struct ChargeUnitPrefs: Sendable, Equatable {
-    public var distance: ChargeDistanceUnit
+public struct LiveChargeUnitPrefs: Sendable, Equatable {
+    public var distance: LiveChargeDistanceUnit
     public var localeIdentifier: String
 
-    public init(distance: ChargeDistanceUnit = .kilometers, localeIdentifier: String = "en_US") {
+    public init(distance: LiveChargeDistanceUnit = .kilometers, localeIdentifier: String = "en_US") {
         self.distance = distance
         self.localeIdentifier = localeIdentifier
     }
@@ -145,22 +145,22 @@ public struct ChargeUnitPrefs: Sendable, Equatable {
 
 /// One coalesced snapshot pushed by a `ChargeStatusLiveSource`: the cached state + latest session +
 /// display prefs plus their load/connection status. The model turns this into the projection.
-public struct ChargeStatusUpdate: Sendable, Equatable {
-    public var status: ChargeLoadStatus
-    public var connection: ChargeConnection
+public struct LiveChargeStatusUpdate: Sendable, Equatable {
+    public var status: LiveChargeLoadStatus
+    public var connection: LiveChargeConnection
     public var isFetching: Bool
-    public var state: ChargeStateDTO?
-    public var latestSession: ChargeSessionDTO?
-    public var units: ChargeUnitPrefs
+    public var state: LiveChargeStateDTO?
+    public var latestSession: LiveChargeSessionDTO?
+    public var units: LiveChargeUnitPrefs
     public var updatedAt: Date?
 
     public init(
-        status: ChargeLoadStatus = .loading,
-        connection: ChargeConnection = .live,
+        status: LiveChargeLoadStatus = .loading,
+        connection: LiveChargeConnection = .live,
         isFetching: Bool = false,
-        state: ChargeStateDTO? = nil,
-        latestSession: ChargeSessionDTO? = nil,
-        units: ChargeUnitPrefs = ChargeUnitPrefs(),
+        state: LiveChargeStateDTO? = nil,
+        latestSession: LiveChargeSessionDTO? = nil,
+        units: LiveChargeUnitPrefs = LiveChargeUnitPrefs(),
         updatedAt: Date? = nil
     ) {
         self.status = status
@@ -180,14 +180,14 @@ public struct ChargeStatusUpdate: Sendable, Equatable {
 @MainActor
 public protocol ChargeStatusLiveSource: AnyObject {
     /// Set by the model; invoked on the main actor for every coalesced snapshot.
-    var onUpdate: (@MainActor (ChargeStatusUpdate) -> Void)? { get set }
+    var onUpdate: (@MainActor (LiveChargeStatusUpdate) -> Void)? { get set }
     func start()
     func stop()
     func refresh()
 }
 
 /// The widget's observable view-model. Subscribes to a `ChargeStatusLiveSource`, recomputes the
-/// `ChargeStatusProjection` via `ChargeStatusProjector`, and exposes a render `Phase` + freshness
+/// `LiveChargeStatusProjection` via `LiveChargeStatusProjector`, and exposes a render `Phase` + freshness
 /// for SwiftUI to switch over.
 @MainActor
 @Observable
@@ -201,10 +201,10 @@ public final class ChargeStatusLiveModel {
     }
 
     public private(set) var phase: Phase = .loading
-    public private(set) var connection: ChargeConnection = .live
+    public private(set) var connection: LiveChargeConnection = .live
     public private(set) var isFetching = false
-    public private(set) var projection: ChargeStatusProjection?
-    public private(set) var units = ChargeUnitPrefs()
+    public private(set) var projection: LiveChargeStatusProjection?
+    public private(set) var units = LiveChargeUnitPrefs()
     public private(set) var updatedAt: Date?
 
     @ObservationIgnored private let source: any ChargeStatusLiveSource
@@ -248,13 +248,13 @@ public final class ChargeStatusLiveModel {
         source.refresh()
     }
 
-    private func apply(_ update: ChargeStatusUpdate) {
+    private func apply(_ update: LiveChargeStatusUpdate) {
         connection = update.connection
         isFetching = update.isFetching
         units = update.units
         updatedAt = update.updatedAt
         projection = update.state.map {
-            ChargeStatusProjector.project(state: $0, session: update.latestSession, units: update.units)
+            LiveChargeStatusProjector.project(state: $0, session: update.latestSession, units: update.units)
         }
         phase = Self.resolvePhase(status: update.status, hasState: update.state != nil)
     }
@@ -266,7 +266,7 @@ public final class ChargeStatusLiveModel {
     ///
     /// `nonisolated` because it is pure (touches no actor state); this lets the freshness/phase
     /// logic be unit-tested from a non-isolated context under Swift 6 strict concurrency.
-    public nonisolated static func resolvePhase(status: ChargeLoadStatus, hasState: Bool) -> Phase {
+    public nonisolated static func resolvePhase(status: LiveChargeLoadStatus, hasState: Bool) -> Phase {
         switch status {
         case .loading:
             hasState ? .content : .loading
@@ -283,14 +283,14 @@ public final class ChargeStatusLiveModel {
 /// In-memory source for previews + unit/UI tests. Drive it with `push(_:)`.
 @MainActor
 public final class InMemoryChargeStatusLiveSource: ChargeStatusLiveSource {
-    public var onUpdate: (@MainActor (ChargeStatusUpdate) -> Void)?
+    public var onUpdate: (@MainActor (LiveChargeStatusUpdate) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
     public private(set) var refreshCount = 0
 
-    private let initial: ChargeStatusUpdate?
+    private let initial: LiveChargeStatusUpdate?
 
-    public init(initial: ChargeStatusUpdate? = nil) {
+    public init(initial: LiveChargeStatusUpdate? = nil) {
         self.initial = initial
     }
 
@@ -308,7 +308,7 @@ public final class InMemoryChargeStatusLiveSource: ChargeStatusLiveSource {
     }
 
     /// Pushes a snapshot to the bound model (test/preview affordance).
-    public func push(_ update: ChargeStatusUpdate) {
+    public func push(_ update: LiveChargeStatusUpdate) {
         onUpdate?(update)
     }
 }

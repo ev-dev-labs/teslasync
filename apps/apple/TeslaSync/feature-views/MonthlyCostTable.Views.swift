@@ -48,7 +48,7 @@ struct MonthlyCostTableView: View {
     var body: some View {
         TSDataTable(rows: rows, columns: columns, density: .compact)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityLabel(Text(verbatim: MonthlyCostStrings.string(
+            .accessibilityLabel(Text(verbatim: MonthlyCostTableStrings.string(
                 "monthlyCost.tableA11y", "Monthly cost breakdown table"
             )))
     }
@@ -58,7 +58,7 @@ struct MonthlyCostTableView: View {
     }
 
     private func columnTitle(_ key: String, _ fallback: String) -> LocalizedStringKey {
-        LocalizedStringKey(MonthlyCostStrings.string(key, fallback))
+        LocalizedStringKey(MonthlyCostTableStrings.string(key, fallback))
     }
 
     private var monthColumn: TSColumn<MonthlyCostBucket> {
@@ -70,7 +70,7 @@ struct MonthlyCostTableView: View {
                 Text(verbatim: row.month)
                     .font(Font.TS.bodySm.weight(.medium))
                     .foregroundStyle(Color.TS.textPrimary)
-                    .accessibilityLabel(Text(verbatim: MonthlyCostAccessibility.rowLabel(
+                    .accessibilityLabel(Text(verbatim: MonthlyCostTableAccessibility.rowLabel(
                         month: row.month,
                         sessions: MonthlyCostFormat.int(row.sessions),
                         energy: MonthlyCostFormat.withUnit(row.energy, "kWh", decimals: 1),
@@ -177,7 +177,7 @@ struct MonthlyCostLoadingView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement()
-        .accessibilityLabel(Text(verbatim: MonthlyCostStrings.string(
+        .accessibilityLabel(Text(verbatim: MonthlyCostTableStrings.string(
             "monthlyCost.loadingA11y", "Loading monthly cost breakdown"
         )))
     }
@@ -188,7 +188,7 @@ struct MonthlyCostEmptyView: View {
     var body: some View {
         ContentUnavailableView {
             Label {
-                Text(verbatim: MonthlyCostStrings.string("costAnalysis.table.noData", "No monthly data available"))
+                Text(verbatim: MonthlyCostTableStrings.string("costAnalysis.table.noData", "No monthly data available"))
             } icon: {
                 Image(systemName: "chart.bar.xaxis")
             }
@@ -207,7 +207,7 @@ struct MonthlyCostErrorView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 26))
                 .foregroundStyle(Color.TS.statusDanger)
-            Text(verbatim: MonthlyCostStrings.string("monthlyCost.errorTitle", "Couldn't load monthly costs"))
+            Text(verbatim: MonthlyCostTableStrings.string("monthlyCost.errorTitle", "Couldn't load monthly costs"))
                 .font(Font.TS.panel)
                 .foregroundStyle(Color.TS.textPrimary)
                 .multilineTextAlignment(.center)
@@ -218,9 +218,9 @@ struct MonthlyCostErrorView: View {
                     .multilineTextAlignment(.center)
             }
             TSButton(variant: .secondary, size: .small, action: onRetry) {
-                Text(verbatim: MonthlyCostStrings.string("monthlyCost.retry", "Retry"))
+                Text(verbatim: MonthlyCostTableStrings.string("monthlyCost.retry", "Retry"))
             }
-            .accessibilityLabel(Text(verbatim: MonthlyCostStrings.string("monthlyCost.retry", "Retry")))
+            .accessibilityLabel(Text(verbatim: MonthlyCostTableStrings.string("monthlyCost.retry", "Retry")))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, TSSpacing.md)

@@ -210,7 +210,7 @@ public struct DrivingCoachDriveRow: Sendable, Equatable, Identifiable {
 /// best efficiency readouts, the threshold pattern bars, the weekly-trend series, the recommendation rows,
 /// and the per-drive score rows. Each `has*` flag reproduces the corresponding web panel's inner empty
 /// branch.
-public struct DrivingCoachProjection: Sendable, Equatable {
+public struct DrivingCoachSectionProjection: Sendable, Equatable {
     public var gauge: DrivingCoachGauge
     public var drivesAnalyzed: Int
     public var styleBreakdown: DrivingCoachStyleBreakdownVM
@@ -259,7 +259,7 @@ public struct DrivingCoachProjection: Sendable, Equatable {
     }
 
     /// The placeholder projection used for the loading / empty chrome (all-zero gauge + bars).
-    public static let empty = DrivingCoachProjection(
+    public static let empty = DrivingCoachSectionProjection(
         gauge: .zero,
         drivesAnalyzed: 0,
         styleBreakdown: .empty,
@@ -285,7 +285,7 @@ public enum DrivingCoachSectionSurface {
 /// Builds the surface's VoiceOver strings. Copy resolves through an injected localizer
 /// (`(key, fallback) -> String`) so the summaries are testable without a bundle, exactly like the view's
 /// P1/S10 facade.
-public enum DrivingCoachAccessibility {
+public enum DrivingCoachSectionAccessibility {
     /// The score-gauge spoken label: "Driving Score, {value}".
     public static func gaugeLabel(
         for gauge: DrivingCoachGauge,
@@ -297,7 +297,7 @@ public enum DrivingCoachAccessibility {
     /// The section-level summary spoken for the whole surface: the "Driving Coach" title, the score, and the
     /// number of analysed drives.
     public static func sectionSummary(
-        for projection: DrivingCoachProjection,
+        for projection: DrivingCoachSectionProjection,
         localize: (String, String) -> String
     ) -> String {
         let title = localize("dynamics.coach.title", "Driving Coach")

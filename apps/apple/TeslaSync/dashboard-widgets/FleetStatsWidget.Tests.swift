@@ -164,7 +164,7 @@ final class FleetStatsWidgetModelTests: XCTestCase {
         telemetry: FleetStatsWidgetTelemetry
     ) -> (FleetStatsWidgetModel, InMemoryFleetStatsSource) {
         let source = InMemoryFleetStatsSource()
-        let bar = FleetStatsBarModel(source: source, telemetry: SilentBarTelemetry())
+        let bar = FleetStatsBarViewModel(source: source, telemetry: SilentBarTelemetry())
         let model = FleetStatsWidgetModel(bar: bar, telemetry: telemetry)
         return (model, source)
     }

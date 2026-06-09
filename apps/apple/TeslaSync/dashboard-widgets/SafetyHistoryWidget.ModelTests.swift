@@ -6,7 +6,7 @@
 //  and accessibility seams (split from `SafetyHistoryWidget.Tests.swift`, which covers
 //  the enum normalization + classify-ladder adapter). These run in the
 //  TeslaSync(/-macOS) XCTest targets with no network and no real store: the model is
-//  driven by `InMemorySafetySource`.
+//  driven by `SafetyHistoryInMemorySource`.
 //
 
 import XCTest
@@ -105,11 +105,11 @@ final class SafetyLayoutTests: XCTestCase {
 
 @MainActor final class SafetyModelTests: XCTestCase {
     private func makeModel(
-        _ update: SafetyUpdate,
-        telemetry: SafetyTelemetry = OSLogSafetyTelemetry()
-    ) -> (SafetyModel, InMemorySafetySource) {
-        let source = InMemorySafetySource(initial: update)
-        let model = SafetyModel(
+        _ update: SafetyHistoryUpdate,
+        telemetry: SafetyHistoryTelemetry = SafetyHistoryOSLogTelemetry()
+    ) -> (SafetyHistoryModel, SafetyHistoryInMemorySource) {
+        let source = SafetyHistoryInMemorySource(initial: update)
+        let model = SafetyHistoryModel(
             source: source,
             telemetry: telemetry,
             now: { Date(timeIntervalSince1970: 1_700_000_000) }
@@ -127,36 +127,36 @@ final class SafetyLayoutTests: XCTestCase {
     }
 
     func testLoadingWithoutEventsShowsLoading() {
-        let (model, _) = makeModel(SafetyUpdate(status: .loading, events: []))
+        let (model, _) = makeModel(SafetyHistoryUpdate(status: .loading, events: []))
         model.start()
         XCTAssertEqual(model.phase, .loading)
     }
 
     func testLoadedWithoutEventsShowsEmpty() {
-        let (model, _) = makeModel(SafetyUpdate(status: .loaded, events: []))
+        let (model, _) = makeModel(SafetyHistoryUpdate(status: .loaded, events: []))
         model.start()
         XCTAssertEqual(model.phase, .empty)
     }
 
     func testFailedWithoutEventsShowsError() {
-        let (model, _) = makeModel(SafetyUpdate(status: .failed("boom"), events: []))
+        let (model, _) = makeModel(SafetyHistoryUpdate(status: .failed("boom"), events: []))
         model.start()
         XCTAssertEqual(model.phase, .error("boom"))
     }
 
     func testEventsPresentShowContentEvenWhileLoadingOrFailed() {
-        let (loading, _) = makeModel(SafetyUpdate(status: .loading, events: [sampleEvent()]))
+        let (loading, _) = makeModel(SafetyHistoryUpdate(status: .loading, events: [sampleEvent()]))
         loading.start()
         XCTAssertEqual(loading.phase, .content)
 
-        let (failed, _) = makeModel(SafetyUpdate(status: .failed("net"), events: [sampleEvent()]))
+        let (failed, _) = makeModel(SafetyHistoryUpdate(status: .failed("net"), events: [sampleEvent()]))
         failed.start()
         XCTAssertEqual(failed.phase, .content)
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
         let spy = SpySafetyTelemetry()
-        let (model, source) = makeModel(SafetyUpdate(status: .loading, events: []), telemetry: spy)
+        let (model, source) = makeModel(SafetyHistoryUpdate(status: .loading, events: []), telemetry: spy)
         model.start()
         model.start()
         XCTAssertEqual(spy.surfaces, [SafetyHistoryWidget.surfaceSlug])
@@ -164,7 +164,7 @@ final class SafetyLayoutTests: XCTestCase {
     }
 
     func testRefreshDelegatesToSource() {
-        let (model, source) = makeModel(SafetyUpdate(status: .loaded, events: []))
+        let (model, source) = makeModel(SafetyHistoryUpdate(status: .loaded, events: []))
         model.start()
         model.refresh()
         model.refresh()
@@ -172,10 +172,10 @@ final class SafetyLayoutTests: XCTestCase {
     }
 
     func testConnectionProjectionAndStatsTrackUpdates() {
-        let (model, source) = makeModel(SafetyUpdate(status: .loading, events: []))
+        let (model, source) = makeModel(SafetyHistoryUpdate(status: .loading, events: []))
         model.start()
         source.push(
-            SafetyUpdate(
+            SafetyHistoryUpdate(
                 status: .loaded,
                 connection: .offline,
                 events: [sampleEvent()],
@@ -234,14 +234,14 @@ final class SafetyAccessibilityTests: XCTestCase {
     }
 
     func testEventSummaryIncludesSubtitleWhenMeaningful() {
-        let summary = SafetyAccessibility.eventSummary(
+        let summary = SafetyHistoryAccessibility.eventSummary(
             for: item(title: "Blind Spot Warning", subtitle: "Follow: 3 · PIN to Drive")
         )
         XCTAssertEqual(summary, "Blind Spot Warning. Follow: 3 · PIN to Drive")
     }
 
     func testEventSummaryOmitsDashSentinelSubtitle() {
-        let summary = SafetyAccessibility.eventSummary(
+        let summary = SafetyHistoryAccessibility.eventSummary(
             for: item(title: "Safety State Update", subtitle: "—")
         )
         XCTAssertEqual(summary, "Safety State Update")
@@ -250,7 +250,7 @@ final class SafetyAccessibilityTests: XCTestCase {
     func testCompactSummaryWithEvents() {
         let stats = SafetyStats(totalEvents: 5, mostCommon: "AEB", trend: .up)
         XCTAssertEqual(
-            SafetyAccessibility.compactSummary(stats: stats, localize: echo),
+            SafetyHistoryAccessibility.compactSummary(stats: stats, localize: echo),
             "5 events (30d). AEB. Increasing"
         )
     }
@@ -258,7 +258,7 @@ final class SafetyAccessibilityTests: XCTestCase {
     func testCompactSummaryWhenZero() {
         let stats = SafetyStats(totalEvents: 0, mostCommon: "—", trend: .none)
         XCTAssertEqual(
-            SafetyAccessibility.compactSummary(stats: stats, localize: echo),
+            SafetyHistoryAccessibility.compactSummary(stats: stats, localize: echo),
             "No safety events"
         )
     }
@@ -267,7 +267,7 @@ final class SafetyAccessibilityTests: XCTestCase {
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpySafetyTelemetry: SafetyTelemetry, @unchecked Sendable {
+private final class SpySafetyTelemetry: SafetyHistoryTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

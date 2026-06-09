@@ -297,7 +297,7 @@ public enum DrivingCoachPhase: Sendable, Equatable {
 }
 
 /// The bound source's load status (web parent `isLoading` / resolved / failure).
-public enum DrivingCoachLoadStatus: Sendable, Equatable {
+public enum DrivingCoachSectionLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case failed(String)
@@ -305,7 +305,7 @@ public enum DrivingCoachLoadStatus: Sendable, Equatable {
 
 /// Live-stream freshness (ADR-013): drives the freshness chip + the cached-data banner so cached content is
 /// clearly labelled while reconnecting / offline.
-public enum DrivingCoachConnection: Sendable, Equatable {
+public enum DrivingCoachSectionConnection: Sendable, Equatable {
     case live
     case stale
     case offline

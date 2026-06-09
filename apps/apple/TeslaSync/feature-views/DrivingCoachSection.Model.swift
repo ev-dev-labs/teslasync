@@ -74,16 +74,16 @@ public enum DrivingCoachSectionStrings {
 /// One coalesced snapshot pushed by a `DrivingCoachSectionSource`: the resolved coach payload + its load
 /// status, the live-state connection, the in-flight flag, and the last-update timestamp.
 public struct DrivingCoachSectionUpdate: Sendable, Equatable {
-    public var status: DrivingCoachLoadStatus
+    public var status: DrivingCoachSectionLoadStatus
     public var data: DrivingCoachData?
-    public var connection: DrivingCoachConnection
+    public var connection: DrivingCoachSectionConnection
     public var refreshing: Bool
     public var updatedAt: Date?
 
     public init(
-        status: DrivingCoachLoadStatus = .loading,
+        status: DrivingCoachSectionLoadStatus = .loading,
         data: DrivingCoachData? = nil,
-        connection: DrivingCoachConnection = .live,
+        connection: DrivingCoachSectionConnection = .live,
         refreshing: Bool = false,
         updatedAt: Date? = nil
     ) {
@@ -118,8 +118,8 @@ public protocol DrivingCoachSectionSource: AnyObject {
 @Observable
 public final class DrivingCoachSectionModel {
     public private(set) var phase: DrivingCoachPhase = .loading
-    public private(set) var connection: DrivingCoachConnection = .live
-    public private(set) var projection: DrivingCoachProjection = .empty
+    public private(set) var connection: DrivingCoachSectionConnection = .live
+    public private(set) var projection: DrivingCoachSectionProjection = .empty
     public private(set) var refreshing = false
     public private(set) var updatedAt: Date?
 
@@ -148,7 +148,7 @@ public final class DrivingCoachSectionModel {
 
     /// The combined VoiceOver summary for the whole section.
     public var accessibilitySummary: String {
-        DrivingCoachAccessibility.sectionSummary(
+        DrivingCoachSectionAccessibility.sectionSummary(
             for: projection,
             localize: DrivingCoachSectionStrings.string
         )
@@ -193,7 +193,7 @@ public final class DrivingCoachSectionModel {
     /// Stale → one guarded auto-refresh (prompt "stale chip + auto-refresh"); reset once live so a later
     /// stale episode re-triggers exactly once. Offline keeps the cached content on screen and does not
     /// refetch.
-    private func handleAutoRefresh(for connection: DrivingCoachConnection) {
+    private func handleAutoRefresh(for connection: DrivingCoachSectionConnection) {
         switch connection {
         case .stale:
             guard !didAutoRefreshForStale else { return }

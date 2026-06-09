@@ -237,7 +237,7 @@ public struct MonthlyTrendScale: Equatable, Sendable {
 
 /// The pure projection from the decoded `ChargingAnalytics` to the view models the
 /// four panels render. Each function mirrors a web computation exactly.
-public enum ChargingProjection {
+public enum ChargingDetailProjection {
     /// The charger-brand leaderboard (web `brandLeaderboard`): `maxCount` is the
     /// largest count (or `1` so an all-zero / empty list never divides by zero),
     /// each row's `fraction` is `count / maxCount`, ranked from `1` in source order.

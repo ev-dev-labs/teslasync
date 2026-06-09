@@ -7,7 +7,7 @@
 //      efficiency math), the `fmtNumber` locale formatting, the responsive column
 //      math, the five-card projection (labels / values / accents / captions /
 //      reversed sparklines), the empty detection, and the phase resolution.
-//    • State holder — `FleetStatsBarModel` wiring, the P1/S11 `view.opened` telemetry,
+//    • State holder — `FleetStatsBarViewModel` wiring, the P1/S11 `view.opened` telemetry,
 //      the stale auto-refresh (once + re-arm), the offline cached-hold, and retry.
 //    • Accessibility — the per-card and bar-level VoiceOver content.
 //
@@ -192,9 +192,9 @@ private func sampleInput(unit: DistanceUnitPref = .km, alerts: Int = 2) -> Fleet
     private func makeModel(
         _ update: FleetStatsUpdate,
         telemetry: FleetStatsTelemetry = OSLogFleetStatsTelemetry()
-    ) -> (FleetStatsBarModel, InMemoryFleetStatsSource) {
+    ) -> (FleetStatsBarViewModel, InMemoryFleetStatsSource) {
         let source = InMemoryFleetStatsSource(initial: update)
-        let model = FleetStatsBarModel(source: source, telemetry: telemetry, locale: enUS)
+        let model = FleetStatsBarViewModel(source: source, telemetry: telemetry, locale: enUS)
         return (model, source)
     }
 

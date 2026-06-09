@@ -82,7 +82,7 @@ struct DrivingCoachScoreGaugePanel: View {
     }
 
     private var gaugeAccessibility: String {
-        let label = DrivingCoachAccessibility.gaugeLabel(
+        let label = DrivingCoachSectionAccessibility.gaugeLabel(
             for: gauge,
             localize: DrivingCoachSectionStrings.string
         )

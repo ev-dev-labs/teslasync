@@ -39,7 +39,7 @@
     @MainActor
     private func fleetStatsPreview(_ update: FleetStatsUpdate) -> FleetStatsBar {
         FleetStatsBar(
-            model: FleetStatsBarModel(
+            model: FleetStatsBarViewModel(
                 source: InMemoryFleetStatsSource(initial: update),
                 telemetry: SilentFleetStatsTelemetry(),
                 locale: Locale(identifier: "en_US")

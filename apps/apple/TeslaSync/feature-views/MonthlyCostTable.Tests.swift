@@ -282,7 +282,7 @@ private func sampleBuckets() -> [MonthlyCostBucket] {
 @MainActor final class MonthlyCostAccessibilityTests: XCTestCase {
     func testRowLabelJoinsParts() {
         XCTAssertEqual(
-            MonthlyCostAccessibility.rowLabel(
+            MonthlyCostTableAccessibility.rowLabel(
                 month: "2024-03",
                 sessions: "24",
                 energy: "1,640.9 kWh",

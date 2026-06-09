@@ -42,19 +42,19 @@ private enum DriveScoreFixture {
 
 final class DriveScoreBandTests: XCTestCase {
     func testThresholdBoundaries() {
-        XCTAssertEqual(DriveScoreBand.classify(100), .excellent)
-        XCTAssertEqual(DriveScoreBand.classify(80), .excellent)
-        XCTAssertEqual(DriveScoreBand.classify(79.999), .good)
-        XCTAssertEqual(DriveScoreBand.classify(60), .good)
-        XCTAssertEqual(DriveScoreBand.classify(59.999), .fair)
-        XCTAssertEqual(DriveScoreBand.classify(40), .fair)
-        XCTAssertEqual(DriveScoreBand.classify(39.999), .poor)
-        XCTAssertEqual(DriveScoreBand.classify(0), .poor)
+        XCTAssertEqual(GaugeDriveScoreBand.classify(100), .excellent)
+        XCTAssertEqual(GaugeDriveScoreBand.classify(80), .excellent)
+        XCTAssertEqual(GaugeDriveScoreBand.classify(79.999), .good)
+        XCTAssertEqual(GaugeDriveScoreBand.classify(60), .good)
+        XCTAssertEqual(GaugeDriveScoreBand.classify(59.999), .fair)
+        XCTAssertEqual(GaugeDriveScoreBand.classify(40), .fair)
+        XCTAssertEqual(GaugeDriveScoreBand.classify(39.999), .poor)
+        XCTAssertEqual(GaugeDriveScoreBand.classify(0), .poor)
     }
 
     func testNonFiniteCollapsesToPoor() {
-        XCTAssertEqual(DriveScoreBand.classify(.nan), .poor)
-        XCTAssertEqual(DriveScoreBand.classify(-10), .poor)
+        XCTAssertEqual(GaugeDriveScoreBand.classify(.nan), .poor)
+        XCTAssertEqual(GaugeDriveScoreBand.classify(-10), .poor)
     }
 }
 

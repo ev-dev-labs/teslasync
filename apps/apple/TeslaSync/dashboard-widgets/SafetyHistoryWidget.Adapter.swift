@@ -40,7 +40,7 @@ public enum SafetyEnumValue: Sendable, Equatable {
 
 /// The four ADAS enum fields that carry a Tesla raw-enum prefix to strip for old
 /// `signal_log` rows — the native port of the web `SAFETY_ENUM_PREFIXES` map.
-public enum SafetyEnumField: Sendable {
+public enum SafetyHistoryEnumField: Sendable {
     case forwardCollisionWarning
     case laneDepartureAvoidance
     case speedLimitWarning
@@ -63,7 +63,7 @@ public enum SafetyEnumField: Sendable {
 /// of the web `cleanSafetyEnum` / `isSafetyEnumActive`. NEVER coerces a non-string
 /// to a string (web invariant: `String(false) === "false"` would mis-classify a
 /// disabled-by-bool feature as active).
-public enum SafetyEnum {
+public enum SafetyHistoryEnum {
     /// Web `String(num)` for the number branch + the raw subtitle echo: a finite
     /// integral value renders without a decimal (`3.0 → "3"`), otherwise verbatim.
     public static func numberString(_ value: Double) -> String {
@@ -78,7 +78,7 @@ public enum SafetyEnum {
     /// → "Off" special case), and null/empty → `fallback`.
     public static func clean(
         _ value: SafetyEnumValue,
-        field: SafetyEnumField,
+        field: SafetyHistoryEnumField,
         fallback: String = "—"
     ) -> String {
         switch value {
@@ -103,7 +103,7 @@ public enum SafetyEnum {
     /// Web `isSafetyEnumActive`: whether the value represents an ENABLED feature.
     /// Centralizes the "off / none / disabled / 0" classification so callers don't
     /// reinvent it (and don't reinvent it WRONG via `String()` coercion).
-    public static func isActive(_ value: SafetyEnumValue, field: SafetyEnumField) -> Bool {
+    public static func isActive(_ value: SafetyEnumValue, field: SafetyHistoryEnumField) -> Bool {
         switch value {
         case .null:
             return false
@@ -189,12 +189,12 @@ public enum SafetyEventCatalog {
     /// The native port of the web `classifySnapshot` precedence ladder.
     public static func derive(from event: SafetyEventInput) -> SafetyEventKind {
         if event.automaticEmergencyBrakingOff == true { return .aeb }
-        if SafetyEnum.isActive(event.forwardCollisionWarning, field: .forwardCollisionWarning) {
-            let detail = SafetyEnum.clean(event.forwardCollisionWarning, field: .forwardCollisionWarning)
+        if SafetyHistoryEnum.isActive(event.forwardCollisionWarning, field: .forwardCollisionWarning) {
+            let detail = SafetyHistoryEnum.clean(event.forwardCollisionWarning, field: .forwardCollisionWarning)
             return .forwardCollision(detail: detail)
         }
-        if SafetyEnum.isActive(event.laneDepartureAvoidance, field: .laneDepartureAvoidance) {
-            let detail = SafetyEnum.clean(event.laneDepartureAvoidance, field: .laneDepartureAvoidance)
+        if SafetyHistoryEnum.isActive(event.laneDepartureAvoidance, field: .laneDepartureAvoidance) {
+            let detail = SafetyHistoryEnum.clean(event.laneDepartureAvoidance, field: .laneDepartureAvoidance)
             return .laneDeparture(detail: detail)
         }
         if event.blindSpotCollisionWarning == true { return .blindSpot }
@@ -271,11 +271,11 @@ public enum SafetyEventCatalog {
     public static func subtitle(for event: SafetyEventInput, localize: (String, String) -> String) -> String {
         var parts: [String] = []
         if !event.speedLimitWarning.isNull {
-            let raw = SafetyEnum.rawString(event.speedLimitWarning)
+            let raw = SafetyHistoryEnum.rawString(event.speedLimitWarning)
             parts.append(String(format: localize("widget.safetySpeedLimit", "Speed Limit: %@"), raw))
         }
         if !event.cruiseFollowDistance.isNull {
-            let raw = SafetyEnum.rawString(event.cruiseFollowDistance)
+            let raw = SafetyHistoryEnum.rawString(event.cruiseFollowDistance)
             parts.append(String(format: localize("widget.safetyFollow", "Follow: %@"), raw))
         }
         if let pin = event.pinToDriveEnabled {

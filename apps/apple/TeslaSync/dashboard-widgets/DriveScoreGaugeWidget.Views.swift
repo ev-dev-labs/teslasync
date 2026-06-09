@@ -7,7 +7,7 @@
 //    • `DriveScoreRadialGauge`   ← web `RadialGauge` (@/components/charts) inside `WidgetGaugeHero`
 //    • `DriveScoreStatCluster`   ← web `WidgetGaugeHero` `stats` row
 //    • `DriveScoreMetricBar`     ← web `MetricBar` (@/components/data-display)
-//    • `DriveScoreGaugeLoadingView` / `DriveScoreConnectivityBanner` ← web `WidgetShell` chrome
+//    • `DriveScoreGaugeLoadingView` / `GaugeDriveScoreConnectivityBanner` ← web `WidgetShell` chrome
 //  All consume the pre-projected values + pre-localized strings (P1/S10) and the shared P1/S9 tokens
 //  — no networking, no Tailwind.
 //
@@ -16,7 +16,7 @@ import SwiftUI
 
 // MARK: - Score band → colour (web `SCORE_COLORS`)
 
-extension DriveScoreBand {
+extension GaugeDriveScoreBand {
     /// The exact web `SCORE_COLORS` hex value for the band, expressed in sRGB so the native gauge +
     /// bars tint identically to the web widget (`#10b981` / `#22d3ee` / `#f59e0b` / `#ef4444`).
     var color: Color {
@@ -221,7 +221,7 @@ struct DriveScoreGaugeLoadingView: View {
 
 /// The stale/offline banner shown above the gauge when the bound source is not live, so the cached
 /// score is clearly labeled (web freshness-indicator intent).
-struct DriveScoreConnectivityBanner: View {
+struct GaugeDriveScoreConnectivityBanner: View {
     let connection: DriveScoreGaugeWidgetConnection
 
     var body: some View {

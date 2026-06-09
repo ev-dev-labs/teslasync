@@ -18,8 +18,8 @@ import Foundation
 
 /// The four score bands the web widget maps a 0-100 score onto. SwiftUI-free so the threshold logic
 /// is host-testable; the concrete colours (`#10b981` / `#22d3ee` / `#f59e0b` / `#ef4444`) are applied
-/// in the view via `DriveScoreBand.color`.
-public enum DriveScoreBand: String, Sendable, Equatable, CaseIterable {
+/// in the view via `GaugeDriveScoreBand.color`.
+public enum GaugeDriveScoreBand: String, Sendable, Equatable, CaseIterable {
     case excellent
     case good
     case fair
@@ -27,7 +27,7 @@ public enum DriveScoreBand: String, Sendable, Equatable, CaseIterable {
 
     /// Web `scoreColor(score)`: `>= 80` excellent, `>= 60` good, `>= 40` fair, else poor. A non-finite
     /// score collapses to the poor band (matching JS where `NaN >= 80` is `false` all the way down).
-    public static func classify(_ score: Double) -> DriveScoreBand {
+    public static func classify(_ score: Double) -> GaugeDriveScoreBand {
         guard score.isFinite else { return .poor }
         if score >= 80 { return .excellent }
         if score >= 60 { return .good }
@@ -134,7 +134,7 @@ public struct DriveScoreGaugeWidgetGauge: Equatable {
     public let valueText: String
     public let unit: String
     public let gradeLabel: String
-    public let band: DriveScoreBand
+    public let band: GaugeDriveScoreBand
     public let accessibilityLabel: String
 
     public init(
@@ -142,7 +142,7 @@ public struct DriveScoreGaugeWidgetGauge: Equatable {
         valueText: String,
         unit: String,
         gradeLabel: String,
-        band: DriveScoreBand,
+        band: GaugeDriveScoreBand,
         accessibilityLabel: String
     ) {
         self.fraction = fraction
@@ -173,7 +173,7 @@ public struct DriveScoreGaugeWidgetBar: Identifiable, Equatable {
     public let label: String
     public let valueText: String
     public let fraction: Double
-    public let band: DriveScoreBand
+    public let band: GaugeDriveScoreBand
     public let accessibilityLabel: String
 
     public init(
@@ -181,7 +181,7 @@ public struct DriveScoreGaugeWidgetBar: Identifiable, Equatable {
         label: String,
         valueText: String,
         fraction: Double,
-        band: DriveScoreBand,
+        band: GaugeDriveScoreBand,
         accessibilityLabel: String
     ) {
         self.id = id
@@ -242,7 +242,7 @@ public enum DriveScoreGaugeWidgetProjector {
     ) -> DriveScoreGaugeWidgetProjection {
         // Web: const overall = score?.overall ?? 0; const color = scoreColor(overall).
         let overall = score.overall ?? 0
-        let band = DriveScoreBand.classify(overall)
+        let band = GaugeDriveScoreBand.classify(overall)
 
         let valueText = DriveScoreGaugeWidgetFormat.gaugeValue(
             overall,
@@ -282,7 +282,7 @@ public enum DriveScoreGaugeWidgetProjector {
                 label: sub.label,
                 valueText: text,
                 fraction: fillFraction(sub.value),
-                band: DriveScoreBand.classify(sub.value),
+                band: GaugeDriveScoreBand.classify(sub.value),
                 accessibilityLabel: String(format: copy.subScoreA11y, sub.label, text)
             )
         }

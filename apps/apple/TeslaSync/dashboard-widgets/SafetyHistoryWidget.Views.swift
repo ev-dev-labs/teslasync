@@ -16,8 +16,8 @@ import SwiftUI
 
 /// The stale/offline banner shown above the content when the bound source is not
 /// live, so cached events are clearly labeled (web `DataFreshness` indicator intent).
-struct SafetyConnectivityBanner: View {
-    let connection: SafetyConnection
+struct SafetyHistoryConnectivityBanner: View {
+    let connection: SafetyHistoryConnection
 
     var body: some View {
         let isOffline = connection == .offline
@@ -29,7 +29,7 @@ struct SafetyConnectivityBanner: View {
         return HStack(spacing: TSSpacing.xs) {
             Image(systemName: isOffline ? "wifi.slash" : "clock.arrow.circlepath")
                 .font(.system(size: 10, weight: .semibold))
-            SafetyStrings.text(key, fallback).font(Font.TS.caption)
+            SafetyHistoryStrings.text(key, fallback).font(Font.TS.caption)
         }
         .foregroundStyle(tone)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -93,17 +93,17 @@ struct SafetyStatsRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: TSSpacing.sm) {
             SafetyStatTile(
-                label: SafetyStrings.string("widget.safetyTotal", "Events (30d)"),
+                label: SafetyHistoryStrings.string("widget.safetyTotal", "Events (30d)"),
                 value: stats.totalEvents.formatted()
             )
             SafetyStatTile(
-                label: SafetyStrings.string("widget.safetyMostCommon", "Most Common"),
+                label: SafetyHistoryStrings.string("widget.safetyMostCommon", "Most Common"),
                 value: stats.mostCommon
             )
             SafetyStatTile(
-                label: SafetyStrings.string("widget.safetyTrend", "Trend"),
+                label: SafetyHistoryStrings.string("widget.safetyTrend", "Trend"),
                 value: stats.trend.glyph,
-                sublabel: SafetyStatsBuilder.trendSublabel(stats.trend, localize: SafetyStrings.string)
+                sublabel: SafetyStatsBuilder.trendSublabel(stats.trend, localize: SafetyHistoryStrings.string)
             )
         }
     }
@@ -142,7 +142,7 @@ struct SafetyEmptyFeed: View {
             Image(systemName: "exclamationmark.octagon")
                 .font(.system(size: 18))
                 .foregroundStyle(Color.TS.textMuted)
-            SafetyStrings.text("widget.noSafetyEvents", "No safety events")
+            SafetyHistoryStrings.text("widget.noSafetyEvents", "No safety events")
                 .font(Font.TS.caption)
                 .foregroundStyle(Color.TS.textMuted)
                 .multilineTextAlignment(.center)
@@ -193,7 +193,7 @@ struct SafetyEventRow: View {
             .padding(.bottom, isLast ? 0 : TSSpacing.sm)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: SafetyAccessibility.eventSummary(for: item)))
+        .accessibilityLabel(Text(verbatim: SafetyHistoryAccessibility.eventSummary(for: item)))
     }
 }
 
@@ -228,18 +228,18 @@ struct SafetyCompactView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: SafetyAccessibility.compactSummary(
+        .accessibilityLabel(Text(verbatim: SafetyHistoryAccessibility.compactSummary(
             stats: stats,
-            localize: SafetyStrings.string
+            localize: SafetyHistoryStrings.string
         )))
     }
 
     private var primaryLine: String {
         guard stats.totalEvents > 0 else {
-            return SafetyStrings.string("widget.noSafetyEvents", "No safety events")
+            return SafetyHistoryStrings.string("widget.noSafetyEvents", "No safety events")
         }
-        let events = SafetyStrings.string("widget.safetyEvents", "events")
-        let window = SafetyStrings.string("widget.safety30dWindow", "(30d)")
+        let events = SafetyHistoryStrings.string("widget.safetyEvents", "events")
+        let window = SafetyHistoryStrings.string("widget.safety30dWindow", "(30d)")
         return "\(stats.totalEvents.formatted()) \(events) \(window)"
     }
 }

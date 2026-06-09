@@ -325,7 +325,7 @@ public enum ChargeCostProjector {
         let mpg = prefs.gasEfficiencyMpg
         let gasPrice = prefs.gasPricePerUnit
         guard mpg > 0, gasPrice > 0, distance > 0 else { return nil }
-        let distanceMi = convertChargeDistanceFromSI(distance, to: .miles)
+        let distanceMi = convertChargeDistanceFromSI(distance, to: ChargeCostDistanceUnit.miles)
         let gallonsUsed = distanceMi / mpg
         if prefs.gasUnit == .liter {
             return gallonsUsed * ChargeCostConstants.gallonsToLiters * gasPrice

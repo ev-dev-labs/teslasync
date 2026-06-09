@@ -60,7 +60,7 @@ enum DrivingCoachLabels {
 /// The section header: the web `Driving Coach` heading with a leading glyph and the live-state freshness
 /// chip.
 struct DrivingCoachSectionHeader: View {
-    let connection: DrivingCoachConnection
+    let connection: DrivingCoachSectionConnection
 
     var body: some View {
         HStack(alignment: .center, spacing: TSSpacing.sm) {
@@ -83,7 +83,7 @@ struct DrivingCoachSectionHeader: View {
 
 /// The header freshness chip reflecting the bound source's live-state (ADR-013).
 struct DrivingCoachSectionFreshnessChip: View {
-    let connection: DrivingCoachConnection
+    let connection: DrivingCoachSectionConnection
 
     private struct Descriptor {
         let tone: Color
@@ -103,7 +103,7 @@ struct DrivingCoachSectionFreshnessChip: View {
         .accessibilityLabel(DrivingCoachSectionStrings.text(descriptor.key, descriptor.fallback))
     }
 
-    private static func descriptor(for connection: DrivingCoachConnection) -> Descriptor {
+    private static func descriptor(for connection: DrivingCoachSectionConnection) -> Descriptor {
         switch connection {
         case .live:
             Descriptor(tone: Color.TS.statusSuccess, key: "dynamics.coach.live", fallback: "Live")
@@ -120,7 +120,7 @@ struct DrivingCoachSectionFreshnessChip: View {
 /// The stale/offline banner shown above the content when the bound source is not live, so cached content is
 /// clearly labelled (web `DataFreshness` intent).
 struct DrivingCoachSectionConnectivityBanner: View {
-    let connection: DrivingCoachConnection
+    let connection: DrivingCoachSectionConnection
 
     var body: some View {
         let offline = connection == .offline

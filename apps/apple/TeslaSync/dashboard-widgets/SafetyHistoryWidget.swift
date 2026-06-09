@@ -5,7 +5,7 @@
 //  The composable "Safety History" dashboard surface — the SwiftUI parity of
 //  features/dashboard/widgets/SafetyHistoryWidget.tsx. Renders every state from the
 //  web source (loading / empty / error / stale / offline / content) inside a glass
-//  widget shell, binding through `SafetyModel` (P1/S8). No networking lives here; the
+//  widget shell, binding through `SafetyHistoryModel` (P1/S8). No networking lives here; the
 //  size-derived compact gate (web `isCompact = size.cols <= 1`) is applied here via
 //  `SafetyLayout`.
 //
@@ -17,14 +17,14 @@ import SwiftUI
 
 /// The composable Safety History dashboard widget — the SwiftUI parity of
 /// `features/dashboard/widgets/SafetyHistoryWidget.tsx`. Renders every state from the
-/// web source inside a glass widget shell, binding through `SafetyModel` (P1/S8).
+/// web source inside a glass widget shell, binding through `SafetyHistoryModel` (P1/S8).
 public struct SafetyHistoryWidget: View {
-    @State private var model: SafetyModel
+    @State private var model: SafetyHistoryModel
     private let size: DashboardWidgetSize
     private let onOpen: (() -> Void)?
 
     public init(
-        model: SafetyModel,
+        model: SafetyHistoryModel,
         size: DashboardWidgetSize = SafetyHistoryWidget.registration.defaultSize,
         onOpen: (() -> Void)? = nil
     ) {
@@ -66,7 +66,7 @@ extension SafetyHistoryWidget {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.TS.statusDanger)
                 .accessibilityHidden(true)
-            SafetyStrings.text("widget.safetyHistory", "Safety History")
+            SafetyHistoryStrings.text("widget.safetyHistory", "Safety History")
                 .font(Font.TS.label)
                 .textCase(.uppercase)
                 .tracking(0.6)
@@ -85,13 +85,13 @@ extension SafetyHistoryWidget {
         switch model.connection {
         case .live:
             tone = Color.TS.statusSuccess
-            label = SafetyStrings.string("widget.safetyLive", "Live")
+            label = SafetyHistoryStrings.string("widget.safetyLive", "Live")
         case .stale:
             tone = Color.TS.statusWarning
-            label = SafetyStrings.string("widget.safetyStale", "Stale")
+            label = SafetyHistoryStrings.string("widget.safetyStale", "Stale")
         case .offline:
             tone = Color.TS.textMuted
-            label = SafetyStrings.string("widget.safetyOffline", "Offline")
+            label = SafetyHistoryStrings.string("widget.safetyOffline", "Offline")
         }
         return HStack(spacing: 4) {
             Circle().fill(tone).frame(width: 6, height: 6)
@@ -109,7 +109,7 @@ extension SafetyHistoryWidget {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.TS.textMuted)
-        .accessibilityLabel(SafetyStrings.text("widget.safetyRefresh", "Refresh"))
+        .accessibilityLabel(SafetyHistoryStrings.text("widget.safetyRefresh", "Refresh"))
     }
 
     private var openButton: some View {
@@ -117,13 +117,13 @@ extension SafetyHistoryWidget {
             onOpen?()
         } label: {
             HStack(spacing: 2) {
-                SafetyStrings.text("widget.open", "Open").font(Font.TS.caption)
+                SafetyHistoryStrings.text("widget.open", "Open").font(Font.TS.caption)
                 Image(systemName: "arrow.up.right").font(.system(size: 9, weight: .semibold))
             }
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.TS.textMuted)
-        .accessibilityLabel(SafetyStrings.text("widget.safetyOpenA11y", "Open the safety page"))
+        .accessibilityLabel(SafetyHistoryStrings.text("widget.safetyOpenA11y", "Open the safety page"))
     }
 
     // MARK: Content states
@@ -161,18 +161,18 @@ extension SafetyHistoryWidget {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .accessibilityElement()
-        .accessibilityLabel(SafetyStrings.text("widget.safetyLoading", "Loading safety events"))
+        .accessibilityLabel(SafetyHistoryStrings.text("widget.safetyLoading", "Loading safety events"))
     }
 
     private var emptyState: some View {
         ContentUnavailableView {
             Label {
-                SafetyStrings.text("widget.noSafetyEvents", "No safety events")
+                SafetyHistoryStrings.text("widget.noSafetyEvents", "No safety events")
             } icon: {
                 Image(systemName: "exclamationmark.octagon")
             }
         } description: {
-            SafetyStrings.text(
+            SafetyHistoryStrings.text(
                 "widget.safetyEmptyHint",
                 "Safety events will appear once your vehicle reports an ADAS event."
             )
@@ -186,7 +186,7 @@ extension SafetyHistoryWidget {
                 .font(.system(size: 26))
                 .foregroundStyle(Color.TS.statusDanger)
                 .accessibilityHidden(true)
-            SafetyStrings.text("widget.safetyErrorTitle", "Couldn't load safety events")
+            SafetyHistoryStrings.text("widget.safetyErrorTitle", "Couldn't load safety events")
                 .font(Font.TS.panel)
                 .foregroundStyle(Color.TS.textPrimary)
                 .multilineTextAlignment(.center)
@@ -199,7 +199,7 @@ extension SafetyHistoryWidget {
             Button {
                 model.refresh()
             } label: {
-                SafetyStrings.text("widget.safetyRetry", "Retry")
+                SafetyHistoryStrings.text("widget.safetyRetry", "Retry")
                     .font(Font.TS.caption)
                     .fontWeight(.semibold)
                     .padding(.horizontal, TSSpacing.md)
@@ -208,7 +208,7 @@ extension SafetyHistoryWidget {
                     .foregroundStyle(Color.TS.accent)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(SafetyStrings.text("widget.safetyRetry", "Retry"))
+            .accessibilityLabel(SafetyHistoryStrings.text("widget.safetyRetry", "Retry"))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
@@ -222,7 +222,7 @@ extension SafetyHistoryWidget {
         } else {
             VStack(alignment: .leading, spacing: TSSpacing.sm) {
                 if model.connection != .live {
-                    SafetyConnectivityBanner(connection: model.connection)
+                    SafetyHistoryConnectivityBanner(connection: model.connection)
                 }
                 SafetyStatsRow(stats: model.stats)
                 SafetyEventFeed(items: model.feedItems, maxItems: SafetyLayout.feedMaxItems)

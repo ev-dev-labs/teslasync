@@ -6,20 +6,20 @@
 //  features/dashboard/components/FleetStatsBar.tsx. Switches over the bound model's
 //  phase so every prompt-required state renders (loading / empty / error / stale /
 //  offline / content) — never a blank box — and surfaces a stale/offline banner above
-//  the cached cards while reconnecting. Binds through `FleetStatsBarModel` (P1/S8); no
+//  the cached cards while reconnecting. Binds through `FleetStatsBarViewModel` (P1/S8); no
 //  networking lives here.
 //
 
 import SwiftUI
 
 /// The composable fleet stats bar — the SwiftUI parity of the web `FleetStatsBar`,
-/// binding through `FleetStatsBarModel` (P1/S8). The web leaf is a staggered grid of
+/// binding through `FleetStatsBarViewModel` (P1/S8). The web leaf is a staggered grid of
 /// five `<GlassPanel>` cards fed by `FleetStatsWidget`; this surface reproduces those
 /// cards plus the parent widget's loading / empty / error / freshness lifecycle.
 public struct FleetStatsBar: View {
-    @State private var model: FleetStatsBarModel
+    @State private var model: FleetStatsBarViewModel
 
-    public init(model: FleetStatsBarModel) {
+    public init(model: FleetStatsBarViewModel) {
         _model = State(initialValue: model)
     }
 

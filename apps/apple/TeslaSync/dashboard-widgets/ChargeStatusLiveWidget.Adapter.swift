@@ -2,8 +2,8 @@
 //  ChargeStatusLiveWidget.Adapter.swift
 //  TeslaSync — P4 dashboard widget · 0020 · ChargeStatusLiveWidget (Apple)
 //
-//  Pure (Foundation-only) projection: a cached `ChargeStateDTO` + latest `ChargeSessionDTO` +
-//  `ChargeUnitPrefs` → display strings, reproducing the web source's numeric pipeline VERBATIM so
+//  Pure (Foundation-only) projection: a cached `LiveChargeStateDTO` + latest `LiveChargeSessionDTO` +
+//  `LiveChargeUnitPrefs` → display strings, reproducing the web source's numeric pipeline VERBATIM so
 //  the native surface shows the exact same values as
 //  features/dashboard/widgets/ChargeStatusLiveWidget.tsx.
 //
@@ -19,7 +19,7 @@ import Foundation
 /// metres-per-unit factor. The web widget feeds it `state.charge_rate` (range added per hour, in
 /// SI METERS/h), so this is a straight SI → display conversion. Non-finite inputs collapse to 0 to
 /// match the `safeNumber` guard upstream.
-func convertChargeDistanceFromSI(_ meters: Double, to unit: ChargeDistanceUnit) -> Double {
+func convertChargeDistanceFromSI(_ meters: Double, to unit: LiveChargeDistanceUnit) -> Double {
     let safe = meters.isFinite ? meters : 0
     return safe / unit.metersPerUnit
 }
@@ -39,7 +39,7 @@ func convertChargeEnergyFromSI(_ wh: Double, to unit: ChargeEnergyUnit) -> Doubl
 
 /// Numeric + time formatting ported from the web widget. Pure so the value pipeline is pinned by
 /// unit tests without rendering.
-public enum ChargeStatusFormat {
+public enum LiveChargeStatusFormat {
     /// The em-dash placeholder the web widget renders for an absent metric (`'—'`).
     public static let emptyDash = "—"
 
@@ -97,7 +97,7 @@ public enum ChargeStatusFormat {
 
 /// One projected metric cell: an SF Symbol, a localized label, and a value string that already
 /// carries its unit symbol (or the em-dash placeholder). Mirrors the web `MetricCell`.
-public struct ChargeMetric: Identifiable, Equatable, Sendable {
+public struct LiveChargeMetric: Identifiable, Equatable, Sendable {
     public let id: String
     public let systemImage: String
     public let labelKey: String
@@ -122,7 +122,7 @@ public struct ChargeMetric: Identifiable, Equatable, Sendable {
 
 /// The fully-projected widget content. Computed once per snapshot by the model so the view stays
 /// declarative across every layout branch (compact charging / compact idle / full charging / idle).
-public struct ChargeStatusProjection: Equatable, Sendable {
+public struct LiveChargeStatusProjection: Equatable, Sendable {
     /// `state.is_charging` — selects the charging vs idle layout family.
     public let isCharging: Bool
     /// Raw charger power in kW (`state.charger_power`), kept for the animated value + accessibility.
@@ -134,9 +134,9 @@ public struct ChargeStatusProjection: Equatable, Sendable {
     /// `${battery_level}%` — the battery percentage text.
     public let batteryText: String
     /// The 2×2 charging grid: Voltage, Current, Time Left, Added (web `MetricCell` order).
-    public let chargingMetrics: [ChargeMetric]
+    public let chargingMetrics: [LiveChargeMetric]
     /// The extra row shown only when `isTall`: Rate, Battery.
-    public let tallMetrics: [ChargeMetric]
+    public let tallMetrics: [LiveChargeMetric]
     /// The idle "Last Session" line (`+{kWh}`), or `nil` when there is no recorded session.
     public let lastSessionEnergyText: String?
     /// The active distance unit symbol (`km` / `mi` / `ft`).
@@ -148,8 +148,8 @@ public struct ChargeStatusProjection: Equatable, Sendable {
         powerValueText: String,
         powerUnit: String,
         batteryText: String,
-        chargingMetrics: [ChargeMetric],
-        tallMetrics: [ChargeMetric],
+        chargingMetrics: [LiveChargeMetric],
+        tallMetrics: [LiveChargeMetric],
         lastSessionEnergyText: String?,
         distanceSymbol: String
     ) {
@@ -165,23 +165,23 @@ public struct ChargeStatusProjection: Equatable, Sendable {
     }
 }
 
-/// Pure projector: `ChargeStateDTO` + latest `ChargeSessionDTO` + `ChargeUnitPrefs` →
-/// `ChargeStatusProjection`. Every value is computed with the exact same arithmetic + formatting
+/// Pure projector: `LiveChargeStateDTO` + latest `LiveChargeSessionDTO` + `LiveChargeUnitPrefs` →
+/// `LiveChargeStatusProjection`. Every value is computed with the exact same arithmetic + formatting
 /// as the web widget.
-public enum ChargeStatusProjector {
+public enum LiveChargeStatusProjector {
     public static func project(
-        state: ChargeStateDTO,
-        session: ChargeSessionDTO?,
-        units: ChargeUnitPrefs
-    ) -> ChargeStatusProjection {
+        state: LiveChargeStateDTO,
+        session: LiveChargeSessionDTO?,
+        units: LiveChargeUnitPrefs
+    ) -> LiveChargeStatusProjection {
         let locale = units.localeIdentifier
         let power = state.chargerPowerKw ?? 0
-        let batteryText = ChargeStatusFormat.jsNumber(state.batteryLevelPercent ?? 0) + "%"
+        let batteryText = LiveChargeStatusFormat.jsNumber(state.batteryLevelPercent ?? 0) + "%"
 
-        return ChargeStatusProjection(
+        return LiveChargeStatusProjection(
             isCharging: state.isCharging,
             power: power,
-            powerValueText: ChargeStatusFormat.number(power, decimals: 1, localeIdentifier: locale),
+            powerValueText: LiveChargeStatusFormat.number(power, decimals: 1, localeIdentifier: locale),
             powerUnit: "kW",
             batteryText: batteryText,
             chargingMetrics: chargingMetrics(state: state, session: session, locale: locale),
@@ -194,45 +194,45 @@ public enum ChargeStatusProjector {
     /// The 2×2 charging grid (web `MetricCell` order: Voltage, Current, Time Left, Added). Voltage
     /// and current fall back to the em-dash, mirroring the web `voltage != null ? … : '—'` branch.
     private static func chargingMetrics(
-        state: ChargeStateDTO,
-        session: ChargeSessionDTO?,
+        state: LiveChargeStateDTO,
+        session: LiveChargeSessionDTO?,
         locale: String
-    ) -> [ChargeMetric] {
+    ) -> [LiveChargeMetric] {
         let energyKwh = convertChargeEnergyFromSI(session?.totalEnergyAddedWh ?? 0, to: .kilowattHours)
         let voltageValue = state.voltage
-            .map { ChargeStatusFormat.number($0, decimals: 0, localeIdentifier: locale) + " V" }
-            ?? ChargeStatusFormat.emptyDash
+            .map { LiveChargeStatusFormat.number($0, decimals: 0, localeIdentifier: locale) + " V" }
+            ?? LiveChargeStatusFormat.emptyDash
         let currentValue = state.amps
-            .map { ChargeStatusFormat.number($0, decimals: 0, localeIdentifier: locale) + " A" }
-            ?? ChargeStatusFormat.emptyDash
+            .map { LiveChargeStatusFormat.number($0, decimals: 0, localeIdentifier: locale) + " A" }
+            ?? LiveChargeStatusFormat.emptyDash
         return [
-            ChargeMetric(
+            LiveChargeMetric(
                 id: "voltage",
                 systemImage: "gauge.open.with.lines.needle.33percent",
                 labelKey: "widget.voltage",
                 labelFallback: "Voltage",
                 value: voltageValue
             ),
-            ChargeMetric(
+            LiveChargeMetric(
                 id: "current",
                 systemImage: "bolt.fill",
                 labelKey: "widget.amps",
                 labelFallback: "Current",
                 value: currentValue
             ),
-            ChargeMetric(
+            LiveChargeMetric(
                 id: "time-left",
                 systemImage: "timer",
                 labelKey: "widget.timeRemaining",
                 labelFallback: "Time Left",
-                value: ChargeStatusFormat.time(hours: state.timeToFullHours ?? 0)
+                value: LiveChargeStatusFormat.time(hours: state.timeToFullHours ?? 0)
             ),
-            ChargeMetric(
+            LiveChargeMetric(
                 id: "added",
                 systemImage: "bolt.fill",
                 labelKey: "widget.energyAdded",
                 labelFallback: "Added",
-                value: ChargeStatusFormat.number(energyKwh, decimals: 1, localeIdentifier: locale) + " kWh"
+                value: LiveChargeStatusFormat.number(energyKwh, decimals: 1, localeIdentifier: locale) + " kWh"
             )
         ]
     }
@@ -240,22 +240,26 @@ public enum ChargeStatusProjector {
     /// The extra row shown only when `isTall` (web: Rate, Battery). `charge_rate` arrives in SI
     /// METERS/h and is converted to the user's distance unit for the `{unit}/h` display.
     private static func tallMetrics(
-        state: ChargeStateDTO,
+        state: LiveChargeStateDTO,
         batteryText: String,
-        units: ChargeUnitPrefs
-    ) -> [ChargeMetric] {
+        units: LiveChargeUnitPrefs
+    ) -> [LiveChargeMetric] {
         let rateDisplay = convertChargeDistanceFromSI(state.chargeRateMeters ?? 0, to: units.distance)
-        let rateValue = ChargeStatusFormat.number(rateDisplay, decimals: 0, localeIdentifier: units.localeIdentifier)
+        let rateValue = LiveChargeStatusFormat.number(
+            rateDisplay,
+            decimals: 0,
+            localeIdentifier: units.localeIdentifier
+        )
             + " " + units.distance.symbol + "/h"
         return [
-            ChargeMetric(
+            LiveChargeMetric(
                 id: "rate",
                 systemImage: "gauge.medium",
                 labelKey: "widget.chargeRate",
                 labelFallback: "Rate",
                 value: rateValue
             ),
-            ChargeMetric(
+            LiveChargeMetric(
                 id: "battery",
                 systemImage: "battery.100.bolt",
                 labelKey: "widget.batteryLevel",
@@ -267,10 +271,10 @@ public enum ChargeStatusProjector {
 
     /// The idle "Last Session" line (`+{kWh}`), or `nil` when there is no recorded session (web
     /// `latestSession && …`). The energy arrives in SI WATT-HOURS and is shown as kWh.
-    private static func lastSessionEnergyText(session: ChargeSessionDTO?, locale: String) -> String? {
+    private static func lastSessionEnergyText(session: LiveChargeSessionDTO?, locale: String) -> String? {
         session.map { recorded in
             let kwh = convertChargeEnergyFromSI(recorded.totalEnergyAddedWh ?? 0, to: .kilowattHours)
-            return "+" + ChargeStatusFormat.number(kwh, decimals: 1, localeIdentifier: locale) + " kWh"
+            return "+" + LiveChargeStatusFormat.number(kwh, decimals: 1, localeIdentifier: locale) + " kWh"
         }
     }
 }
@@ -293,11 +297,11 @@ public enum ChargeStatusLayout {
 
 /// Builds the VoiceOver summary spoken for the widget body. Pure + public so the a11y label content
 /// can be unit-tested without rendering the view.
-public enum ChargeStatusAccessibility {
+public enum LiveChargeStatusAccessibility {
     /// A spoken clause per visible datum. Charging surfaces lead with the charging state, battery
     /// and power, then each metric; idle surfaces speak the not-charging state, battery and the
     /// optional last-session energy.
-    public static func summary(for projection: ChargeStatusProjection) -> String {
+    public static func summary(for projection: LiveChargeStatusProjection) -> String {
         let title = ChargeStatusLiveStrings.string("widget.chargeStatusLive", "Charge Status")
         let batteryLabel = ChargeStatusLiveStrings.string("widget.batteryLevel", "Battery")
         var parts = [title]

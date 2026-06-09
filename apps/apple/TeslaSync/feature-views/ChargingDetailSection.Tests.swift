@@ -47,7 +47,7 @@ import XCTest
 
 @MainActor final class BrandLeaderboardTests: XCTestCase {
     func testEmptyBrandsProduceNoRows() {
-        XCTAssertTrue(ChargingProjection.brandLeaderboard([]).isEmpty)
+        XCTAssertTrue(ChargingDetailProjection.brandLeaderboard([]).isEmpty)
     }
 
     func testRowsAreRankedInSourceOrderWithFractionOfMax() {
@@ -56,7 +56,7 @@ import XCTest
             ChargerBrandDatum(brand: "EA", count: 500),
             ChargerBrandDatum(brand: "EVgo", count: 250)
         ]
-        let rows = ChargingProjection.brandLeaderboard(brands)
+        let rows = ChargingDetailProjection.brandLeaderboard(brands)
         XCTAssertEqual(rows.map(\.rank), [1, 2, 3])
         XCTAssertEqual(rows.map(\.brand), ["Tesla", "EA", "EVgo"])
         XCTAssertEqual(rows[0].fraction, 1.0, accuracy: 0.0001)
@@ -69,13 +69,13 @@ import XCTest
             ChargerBrandDatum(brand: "A", count: 0),
             ChargerBrandDatum(brand: "B", count: 0)
         ]
-        let rows = ChargingProjection.brandLeaderboard(brands)
+        let rows = ChargingDetailProjection.brandLeaderboard(brands)
         XCTAssertEqual(rows.map(\.fraction), [0, 0])
         XCTAssertEqual(rows.map(\.count), [0, 0])
     }
 
     func testNonFiniteCountIsTreatedAsZero() {
-        let rows = ChargingProjection.brandLeaderboard([ChargerBrandDatum(brand: "X", count: .nan)])
+        let rows = ChargingDetailProjection.brandLeaderboard([ChargerBrandDatum(brand: "X", count: .nan)])
         XCTAssertEqual(rows.first?.count, 0)
         XCTAssertEqual(rows.first?.fraction, 0)
     }
@@ -85,7 +85,7 @@ import XCTest
 
 @MainActor final class ChargerTypeShareTests: XCTestCase {
     func testEmptyTypesProduceNoShares() {
-        XCTAssertTrue(ChargingProjection.chargerTypeShares([]).isEmpty)
+        XCTAssertTrue(ChargingDetailProjection.chargerTypeShares([]).isEmpty)
     }
 
     func testFractionPercentAndColorIndex() {
@@ -93,7 +93,7 @@ import XCTest
             ChargingDetailSectionChargerTypeDatum(type: "Supercharger", count: 75),
             ChargingDetailSectionChargerTypeDatum(type: "Level 2", count: 25)
         ]
-        let shares = ChargingProjection.chargerTypeShares(types)
+        let shares = ChargingDetailProjection.chargerTypeShares(types)
         XCTAssertEqual(shares.map(\.colorIndex), [0, 1])
         XCTAssertEqual(shares[0].fraction, 0.75, accuracy: 0.0001)
         XCTAssertEqual(shares[0].percent, 75, accuracy: 0.0001)
@@ -106,7 +106,7 @@ import XCTest
             ChargingDetailSectionChargerTypeDatum(type: "A", count: 0),
             ChargingDetailSectionChargerTypeDatum(type: "B", count: 0)
         ]
-        let shares = ChargingProjection.chargerTypeShares(types)
+        let shares = ChargingDetailProjection.chargerTypeShares(types)
         XCTAssertEqual(shares.map(\.fraction), [0, 0])
         XCTAssertEqual(shares.map(\.percent), [0, 0])
     }
@@ -121,19 +121,19 @@ import XCTest
     ]
 
     func testLeftMaxSpansEnergyAndSessionsRightMaxSpansPower() {
-        let scale = ChargingProjection.monthlyTrendScale(points)
+        let scale = ChargingDetailProjection.monthlyTrendScale(points)
         XCTAssertEqual(scale.leftMax, 420, accuracy: 0.0001)
         XCTAssertEqual(scale.rightMax, 66, accuracy: 0.0001)
     }
 
     func testEmptyPointsClampToOne() {
-        let scale = ChargingProjection.monthlyTrendScale([])
+        let scale = ChargingDetailProjection.monthlyTrendScale([])
         XCTAssertEqual(scale.leftMax, 1)
         XCTAssertEqual(scale.rightMax, 1)
     }
 
     func testPlottedAndTruePowerAreInverses() {
-        let scale = ChargingProjection.monthlyTrendScale(points)
+        let scale = ChargingDetailProjection.monthlyTrendScale(points)
         let plotted = scale.plotted(power: 66)
         XCTAssertEqual(plotted, 420, accuracy: 0.0001)
         XCTAssertEqual(scale.truePower(fromPlotted: plotted), 66, accuracy: 0.0001)
@@ -141,7 +141,7 @@ import XCTest
     }
 
     func testTrailingTicksAndDomain() {
-        let scale = ChargingProjection.monthlyTrendScale(points)
+        let scale = ChargingDetailProjection.monthlyTrendScale(points)
         let ticks = scale.trailingTickPositions
         XCTAssertEqual(ticks.count, 5)
         XCTAssertEqual(ticks.first, 0)

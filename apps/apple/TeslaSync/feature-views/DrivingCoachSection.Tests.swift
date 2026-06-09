@@ -164,7 +164,7 @@ func coachSampleData(
 // MARK: - Projector
 
 @MainActor final class DrivingCoachProjectorTests: XCTestCase {
-    private func project(_ data: DrivingCoachData?) -> DrivingCoachProjection {
+    private func project(_ data: DrivingCoachData?) -> DrivingCoachSectionProjection {
         DrivingCoachProjector.project(data: data, copy: .fallback, localeIdentifier: coachEnUS, timeZone: coachUTC)
     }
 

@@ -3,7 +3,7 @@
 //  TeslaSync — P4 dashboard widget · 0020 · ChargeStatusLiveWidget (Apple)
 //
 //  Unit coverage for the ChargeStatusLiveWidget surface:
-//    • Adapter (cached → projection) — `ChargeStatusProjector` value parity with the web widget's
+//    • Adapter (cached → projection) — `LiveChargeStatusProjector` value parity with the web widget's
 //      numeric pipeline (charger_power, time_to_full_charge, charge_rate via convertDistanceFromSI,
 //      total_energy_added_wh via convertEnergyFromSI, the formatTime helper, and the `${battery}%`).
 //    • State holder — `ChargeStatusLiveModel` phase resolution across loading / empty / error /
@@ -22,7 +22,7 @@ import XCTest
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
 @MainActor final class ChargeStatusAdapterTests: XCTestCase {
-    private let charging = ChargeStateDTO(
+    private let charging = LiveChargeStateDTO(
         isCharging: true,
         chargerPowerKw: 11.5,
         voltage: nil,
@@ -31,13 +31,13 @@ import XCTest
         chargeRateMeters: 50000,
         batteryLevelPercent: 60
     )
-    private let session = ChargeSessionDTO(totalEnergyAddedWh: 25000)
+    private let session = LiveChargeSessionDTO(totalEnergyAddedWh: 25000)
 
     func testChargingProjectionKilometers() {
-        let projection = ChargeStatusProjector.project(
+        let projection = LiveChargeStatusProjector.project(
             state: charging,
             session: session,
-            units: ChargeUnitPrefs(distance: .kilometers)
+            units: LiveChargeUnitPrefs(distance: .kilometers)
         )
         XCTAssertTrue(projection.isCharging)
         XCTAssertEqual(projection.powerValueText, "11.5")
@@ -56,32 +56,32 @@ import XCTest
 
     func testChargingProjectionMilesRate() {
         // 80,467.2 m / 1609.344 = 50 mi exactly → "50 mi/h".
-        let state = ChargeStateDTO(isCharging: true, chargeRateMeters: 80467.2, batteryLevelPercent: 60)
-        let projection = ChargeStatusProjector.project(
+        let state = LiveChargeStateDTO(isCharging: true, chargeRateMeters: 80467.2, batteryLevelPercent: 60)
+        let projection = LiveChargeStatusProjector.project(
             state: state,
             session: nil,
-            units: ChargeUnitPrefs(distance: .miles)
+            units: LiveChargeUnitPrefs(distance: .miles)
         )
         XCTAssertEqual(projection.distanceSymbol, "mi")
         XCTAssertEqual(projection.tallMetrics.first(where: { $0.id == "rate" })?.value, "50 mi/h")
     }
 
     func testVoltageAndAmpsRenderWhenPresent() {
-        let state = ChargeStateDTO(isCharging: true, voltage: 240, amps: 32, batteryLevelPercent: 50)
-        let projection = ChargeStatusProjector.project(
+        let state = LiveChargeStateDTO(isCharging: true, voltage: 240, amps: 32, batteryLevelPercent: 50)
+        let projection = LiveChargeStatusProjector.project(
             state: state,
             session: nil,
-            units: ChargeUnitPrefs(distance: .kilometers)
+            units: LiveChargeUnitPrefs(distance: .kilometers)
         )
         XCTAssertEqual(projection.chargingMetrics.first(where: { $0.id == "voltage" })?.value, "240 V")
         XCTAssertEqual(projection.chargingMetrics.first(where: { $0.id == "current" })?.value, "32 A")
     }
 
     func testNilInnerValuesCollapseToZero() {
-        let projection = ChargeStatusProjector.project(
-            state: ChargeStateDTO(isCharging: true),
+        let projection = LiveChargeStatusProjector.project(
+            state: LiveChargeStateDTO(isCharging: true),
             session: nil,
-            units: ChargeUnitPrefs(distance: .kilometers)
+            units: LiveChargeUnitPrefs(distance: .kilometers)
         )
         XCTAssertEqual(projection.powerValueText, "0.0")
         XCTAssertEqual(projection.batteryText, "0%")
@@ -92,10 +92,10 @@ import XCTest
     }
 
     func testIdleProjectionWithLastSession() {
-        let projection = ChargeStatusProjector.project(
-            state: ChargeStateDTO(isCharging: false, batteryLevelPercent: 78),
-            session: ChargeSessionDTO(totalEnergyAddedWh: 41500),
-            units: ChargeUnitPrefs(distance: .kilometers)
+        let projection = LiveChargeStatusProjector.project(
+            state: LiveChargeStateDTO(isCharging: false, batteryLevelPercent: 78),
+            session: LiveChargeSessionDTO(totalEnergyAddedWh: 41500),
+            units: LiveChargeUnitPrefs(distance: .kilometers)
         )
         XCTAssertFalse(projection.isCharging)
         XCTAssertEqual(projection.batteryText, "78%")
@@ -103,19 +103,19 @@ import XCTest
     }
 
     func testIdleProjectionWithoutSessionHasNoLastSession() {
-        let projection = ChargeStatusProjector.project(
-            state: ChargeStateDTO(isCharging: false, batteryLevelPercent: 78),
+        let projection = LiveChargeStatusProjector.project(
+            state: LiveChargeStateDTO(isCharging: false, batteryLevelPercent: 78),
             session: nil,
-            units: ChargeUnitPrefs(distance: .kilometers)
+            units: LiveChargeUnitPrefs(distance: .kilometers)
         )
         XCTAssertNil(projection.lastSessionEnergyText)
     }
 
     func testLabelsResolveToWebFallback() {
-        let projection = ChargeStatusProjector.project(
+        let projection = LiveChargeStatusProjector.project(
             state: charging,
             session: session,
-            units: ChargeUnitPrefs(distance: .kilometers)
+            units: LiveChargeUnitPrefs(distance: .kilometers)
         )
         XCTAssertEqual(projection.chargingMetrics.map(\.label), ["Voltage", "Current", "Time Left", "Added"])
         XCTAssertEqual(projection.tallMetrics.map(\.label), ["Rate", "Battery"])
@@ -126,27 +126,27 @@ import XCTest
 
 @MainActor final class ChargeStatusFormatTests: XCTestCase {
     func testNumberRoundsHalfUpWithGrouping() {
-        XCTAssertEqual(ChargeStatusFormat.number(11.5, decimals: 1), "11.5")
-        XCTAssertEqual(ChargeStatusFormat.number(25, decimals: 1), "25.0")
-        XCTAssertEqual(ChargeStatusFormat.number(50, decimals: 0), "50")
-        XCTAssertEqual(ChargeStatusFormat.number(1234.5, decimals: 0), "1,235")
-        XCTAssertEqual(ChargeStatusFormat.number(.infinity, decimals: 1), "0.0")
+        XCTAssertEqual(LiveChargeStatusFormat.number(11.5, decimals: 1), "11.5")
+        XCTAssertEqual(LiveChargeStatusFormat.number(25, decimals: 1), "25.0")
+        XCTAssertEqual(LiveChargeStatusFormat.number(50, decimals: 0), "50")
+        XCTAssertEqual(LiveChargeStatusFormat.number(1234.5, decimals: 0), "1,235")
+        XCTAssertEqual(LiveChargeStatusFormat.number(.infinity, decimals: 1), "0.0")
     }
 
     func testJSNumberDropsTrailingZeros() {
-        XCTAssertEqual(ChargeStatusFormat.jsNumber(60), "60")
-        XCTAssertEqual(ChargeStatusFormat.jsNumber(0), "0")
-        XCTAssertEqual(ChargeStatusFormat.jsNumber(78.5), "78.5")
-        XCTAssertEqual(ChargeStatusFormat.jsNumber(.nan), "0")
+        XCTAssertEqual(LiveChargeStatusFormat.jsNumber(60), "60")
+        XCTAssertEqual(LiveChargeStatusFormat.jsNumber(0), "0")
+        XCTAssertEqual(LiveChargeStatusFormat.jsNumber(78.5), "78.5")
+        XCTAssertEqual(LiveChargeStatusFormat.jsNumber(.nan), "0")
     }
 
     func testTimeMatchesWebFormatTime() {
-        XCTAssertEqual(ChargeStatusFormat.time(hours: 0), "—")
-        XCTAssertEqual(ChargeStatusFormat.time(hours: -1), "—")
-        XCTAssertEqual(ChargeStatusFormat.time(hours: 0.5), "30m")
-        XCTAssertEqual(ChargeStatusFormat.time(hours: 2.0), "2h")
-        XCTAssertEqual(ChargeStatusFormat.time(hours: 1.5), "1h 30m")
-        XCTAssertEqual(ChargeStatusFormat.time(hours: 1.25), "1h 15m")
+        XCTAssertEqual(LiveChargeStatusFormat.time(hours: 0), "—")
+        XCTAssertEqual(LiveChargeStatusFormat.time(hours: -1), "—")
+        XCTAssertEqual(LiveChargeStatusFormat.time(hours: 0.5), "30m")
+        XCTAssertEqual(LiveChargeStatusFormat.time(hours: 2.0), "2h")
+        XCTAssertEqual(LiveChargeStatusFormat.time(hours: 1.5), "1h 30m")
+        XCTAssertEqual(LiveChargeStatusFormat.time(hours: 1.25), "1h 15m")
     }
 
     func testEnergyConversionFromSI() {
@@ -156,10 +156,10 @@ import XCTest
     }
 
     func testDistanceConversionFromSI() {
-        XCTAssertEqual(convertChargeDistanceFromSI(1000, to: .kilometers), 1, accuracy: 1e-9)
-        XCTAssertEqual(convertChargeDistanceFromSI(1609.344, to: .miles), 1, accuracy: 1e-9)
-        XCTAssertEqual(convertChargeDistanceFromSI(0.3048, to: .feet), 1, accuracy: 1e-9)
-        XCTAssertEqual(convertChargeDistanceFromSI(.infinity, to: .kilometers), 0)
+        XCTAssertEqual(convertChargeDistanceFromSI(1000, to: LiveChargeDistanceUnit.kilometers), 1, accuracy: 1e-9)
+        XCTAssertEqual(convertChargeDistanceFromSI(1609.344, to: LiveChargeDistanceUnit.miles), 1, accuracy: 1e-9)
+        XCTAssertEqual(convertChargeDistanceFromSI(0.3048, to: LiveChargeDistanceUnit.feet), 1, accuracy: 1e-9)
+        XCTAssertEqual(convertChargeDistanceFromSI(.infinity, to: LiveChargeDistanceUnit.kilometers), 0)
     }
 }
 
@@ -180,7 +180,7 @@ import XCTest
 
 @MainActor final class ChargeStatusModelTests: XCTestCase {
     private func makeModel(
-        _ update: ChargeStatusUpdate,
+        _ update: LiveChargeStatusUpdate,
         telemetry: ChargeStatusLiveTelemetry = OSLogChargeStatusLiveTelemetry()
     ) -> (ChargeStatusLiveModel, InMemoryChargeStatusLiveSource) {
         let source = InMemoryChargeStatusLiveSource(initial: update)
@@ -189,26 +189,26 @@ import XCTest
     }
 
     func testLoadingWithoutStateShowsLoading() {
-        let (model, _) = makeModel(ChargeStatusUpdate(status: .loading, state: nil))
+        let (model, _) = makeModel(LiveChargeStatusUpdate(status: .loading, state: nil))
         model.start()
         XCTAssertEqual(model.phase, .loading)
     }
 
     func testLoadedWithoutStateShowsEmpty() {
-        let (model, _) = makeModel(ChargeStatusUpdate(status: .loaded, state: nil))
+        let (model, _) = makeModel(LiveChargeStatusUpdate(status: .loaded, state: nil))
         model.start()
         XCTAssertEqual(model.phase, .empty)
     }
 
     func testFailedWithoutStateShowsError() {
-        let (model, _) = makeModel(ChargeStatusUpdate(status: .failed("boom"), state: nil))
+        let (model, _) = makeModel(LiveChargeStatusUpdate(status: .failed("boom"), state: nil))
         model.start()
         XCTAssertEqual(model.phase, .error("boom"))
     }
 
     func testStatePresentShowsContentEvenWhileFailed() {
-        let state = ChargeStateDTO(isCharging: true, chargerPowerKw: 7.4, batteryLevelPercent: 55)
-        let (model, _) = makeModel(ChargeStatusUpdate(status: .failed("net"), state: state))
+        let state = LiveChargeStateDTO(isCharging: true, chargerPowerKw: 7.4, batteryLevelPercent: 55)
+        let (model, _) = makeModel(LiveChargeStatusUpdate(status: .failed("net"), state: state))
         model.start()
         XCTAssertEqual(model.phase, .content)
         XCTAssertEqual(model.projection?.powerValueText, "7.4")
@@ -217,7 +217,7 @@ import XCTest
 
     func testStartEmitsViewOpenedTelemetryOnce() {
         let spy = SpyChargeStatusTelemetry()
-        let (model, source) = makeModel(ChargeStatusUpdate(status: .loading, state: nil), telemetry: spy)
+        let (model, source) = makeModel(LiveChargeStatusUpdate(status: .loading, state: nil), telemetry: spy)
         model.start()
         model.start()
         XCTAssertEqual(spy.surfaces, [ChargeStatusLiveWidget.surfaceSlug])
@@ -225,7 +225,7 @@ import XCTest
     }
 
     func testRefreshDelegatesToSource() {
-        let (model, source) = makeModel(ChargeStatusUpdate(status: .loaded, state: nil))
+        let (model, source) = makeModel(LiveChargeStatusUpdate(status: .loaded, state: nil))
         model.start()
         model.refresh()
         model.refresh()
@@ -233,31 +233,31 @@ import XCTest
     }
 
     func testAutoRefreshOnlyWhenStaleAndNotFetching() {
-        let state = ChargeStateDTO(isCharging: true, chargerPowerKw: 7.4, batteryLevelPercent: 40)
-        let (model, source) = makeModel(ChargeStatusUpdate(status: .loaded, state: state))
+        let state = LiveChargeStateDTO(isCharging: true, chargerPowerKw: 7.4, batteryLevelPercent: 40)
+        let (model, source) = makeModel(LiveChargeStatusUpdate(status: .loaded, state: state))
         model.start()
 
         model.autoRefreshIfStale() // live → no refresh
         XCTAssertEqual(source.refreshCount, 0)
 
-        source.push(ChargeStatusUpdate(status: .loaded, connection: .stale, isFetching: true, state: state))
+        source.push(LiveChargeStatusUpdate(status: .loaded, connection: .stale, isFetching: true, state: state))
         model.autoRefreshIfStale() // stale but fetching → no refresh
         XCTAssertEqual(source.refreshCount, 0)
 
-        source.push(ChargeStatusUpdate(status: .loaded, connection: .stale, isFetching: false, state: state))
+        source.push(LiveChargeStatusUpdate(status: .loaded, connection: .stale, isFetching: false, state: state))
         model.autoRefreshIfStale() // stale + idle → refresh
         XCTAssertEqual(source.refreshCount, 1)
     }
 
     func testConnectionAndUnitsTrackUpdates() {
-        let (model, source) = makeModel(ChargeStatusUpdate(status: .loading, state: nil))
+        let (model, source) = makeModel(LiveChargeStatusUpdate(status: .loading, state: nil))
         model.start()
         source.push(
-            ChargeStatusUpdate(
+            LiveChargeStatusUpdate(
                 status: .loaded,
                 connection: .offline,
-                state: ChargeStateDTO(isCharging: true, chargeRateMeters: 80467.2, batteryLevelPercent: 70),
-                units: ChargeUnitPrefs(distance: .miles),
+                state: LiveChargeStateDTO(isCharging: true, chargeRateMeters: 80467.2, batteryLevelPercent: 70),
+                units: LiveChargeUnitPrefs(distance: .miles),
                 updatedAt: Date()
             )
         )
@@ -319,18 +319,18 @@ import XCTest
 
 @MainActor final class ChargeStatusAccessibilityTests: XCTestCase {
     func testChargingSummaryIncludesEveryDatum() {
-        let projection = ChargeStatusProjector.project(
-            state: ChargeStateDTO(
+        let projection = LiveChargeStatusProjector.project(
+            state: LiveChargeStateDTO(
                 isCharging: true,
                 chargerPowerKw: 11.5,
                 timeToFullHours: 1.5,
                 chargeRateMeters: 50000,
                 batteryLevelPercent: 60
             ),
-            session: ChargeSessionDTO(totalEnergyAddedWh: 25000),
-            units: ChargeUnitPrefs(distance: .kilometers)
+            session: LiveChargeSessionDTO(totalEnergyAddedWh: 25000),
+            units: LiveChargeUnitPrefs(distance: .kilometers)
         )
-        let summary = ChargeStatusAccessibility.summary(for: projection)
+        let summary = LiveChargeStatusAccessibility.summary(for: projection)
         XCTAssertEqual(
             summary,
             "Charge Status. Charging. Battery 60%. 11.5 kW. "
@@ -339,22 +339,22 @@ import XCTest
     }
 
     func testIdleSummaryIncludesLastSession() {
-        let projection = ChargeStatusProjector.project(
-            state: ChargeStateDTO(isCharging: false, batteryLevelPercent: 78),
-            session: ChargeSessionDTO(totalEnergyAddedWh: 41500),
-            units: ChargeUnitPrefs(distance: .kilometers)
+        let projection = LiveChargeStatusProjector.project(
+            state: LiveChargeStateDTO(isCharging: false, batteryLevelPercent: 78),
+            session: LiveChargeSessionDTO(totalEnergyAddedWh: 41500),
+            units: LiveChargeUnitPrefs(distance: .kilometers)
         )
-        let summary = ChargeStatusAccessibility.summary(for: projection)
+        let summary = LiveChargeStatusAccessibility.summary(for: projection)
         XCTAssertEqual(summary, "Charge Status. Not Charging. Battery 78%. Last Session +41.5 kWh")
     }
 
     func testIdleSummaryOmitsLastSessionWhenAbsent() {
-        let projection = ChargeStatusProjector.project(
-            state: ChargeStateDTO(isCharging: false, batteryLevelPercent: 78),
+        let projection = LiveChargeStatusProjector.project(
+            state: LiveChargeStateDTO(isCharging: false, batteryLevelPercent: 78),
             session: nil,
-            units: ChargeUnitPrefs(distance: .kilometers)
+            units: LiveChargeUnitPrefs(distance: .kilometers)
         )
-        let summary = ChargeStatusAccessibility.summary(for: projection)
+        let summary = LiveChargeStatusAccessibility.summary(for: projection)
         XCTAssertEqual(summary, "Charge Status. Not Charging. Battery 78%")
     }
 }

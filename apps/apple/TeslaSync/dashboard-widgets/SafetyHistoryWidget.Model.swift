@@ -3,7 +3,7 @@
 //  TeslaSync — P4 dashboard widget · 0084 · SafetyHistoryWidget (Apple)
 //
 //  State-holder seam (P1/S8) + telemetry seam (P1/S11) + registry + i18n facade
-//  (P1/S10). The view binds through `SafetyModel`; no networking lives in the view.
+//  (P1/S10). The view binds through `SafetyHistoryModel`; no networking lives in the view.
 //
 //  SwiftUI parity of features/dashboard/widgets/SafetyHistoryWidget.tsx — the
 //  composable "Safety History" ADAS surface that lists recent safety snapshots
@@ -21,12 +21,12 @@ import SwiftUI
 /// Emits the `view.opened` product-analytics event for the surface. The default
 /// implementation logs via `os.Logger`; the production app injects an adapter that
 /// forwards to the shared core diagnostics pipeline (consent-gated + redacted there).
-public protocol SafetyTelemetry: Sendable {
+public protocol SafetyHistoryTelemetry: Sendable {
     func viewOpened(surface: String)
 }
 
 /// `os.Logger`-backed default that records the surface open as a `view.opened` event.
-public struct OSLogSafetyTelemetry: SafetyTelemetry {
+public struct SafetyHistoryOSLogTelemetry: SafetyHistoryTelemetry {
     private let logger: Logger
 
     public init() {
@@ -42,7 +42,7 @@ public struct OSLogSafetyTelemetry: SafetyTelemetry {
 
 /// The load lifecycle for the widget's data, mirroring the shared `LoadableState`
 /// cases the web source projects from the `useSafetyHistory` query.
-public enum SafetyLoadStatus: Sendable, Equatable {
+public enum SafetyHistoryLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case empty
@@ -51,7 +51,7 @@ public enum SafetyLoadStatus: Sendable, Equatable {
 
 /// Live-stream freshness, mirroring `LiveConnectionState` (ADR-013). Drives the
 /// header freshness chip + the cached-data banner (web `DataFreshness` indicator).
-public enum SafetyConnection: Sendable, Equatable {
+public enum SafetyHistoryConnection: Sendable, Equatable {
     case live
     case stale
     case offline
@@ -113,17 +113,17 @@ public struct SafetyEventInput: Sendable, Equatable {
     }
 }
 
-/// One coalesced snapshot pushed by a `SafetySource`: the cached events plus their
+/// One coalesced snapshot pushed by a `SafetyHistorySource`: the cached events plus their
 /// load/connection status. The model turns this into the feed + stats projection.
-public struct SafetyUpdate: Sendable, Equatable {
-    public var status: SafetyLoadStatus
-    public var connection: SafetyConnection
+public struct SafetyHistoryUpdate: Sendable, Equatable {
+    public var status: SafetyHistoryLoadStatus
+    public var connection: SafetyHistoryConnection
     public var events: [SafetyEventInput]
     public var updatedAt: Date?
 
     public init(
-        status: SafetyLoadStatus = .loading,
-        connection: SafetyConnection = .live,
+        status: SafetyHistoryLoadStatus = .loading,
+        connection: SafetyHistoryConnection = .live,
         events: [SafetyEventInput] = [],
         updatedAt: Date? = nil
     ) {
@@ -138,22 +138,22 @@ public struct SafetyUpdate: Sendable, Equatable {
 /// shared P1/S8 state holders — composing the vehicles store (web `useVehicles`,
 /// `id = vehicleId ?? vehicles[0].id`) with the safety-history query (web
 /// `useSafetyHistory('/safety?vehicle_id=')`). Previews + tests use
-/// `InMemorySafetySource`. The view never talks to the network directly.
+/// `SafetyHistoryInMemorySource`. The view never talks to the network directly.
 @MainActor
-public protocol SafetySource: AnyObject {
-    var onUpdate: (@MainActor (SafetyUpdate) -> Void)? { get set }
+public protocol SafetyHistorySource: AnyObject {
+    var onUpdate: (@MainActor (SafetyHistoryUpdate) -> Void)? { get set }
     func start()
     func stop()
     func refresh()
 }
 
-/// The widget's observable view-model. Subscribes to a `SafetySource`, recomputes the
+/// The widget's observable view-model. Subscribes to a `SafetyHistorySource`, recomputes the
 /// `SafetyFeedItem` + `SafetyStats` projections, and exposes a render `Phase` +
 /// freshness for SwiftUI to switch over. Size-agnostic: the view applies the
 /// size-derived compact gate (web `isCompact`) via `SafetyLayout`.
 @MainActor
 @Observable
-public final class SafetyModel {
+public final class SafetyHistoryModel {
     /// The mutually-exclusive render branches (web shell loading / content / empty).
     public enum Phase: Equatable {
         case loading
@@ -163,19 +163,19 @@ public final class SafetyModel {
     }
 
     public private(set) var phase: Phase = .loading
-    public private(set) var connection: SafetyConnection = .live
+    public private(set) var connection: SafetyHistoryConnection = .live
     public private(set) var feedItems: [SafetyFeedItem] = []
     public private(set) var stats: SafetyStats = .init(totalEvents: 0, mostCommon: "—", trend: .none)
     public private(set) var updatedAt: Date?
 
-    @ObservationIgnored private let source: any SafetySource
-    @ObservationIgnored private let telemetry: any SafetyTelemetry
+    @ObservationIgnored private let source: any SafetyHistorySource
+    @ObservationIgnored private let telemetry: any SafetyHistoryTelemetry
     @ObservationIgnored private let now: @Sendable () -> Date
     @ObservationIgnored private var started = false
 
     public init(
-        source: any SafetySource,
-        telemetry: any SafetyTelemetry = OSLogSafetyTelemetry(),
+        source: any SafetyHistorySource,
+        telemetry: any SafetyHistoryTelemetry = SafetyHistoryOSLogTelemetry(),
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.source = source
@@ -203,11 +203,11 @@ public final class SafetyModel {
         source.refresh()
     }
 
-    private func apply(_ update: SafetyUpdate) {
+    private func apply(_ update: SafetyHistoryUpdate) {
         connection = update.connection
         updatedAt = update.updatedAt
-        feedItems = SafetyFeedBuilder.build(events: update.events, localize: SafetyStrings.string)
-        stats = SafetyStatsBuilder.build(events: update.events, now: now(), localize: SafetyStrings.string)
+        feedItems = SafetyFeedBuilder.build(events: update.events, localize: SafetyHistoryStrings.string)
+        stats = SafetyStatsBuilder.build(events: update.events, now: now(), localize: SafetyHistoryStrings.string)
         phase = Self.resolvePhase(update)
     }
 
@@ -216,7 +216,7 @@ public final class SafetyModel {
     /// empty; whenever events are known the widget renders (cached rows stay visible
     /// behind refresh/errors, with the freshness chip + banner reflecting
     /// staleness/offline/failure).
-    public static func resolvePhase(_ update: SafetyUpdate) -> Phase {
+    public static func resolvePhase(_ update: SafetyHistoryUpdate) -> Phase {
         let hasEvents = !update.events.isEmpty
         switch update.status {
         case .loading:
@@ -233,15 +233,15 @@ public final class SafetyModel {
 
 /// In-memory source for previews + unit/UI tests. Drive it with `push(_:)`.
 @MainActor
-public final class InMemorySafetySource: SafetySource {
-    public var onUpdate: (@MainActor (SafetyUpdate) -> Void)?
+public final class SafetyHistoryInMemorySource: SafetyHistorySource {
+    public var onUpdate: (@MainActor (SafetyHistoryUpdate) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
     public private(set) var refreshCount = 0
 
-    private let initial: SafetyUpdate?
+    private let initial: SafetyHistoryUpdate?
 
-    public init(initial: SafetyUpdate? = nil) {
+    public init(initial: SafetyHistoryUpdate? = nil) {
         self.initial = initial
     }
 
@@ -259,7 +259,7 @@ public final class InMemorySafetySource: SafetySource {
     }
 
     /// Pushes a snapshot to the bound model (test/preview affordance).
-    public func push(_ update: SafetyUpdate) {
+    public func push(_ update: SafetyHistoryUpdate) {
         onUpdate?(update)
     }
 }
@@ -287,7 +287,7 @@ public extension SafetyHistoryWidget {
 /// Resolves the surface's strings by key with the web English fallback, so the view
 /// holds no hardcoded literals. Keys live in the "SafetyHistoryWidget" table, folded
 /// into the app `Localizable.xcstrings` catalog at integration time.
-public enum SafetyStrings {
+public enum SafetyHistoryStrings {
     public static let table = "SafetyHistoryWidget"
 
     public static func string(_ key: String, _ fallback: String) -> String {

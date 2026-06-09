@@ -143,7 +143,7 @@ private struct DrivingCoachPatternSpec {
 
 // MARK: - Projector (pure)
 
-/// The dependency-free projection from a resolved `DrivingCoachData` to the view-ready `DrivingCoachProjection`.
+/// The dependency-free projection from a resolved `DrivingCoachData` to the view-ready `DrivingCoachSectionProjection`.
 /// Every value uses the same arithmetic as the web component so the native surface shows the exact same
 /// numbers as the web one.
 public enum DrivingCoachProjector {
@@ -184,7 +184,7 @@ public enum DrivingCoachProjector {
     /// resolved-but-empty payload is the empty state, an analysed payload is content with the full
     /// composition.
     public static func resolvePhase(
-        _ status: DrivingCoachLoadStatus,
+        _ status: DrivingCoachSectionLoadStatus,
         hasContent: Bool
     ) -> DrivingCoachPhase {
         switch status {
@@ -204,9 +204,9 @@ public enum DrivingCoachProjector {
         copy: DrivingCoachCopy = .fallback,
         localeIdentifier: String = "en_US",
         timeZone: TimeZone = .current
-    ) -> DrivingCoachProjection {
+    ) -> DrivingCoachSectionProjection {
         guard let data else { return .empty }
-        return DrivingCoachProjection(
+        return DrivingCoachSectionProjection(
             gauge: gauge(from: data, localeIdentifier: localeIdentifier),
             drivesAnalyzed: data.totalDrivesAnalyzed,
             styleBreakdown: styleBreakdown(from: data),

@@ -16,6 +16,7 @@ import SwiftUI
         static let locale = Locale(identifier: "en_US")
         static let timeZone = TimeZone(identifier: "America/Los_Angeles") ?? .current
 
+        @MainActor
         static func model(unix: String = "", iso: String = "") -> TimestampToolModel {
             TimestampToolModel(
                 now: now,

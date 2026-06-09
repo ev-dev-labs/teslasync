@@ -184,16 +184,16 @@ import XCTest
     }
 
     func testNonFiniteInputsCollapseToZero() {
-        XCTAssertEqual(convertChargeDistanceFromSI(.nan, to: .kilometers), 0)
-        XCTAssertEqual(convertChargeDistanceFromSI(.infinity, to: .miles), 0)
+        XCTAssertEqual(convertChargeDistanceFromSI(.nan, to: ChargeDistanceUnit.kilometers), 0)
+        XCTAssertEqual(convertChargeDistanceFromSI(.infinity, to: ChargeDistanceUnit.miles), 0)
         XCTAssertEqual(ChargeStatusFormat.number(.infinity, decimals: 2), "0.00")
         XCTAssertEqual(ChargeStatusFormat.plainInteger(.nan), "0")
     }
 
     func testDistanceConversionFactors() {
-        XCTAssertEqual(convertChargeDistanceFromSI(1000, to: .kilometers), 1, accuracy: 1e-9)
-        XCTAssertEqual(convertChargeDistanceFromSI(1609.344, to: .miles), 1, accuracy: 1e-9)
-        XCTAssertEqual(convertChargeDistanceFromSI(0.3048, to: .feet), 1, accuracy: 1e-9)
+        XCTAssertEqual(convertChargeDistanceFromSI(1000, to: ChargeDistanceUnit.kilometers), 1, accuracy: 1e-9)
+        XCTAssertEqual(convertChargeDistanceFromSI(1609.344, to: ChargeDistanceUnit.miles), 1, accuracy: 1e-9)
+        XCTAssertEqual(convertChargeDistanceFromSI(0.3048, to: ChargeDistanceUnit.feet), 1, accuracy: 1e-9)
     }
 }
 

@@ -51,7 +51,7 @@ public struct MonthlyCostTable: View {
         .onAppear { model.start() }
         .onDisappear { model.stop() }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(verbatim: MonthlyCostStrings.string(
+        .accessibilityLabel(Text(verbatim: MonthlyCostTableStrings.string(
             "costAnalysis.table.title", "Monthly Cost Breakdown"
         )))
     }
@@ -66,7 +66,7 @@ private extension MonthlyCostTable {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.TS.accent)
                 .accessibilityHidden(true)
-            Text(verbatim: MonthlyCostStrings.string("costAnalysis.table.title", "Monthly Cost Breakdown"))
+            Text(verbatim: MonthlyCostTableStrings.string("costAnalysis.table.title", "Monthly Cost Breakdown"))
                 .font(Font.TS.panel)
                 .foregroundStyle(Color.TS.textPrimary)
                 .accessibilityAddTraits(.isHeader)
@@ -82,13 +82,13 @@ private extension MonthlyCostTable {
         switch model.connection {
         case .live:
             tone = Color.TS.statusSuccess
-            label = MonthlyCostStrings.string("monthlyCost.live", "Live")
+            label = MonthlyCostTableStrings.string("monthlyCost.live", "Live")
         case .stale:
             tone = Color.TS.statusWarning
-            label = MonthlyCostStrings.string("monthlyCost.stale", "Stale")
+            label = MonthlyCostTableStrings.string("monthlyCost.stale", "Stale")
         case .offline:
             tone = Color.TS.textMuted
-            label = MonthlyCostStrings.string("monthlyCost.offline", "Offline")
+            label = MonthlyCostTableStrings.string("monthlyCost.offline", "Offline")
         }
         return HStack(spacing: 4) {
             Circle().fill(tone).frame(width: 6, height: 6)
@@ -109,14 +109,14 @@ private extension MonthlyCostTable {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.TS.textMuted)
-        .accessibilityLabel(Text(verbatim: MonthlyCostStrings.string("monthlyCost.refresh", "Refresh")))
+        .accessibilityLabel(Text(verbatim: MonthlyCostTableStrings.string("monthlyCost.refresh", "Refresh")))
     }
 
     var connectivityBanner: some View {
         let isOffline = model.connection == .offline
         let label = isOffline
-            ? MonthlyCostStrings.string("monthlyCost.offlineBanner", "Offline — showing last known data")
-            : MonthlyCostStrings.string("monthlyCost.staleBanner", "Reconnecting — data may be stale")
+            ? MonthlyCostTableStrings.string("monthlyCost.offlineBanner", "Offline — showing last known data")
+            : MonthlyCostTableStrings.string("monthlyCost.staleBanner", "Reconnecting — data may be stale")
         let tone = isOffline ? Color.TS.textMuted : Color.TS.statusWarning
         return HStack(spacing: TSSpacing.xs) {
             Image(systemName: isOffline ? "wifi.slash" : "clock.arrow.circlepath")

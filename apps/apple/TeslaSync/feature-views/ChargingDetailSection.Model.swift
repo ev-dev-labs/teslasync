@@ -190,17 +190,17 @@ public final class ChargingDetailModel {
 
     /// The charger-brand leaderboard rows (web `brandLeaderboard`).
     public var brandLeaderboard: [BrandLeaderboardRow] {
-        ChargingProjection.brandLeaderboard(analytics.brands)
+        ChargingDetailProjection.brandLeaderboard(analytics.brands)
     }
 
     /// The charger-type share bars (web `chargerTypes.map`).
     public var chargerTypeShares: [ChargerTypeShare] {
-        ChargingProjection.chargerTypeShares(analytics.chargerTypes)
+        ChargingDetailProjection.chargerTypeShares(analytics.chargerTypes)
     }
 
     /// The dual-axis scale for the monthly composed chart.
     public var monthlyTrendScale: MonthlyTrendScale {
-        ChargingProjection.monthlyTrendScale(analytics.monthlyTrend)
+        ChargingDetailProjection.monthlyTrendScale(analytics.monthlyTrend)
     }
 
     /// The monthly trend points (web `monthlyTrend`).

@@ -12,9 +12,9 @@ import SwiftUI
 
 #if DEBUG
     @MainActor
-    private func previewModel(_ update: SafetyUpdate) -> SafetyModel {
-        let source = InMemorySafetySource(initial: update)
-        let model = SafetyModel(source: source)
+    private func previewModel(_ update: SafetyHistoryUpdate) -> SafetyHistoryModel {
+        let source = SafetyHistoryInMemorySource(initial: update)
+        let model = SafetyHistoryModel(source: source)
         model.start()
         return model
     }
@@ -57,7 +57,7 @@ import SwiftUI
     #Preview("Content (2×4)") {
         SafetyHistoryWidget(
             model: previewModel(
-                SafetyUpdate(
+                SafetyHistoryUpdate(
                     status: .loaded,
                     connection: .live,
                     events: previewEvents(),
@@ -75,7 +75,7 @@ import SwiftUI
     #Preview("Wide (4×6)") {
         SafetyHistoryWidget(
             model: previewModel(
-                SafetyUpdate(status: .loaded, connection: .live, events: previewEvents(), updatedAt: Date())
+                SafetyHistoryUpdate(status: .loaded, connection: .live, events: previewEvents(), updatedAt: Date())
             ),
             size: DashboardWidgetSize(cols: 4, rows: 6)
         )
@@ -85,30 +85,33 @@ import SwiftUI
     }
 
     #Preview("Empty") {
-        SafetyHistoryWidget(model: previewModel(SafetyUpdate(status: .loaded, events: [])))
+        SafetyHistoryWidget(model: previewModel(SafetyHistoryUpdate(status: .loaded, events: [])))
             .frame(width: 320, height: 420)
             .padding()
             .background(Color.TS.bg)
     }
 
     #Preview("Loading") {
-        SafetyHistoryWidget(model: previewModel(SafetyUpdate(status: .loading, events: [])))
+        SafetyHistoryWidget(model: previewModel(SafetyHistoryUpdate(status: .loading, events: [])))
             .frame(width: 320, height: 420)
             .padding()
             .background(Color.TS.bg)
     }
 
     #Preview("Error") {
-        SafetyHistoryWidget(model: previewModel(SafetyUpdate(status: .failed("Network unavailable"), events: [])))
-            .frame(width: 320, height: 420)
-            .padding()
-            .background(Color.TS.bg)
+        SafetyHistoryWidget(model: previewModel(SafetyHistoryUpdate(
+            status: .failed("Network unavailable"),
+            events: []
+        )))
+        .frame(width: 320, height: 420)
+        .padding()
+        .background(Color.TS.bg)
     }
 
     #Preview("Offline (cached)") {
         SafetyHistoryWidget(
             model: previewModel(
-                SafetyUpdate(
+                SafetyHistoryUpdate(
                     status: .loaded,
                     connection: .offline,
                     events: previewEvents(),
@@ -124,7 +127,7 @@ import SwiftUI
     #Preview("Stale") {
         SafetyHistoryWidget(
             model: previewModel(
-                SafetyUpdate(
+                SafetyHistoryUpdate(
                     status: .loaded,
                     connection: .stale,
                     events: previewEvents(),
@@ -140,7 +143,7 @@ import SwiftUI
     // The registry `minSize` clamps the surface to cols ≥ 2, so the compact summary
     // (web `CompactView`) is previewed directly to keep the parity branch verifiable.
     #Preview("Compact summary") {
-        let stats = SafetyStatsBuilder.build(events: previewEvents(), localize: SafetyStrings.string)
+        let stats = SafetyStatsBuilder.build(events: previewEvents(), localize: SafetyHistoryStrings.string)
         return SafetyCompactView(stats: stats)
             .padding(TSSpacing.md)
             .frame(width: 240, height: 80)

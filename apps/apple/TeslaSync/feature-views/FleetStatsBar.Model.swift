@@ -4,7 +4,7 @@
 //
 //  The state-holder seam (P1/S8), the telemetry seam (P1/S11 diagnostics), and the
 //  i18n facade (P1/S10) for the dashboard fleet stats bar. The view binds through
-//  `FleetStatsBarModel`; no networking lives in the view. SwiftUI parity of
+//  `FleetStatsBarViewModel`; no networking lives in the view. SwiftUI parity of
 //  features/dashboard/components/FleetStatsBar.tsx.
 //
 //  The web leaf receives its props from `FleetStatsWidget`, which owns the
@@ -109,7 +109,7 @@ public protocol FleetStatsSource: AnyObject {
 /// first appearance.
 @MainActor
 @Observable
-public final class FleetStatsBarModel {
+public final class FleetStatsBarViewModel {
     public private(set) var phase: FleetStatsPhase = .loading
     public private(set) var connection: FleetStatsConnection = .live
     public private(set) var cards: [FleetStatCard] = []

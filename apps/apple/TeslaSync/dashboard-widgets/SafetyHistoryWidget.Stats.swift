@@ -153,7 +153,7 @@ public enum SafetyRelativeTime {
 
 /// Builds the VoiceOver strings for the surface. Pure + public so the spoken content
 /// can be unit-tested without rendering the view.
-public enum SafetyAccessibility {
+public enum SafetyHistoryAccessibility {
     /// The spoken label for a feed row: title plus subtitle when meaningful.
     public static func eventSummary(for item: SafetyFeedItem) -> String {
         guard item.subtitle != "—", !item.subtitle.isEmpty else { return item.title }

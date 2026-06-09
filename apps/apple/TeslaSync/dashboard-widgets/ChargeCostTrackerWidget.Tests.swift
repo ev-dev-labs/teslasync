@@ -163,10 +163,10 @@ final class ChargeCostAdapterTests: XCTestCase {
     func testConversionFactors() {
         XCTAssertEqual(convertChargeEnergyFromSIToKwh(1000), 1, accuracy: 1e-9)
         XCTAssertEqual(convertChargeEnergyFromSIToKwh(.nan), 0)
-        XCTAssertEqual(convertChargeDistanceFromSI(1000, to: .kilometers), 1, accuracy: 1e-9)
-        XCTAssertEqual(convertChargeDistanceFromSI(1609.344, to: .miles), 1, accuracy: 1e-9)
-        XCTAssertEqual(convertChargeDistanceFromSI(0.3048, to: .feet), 1, accuracy: 1e-9)
-        XCTAssertEqual(convertChargeDistanceFromSI(.infinity, to: .kilometers), 0)
+        XCTAssertEqual(convertChargeDistanceFromSI(1000, to: ChargeCostDistanceUnit.kilometers), 1, accuracy: 1e-9)
+        XCTAssertEqual(convertChargeDistanceFromSI(1609.344, to: ChargeCostDistanceUnit.miles), 1, accuracy: 1e-9)
+        XCTAssertEqual(convertChargeDistanceFromSI(0.3048, to: ChargeCostDistanceUnit.feet), 1, accuracy: 1e-9)
+        XCTAssertEqual(convertChargeDistanceFromSI(.infinity, to: ChargeCostDistanceUnit.kilometers), 0)
     }
 }
 

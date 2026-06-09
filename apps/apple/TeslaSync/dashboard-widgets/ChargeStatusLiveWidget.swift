@@ -266,7 +266,7 @@ extension ChargeStatusLiveWidget {
         .accessibilityIdentifier("widget.chargeStatusLive.error")
     }
 
-    private func loadedContent(_ projection: ChargeStatusProjection) -> some View {
+    private func loadedContent(_ projection: LiveChargeStatusProjection) -> some View {
         VStack(alignment: .leading, spacing: TSSpacing.sm) {
             if model.connection != .live { connectivityBanner }
             body(for: projection)
@@ -274,13 +274,13 @@ extension ChargeStatusLiveWidget {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(verbatim: ChargeStatusAccessibility.summary(for: projection)))
+        .accessibilityLabel(Text(verbatim: LiveChargeStatusAccessibility.summary(for: projection)))
         .accessibilityIdentifier("widget.chargeStatusLive.content")
     }
 
     /// Web body dispatch: `state.is_charging ? (compact|full charging) : (compact|full idle)`.
     @ViewBuilder
-    private func body(for projection: ChargeStatusProjection) -> some View {
+    private func body(for projection: LiveChargeStatusProjection) -> some View {
         if projection.isCharging {
             if isCompact {
                 ChargeStatusCompactChargingView(projection: projection)

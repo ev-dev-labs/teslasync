@@ -231,7 +231,7 @@ public final class InMemoryMonthlyCostTableSource: MonthlyCostTableSource {
 /// Resolves the surface's strings by key with the web English fallback, so the view holds
 /// no hardcoded literals. Keys live in the "MonthlyCostTable" table, folded into the app
 /// `Localizable.xcstrings` catalog at integration time.
-public enum MonthlyCostStrings {
+public enum MonthlyCostTableStrings {
     public static let table = "MonthlyCostTable"
 
     public static func string(_ key: String, _ fallback: String) -> String {

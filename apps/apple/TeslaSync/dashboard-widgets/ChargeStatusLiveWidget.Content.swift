@@ -13,7 +13,7 @@ import SwiftUI
 // MARK: - Full: actively charging (web `FullChargingView`)
 
 struct ChargeStatusFullChargingView: View {
-    let projection: ChargeStatusProjection
+    let projection: LiveChargeStatusProjection
     let isTall: Bool
 
     private var metricColumns: [GridItem] {
@@ -74,7 +74,7 @@ struct ChargeStatusFullChargingView: View {
 // MARK: - Full: not charging (web `IdleView`)
 
 struct ChargeStatusIdleView: View {
-    let projection: ChargeStatusProjection
+    let projection: LiveChargeStatusProjection
 
     var body: some View {
         VStack(spacing: TSSpacing.md) {
@@ -126,7 +126,7 @@ struct ChargeStatusIdleView: View {
 // MARK: - Compact: charging (web `CompactChargingView`)
 
 struct ChargeStatusCompactChargingView: View {
-    let projection: ChargeStatusProjection
+    let projection: LiveChargeStatusProjection
 
     var body: some View {
         VStack(spacing: TSSpacing.xs) {
@@ -154,7 +154,7 @@ struct ChargeStatusCompactChargingView: View {
 // MARK: - Compact: idle (web `CompactIdleView`)
 
 struct ChargeStatusCompactIdleView: View {
-    let projection: ChargeStatusProjection
+    let projection: LiveChargeStatusProjection
 
     var body: some View {
         VStack(spacing: TSSpacing.xs) {
@@ -179,7 +179,7 @@ struct ChargeStatusCompactIdleView: View {
 // MARK: - Metric cell (web `MetricCell`)
 
 struct ChargeStatusMetricCell: View {
-    let metric: ChargeMetric
+    let metric: LiveChargeMetric
 
     var body: some View {
         HStack(alignment: .top, spacing: 6) {

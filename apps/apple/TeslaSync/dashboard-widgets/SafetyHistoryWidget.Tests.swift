@@ -3,7 +3,7 @@
 //  TeslaSync — P4 dashboard widget · 0084 · SafetyHistoryWidget (Apple)
 //
 //  Unit coverage for the SafetyHistoryWidget surface:
-//    • Enum normalization — `SafetyEnum.clean`/`isActive`/`numberString`/`rawString`
+//    • Enum normalization — `SafetyHistoryEnum.clean`/`isActive`/`numberString`/`rawString`
 //      parity with the web `lib/safetyEnum` (`cleanSafetyEnum`/`isSafetyEnumActive`).
 //    • Adapter (cached → projection) — `SafetyEventCatalog.derive`/`visual`/`title`/
 //      `subtitle` parity with the web `classifySnapshot` ladder + `buildSubtitle`, and
@@ -12,13 +12,13 @@
 //      most-common bucket with stable ties, 30-vs-prior-30-day trend).
 //    • Layout — `SafetyLayout.isCompact`/`feedMaxItems` parity with the web
 //      `isCompact = size.cols <= 1` and `maxItems={10}`.
-//    • State holder — `SafetyModel` phase resolution across loading / empty / error /
+//    • State holder — `SafetyHistoryModel` phase resolution across loading / empty / error /
 //      content, plus the P1/S11 `view.opened` telemetry + source wiring.
 //    • Registry — canonical `safety-history` metadata + size clamping.
 //    • Accessibility — the VoiceOver summary content for rows + the compact summary.
 //
 //  These run in the TeslaSync(/-macOS) XCTest targets. They have no network and no
-//  real store: the model is driven by `InMemorySafetySource`.
+//  real store: the model is driven by `SafetyHistoryInMemorySource`.
 //
 
 import XCTest
@@ -28,64 +28,64 @@ import XCTest
 
 final class SafetyEnumTests: XCTestCase {
     func testCleanBooleanRendersOnOff() {
-        XCTAssertEqual(SafetyEnum.clean(.bool(true), field: .forwardCollisionWarning), "On")
-        XCTAssertEqual(SafetyEnum.clean(.bool(false), field: .forwardCollisionWarning), "Off")
+        XCTAssertEqual(SafetyHistoryEnum.clean(.bool(true), field: .forwardCollisionWarning), "On")
+        XCTAssertEqual(SafetyHistoryEnum.clean(.bool(false), field: .forwardCollisionWarning), "Off")
     }
 
     func testCleanNumberRendersDecimalForm() {
-        XCTAssertEqual(SafetyEnum.clean(.number(3), field: .cruiseFollowDistance), "3")
-        XCTAssertEqual(SafetyEnum.clean(.number(3.5), field: .cruiseFollowDistance), "3.5")
-        XCTAssertEqual(SafetyEnum.numberString(3.0), "3")
-        XCTAssertEqual(SafetyEnum.numberString(2.25), "2.25")
+        XCTAssertEqual(SafetyHistoryEnum.clean(.number(3), field: .cruiseFollowDistance), "3")
+        XCTAssertEqual(SafetyHistoryEnum.clean(.number(3.5), field: .cruiseFollowDistance), "3.5")
+        XCTAssertEqual(SafetyHistoryEnum.numberString(3.0), "3")
+        XCTAssertEqual(SafetyHistoryEnum.numberString(2.25), "2.25")
     }
 
     func testCleanStripsKnownPrefix() {
         XCTAssertEqual(
-            SafetyEnum.clean(.string("ForwardCollisionSensitivityHigh"), field: .forwardCollisionWarning),
+            SafetyHistoryEnum.clean(.string("ForwardCollisionSensitivityHigh"), field: .forwardCollisionWarning),
             "High"
         )
         XCTAssertEqual(
-            SafetyEnum.clean(.string("LaneAssistLevelWarning"), field: .laneDepartureAvoidance),
+            SafetyHistoryEnum.clean(.string("LaneAssistLevelWarning"), field: .laneDepartureAvoidance),
             "Warning"
         )
     }
 
     func testCleanSpeedLimitNoneBecomesOff() {
         XCTAssertEqual(
-            SafetyEnum.clean(.string("SpeedAssistLevelNone"), field: .speedLimitWarning),
+            SafetyHistoryEnum.clean(.string("SpeedAssistLevelNone"), field: .speedLimitWarning),
             "Off"
         )
     }
 
     func testCleanUnprefixedStringPassesThrough() {
-        XCTAssertEqual(SafetyEnum.clean(.string("Chime"), field: .speedLimitWarning), "Chime")
+        XCTAssertEqual(SafetyHistoryEnum.clean(.string("Chime"), field: .speedLimitWarning), "Chime")
     }
 
     func testCleanEmptyAndNullUseFallback() {
-        XCTAssertEqual(SafetyEnum.clean(.string(""), field: .speedLimitWarning), "—")
-        XCTAssertEqual(SafetyEnum.clean(.null, field: .speedLimitWarning, fallback: "n/a"), "n/a")
+        XCTAssertEqual(SafetyHistoryEnum.clean(.string(""), field: .speedLimitWarning), "—")
+        XCTAssertEqual(SafetyHistoryEnum.clean(.null, field: .speedLimitWarning, fallback: "n/a"), "n/a")
     }
 
     func testIsActiveClassification() {
-        XCTAssertFalse(SafetyEnum.isActive(.null, field: .forwardCollisionWarning))
-        XCTAssertTrue(SafetyEnum.isActive(.bool(true), field: .forwardCollisionWarning))
-        XCTAssertFalse(SafetyEnum.isActive(.bool(false), field: .forwardCollisionWarning))
+        XCTAssertFalse(SafetyHistoryEnum.isActive(.null, field: .forwardCollisionWarning))
+        XCTAssertTrue(SafetyHistoryEnum.isActive(.bool(true), field: .forwardCollisionWarning))
+        XCTAssertFalse(SafetyHistoryEnum.isActive(.bool(false), field: .forwardCollisionWarning))
         // Web invariant: a disabled-by-bool feature must NOT be classified as active.
-        XCTAssertFalse(SafetyEnum.isActive(.number(0), field: .cruiseFollowDistance))
-        XCTAssertTrue(SafetyEnum.isActive(.number(3), field: .cruiseFollowDistance))
+        XCTAssertFalse(SafetyHistoryEnum.isActive(.number(0), field: .cruiseFollowDistance))
+        XCTAssertTrue(SafetyHistoryEnum.isActive(.number(3), field: .cruiseFollowDistance))
         XCTAssertFalse(
-            SafetyEnum.isActive(.string("ForwardCollisionSensitivityOff"), field: .forwardCollisionWarning)
+            SafetyHistoryEnum.isActive(.string("ForwardCollisionSensitivityOff"), field: .forwardCollisionWarning)
         )
         XCTAssertTrue(
-            SafetyEnum.isActive(.string("ForwardCollisionSensitivityHigh"), field: .forwardCollisionWarning)
+            SafetyHistoryEnum.isActive(.string("ForwardCollisionSensitivityHigh"), field: .forwardCollisionWarning)
         )
-        XCTAssertFalse(SafetyEnum.isActive(.string("None"), field: .laneDepartureAvoidance))
+        XCTAssertFalse(SafetyHistoryEnum.isActive(.string("None"), field: .laneDepartureAvoidance))
     }
 
     func testRawStringEcho() {
-        XCTAssertEqual(SafetyEnum.rawString(.bool(true)), "true")
-        XCTAssertEqual(SafetyEnum.rawString(.number(3)), "3")
-        XCTAssertEqual(SafetyEnum.rawString(.string("SpeedAssistLevelChime")), "SpeedAssistLevelChime")
+        XCTAssertEqual(SafetyHistoryEnum.rawString(.bool(true)), "true")
+        XCTAssertEqual(SafetyHistoryEnum.rawString(.number(3)), "3")
+        XCTAssertEqual(SafetyHistoryEnum.rawString(.string("SpeedAssistLevelChime")), "SpeedAssistLevelChime")
     }
 }
 
