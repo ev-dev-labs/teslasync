@@ -287,3 +287,4 @@ p2-windows/feature-views/W-0091-SessionDetailPanel.prompt.md
 p2-windows/feature-views/W-0094-TimeToChargeSection.prompt.md
 p2-windows/feature-views/W-0095-YearlyTrendChart.prompt.md
 p2-windows/feature-views/W-0097-BatteryLevelChart.prompt.md
+p2-windows/feature-views/W-0098-ChargerSpecsPanel.prompt.md
