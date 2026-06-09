@@ -36,6 +36,9 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaHistoryWidget\MediaHistoryWidget.Model.cs" Link="Widgets\MediaHistoryWidget\MediaHistoryWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaHistoryWidget\MediaHistoryWidget.ViewModel.cs" Link="Widgets\MediaHistoryWidget\MediaHistoryWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaHistoryWidget\MediaHistoryWidget.Source.cs" Link="Widgets\MediaHistoryWidget\MediaHistoryWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.Model.cs" Link="Widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.ViewModel.cs" Link="Widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.Model.cs" Link="Widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.Model.cs" />
