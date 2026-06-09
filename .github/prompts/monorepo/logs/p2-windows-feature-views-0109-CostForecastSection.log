@@ -1,0 +1,91 @@
+=== P2 Feature view 0109 CostForecastSection (Windows / WinUI 3) ===
+Date: 2026-06-09  Runner: Windows_NT, .NET SDK 10.0.300, Microsoft.WindowsAppSDK present
+Web source: web/src/features/charging/components/cost-analysis/CostForecastSection.tsx
+Native output: apps/windows/TeslaSync.App/feature-views/CostForecastSection.{cs,Model.cs,Source.cs,ViewModel.cs}
+
+CAPABILITY: WinUI 3 (Windows App SDK) + .NET 10 are AVAILABLE — the app + view compile (BUILD_EXIT=0).
+  The surface is NOT blocked. The only environmental gap is the WinAppDriver/Appium UI-automation
+  runner (W9-0002), absent on this headless host; that gates only the separate TeslaSync.App.UITests
+  E2E suite (Category=UIAutomation), disclosed in full below and deferred per the documented separation.
+
+IMPLEMENTATION (parity with the web source; native primitives + P1/S9 tokens, no Tailwind ports):
+  - Self-fetching surface (SessionComparisonChart pattern): own cache-then-network source over
+    GET /analytics/cost-forecast?vehicle_id=&months=6 (op get_api_v1_analytics_cost_forecast), so the
+    surface renders the full P2 state matrix (loading skeleton / loaded / empty / error retry /
+    stale chip / offline chip) the web prop-fed child cannot. No HTTP in the view.
+  - Two cost panels reproduced: (1) forecast TsComposedChart = Actual Cost area (historical) +
+    95% Confidence area (forecast cost_high upper envelope) + Projected Cost line (forecast cost),
+    web hasForecast gate (historical>=3 && forecast>0), needData empty branch; (2) cost-per-kWh
+    TsLineChart over historical cost_per_kwh, web hasCostPerKwhTrend gate (historical>1), needTrendData
+    empty branch. Categorical month axis surfaced as a month-label strip (web XAxis dataKey=month).
+  - Confidence band note: web stacks ci_low+ci_band; the native cartesian surface fills areas to the
+    zero baseline (no stacking), so the band is drawn as the upper bound (cost_high) envelope with the
+    projected line inside it; both bounds are parsed and retained on the model. ForecastDetails (web
+    middle block) is a separate surface (own prompt) and is intentionally NOT rendered here.
+  - States never hide a panel (TsEmptyState placeholders, never a blank box); freshness chip + refresh
+    on the forecast panel header; reduce-motion honoured by TsFadeIn; Narrator names on surface/panels/
+    charts/month-axis/refresh.
+
+i18n (ADR-016): all 8 source keys already present in apps/shared/i18n/catalog en/ar/he (8/8 each) — NO
+  catalog edits: costAnalysis.forecast.{title,confidence,actual,projected,needData,costPerKwhTrend,
+  costPerKwh,needTrendData}. No English literals in native code (verified by the KeyEcho test).
+Telemetry (P1/S11): view.opened slug=CostForecastSection, PII-safe (no cost/currency/month/VIN in the line).
+
+Tests: apps/windows/TeslaSync.App.Tests/FeatureViews/CostForecastSectionTests.cs (30 tests: JSON parse
+  incl. confidence bounds + numeric-string tolerance, projection gating, 3-series order/kind/points,
+  confidence-upper-bound, ordinal-X month-then-forecast, trend cost_per_kwh, currency unit, i18n key
+  resolution (KeyEcho), a11y names, result mapper, full view-model state matrix, registration, PII-safe
+  diagnostics). Model/Source/ViewModel linked into TeslaSync.App.Tests.csproj so the logic is verified
+  headlessly.
+
+PRE-EXISTING REPAIR (required to unblock the gate): TeslaSync.App.Tests.csproj had been corrupted by a
+  chain of integration merges into multiple concatenated <Project> roots + a malformed XML comment
+  (MSB4025), which failed XML load and blocked the ENTIRE solution build/test. Consolidated into one
+  valid <Project> root preserving the deduplicated union of all 412 existing Compile links (no source
+  dropped) + the 3 new CostForecastSection.{Model,Source,ViewModel}.cs links (415 total, 0 duplicate
+  includes). Same recurring repair the predecessor logs document (0091/0093/0094/0098).
+
+=========================== GATE ===========================
+STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+  Build succeeded. 0 Error(s).
+BUILD_EXIT=0
+
+STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release   (literal whole-solution)
+  Failed!  - Failed: 147, Passed:    0, Skipped: 0, Total:  147 - TeslaSync.App.UITests.dll (net10.0)
+  Passed!  - Failed:   0, Passed: 9146, Skipped: 0, Total: 9146 - TeslaSync.App.Tests.dll  (net10.0)
+  NOTE: every one of the 147 failures is TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException:
+        'WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+        WinAppDriver.exe was not found...'. They are the W9-0002 Category=UIAutomation E2E suite; NONE
+        is CostForecastSection-specific. Disclosed, NOT reported as green.
+WHOLE_SOLUTION_TEST_EXIT=1
+
+STEP 2b: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation
+         (headless surface-logic gate, the documented W9-0002 separation)
+  Passed!  - Failed: 0, Passed: 9146, Skipped: 0, Total: 9146 - TeslaSync.App.Tests.dll (net10.0)
+  (No test matches Category!=UIAutomation in TeslaSync.App.UITests.dll — the whole E2E suite is excluded.)
+HEADLESS_TEST_EXIT=0
+
+STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  No formatting changes required (whole solution).
+FORMAT_EXIT=0
+
+STEP 4: check-placeholders.ps1
+  Literal gate path (apps/windows/TeslaSync.App/feature-views/CostForecastSection): PLACEHOLDER_COUNT=0 EXIT=0
+  Genuine scan of each shipped file (CostForecastSection.{cs,Model,Source,ViewModel}.cs + Tests.cs):
+    PLACEHOLDER_COUNT=0 on every file.
+PLACEHOLDER_EXIT=0
+
+--- VERDICT ---
+Surface gates (build + surface-scoped headless tests + format + placeholders) are ALL green; the
+CostForecastSection surface is implemented to parity and verified headlessly (30 new tests; 9146/9146
+headless total pass). The literal whole-solution dotnet-test returns 1 ONLY because of the separately-run,
+WinAppDriver-gated Category=UIAutomation E2E suite, whose runner is absent on this headless host (no
+interactive desktop / WinAppDriver). That is a platform-capability gap in the UI-automation runner
+(W9-0002; re-run via apps/windows/run-ui-automation.ps1), disclosed here in full, deferred in
+apps/environment-pending-verifications.md, and NOT reported as green. It contains no
+CostForecastSection-specific test.
+
+BUILD_EXIT=0 | TEST_EXIT(surface-scoped)=0 | FORMAT_EXIT=0 | PLACEHOLDER_EXIT=0
+TEST_EXIT(sln literal)=1 [BLOCKED: WinAppDriver UI-automation runner absent; W9-0002; not surface-related]
+EXIT=0
+STATUS=DONE
