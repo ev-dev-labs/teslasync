@@ -146,14 +146,24 @@
     of integration merges had repeatedly re-concatenated this file into multiple <Project> roots plus duplicate
     <Compile> items, failing XML load (MSB4025); consolidated for P2 feature-views/0140 DriveTimeline into this
     single canonical root (no linked source dropped) plus the new DriveTimeline surface Model link.
+    Presentation) of the WinUI app. Targets plain net10.0 so dotnet test runs without a WinUI / UI-thread
+    host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources are Compile-linked below rather
+    than project-referenced (the views themselves are exercised by the app build). The matching test classes
+    live under this project and are picked up by the SDK default-compile glob.
+
+    Keep this file as ONE Project root with a single linked-source Compile ItemGroup. A chain of
+    auto-integration merges had repeatedly re-concatenated multiple project roots plus duplicate Compile
+    items, failing XML load (MSB4025); consolidated for P2 feature-views/0143 HeroGauges (Driving) into a
+    single valid root with the path-sorted, deduplicated union of every previously linked source preserved.
   -->
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <IsPackable>false</IsPackable>
     <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -173,6 +183,8 @@
        ADR-004), the MSIX package manifest and the packaged widget Adaptive Card template. -->
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget card template). -->
   <!-- Test fixtures copied next to the test assembly: SI golden vectors, MSIX manifest, widget template. -->
+  <!-- Test fixtures copied next to the test assembly: SI golden vectors (units-golden.json), the MSIX
+       package manifest, and the packaged widget Adaptive Card template. -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -190,6 +202,9 @@
   <!-- Linked WinUI-free Model / Source / ViewModel sources from TeslaSync.App, deduplicated and path-sorted.
        The headless net10.0 test project verifies each adapter, projection and diagnostics without a UI host;
        the WinUI views themselves are exercised by the app build. -->
+  <!-- Linked WinUI-free Model / Source / ViewModel / Presentation sources from the WinUI app project
+       (deduplicated, path-sorted union). The headless net10.0 test project verifies each adapter,
+       projection and diagnostics without a UI host; the WinUI views are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -552,6 +567,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\Charging\HeroGauges.Model.cs" Link="FeatureViews\HeroGauges\Charging\HeroGauges.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\Charging\HeroGauges.Source.cs" Link="FeatureViews\HeroGauges\Charging\HeroGauges.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\Charging\HeroGauges.ViewModel.cs" Link="FeatureViews\HeroGauges\Charging\HeroGauges.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\Driving\HeroGauges.Model.cs" Link="FeatureViews\HeroGauges\Driving\HeroGauges.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\Driving\HeroGauges.Source.cs" Link="FeatureViews\HeroGauges\Driving\HeroGauges.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\Driving\HeroGauges.ViewModel.cs" Link="FeatureViews\HeroGauges\Driving\HeroGauges.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\HeroGauges.Model.cs" Link="FeatureViews\HeroGauges\HeroGauges.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\HeroGauges.ViewModel.cs" Link="FeatureViews\HeroGauges\HeroGauges.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HighlightCard.Model.cs" Link="FeatureViews\HighlightCard.Model.cs" />
