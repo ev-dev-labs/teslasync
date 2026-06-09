@@ -198,6 +198,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MotorPerformanceWidget\MotorPerformanceWidget.Model.cs" Link="Widgets\MotorPerformanceWidget\MotorPerformanceWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MotorPerformanceWidget\MotorPerformanceWidget.ViewModel.cs" Link="Widgets\MotorPerformanceWidget\MotorPerformanceWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MotorPerformanceWidget\MotorPerformanceWidget.Source.cs" Link="Widgets\MotorPerformanceWidget\MotorPerformanceWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.Model.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.ViewModel.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.Source.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.Source.cs" />
   </ItemGroup>
 
   <!--
