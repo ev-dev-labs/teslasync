@@ -448,6 +448,9 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\ToolCard.Presentation.cs" Link="FeatureViews\ToolCard.Presentation.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (W-0013): the ColorConverter's UI-thread-free logic (the hex parse + HSL conversion
     model and the state-holder view-model) lives in the WinUI app project but is WinUI-free by construction.
     Link those two source files in so the headless (net10.0) test project verifies the adapter + per-state
@@ -456,6 +459,19 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.Model.cs" Link="FeatureViews\ColorConverter\ColorConverter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.ViewModel.cs" Link="FeatureViews\ColorConverter\ColorConverter.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views (0024-UuidGenerator): the surface's UI-thread-free logic (the history projection, the
+    RFC 4122 v4 generation seam + format, the registration / PII-safe diagnostics and the state-holder
+    view-model) lives in the WinUI app project but is WinUI-free by construction. Link those two source
+    files in so the headless (net10.0) test project verifies the adapter + per-state transitions row-for-row
+    without a UI host. The WinUI view itself (feature-views\UuidGenerator\UuidGenerator.cs) is exercised by
+    the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.Model.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.ViewModel.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
