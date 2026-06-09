@@ -294,3 +294,4 @@ p2-windows/feature-views/W-0103-HeroGauges.prompt.md
 p2-windows/feature-views/W-0100-CostHeatmap.prompt.md
 p2-windows/feature-views/W-0102-EfficiencyPanel.prompt.md
 p2-windows/feature-views/W-0101-DetailedStatistics.prompt.md
+p2-windows/feature-views/W-0108-ChargerTypeBreakdown.prompt.md
