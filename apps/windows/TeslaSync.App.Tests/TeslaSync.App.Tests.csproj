@@ -183,6 +183,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SystemHealthWidget\SystemHealthWidget.Model.cs" Link="Widgets\SystemHealthWidget\SystemHealthWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SystemHealthWidget\SystemHealthWidget.ViewModel.cs" Link="Widgets\SystemHealthWidget\SystemHealthWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SystemHealthWidget\SystemHealthWidget.Source.cs" Link="Widgets\SystemHealthWidget\SystemHealthWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VersionInfoWidget\VersionInfoWidget.Model.cs" Link="Widgets\VersionInfoWidget\VersionInfoWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VersionInfoWidget\VersionInfoWidget.ViewModel.cs" Link="Widgets\VersionInfoWidget\VersionInfoWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VersionInfoWidget\VersionInfoWidget.Source.cs" Link="Widgets\VersionInfoWidget\VersionInfoWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.Model.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.ViewModel.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.Source.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.Source.cs" />
