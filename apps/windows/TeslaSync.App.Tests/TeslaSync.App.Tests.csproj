@@ -122,6 +122,11 @@
     consolidated below as a single deduplicated, sorted union (preserving every previously linked
     widget/feature-view source), plus the new ForecastDetails surface. Keep this as ONE Project root with a
     single Compile ItemGroup.
+    Headless (net10.0) unit tests for the WinUI app's UI-thread-free logic. The project runs without a
+    WinUI / UI-thread host and links each surface's WinUI-free sources (Model / Source / ViewModel /
+    Presentation) from TeslaSync.App so the adapters, per-state projections and diagnostics are verified
+    row for row; the WinUI views themselves are exercised by the app build. Keep this as ONE Project root
+    with a single, deduplicated Compile ItemGroup.
   -->
 
   <PropertyGroup>
@@ -159,6 +164,7 @@
     truth (ADR-004); the app manifest + widget template back the packaging/widget model tests.
   -->
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
+  <!-- Test fixtures / manifests copied next to the test assembly (SI golden vectors, MSIX manifest, widget template). -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -194,6 +200,7 @@
     deduplicated, path-sorted union of the test surface.
   -->
   <!-- Linked WinUI-free Model / Source / ViewModel sources, deduplicated and sorted by path. -->
+  <!-- Linked WinUI-free sources from the app project (deduplicated union). -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -570,6 +577,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.Model.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.Source.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LoadingSkeleton.Model.cs" Link="FeatureViews\LoadingSkeleton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Model.cs" Link="FeatureViews\OverviewTab\OverviewTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Source.cs" Link="FeatureViews\OverviewTab\OverviewTab.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.ViewModel.cs" Link="FeatureViews\OverviewTab\OverviewTab.ViewModel.cs" />
