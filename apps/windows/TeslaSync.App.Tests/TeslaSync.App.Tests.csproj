@@ -132,6 +132,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ClimateHistoryWidget\ClimateHistoryWidget.Model.cs" Link="Widgets\ClimateHistoryWidget\ClimateHistoryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ClimateHistoryWidget\ClimateHistoryWidget.ViewModel.cs" Link="Widgets\ClimateHistoryWidget\ClimateHistoryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ClimateHistoryWidget\ClimateHistoryWidget.Source.cs" Link="Widgets\ClimateHistoryWidget\ClimateHistoryWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyHistoryWidget\SafetyHistoryWidget.Model.cs" Link="Widgets\SafetyHistoryWidget\SafetyHistoryWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyHistoryWidget\SafetyHistoryWidget.ViewModel.cs" Link="Widgets\SafetyHistoryWidget\SafetyHistoryWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyHistoryWidget\SafetyHistoryWidget.Source.cs" Link="Widgets\SafetyHistoryWidget\SafetyHistoryWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ClimateStatusWidget\ClimateStatusWidget.Model.cs" Link="Widgets\ClimateStatusWidget\ClimateStatusWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ClimateStatusWidget\ClimateStatusWidget.ViewModel.cs" Link="Widgets\ClimateStatusWidget\ClimateStatusWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ClimateStatusWidget\ClimateStatusWidget.Source.cs" Link="Widgets\ClimateStatusWidget\ClimateStatusWidget.Source.cs" />
