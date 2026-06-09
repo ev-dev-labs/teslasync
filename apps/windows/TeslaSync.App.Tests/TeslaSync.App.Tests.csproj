@@ -97,6 +97,19 @@
     re-concatenated multiple <Project> roots plus duplicate <Compile> items, failing XML load
     with MSB4025; consolidated here into a single valid root (no linked source dropped) plus the
     CostSummaryCards (charging cost-analysis) feature-view surface logic links.
+    P2/W2-0001 - headless unit tests for the UI-thread-free logic models (feature-view + dashboard-widget
+    + shared Model / Source / ViewModel sources). Targets plain net10.0 so `dotnet test` runs without a
+    WinUI/UI-thread host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources are
+    Compile-linked here rather than project-referenced. The link set below is the deduplicated union of
+    every previously linked source.
+
+    Repair note (P2 feature-views/0112 EnvironmentalImpact): a chain of integration merges had again left
+    this file with several concatenated Project roots plus stray closing tags and orphaned comment text,
+    so the solution failed XML load (MSB4025: multiple root elements). The duplicate roots and broken
+    boundaries were removed and every previously linked source consolidated into this single canonical
+    root (deduplicated to avoid NETSDK1022), preserving every link from all discarded roots and adding
+    the new EnvironmentalImpact surface (Model / Source / ViewModel). Keep this file as ONE Project root
+    with a single Compile ItemGroup.
   -->
 
   <PropertyGroup>
@@ -482,6 +495,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.Model.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.Source.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.ViewModel.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Model.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Source.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.ViewModel.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
@@ -503,6 +519,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.Model.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.ViewModel.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EntriesTable\EntriesTable.Model.cs" Link="FeatureViews\EntriesTable\EntriesTable.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EnvironmentalImpact.Model.cs" Link="FeatureViews\EnvironmentalImpact.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EnvironmentalImpact.Source.cs" Link="FeatureViews\EnvironmentalImpact.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EnvironmentalImpact.ViewModel.cs" Link="FeatureViews\EnvironmentalImpact.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentSlide\EnvironmentSlide.Model.cs" Link="FeatureViews\EnvironmentSlide\EnvironmentSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FlagsTable\FlagsTable.Model.cs" Link="FeatureViews\FlagsTable\FlagsTable.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Model.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.Model.cs" />

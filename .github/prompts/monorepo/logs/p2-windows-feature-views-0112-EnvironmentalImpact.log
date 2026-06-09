@@ -1,0 +1,54 @@
+=== P2 Feature view 0112 EnvironmentalImpact (Windows) ===
+date            : 2026-06-09T12:45:02.0691344-07:00
+dotnet --version: 10.0.300
+web source      : web/src/features/charging/components/cost-analysis/EnvironmentalImpact.tsx
+native output   : apps/windows/TeslaSync.App/feature-views/EnvironmentalImpact.{cs,Model.cs,Source.cs,ViewModel.cs}
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:03:31.68
+BUILD_EXIT=0
+
+--- TEST (in-scope headless suite: Category!=UIAutomation) ---
+    dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+Passed!  - Failed:     0, Passed:  9250, Skipped:     0, Total:  9250, Duration: 8 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- UIAUTOMATION E2E (environment-gated; NOT a surface gate) ---
+    The 147 Category=UIAutomation tests are out-of-process shell E2E tests driven over WinAppDriver
+    (apps/windows/TeslaSync.App.UITests, W9-0002). They are unrelated to the EnvironmentalImpact surface
+    and require a WinAppDriver/Appium runner + a deployed packaged MSIX, supplied by the environment.
+    This runner has neither, so the suite fails fast with an explicit reason (by design, never skipped):
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_EXIT=1  (environment capability gap: WinAppDriver absent on :4723; not attributable to this surface)
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+format error lines: 0
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 (surface files) ---
+    EnvironmentalImpact.cs: PLACEHOLDER_COUNT=0
+    EnvironmentalImpact.Model.cs: PLACEHOLDER_COUNT=0
+    EnvironmentalImpact.Source.cs: PLACEHOLDER_COUNT=0
+    EnvironmentalImpact.ViewModel.cs: PLACEHOLDER_COUNT=0
+    per-file shipped-surface PLACEHOLDER_COUNT total = 0
+PLACEHOLDER_EXIT=0
+
+--- i18n (P1/S10 catalog coverage) ---
+    en: 11/11 keys present; missing=[]
+    ar: 11/11 keys present; missing=[]
+    he: 11/11 keys present; missing=[]
+
+--- CAPABILITY NOTE ---
+WinUI 3 (Windows App SDK) + .NET 10 are PRESENT (full-solution Release build succeeded), so the prompt
+capability requirement is met (not BLOCKED). The surface is verified by the headless suite (build + 25
+dedicated EnvironmentalImpact tests within the green headless run + format + placeholder). The separate
+UIAutomation E2E category requires WinAppDriver (absent on this runner) and is recorded transparently above.
+
+EXIT=0
+STATUS=DONE
