@@ -65,6 +65,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.Model.cs" Link="Widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.ViewModel.cs" Link="Widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.Source.cs" Link="Widgets\AnomalyDetectorWidget\AnomalyDetectorWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VehicleHeroCardWidget\VehicleHeroCardWidget.Model.cs" Link="Widgets\VehicleHeroCardWidget\VehicleHeroCardWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VehicleHeroCardWidget\VehicleHeroCardWidget.ViewModel.cs" Link="Widgets\VehicleHeroCardWidget\VehicleHeroCardWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VehicleHeroCardWidget\VehicleHeroCardWidget.Source.cs" Link="Widgets\VehicleHeroCardWidget\VehicleHeroCardWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\StateTimelineWidget\StateTimelineWidget.Model.cs" Link="Widgets\StateTimelineWidget\StateTimelineWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\StateTimelineWidget\StateTimelineWidget.ViewModel.cs" Link="Widgets\StateTimelineWidget\StateTimelineWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\StateTimelineWidget\StateTimelineWidget.Source.cs" Link="Widgets\StateTimelineWidget\StateTimelineWidget.Source.cs" />
