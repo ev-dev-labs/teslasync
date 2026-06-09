@@ -306,6 +306,19 @@
   </ItemGroup>
 
   <!--
+    P2 feature-views: the BackendTool's UI-thread-free logic (the descriptor + outcome classification model,
+    the dev-tools run adapter, and the state-holder view-model) lives in the WinUI app project but is WinUI-free
+    by construction. Link those three source files in so the headless (net10.0) test project verifies the
+    adapter + per-state transitions row-for-row without a UI host. The WinUI view itself is exercised by the
+    app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Model.cs" Link="FeatureViews\BackendTool\BackendTool.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Source.cs" Link="FeatureViews\BackendTool\BackendTool.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.ViewModel.cs" Link="FeatureViews\BackendTool\BackendTool.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2/W8-0003 — copy the packaged widget Adaptive Card template next to the tests so the drift test can
     assert it matches the canonical Core template constant.
   -->
