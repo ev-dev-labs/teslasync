@@ -1,0 +1,56 @@
+/*
+  DrivingDynamicsWidget.strings
+  TeslaSync — P4 dashboard widget · 0044 · DrivingDynamicsWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DrivingDynamicsWidget` resolves (table "DrivingDynamicsWidget") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The parity keys are the exact strings extracted from the web source
+  (features/dashboard/widgets/DrivingDynamicsWidget.tsx + registry/driving.ts).
+  The remaining keys back the native-only chrome (freshness chip, refresh/retry,
+  empty/error/banner copy, chart + accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.drivingDynamics.title" = "Driving Dynamics";
+"widget.drivingDynamics.description" = "Acceleration, braking, lateral g-forces with driving style indicator";
+"widget.drivingDynamics.maxG" = "Max g";
+"widget.drivingDynamics.smooth" = "Smooth";
+"widget.drivingDynamics.aggressive" = "Aggressive";
+"widget.drivingDynamics.noData" = "No dynamics data";
+"widget.drivingDynamics.accel" = "Accel";
+"widget.drivingDynamics.brake" = "Brake";
+"widget.drivingDynamics.lateral" = "Lateral";
+"widget.drivingDynamics.distribution" = "G-Force Distribution";
+
+/* --- Driving-style severity (web capitalizes the Severity key) --- */
+"widget.drivingDynamics.severity.calm" = "Calm";
+"widget.drivingDynamics.severity.normal" = "Normal";
+"widget.drivingDynamics.severity.sporty" = "Sporty";
+"widget.drivingDynamics.severity.aggressive" = "Aggressive";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.drivingDynamics.live" = "Live";
+"widget.drivingDynamics.stale" = "Stale";
+"widget.drivingDynamics.offline" = "Offline";
+"widget.drivingDynamics.refresh" = "Refresh";
+"widget.drivingDynamics.retry" = "Retry";
+"widget.drivingDynamics.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.drivingDynamics.loading" = "Loading driving dynamics";
+"widget.drivingDynamics.emptyHint" = "Acceleration and cornering g-forces will appear here once your vehicle drives.";
+"widget.drivingDynamics.errorTitle" = "Couldn't load driving dynamics";
+"widget.drivingDynamics.staleBanner" = "Updating — values may be stale";
+"widget.drivingDynamics.offlineBanner" = "Offline — showing last saved dynamics";
+
+/* --- Chart + accessibility --- */
+"widget.drivingDynamics.gUnit" = "g";
+"widget.drivingDynamics.bucket" = "Bucket";
+"widget.drivingDynamics.count" = "Count";
+"widget.drivingDynamics.distributionA11y" = "Histogram of g-force samples by acceleration bucket";
+"widget.drivingDynamics.openA11y" = "Open the driving dynamics page";
