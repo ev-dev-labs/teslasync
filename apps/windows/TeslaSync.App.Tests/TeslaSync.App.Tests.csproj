@@ -36,6 +36,8 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SignalLogWidget\SignalLogWidget.Model.cs" Link="Widgets\SignalLogWidget\SignalLogWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SignalLogWidget\SignalLogWidget.ViewModel.cs" Link="Widgets\SignalLogWidget\SignalLogWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.Model.cs" Link="Widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.ViewModel.cs" Link="Widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RecentDrivesListWidget\RecentDrivesListWidget.Model.cs" Link="Widgets\RecentDrivesListWidget\RecentDrivesListWidget.Model.cs" />
