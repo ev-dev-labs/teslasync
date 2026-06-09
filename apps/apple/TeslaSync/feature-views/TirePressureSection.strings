@@ -1,0 +1,53 @@
+/*
+  TirePressureSection.strings
+  TeslaSync — P4 feature view · 0151 · TirePressureSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TirePressureSection` resolves (table "TirePressureSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/drive-detail/TirePressureSection.tsx). The remainder
+  back the native state envelope (short wheel names, the no-value placeholder, freshness
+  chip, connectivity banner, loading / empty / error chrome) and the chart axes.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.tirePressure" = "Tire Pressure During Drive";
+"driveDetail.tirePressure.aria" = "Front and rear tire pressure lines over the drive timeline";
+"driveDetail.frontLeft" = "Front Left";
+"driveDetail.frontRight" = "Front Right";
+"driveDetail.rearLeft" = "Rear Left";
+"driveDetail.rearRight" = "Rear Right";
+"driveDetail.noChartData" = "No telemetry data available";
+
+/* --- Short wheel names (web `<Line name>` `FL (unit)` / `FR (unit)` / …) --- */
+"driveDetail.tireFlShort" = "FL";
+"driveDetail.tireFrShort" = "FR";
+"driveDetail.tireRlShort" = "RL";
+"driveDetail.tireRrShort" = "RR";
+
+/* --- Per-wheel no-value placeholder (web `'—'`) --- */
+"driveDetail.tireNoValue" = "—";
+
+/* --- Chart axes / scale labels --- */
+"driveDetail.time" = "Time";
+"driveDetail.pressure" = "Pressure";
+"driveDetail.wheel" = "Wheel";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"driveDetail.live" = "Live";
+"driveDetail.stale" = "Stale";
+"driveDetail.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"driveDetail.staleBanner" = "Reconnecting — tire pressure may be stale";
+"driveDetail.offlineBanner" = "Offline — showing last known tire pressure";
+
+/* --- Loading / empty / error chrome --- */
+"driveDetail.tireLoading" = "Loading tire pressure";
+"driveDetail.tireErrorTitle" = "Couldn't load tire pressure";
+"driveDetail.retry" = "Retry";
