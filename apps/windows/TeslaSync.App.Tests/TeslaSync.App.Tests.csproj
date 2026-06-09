@@ -438,6 +438,18 @@
   </ItemGroup>
 
   <!--
+    P2 feature-views (0052 BatteryTab): the analytics Battery tab's UI-thread-free logic (the loading/empty/
+    ready branch projection, the five hero-metric formatters — fmtNumber/fmtInt, formatEnergy and the
+    convertDistanceFromSI range conversion — the four chart series + CHART_COLORS indices, the accessible
+    names, the registration and the PII-safe diagnostics) is WinUI-free by construction. Link the Model in so
+    this headless (net10.0) test project verifies the adapter + per-state projection + a11y names +
+    diagnostics without a UI host. The WinUI view itself (BatteryTab.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryTab\BatteryTab.Model.cs" Link="FeatureViews\BatteryTab\BatteryTab.Model.cs" />
+  </ItemGroup>
+
+  <!--
     TirePressureVisualWidget's three WinUI-free sources (linked exactly once) — restored so the headless
     TirePressureVisualWidgetTests can resolve TirePressureLevel / TirePressureReading / the source +
     view-model. A prior cleanup removed every triple (not just the NETSDK1022 duplicates), breaking the build.
