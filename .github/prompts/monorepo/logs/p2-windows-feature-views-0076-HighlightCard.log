@@ -1,0 +1,92 @@
+=== P2 Feature view 0076 HighlightCard (Windows) ===
+runner: dotnet 10.0.300; OS=Microsoft Windows NT 10.0.26200.0; UTC=2026-06-09T15:31:13Z
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    17 Warning(s)   (all pre-existing in TeslaSync.App.Core: CA1000/CA1716/CA1720/CA1859 — none from this surface)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- TEST: dotnet test apps/windows/TeslaSync.sln -c Release ---
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 247 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  8295, Skipped:     0, Total:  8295, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=1
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+no formatting changes required (clean)
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 on HighlightCard.{cs,Model.cs} ---
+(prompt path .../feature-views/HighlightCard is a file prefix, not a dir, under the flat slide layout; the gate's
+ literal invocation resolves clean, and the two surface files are ALSO scanned directly so the gate inspects shipped code)
+  gate-literal (-Path .../feature-views/HighlightCard): PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  apps/windows/TeslaSync.App/feature-views/HighlightCard.cs       => PLACEHOLDER_COUNT=0
+  apps/windows/TeslaSync.App/feature-views/HighlightCard.Model.cs => PLACEHOLDER_COUNT=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+GATE: BUILD_EXIT=0 TEST_EXIT=1 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0
+
+=== CONCLUSION ===
+
+DELIVERED — native WinUI 3 HighlightCard at parity with
+web/src/features/analytics/components/weekly-digest/HighlightCard.tsx:
+  apps/windows/TeslaSync.App/feature-views/HighlightCard.Model.cs  (WinUI-free projection, records, diagnostics,
+    registration — the loading/empty/ready branch selection; the web glowMap colour->glow mapping
+    (cyan/green/purple keep their glow, amber/red collapse to none); the success/danger change tone reusing the
+    shared DeltaLogic.AccentBrushKey so a favourable change tints success and an unfavourable one tints danger,
+    exactly as the web emerald-400 / red-400 classes do; the verbatim value/change/subtitle passthrough; the
+    em-dash empty-value fallback; per-state Narrator names; PII-safe view.opened diagnostics).
+  apps/windows/TeslaSync.App/feature-views/HighlightCard.cs  (the ContentControl view: a tokenized TsGlassPanel
+    whose Glow follows the resolved colour — the web p-5 / gap-2 composition: the icon + label row, the bold
+    tracking-tight value, the optional change row with its ChevronUp/Down trend glyph in the success/danger
+    accent, and the optional muted subtitle; TsSkeleton loading chrome; the em-dash empty fallback with a
+    friendly caption — never a blank box; decorative icons hidden from Narrator; emits view.opened slug=HighlightCard).
+  apps/windows/TeslaSync.App.Tests/FeatureViews/HighlightCardTests.cs  (39 headless xUnit cases: branch precedence
+    + loading-over-value precedence, the glowMap colour->glow theory (cyan/green/purple/amber/red), the
+    success/danger change tone, verbatim value/change/subtitle passthrough, icon-glyph + label presence, the
+    shared chart.noData / common.loading copy, the em-dash, per-state a11y names, PII-safe diagnostics, the stable
+    slug + distinct trend glyphs, and argument validation).
+i18n: the surface is presentational and owns no literal strings (the web takes already-resolved icon/label/value/
+change/subtitle props); the only resolved copy is the shared chart.noData / common.loading keys (already present in
+Strings/{en,ar,he}/Resources.resw). No English literals outside i18n fallbacks.
+States: the web source is a pure presentational card with no fetch-driven error/stale/offline branch (the parent
+weekly-digest owns the query lifecycle via DigestSkeleton / QueryError before any card mounts). The card-local
+loading / empty / ready branches are reproduced; error/stale/offline are documented as parent-owned in the model
+XML docs — the same precedent set by the committed sibling slides 0061 ChargingBreakdownSlide and 0062
+DriveHighlightSlide.
+
+BASELINE REPAIR (prerequisite, transparently disclosed): at HEAD the headless test project
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed in a NON-BUILDING state, unrelated to this
+surface:
+  (a) XML-malformed — four "</ItemGroup> + <!--" comment boundaries had been deleted (after the DrivingTab,
+      ChargingDetailSection, DrivingTemperatureStats and OverviewTab Compile groups), leaking comment prose as
+      element content; the first un-escaped '&' (".../0060 ... Energy & Activity ...") aborted XML load with
+      MSB4025 "An error occurred while parsing EntityName".
+  (b) 329 duplicate <Compile Include> items (NETSDK1022) — masked behind (a) until the XML parsed.
+This headless (net10.0) test project cannot reference the WinUI App project, so every feature-view's WinUI-free
+Model.cs is LINKED in via <Compile Include> (the established pattern — see ChargingBreakdownSlide.Model.cs at the
+same spot). Linking HighlightCard.Model.cs (required to verify this surface's tests) is impossible while the file
+will not parse, so the four boundaries were restored and the 329 duplicate Compile items de-duplicated to one each
+(378 unique kept). This restored the ENTIRE headless suite (8295 passing), not just this surface. No test logic was
+changed; the repair is pure project-file wiring.
+
+GATE: BUILD_EXIT=0  TEST_EXIT=1  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  =>  EXIT=1.
+
+TEST_EXIT=1 — ROOT CAUSE = ABSENT UI-AUTOMATION RUNNER (platform-capability gap, not a defect):
+  TeslaSync.App.Tests (headless): Passed 8295 / Failed 0 — includes the 39 new HighlightCard tests
+    (the headless baseline before this surface was 8256; delta = +39).
+  TeslaSync.App.UITests (E2E):    Failed 147 / Passed 0 — EVERY failure is UiAutomationUnavailableException:
+    "WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was
+    not found." None of the 147 reference HighlightCard; they exercise pre-existing shell / navigation / auth /
+    page-state-matrix chrome and fail identically at HEAD, independent of this surface.
+  This is the same WinAppDriver gap recorded as STATUS=BLOCKED by every predecessor feature-view log
+  (0002 BackendTool ... 0061 ChargingBreakdownSlide ... 0067 StatChartSlide). The prompt's capability note
+  ("requires WinUI 3 (Windows App SDK 1.6+) + .NET 10 ... If unavailable on the runner -> STATUS=BLOCKED with API
+  evidence") sanctions BLOCKED for exactly this gap. WinUI 3 + .NET 10 THEMSELVES are present — the Release solution
+  build is green and the surface compiles into TeslaSync.App under TreatWarningsAsErrors with zero new warnings.
+
+EXIT=1
+STATUS=BLOCKED
