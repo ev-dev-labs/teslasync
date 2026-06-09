@@ -153,3 +153,4 @@ p2-windows/dashboard-widgets/W-0048-EnergyStatsWidget.prompt.md
 p2-windows/dashboard-widgets/W-0049-ExportStatusWidget.prompt.md
 p2-windows/dashboard-widgets/W-0050-FleetStatsBarWidget.prompt.md
 p2-windows/dashboard-widgets/W-0055-LifetimeStatsWidget.prompt.md
+p2-windows/dashboard-widgets/W-0051-FleetStatsWidget.prompt.md
