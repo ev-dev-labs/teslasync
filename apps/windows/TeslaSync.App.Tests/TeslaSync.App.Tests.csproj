@@ -186,6 +186,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MileageStatsWidget\MileageStatsWidget.Source.cs" Link="Widgets\MileageStatsWidget\MileageStatsWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsWidget\FleetStatsWidget.Model.cs" Link="Widgets\FleetStatsWidget\FleetStatsWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsWidget\FleetStatsWidget.ViewModel.cs" Link="Widgets\FleetStatsWidget\FleetStatsWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Model.cs" Link="Widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.ViewModel.cs" Link="Widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Source.cs" Link="Widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Source.cs" />
   </ItemGroup>
 
   <!--
