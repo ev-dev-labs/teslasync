@@ -1,0 +1,39 @@
+/*
+  CodeBlock.strings
+  TeslaSync — P4 feature view · 0220 · CodeBlock (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native CodeBlock resolves (table
+  "CodeBlock") lives here with its English value. These entries fold into the app `Localizable.xcstrings`
+  master catalog at integration time; they are kept in a per-surface table so each parallel surface prompt
+  owns its own strings without editing the shared catalog.
+
+  The web source (features/system/components/chatbot/CodeBlock.tsx) is anonymous: it renders only the
+  snippet and computes `langLabel = language?.trim() || 'text'`, extracting no `t()` keys. Every key below
+  therefore backs the native chrome the SwiftUI surface adds around that snippet — the copy affordance (web
+  CodeBlock CopyButton), the loading / empty / error states, the live-state connectivity banner, and the
+  accessibility labels — none of which exist as English literals in the Swift sources.
+*/
+
+/* --- Copy affordance (web CodeBlock CopyButton) --- */
+"codeBlock.copy" = "Copy";
+"codeBlock.copied" = "Copied";
+
+/* --- Connectivity banner (stale / offline) --- */
+"codeBlock.staleBanner" = "Reconnecting — showing the cached snippet";
+"codeBlock.offlineBanner" = "Offline — showing the last received snippet";
+
+/* --- Empty (resolved but blank) --- */
+"codeBlock.empty.title" = "No code to show";
+"codeBlock.empty.message" = "This snippet has no content yet.";
+
+/* --- Error (load failure — web QueryError) --- */
+"codeBlock.error.title" = "Couldn't load the code";
+"codeBlock.error.retry" = "Retry";
+
+/* --- Accessibility --- */
+"codeBlock.a11y.label" = "Code block, %@";
+"codeBlock.a11y.copy" = "Copy code";
+"codeBlock.a11y.loading" = "Loading code";
+"codeBlock.a11y.content" = "Code block";
+"codeBlock.a11y.empty" = "No code to show";
+"codeBlock.a11y.error" = "Couldn't load the code";
