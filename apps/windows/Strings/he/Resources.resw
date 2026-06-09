@@ -23610,4 +23610,25 @@
   <data name="translation.yearReview.youSaved" xml:space="preserve">
     <value>You saved</value>
   </data>
+  <data name="translation.nav.drivesDesc" xml:space="preserve">
+    <value>Trip history</value>
+  </data>
+  <data name="translation.nav.chargingDesc" xml:space="preserve">
+    <value>Sessions &amp; costs</value>
+  </data>
+  <data name="translation.nav.analyticsDesc" xml:space="preserve">
+    <value>Fleet insights</value>
+  </data>
+  <data name="translation.nav.batteryDesc" xml:space="preserve">
+    <value>Health &amp; degradation</value>
+  </data>
+  <data name="translation.widget.quickNav.title" xml:space="preserve">
+    <value>Quick Navigation</value>
+  </data>
+  <data name="translation.widget.quickNav.description" xml:space="preserve">
+    <value>Shortcut links to key pages</value>
+  </data>
+  <data name="translation.widget.quickNav.noData" xml:space="preserve">
+    <value>No navigation links available</value>
+  </data>
 </root>
