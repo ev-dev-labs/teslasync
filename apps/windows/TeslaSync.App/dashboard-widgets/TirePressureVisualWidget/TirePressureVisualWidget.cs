@@ -523,13 +523,13 @@ public sealed partial class TirePressureVisualWidget : ContentControl, IDisposab
     // ── Brush helpers (theme-token driven; opacity derived for the diagram tints) ──
     private static Brush AccentBrush(StatusKind kind) => DisplayTokens.Brush(StatusResources.AccentBrushKey(kind));
 
-    private static Brush TireFill(StatusKind kind) => WithOpacity(AccentBrush(kind), TireFillOpacity);
+    private static SolidColorBrush TireFill(StatusKind kind) => WithOpacity(AccentBrush(kind), TireFillOpacity);
 
-    private static Brush OutlineBrush(double opacity) => WithOpacity(DisplayTokens.Border, opacity);
+    private static SolidColorBrush OutlineBrush(double opacity) => WithOpacity(DisplayTokens.Border, opacity);
 
     private static Brush InfoBrush() => DisplayTokens.Brush(StatusResources.AccentBrushKey(StatusKind.Info));
 
-    private static Brush WithOpacity(Brush source, double opacity) =>
+    private static SolidColorBrush WithOpacity(Brush source, double opacity) =>
         source is SolidColorBrush solid
             ? new SolidColorBrush(solid.Color) { Opacity = opacity }
             : new SolidColorBrush(Microsoft.UI.Colors.Transparent);

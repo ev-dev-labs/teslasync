@@ -1,0 +1,131 @@
+=== P2 Dashboard widget 0114 WatchSummaryWidget (Windows) ===
+Date: 2026-06-08
+Branch/worktree: wt-03  (repo ev-dev-labs/teslasync)
+Host toolchain (platform-capability probe):
+  dotnet --version        -> 10.0.300        (.NET 10 present)
+  dotnet --list-sdks      -> 9.0.314, 10.0.300
+  WinUI 3 / WindowsAppSDK -> present (TeslaSync.App compiles + links Themes/Tokens.xaml, Fluent controls)
+  => WinUI 3 + .NET 10 + Fluent Design System ARE available on this runner (build succeeds, see below).
+
+Web source (THE specification):
+  web/src/features/dashboard/widgets/WatchSummaryWidget.tsx
+Registry (canonical): id=watch-summary, category=vehicle, default/min 1x2, max 2x40.
+
+Native output (folder-per-widget convention, matching every sibling widget):
+  apps/windows/TeslaSync.App/dashboard-widgets/WatchSummaryWidget/WatchSummaryWidget.Model.cs
+  apps/windows/TeslaSync.App/dashboard-widgets/WatchSummaryWidget/WatchSummaryWidget.Source.cs
+  apps/windows/TeslaSync.App/dashboard-widgets/WatchSummaryWidget/WatchSummaryWidget.ViewModel.cs
+  apps/windows/TeslaSync.App/dashboard-widgets/WatchSummaryWidget/WatchSummaryWidget.cs   (WinUI view)
+Tests:
+  apps/windows/TeslaSync.App.Tests/Widgets/WatchSummaryWidgetTests.cs   (71 tests)
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj           (Compile registration)
+
+Parity scope reproduced from the web source:
+  - Two data sources: useWatchSummary (GET /watch/summary) load-bearing + useWatchComplication
+    (GET /watch/complication) enrichment, combine-latest merged; web isLoading = summaryLoading || compLoading;
+    web hasData = summary != null gates the body.
+  - Compact (size.cols <= 1, default 1x2): watch-face radial gauge tinted by getBatteryColor (>50 green,
+    >20 amber, else red; muted/grey when SoC unknown), StatusBadge(state), converted range, pulsing
+    "⚡ Charging" line from complication.charging.
+  - Standard (cols >= 2): battery hero big-number + state badge (online->success, asleep->neutral,
+    else warning) over a 2-up grid: Range, Lock (Lock/Unlock glyph + badge), Cabin temp, Last Seen.
+  - SI display-boundary conversions via shared UnitConverters: range_km (km) x1000 -> m -> display distance;
+    inside_temp_c (Celsius) -> display temperature. All numbers 0 decimals (web RadialGauge decimals={0},
+    AnimatedNumber default, fmtNumber(_,0)).
+  - States: loading / loaded / empty / error / stale / offline (error + empty both render the friendly
+    "No watch data" surface; error surfaced via the freshness chip + refresh, faithful to the web shell).
+  - i18n: every source key resolves through the P1/S10 facade. All 10 source keys already exist in
+    apps/windows/Strings/en/Resources.resw (widget.watchSummary, widget.charging, widget.noWatchData,
+    widget.battery, widget.range, widget.lockStatus, widget.locked, widget.unlocked, widget.cabinTemp,
+    widget.lastSeen).
+  - Accessibility: Narrator names on gauge, state pill, every detail tile, charging line, refresh button;
+    reduced-motion honoured (MotionPreference.ReduceMotion); system font scale via tokens.
+  - Telemetry: WatchSummaryDiagnostics.RecordViewOpened emits "view.opened slug=WatchSummaryWidget"
+    (P1/S11 diagnostics contract), PII-safe.
+
+----------------------------------------------------------------------
+GATE STEP 1 — dotnet build apps/windows/TeslaSync.sln -c Release
+----------------------------------------------------------------------
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+----------------------------------------------------------------------
+GATE STEP 2 — dotnet test apps/windows/TeslaSync.sln -c Release
+----------------------------------------------------------------------
+Passed!  - Failed:     0, Passed:  5938, Skipped:     0, Total:  5938 - TeslaSync.App.Tests.dll  (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+TEST_EXIT=1
+
+  * TeslaSync.App.Tests (unit / UI-thread-free logic — the widget's own suite): 5938 passed / 0 failed,
+    including the 71 new WatchSummaryWidgetTests (adapter parse, battery-tint thresholds, vehicle-state
+    palette, unit-aware projection across compact+standard, two-source combiner, view-model per-state
+    matrix loading/loaded/empty/error/stale/offline, registry metadata + bounds, diagnostics slug,
+    always-on two-endpoint source + vehicle_id forwarding, accessibility-name assertions).
+        $ dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+          --filter FullyQualifiedName~WatchSummaryWidgetTests
+          -> Passed!  - Failed: 0, Passed: 71, Skipped: 0, Total: 71
+
+  * TeslaSync.App.UITests (page/shell UI-automation — NOT a widget suite; no WatchSummary test in it):
+    147 / 147 FAILED. Every failure is the SAME platform-runner gap (147x):
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException :
+        UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+        http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+        (also: the packaged TeslaSync MSIX app under test could not be resolved)
+    By design these tests FAIL rather than skip when the runner is absent (see
+    apps/windows/TeslaSync.App.UITests/Drivers/RunnerAvailability.cs:
+    "the tests fail with that reason rather than being silently skipped"). They require a WinAppDriver/
+    Appium endpoint + a deployed MSIX + an interactive desktop session — none of which exist on this
+    headless host — and are normally driven separately via apps/windows/run-ui-automation.ps1 in a CI
+    runner. This suite is PRE-EXISTING and fails identically at HEAD, independent of this widget.
+
+----------------------------------------------------------------------
+GATE STEP 3 — dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+----------------------------------------------------------------------
+(whole solution; 0 files needed formatting)
+FORMAT_EXIT=0
+
+----------------------------------------------------------------------
+GATE STEP 4 — check-placeholders.ps1 -Path .../WatchSummaryWidget
+----------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------
+PRE-EXISTING BASELINE REPAIRS (required to obtain ANY green solution build/test in this worktree)
+----------------------------------------------------------------------
+The committed baseline of this worktree did NOT build (TeslaSync.App.csproj sets
+<TreatWarningsAsErrors>true</TreatWarningsAsErrors> + <AnalysisMode>Recommended</AnalysisMode>, so CA
+analyzer findings are errors). The sibling widget TirePressureVisualWidget (commit 05ec2a734) was committed
+in a non-building state. Minimal, non-behavioural repairs were made so the whole solution compiles and the
+unit suite runs (without them this widget could not be built/tested at all):
+  - TirePressureVisualWidget.cs       : WithOpacity/TireFill/OutlineBrush return type Brush -> SolidColorBrush (CA1859)
+  - TirePressureVisualWidget.Model.cs : BuildAutomationName param IReadOnlyList -> array, .Count -> .Length (CA1859)
+  - TeslaSync.App.Tests.csproj        : added the missing <Compile Include> registrations for the
+                                        TirePressureVisualWidget Model/ViewModel/Source (its committed test
+                                        file referenced types that were never wired into the test project).
+The same csproj also gained the standard 3 <Compile Include> registrations for WatchSummaryWidget
+(Model/ViewModel/Source) — the established mechanism every sibling widget uses so its headless tests can
+see the widget's UI-thread-free types.
+
+----------------------------------------------------------------------
+SUMMARY
+----------------------------------------------------------------------
+WIDGET_IMPLEMENTATION = COMPLETE (full parity port; all six states; i18n; accessibility; diagnostics)
+BUILD_EXIT            = 0
+UNIT_TESTS            = 5938 passed / 0 failed   (71 new WatchSummaryWidget tests)
+FORMAT_EXIT           = 0
+PLACEHOLDER_EXIT      = 0
+TEST_EXIT             = 1   (solely TeslaSync.App.UITests: WinAppDriver/Appium UI-automation runner absent)
+
+The widget deliverable and EVERY widget-scoped gate are green. The only non-zero step is the full-solution
+dotnet test sweeping in the pre-existing, page-level App.UITests suite, which requires the WinAppDriver
+UI-automation platform runner (+ deployed MSIX + interactive desktop) that is unavailable on this host.
+Per the prompt's capability clause ("If unavailable on the runner -> STATUS=BLOCKED with API evidence")
+the UI-automation runner is the documented blocker; the WinUI 3 + .NET 10 + Fluent build/runtime itself
+IS available and green.
+
+EXIT=1
+STATUS=BLOCKED
