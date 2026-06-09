@@ -1,0 +1,51 @@
+/*
+  DriveTelemetryWidget.strings
+  TeslaSync — P4 dashboard widget · 0041 · DriveTelemetryWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DriveTelemetryWidget` resolves (table "DriveTelemetryWidget") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/DriveTelemetryWidget.tsx). The remaining keys back
+  the native-only chrome (freshness chip, retry/empty/error copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.driveTelemetry.title" = "Drive Telemetry";
+"widget.driveTelemetry.distance" = "Distance";
+"widget.driveTelemetry.duration" = "Duration";
+"widget.driveTelemetry.min" = "min";
+"widget.driveTelemetry.efficiency" = "Efficiency";
+"widget.driveTelemetry.elevation" = "Elevation";
+"widget.driveTelemetry.power" = "Power (kW)";
+"widget.driveTelemetry.speed" = "Speed";
+"widget.driveTelemetry.battery" = "Battery %";
+"widget.driveTelemetry.empty" = "No recent drives";
+"widget.driveTelemetry.noTelemetry" = "No telemetry for this drive";
+
+/* --- Registry metadata (registry/driving.ts → "drive-telemetry") --- */
+"widget.driveTelemetry" = "Drive Telemetry";
+"widget.driveTelemetry.description" = "Last drive replay: speed, power, battery over time with route";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.driveTelemetry.live" = "Live";
+"widget.driveTelemetry.stale" = "Stale";
+"widget.driveTelemetry.offline" = "Offline";
+"widget.driveTelemetry.refresh" = "Refresh";
+"widget.driveTelemetry.retry" = "Retry";
+"widget.driveTelemetry.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.driveTelemetry.loading" = "Loading drive telemetry";
+"widget.driveTelemetry.emptyHint" = "Take a drive to see speed, power, and battery replay.";
+"widget.driveTelemetry.errorTitle" = "Couldn't load drive telemetry";
+"widget.driveTelemetry.offlineBanner" = "Offline — showing last known data";
+"widget.driveTelemetry.staleBanner" = "Reconnecting — values may be stale";
+
+/* --- Accessibility --- */
+"widget.driveTelemetry.a11yChart" = "Drive telemetry chart";
+"widget.driveTelemetry.openA11y" = "Open the Drives page";
