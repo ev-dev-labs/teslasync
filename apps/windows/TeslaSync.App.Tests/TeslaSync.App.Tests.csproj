@@ -189,6 +189,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Model.cs" Link="Widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.ViewModel.cs" Link="Widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Source.cs" Link="Widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.Model.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.ViewModel.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.Source.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.Source.cs" />
   </ItemGroup>
 
   <!--
