@@ -4,7 +4,7 @@ using TeslaSync.App.Core;
 using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Notifications;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.SafetyFeatures;
 
 /// <summary>
 /// The lifecycle state a <see cref="SafetyFeaturesViewModel"/> can be in — the native union of the
