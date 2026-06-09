@@ -1,0 +1,50 @@
+/*
+  CostForecastWidget.strings
+  TeslaSync — P4 dashboard widget · 0032 · CostForecastWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `CostForecastWidget` resolves (table "CostForecastWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The parity keys are the exact strings extracted from the web source
+  (features/dashboard/widgets/CostForecastWidget.tsx + registry/charging.ts).
+  The remaining keys back the native-only chrome (freshness chip, refresh/retry,
+  empty/error/banner copy, chart + accessibility, historical/forecast legend).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.costForecast.title" = "Cost Forecast";
+"widget.costForecast.description" = "6-month charging cost projection with seasonal trends";
+"widget.costForecast.noData" = "No forecast data";
+"widget.costForecast.nextMonth" = "Next Month";
+"widget.costForecast.trend" = "Trend";
+"widget.costForecast.avgPerKwh" = "Avg $/kWh";
+"widget.costForecast.costLabel" = "Cost";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.costForecast.live" = "Live";
+"widget.costForecast.stale" = "Stale";
+"widget.costForecast.offline" = "Offline";
+"widget.costForecast.refresh" = "Refresh";
+"widget.costForecast.retry" = "Retry";
+"widget.costForecast.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.costForecast.loading" = "Loading cost forecast";
+"widget.costForecast.emptyHint" = "A six-month cost projection will appear here once enough charging history is recorded.";
+"widget.costForecast.errorTitle" = "Couldn't load cost forecast";
+"widget.costForecast.staleBanner" = "Updating — values may be stale";
+"widget.costForecast.offlineBanner" = "Offline — showing last saved forecast";
+
+/* --- Chart + accessibility --- */
+"widget.costForecast.month" = "Month";
+"widget.costForecast.actual" = "Actual";
+"widget.costForecast.forecast" = "Forecast";
+"widget.costForecast.trendUp" = "up";
+"widget.costForecast.trendDown" = "down";
+"widget.costForecast.chartA11y" = "Bar chart of monthly charging cost, with the most recent months projected as a forecast";
+"widget.costForecast.legendA11y" = "Actual versus forecast legend";
+"widget.costForecast.openA11y" = "Open the charging page";
