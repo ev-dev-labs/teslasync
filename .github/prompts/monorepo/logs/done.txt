@@ -195,3 +195,4 @@ p2-windows/dashboard-widgets/W-0095-SpeedProfileWidget.prompt.md
 p2-windows/dashboard-widgets/W-0096-StateTimelineWidget.prompt.md
 p2-windows/dashboard-widgets/W-0098-SuperchargerHistoryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0097-SubscriptionsWidget.prompt.md
+p2-windows/dashboard-widgets/W-0099-SystemHealthWidget.prompt.md
