@@ -507,29 +507,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    P2/W2-0001 - headless unit tests for the UI-primitive logic models.
-    Targets plain net10.0 so dotnet test runs without a WinUI/UI-thread host.
-
-    Repair note (P2 feature-views/0094 TimeToChargeSection): a chain of auto-integration merges had
-    left this file with several concatenated <Project> roots and malformed comment / ItemGroup
-    boundaries that failed XML load (MSB4025: multiple root elements). The duplicate roots and broken
-    boundaries were removed and every previously linked source consolidated below (deduplicated to
-    avoid NETSDK1022), preserving every link from all discarded roots and adding the new
-    TimeToChargeSection surface.
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <!--
-    P2/W2-0001 â€” headless unit tests for the UI-thread-free logic models. Targets plain net10.0 so
-    `dotnet test` runs without a WinUI/UI-thread host.
-
-    Repair note (P2 feature-views/0098 ChargerSpecsPanel): a chain of auto-integration merges had
-    left this file with multiple concatenated <Project> roots plus several stray </Project> /
-    </ItemGroup> boundaries and orphaned comment fragments, so the solution failed to load with
-    MSB4025 "multiple root elements". The duplicate roots and broken boundaries were removed and the
-    union of every linked WinUI-app source (the UI-thread-free *.Model/Source/ViewModel files, which
-    target a WinUI TFM and so are <Compile>-linked here rather than project-referenced) was folded
-    back into this single canonical project. No linked source was dropped.
-    P2/W2-0001 - headless unit tests for the UI-thread-free logic models (feature-view + dashboard-widget
+    P2/W2-0001 — headless unit tests for the UI-thread-free logic models (feature-view + dashboard-widget
     + shared Model/Source/ViewModel sources). Targets plain net10.0 so `dotnet test` runs without a
     WinUI/UI-thread host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources are
     <Compile>-linked here rather than project-referenced. The link set below is the deduplicated union of
@@ -549,7 +527,13 @@
     NOTE: this project links the WinUI-free *.Model.cs / *.Source.cs / *.ViewModel.cs files
     from TeslaSync.App so their logic is verified headlessly. Keep it as ONE <Project> root
     with a single Compile ItemGroup (the file was previously corrupted into multiple roots).
+    <Compile>-linked here rather than project-referenced (the views themselves are exercised by the app
+    build). Keep this file as ONE <Project> root with a single Compile ItemGroup: a prior chain of
+    auto-integration merges repeatedly left it with several concatenated <Project> roots that failed XML
+    load (MSB4025). The links below are the deduplicated, path-sorted union of every previously linked
+    source, plus the P2 feature-views/0108 ChargerTypeBreakdown surface.
   -->
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -570,12 +554,6 @@
     <ProjectReference Include="..\Generated\Generated.csproj" />
   </ItemGroup>
 
-  <!--
-    Fixtures copied next to the test assembly: the language-neutral SI golden vectors
-    (apps/shared/spec/units-golden.json) verify the C# behaviour port row-for-row against the web
-    truth (ADR-004); the app manifest + widget template back the packaging/widget model tests.
-  -->
-  <!-- Test fixtures / manifests copied next to the test assembly. -->
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget card template). -->
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
   <!-- Test data + manifests copied next to the test assembly (golden SI vectors, MSIX manifest, widget template). -->
@@ -606,6 +584,7 @@
     the SDK default-compile glob.
   -->
   <!-- Linked UI-thread-free sources from the WinUI app project (deduplicated union). -->
+  <!-- Linked WinUI-free sources from the WinUI app project (deduplicated, path-sorted union). -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -892,6 +871,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChangesPanel\ChangesPanel.Model.cs" Link="FeatureViews\ChangesPanel\ChangesPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargerSpecsPanel\ChargerSpecsPanel.Model.cs" Link="FeatureViews\ChargerSpecsPanel\ChargerSpecsPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargerTypeBreakdown\ChargerTypeBreakdown.Model.cs" Link="FeatureViews\ChargerTypeBreakdown\ChargerTypeBreakdown.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingBreakdownSlide.Model.cs" Link="FeatureViews\ChargingBreakdownSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Model.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Source.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Source.cs" />
@@ -1044,5 +1024,7 @@
     </Content>
   </ItemGroup>
 </Project>
+    <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
+  </ItemGroup>
 
 </Project>
