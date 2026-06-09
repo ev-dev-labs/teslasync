@@ -1,0 +1,51 @@
+/*
+  SignalChartPanel.strings
+  TeslaSync — P4 feature view · 0266 · SignalChartPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SignalChartPanel` resolves (table "SignalChartPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of strings the web source resolves through
+  `t()` (features/telemetry/components/SignalChartPanel.tsx + the grid empty key
+  from SmallMultiplesChart). The web uses the English string itself as the key; the
+  native port assigns a stable dotted key carrying that exact English value, so the
+  rendered copy is identical while staying translatable. The remainder backs the
+  native state envelope (freshness chip, connectivity banner, loading / error
+  chrome) and the accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"telemetry.signalChart.titleLive" = "Live Signal Stream";
+"telemetry.signalChart.title" = "Signal Chart";
+"telemetry.signalChart.events" = "events";
+"telemetry.signalChart.points" = "points";
+"telemetry.signalChart.pointsLoaded" = "points loaded";
+"telemetry.signalChart.waiting" = "Waiting for signal data…";
+"telemetry.signalChart.noData" = "No data for this time range";
+"smallMultiples.noData" = "No data";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"telemetry.signalChart.live" = "Live";
+"telemetry.signalChart.stale" = "Stale";
+"telemetry.signalChart.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"telemetry.signalChart.staleBanner" = "Reconnecting — values may be stale";
+"telemetry.signalChart.offlineBanner" = "Offline — showing the last loaded chart";
+
+/* --- Loading / error chrome --- */
+"telemetry.signalChart.loading" = "Loading signal chart";
+"telemetry.signalChart.errorTitle" = "Couldn't load signal chart";
+"telemetry.signalChart.retry" = "Retry";
+
+/* --- Accessibility --- */
+"telemetry.signalChart.a11y.legend" = "Signal legend";
+"telemetry.signalChart.a11y.overlay" = "overlay";
+"telemetry.signalChart.a11y.grid" = "grid";
+"telemetry.signalChart.a11y.chart" = "chart";
+"telemetry.signalChart.a11y.signals" = "signals";
+"telemetry.signalChart.a11y.points" = "points";
