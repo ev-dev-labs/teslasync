@@ -1,0 +1,263 @@
+================================================================================
+P4 · Feature view · 0260 — ToggleCommandTile (Apple)
+Run: 2026-06-09T03:32-0700   Host: Darwin arm64   Branch: auto/20260608-211853-78201/141
+Base: 7c334badc
+Prompt: P4/feature-views/0260 — Feature view: ToggleCommandTile
+Web source (spec): web/src/features/system/components/ToggleCommandTile.tsx  (92 lines)
+Mode: code-complete + host-green; full-app xcodebuild build/test RAN and captured,
+      DEFERRED to the signed macos-latest acceptance gate (ADR-012, P99-0001) on the
+      PRE-EXISTING, UNRELATED parallel-merge collisions in OTHER surfaces + macOS
+      dev-signing — apps/macos-pending-verifications.md precedent (ToolCard 0010,
+      AlertMessageEditor 0180, CommandTile 0226). Honesty rule 7. Delegation: NONE
+      (FORBIDDEN by this prompt; authored directly).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (Xcode toolchain) .... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present + Booted (83717DEE-…-CBDDD3140989)           OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift build/test (SwiftPM) . runs the surface + XCTest on the macOS host          OK
+  xcodegen ................... project generates cleanly; 9 ToggleCommandTile files
+                              enumerated (54 pbxproj refs across app + test targets)  OK
+  Shared.xcframework ......... BUILT + STAGED — gradle :core:assembleSharedXCFramework
+                              BUILD SUCCESSFUL (7m26s); ios-arm64 + ios-arm64-simulator
+                              + macos-arm64 staged to apps/apple/Frameworks/           OK
+  feature-views in project.yml  2 references (iOS + macOS app targets glob the dir)  OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui". The core requirement is SwiftUI, which is AVAILABLE
+  and PROVEN by the real iOS-18-simulator AND macOS-15 SDK type-checks + the executed
+  XCTest suite below. The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit
+  unavailable") does NOT apply — the surface is authored, host-compiled on both SDKs,
+  host-tested (35/35), and the full-app xcodebuild was actually run (evidence below).
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/ToggleCommandTile.*) ===
+  ToggleCommandTile.Adapter.swift    333  testable projection core — ToggleCommandParameters
+                                          value, variant→TSTone (web onStyles[variant]),
+                                          ToggleCommandTileDef (narrowed CommandDef: on/off
+                                          commands, stateField, requiresInput, on/off symbol
+                                          swap), ToggleCommandPower (web commands.on/off),
+                                          active-tone style rule, ToggleCommandOutcome.parse
+                                          (web lastStatus.startsWith('✓')), render phase,
+                                          freshness chip, VoiceOver builders (pure)
+  ToggleCommandTile.Model.swift      308  P1/S8 seams (ToggleCommandDispatching: execute +
+                                          requestDialog reporting ToggleCommandEvent;
+                                          ToggleStateObserving: bound live boolean;
+                                          ToggleCommandFavoriteToggling) + P1/S11 telemetry
+                                          seam (view.opened) + P1/S10 strings facade +
+                                          @Observable ToggleCommandTileModel (isOn derivation,
+                                          handleClick routing, lifecycle, freshness)
+  ToggleCommandTile.Fakes.swift      116  in-memory seams (InMemoryToggleCommandDispatcher /
+                                          InMemoryToggleStateSource / InMemoryToggleFavoriteToggle)
+                                          shared by previews + tests; the view performs no I/O
+  ToggleCommandTile.Views.swift      298  presentational subviews — tappable glass tile (variant
+                                          tone border + wash while on) + favorite star (sibling
+                                          overlay, web stopPropagation) + status dot + icon box
+                                          (on/off symbol, spinner while executing) + label +
+                                          ON/OFF power line + status line + freshness chip
+  ToggleCommandTile.swift             66  ToggleCommandTile surface (model + convenience init,
+                                          view.opened on appear, surfaceSlug "ToggleCommandTile")
+  ToggleCommandTile.Previews.swift   204  #if DEBUG previews — off / on(bound) / success-on /
+                                          danger-on / local-optimistic / input-gated / executing /
+                                          succeeded / failed / stale / offline + a grid
+  ToggleCommandTile.Tests.swift      203  XCTest — Adapter projections (16 methods)
+  ToggleCommandTile.ModelTests.swift 400  XCTest — Model state holder, 2 XCTestCases
+                                          (derivation+routing 10 + lifecycle 9 = 19 methods)
+  ToggleCommandTile.strings           39  P1/S10 catalog contribution (table "ToggleCommandTile")
+  Total = 1928 .swift lines + 39 strings (vs 92-line web source; the 9-file seam architecture
+  mirrors the CommandTile 0226 / InputCommandTile 0232 sibling predecessors). Largest .swift =
+  400 (ModelTests) / 333 (Adapter) — swiftlint file_length<=400 honored on every file. No
+  file imports the Shared xcframework (seams are Swift protocols; prod injects the facade-backed
+  command bus / live-signal holder / favorites holder; previews/tests inject the in-memory seams).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation only; fully controlled component): the parent props
+    state / onExecute / onRequestDialog / onToggleFavorite / loading / lastStatus / isFavorite
+    are bound through three P1/S8 seams — ToggleCommandDispatching (execute on/off-command +
+    requestDialog, reporting ToggleCommandEvent started/succeeded/failed/offline),
+    ToggleStateObserving (the bound live boolean, web state[def.stateField]), and
+    ToggleCommandFavoriteToggling — so ToggleCommandTileModel owns isOn / loading / lastStatus /
+    isFavorite as derived state. No I/O in the view.
+  - isOn derivation (web `def.stateField && state ? Boolean(state[def.stateField]) : localToggle`):
+    a bound command uses the live value once known; an unbound command (or one whose live state
+    has not loaded) falls back to a local optimistic toggle. EXECUTED unit tests cover both.
+  - handleClick routing (web): when ON -> flip local toggle off (unbound only) + execute
+    def.commandOff (no params); when OFF + inputConfig -> onRequestDialog(def); else -> flip
+    local toggle on (unbound only) + execute def.command with def.params. EXECUTED tests cover
+    turn-on(+params) / turn-off(no params) / input-gated(dialog) / bound-no-local-mutation.
+  - Composition (web clickable GlassPanel + ghost Star Button + status dot + Loader2/Icon/iconOff):
+      • Tile     -> Button(.plain) + TSMaterial.panel glass; while ON takes the variant tone
+                    (border 0.45 + 0.08 wash, web styles.panel border-neon-*/20 bg-neon-*/5);
+                    dims to 0.5 while executing (web loading && opacity-50); whole tile activates.
+      • Star     -> sibling overlay Button (independent tap = web e.stopPropagation()),
+                    star.fill+warning when favorite else star+muted (web amber-300 / muted),
+                    aria = web t('commands.toggleFavorite'); .isSelected trait.
+      • Dot      -> top-trailing Circle, variant tone when ON else surface (web isOn ? styles.dot
+                    : bg-surface-2); non-interactive, accessibilityHidden.
+      • Icon box -> ProgressView while executing else Image(systemName: def.systemImage(isOn:))
+                    (web Loader2 / Icon / iconOff); variant tone fill+symbol when ON else neutral
+                    surface (web styles.icon vs bg-surface-2 text-muted).
+      • Labels   -> command label (textPrimary) + ON/OFF power line (variant tone when ON else
+                    muted, web styles.text) + status line (✓→checkmark/green, else exclamation/red)
+                    + freshness chip.
+  - States (ALL rendered; each has a #if DEBUG preview + a model/adapter unit test):
+      off (resting icon+label+OFF, never blank) · on (bound live state, variant tone) ·
+      local-optimistic (unbound toggle) · input-gated (turn-on opens dialog) · executing
+      (spinner + dimmed, web loading) · succeeded (web ✓ green) · failed (web red — the tile's
+      error surface, re-tappable = retry) · stale (freshness chip, time-based — native live-state
+      chrome, ADR-013) · offline (cached outcome kept + offline chip, activation blocked).
+  - i18n (P1/S10): web keys preserved verbatim — "commands.toggleFavorite"="Toggle favorite",
+    "commands.on"="ON", "commands.off"="OFF". Per-command label keys are dynamic (owned by the
+    command catalog) and resolved through the same facade with the def's key+fallback (not
+    redeclared). Native chrome keys namespaced commands.toggleTile.* (hint.turnOn/turnOff/configure,
+    state.running/on/off/succeeded/failed) + commands.tile.freshness.stale/offline. Referenced ==
+    declared verified: 13 referenced, 13 declared, 0 missing, 0 orphan. NO English string literals
+    in native code (all via ToggleCommandTileStrings + Text(verbatim:)).
+  - Accessibility: tile carries label (command) + value (running / on|off + stale|offline +
+    succeeded|failed) + hint (turn-on / turn-off / configure) + identifier
+    (toggle-command-tile-<id>); favorite carries its own label + .isSelected + identifier
+    (toggle-command-tile-favorite-<id>); status dot + icon accessibilityHidden; status/chip
+    combine; Dynamic-Type system fonts; reduce-motion honored (hover animation).
+  - Telemetry (P1/S11): ToggleCommandTileModel.start() emits view.opened with surface slug
+    "ToggleCommandTile" exactly once (asserted) and starts the bound-state observer once;
+    OSLogToggleCommandTelemetry default; prod injects the shared diagnostics adapter.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 6 production files compiled together with the REAL apps/apple token
+  closure (design/generated/apple/Tokens + Design/{TSDesign,TSMaterial} + Components/UI/Badges
+  for TSTone); none import the Shared xcframework.
+
+  [1] Isolated SwiftPM build — module "TeslaSync", real tokens, Swift 6 language mode:
+          swift build -> "Build complete!"
+        ISO_BUILD_EXIT=0                                                           OK
+  [2] swift test — the FULL XCTest suite EXECUTED on the macOS host (real Adapter/Model/Views/
+        Fakes/surface + real tokens), Swift 6 language mode:
+          Test Suite 'ToggleCommandTileAdapterTests'   passed — 16 tests, 0 failures
+          Test Suite 'ToggleCommandTileModelTests'     passed — 10 tests, 0 failures
+          Test Suite 'ToggleCommandTileLifecycleTests' passed —  9 tests, 0 failures
+          Executed 35 tests, with 0 failures (0 unexpected)
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: variant→tone, def state-binding + on/off symbol swap, params equality, power
+        label keys/fallbacks, active-tone rule, lastStatus parse (✓→succeeded / else failed /
+        glyph-strip / blank→nil), phase projection, freshness-chip map, a11y builders
+        (favorite/power/hint×3/testids); model idle-off/parse-on-init, bound-live-state→isOn,
+        unbound→local-optimistic, activate turn-on(command+params) / turn-off(commandOff,no-params)
+        / input-gated→requestDialog / bound-no-local-mutation, re-entrancy + offline guards,
+        started/succeeded/failed/offline events, cached-behind-offline, optimistic favorite +
+        authoritative seam confirm, time-based stale, idle-never-stale, view.opened-once + slug +
+        state-source-started-once.
+  [3] swiftc -typecheck — iOS 18 SIMULATOR SDK (-D DEBUG previews; -swift-version 6
+        -strict-concurrency=complete; -target arm64-apple-ios18.0-simulator; 6 production files
+        + previews + real token closure):
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [4] swiftc -typecheck — macOS 15 SDK (same files/flags; -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [5] swiftlint --strict (8 surface .swift files; explicit paths):
+          Done linting! Found 0 violations, 0 serious in 8 files.
+        LINT_EXIT=0                                                                OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/8 files require formatting.
+        FORMAT_EXIT=0                                                              OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift) on a scan dir holding the
+        ToggleCommandTile.* files:
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+        PLACEHOLDER_EXIT=0                                                         OK
+        (gate -SelfTest also run: all PASS. Manual grep TODO/FIXME/XXX/Coming soon/Placeholder/
+         Lorem/not implemented/stub/mock/fatalError across the 9 files: NONE.)
+
+=== GATE — FULL-APP XCODEBUILD (RAN on this host; real output; DEFERRED to signed runner) ===
+    Prereqs done: `xcodegen generate` -> GEN_EXIT=0 (ToggleCommandTile's 9 files enumerated);
+    Shared.xcframework staged from the gradle release artifact (BUILD SUCCESSFUL above).
+
+    [A] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+          IOS_EXIT=65
+          Real errors = 284 lines, ALL in OTHER prompts' surfaces — parallel-merge type
+          collisions and predecessor preview bugs, NONE in ToggleCommandTile. Distinct culprit
+          files: ChargeSessionChartWidget.{Model,Previews}, ChargeStatusLiveWidget.{Adapter,
+          Content,Model,Previews}, ChargeStatusWidget.{Adapter,Model,Previews},
+          DrivingCoachSection.{Model,Previews}, DrivingCoachWidget.{Model,Previews},
+          FleetStatsBarWidget(.swift,.Previews), SafetyFeaturesWidget(.swift,.Model,.Previews),
+          SafetyHistoryWidget(.swift,.Model,.Previews) — e.g. "'SafetyModel' is ambiguous for
+          type lookup", "cannot infer contextual base in reference to member 'loaded'/'live'",
+          "cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'".
+          The iOS app target glob compiles the whole feature-views/dashboard-widgets module, so
+          one ambiguous type in a sibling surface aborts the module compile. ToggleCommandTile
+          ITSELF compiled clean — the log shows "SwiftCompile … ToggleCommandTile.Previews.swift,
+          ToggleCommandTile.Views.swift, ToggleCommandTile.swift …" and "CopyStringsFile …
+          ToggleCommandTile.strings … detected encoding … UTF-8" with ZERO ToggleCommandTile
+          errors (verified: grep 'ToggleCommandTile' | grep -c 'error:' -> 0).
+    [B] xcodebuild -scheme TeslaSync-macOS build test
+          MAC_EXIT=65
+          Real errors = 4, ALL development-signing entitlements, PRE-EXISTING / infra:
+            "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing
+              with a development certificate. Enable development signing…
+          Zero compile errors surfaced (grep 'error:' minus signing/entitlement/certificate ->
+          empty); the build fast-failed at code-signing of the widget extension before the app's
+          module compile. No signing identity exists on this runner (ADR-012 reserves signed
+          builds for the macos-latest acceptance gate). ZERO ToggleCommandTile errors.
+
+    Disposition (two independent, code-unrelated reasons — neither a defect in this surface;
+    identical to the CommandTile 0226 / ToolCard 0010 / AlertMessageEditor 0180 predecessors,
+    Honesty rule 7):
+      (a) SIBLING COLLISIONS: the iOS whole-module app compile is aborted by pre-existing
+          parallel-merge type ambiguities + predecessor preview bugs in ~8 OTHER surfaces
+          (Charge*/DrivingCoach*/FleetStats*/Safety* widgets). Fixing those files is OUTSIDE this
+          prompt's allowed files (ToggleCommandTile.* + this log). ToggleCommandTile compiles clean.
+      (b) DEV-SIGNING: macOS app/widget entitlements need a development certificate on a signed
+          runner (ADR-012). Independent of this UI surface.
+      Both are the downstream P99-0001 apple-acceptance-gate's responsibility (runs on
+      macos-latest with signing identities and the merged, de-collided tree).
+    The surface is PROVEN green where it can be: isolated SwiftPM build [1], 35/35 executed
+    tests [2], real iOS-18 AND macOS-15 SDK type-checks [3]/[4], swiftlint/swiftformat/placeholder
+    [5]/[6]/[7]. A macos-pending row for this surface can be appended to
+    apps/macos-pending-verifications.md by the integrator (that file is outside this prompt's
+    allowed-files scope, so it is not edited here — the audit trail is captured in this log).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (off/on/local-optimistic/input-gated/
+      executing/succeeded/failed) + native live-state stale/offline — each has a #if DEBUG
+      preview and a model/adapter unit test; EXECUTED green (35/35).
+  [x] Hooks bind through the shared P1/S8 seams (ToggleCommandDispatching + ToggleStateObserving
+      + ToggleCommandFavoriteToggling → ToggleCommandTileModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web "commands.toggleFavorite" /
+      "commands.on" / "commands.off" preserved verbatim; native chrome commands.toggleTile.* +
+      commands.tile.freshness.* present; referenced(13)==declared(13), 0 missing, 0 orphan.
+  [x] Accessibility labels on every interactive element (tile label+value+hint+id; favorite
+      label+selected+id); status dot + icon hidden; status/chip combined.
+  [x] Tests: adapter unit + per-state model + a11y — 35 methods, EXECUTED 35/35, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; full-app xcodebuild build/test RAN, real
+      IOS_EXIT=65 (pre-existing sibling-surface collisions) + MAC_EXIT=65 (dev-signing) captured
+      and DEFERRED to the signed P99 acceptance gate, with ZERO ToggleCommandTile errors.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host/surface gates are genuinely green; the full-app xcodebuild is
+                          shown with its REAL exit 65 + cause + zero-ToggleCommandTile-errors,
+                          DEFERRED, never reported as pass.
+  2 No scope narrowing ... full surface (8 .swift + strings), all states, three seams, 35 tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + conditional branch reproduced
+                          (isOn derivation, handleClick on/off/input routing, iconOff, onStyles).
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0; manual grep clean.
+  5 No parity shortcuts .. GlassPanel tile + variant-tone on-state (border/wash/icon/dot/text) +
+                          Star (stopPropagation) + status dot + Loader2/Icon/iconOff + ON/OFF +
+                          status line; bound-state vs local-optimistic toggle; off→input dialog.
+  6 No delegation ........ authored directly (delegation FORBIDDEN by this prompt; none used).
+  7 No predecessor bypass  same disposition as CommandTile 0226 / ToolCard 0010 (host green +
+                          full-app build deferred to the signed macos-latest gate).
+  8 No commit on red ..... committed work is green on every surface-scoped runnable gate; the only
+                          non-green steps are PRE-EXISTING sibling-surface collisions + dev-signing,
+                          both out-of-scope / out-of-allowed-files.
+  9 No silent drift ...... the full-app build deferral + its causes are documented above with real
+                          exit codes + culprit files; native-only stale/offline chrome labelled as such.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
