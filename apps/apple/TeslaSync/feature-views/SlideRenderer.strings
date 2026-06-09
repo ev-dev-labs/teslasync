@@ -1,0 +1,59 @@
+/*
+  SlideRenderer.strings
+  TeslaSync — P4 feature view · 0066 · SlideRenderer (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SlideRenderer` resolves (table "SlideRenderer") lives here with its English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns its own
+  strings without editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the EXACT set of keys extracted from the web source
+  (features/analytics/components/review/SlideRenderer.tsx → the two drive-highlight labels
+  it owns). The `slideRenderer.*` keys back this surface's own composition: the built-in
+  default slide bodies (shown until the parent injects the richer child surfaces) and the
+  native live-state chrome (freshness chip, banners, loading / empty / error, refresh /
+  retry, accessibility copy).
+*/
+
+/* --- Keys from the web source (parity: the labels SlideRenderer.tsx forwards) --- */
+"yearReview.longestDrive" = "Longest Drive";
+"yearReview.mostEfficient" = "Most Efficient Drive";
+
+/* --- Built-in default slide composition: stat captions --- */
+"slideRenderer.caption.recap" = "Year in Review";
+"slideRenderer.caption.distance" = "total distance";
+"slideRenderer.caption.energy" = "charged";
+"slideRenderer.caption.drives" = "drives this year";
+"slideRenderer.caption.saved" = "estimated fuel savings";
+"slideRenderer.caption.co2" = "CO₂ offset";
+"slideRenderer.caption.mostActiveDay" = "most active day";
+"slideRenderer.caption.funFacts" = "Fun facts about your year";
+"slideRenderer.caption.duration" = "duration";
+"slideRenderer.caption.avgStartSOC" = "Average plug-in at %@%% battery";
+
+/* --- Built-in default slide composition: drive highlight + charging mix --- */
+"slideRenderer.driveHighlight.noData" = "No drive data for this year";
+"slideRenderer.charging.supercharger" = "Supercharger";
+"slideRenderer.charging.dcFast" = "DC Fast";
+"slideRenderer.charging.acOther" = "AC / Other";
+"slideRenderer.charging.sessions" = "charge sessions";
+
+/* --- Accessibility --- */
+"slideRenderer.a11y.to" = "to";
+
+/* --- Native chrome: freshness + actions --- */
+"slideRenderer.live" = "Live";
+"slideRenderer.updating" = "Updating";
+"slideRenderer.stale" = "Stale";
+"slideRenderer.offline" = "Offline";
+"slideRenderer.refresh" = "Refresh";
+"slideRenderer.retry" = "Retry";
+
+/* --- Native chrome: states + banners --- */
+"slideRenderer.loading" = "Loading year in review";
+"slideRenderer.noData" = "No year-in-review data";
+"slideRenderer.emptyHint" = "Drive through the year to build up your recap.";
+"slideRenderer.errorTitle" = "Couldn't load year in review";
+"slideRenderer.staleBanner" = "Reconnecting — recap may be stale";
+"slideRenderer.offlineBanner" = "Offline — showing last known recap";
