@@ -265,7 +265,7 @@ public static class FleetStatsBarProjection
 /// <c>(vehicles &amp;&amp; vehicles.length &gt; 0) || analytics</c> empty gate. Kept pure so the
 /// combine contract is unit-tested without a network or cache.
 /// </summary>
-public static class FleetStatsResultMapper
+public static class FleetStatsBarResultMapper
 {
     /// <summary>Combine the latest <paramref name="vehicles"/> and <paramref name="fleet"/> emissions.</summary>
     public static RepositoryResult<FleetStats> Combine(
