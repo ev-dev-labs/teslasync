@@ -1,0 +1,50 @@
+/*
+  PresetGallery.strings
+  TeslaSync — P4 feature view · 0085 · PresetGallery (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  PresetGallery resolves (table "PresetGallery") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first groups are the exact keys extracted from the web source
+  (features/automations/pages/PresetGallery.tsx). The remainder back the native
+  state envelope (loading, error retry, freshness chip, connectivity banner) and the
+  accessibility strings.
+*/
+
+/* --- Card subtitle: trigger labels (web `triggerLabels` map) --- */
+"automations.builder.triggerSchedule" = "Schedule";
+"automations.builder.triggerEvent" = "Vehicle Event";
+"automations.builder.triggerGeofence" = "Geofence";
+"automations.builder.triggerSignal" = "Signal Threshold";
+"automations.builder.noTrigger" = "No trigger configured";
+
+/* --- Card badge + action (web `PresetCard`) --- */
+"automations.presets.actionCount" = "{{count}} actions";
+"automations.presets.install" = "Install";
+"automations.presets.installAria" = "Install {{name}}";
+
+/* --- Empty (web `EmptyState` message) --- */
+"automations.presets.empty" = "No preset templates available";
+
+/* --- Gallery title (accessibility summary) --- */
+"automations.presets.title" = "Automation presets";
+
+/* --- Loading (web four `PresetCardSkeleton`s) --- */
+"automations.presets.loading" = "Loading presets…";
+
+/* --- Error-state + inline error (web first-load failure → retry) --- */
+"automations.presets.errors.load" = "Failed to load presets.";
+"automations.presets.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"automations.presets.live" = "Live";
+"automations.presets.stale" = "Stale";
+"automations.presets.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"automations.presets.staleBanner" = "Reconnecting — this list may be out of date";
+"automations.presets.offlineBanner" = "Offline — showing the last loaded presets";
