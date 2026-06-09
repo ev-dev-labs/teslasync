@@ -46,6 +46,19 @@
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.ViewModel.cs" Link="FeatureViews\ResultPanel.ViewModel.cs" />
   </ItemGroup>
 
+  <!--
+    P2 feature-views/0018 JwtDecoder: the surface's UI-thread-free logic (the pure decode adapter, the state
+    enum + decode-result model, the display projection, the diagnostics, and the state-holder view-model)
+    lives in the WinUI app project under feature-views/ but is WinUI-free by construction. It reuses the
+    sibling ResultPanel.Model (the ResultPanelInput record) linked above for its segment panels. Link the two
+    logic files in so this headless (net10.0) test project verifies the adapter + per-state transitions
+    without a UI host. The WinUI view itself (JwtDecoder.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.Model.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.ViewModel.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.ViewModel.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -157,9 +170,6 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WarrantyStatusWidget\WarrantyStatusWidget.Model.cs" Link="Widgets\WarrantyStatusWidget\WarrantyStatusWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WarrantyStatusWidget\WarrantyStatusWidget.ViewModel.cs" Link="Widgets\WarrantyStatusWidget\WarrantyStatusWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WarrantyStatusWidget\WarrantyStatusWidget.Source.cs" Link="Widgets\WarrantyStatusWidget\WarrantyStatusWidget.Source.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Model.cs" Link="Widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.ViewModel.cs" Link="Widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Source.cs" Link="Widgets\ChargingOptimizerWidget\ChargingOptimizerWidget.Source.cs" />
@@ -351,9 +361,6 @@
     -->
     <Compile Include="..\TeslaSync.App\feature-views\ReferenceLinksSection.Model.cs" Link="FeatureViews\ReferenceLinksSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ReferenceLinksSection.ViewModel.cs" Link="FeatureViews\ReferenceLinksSection.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Model.cs" Link="FeatureViews\InfrastructureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.ViewModel.cs" Link="FeatureViews\InfrastructureSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Source.cs" Link="FeatureViews\InfrastructureSection.Source.cs" />
