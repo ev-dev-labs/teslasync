@@ -165,6 +165,8 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ExportStatusWidget\ExportStatusWidget.Model.cs" Link="Widgets\ExportStatusWidget\ExportStatusWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ExportStatusWidget\ExportStatusWidget.ViewModel.cs" Link="Widgets\ExportStatusWidget\ExportStatusWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ExportStatusWidget\ExportStatusWidget.Source.cs" Link="Widgets\ExportStatusWidget\ExportStatusWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsBarWidget\FleetStatsBarWidget.Model.cs" Link="Widgets\FleetStatsBarWidget\FleetStatsBarWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsBarWidget\FleetStatsBarWidget.ViewModel.cs" Link="Widgets\FleetStatsBarWidget\FleetStatsBarWidget.ViewModel.cs" />
   </ItemGroup>
 
   <!--
