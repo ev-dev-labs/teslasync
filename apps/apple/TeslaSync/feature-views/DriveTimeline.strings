@@ -1,0 +1,45 @@
+/*
+  DriveTimeline.strings
+  TeslaSync — P4 feature view · 0140 · DriveTimeline (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  DriveTimeline resolves (table "DriveTimeline") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-safe across the concurrent slots).
+
+  The web source extracts exactly one i18n key (`driveDetail.inProgress`). The
+  remaining keys back the native-only chrome (the localized h/m duration tokens the
+  web helper hardcodes, the freshness chip, retry / error / offline / empty / loading
+  copy, and the VoiceOver summary templates).
+*/
+
+/* --- Source key (web `t('driveDetail.inProgress', 'In progress')`) --- */
+"driveDetail.inProgress" = "In progress";
+
+/* --- Duration tokens (web drive-detail/helpers.ts `${h}h ${m}m` / `${m}m`) --- */
+"driveDetail.timeline.durationHM" = "{{hours}}h {{minutes}}m";
+"driveDetail.timeline.durationM" = "{{minutes}}m";
+
+/* --- Native chrome: freshness + actions --- */
+"driveDetail.timeline.live" = "Live";
+"driveDetail.timeline.stale" = "Stale";
+"driveDetail.timeline.offline" = "Offline";
+"driveDetail.timeline.refresh" = "Refresh";
+"driveDetail.timeline.retry" = "Retry";
+
+/* --- Native chrome: error + offline copy --- */
+"driveDetail.timeline.errorTitle" = "Couldn't load drive timeline";
+"driveDetail.timeline.offlineMessage" = "Offline — showing last known drive timeline";
+
+/* --- Native chrome: empty state (no drive resolved) --- */
+"driveDetail.timeline.empty.title" = "No drive timeline";
+"driveDetail.timeline.empty.message" = "Select a drive to see its start, duration, and finish.";
+
+/* --- Native chrome: loading skeleton VoiceOver label --- */
+"driveDetail.timeline.loading" = "Loading drive timeline…";
+
+/* --- Accessibility: combined timeline VoiceOver summary --- */
+"driveDetail.timeline.a11y.completed" = "Drive from {{start}} to {{end}}, duration {{duration}}";
+"driveDetail.timeline.a11y.inProgress" = "Drive started {{start}}, in progress, {{duration}} so far";
