@@ -57,6 +57,16 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.Model.cs" Link="FeatureViews\RegexTester\RegexTester.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.ViewModel.cs" Link="FeatureViews\RegexTester\RegexTester.ViewModel.cs" />
+    P2 feature-views/0018 JwtDecoder: the surface's UI-thread-free logic (the pure decode adapter, the state
+    enum + decode-result model, the display projection, the diagnostics, and the state-holder view-model)
+    lives in the WinUI app project under feature-views/ but is WinUI-free by construction. It reuses the
+    sibling ResultPanel.Model (the ResultPanelInput record) linked above for its segment panels. Link the two
+    logic files in so this headless (net10.0) test project verifies the adapter + per-state transitions
+    without a UI host. The WinUI view itself (JwtDecoder.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.Model.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.ViewModel.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.ViewModel.cs" />
   </ItemGroup>
 
   <ItemGroup>
