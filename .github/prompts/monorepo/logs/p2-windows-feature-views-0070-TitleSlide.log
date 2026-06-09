@@ -1,0 +1,107 @@
+=== P2 Feature view 0070 TitleSlide (Windows) ===
+
+--- build: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-02\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:01:08.32
+BUILD_EXIT=0
+
+--- test: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation ---
+(UIAutomation suite drives the packaged app over WinAppDriver and is run separately via run-ui-automation.ps1; it is excluded from this headless gate.)
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generated -> D:\repos\teslasync-wt2\wt-02\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+Test run for D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+Test run for D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed:  8091, Skipped:     0, Total:  8091, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- format: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- placeholders: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TitleSlide ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+GATE complete
+
+GATE BUILD=0 TEST=0 FORMAT=0 PLACEHOLDER=0
+(Build warnings are pre-existing CA1000/CA1716/CA1720/CA1859 advisories in TeslaSync.App.Core; this surface
+adds 0 warnings and 0 errors. The 8091 headless tests include this surface's 22 new tests.)
+
+=== SUMMARY ===
+Surface (allowed files): apps/windows/TeslaSync.App/feature-views/TitleSlide/
+  - TitleSlide.Model.cs  (WinUI-free: TitleSlideState, TitleSlideModel (tolerant FromJson/Parse incl. nested
+                          vehicle.display_name), TitleSlideDisplay, TitleSlideProjection, TitleSlideRegistration,
+                          TitleSlideDiagnostics)
+  - TitleSlide.cs        (WinUI 3 view: ContentControl rendering the content / empty branches)
+Tests (required by acceptance + gate): apps/windows/TeslaSync.App.Tests/FeatureViews/TitleSlideTests.cs (22 tests)
+  + TitleSlide.Model.cs linked into TeslaSync.App.Tests.csproj (headless net10.0 adapter/projection verification).
+
+Pre-existing-corruption repair (TeslaSync.App.Tests.csproj):
+  This branch's TeslaSync.App.Tests.csproj was committed corrupt (HEAD 8804add5f): TWO concatenated <Project>
+  roots (lines 1-893 + 894-1682) plus several malformed comment/ItemGroup boundaries that failed XML load with
+  MSB4025, so `dotnet build`/`dotnet test` could not even load the project (a pre-existing integration-branch
+  defect, NOT introduced here; a prior agent left a note about the same MSB4025 class at the DrivingPerformanceCards
+  block). Repaired deterministically: dropped the duplicate <Project> root, removed the broken boundaries, and
+  consolidated every linked source into well-formed ItemGroups (deduplicated to avoid NETSDK1022), preserving all
+  364 previously-linked sources -- including the ChargingTab triple, which had only survived in the discarded
+  duplicate root (so the repair also RESTORES ChargingTab's headless test coverage) -- and adding the TitleSlide
+  link. Verified: the csproj now loads as XML with a single root, the whole solution builds, and 8091 tests pass.
+
+Web source parity (web/src/features/analytics/components/review/TitleSlide.tsx):
+  States reproduced: Content (car emoji + count-up year + t('yearReview.title','Year in Review') + vehicle name)
+    and Empty (emoji over the title + t('yearReview.noDriveData','No drive data for this year'), never a blank box).
+    The web source is purely presentational (single prop data: YearReview; hook useTranslation only) with no
+    conditional branch, so there is no fetch-driven loading/error/stale/offline branch to reproduce in the slide --
+    the parent year-in-review story page owns those, exactly as the DriveHighlightSlide/AuditPanel/ResultPanel ports
+    document. The Empty branch is the native robustness path for the absent/sentinel model (never-blank rule).
+  Data sources mapped: useTranslation -> ILocalizer facade (no HTTP in the view; model is supplied by the parent).
+  Shared components mapped: @/components/data-display AnimatedNumber -> TsAnimatedNumber (count-up, en-US grouping,
+    reduce-motion aware) scaled to a hero size via a height-locked Viewbox; @/components/motion (framer-motion
+    staggered entrance) -> TsStaggerContainer (OS reduce-motion aware); typography -> tokenized DisplayTokens
+    brushes (TextSecondary; no raw hex).
+  Year formatting: web fmtNumber/toLocaleString grouping (2026 -> "2,026") reproduced via NumberFormatting.Format,
+    matching what the TsAnimatedNumber count-up shows on screen.
+  i18n: yearReview.title + yearReview.noDriveData resolve through the P1/S10 ILocalizer facade and are present in
+    the shared catalog ("Year in Review" / "No drive data for this year"); no English literals beyond the fallbacks
+    the web t() also passes.
+  Accessibility: surface Narrator name in both states (year, title, vehicle -- or the title + empty message);
+    decorative emoji and the count-up wrapper are AccessibilityView.Raw; the empty state is a live region;
+    TextBlocks honour the system font scale; the entrance honours OS reduce-motion via TsStaggerContainer.
+  Telemetry: TitleSlideDiagnostics emits "view.opened slug=TitleSlide" (PII-safe; never the year or vehicle name)
+    on first load.
+
+Note: the Category=UIAutomation suite (TeslaSync.App.UITests) drives the packaged app over WinAppDriver and is run
+      independently via run-ui-automation.ps1 per its csproj contract; it is intentionally excluded from this headless
+      gate (its tests require a WinAppDriver runner + deployed MSIX that the headless build host lacks -- an honest
+      BLOCKED condition for THAT suite's own gate, not this surface's). The WinUI App project itself builds 0-error,
+      confirming the WinUI 3 / Windows App SDK toolchain is available on this runner.
+
+Gate: BUILD_EXIT=0  TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE
