@@ -190,6 +190,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\NotificationStatsWidget\NotificationStatsWidget.Model.cs" Link="Widgets\NotificationStatsWidget\NotificationStatsWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\NotificationStatsWidget\NotificationStatsWidget.ViewModel.cs" Link="Widgets\NotificationStatsWidget\NotificationStatsWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\NotificationStatsWidget\NotificationStatsWidget.Source.cs" Link="Widgets\NotificationStatsWidget\NotificationStatsWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\OdometerCounterWidget\OdometerCounterWidget.Model.cs" Link="Widgets\OdometerCounterWidget\OdometerCounterWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\OdometerCounterWidget\OdometerCounterWidget.ViewModel.cs" Link="Widgets\OdometerCounterWidget\OdometerCounterWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\OdometerCounterWidget\OdometerCounterWidget.Source.cs" Link="Widgets\OdometerCounterWidget\OdometerCounterWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsWidget\FleetStatsWidget.Model.cs" Link="Widgets\FleetStatsWidget\FleetStatsWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsWidget\FleetStatsWidget.ViewModel.cs" Link="Widgets\FleetStatsWidget\FleetStatsWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Model.cs" Link="Widgets\MediaNowPlayingWidget\MediaNowPlayingWidget.Model.cs" />

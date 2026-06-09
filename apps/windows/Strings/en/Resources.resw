@@ -22359,6 +22359,12 @@
   <data name="translation.widget.nowPlaying" xml:space="preserve">
     <value>Now Playing</value>
   </data>
+  <data name="translation.widget.odometer.description" xml:space="preserve">
+    <value>Animated odometer with rolling digit animation and distance breakdown</value>
+  </data>
+  <data name="translation.widget.odometer.name" xml:space="preserve">
+    <value>Odometer Counter</value>
+  </data>
   <data name="translation.widget.odometer.noData" xml:space="preserve">
     <value>No odometer data</value>
   </data>
