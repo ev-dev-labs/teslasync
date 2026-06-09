@@ -1,0 +1,27 @@
+/*
+  ByteSizeConverter.strings
+  TeslaSync — P4 feature view · 0012 · ByteSizeConverter (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ByteSizeConverter` resolves (table "ByteSizeConverter") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/admin/components/devtools/tools/ByteSizeConverter.tsx). The web
+  en.json carries "Value"/"Unit" verbatim and has no entry for "Byte Size"/
+  "Byte Size Desc", so i18next renders those keys as-is — the native fallbacks
+  reproduce that exactly. The remaining keys back native-only chrome (the
+  unparseable-input hint and accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Byte Size" = "Byte Size";
+"Byte Size Desc" = "Byte Size Desc";
+"Value" = "Value";
+"Unit" = "Unit";
+
+/* --- Native chrome: unparseable-input hint --- */
+"Byte Size Empty Hint" = "Enter a number (for example, 1024) to convert it across every byte unit.";
