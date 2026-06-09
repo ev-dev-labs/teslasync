@@ -1,0 +1,47 @@
+/*
+  DriveScoreGaugeWidget.strings
+  TeslaSync — P4 dashboard widget · 0039 · DriveScoreGaugeWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DriveScoreGaugeWidget` resolves (table "DriveScoreGaugeWidget") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/dashboard/widgets/DriveScoreGaugeWidget.tsx) — the title, the gauge
+  unit, the three sub-score labels, and the empty-state copy. The remaining keys
+  back the native-only chrome (freshness chip, refresh/retry/loading/error/banner
+  copy) and the VoiceOver templates.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.driveScoreGauge.title" = "Drive Score";
+"widget.driveScoreGauge.description" = "Radial gauge showing weekly score (0-100) with efficiency, smoothness, and speed breakdown";
+"widget.driveScoreGauge.weekly" = "Weekly score";
+"widget.driveScoreGauge.efficiency" = "Efficiency";
+"widget.driveScoreGauge.smoothness" = "Smoothness";
+"widget.driveScoreGauge.speed" = "Speed Discipline";
+"widget.driveScoreGauge.noData" = "No score yet";
+
+/* --- Grade fallback (web `score?.grade ?? '—'`) --- */
+"widget.driveScoreGauge.gradeFallback" = "—";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.driveScoreGauge.live" = "Live";
+"widget.driveScoreGauge.stale" = "Stale";
+"widget.driveScoreGauge.offline" = "Offline";
+"widget.driveScoreGauge.refresh" = "Refresh";
+"widget.driveScoreGauge.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.driveScoreGauge.loading" = "Loading drive score";
+"widget.driveScoreGauge.emptyHint" = "Your weekly drive score appears here after a few drives.";
+"widget.driveScoreGauge.errorTitle" = "Couldn't load drive score";
+"widget.driveScoreGauge.staleBanner" = "Reconnecting — score may be stale";
+"widget.driveScoreGauge.offlineBanner" = "Offline — showing last known score";
+
+/* --- Accessibility (VoiceOver templates) --- */
+"widget.driveScoreGauge.overallA11y" = "Weekly drive score %1$@ out of 100, grade %2$@";
+"widget.driveScoreGauge.subScoreA11y" = "%1$@ %2$@ out of 100";
