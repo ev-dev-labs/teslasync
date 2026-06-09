@@ -1,0 +1,36 @@
+/*
+  VinDecoder.strings
+  TeslaSync — P4 feature view · 0025 · VinDecoder (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VinDecoderView` resolves (table "VinDecoder", via the `VinDecoderStrings`
+  facade) lives here with its English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first blocks are the exact set of keys extracted from the web source
+  (features/admin/components/devtools/tools/VinDecoder.tsx) — the literal `t()`
+  keys, so source ↔ catalog parity is mechanical. The web catalog leaves the
+  `devtools.utils.vin_*` labels unfilled (it would render the raw key); the
+  native catalog supplies proper copy. The remaining keys back the native-only
+  chrome (the no-result hint + the input accessibility hint).
+*/
+
+/* --- Keys from the web source (parity, literal t() keys) --- */
+"Vin Decoder" = "VIN Decoder";
+"Vin Decoder Desc" = "Decode a Tesla VIN into its manufacturer, model, drivetrain, model year, and assembly plant.";
+"Vin" = "VIN";
+"Unknown" = "Unknown";
+
+/* --- Decoded field labels (web devtools.utils.vin_<key>) --- */
+"devtools.utils.vin_mfr" = "Manufacturer";
+"devtools.utils.vin_model" = "Model";
+"devtools.utils.vin_drive" = "Drivetrain";
+"devtools.utils.vin_year" = "Model Year";
+"devtools.utils.vin_plant" = "Plant";
+"devtools.utils.vin_serial" = "Serial";
+
+/* --- Native chrome --- */
+"vinDecoder.idleHint" = "Enter at least 11 characters of a VIN to decode it.";
+"vinDecoder.inputHint" = "Type or paste a 17-character Tesla VIN to decode.";
