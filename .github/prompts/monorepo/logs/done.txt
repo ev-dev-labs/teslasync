@@ -164,3 +164,4 @@ p2-windows/dashboard-widgets/W-0062-MediaHistoryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0063-MediaNowPlayingWidget.prompt.md
 p2-windows/dashboard-widgets/W-0066-MotorHistoryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0065-MonthlyMileageWidget.prompt.md
+p2-windows/dashboard-widgets/W-0067-MotorPerformanceWidget.prompt.md
