@@ -19,7 +19,7 @@ namespace TeslaSync.App.DashboardWidgets.SafetyHistory;
 public interface ISafetyHistorySource
 {
     /// <summary>Stream the cache-then-network safety-history snapshots, newest cache first.</summary>
-    IAsyncEnumerable<RepositoryResult<IReadOnlyList<SafetySnapshot>>> StreamAsync(CancellationToken cancellationToken = default);
+    IAsyncEnumerable<RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>> StreamAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -29,7 +29,7 @@ public interface ISafetyHistorySource
 /// cache-then-network read of the safety change feed (generated operation <c>get_api_v1_safety</c> —
 /// <c>GET /api/v1/safety?vehicle_id={id}</c>, the web <c>useSafetyHistory</c> query) through the shared
 /// <see cref="CacheThenNetworkEngine"/>, caching the raw JSON so the snake_case wire shape round-trips
-/// losslessly, and parses each emission into <see cref="SafetySnapshot"/> rows via
+/// losslessly, and parses each emission into <see cref="SafetyHistorySnapshot"/> rows via
 /// <see cref="SafetyHistoryResultMapper"/>. When no vehicle is available the read short-circuits to
 /// <see cref="RepositoryResult{T}.Empty()"/>, mirroring the web hook's disabled query
 /// (<c>enabled: !!vehicleId</c>). No HTTP touches the view.
@@ -72,14 +72,14 @@ public sealed class SafetyHistorySource : ISafetyHistorySource
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<RepositoryResult<IReadOnlyList<SafetySnapshot>>> StreamAsync(
+    public async IAsyncEnumerable<RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>> StreamAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         long? vehicleId = await ResolveVehicleIdAsync(cancellationToken).ConfigureAwait(false);
         if (vehicleId is not { } vid)
         {
             // Web parity: with no vehicle the useSafetyHistory query is disabled and `data` is undefined.
-            yield return RepositoryResult<IReadOnlyList<SafetySnapshot>>.Empty();
+            yield return RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Empty();
             yield break;
         }
 
