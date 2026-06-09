@@ -1,0 +1,55 @@
+/*
+  CommandQuickActionsWidget.strings
+  TeslaSync — P4 dashboard widget · 0030 · CommandQuickActionsWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `CommandQuickActionsWidget` resolves (table "CommandQuickActionsWidget") lives
+  here with its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/dashboard/widgets/CommandQuickActionsWidget.tsx — the `dashboard`
+  namespace `widget.quickActions.*` keys). The registry group mirrors
+  registry/commands.ts ("command-quick-actions"). The remaining keys back the
+  native-only chrome (freshness / loading / error / dispatch feedback +
+  accessibility), which the web source delegates to the shared WidgetShell + toast.
+*/
+
+/* --- Keys from the web source (parity, web `t('widget.quickActions.X', default)`) --- */
+"widget.quickActions.title" = "Quick Actions";
+"widget.quickActions.lock" = "Lock";
+"widget.quickActions.unlock" = "Unlock";
+"widget.quickActions.climateOn" = "Climate On";
+"widget.quickActions.climateOff" = "Climate Off";
+"widget.quickActions.frunk" = "Frunk";
+"widget.quickActions.horn" = "Horn";
+"widget.quickActions.flash" = "Flash";
+"widget.quickActions.trunk" = "Trunk";
+"widget.quickActions.noVehicle" = "No vehicle selected";
+
+/* --- Registry (registry/commands.ts → "command-quick-actions") --- */
+"widget.quickActions.description" = "Grid of command buttons: Lock, Unlock, Climate, Frunk, Horn, Flash";
+
+/* --- Native chrome: freshness (web WidgetShell DataFreshness) --- */
+"widget.quickActions.live" = "Live";
+"widget.quickActions.stale" = "Stale";
+"widget.quickActions.offline" = "Offline";
+"widget.quickActions.updating" = "Updating";
+"widget.quickActions.refresh" = "Refresh";
+
+/* --- Native chrome: states --- */
+"widget.quickActions.loading" = "Loading quick actions";
+"widget.quickActions.errorTitle" = "Couldn't load vehicle";
+"widget.quickActions.retry" = "Retry";
+"widget.quickActions.staleBanner" = "Reconnecting — vehicle state may be stale";
+"widget.quickActions.offlineBanner" = "Offline — commands may not be delivered";
+
+/* --- Dispatch feedback (web useVehicleCommand success/error toast) --- */
+"widget.quickActions.commandSent" = "Command sent successfully";
+"widget.quickActions.commandFailed" = "Command failed";
+
+/* --- Accessibility --- */
+"widget.quickActions.actionHint" = "Sends the %@ command";
+"widget.quickActions.sending" = "Sending %@…";
