@@ -221,6 +221,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.Model.cs" Link="Widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.ViewModel.cs" Link="Widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.Source.cs" Link="Widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Model.cs" Link="Widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.ViewModel.cs" Link="Widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Source.cs" Link="Widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Source.cs" />
   </ItemGroup>
 
   <!--
