@@ -157,6 +157,17 @@
     Targets plain net10.0 so `dotnet test` runs without a WinUI/UI thread host. The WinUI app targets a
     WinUI TFM, so its testable sources are Compile linked here rather than project referenced; the bare
     view *.cs files are exercised by the app build itself.
+    Headless (net10.0) unit tests for the WinUI app's UI-thread-free logic. The project runs without a
+    WinUI / UI-thread host and links each surface's WinUI-free sources (Model / Source / ViewModel /
+    Presentation) from TeslaSync.App so the adapters, per-state projections and diagnostics are verified
+    row for row; the WinUI views themselves are exercised by the app build.
+
+    Keep this as ONE <Project> root with a single, deduplicated, path-sorted Compile ItemGroup. A chain of
+    integration merges had repeatedly re-concatenated multiple <Project> roots plus nested/unclosed comments
+    and duplicate <Compile> items, failing XML load (MSB4025) and source-file-specified-twice (CS2002). The
+    file was consolidated back into this single canonical root: the deduplicated union of every previously
+    linked source is preserved.
+  -->
 
     Repair note (P2 feature-views/0124 KioskOverlay): a chain of integration merges had again left this
     file with several concatenated Project roots plus unterminated comment blocks, so the solution failed
@@ -251,6 +262,7 @@
   <!-- Linked WinUI-free feature-view / dashboard-widget / shared logic (deduplicated union). -->
   <!-- Linked WinUI-free logic from TeslaSync.App (compiled + verified headlessly). -->
   <!-- UI thread free feature-view, dashboard-widget and shared logic sources, deduplicated and sorted. -->
+  <!-- Linked WinUI-free Model / Source / ViewModel / Presentation sources (deduplicated, path-sorted union). -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -628,6 +640,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.ViewModel.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\KioskOverlay\KioskOverlay.Model.cs" Link="FeatureViews\KioskOverlay\KioskOverlay.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\KioskOverlay\KioskOverlay.ViewModel.cs" Link="FeatureViews\KioskOverlay\KioskOverlay.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LayoutManager\LayoutManager.Model.cs" Link="FeatureViews\LayoutManager\LayoutManager.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LayoutManager\LayoutManager.ViewModel.cs" Link="FeatureViews\LayoutManager\LayoutManager.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Model.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Source.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.ViewModel.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.ViewModel.cs" />
