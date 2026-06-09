@@ -707,6 +707,19 @@
   </ItemGroup>
 
   <!--
+    P2 feature-views/0062 DriveHighlightSlide: the year-in-review drive-highlight slide's UI-thread-free logic
+    (the tolerant highlight parse adapter, the content/empty branch projection, the SI distance + efficiency
+    conversion, the JavaScript-faithful Math.round rendering, the duration formatting, the localized keys, the
+    composed Narrator names and the view.opened diagnostics) lives in the WinUI app project but is WinUI-free by
+    construction. Link the Model in so this headless (net10.0) test project verifies the adapter + per-state
+    projection row-for-row without a UI host. The WinUI view itself
+    (feature-views\DriveHighlightSlide\DriveHighlightSlide.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\DriveHighlightSlide\DriveHighlightSlide.Model.cs" Link="FeatureViews\DriveHighlightSlide\DriveHighlightSlide.Model.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (W-0025 VinDecoder): the VinDecoder surface's UI-thread-free logic (the pure VIN decode
     + reference tables + field catalog model and the state-holder view-model) lives in the WinUI app project
     but is WinUI-free by construction. Link those two source files in so the headless (net10.0) test project
