@@ -1,0 +1,47 @@
+/*
+  TripPlannerMap.strings
+  TeslaSync — P4 feature view · 0178 · TripPlannerMap (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TripPlannerMap` resolves (table "TripPlannerMap") lives here with its web value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  Group 1 is the exact keys + values extracted from the web source
+  (features/driving/components/TripPlannerMap.tsx, namespace "tripPlanner.map").
+  Group 2 backs the charge-stop popup metric template the native callout reproduces.
+  Group 3 backs the native-only chrome (map label, legend, freshness chip, loading /
+  error / empty, callout dismiss) and the VoiceOver labels.
+*/
+
+/* --- Group 1: web source (tripPlanner.map.*) --- */
+"tripPlanner.map.origin" = "Origin";
+"tripPlanner.map.destination" = "Destination";
+"tripPlanner.map.empty" = "Enter origin and destination to see the route";
+
+/* --- Group 2: reproduced charge-stop popup metric template --- */
+"tripPlanner.map.stopRange" = "{{from}}% → {{to}}% ({{minutes}} min)";
+"tripPlanner.map.chargeStop" = "Charge stop";
+
+/* --- Group 3: native chrome (map label + legend) --- */
+"tripPlanner.map.mapLabel" = "Trip route map";
+"tripPlanner.map.chargeStops" = "Charge stops";
+"tripPlanner.map.legendA11y" = "Map legend: {{roles}}";
+
+/* --- Group 3: native chrome (freshness chip) --- */
+"tripPlanner.map.refresh" = "Refresh";
+"tripPlanner.map.staleBanner" = "Reconnecting — the planned route may be out of date";
+"tripPlanner.map.offlineBanner" = "Offline — showing the last planned route";
+
+/* --- Group 3: native chrome (loading / error / empty + callout) --- */
+"tripPlanner.map.loading" = "Loading planned route";
+"tripPlanner.map.errorTitle" = "Couldn't load the planned route";
+"tripPlanner.map.retry" = "Retry";
+"tripPlanner.map.emptyHint" = "The route, charge stops, and waypoints appear here once you set a destination.";
+"tripPlanner.map.dismiss" = "Dismiss";
+
+/* --- Group 3: VoiceOver labels --- */
+"tripPlanner.map.originA11y" = "Origin: {{name}}";
+"tripPlanner.map.destinationA11y" = "Destination: {{name}}";
+"tripPlanner.map.stopA11y" = "{{name}}, {{from}}% to {{to}}%, {{minutes}} minutes";
