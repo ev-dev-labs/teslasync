@@ -199,3 +199,4 @@ p2-windows/dashboard-widgets/W-0099-SystemHealthWidget.prompt.md
 p2-windows/dashboard-widgets/W-0101-TirePressureHistoryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0100-TelemetryErrorsWidget.prompt.md
 p2-windows/dashboard-widgets/W-0103-TripSummaryWidget.prompt.md
+p2-windows/dashboard-widgets/W-0102-TirePressureVisualWidget.prompt.md
