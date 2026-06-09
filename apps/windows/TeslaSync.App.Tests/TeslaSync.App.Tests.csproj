@@ -53,6 +53,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AuditLogWidget\AuditLogWidget.Model.cs" Link="Widgets\AuditLogWidget\AuditLogWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AuditLogWidget\AuditLogWidget.ViewModel.cs" Link="Widgets\AuditLogWidget\AuditLogWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AuditLogWidget\AuditLogWidget.Source.cs" Link="Widgets\AuditLogWidget\AuditLogWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SignalCatalogWidget\SignalCatalogWidget.Model.cs" Link="Widgets\SignalCatalogWidget\SignalCatalogWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SignalCatalogWidget\SignalCatalogWidget.ViewModel.cs" Link="Widgets\SignalCatalogWidget\SignalCatalogWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SignalCatalogWidget\SignalCatalogWidget.Source.cs" Link="Widgets\SignalCatalogWidget\SignalCatalogWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AutomationHistoryWidget\AutomationHistoryWidget.Model.cs" Link="Widgets\AutomationHistoryWidget\AutomationHistoryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AutomationHistoryWidget\AutomationHistoryWidget.ViewModel.cs" Link="Widgets\AutomationHistoryWidget\AutomationHistoryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AutomationStatusWidget\AutomationStatusWidget.Model.cs" Link="Widgets\AutomationStatusWidget\AutomationStatusWidget.Model.cs" />
