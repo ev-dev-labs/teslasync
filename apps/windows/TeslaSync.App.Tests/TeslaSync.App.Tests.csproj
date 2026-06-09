@@ -46,10 +46,11 @@
     with MSB4025; consolidated here into a single valid root (no linked source dropped) plus the
     CostSummaryCards (charging cost-analysis) feature-view surface logic links.
     P2/W2-0001 - headless unit tests for the UI-thread-free logic models (feature-view + dashboard-widget
+    P2/W2-0001 headless unit tests for the UI-thread-free logic models (feature-view + dashboard-widget
     + shared Model / Source / ViewModel sources). Targets plain net10.0 so `dotnet test` runs without a
-    WinUI/UI-thread host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources are
-    Compile-linked here rather than project-referenced. The link set below is the deduplicated union of
-    every previously linked source.
+    WinUI / UI-thread host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources are
+    Compile-linked here rather than project-referenced (the views are exercised by the app build). The
+    matching test classes live under this project and are picked up by the SDK default-compile glob.
 
     Repair note (P2 feature-views/0112 EnvironmentalImpact): a chain of integration merges had again left
     this file with several concatenated Project roots plus stray closing tags and orphaned comment text,
@@ -133,6 +134,10 @@
     A chain of integration merges has repeatedly re-concatenated multiple roots plus orphaned comment text,
     failing XML load (MSB4025); it has been consolidated here (no linked source dropped) plus the
     DriveDetailHeader feature-view surface logic link.
+    Invariant: keep this file as ONE <Project> root with a single, deduplicated, path-sorted Compile
+    ItemGroup (no linked source dropped). A chain of integration merges had repeatedly re-concatenated
+    multiple project roots plus duplicate Compile items and broken comments, failing XML load (MSB4025);
+    consolidated here into a single valid root plus the DriveOverviewChart (drive-detail) surface logic.
   -->
 
   <PropertyGroup>
@@ -154,8 +159,6 @@
     <ProjectReference Include="..\Generated\Generated.csproj" />
   </ItemGroup>
 
-  <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
-  <!-- Test fixtures / manifests copied next to the test assembly (SI golden vectors, MSIX manifest, widget template). -->
   <!-- Test fixtures copied next to the assembly: SI golden vectors, MSIX manifest, widget template. -->
   <!-- Fixtures copied next to the test assembly: SI golden vectors, MSIX manifest, widget template. -->
   <!-- Test fixtures copied next to the test assembly: SI golden vectors (apps/shared/spec/units-golden.json,
@@ -494,7 +497,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.Model.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.Source.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.ViewModel.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\CostPerKwhChart\CostPerKwhChart.Model.cs" Link="FeatureViews\CostPerKwhChart\CostPerKwhChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
@@ -503,6 +505,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\DetailedStatistics.ViewModel.cs" Link="FeatureViews\DetailedStatistics.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveDetailHeader\DriveDetailHeader.Model.cs" Link="FeatureViews\DriveDetailHeader\DriveDetailHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveHighlightSlide\DriveHighlightSlide.Model.cs" Link="FeatureViews\DriveHighlightSlide\DriveHighlightSlide.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.Model.cs" Link="FeatureViews\DriveOverviewChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.Source.cs" Link="FeatureViews\DriveOverviewChart.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.ViewModel.cs" Link="FeatureViews\DriveOverviewChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" />
