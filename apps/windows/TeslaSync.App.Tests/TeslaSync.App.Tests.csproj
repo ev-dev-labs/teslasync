@@ -230,6 +230,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Model.cs" Link="Widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.ViewModel.cs" Link="Widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Source.cs" Link="Widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SecurityStatusWidget\SecurityStatusWidget.Model.cs" Link="Widgets\SecurityStatusWidget\SecurityStatusWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SecurityStatusWidget\SecurityStatusWidget.ViewModel.cs" Link="Widgets\SecurityStatusWidget\SecurityStatusWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SecurityStatusWidget\SecurityStatusWidget.Source.cs" Link="Widgets\SecurityStatusWidget\SecurityStatusWidget.Source.cs" />
   </ItemGroup>
 
   <!--

@@ -22653,6 +22653,24 @@
   <data name="translation.widget.security" xml:space="preserve">
     <value>Security</value>
   </data>
+  <data name="translation.widget.securityStatus.description" xml:space="preserve">
+    <value>Lock, sentry, doors, windows status</value>
+  </data>
+  <data name="translation.widget.securityStatus.error" xml:space="preserve">
+    <value>Couldn't load security status</value>
+  </data>
+  <data name="translation.widget.securityStatus.error.auth" xml:space="preserve">
+    <value>Sign in to view security status</value>
+  </data>
+  <data name="translation.widget.securityStatus.error.offline" xml:space="preserve">
+    <value>You're offline — showing the last cached security status</value>
+  </data>
+  <data name="translation.widget.securityStatus.loading" xml:space="preserve">
+    <value>Loading security status</value>
+  </data>
+  <data name="translation.widget.securityStatus.refresh" xml:space="preserve">
+    <value>Refresh security status</value>
+  </data>
   <data name="translation.widget.sentry" xml:space="preserve">
     <value>Sentry</value>
   </data>
