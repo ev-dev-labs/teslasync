@@ -39,6 +39,8 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SentryEventLogWidget\SentryEventLogWidget.Model.cs" Link="Widgets\SentryEventLogWidget\SentryEventLogWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SentryEventLogWidget\SentryEventLogWidget.ViewModel.cs" Link="Widgets\SentryEventLogWidget\SentryEventLogWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SentryEventLogWidget\SentryEventLogWidget.Source.cs" Link="Widgets\SentryEventLogWidget\SentryEventLogWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SignalLogWidget\SignalLogWidget.Model.cs" Link="Widgets\SignalLogWidget\SignalLogWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SignalLogWidget\SignalLogWidget.ViewModel.cs" Link="Widgets\SignalLogWidget\SignalLogWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.Model.cs" Link="Widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.ViewModel.cs" Link="Widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RecentDrivesListWidget\RecentDrivesListWidget.Model.cs" Link="Widgets\RecentDrivesListWidget\RecentDrivesListWidget.Model.cs" />
