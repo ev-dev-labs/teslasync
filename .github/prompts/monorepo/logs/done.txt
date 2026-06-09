@@ -244,3 +244,4 @@ p2-windows/feature-views/W-0030-ChangesPanel.prompt.md
 p2-windows/feature-views/W-0031-FlagsTable.prompt.md
 p2-windows/feature-views/W-0032-XRayBucketChart.prompt.md
 p2-windows/feature-views/W-0035-XRayHeader.prompt.md
+p2-windows/feature-views/W-0036-LiveSignalsTable.prompt.md
