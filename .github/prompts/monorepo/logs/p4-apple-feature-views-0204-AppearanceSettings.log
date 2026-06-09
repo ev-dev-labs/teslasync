@@ -1,0 +1,259 @@
+================================================================================
+P4 · Feature view · 0204 — AppearanceSettings (Apple)
+Run: 2026-06-09T15:53-0700   Host: Darwin arm64   Branch: auto/20260609-114341-81114/34
+Base: daa5d0618
+Prompt: P4/feature-views/0204 — Feature view: AppearanceSettings
+Web source (spec): web/src/features/settings/components/AppearanceSettings.tsx
+Mode: code-complete + host-gated (typecheck both SDKs + executed XCTest) with the
+      Xcode app build/test DEFERRED (Shared.xcframework not staged + feature-views
+      test-file/target wiring is the integration prompt's job). Disposition matches
+      0207 GeneralSettings / 0198 AdvancedSettings precedent (ADR-012, Honesty rule 7).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iOS simulators ............. iPhone 17 family present (no "iPhone 16" image on
+                               this runner; the gate's named destination is mapped
+                               to an available image for the DEFERRED xcodebuild)    OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui", "@/components/motion", "@/components/feedback/Toast",
+  "@/components/layout". The core requirement is SwiftUI, which is AVAILABLE and
+  PROVEN by real iOS-18-simulator AND macOS-15 SDK typechecks below + an executed
+  33-test XCTest run. The capability-BLOCKED escape hatch does NOT apply — the
+  surface is authored, host-compiled on both SDKs, preview-macro-expanded, and
+  host-tested.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/AppearanceSettings.*) ===
+  AppearanceSettings.Models.swift    274  value types — AppearancePreferences
+                                          (ui_density/time_format_default/chart_palette)
+                                          + Density/TimeFormat/ChartPalette/SidebarStyle/
+                                          ThemeMode enums + StatusBar/Celebration/Theme
+                                          local prefs + Query/Connection/Freshness/Phase/
+                                          ServerField + Snapshot + P1/S10 strings facade
+  AppearanceSettings.Seams.swift     215  P1/S11 telemetry seam + toast type (web useToast)
+                                          + product-tour ids + SaveError + P1/S8
+                                          AppearanceSettingsSource + InMemory double
+  AppearanceSettings.Adapter.swift   330  pure projections — resolvePhase/Freshness +
+                                          relativeTime + density/timeFormat/sidebar/
+                                          chartPalette/themeMode catalogs + CB-safe + neon
+                                          swatch tables (verbatim lib/colors.ts) + accent
+                                          presets + density preview rows + a11y copy
+  AppearanceSettings.Model.swift     267  @Observable @MainActor view-model — server +
+                                          local prefs; derived phase/freshness; start
+                                          (view.opened)/stop/refresh; optimistic per-
+                                          selector save (+ failure revert) + status-bar/
+                                          celebration/sidebar/theme/tours actions + toasts
+  AppearanceSettings.swift           134  surface — FadeIn+GlassPanel shell, header,
+                                          connectivity banner, 8-section composition (web
+                                          order), toast overlay, start/stop; i18n text()
+  AppearanceSettings.Views.swift     226  chrome — header+freshness chip, connectivity
+                                          band, toast, section header (icon+label+help)
+  AppearanceSettings.Controls.swift  201  reusable controls — selectable choice card +
+                                          inits, toggle row, action button, hex→Color
+  AppearanceSettings.Theme.swift     129  composed theme section (web ThemePicker showMode
+                                          + showCustom) — mode cards + accent swatch row
+  AppearanceSettings.Sections.swift  326  server-region envelope (loading/empty/error) +
+                                          density selector + live reflowing preview +
+                                          density swatch + sidebar selector + silhouette
+  AppearanceSettings.Panels.swift    311  time-format + chart-palette selectors (server
+                                          region) + status-bar + celebration + tours panels
+  AppearanceSettings.Previews.swift  110  #if DEBUG — 8 #Preview (content dark/light,
+                                          loading, empty, error, stale, offline, DynType3)
+  AppearanceSettings.Tests.swift     178  XCTest — adapter/phase/freshness/relativeTime/
+                                          catalogs/palettes/accent/preview/a11y/i18n (14)
+  AppearanceSettings.ModelTests.swift 261 XCTest @MainActor — lifecycle/telemetry/hydration/
+                                          save+revert/save-guard/local prefs/toasts (19)
+  AppearanceSettings.strings         141  P1/S10 catalog contribution (table "AppearanceSettings")
+  Largest .swift = 330 lines (swiftlint file_length<=400 honored). No file imports the
+  Shared xcframework: the data/telemetry seams are Swift protocols; the prod app injects
+  the facade-backed source, previews/tests inject the InMemory double.
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useSettings/useSaveSettings/useToast/useChartPalette/
+    useStatusBarPrefs/useAchievementCelebrationPrefs/useSidebarStyle/useTranslation):
+    bound through the P1/S8 seam AppearanceSettingsSource→AppearanceSettingsModel. The
+    prod source fires GET /settings, PUT /settings (web request(), full-replace merge)
+    for ui_density/time_format_default/chart_palette; the four device-local prefs
+    (status bar, celebration, sidebar style, theme) read/write localStorage-equivalent
+    stores. No HTTP / no storage in the view.
+  - Composition (web GlassPanel + IconBox + ThemePicker + Toggle + Button + HelpIcon
+    + FadeIn + Toast), reproduced in web top-to-bottom order:
+      • FadeIn/GlassPanel/IconBox -> TSFadeIn / TSGlassPanel / TSIconBox(paintpalette).
+      • <ThemePicker showMode showCustom> -> composed AppearanceThemeSection:
+        a System/Light/Dark display-mode card group + an accent-preset swatch row,
+        routed through the model's theme seam. The rich multi-theme + custom-RGB
+        picker stays the shared component-library atom (OUT OF SCOPE per the prompt);
+        this feature view composes the mode + accent controls (documented drift, rule 9).
+      • Density picker -> 3 choice cards (compact/comfortable/spacious) each with a
+        density swatch + the LIVE reflowing preview (Preview title + the 3 "Sample row
+        — Tesla Model 3/Y/S" rows whose height + padding track the selected density,
+        the native equivalent of body[data-density]).
+      • Sidebar style -> 3 choice cards (Minimal/Compact/Classic) each with a silhouette
+        swatch (accent-bar / dotted-rows / icon-tiles), device-local + always interactive.
+      • Default time format -> 2 choice cards (relative / absolute).
+      • Chart palette -> 2 choice cards (cb_safe / neon) each with the full 8-swatch row,
+        swatch hexes BYTE-IDENTICAL to web lib/colors.ts (CHART_COLORS_CB_SAFE /
+        CHART_COLORS_NEON), asserted in the test suite.
+      • Status bar -> panel with "Show status bar" (+ shown/hidden info toast) and
+        "Always icon-only" (dims when the bar is hidden) toggle rows.
+      • Celebration -> panel with showToasts / playSound / showOnDashboard / pushOnUnlock
+        toggle rows.
+      • Product tours -> panel with Replay-dashboard / Debugger / Automations tour
+        buttons + a danger "Reset all tours" button (+ success toast).
+  - States (ALL rendered, each with a #if DEBUG preview): the three SERVER-backed
+    selectors (density/time-format/chart-palette) are wrapped by the ADR-013 server
+    region so their card area shows loading (skeleton) · empty (inline note + retry) ·
+    error (inline note + retry) · content, while the section header + density preview
+    + the device-local sections stay present (no hidden surfaces). The header freshness
+    chip + connectivity band cover stale (out-of-date band) + offline (cached band).
+  - i18n (P1/S10): every web t() key reproduced VERBATIM (theme.* / achievements.* /
+    settings.tours.*); native-only additions (the composed theme-mode + accent keys,
+    the freshness/state/error/action/a11y chrome) grouped at the catalog bottom. Every
+    code-referenced key is declared in AppearanceSettings.strings and every declared key
+    is referenced (referenced==declared verified, 0 orphans / 0 missing); NO English
+    literal in native code (all via the facade + Text(verbatim:)). Two minor fallback
+    adaptations are documented (rule 9): the web "tab is closed" -> native "app is
+    closed" in the push-on-unlock help, and the time-format help <p> split into a
+    help-glyph + a body caption.
+  - Accessibility: VoiceOver labels on every control (each choice card with a
+    "Selected" value + isSelected trait, each toggle row with an On/Off value, the
+    accent swatches, the freshness chip with a spoken status, the tour/retry/dismiss
+    buttons); Dynamic Type system fonts (Font.TS); Reduce-Motion honored (chip spin,
+    FadeIn, TSSkeleton shimmer).
+  - Telemetry (P1/S11): AppearanceSettingsModel.start() emits view.opened with slug
+    "AppearanceSettings" exactly once (OSLog default; prod injects the shared adapter).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 11 production files compiled together with the REAL apps/apple
+  component closure (design Tokens + Design/{TSMaterial,TSDesign} + Components/UI
+  {Typography,Badges,Buttons,Cards} + Feedback/Skeletons + Motion/Motion); none import
+  the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete <closure> <11 production files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG; all 8 #Preview macros expand via
+        the Xcode toolchain plugin):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the FULL committed XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM package (real production Models/Seams/Adapter/Model +
+        the committed AppearanceSettings.Tests.swift + AppearanceSettings.ModelTests.swift),
+        Swift 6 language mode, Xcode toolchain:
+          Test Suite 'TeslaSyncPackageTests.xctest' passed
+          Executed 33 tests, with 0 failures (0 unexpected) in 0.007 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: resolvePhase (cache-then-network) + freshness precedence, relativeTime
+        buckets, the 5 option catalogs (order + web labels), the CB-safe/neon swatch
+        tables + accent presets, the density preview rows, the a11y copy, the i18n
+        facade fallback; model start-once + slug, lifecycle, snapshot hydration of the
+        server + 4 local prefs, optimistic per-selector save + success, save-failure
+        revert + error toast, the in-flight save guard, status-bar toggle + shown/hidden
+        toast, icon-only without toast, celebration/sidebar/theme mutations + no-op
+        guards, startTour, resetTours + success toast.
+  [5] swiftlint --strict (13 surface files; explicit paths):
+          Done linting! Found 0 violations, 0 serious in 13 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/13 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; the 13 .swift files copied to a temp
+        tree and scanned — a genuine scan, not the no-op path-prefix form):
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+  Findings caught + fixed by the host gate before green (no red-as-green):
+    (i)  Swift-6 strict-concurrency data-race WARNING converting the toggle row's
+         non-Sendable `(Bool) -> Void` to the SwiftUI Binding setter's
+         `@isolated(any) @Sendable` parameter. Fixed by marking the toggle callback
+         chain `@MainActor (Bool) -> Void` (toggle row + status-bar + celebration
+         panels). Re-typechecked clean. (caught by [1])
+    (ii) AppearanceSettings.Views.swift exceeded the swiftlint file_length<=400 limit
+         (414). Split the reusable controls (choice card / toggle row / button / hex
+         helper) into AppearanceSettings.Controls.swift; both files now < 230. (caught by [5])
+    (iii) `theme.chartPalette.help` had two divergent in-code fallbacks for one key;
+         aligned both + the catalog to the web-verbatim "~8% ... red-green colour
+         vision deficiency" copy. (caught by the referenced==declared audit)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + targets +
+          schemes; the 13 AppearanceSettings.* files are referenced 84x across the iOS app,
+          macOS app, and the two XCTest bundles).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (code-unrelated; identical disposition to 0207 GeneralSettings / 0198
+    AdvancedSettings, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it
+          needs a Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework).
+          Independent of this UI surface; concrete missing-framework error captured above.
+      (b) Test-file/target wiring: project.yml sources TeslaSync/feature-views into the
+          app target; re-homing the per-surface *.Tests.swift / *.ModelTests.swift into the
+          XCTest target is the downstream P4 integration prompt's job and editing project.yml
+          is OUTSIDE this prompt's allowed files (AppearanceSettings.* + the log).
+      (c) The gate's named iOS destination "iPhone 16" is not present on this runner (iPhone
+          17 family only); the simulator-name mapping is a runner concern, not a code one.
+    The SAME committed XCTest suite is PROVEN GREEN (33/33) by the executed SwiftPM run in
+    step [4], and the surface compiles against BOTH the iOS 18 and macOS 15 SDKs (steps
+    [1]/[2]) with all 8 previews expanding (step [3]).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced —
+      loading / empty / error (server region) + content + the native stale / offline
+      bands; each has a #if DEBUG preview; phase + freshness logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (AppearanceSettingsSource→
+      AppearanceSettingsModel); no view HTTP / no view storage.
+  [x] Every i18n key from source has a matching catalog key — referenced==declared
+      verified (0 orphans / 0 missing); web keys preserved verbatim.
+  [x] Accessibility labels on every interactive element (each choice card, accent swatch,
+      toggle row, freshness chip, tour/retry/dismiss button) with selection + On/Off values.
+  [x] Tests: adapter unit + per-state model + a11y label tests — 33 methods, EXECUTED
+      33/33, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green (typecheck iOS+macOS, previews, 33/33
+      XCTest, lint, format, placeholder); Xcode app build/test DEFERRED with captured
+      evidence (xcframework staging + test-target wiring + simulator name), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; xcodebuild build/test is shown
+                          DEFERRED with its real exit 65 + cause, not as a pass. Three real
+                          findings were fixed before green (see [4]/[5]/audit).
+  2 No scope narrowing ... full surface (13 .swift + strings), all states, all 8 data
+                          hooks via the seam, all 8 web sections + every toggle/selector/tour.
+  3 No skip-and-assume ... web source read end-to-end (654 lines incl. SidebarStyleSwatch);
+                          every t() + every conditional (status-bar dim, save-pending disable,
+                          density preview reflow, active-choice check) reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. ThemePicker(mode+accent)/density(+live preview)/sidebar(+silhouette)/
+                          time-format/chart-palette(+8 swatches)/status-bar/celebration/tours +
+                          all 6 states. The rich multi-theme/custom-RGB picker is the shared
+                          atom (out of scope), composed here as mode + accent controls.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same host-gate+defer disposition as 0207 GeneralSettings / 0198
+                          AdvancedSettings (ADR-012).
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework build,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... the ThemePicker composition (rich atom out of scope), the two
+                          fallback adaptations (web "tab"->"app"; time-format help split),
+                          and the Views->Controls file split are documented above.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
