@@ -472,4 +472,18 @@
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.ViewModel.cs" Link="FeatureViews\ColorConverter\ColorConverter.ViewModel.cs" />
   </ItemGroup>
 
+  <!--
+    P2 feature-views/0016 HttpStatusTool: the surface's UI-thread-free logic (the canonical HTTP_CODES
+    catalog source, the code-class classifier + search projection model, and the state-holder view-model)
+    lives in the WinUI app project but is WinUI-free by construction. Link those three source files into the
+    headless (net10.0) test project so the adapter + Ready/Empty transitions + localized labels + a11y names
+    + the view.opened diagnostics are verified without a UI host. The WinUI view itself (HttpStatusTool.cs)
+    is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Model.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Source.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.ViewModel.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.ViewModel.cs" />
+  </ItemGroup>
+
 </Project>
