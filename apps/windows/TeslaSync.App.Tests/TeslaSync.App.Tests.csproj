@@ -978,12 +978,12 @@
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Model.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Source.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.ViewModel.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Model.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Source.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Model.cs" Link="FeatureViews\ChargingTab\ChargingTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Source.cs" Link="FeatureViews\ChargingTab\ChargingTab.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.ViewModel.cs" Link="FeatureViews\ChargingTab\ChargingTab.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Model.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Source.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.ViewModel.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.Model.cs" Link="FeatureViews\ColorConverter\ColorConverter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.ViewModel.cs" Link="FeatureViews\ColorConverter\ColorConverter.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
@@ -1007,14 +1007,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Model.cs" Link="FeatureViews\HashCalculator\HashCalculator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Source.cs" Link="FeatureViews\HashCalculator\HashCalculator.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.ViewModel.cs" Link="FeatureViews\HashCalculator\HashCalculator.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\HeroGauges.Model.cs" Link="FeatureViews\HeroGauges\HeroGauges.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\HeroGauges.ViewModel.cs" Link="FeatureViews\HeroGauges\HeroGauges.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Model.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Source.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.ViewModel.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Model.cs" Link="FeatureViews\InfrastructureSection.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Source.cs" Link="FeatureViews\InfrastructureSection.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.ViewModel.cs" Link="FeatureViews\InfrastructureSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JsonFormatter\JsonFormatter.Model.cs" Link="FeatureViews\JsonFormatter\JsonFormatter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JsonFormatter\JsonFormatter.Source.cs" Link="FeatureViews\JsonFormatter\JsonFormatter.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JsonFormatter\JsonFormatter.ViewModel.cs" Link="FeatureViews\JsonFormatter\JsonFormatter.ViewModel.cs" />
@@ -1749,6 +1744,16 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\ChargingSection.Model.cs" Link="FeatureViews\ChargingSection.Model.cs" />
+    P2 feature-views/0075 DrivingSection: the weekly-digest Driving section's UI-thread-free logic (the
+    cached-props parse adapter, the loading/ready projection with the daily-distance bar math, the four
+    efficiency mini-stats — fmtNumber/fmtInt + the pctChange helper + the TrendingDown/Up choice — the
+    accessible Day/Distance fallback table, the top-drive fields + formatDate, the registration and the
+    PII-safe diagnostics) is WinUI-free by construction. Link the model source in so this headless
+    (net10.0) test project verifies the adapter + per-state projection + a11y names + diagnostics without a
+    UI host. The WinUI view itself (DrivingSection.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingSection\DrivingSection.Model.cs" Link="FeatureViews\DrivingSection\DrivingSection.Model.cs" />
   </ItemGroup>
 
 </Project>
