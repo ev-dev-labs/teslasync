@@ -1,0 +1,95 @@
+=== P2 Feature view 0026 AuditPanel (Windows) ===
+
+--- build: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-06\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:05:34.55
+BUILD_EXIT=0
+
+--- test: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation ---
+(UIAutomation suite drives the packaged app over WinAppDriver and is run separately via run-ui-automation.ps1; it is excluded from this headless gate.)
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generated -> D:\repos\teslasync-wt2\wt-06\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+Test run for D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+Test run for D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed:  6972, Skipped:     0, Total:  6972, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- format: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+FORMAT_EXIT=0
+
+--- placeholders: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AuditPanel ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+GATE BUILD=0 TEST=0 FORMAT=0 PLACEHOLDER=0
+
+=== SUMMARY ===
+Surface (allowed files): apps/windows/TeslaSync.App/feature-views/AuditPanel/
+  - AuditPanel.Model.cs  (WinUI-free: AuditPanelState, AuditRecord, AuditPanelModel, DlqReplayResultVariant,
+                          AuditPanelColumn/Row/Display, AuditPanelProjection, AuditPanelDiagnostics, AuditPanelRegistration)
+  - AuditPanel.cs        (WinUI 3 view: ContentControl rendering the loading / empty / data web branches)
+Tests (required by acceptance + gate): apps/windows/TeslaSync.App.Tests/FeatureViews/AuditPanelTests.cs (31 tests)
+  + AuditPanel.Model.cs linked into TeslaSync.App.Tests.csproj (headless net10.0 adapter/projection verification).
+
+Web source parity (web/src/features/admin/components/dlq-inspector/AuditPanel.tsx):
+  States reproduced (exact branch precedence): !loading && rows.length===0 -> EmptyState (scoped vs global copy);
+    else the DataTable, whose empty message is loading ? "Loading audit log..." : "No replay attempts yet". The web
+    source is presentational (props: rows/loading/scopedDlqId; only useTranslation) so there is no fetch-driven
+    error/stale/offline branch to reproduce, exactly as the TelemetryErrorsPanel/ResultPanel ports document.
+  Shared components mapped: @/components/ui DataTable -> TsDataTable/TsDataColumn/TsDataRow, Badge -> TsBadge variant
+    via DlqReplayResultVariant (the web RESULT_VARIANT record + its `?? neutral` fallback, computed + unit-tested);
+    @/components/data-display TimeStamp format="absolute" -> DateTimeFormatting.Format(.., Full, now);
+    @/components/feedback EmptyState -> TsEmptyState. The shared TsDataTable renders text cells, so the result column
+    shows its replay-result code (the textual content of the web Badge) while the status tint is verified in the projection.
+  Columns (7, in order): replayed_at, actor, dlq_id, result, dst_topic, error, trace_id. Cell renders mirror the web:
+    absolute timestamp, x || em-dash fallbacks, numeric dlq_id, raw result code. Pagination defaultPageSize=25.
+  i18n: every label resolves through the P1/S10 ILocalizer facade using the SAME catalog keys the web source feeds
+    into t(): translation.admin.dlq.audit.cols.{replayedAt,actor,dlqId,result,dstTopic,error,traceId},
+    .empty.{title,scopedMessage,globalMessage}, .loading (+ .panels.audit for the data-state region name). All present
+    in Strings/{en,ar,he}/Resources.resw; no English literals in native code.
+  Accessibility: Narrator name on every state (loading text / title+message / audit-log label); the loading table is a
+    polite live region; TsDataTable exposes DataGrid semantics and conveys each row through its cell values.
+  Telemetry: AuditPanelDiagnostics emits "view.opened slug=AuditPanel" (PII-safe; never actor/dlq_id/trace_id/error)
+    on first load.
+
+Pre-existing build-unblock (NOT introduced by this surface):
+  The integration baseline did not load: apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was malformed in
+  THREE places -- the ToolCard/ColorConverter, ByteSizeConverter/HashCalculator and TirePressure/CronParser comment
+  blocks had each lost their opening "<!--" (the comment text leaked into the preceding ItemGroup, two of which were
+  then left unclosed), producing MSB4025 "ItemGroup start tag does not match end tag of Project". This blocked the whole
+  solution build/test for ANY surface on this branch. Minimal, structure-restoring fix: re-added the three missing
+  "<!--" openers and the two missing "</ItemGroup>" closers (comment/ItemGroup counts now balance 19/19). No Compile
+  items were added, removed or reordered. Verified: 6972 headless tests pass with zero regressions.
+
+Gate: BUILD_EXIT=0  TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+Note: the Category=UIAutomation suite (TeslaSync.App.UITests) drives the packaged app over WinAppDriver and is run
+      independently via run-ui-automation.ps1 per its csproj contract; it is intentionally excluded from this headless
+      gate (147 UIAutomation tests require a WinAppDriver runner + deployed MSIX that the headless build host lacks --
+      an honest BLOCKED condition for THAT suite's own gate, not this surface's).
+
+EXIT=0
+STATUS=DONE

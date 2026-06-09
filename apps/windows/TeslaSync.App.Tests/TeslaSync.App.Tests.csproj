@@ -322,6 +322,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
+    <!--
       P2 dashboard-widgets (TirePressureVisualWidget): its headless logic + state-holder view-model are
       exercised by TirePressureVisualWidgetTests; the three WinUI-free source files are linked in once above
       (NETSDK1022: this block previously duplicated those identical Compile items, breaking the test build).
@@ -475,6 +476,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Model.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Source.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0015 — the HashCalculator tool's UI-thread-free logic (the pure SHA-256 digest +
     lowercase-hex helper, the IHashComputer adapter, the outcome model, and the state-holder view-model)
     lives in the WinUI app project but is WinUI-free by construction. Link those three source files in so the
@@ -575,6 +579,18 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\UrlEncoder\UrlEncoder.Model.cs" Link="FeatureViews\UrlEncoder\UrlEncoder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UrlEncoder\UrlEncoder.ViewModel.cs" Link="FeatureViews\UrlEncoder\UrlEncoder.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0026 AuditPanel: the DLQ replay-audit panel's UI-thread-free logic (the loading/empty/data
+    branch projection, the RESULT_VARIANT→status mapping, the absolute-timestamp + em-dash cell formatting, the
+    localized columns + empty/loading copy, the accessible names and the view.opened diagnostics) lives in the
+    WinUI app project but is WinUI-free by construction. Link the Model in so this headless (net10.0) test project
+    verifies the adapter + per-state projection row-for-row without a UI host. The WinUI view itself
+    (feature-views\AuditPanel\AuditPanel.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\AuditPanel\AuditPanel.Model.cs" Link="FeatureViews\AuditPanel\AuditPanel.Model.cs" />
   </ItemGroup>
 
 </Project>
