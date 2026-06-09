@@ -1,0 +1,44 @@
+/*
+  ChargeHistoryWidget.strings
+  TeslaSync — P4 dashboard widget · 0017 · ChargeHistoryWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargeHistoryWidget` resolves (table "ChargeHistoryWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The parity keys are the exact strings extracted from the web source
+  (features/dashboard/widgets/ChargeHistoryWidget.tsx + registry/charging.ts). The
+  remaining keys back the native-only chrome (freshness chip, refresh/retry,
+  empty/error/banner copy, chart + accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.chargeHistory.title" = "Charge History";
+"widget.chargeHistory.description" = "Recent charging sessions chart";
+"widget.chargeHistory.total" = "Total";
+"widget.chargeHistory.avg" = "Avg";
+"widget.noChargeHistory" = "No charge sessions yet";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.chargeHistory.live" = "Live";
+"widget.chargeHistory.stale" = "Stale";
+"widget.chargeHistory.offline" = "Offline";
+"widget.chargeHistory.refresh" = "Refresh";
+"widget.chargeHistory.retry" = "Retry";
+"widget.chargeHistory.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.chargeHistory.loading" = "Loading charge history";
+"widget.chargeHistory.emptyHint" = "Charging history will appear here once your vehicle records a few sessions.";
+"widget.chargeHistory.errorTitle" = "Couldn't load charge history";
+"widget.chargeHistory.staleBanner" = "Updating — values may be stale";
+"widget.chargeHistory.offlineBanner" = "Offline — showing last saved history";
+
+/* --- Chart + accessibility --- */
+"widget.chargeHistory.session" = "Session";
+"widget.chargeHistory.energy" = "Energy";
+"widget.chargeHistory.chartA11y" = "Area chart of energy added per recent charge session";
+"widget.chargeHistory.openA11y" = "Open the charging page";
