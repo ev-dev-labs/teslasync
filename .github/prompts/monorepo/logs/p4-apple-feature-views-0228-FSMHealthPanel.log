@@ -1,0 +1,159 @@
+================================================================================
+P4 · Feature view · 0228 — FSMHealthPanel (Apple)
+Run: 2026-06-09T03:28-0700   Host: Darwin arm64   Branch: auto/20260608-211853-78201/121
+Base: 988df9357
+Prompt: P4 · feature-views · 0228 — FSMHealthPanel (Apple)
+Web source (spec): web/src/features/system/components/FSMHealthPanel.tsx (184 lines)
+Mode: code-complete + host-validated. The full-app Xcode scheme `build test` is
+      DEFERRED (ADR-012 macOS-pending) — and was ATTEMPTED live here (real iOS run,
+      first-hand evidence below): it fails on PRE-EXISTING, UNRELATED sibling-surface
+      collisions, with ZERO FSMHealthPanel diagnostics. Matches predecessors
+      0231 FSMTimelineChart / 0230 FSMSubFSMPanel / 0180 AlertMessageEditor / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42)                                   OK
+  iOS simulator SDK .......... iPhoneSimulator (deployment target iOS 18.0)         OK
+  macOS SDK .................. MacOSX (deployment target macOS 15.0)                 OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... 2.45.4                                               OK
+  pwsh (placeholder gate) .... present                                             OK
+  Shared.xcframework ......... NOT staged at start (Frameworks had only .gitkeep)   WARN
+  codesign identities ........ none (BLOCKER for the signed macOS app gate, ADR-012) WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (the web "Charts/maps used" section lists none — FSMHealthPanel.tsx is a plain
+  GlassPanel + Grid of alert cards, lucide icons only). The core requirement —
+  SwiftUI + the iOS-18 / macOS-15 HIG — is available and PROVEN by REAL iOS-18 +
+  macOS-15 SDK `swiftc -typecheck` AND a passing 32-test XCTest run below. The
+  capability-BLOCKED escape hatch therefore does NOT apply; the surface is authored
+  and host-validated for real, STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/FSMHealthPanel.*) ===
+  FSMHealthPanel.Adapter.swift        278  Foundation-only pure projector — VERBATIM port of the web
+                                            `useMemo` + exported `computeFlapIds`: the per-FSM
+                                            >5-transitions/min flap window (epoch-ms floor, strict
+                                            threshold, first-seen grouping), the latest-per-instance
+                                            (`fsm_name:vehicle_id`) stuck detection over the strict >4h
+                                            window for `drive_session`/`charge_session` in pending/active,
+                                            the `recovered` recovery count, the composed alerts (web order
+                                            flap→stuck→recovery + the push-once running-flap-count quirk,
+                                            reproduced not "corrected"), `flapIds`, phases + resolvePhase.
+  FSMHealthPanel.Accessibility.swift  135  Foundation-only tail (split for the 400-line house budget): the
+                                            P1/S11 surface slug, locale-aware whole-number formatting (web
+                                            `fmtInt`), the localized title/message builders with the
+                                            `{{count}}` interpolation, and the VoiceOver panel summary.
+  FSMHealthPanel.Model.swift          249  P1/S11 telemetry seam + P1/S10 strings facade + source snapshot
+                                            + P1/S8 source protocol + @Observable FSMHealthPanelModel
+                                            (derive alerts + flapIds on apply, phase, freshness, stale
+                                            one-shot auto-refresh / offline-keeps-cache) + InMemory source.
+                                            Injected clock. `view.opened` emitted once.
+  FSMHealthPanel.Views.swift          278  Token-driven chrome: title (web uppercase <h2>), freshness chip,
+                                            stale/offline banner, loading skeleton cards, error (+retry),
+                                            the all-clear row (web `alerts.length===0`), and the responsive
+                                            alert grid + per-alert card (icon/tone by severity, fmtInt badge).
+  FSMHealthPanel.swift                 93  The composed surface + GlassPanel card (web `GlassPanel`) + fade-in
+                                            + phase switch (loading/error/healthy/alerts) + view.opened
+                                            lifecycle + spoken a11y summary. Live cases match the web exactly;
+                                            the chip/banner are the P4 envelope shown only when not live.
+  FSMHealthPanel.Previews.swift       128  #if DEBUG previews: alerts (all three firing) / healthy / loading /
+                                            error / stale / offline.
+  FSMHealthPanel.strings               42  P1/S10 catalog — the 8 web source keys (byte-identical defaults,
+                                            incl. the `{{count}}` token) + native chrome/a11y (16 total).
+  FSMHealthPanel.Tests.swift          287  XCTest: adapter (millis, flap window/threshold/isolation/ignore,
+                                            stuck latest-per-instance + strict >4h boundary + session filter,
+                                            recovery, alert composition+order+severity, the push-once flap
+                                            count quirk, resolvePhase, slug) + formatting + messages/a11y.
+  FSMHealthPanel.ModelTests.swift     157  XCTest: model lifecycle (phases loading/healthy/alerts/failed,
+                                            alerts + flapIds exposure, view.opened once, stale auto-refresh
+                                            once + re-arm, offline keeps cache, retry, stop).
+  Total 1647 lines (9 files). Every file <= 287 lines (house file_length 400). Zero
+  `// parity:allow` opt-outs.
+
+=== PARITY (vs web FSMHealthPanel.tsx) ===
+  Data sources (web → native P1/S8 source seam):
+    transitions prop (parent-owned)  → FSMHealthPanelSource → FSMHealthPanelUpdate
+    useTranslation                   → FSMHealthPanelStrings facade (P1/S10)
+  Verbatim web logic ported + unit-pinned (the `useMemo` body + exported computeFlapIds):
+    flap   = per fsm_name, sort by ts, any window (ts_i, ts_i+60_000] with `count > 5`
+             flags every row in it; the warning alert is pushed ONCE with the running
+             flapped size at first push (web quirk reproduced; `flapIds` = full set).
+    stuck  = latest transition per `fsm_name:vehicle_id` for drive_session/charge_session,
+             to_state in {pending,active}, (now − ts) > 4h (STRICT). warning.
+    recovery = count of to_state == "recovered". info.
+    render = alerts.length===0 ? all-clear row : "FSM Health" title + grid of cards.
+  Composition: GlassPanel (web GlassPanel) → TSGlassPanel · Grid cols={{default:1,
+    md:alerts.length}} → adaptive LazyVGrid · lucide AlertTriangle/Timer/RotateCw →
+    SF Symbols exclamationmark.triangle.fill / timer / arrow.clockwise · amber/blue
+    severity tints → Color.TS.statusWarning / statusInfo (0.06 bg, 0.2 border) ·
+    fmtInt(count) → FSMHealthFormat.count (grouped) · message {{count}} → raw count.
+  States (all render, never a blank box): loading(skeleton) · healthy(web all-clear,
+    the friendly "empty") · alerts(grid) · error(+retry) · stale(chip + one
+    auto-refresh) · offline(cached + chip) — a freshness envelope (ADR-013) layered on
+    the web all-clear/alerts split; the live cases are byte-faithful to the web.
+  i18n: the 8 source keys (fsm.health.title/flapping/stuck/recoveries/allClear/flapTitle/
+    stuckTitle/recoveryTitle) + native chrome/a11y all resolve via the P1/S10 facade;
+    catalog carries the verbatim web English. a11y: panel VoiceOver summary, alert-card
+    labels (title + badge + message), header trait, retry label; Dynamic Type via
+    Font.TS; reduce-motion-safe (TSFadeIn / TSSkeleton).
+  Telemetry: emits view.opened with surface slug "FSMHealthPanel" once (P1/S11), asserted.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/8 require formatting              FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious (8 files) LINT_EXIT=0
+      (Tree-wide swiftlint reports exactly 1 pre-existing violation —
+       opening_brace in TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158 —
+       which is OUTSIDE this surface's allowed files and predates this change.)
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency=complete) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency=complete) ................. MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6) ........... 32/32 passed, TEST_EXIT=0
+      → FSMHealthProjectorTests (14) · FSMHealthFormatTests (1) ·
+        FSMHealthMessagesTests (7) · FSMHealthPanelModelTests (10)
+      Harness links the REAL Tokens.swift + TSDesign.swift + Motion.swift primitives;
+      the two out-of-scope shared atoms (TSGlassPanel, TSSkeleton) are provided with
+      their exact public signatures (the atom library is the P4 component-library
+      bundle's scope). All six surface .swift files (incl. Previews) compile in it.
+  xcodegen generate (project spec enumerates the 9 new files, 54 pbxproj refs) ..... XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build  → ATTEMPTED LIVE
+    XCODEBUILD_IOS_EXIT=65 (** BUILD FAILED **). First-hand evidence (not asserted):
+      • The scheme pre-action staged Shared.xcframework via the Kotlin/Native Gradle
+        toolchain — it DID assemble + stage successfully this run (release link long-pole
+        ~20 min): "xcframework successfully written out … release/Shared.xcframework";
+        apps/apple/Frameworks/Shared.xcframework now present.
+      • The app-target Swift compile then failed with 142 `error:` diagnostics across 8
+        PRE-EXISTING, UNRELATED sibling surfaces — parallel-merge type collisions
+        ("'ChargeSessionDTO'/'ChargeStatusProjection'/'ChargeStateDTO'/'ChargeUnitPrefs'
+        is ambiguous for type lookup", "cannot infer contextual base") in:
+          ChargeSessionChartWidget · ChargeStatusLiveWidget · ChargeStatusWidget ·
+          DrivingCoachSection · DrivingCoachWidget · FleetStatsBarWidget ·
+          SafetyFeaturesWidget · SafetyHistoryWidget
+      • ZERO FSMHealthPanel diagnostics (grep error:/warning: for FSMHealthPanel = 0).
+        None of this surface's files appear in the failure set.
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT re-run to green: same app source tree → same pre-existing sibling collisions,
+    plus the absent macOS development-signing identity (ADR-012). This surface's OWN
+    macOS compile is already proven by the macos15.0 SDK `swiftc -typecheck` above.
+  Both are recorded for the P99 acceptance gate on a macos-latest runner with signing
+  identities (apps/macos-pending-verifications.md tracks the identical deferral for the
+  predecessor feature-views). This surface's code is proven to compile against the real
+  iOS-18 + macOS-15 SDKs and its logic runs green (32/32 XCTest).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/healthy/alerts/error/stale/offline).
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (8/8 + native chrome = 16).
+  [x] Accessibility labels present on the panel + every alert card + the retry control + per-state summaries.
+  [x] Tests: adapter unit tests + per-state model tests + a11y/message tests (32 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest. Attempted live: KMP Shared.xcframework
+      staged OK; build failed only on 142 pre-existing unrelated sibling-surface errors (0 FSMHealthPanel);
+      host-runnable equivalents (real iOS-18 + macOS-15 SDK typecheck + 32/32 XCTest) green.
+
+EXIT=0
+STATUS=DONE
