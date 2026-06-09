@@ -1,0 +1,42 @@
+/*
+  TripLegList.strings
+  TeslaSync — P4 feature view · 0177 · TripLegList (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TripLegList` resolves (table "TripLegList") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/driving/components/TripLegList.tsx). The second group backs the native
+  chrome: the P4 leaf freshness / loading / error copy and the VoiceOver summaries,
+  so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"tripPlanner.legs.title" = "Route Breakdown";
+"tripPlanner.legs.empty" = "Plan a trip to see the route breakdown";
+"tripPlanner.legs.distance" = "Distance";
+"tripPlanner.legs.duration" = "Duration";
+"common.min" = "min";
+"tripPlanner.legs.energy" = "Energy";
+"tripPlanner.legs.soc" = "Battery";
+"tripPlanner.legs.recommended" = "Recommended stop point — actual charger locations may vary";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"tripPlanner.legs.live" = "Live";
+"tripPlanner.legs.stale" = "Stale";
+"tripPlanner.legs.offline" = "Offline";
+"tripPlanner.legs.staleA11y" = "Stale — tap to refresh";
+"tripPlanner.legs.offlineA11y" = "Offline — showing last known data";
+"tripPlanner.legs.loadingA11y" = "Loading route breakdown";
+"tripPlanner.legs.errorTitle" = "Couldn't load the route breakdown";
+"tripPlanner.legs.retry" = "Retry";
+
+/* --- Native chrome: VoiceOver summaries (spoken form of the cards) --- */
+"tripPlanner.legs.a11y.route" = "Leg %1$lld, from %2$@ to %3$@";
+"tripPlanner.legs.a11y.battery" = "%1$@ to %2$@";
+"tripPlanner.legs.a11y.chargeStop" = "Charging stop, %@";
+"tripPlanner.legs.a11y.cost" = "Cost";
