@@ -201,6 +201,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\VehicleSpecsWidget\VehicleSpecsWidget.Model.cs" Link="Widgets\VehicleSpecsWidget\VehicleSpecsWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\VehicleSpecsWidget\VehicleSpecsWidget.ViewModel.cs" Link="Widgets\VehicleSpecsWidget\VehicleSpecsWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\VehicleSpecsWidget\VehicleSpecsWidget.Source.cs" Link="Widgets\VehicleSpecsWidget\VehicleSpecsWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VersionInfoWidget\VersionInfoWidget.Model.cs" Link="Widgets\VersionInfoWidget\VersionInfoWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VersionInfoWidget\VersionInfoWidget.ViewModel.cs" Link="Widgets\VersionInfoWidget\VersionInfoWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VersionInfoWidget\VersionInfoWidget.Source.cs" Link="Widgets\VersionInfoWidget\VersionInfoWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.Model.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.ViewModel.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.Source.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.Source.cs" />
