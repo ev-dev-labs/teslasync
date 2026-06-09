@@ -288,6 +288,12 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Model.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.ViewModel.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Source.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Model.cs" Link="FeatureViews\InfrastructureSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.ViewModel.cs" Link="FeatureViews\InfrastructureSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Source.cs" Link="FeatureViews\InfrastructureSection.Source.cs" />
   </ItemGroup>
 
   <!--

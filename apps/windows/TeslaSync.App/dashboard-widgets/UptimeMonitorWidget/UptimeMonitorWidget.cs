@@ -13,7 +13,7 @@ using TeslaSync.App.Core.Data;
 using TeslaSync.App.Core.Data.Net;
 using TeslaSync.App.Core.Notifications;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.UptimeMonitor;
 
 /// <summary>
 /// The native WinUI 3 Uptime Monitor dashboard surface — a parity port of
