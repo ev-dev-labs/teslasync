@@ -1,0 +1,50 @@
+/*
+  DrivingCoachWidget.strings
+  TeslaSync — P4 dashboard widget · 0043 · DrivingCoachWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DrivingCoachWidget` resolves (table "DrivingCoachWidget") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/DrivingCoachWidget.tsx) — the title, the potential-savings
+  chip (with the {{pct}} interpolation token preserved verbatim), the no-tips empty copy,
+  the "/ 100" score caption, and the impact-tier labels. The remaining keys back the
+  native chrome (registry description, freshness chip, refresh/retry/loading/error/banner
+  copy, and accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.drivingCoach.title" = "Driving Coach";
+"widget.drivingCoach.potentialSavings" = "Potential savings: {{pct}}%";
+"widget.drivingCoach.noTips" = "No tips available";
+"widget.drivingCoach.scoreLabel" = "/ 100";
+"widget.drivingCoach.impact.high" = "High";
+"widget.drivingCoach.impact.medium" = "Medium";
+"widget.drivingCoach.impact.low" = "Low";
+
+/* --- Registry metadata (registry/driving.ts → "driving-coach") --- */
+"widget.drivingCoach.description" = "Helix-powered driving tips: personalized efficiency recommendations";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.open" = "Open";
+"widget.drivingCoach.live" = "Live";
+"widget.drivingCoach.stale" = "Stale";
+"widget.drivingCoach.offline" = "Offline";
+"widget.drivingCoach.refresh" = "Refresh";
+"widget.drivingCoach.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.drivingCoach.loading" = "Loading driving coach";
+"widget.drivingCoach.emptyHint" = "Personalized coaching appears once we've analyzed a few of your drives.";
+"widget.drivingCoach.errorTitle" = "Couldn't load driving coach";
+"widget.drivingCoach.staleBanner" = "Refreshing — this coaching may be stale";
+"widget.drivingCoach.offlineBanner" = "Offline — showing the last loaded coaching";
+
+/* --- Accessibility --- */
+"widget.drivingCoach.scoreA11y" = "Driving score";
+"widget.drivingCoach.tipA11y" = "Tip";
+"widget.drivingCoach.openA11y" = "Open the Driving Coach page";
