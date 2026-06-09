@@ -1,0 +1,50 @@
+/*
+  HealthProbesSection.strings
+  TeslaSync — P4 feature view · 0244 · HealthProbesSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `HealthProbesSection` resolves (table "HealthProbesSection") lives here with its
+  web English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/system/components/status/HealthProbesSection.tsx), where the English
+  label IS the key (web `t('Health Probes')`-style calls). The remainder back the
+  native state envelope (accordion a11y, freshness chip / banner, loading / empty /
+  error chrome).
+*/
+
+/* --- Keys from the web source (parity — English label is the key) --- */
+"Health Probes" = "Health Probes";
+"Liveness and readiness checks" = "Liveness and readiness checks";
+"Live" = "Live";
+"Ready" = "Ready";
+"Liveness — /healthz" = "Liveness — /healthz";
+"Readiness — /readyz" = "Readiness — /readyz";
+"Status" = "Status";
+"Goroutines" = "Goroutines";
+"Uptime" = "Uptime";
+"Database" = "Database";
+"Latency" = "Latency";
+"Pool Connections" = "Pool Connections";
+
+/* --- Accordion accessibility (expand/collapse) --- */
+"Expanded" = "Expanded";
+"Collapsed" = "Collapsed";
+"Toggle Section" = "Double tap to expand or collapse";
+
+/* --- Freshness chip (Stale / Offline) --- */
+"Stale" = "Stale";
+"Offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"Stale Banner" = "Reconnecting — health probes may be out of date";
+"Offline Banner" = "Offline — showing last known health probes";
+
+/* --- Loading / empty / error chrome --- */
+"Loading" = "Loading health probes";
+"No Health Data Title" = "No health data";
+"No health data available" = "No health data available";
+"Couldn't load health probes" = "Couldn't load health probes";
+"Retry" = "Retry";

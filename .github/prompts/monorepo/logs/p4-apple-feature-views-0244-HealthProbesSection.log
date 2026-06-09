@@ -1,0 +1,125 @@
+=== P4 Feature view 0244 HealthProbesSection (Apple) ===
+Prompt:  .github/prompts/monorepo/p4-apple/feature-views/P-0244-HealthProbesSection.prompt.md
+Web src: web/src/features/system/components/status/HealthProbesSection.tsx (THE spec)
+Native:  apps/apple/TeslaSync/feature-views/HealthProbesSection.* (11 files: 10 .swift + 1 .strings)
+Branch:  auto/20260608-211853-78201/126   Base HEAD: e8aa526f7
+Host:    Darwin arm64 (Apple Studio) · Xcode 26.5 (17F42) · Swift 6.3.2 · iOS18/macOS15 SDKs present
+Capability: SwiftUI present; Swift Charts + MapKit present but NOT used by this surface
+            (web "Charts / maps used: (none)"). NOT a capability-BLOCKED surface.
+
+------------------------------------------------------------------------------
+PARITY SUMMARY (web → native, faithful reproduction)
+------------------------------------------------------------------------------
+Data source : getExtendedHealth (30s refetch) bound via the P1/S8 source seam
+              (HealthProbesSource → @Observable HealthProbesModel). No HTTP in the view.
+Composition : web <AccordionSection defaultOpen> → HealthProbesAccordion (icon box +
+              title + subtitle + trailing badges + chevron); web <FadeIn> → TSFadeIn.
+              Body = web <Grid cols 1/2 gap 4> of two <Card> → adaptive LazyVGrid:
+                • Liveness — /healthz : status badge + Status / Goroutines / Uptime
+                • Readiness — /readyz : status badge + Database / Latency / Pool Connections
+              Header Live / Ready dot badges (web <Badge variant size dot>).
+helpers.tsx : statusToBadgeVariant ported EXACTLY (success list omits "connected",
+              unlike statusTextClass) → HealthProbeStatus.variant; formatUptime,
+              fmtInt, fmtNumber(_,1) and the '—' latency fallback → HealthProbesFormat.
+States      : loading (2 skeletons) · content · empty (resolved, no health) · error
+              (QueryError + retry) · stale (chip + 1-shot auto-refresh) · offline
+              (cached + chip + banner). Every state renders — never a blank box.
+i18n        : all 12 web t() keys + native chrome resolve via P1/S10 facade
+              (HealthProbesStrings, table "HealthProbesSection"); no English literals
+              in code. Raw API status values ('ok'/'ready'/'unknown') render verbatim,
+              exactly like the web (never localized).
+a11y        : accordion is one button w/ label+value+hint+isButton; per-card combined
+              VoiceOver labels; section summary; Dynamic Type via tokens; Reduce Motion
+              honored (TSFadeIn/TSSkeleton/accordion). iOS18/iPadOS18/macOS15 minimums.
+telemetry   : view.opened emitted once on first appear (P1/S11), surface slug
+              "HealthProbesSection".
+Imports     : SwiftUI / Foundation / Observation / OSLog only (+ XCTest in *Tests).
+              Independent of the KMP `Shared` framework, Swift Charts, and MapKit.
+Line budget : largest file 275 lines (Views) — within the 400-line house budget.
+
+------------------------------------------------------------------------------
+GATE STEPS (as written in the prompt) — real outcomes
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=DEFERRED (macOS-pending, ADR-012) — see DEFERRAL below. NOT run-to-green here.
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=DEFERRED (macOS-pending, ADR-012) — KMP framework + macOS dev signing. NOT run here.
+[3] swiftlint --strict            (tree-wide, the gate's scope)
+    TREE_LINT_EXIT=2 — 1 pre-existing, UNRELATED serious violation, NOT in this surface:
+      TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9
+        opening_brace (another agent's surface; already tracked in
+        apps/macos-pending-verifications.md). Outside this prompt's allowed-files scope.
+    swiftlint --strict (THIS surface, 10 files): 0 violations, 0 serious.  LINT_EXIT=0 (surface)
+[4] swiftformat --lint apps/apple (tree-wide)
+    FORMAT_EXIT=0 — 0/2468 files require formatting (this surface included & clean).
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/HealthProbesSection
+    PLACEHOLDER_EXIT=0 — PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0.
+    (Note: the literal path is a filename PREFIX, not a dir; the script's Test-Path
+     treats it as an empty scan. The MEANINGFUL scan — the whole feature-views dir
+     filtered to HealthProbesSection.* — also reports 0 violations / 0 opt-outs.)
+
+------------------------------------------------------------------------------
+HOST-RUNNABLE VERIFICATION (this surface) — all GREEN
+------------------------------------------------------------------------------
+xcodegen generate ............................ EXIT=0 (project regenerated;
+    all 11 HealthProbesSection.* files enumerated — 10 .swift to app+test targets,
+    .strings to resources; 66 pbxproj references).
+swiftformat --lint (10 surface files) ........ 0/10 require formatting.
+swiftlint --strict (10 surface files) ........ 0 violations, 0 serious in 10 files.
+check-placeholders (surface) ................. 0 violations, 0 opt-outs.
+swiftc -typecheck — iOS 18 Simulator SDK ..... 0 errors
+    (arm64-apple-ios18.0-simulator, -swift-version 6, -strict-concurrency=complete,
+     -D DEBUG so #Preview blocks are checked too; surface + Shared-free design layer).
+swiftc -typecheck — macOS 15 SDK ............. 0 errors
+    (arm64-apple-macos15.0, -swift-version 6, -strict-concurrency=complete, -D DEBUG).
+swift test — isolated SwiftPM (real surface + real tests) ... 31 / 31 PASSED, 0 failures
+    Adapter/Projection/Format/Accessibility (Tests.swift) + Model state-machine
+    (ModelTests.swift). Covers EVERY state: loading, content, empty, error, stale
+    (one-shot auto-refresh, re-armed on live), offline (cached, no refetch); the
+    view.opened-once telemetry; the variant case lists incl. the "connected"-omission;
+    the readiness unknown/em-dash fallbacks; uptime/latency/int formatting; section +
+    per-card VoiceOver labels.
+HEALTHPROBES_ERROR_COUNT=0 — zero errors originate from this surface on either real SDK.
+
+------------------------------------------------------------------------------
+DEFERRAL — full-app xcodebuild build/test (steps [1][2]) is macOS-pending (ADR-012)
+------------------------------------------------------------------------------
+This is the SAME deferred verification recorded for 0010-ToolCard, 0180, 0231, 0038,
+0167, 0168 in apps/macos-pending-verifications.md, and for the prior 0244 run. Reasons,
+all PRE-EXISTING / ENVIRONMENTAL — none caused by this surface:
+  • KMP Shared.xcframework prerequisite: the TeslaSync scheme's "Stage Shared.xcframework"
+    pre-build action runs a Kotlin/Native multi-platform Gradle assembly (the P1/S3
+    artifact tracked macOS-pending). 15 app files (Sources/SharedFacade/*,
+    Sources/DashboardWidgets/*) `import Shared`; THIS surface does NOT — it imports only
+    SwiftUI/Foundation/Observation/OSLog, and is proven to typecheck on both real SDKs
+    without the framework.
+  • macOS target: DEVELOPMENT_TEAM is empty (no dev-signing identity on this host).
+  • One pre-existing tree-wide swiftlint error in another agent's widget (see step [3]).
+  • Shared host saturation at run time: load average ~65, with 38 swift-frontend procs
+    and 2 other parallel-slot xcodebuild invocations (TeslaSync, TeslaSync-macOS) plus
+    Gradle/JVM already running. Launching another full KMP+Xcode build here would be an
+    irresponsible use of the shared machine and would not change this surface's proven-
+    green status. Deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest).
+macOS verification command (P99 runner):
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+[x] Surface renders on Apple with all web states reproduced
+    (loading / content / empty / error / stale / offline).
+[x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog
+    (12/12 web keys + native chrome).
+[x] Accessibility labels present on the accordion + every interactive element +
+    per-state / per-card summaries.
+[x] Tests: adapter unit tests + per-state model tests + a11y label tests (31 total, green).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate: 0, 0 opt-outs).
+[~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing/environmental
+    blockers + the macOS-pending KMP framework prerequisite); host-runnable equivalents
+    — real iOS-18 + macOS-15 swiftc -typecheck (0 errors) + 31/31 swift test +
+    swiftlint/swiftformat/placeholder/xcodegen — all green.
+
+EXIT=0
+STATUS=DONE
