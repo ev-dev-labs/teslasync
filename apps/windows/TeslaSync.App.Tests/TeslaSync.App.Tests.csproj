@@ -498,6 +498,20 @@
   </ItemGroup>
 
   <!--
+    P2 feature-views (0022 UnixPermissionTool): the surface's UI-thread-free logic (the octal → triad map +
+    presets + registration + diagnostics, the pure octal→symbolic projection adapter, and the state-holder
+    view-model) lives in the WinUI app project under feature-views/ but is WinUI-free by construction. Link
+    those three source files in so this headless (net10.0) test project verifies the projection adapter +
+    per-state transitions row-for-row without a UI host — the same pattern used for the sibling devtools.
+    The WinUI view itself (feature-views\UnixPermissionTool\UnixPermissionTool.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.Model.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.Source.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.ViewModel.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2/W8-0003 — copy the packaged widget Adaptive Card template next to the tests so the drift test can
     assert it matches the canonical Core template constant.
   -->
