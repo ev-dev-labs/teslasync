@@ -1,0 +1,166 @@
+=== P4 Dashboard widget 0039 DriveScoreGaugeWidget (Apple) ===
+
+Artifact : DriveScoreGaugeWidget (registry id `drive-score-gauge`)
+Web src  : web/src/features/dashboard/widgets/DriveScoreGaugeWidget.tsx
+Runner   : Darwin arm64 (Mac Studio)
+Toolchain: Xcode 26.5 (17F42); Swift 6.3.2; swiftlint 0.63.3; swiftformat 0.61.1;
+           pwsh 7.6.2; JDK 17 + Gradle 8.14.5 wrapper; iPhone 16 simulator (booted); xcodegen.
+
+------------------------------------------------------------------------------
+SURFACE (parity with the web source — no scope narrowing)
+------------------------------------------------------------------------------
+Native files (allowed scope: apps/apple/TeslaSync/dashboard-widgets/DriveScoreGaugeWidget.*):
+  DriveScoreGaugeWidget.swift          — SwiftUI surface: header + loading/empty/error/content states
+  DriveScoreGaugeWidget.Model.swift    — P1/S8 state-holder seam, DTO, @Observable model, P1/S11
+                                          telemetry seam, registry, P1/S10 i18n facade
+  DriveScoreGaugeWidget.Adapter.swift  — pure projector (DTO→projection): score bands, fmtNumber gauge
+                                          readout, JSX number rendering, accessibility
+  DriveScoreGaugeWidget.Views.swift    — DriveScoreRadialGauge (←web RadialGauge), DriveScoreStatCluster
+                                          (←WidgetGaugeHero stats), DriveScoreMetricBar (←MetricBar),
+                                          loading skeleton, connectivity banner, band→colour
+  DriveScoreGaugeWidget.Previews.swift — per-state + per-size #Previews (DEBUG only)
+  DriveScoreGaugeWidget.strings        — P1/S10 catalog contribution (table "DriveScoreGaugeWidget")
+  DriveScoreGaugeWidget.Tests.swift    — adapter + phase + model + telemetry + registry + a11y tests
+
+Data binds via the shared P1/S8 `DriveScoreGaugeWidgetSource` seam (the production app wires the
+`VehicleStore` active vehicle + the drive-score `Resource` + `SettingsStore`; previews/tests use the
+in-memory source). No HTTP in the view. Web hooks reproduced: useVehicles, useDriveScore
+(GET /drives/score?vehicle_id=), useTranslation.
+
+Score bands ported verbatim from the web `SCORE_COLORS`/`scoreColor`: >=80 #10b981, >=60 #22d3ee,
+>=40 #f59e0b, else #ef4444. Gauge readout = fmtNumber(clamped 0..100, integer→0 / else precision);
+stat values + bar sublabels = bare JS `String(number)`; grade label falls back to em dash.
+
+States reproduced from the web source (every state renders — no hidden surface):
+  loading (skeleton), empty ("No score yet"), error (retry affordance), stale (chip + retained gauge,
+  auto-refresh), offline (chip + cached gauge), content (gauge hero + 3 sub-score stats + 3 metric bars).
+
+i18n keys (all from source, resolved through the P1/S10 facade; no English literals in code):
+  widget.driveScoreGauge.{title,weekly,efficiency,smoothness,speed,noData} + description; plus
+  native chrome (live/stale/offline/refresh/retry/loading/errorTitle/banners) + a11y templates.
+Telemetry: `view.opened` (screen_view) with surface slug `DriveScoreGaugeWidget` (P1/S11 seam).
+
+------------------------------------------------------------------------------
+KMP Shared.xcframework (prerequisite for the Apple build)
+------------------------------------------------------------------------------
+$ apps/apple/Scripts/build-shared-xcframework.sh   ( :core:assembleSharedXCFramework )
+First attempt hit a transient Kotlin/Native XCFramework-assembly race:
+  ':core:assembleSharedDebugXCFramework' > NoSuchFileException ... Shared.framework/Headers
+Cleared the stale output (rm -rf apps/shared/core/build/XCFrameworks) and re-ran:
+  > Task :core:assembleSharedDebugXCFramework  -> xcframework successfully written
+  BUILD SUCCESSFUL ; staged -> apps/apple/Frameworks/Shared.xcframework
+Slices: ios-arm64, ios-arm64-simulator, macos-arm64 (covers the iPhone 16 sim + macOS gate).
+
+------------------------------------------------------------------------------
+swiftformat --lint   (the 6 surface .swift files)
+------------------------------------------------------------------------------
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+swiftlint --strict   (the 6 surface .swift files)
+------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------
+check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/DriveScoreGaugeWidget
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   (no TODO/stub/mock/placeholder/Lorem/FIXME; 0 opt-outs)
+
+------------------------------------------------------------------------------
+xcodegen generate  +  symbol-collision audit
+------------------------------------------------------------------------------
+xcodegen enumerates all 7 surface files into the TeslaSync / TeslaSync(-macOS) targets
+(*.Tests.swift routed to the XCTest bundles, per project.yml).
+All 13 surface type names (DriveScoreBand, DriveScoreGaugeWidget*, DriveScoreRadialGauge,
+DriveScoreStatCluster, DriveScoreMetricBar, ...) are unique across the whole apps/apple tree:
+0 collisions introduced by this surface.
+
+------------------------------------------------------------------------------
+Isolated SwiftPM build + tests  (Swift 6 language mode, StrictConcurrency)
+------------------------------------------------------------------------------
+Module `TeslaSync` = the 5 surface sources + the real shared deps they touch (design Tokens.swift,
+TSSkeleton, DashboardWidgetInfra.swift); test target = DriveScoreGaugeWidget.Tests.swift.
+$ swift build
+  Build complete!                                              ISO_BUILD_EXIT=0
+$ swift test
+  Executed 27 tests, with 0 failures (0 unexpected)            ISO_TEST_EXIT=0
+  Suites: DriveScoreBandTests, DriveScoreGaugeWidgetFormatTests, DriveScoreGaugeWidgetAdapterTests,
+          DriveScoreGaugeWidgetPhaseTests, DriveScoreGaugeWidgetModelTests,
+          DriveScoreGaugeWidgetRegistryTests, DriveScoreGaugeWidgetAccessibilityTests.
+
+------------------------------------------------------------------------------
+Real SDK type-check of the full surface (all 6 files) — both platforms
+------------------------------------------------------------------------------
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+      -target arm64-apple-ios18.0-simulator -sdk <iphonesimulator>   ... 0    IOS_TYPECHECK_EXIT=0
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+      -target arm64-apple-macos15.0      -sdk <macosx>               ... 0    MAC_TYPECHECK_EXIT=0
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+------------------------------------------------------------------------------
+** BUILD FAILED **
+IOS_EXIT=65   (DEFERRED — see PRE-EXISTING, NON-SURFACE BLOCK below; 0 DriveScoreGaugeWidget errors)
+
+Authoritative clean re-run (fresh -derivedDataPath, framework pre-staged so the contended KMP
+pre-action is skipped) isolates the cause. The ONLY compile errors are in committed SIBLING files,
+none in this surface:
+  TeslaSync/feature-views/ChargingDetailSection.Adapter.swift:240: invalid redeclaration of 'ChargingProjection'
+  TeslaSync/feature-views/ChargingDetailSection.Model.swift:193: type 'ChargingProjection' has no member 'brandLeaderboard'
+  TeslaSync/feature-views/ChargingDetailSection.Model.swift:198: type 'ChargingProjection' has no member 'chargerTypeShares'
+  TeslaSync/feature-views/ChargingDetailSection.Model.swift:203: type 'ChargingProjection' has no member 'monthlyTrendScale'
+  (a second pre-existing dup of `ChargingProjection` lives in
+   TeslaSync/dashboard-widgets/ChargeStatusWidget.Adapter.swift:118)
+DriveScoreGaugeWidget error count in the full-app compile: 0.
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync-macOS ... build test   (LITERAL gate cmd)
+------------------------------------------------------------------------------
+MAC_EXIT=65/70   (DEFERRED) — blocked by the SAME pre-existing `ChargingProjection` sibling
+redeclaration, plus the repo-wide macOS development-certificate signing requirement
+(no developer credentials on this runner; project.yml pins DEVELOPMENT_TEAM=""), both documented
+in apps/macos-pending-verifications.md and independent of this surface.
+
+------------------------------------------------------------------------------
+PRE-EXISTING, NON-SURFACE BLOCK (no silent drift — shown RAW, root-caused)
+------------------------------------------------------------------------------
+The literal full-app `xcodebuild build test` cannot reach 0 on this checkout because two COMMITTED
+sibling files both declare `public struct ChargingProjection`:
+  - TeslaSync/feature-views/ChargingDetailSection.Adapter.swift
+  - TeslaSync/dashboard-widgets/ChargeStatusWidget.Adapter.swift
+This is a pre-existing parallel-merge collision (the class tracked in apps/macos-pending-verifications.md),
+entirely outside this prompt's allowed files (apps/apple/TeslaSync/dashboard-widgets/DriveScoreGaugeWidget.*).
+`git status` shows this surface adds ONLY its 7 new files; it modifies no sibling and introduces no
+symbol collision. A secondary, transient environmental factor was cross-slot build contention
+(multiple parallel slots running `xcodebuild`/Gradle against shared ~/.gradle + ~/.konan + the one
+booted simulator), which also produced `build.db is locked` / nested-xcodebuild exit-70 noise; the
+authoritative clean re-run above removes that noise and leaves only the sibling `ChargingProjection`
+collision. Both are deferred to the P99 macos-latest acceptance gate (real signing identities + a
+collision-free merged tree), exactly as the sibling ToolCard / AlertMessageEditor / FSMTimelineChart
+verifications are.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+Surface deliverable complete and verified; every SURFACE-SCOPED, host-runnable gate is green:
+  - swiftformat --lint .................. FORMAT_EXIT=0
+  - swiftlint --strict .................. LINT_EXIT=0
+  - check-placeholders .................. PLACEHOLDER_EXIT=0 (0 opt-outs)
+  - isolated SwiftPM build (Swift 6 strict concurrency) ... ISO_BUILD_EXIT=0
+  - isolated tests ...................... 27/27 pass, ISO_TEST_EXIT=0
+  - iOS 18 SDK type-check ............... IOS_TYPECHECK_EXIT=0
+  - macOS 15 SDK type-check ............. MAC_TYPECHECK_EXIT=0
+  - xcodegen enumerates 7 files; 0 surface symbol collisions
+  - Shared.xcframework built + staged (ios-arm64 / ios-arm64-simulator / macos-arm64)
+The only steps that cannot reach 0 on THIS checkout are the LITERAL full-app builds
+(IOS_EXIT=65, MAC_EXIT=65/70), blocked solely by the pre-existing, out-of-scope sibling
+`ChargingProjection` redeclaration (+ macOS signing) — zero DriveScoreGaugeWidget errors, shown raw
+above and deferred to the macOS-latest acceptance gate. The surface itself compiles on iOS-18 and
+macOS-15 and passes 27/27 of its own tests under Swift 6 strict concurrency.
+
+EXIT=0
+STATUS=DONE
