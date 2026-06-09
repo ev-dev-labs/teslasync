@@ -1,0 +1,142 @@
+=== P2 Feature view 0091 SessionDetailPanel (Windows) ===
+
+ARTIFACT
+  Web source : web/src/features/charging/components/charging-curve/SessionDetailPanel.tsx (THE spec)
+  Native out : apps/windows/TeslaSync.App/feature-views/SessionDetailPanel/SessionDetailPanel.{Model.cs, cs}
+  Tests      : apps/windows/TeslaSync.App.Tests/FeatureViews/SessionDetailPanelTests.cs (headless; the
+               UI-thread-free projection is <Compile>-linked into the net10.0 test project the same way
+               every sibling surface links its UI-thread-free logic)
+
+----------------------------------------------------------------------------------------------------
+CAPABILITY PROBE (prompt requires WinUI 3 / Windows App SDK 1.6+ / .NET 10, Fluent Design System)
+----------------------------------------------------------------------------------------------------
+  dotnet --version                 -> 10.0.300  (PASS: .NET 10 SDK present)
+  dotnet --list-sdks               -> 9.0.314, 10.0.300
+  Windows App SDK / WinUI 3 build  -> PASS: the Release solution build below compiles the WinUI app project
+                                      (Microsoft.WindowsAppSDK, XAML compiler) to 0 errors, so the build +
+                                      Fluent UI capability is present on this runner.
+  WinAppDriver / Appium UIA runner -> ABSENT (see TEST step) — required only by the pre-existing
+                                      TeslaSync.App.UITests shell suite, not by this surface. Probe this run:
+                                      WinAppDriver.exe not under Program Files / Program Files (x86) / PATH;
+                                      nothing listening on http://127.0.0.1:4723/; TESLASYNC_UIA_APP unset.
+
+----------------------------------------------------------------------------------------------------
+PARITY NOTES (native reproduces the web source's data, composition, states and i18n)
+----------------------------------------------------------------------------------------------------
+  The web SessionDetailPanel is a pure, prop-driven presentational component (prop: session: ChargingSession;
+  hooks: useTranslation + useFormatting.formatCurrency). It owns NO data source: ChargingCurvePage mounts it
+  ONLY once a session is selected from a resolved list, so the page owns the loading / empty / error / stale /
+  offline lifecycle. The panel renders a GlassPanel headed "Session Details" with label/value rows:
+    Date, Charger Type, SOC Range, Energy Added, Peak Power, [Avg Power], Duration, [Cost], [Location]
+  ([] = web conditional: Avg Power iff avg_power_w != null; Cost iff cost_decimal != null; Location iff
+  start_place is truthy).
+
+  Native reproduction (SessionDetailPanel.Model.cs = WinUI-free projection; SessionDetailPanel.cs = view):
+    - States: model-driven Loading / Empty / Ready, the established presentational-surface precedent
+      (ChargingBreakdownSlide): the parent owns the fetch lifecycle, so there is deliberately no fetch-driven
+      error / stale / offline branch. The header always renders (never a blank region) — Loading = skeleton
+      rows (live region), Empty = "select a session" surface, Ready = the rows via the shared TsKVList.
+      Every state carries a Narrator name and is asserted headlessly.
+    - Composition / formatting (display boundary; SI stays on the model): Energy Wh/1000 -> "{n} kWh",
+      Peak/Avg W/1000 -> "{n} kW", Duration whole-minutes -> "{n} min", all at the web default precision 2
+      with en-US grouping via NumberFormatting; Cost via ScalarFormatters.FormatCurrency(symbol, 2); Date via
+      the shared DateTimeFormatting full variant (em-dash fallback); SOC range "${start}% -> ${end ?? '?'}%"
+      via raw number-to-string (matches the JS template literal). The durationMinutes and getChargerLabel
+      helpers are ported verbatim (incl. the >20 kW DC-fast threshold and the Tesla/"tesla" Supercharger rule).
+    - i18n: 9 of the 10 row labels resolve through the P1/S10 ILocalizer facade using the web's exact
+      charging.curve.* keys (all present in Strings/{en,he,ar}/Resources.resw). The Cost row uses the web's
+      literal key charging.curve.cost_decimal with the "Cost" fallback: that key is ABSENT from the web i18n
+      catalog (web/src/i18n/en.json has charging.curve.cost, not cost_decimal — the field name leaked into the
+      key), so the web itself falls back to "Cost". Reproduced byte-for-byte with the same key + fallback (no
+      catalog edit: the generated resw mirrors the same JSON that lacks it). The charger-type display values
+      (Supercharger / DC Fast / Home / AC) are raw string literals in the web helper; the native port routes
+      them through the facade with those exact English fallbacks (charging.curve.charger.*) so the rendered
+      value is identical while satisfying "no English literals in native code".
+    - Accessibility: the surface AutomationProperties.Name summarises the active state ("Session Details.
+      <rows>"); each row carries a "{label} {value}" name; the loading column is announced as a live region.
+    - Telemetry: view.opened (slug=SessionDetailPanel) emits on Loaded per the P1/S11 diagnostics contract;
+      the diagnostics line is PII-safe (carries only the slug — never a date, place, energy, power or cost).
+
+----------------------------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER FIXED (required to make the solution build at all)
+----------------------------------------------------------------------------------------------------
+  At HEAD the solution did NOT build: apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was invalid
+  XML — a chain of integration merges had left it with multiple concatenated <Project> roots (opens at lines
+  1 and 1103; closes at 1102 / 1733 / 1736 / 1759 / 1788) plus stray </ItemGroup> / </Project> tags and
+  orphaned (unwrapped) comment text. The project failed to load with MSB4025 "multiple root elements", so the
+  whole solution (build + test + format) was red regardless of any surface. This is an integration regression
+  unrelated to SessionDetailPanel (two prior partial-repair notes, at the old lines 1133 and 1762, were
+  themselves incomplete). Resolved by consolidating into a SINGLE valid <Project> root that preserves the
+  deduplicated UNION of every previously linked WinUI-app source (391 unique <Compile Include> across all
+  roots -> 392 including the new SessionDetailPanel.Model.cs), plus the standard PropertyGroup, the 3
+  PackageReferences, the 2 ProjectReferences and the 3 Content items. Verified: valid XML (1 root element);
+  all 8767 headless tests pass (no surface lost a linked source). File: 1788 -> 448 lines.
+
+----------------------------------------------------------------------------------------------------
+BUILD  ::  dotnet build apps/windows/TeslaSync.sln -c Release
+----------------------------------------------------------------------------------------------------
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+  BUILD_EXIT=0
+  (TeslaSync.App carries TreatWarningsAsErrors=true: the new surface compiles with 0 analyzer warnings — the
+   initial CA1822 / CA1859 analyzer errors on the first compile were fixed, not suppressed.)
+
+----------------------------------------------------------------------------------------------------
+TEST   ::  dotnet test apps/windows/TeslaSync.sln -c Release
+----------------------------------------------------------------------------------------------------
+  Passed!  - Failed: 0, Passed: 8767, Skipped: 0, Total: 8767 - TeslaSync.App.Tests.dll (net10.0)
+      SessionDetailPanel (this surface)  -> Passed: 54, Failed: 0  (--filter ~SessionDetailPanelTests)
+      Full headless suite                -> 8767/8767 pass (zero regressions from the csproj consolidation)
+
+  Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+      Every one of the 147 failures is the identical fixture exception, raised before any assertion (captured
+      on this run):
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+        WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+        WinAppDriver.exe was not found at its standard install paths or on PATH.
+          at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in
+             apps/windows/TeslaSync.App.UITests/Fixtures/WinAppDriverSession.cs:line 75
+      Per RunnerAvailability's own contract these E2E shell / auth / page-state / a11y tests "fail with that
+      reason rather than being silently skipped" when the runner is absent. They do NOT reference
+      SessionDetailPanel. Driving them needs WinAppDriver + an MSIX deploy + an interactive desktop session,
+      infeasible on this shared headless host and out of scope for this surface.
+  TEST_EXIT=1   (blocked solely by the absent WinAppDriver/Appium UI-automation runner — recorded with
+                 evidence, never reported as green; Honesty Covenant #1/#10)
+
+----------------------------------------------------------------------------------------------------
+FORMAT ::  dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+----------------------------------------------------------------------------------------------------
+  (no changes required — the new .cs files + the rebuilt csproj are LF and style-clean)
+  FORMAT_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+PLACEHOLDER ::  ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SessionDetailPanel
+----------------------------------------------------------------------------------------------------
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+CONCLUSION
+----------------------------------------------------------------------------------------------------
+  SessionDetailPanel is complete and at web-source parity
+  (web/src/features/charging/components/charging-curve/SessionDetailPanel.tsx). The surface builds clean in the
+  Release solution (0 warnings under TreatWarningsAsErrors), its headless adapter / per-state / formatting /
+  charger-label / SOC-range / duration / a11y / diagnostics tests pass (54/54), the full headless suite is
+  green (8767/8767), and the format + placeholder gates pass. The single red gate step (TEST) is blocked
+  SOLELY by the absent WinAppDriver/Appium UI-automation runner that the pre-existing TeslaSync.App.UITests
+  shell suite requires — a platform-capability gap recorded with evidence rather than reported as green,
+  exactly as the sibling P2 surfaces recorded the identical 147-failure block. The SessionDetailPanel surface
+  + tests + this log are committed per that convention; the necessary pre-existing TeslaSync.App.Tests.csproj
+  multiple-root (MSB4025) repair is included so the committed tree builds.
+
+  Honesty Covenant: #1 no red-as-green (real exit codes above; STATUS reflects the true WinAppDriver red);
+  #2 no scope narrowing (every web row, optional branch and state reproduced and tested); #3 no skip-and-assume;
+  #4 no stubs (placeholder gate clean); #5 no parity shortcuts; #6 no delegation; #7 no predecessor bypass (the
+  csproj repair preserves every sibling's linked source as the deduplicated union); #8 no commit faking a code
+  red green (the only red is the documented environmental WinAppDriver gap); #9 no silent drift (the
+  cost_decimal key and charger-label localization decisions are documented above); #10 this log ends EXIT/STATUS.
+
+EXIT=1
+STATUS=BLOCKED
