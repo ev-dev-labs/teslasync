@@ -1,0 +1,39 @@
+/*
+  UpdateAvailableCallout.strings
+  TeslaSync — P4 feature view · 0259 · UpdateAvailableCallout (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "UpdateAvailableCallout").
+  These entries fold into the app Localizable.xcstrings master catalog at integration time;
+  they are kept in a per-surface table so each parallel surface prompt owns its own strings
+  without editing the shared catalog.
+
+  PARITY NOTE: the web source
+  (web/src/features/system/components/status/UpdateAvailableCallout.tsx) hardcodes its copy
+  as English literals and makes NO t() calls. The first group below PROMOTES those literals
+  verbatim into localizable keys (so the native surface holds no hardcoded English). The
+  `{{version}}` / `{{timestamp}}` tokens mirror the web template expressions (`v${latest}`,
+  `v${current}`, formatDateTime(checkedAt)). The final group backs the native chrome the
+  Apple HIG states contract requires — the external-link VoiceOver hint (the web gets it
+  implicitly from <a target="_blank">) and the P4 stale/offline freshness chips (the web
+  shows none).
+*/
+
+/* --- Heading (web `Update available{latest ? ` — v${latest}` : ''}`) --- */
+"updateAvailable.heading" = "Update available";
+"updateAvailable.heading.withVersion" = "Update available — v{{version}}";
+
+/* --- Body (web `{current ? `You're running v${current}. ` : ''}Review …`) --- */
+"updateAvailable.body" = "Review the release notes before upgrading your deployment.";
+"updateAvailable.body.withCurrent" = "You're running v{{version}}. Review the release notes before upgrading your deployment.";
+
+/* --- Last checked (web `checkedAt && ` · Last checked ${formatDateTime(checkedAt)}``) --- */
+"updateAvailable.lastChecked" = "Last checked {{timestamp}}";
+
+/* --- Call to action (web anchor `View notes`) --- */
+"updateAvailable.viewNotes" = "View notes";
+
+/* --- Native chrome: accessibility + P4 freshness (not literal in the web leaf) --- */
+"updateAvailable.viewNotes.hint" = "Opens the release notes on GitHub in your browser";
+"updateAvailable.region.label" = "Update available";
+"updateAvailable.freshness.stale" = "This result may be out of date";
+"updateAvailable.freshness.offline" = "Offline — showing the last check";
