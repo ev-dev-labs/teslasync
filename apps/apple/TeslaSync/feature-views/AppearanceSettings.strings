@@ -1,0 +1,141 @@
+/*
+  AppearanceSettings.strings
+  TeslaSync — P4 feature view · 0204 · AppearanceSettings (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "AppearanceSettings").
+  Every user-facing string the SwiftUI parity of
+  features/settings/components/AppearanceSettings.tsx renders resolves here through
+  the AppearanceSettingsStrings facade with the web `t(key, default)` English value
+  as the fallback. The web keys are preserved VERBATIM (theme.* / achievements.* /
+  settings.tours.*); native-only additions (the composed theme-mode + accent
+  controls, the ADR-013 freshness chip + offline band, the server-region states,
+  the save-failure toast, and the VoiceOver copy) are grouped at the bottom. Folds
+  into the app Localizable.xcstrings master catalog at integration time; kept
+  per-surface so this prompt owns its own strings without editing the shared catalog.
+*/
+
+/* Header */
+"theme.title" = "Appearance";
+"theme.subtitle" = "Customize colors and display mode";
+
+/* Theme picker — display mode (web ThemePicker showMode) */
+"theme.displayMode" = "Display Mode";
+"theme.mode.system" = "System";
+"theme.mode.systemHelp" = "Match the device appearance";
+"theme.mode.light" = "Light";
+"theme.mode.lightHelp" = "Always use the light theme";
+"theme.mode.dark" = "Dark";
+"theme.mode.darkHelp" = "Always use the dark theme";
+
+/* Theme picker — accent color (web ThemePicker showCustom) */
+"theme.accentColor" = "Accent Color";
+"theme.accentHelp" = "Tints buttons, links, and active states across the app.";
+"theme.accent.cyan" = "Cyan";
+"theme.accent.blue" = "Blue";
+"theme.accent.purple" = "Purple";
+"theme.accent.pink" = "Pink";
+"theme.accent.green" = "Green";
+"theme.accent.amber" = "Amber";
+
+/* Information density */
+"theme.density.label" = "Information density";
+"theme.density.help" = "Affects table rows, cards, and dashboard widgets across the app.";
+"theme.density.compact" = "Compact";
+"theme.density.compactHelp" = "Tight rows — fits more on screen";
+"theme.density.comfortable" = "Comfortable";
+"theme.density.comfortableHelp" = "Default sizing";
+"theme.density.spacious" = "Spacious";
+"theme.density.spaciousHelp" = "Roomy — easier to read at distance";
+"theme.density.previewTitle" = "Preview";
+"theme.density.previewRow1" = "Sample row — Tesla Model 3";
+"theme.density.previewRow2" = "Sample row — Tesla Model Y";
+"theme.density.previewRow3" = "Sample row — Tesla Model S";
+
+/* Sidebar style */
+"theme.sidebarStyle.label" = "Sidebar style";
+"theme.sidebarStyle.linear" = "Minimal";
+"theme.sidebarStyle.linearHelp" = "Single column with section headers and a 2px accent bar on the active row. Recommended.";
+"theme.sidebarStyle.notion" = "Compact";
+"theme.sidebarStyle.notionHelp" = "Tighter rows with collapsible sections. Best for fitting many pages on screen.";
+"theme.sidebarStyle.legacy" = "Classic";
+"theme.sidebarStyle.legacyHelp" = "Colorful icon tiles with a pill on the active item. The most visual option.";
+"theme.sidebarStyle.help" = "Applies instantly. Saved per device — your other devices keep their own choice.";
+
+/* Default time format */
+"theme.timeFormat.label" = "Default time format";
+"theme.timeFormat.relative" = "Relative (2h ago)";
+"theme.timeFormat.relativeHelp" = "Best for recent activity feeds";
+"theme.timeFormat.absolute" = "Absolute (Nov 12, 13:42)";
+"theme.timeFormat.absoluteHelp" = "Best for trip planning and event correlation";
+"theme.timeFormat.help" = "Hover any timestamp to see the alternate format.";
+"theme.timeFormat.help2" = "Override per-surface with the format prop where needed.";
+
+/* Chart palette */
+"theme.chartPalette.label" = "Chart palette";
+"theme.chartPalette.cbSafe" = "Color-blind safe";
+"theme.chartPalette.cbSafeHelp" = "Okabe-Ito palette — distinguishable for all CVD types.";
+"theme.chartPalette.neon" = "Stylistic neon";
+"theme.chartPalette.neonHelp" = "Bright cyan/magenta — best when colour vision is unimpaired.";
+"theme.chartPalette.help" = "Defaults to the Okabe-Ito palette so series remain distinguishable for the ~8% of users with red-green colour vision deficiency.";
+
+/* Footer status bar */
+"theme.statusBar.label" = "Status bar";
+"theme.statusBar.show" = "Show status bar";
+"theme.statusBar.showHelp" = "Always-on footer with API health, live telemetry, vehicle, and version.";
+"theme.statusBar.iconOnly" = "Always icon-only";
+"theme.statusBar.iconOnlyHelp" = "Hide labels at all widths. Otherwise the bar auto-collapses on narrow screens.";
+"theme.statusBar.shownToast" = "Status bar shown";
+"theme.statusBar.hiddenToast" = "Status bar hidden";
+
+/* Achievement celebrations */
+"achievements.celebrationSettings" = "Celebration";
+"achievements.showToasts" = "Show celebration toasts";
+"achievements.showToastsHelp" = "Pop a celebratory toast with confetti when you unlock an achievement.";
+"achievements.playSound" = "Play sound on unlock";
+"achievements.playSoundHelp" = "Play a short chime alongside the celebration toast. Off by default.";
+"achievements.showOnDashboard" = "Show recently unlocked on dashboard";
+"achievements.showOnDashboardHelp" = "Surface your latest unlocks in the dashboard's recently-unlocked widget.";
+"achievements.pushOnUnlock" = "Send push notifications for achievements";
+"achievements.pushOnUnlockHelp" = "Deliver a push notification when an achievement unlocks while the app is closed.";
+
+/* Product tours */
+"settings.tours.label" = "Product tours";
+"settings.tours.title" = "Product tours";
+"settings.tours.body" = "Re-run the guided walkthroughs that introduce major sections.";
+"settings.tours.replayMain" = "Replay dashboard tour";
+"settings.tours.replayDebugger" = "Debugger tour";
+"settings.tours.replayAutomations" = "Automations tour";
+"settings.tours.resetAll" = "Reset all tours";
+"settings.tours.resetDone" = "All tours reset — they will play next time you open the matching page";
+
+/* Save-failure toast (native error handling) */
+"toast.saveFailed" = "Failed to save";
+"toast.saveFailedDesc" = "Could not update settings";
+
+/* Freshness chip (ADR-013, native addition) */
+"freshness.refresh" = "Refresh";
+"freshness.live" = "Live";
+"freshness.updating" = "Updating…";
+"freshness.stale" = "Stale";
+"freshness.error" = "Error";
+"freshness.offline" = "Offline";
+"freshness.justNow" = "just now";
+"freshness.minutesAgo" = "%lldm ago";
+"freshness.hoursAgo" = "%lldh ago";
+"freshness.daysAgo" = "%lldd ago";
+
+/* Connectivity bands (native addition) */
+"state.offlineBanner" = "Offline — showing your last saved appearance";
+"state.staleBanner" = "Reconnecting — display preferences may be out of date";
+
+/* Server-region states (native addition) */
+"state.loadingA11y" = "Loading display preferences";
+"state.emptyTitle" = "Preferences not loaded";
+"error.loadFailed" = "Couldn't load display preferences";
+"action.retry" = "Retry";
+"action.dismiss" = "Dismiss";
+
+/* VoiceOver copy (native addition) */
+"a11y.on" = "On";
+"a11y.off" = "Off";
+"a11y.selected" = "Selected";
