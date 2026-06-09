@@ -1,0 +1,70 @@
+=== P2 Feature view 0061 ChargingBreakdownSlide (Windows) ===
+runner: dotnet 10.0.300; OS=Microsoft Windows NT 10.0.26200.0; UTC=2026-06-09T14:14:57.7819140Z
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    17 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- TEST: dotnet test apps/windows/TeslaSync.sln -c Release ---
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 212 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  7809, Skipped:     0, Total:  7809, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=1
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+no formatting changes required (clean)
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 on ChargingBreakdownSlide.{cs,Model.cs} ---
+(prompt path .../feature-views/ChargingBreakdownSlide is a file prefix, not a dir, under the flat layout;
+ scanning the two surface files directly so the gate actually inspects shipped code)
+  apps/windows/TeslaSync.App/feature-views/ChargingBreakdownSlide.cs => PLACEHOLDER_COUNT=0
+  apps/windows/TeslaSync.App/feature-views/ChargingBreakdownSlide.Model.cs => PLACEHOLDER_COUNT=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+GATE: BUILD_EXIT=0 TEST_EXIT=1 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0
+
+=== CONCLUSION ===
+
+DELIVERED — native WinUI 3 ChargingBreakdownSlide at parity with
+web/src/features/analytics/components/review/ChargingBreakdownSlide.tsx:
+  apps/windows/TeslaSync.App/feature-views/ChargingBreakdownSlide.Model.cs  (WinUI-free projection,
+    records, diagnostics, registration — the loading/empty/ready branch selection mirroring the web data
+    lifecycle; the web filter(d => d.value > 0) zero-share drop + palette-by-FILTERED-position colouring;
+    Math.round percentage + grouped session-count formatting via NumberFormatting; the yearReview.avgStartSOC
+    template filled for BOTH the web {{soc}} and the resw {0} token forms; per-segment + surface Narrator names).
+  apps/windows/TeslaSync.App/feature-views/ChargingBreakdownSlide.cs  (the ContentControl view: a centred,
+    full-height slide (web px-8) with TsFadeIn staggered entrances honouring reduce-motion — the emoji, the
+    "{count} charge sessions" headline, the "Average plug-in at {soc}% battery" line, the connector-mix donut
+    via TsPieChart at innerRadius 0.65 (the native analogue of the recharts PieChart) and the colour-keyed
+    legend whose dots resolve from ChartBrushes.ForIndex so they match the slice palette exactly; TsSkeleton
+    loading, TsEmptyState empty; emits view.opened slug=ChargingBreakdownSlide).
+  apps/windows/TeslaSync.App.Tests/FeatureViews/ChargingBreakdownSlideTests.cs  (33 headless xUnit tests:
+    every state + loading precedence, the zero/negative-share filter, palette-by-filtered-position, Math.round
+    percentages, grouped session counts, both SoC token forms, the chart summary, a11y names, PII-safe
+    diagnostics, the stable slug, and argument validation).
+i18n: the surface reuses the 5 source keys yearReview.{supercharger,dcFast,acOther,chargeSessions,avgStartSOC}
+(already present in Strings/{en,ar,he}/Resources.resw) plus the shared chart.noData / common.loading keys.
+No English literals outside i18n fallbacks.
+
+GATE: BUILD_EXIT=0  TEST_EXIT=1  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  =>  EXIT=1.
+
+TEST_EXIT=1 — ROOT CAUSE = ABSENT UI-AUTOMATION RUNNER (platform-capability gap, not a defect):
+  TeslaSync.App.Tests (headless): Passed 7809 / Failed 0 — includes the 33 new ChargingBreakdownSlide tests
+    (the baseline before this surface was 7776; delta = +33).
+  TeslaSync.App.UITests (E2E):    Failed 147 / Passed 0 — EVERY failure is UiAutomationUnavailableException:
+    "WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+    was not found." None of the 147 reference ChargingBreakdownSlide; they exercise pre-existing shell /
+    navigation / auth / page-state-matrix chrome and fail identically at HEAD, independent of this surface.
+  This is the same WinAppDriver gap recorded as STATUS=BLOCKED by every predecessor feature-view log
+  (0002 BackendTool ... 0032 XRayBucketChart). The prompt's capability note ("requires WinUI 3 (Windows App
+  SDK 1.6+) + .NET 10 ... If unavailable on the runner -> STATUS=BLOCKED with API evidence") sanctions BLOCKED
+  for exactly this gap. WinUI 3 + .NET 10 THEMSELVES are present — the Release solution build is green and the
+  surface compiles into TeslaSync.App under TreatWarningsAsErrors with zero new warnings.
+
+EXIT=1
+STATUS=BLOCKED
