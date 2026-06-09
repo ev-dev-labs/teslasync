@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Notifications;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.UptimeMonitor;
 
 /// <summary>
 /// Canonical registry metadata for the Uptime Monitor surface — the native mirror of the web registry entry

@@ -4,7 +4,7 @@ using TeslaSync.App.Core;
 using TeslaSync.App.Core.Notifications;
 using TeslaSync.App.Core.Units;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.UptimeMonitor;
 
 /// <summary>
 /// The lifecycle state a <see cref="UptimeMonitorViewModel"/> can be in — the native union of the

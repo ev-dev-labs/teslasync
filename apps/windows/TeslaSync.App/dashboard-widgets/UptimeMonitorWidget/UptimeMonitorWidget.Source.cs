@@ -5,7 +5,7 @@ using TeslaSync.App.Core.Data.Behavior;
 using TeslaSync.App.Core.Data.Net;
 using TeslaSync.App.Core.Data.State;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.UptimeMonitor;
 
 /// <summary>
 /// The data port the <see cref="UptimeMonitorViewModel"/> binds to (P1/S8 state-holder seam). It yields the
