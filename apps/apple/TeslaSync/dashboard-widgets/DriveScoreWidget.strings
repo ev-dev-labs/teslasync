@@ -1,0 +1,47 @@
+/*
+  DriveScoreWidget.strings
+  TeslaSync — P4 dashboard widget · 0040 · DriveScoreWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DriveScoreWidget` resolves (table "DriveScoreWidget") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/DriveScoreWidget.tsx) — the gauge label, the stat label,
+  and the empty copy. The remaining keys back the native chrome (registry name +
+  description, freshness chip, refresh/retry/loading/error/banner copy, the VoiceOver
+  band words, and accessibility labels).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.score" = "Score";
+"widget.efficiency" = "Efficiency";
+"widget.noScore" = "No data yet";
+
+/* --- Registry metadata (registry/driving.ts → "drive-score") --- */
+"widget.driveScore.title" = "Driving Score";
+"widget.driveScore.description" = "Weekly efficiency and driving score";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.open" = "Open";
+"widget.driveScore.live" = "Live";
+"widget.driveScore.stale" = "Stale";
+"widget.driveScore.offline" = "Offline";
+"widget.driveScore.refresh" = "Refresh";
+"widget.driveScore.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.driveScore.loading" = "Loading driving score";
+"widget.driveScore.emptyHint" = "Your weekly driving score appears once there are drives to analyze.";
+"widget.driveScore.errorTitle" = "Couldn't load driving score";
+"widget.driveScore.staleBanner" = "Refreshing — this score may be stale";
+"widget.driveScore.offlineBanner" = "Offline — showing the last loaded score";
+
+/* --- Accessibility: VoiceOver band words + labels --- */
+"widget.driveScore.bandStrong" = "strong score";
+"widget.driveScore.bandFair" = "fair score";
+"widget.driveScore.bandWeak" = "score needs improvement";
+"widget.driveScore.openA11y" = "Open the Driving Score page";
