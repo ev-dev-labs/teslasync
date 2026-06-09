@@ -70,6 +70,9 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.Model.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.ViewModel.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0021 TimestampTool): the surface's UI-thread-free logic (the timestamp converter, the
     field-state enum, the registration metadata, the diagnostics, and the state-holder view-model) lives in
     the WinUI app project under feature-views/ but is WinUI-free by construction. Link the two source files
@@ -332,13 +335,6 @@
       itself (TirePressureVisualWidget.cs) is exercised by the app build.
     -->
     <!-- TirePressureVisualWidget's three WinUI-free sources are linked once in the dashboard-widgets group above. -->
-      TirePressureVisualWidget's three WinUI-free sources are linked exactly once (in the widget ItemGroup
-      above). Two further duplicate triples here were a pre-existing merge artifact that made the build fail
-      with NETSDK1022 "Duplicate 'Compile' items"; removed so the gate can build.
-    -->
-      exercised by TirePressureVisualWidgetTests. The three WinUI-free source files are linked in here once
-      (NETSDK1022: do not duplicate these identical Compile items elsewhere — duplicates break the test build).
-    -->
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
@@ -429,6 +425,9 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views: the TeslaApiRefTool's UI-thread-free logic (the static endpoint catalog, the
     pure search adapter, the registration metadata, the PII-safe diagnostics, and the state-holder
     view-model) lives in the WinUI app project but is WinUI-free by construction. Link those two source
@@ -584,6 +583,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Model.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Source.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.ViewModel.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0024-UuidGenerator): the surface's UI-thread-free logic (the history projection, the
     RFC 4122 v4 generation seam + format, the registration / PII-safe diagnostics and the state-holder
     view-model) lives in the WinUI app project but is WinUI-free by construction. Link those two source
@@ -594,6 +596,9 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.Model.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.ViewModel.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0023 UrlEncoder): the surface's UI-thread-free logic (the pure
     encodeURIComponent/decodeURIComponent codec, the registration metadata, the PII-safe diagnostics, and
     the state-holder view-model) lives in the WinUI app project but is WinUI-free by construction. Link those
@@ -615,6 +620,9 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\AuditPanel\AuditPanel.Model.cs" Link="FeatureViews\AuditPanel\AuditPanel.Model.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (W-0025 VinDecoder): the VinDecoder surface's UI-thread-free logic (the pure VIN decode
     + reference tables + field catalog model and the state-holder view-model) lives in the WinUI app project
     but is WinUI-free by construction. Link those two source files in so the headless (net10.0) test project
@@ -638,6 +646,21 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.Model.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.ViewModel.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0038 RateLimitStatusPanel: the surface's UI-thread-free logic (the null-tolerant JSON
+    parse + ScopeBudget/snapshot records, the severity/usage/window/reset projection + the formatDurationMsLong
+    port, the cache-then-network result mapper, the registration metadata, the PII-safe diagnostics and the
+    state-holder view-model) lives in the WinUI app project under feature-views/ but is WinUI-free by
+    construction. Link those three source files in so this headless (net10.0) test project verifies the
+    adapter + per-state transitions + a11y names + the view.opened diagnostics without a UI host. The WinUI
+    view itself (RateLimitStatusPanel.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Model.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Source.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.ViewModel.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
