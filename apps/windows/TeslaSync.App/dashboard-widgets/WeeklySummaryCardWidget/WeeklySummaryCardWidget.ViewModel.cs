@@ -2,44 +2,53 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Notifications;
+using TeslaSync.App.Core.Units;
 
 namespace TeslaSync.App.DashboardWidgets;
 
 /// <summary>
-/// Canonical registry metadata for the Uptime Monitor surface — the native mirror of the web registry entry
-/// in web/src/features/dashboard/widgets/registry/system.ts (<c>uptime-monitor</c>). The dashboard grid system
-/// binds this surface with the same <see cref="Id"/> and honours the same size constraints. The generated
-/// OpenAPI operation id is centralized here so a single test asserts it resolves against the generated
-/// endpoint table (catching contract drift at build/test time rather than at runtime).
+/// The data port the <see cref="WeeklySummaryViewModel"/> binds to (P1/S8 state-holder seam). It yields the
+/// cache-then-network sequence of parsed weekly-digest snapshots for
+/// <c>GET /vehicles/{vehicleID}/weekly-digest</c> — the native analogue of the web <c>useWeeklyDigest</c> hook
+/// composed with <c>useVehicles</c>. The view never performs HTTP itself; the concrete
+/// <see cref="WeeklySummarySource"/> (or a test fake) drives this.
 /// </summary>
-public static class UptimeMonitorRegistration
+public interface IWeeklySummarySource
+{
+    /// <summary>Stream the cache-then-network weekly-digest snapshots, newest cache first.</summary>
+    IAsyncEnumerable<RepositoryResult<WeeklyDigest>> StreamAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Canonical registry metadata for the Weekly Summary surface — the native mirror of the web registry entry in
+/// web/src/features/dashboard/widgets/registry/analytics.ts (<c>weekly-summary-card</c>). The dashboard grid
+/// system binds this surface with the same <see cref="Id"/> and honours the same size constraints.
+/// </summary>
+public static class WeeklySummaryRegistration
 {
     /// <summary>Stable registry id (matches the web registry).</summary>
-    public const string Id = "uptime-monitor";
+    public const string Id = "weekly-summary-card";
 
     /// <summary>Widget category (matches the web registry).</summary>
-    public const string Category = "system";
+    public const string Category = "analytics";
 
     /// <summary>Diagnostics surface slug emitted with the <c>view.opened</c> event.</summary>
-    public const string Slug = "UptimeMonitorWidget";
-
-    /// <summary>Generated operation id for the system-health read (web <c>useSystemHealth</c>).</summary>
-    public const string HealthOperationId = "get_api_v1_system_health";
+    public const string Slug = "WeeklySummaryCardWidget";
 
     /// <summary>Default footprint: 2 columns × 2 rows.</summary>
-    public static UptimeMonitorSize DefaultSize => new(2, 2);
+    public static WeeklySummarySize DefaultSize => new(2, 2);
 
     /// <summary>Minimum footprint: 1 column × 2 rows.</summary>
-    public static UptimeMonitorSize MinSize => new(1, 2);
+    public static WeeklySummarySize MinSize => new(1, 2);
 
     /// <summary>Maximum footprint: 4 columns × 40 rows.</summary>
-    public static UptimeMonitorSize MaxSize => new(4, 40);
+    public static WeeklySummarySize MaxSize => new(4, 40);
 
-    /// <summary>Localized display name (web registry "Uptime Monitor").</summary>
+    /// <summary>Localized display name (web registry "Weekly Summary").</summary>
     public static string Name(ILocalizer localizer)
     {
         ArgumentNullException.ThrowIfNull(localizer);
-        return localizer.GetString("widget.uptime.title", "Uptime Monitor");
+        return localizer.GetString("widget.weeklySummary.title", "Weekly Summary");
     }
 
     /// <summary>Localized description (web registry copy).</summary>
@@ -47,67 +56,69 @@ public static class UptimeMonitorRegistration
     {
         ArgumentNullException.ThrowIfNull(localizer);
         return localizer.GetString(
-            "widget.uptime.description",
-            "System health: DB, MQTT, Tesla API, Fleet Telemetry status");
+            "widget.weeklySummary.description",
+            "This week vs last week: total miles, kWh, cost, efficiency");
     }
 
     /// <summary>True when <paramref name="size"/> falls within the min/max footprint constraints.</summary>
-    public static bool IsWithinBounds(UptimeMonitorSize size) =>
+    public static bool IsWithinBounds(WeeklySummarySize size) =>
         size.Cols >= MinSize.Cols && size.Cols <= MaxSize.Cols &&
         size.Rows >= MinSize.Rows && size.Rows <= MaxSize.Rows;
 
     /// <summary>Clamp <paramref name="size"/> into the supported min/max footprint.</summary>
-    public static UptimeMonitorSize Clamp(UptimeMonitorSize size) => new(
+    public static WeeklySummarySize Clamp(WeeklySummarySize size) => new(
         Math.Clamp(size.Cols, MinSize.Cols, MaxSize.Cols),
         Math.Clamp(size.Rows, MinSize.Rows, MaxSize.Rows));
 }
 
 /// <summary>
-/// PII-safe diagnostics for the Uptime Monitor surface (P1/S11 diagnostics contract). Records only the
-/// operational <c>view.opened</c> event with the surface slug — never a component status, error message or
-/// database size — so a diagnostics line can never leak an operator's infrastructure state. Thread-safe.
+/// PII-safe diagnostics for the Weekly Summary surface (P1/S11 diagnostics contract). Records only the
+/// operational <c>view.opened</c> event with the surface slug — never a distance, cost, efficiency value or
+/// vehicle id — so a diagnostics line can never leak fleet data. Thread-safe.
 /// </summary>
-public sealed class UptimeMonitorDiagnostics
+public sealed class WeeklySummaryDiagnostics
 {
     private readonly Action<string>? _sink;
     private long _viewsOpened;
 
     /// <summary>Creates the collector over an optional PII-safe diagnostics sink.</summary>
-    public UptimeMonitorDiagnostics(Action<string>? sink = null) => _sink = sink;
+    public WeeklySummaryDiagnostics(Action<string>? sink = null) => _sink = sink;
 
     /// <summary>Number of times the surface has been opened.</summary>
     public long ViewsOpened => Interlocked.Read(ref _viewsOpened);
 
-    /// <summary>Record that the surface was opened, emitting <c>view.opened slug=UptimeMonitorWidget</c>.</summary>
+    /// <summary>Record that the surface was opened, emitting <c>view.opened slug=WeeklySummaryCardWidget</c>.</summary>
     public void RecordViewOpened()
     {
         Interlocked.Increment(ref _viewsOpened);
-        _sink?.Invoke($"view.opened slug={UptimeMonitorRegistration.Slug}");
+        _sink?.Invoke($"view.opened slug={WeeklySummaryRegistration.Slug}");
     }
 }
 
 /// <summary>
-/// UI-thread-free state holder backing the WinUI <see cref="UptimeMonitorWidget"/> view — the native port of
-/// the web component's <c>useSystemHealth</c> composition
-/// (web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx). It consumes the cache-then-network
-/// <see cref="IUptimeMonitorSource"/>, projects each snapshot through <see cref="UptimeMonitorProjection"/>,
-/// and exposes the mutually-exclusive <see cref="State"/> (loading / loaded / empty / error / stale / offline)
-/// plus the header freshness flags so the view is a thin renderer. <see cref="Display"/> is always populated so
-/// the compact healthy-count metric renders in every state. Drive it from one confinement (the UI thread); it
-/// is not internally synchronised.
+/// UI-thread-free state holder backing the WinUI <see cref="WeeklySummaryCardWidget"/> view — the native port
+/// of the web <c>WeeklySummaryCardWidget</c>'s hook composition
+/// (web/src/features/dashboard/widgets/WeeklySummaryCardWidget.tsx). It consumes the cache-then-network
+/// <see cref="IWeeklySummarySource"/>, projects each snapshot through <see cref="WeeklySummaryProjection"/>
+/// with the active units + currency, and exposes the mutually-exclusive <see cref="State"/> plus the header
+/// freshness flags so the view is a thin renderer. Drive it from one confinement (the UI thread); it is not
+/// internally synchronised.
 /// </summary>
-public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
+public sealed class WeeklySummaryViewModel : INotifyPropertyChanged, IDisposable
 {
-    private readonly IUptimeMonitorSource _source;
+    private readonly IWeeklySummarySource _source;
     private readonly ILocalizer _localizer;
+    private readonly Func<DateTimeOffset> _clock;
 
-    private UptimeMonitorSize _size;
+    private WeeklySummarySize _size;
+    private UnitPref _units;
+    private string _currencySymbol;
     private CancellationTokenSource? _cts;
-    private RepositoryResult<UptimeHealthSnapshot>? _last;
+    private RepositoryResult<WeeklyDigest>? _last;
     private bool _disposed;
 
-    private UptimeMonitorState _state = UptimeMonitorState.Loading;
-    private UptimeMonitorDisplay _display;
+    private WeeklySummaryState _state = WeeklySummaryState.Loading;
+    private WeeklySummaryDisplay _display;
     private DateTimeOffset? _updatedAt;
     private bool _isFetching;
     private bool _isError;
@@ -115,29 +126,44 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
     private string? _errorMessage;
     private int _attempts;
 
-    /// <summary>Creates the holder over its data source, localizer and footprint.</summary>
-    public UptimeMonitorViewModel(IUptimeMonitorSource source, ILocalizer localizer, UptimeMonitorSize size)
+    /// <summary>Creates the holder over its data source, localizer, footprint, units and currency.</summary>
+    /// <param name="source">The cache-then-network weekly-digest source.</param>
+    /// <param name="localizer">The i18n facade resolving every string.</param>
+    /// <param name="size">The widget footprint.</param>
+    /// <param name="units">The user's unit preference; defaults to metric when null.</param>
+    /// <param name="currencySymbol">The currency symbol for the cost tile; defaults to "$" when null.</param>
+    /// <param name="clock">Test clock for the "now" timestamp; defaults to the system clock.</param>
+    public WeeklySummaryViewModel(
+        IWeeklySummarySource source,
+        ILocalizer localizer,
+        WeeklySummarySize size,
+        UnitPref? units = null,
+        string? currencySymbol = null,
+        Func<DateTimeOffset>? clock = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
         _size = size;
-        _display = UptimeMonitorProjection.Project(UptimeHealthSnapshot.Empty, _size, _localizer);
+        _units = units ?? UnitPref.Metric;
+        _currencySymbol = string.IsNullOrWhiteSpace(currencySymbol) ? "$" : currencySymbol;
+        _clock = clock ?? (() => DateTimeOffset.Now);
+        _display = WeeklySummaryProjection.Project(WeeklyDigest.Empty, _size, _units, _currencySymbol, _localizer);
     }
 
     /// <inheritdoc />
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>The current mutually-exclusive surface state.</summary>
-    public UptimeMonitorState State
+    public WeeklySummaryState State
     {
         get => _state;
         private set => Set(ref _state, value);
     }
 
-    /// <summary>The projected, render-ready display model (overall badge + service rows + footer values).</summary>
-    public UptimeMonitorDisplay Display
+    /// <summary>The projected, render-ready display model (stat tiles, inline metrics, compact number).</summary>
+    public WeeklySummaryDisplay Display
     {
         get => _display;
         private set
@@ -176,7 +202,7 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
         private set => Set(ref _isStale, value);
     }
 
-    /// <summary>Localized error message shown in the error surface / offline chip tooltip.</summary>
+    /// <summary>Localized error message shown in the error surface.</summary>
     public string? ErrorMessage
     {
         get => _errorMessage;
@@ -190,18 +216,18 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
         private set => Set(ref _attempts, value);
     }
 
-    /// <summary>True when a system-health body is available to render (web truthy <c>data</c>).</summary>
-    public bool HasData => _display.HasData;
+    /// <summary>True when this-week metrics are being shown (web truthy <c>metrics</c>).</summary>
+    public bool HasData =>
+        _state is WeeklySummaryState.Loaded or WeeklySummaryState.Stale or WeeklySummaryState.Offline;
 
-    /// <summary>Localized widget title (web <c>widget.uptime.title</c>).</summary>
-    public string Title => UptimeMonitorRegistration.Name(_localizer);
+    /// <summary>Localized widget title (web <c>widget.weeklySummary.title</c>).</summary>
+    public string Title => WeeklySummaryRegistration.Name(_localizer);
 
-    /// <summary>Localized "no system health data" empty-state message (web <c>widget.uptime.noData</c>).</summary>
-    public string EmptyMessage =>
-        _localizer.GetString("widget.uptime.noData", "No system health data");
+    /// <summary>Localized empty-state message (web <c>widget.weeklySummary.noData</c>).</summary>
+    public string EmptyMessage => _localizer.GetString("widget.weeklySummary.noData", "No weekly data");
 
     /// <summary>The widget footprint; reassigning re-projects the current snapshot for the new layout.</summary>
-    public UptimeMonitorSize Size
+    public WeeklySummarySize Size
     {
         get => _size;
         set
@@ -217,10 +243,46 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    /// <summary>The user's unit preference; reassigning re-projects the current snapshot in the new units.</summary>
+    public UnitPref Units
+    {
+        get => _units;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            if (_units == value)
+            {
+                return;
+            }
+
+            _units = value;
+            Raise(nameof(Units));
+            Reproject();
+        }
+    }
+
+    /// <summary>The currency symbol used for the cost tile; reassigning re-projects.</summary>
+    public string CurrencySymbol
+    {
+        get => _currencySymbol;
+        set
+        {
+            string resolved = string.IsNullOrWhiteSpace(value) ? "$" : value;
+            if (_currencySymbol == resolved)
+            {
+                return;
+            }
+
+            _currencySymbol = resolved;
+            Raise(nameof(CurrencySymbol));
+            Reproject();
+        }
+    }
+
     /// <summary>
     /// Run a cache-then-network load: counts the attempt, shows the skeleton only when nothing is already
-    /// visible (otherwise keeps content while refreshing), and folds every emission into
-    /// <see cref="State"/> + <see cref="Display"/>. A superseding load cancels the prior one.
+    /// visible (otherwise keeps content while refreshing), and folds every emission into <see cref="State"/>
+    /// + <see cref="Display"/>. A superseding load cancels the prior one.
     /// </summary>
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -252,7 +314,7 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    /// <summary>Retry after a failure (or refresh on demand) — re-runs the load from the top.</summary>
+    /// <summary>Retry after a failure — re-runs the load from the top.</summary>
     public Task RetryAsync() => LoadAsync();
 
     /// <inheritdoc />
@@ -271,12 +333,9 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private bool HasContent() =>
-        _state is UptimeMonitorState.Loaded
-            or UptimeMonitorState.Empty
-            or UptimeMonitorState.Stale
-            or UptimeMonitorState.Offline;
+        _state is WeeklySummaryState.Loaded or WeeklySummaryState.Stale or WeeklySummaryState.Offline;
 
-    private void Apply(RepositoryResult<UptimeHealthSnapshot> result)
+    private void Apply(RepositoryResult<WeeklyDigest> result)
     {
         _last = result;
         switch (result.Status)
@@ -317,31 +376,22 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private void ApplySnapshot(
-        UptimeHealthSnapshot snapshot,
+        WeeklyDigest digest,
         DateTimeOffset? fetchedAt,
         bool stale,
         bool fetching,
         RepositoryError? error,
         bool offline = false)
     {
-        Display = UptimeMonitorProjection.Project(snapshot, _size, _localizer);
-
+        Display = WeeklySummaryProjection.Project(digest, _size, _units, _currencySymbol, _localizer);
         UpdatedAt = fetchedAt;
         IsFetching = fetching;
         IsStale = stale;
         IsError = offline;
         ErrorMessage = offline ? ErrorTextFor(error) : null;
-
-        // Web parity: a non-object body (`data` falsy) is its own empty surface. Offline / stale freshness take
-        // precedence for the header chip (as in the sibling widgets); the body still renders the right
-        // empty/content via Display.
         State = offline
-            ? UptimeMonitorState.Offline
-            : stale
-                ? UptimeMonitorState.Stale
-                : !Display.HasData
-                    ? UptimeMonitorState.Empty
-                    : UptimeMonitorState.Loaded;
+            ? WeeklySummaryState.Offline
+            : stale ? WeeklySummaryState.Stale : WeeklySummaryState.Loaded;
     }
 
     private void Reproject()
@@ -352,7 +402,7 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
         }
         else
         {
-            Display = UptimeMonitorProjection.Project(UptimeHealthSnapshot.Empty, _size, _localizer);
+            Display = WeeklySummaryProjection.Project(WeeklyDigest.Empty, _size, _units, _currencySymbol, _localizer);
         }
     }
 
@@ -360,20 +410,18 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
     {
         IsError = false;
         ErrorMessage = null;
-        State = UptimeMonitorState.Loading;
+        State = WeeklySummaryState.Loading;
     }
 
     private void SetEmpty(DateTimeOffset? fetchedAt)
     {
-        // The source returns a value for every outcome, so the engine's generic Empty is never expected; the
-        // contract is honoured defensively by rendering the same "no system health data" empty surface.
-        Display = UptimeMonitorProjection.Project(UptimeHealthSnapshot.Empty, _size, _localizer);
+        Display = WeeklySummaryProjection.Project(WeeklyDigest.Empty, _size, _units, _currencySymbol, _localizer);
         UpdatedAt = fetchedAt;
         IsFetching = false;
         IsStale = false;
         IsError = false;
         ErrorMessage = null;
-        State = UptimeMonitorState.Empty;
+        State = WeeklySummaryState.Empty;
     }
 
     private void SetError(RepositoryError? error)
@@ -382,23 +430,23 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
         IsStale = false;
         IsError = true;
         ErrorMessage = ErrorTextFor(error);
-        State = UptimeMonitorState.Error;
+        State = WeeklySummaryState.Error;
     }
 
     private string ErrorTextFor(RepositoryError? error)
     {
         string key = error?.Kind switch
         {
-            RepositoryErrorKind.Unauthorized => "widget.uptime.error.auth",
-            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "widget.uptime.error.offline",
-            _ => "widget.uptime.error",
+            RepositoryErrorKind.Unauthorized => "widget.weeklySummary.error.auth",
+            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "widget.weeklySummary.error.offline",
+            _ => "widget.weeklySummary.error",
         };
 
         string fallback = error?.Kind switch
         {
-            RepositoryErrorKind.Unauthorized => "Sign in to view system health",
-            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "You're offline — showing the last cached system health",
-            _ => "Couldn't load system health",
+            RepositoryErrorKind.Unauthorized => "Sign in to view your weekly summary",
+            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "You're offline — showing the last cached summary",
+            _ => "Couldn't load the weekly summary",
         };
 
         return _localizer.GetString(key, fallback);

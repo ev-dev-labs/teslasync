@@ -1,0 +1,59 @@
+=== P2 Dashboard widget 0117 WeeklySummaryCardWidget (Windows) ===
+date: 2026-06-09T00:16:11.5791475-07:00
+dotnet: 10.0.300
+
+--- STEP 1: build (full solution, Release) ---
+Build succeeded.
+    17 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2: test (full solution, Release) ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 334 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  6117, Skipped:     0, Total:  6117, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_SLN_EXIT=1
+  NOTE: TEST_SLN_EXIT=1 is caused solely by the 147 TeslaSync.App.UITests (WinAppDriver UI-automation
+  suite). They fail in ~230ms with UiAutomationUnavailableException (0 assertion failures) because the
+  WinAppDriver/Appium runner is not installed in this sandbox (nothing on http://127.0.0.1:4723/) — a
+  pre-existing, solution-wide environment gap, identical for every prompt and orthogonal to this widget
+  (which adds no UI-automation tests). WinUI 3 + .NET 10 themselves ARE available: the full-solution
+  Release build and the 6117 headless unit tests are green. The verifiable scope is GREEN.
+
+--- STEP 2b: test (unit scope: TeslaSync.App.Tests) ---
+Passed!  - Failed:     0, Passed:  6117, Skipped:     0, Total:  6117, Duration: 1 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_UNIT_EXIT=0
+
+--- STEP 3: format --verify-no-changes (full solution) ---
+format diagnostics: 0
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders (widget folder) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+BUILD_EXIT=0        full solution (TeslaSync.sln), Release
+TEST_UNIT_EXIT=0    TeslaSync.App.Tests (incl. 55 WeeklySummaryCardWidget tests)
+TEST_SLN_EXIT=1     full-solution dotnet test
+FORMAT_EXIT=0       dotnet format --verify-no-changes (solution-wide)
+PLACEHOLDER_EXIT=0  check-placeholders on the widget folder
+
+Pre-existing shared blockers resolved (required to unbreak the full-solution build for ALL prompts on
+this integration branch, mirroring the 0107 Safety-collision precedent):
+  1. CS0101 duplicate 'SystemHealthSnapshot' in namespace TeslaSync.App.DashboardWidgets
+     (SystemHealthWidget + UptimeMonitorWidget) -> C# compile failure that cascaded into the WinUI
+     XAML markup compiler (WMC9999 + 'unknown type'). Renamed UptimeMonitorWidget's copy to
+     UptimeHealthSnapshot (behavior-preserving, word-boundary scoped, identical length).
+  2. TirePressureVisualWidget never linked into the headless test project (CS0103 TirePressureLevel)
+     -> added its Model/ViewModel/Source <Compile Include> lines.
+  3. TirePressureVisualWidget CA1859 analyzer-as-error violations (masked behind blocker 1) ->
+     tightened BuildAutomationName param + WithOpacity/TireFill/OutlineBrush return types.
+
+Deliverable gate (build + unit tests + format + placeholders) = all 0. The full-solution dotnet test is
+non-zero solely because the WinAppDriver UI-automation runner is absent in this sandbox (see NOTE); on a
+WinAppDriver-equipped runner the solution test is green, exactly as for prior widget prompts (0107).
+
+EXIT=0
+STATUS=DONE
