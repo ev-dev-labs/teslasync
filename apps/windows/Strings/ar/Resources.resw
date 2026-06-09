@@ -21696,17 +21696,32 @@
   <data name="translation.widget.exportActiveJobs" xml:space="preserve">
     <value>Active Exports</value>
   </data>
+  <data name="translation.widget.exportDone" xml:space="preserve">
+    <value>Done</value>
+  </data>
   <data name="translation.widget.exportDownload" xml:space="preserve">
     <value>Download</value>
   </data>
+  <data name="translation.widget.exportFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
   <data name="translation.widget.exportIdleBadge" xml:space="preserve">
     <value>Idle</value>
+  </data>
+  <data name="translation.widget.exportQueued" xml:space="preserve">
+    <value>Queued</value>
+  </data>
+  <data name="translation.widget.exportRunning" xml:space="preserve">
+    <value>Running</value>
   </data>
   <data name="translation.widget.exportRunningBadge" xml:space="preserve">
     <value>Running</value>
   </data>
   <data name="translation.widget.exportStatus" xml:space="preserve">
     <value>Export Status</value>
+  </data>
+  <data name="translation.widget.exportStatus.description" xml:space="preserve">
+    <value>Data export jobs: progress, format, size, success/fail status</value>
   </data>
   <data name="translation.widget.failing" xml:space="preserve">
     <value>Failing</value>

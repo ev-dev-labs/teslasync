@@ -162,6 +162,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyStatsWidget\EnergyStatsWidget.Model.cs" Link="Widgets\EnergyStatsWidget\EnergyStatsWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyStatsWidget\EnergyStatsWidget.ViewModel.cs" Link="Widgets\EnergyStatsWidget\EnergyStatsWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyStatsWidget\EnergyStatsWidget.Source.cs" Link="Widgets\EnergyStatsWidget\EnergyStatsWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ExportStatusWidget\ExportStatusWidget.Model.cs" Link="Widgets\ExportStatusWidget\ExportStatusWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ExportStatusWidget\ExportStatusWidget.ViewModel.cs" Link="Widgets\ExportStatusWidget\ExportStatusWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\ExportStatusWidget\ExportStatusWidget.Source.cs" Link="Widgets\ExportStatusWidget\ExportStatusWidget.Source.cs" />
   </ItemGroup>
 
   <!--
