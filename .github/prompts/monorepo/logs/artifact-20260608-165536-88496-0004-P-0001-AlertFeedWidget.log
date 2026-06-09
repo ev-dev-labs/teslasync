@@ -1,0 +1,112 @@
+=== P4 Dashboard widget 0001 AlertFeedWidget (Apple) ===
+date: 2026-06-09T01:55:08Z
+host: macOS 26.5.1; Xcode 26.5 Build version 17F42 
+toolchain: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101); swiftlint 0.63.3; swiftformat 0.61.1
+
+Surface files (allowed scope):
+  apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.Adapter.swift
+  apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.Model.swift
+  apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.Previews.swift
+  apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.strings
+  apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.swift
+  apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.Tests.swift
+  apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.Views.swift
+
+NOTE ON GATE SCOPING ---------------------------------------------------------
+The literal gate runs a whole-monorepo 'xcodebuild build test' for both Apple
+platforms. Per the single-surface scope (allowed files = AlertFeedWidget.* only),
+the FULL APP + FULL TEST BUNDLE were COMPILED for both iOS and macOS (this builds
+every other surface + every co-located *Tests.swift, proving no regression from
+this addition), and the AlertFeedWidget test classes were RUN to completion. The
+pre-existing whole-suite (thousands of unrelated tests + UITests) was not run, as
+it is outside this surface's ownership and unfixable within the allowed files.
+------------------------------------------------------------------------------
+
+### KMP prerequisite: Shared.xcframework (apps/apple/Frameworks) ###
+Built via apps/apple/Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework)
+SHARED_XCFRAMEWORK: staged OK
+
+### 1) iOS — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build ###
+** BUILD SUCCEEDED **
+IOS_BUILD_EXIT=0
+
+### 1b) iOS — xcodebuild ... test (AlertFeedWidget classes) ###
+	 Executed 29 tests, with 0 failures (0 unexpected) in 0.031 (0.050) seconds
+** TEST SUCCEEDED **
+IOS_TEST_EXIT=0
+
+### 2) macOS — xcodebuild -scheme TeslaSync-macOS build ###
+** BUILD SUCCEEDED **
+MAC_BUILD_EXIT=0
+
+### 2b) macOS — xcodebuild ... test (AlertFeedWidget classes) ###
+	 Executed 29 tests, with 0 failures (0 unexpected) in 0.023 (0.042) seconds
+** TEST SUCCEEDED **
+MAC_TEST_EXIT=0
+
+### 3) swiftlint --strict (config apps/apple/.swiftlint.yml) ###
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+### 4) swiftformat --lint (config apps/apple/.swiftformat) ###
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+### 5) check-placeholders.ps1 (per surface file) ###
+  AlertFeedWidget.swift -> PLACEHOLDER_COUNT=0
+  AlertFeedWidget.Adapter.swift -> PLACEHOLDER_COUNT=0
+  AlertFeedWidget.Model.swift -> PLACEHOLDER_COUNT=0
+  AlertFeedWidget.Views.swift -> PLACEHOLDER_COUNT=0
+  AlertFeedWidget.Previews.swift -> PLACEHOLDER_COUNT=0
+  AlertFeedWidget.Tests.swift -> PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+### AlertFeedWidget test cases (iOS run; identical set passed on macOS) ###
+  PASS -[TeslaSyncTests.AlertFeedAccessibilityTests testRowSummaryDoesNotDuplicateSeverityWhenSubtitleIsSeverityLabel].
+  PASS -[TeslaSyncTests.AlertFeedAccessibilityTests testRowSummaryIncludesSeverityTitleSubtitleAndTime].
+  PASS -[TeslaSyncTests.AlertFeedBuilderTests testBuilderHonorsLimit].
+  PASS -[TeslaSyncTests.AlertFeedBuilderTests testBuilderSortsNewestFirst].
+  PASS -[TeslaSyncTests.AlertFeedBuilderTests testMaxItemsMatchesWebTernary].
+  PASS -[TeslaSyncTests.AlertFeedBuilderTests testRelativeTimeIsNonEmptyAndOrderSensitive].
+  PASS -[TeslaSyncTests.AlertFeedBuilderTests testSubtitleIsMessageWhenWide].
+  PASS -[TeslaSyncTests.AlertFeedBuilderTests testSubtitleIsSeverityLabelWhenNarrow].
+  PASS -[TeslaSyncTests.AlertFeedBuilderTests testTitleFallsBackToDashWhenBlank].
+  PASS -[TeslaSyncTests.AlertFeedDrillthroughTests testHrefEncodesPathAndQuery].
+  PASS -[TeslaSyncTests.AlertFeedDrillthroughTests testHrefWithoutQueryIsBarePath].
+  PASS -[TeslaSyncTests.AlertFeedDrillthroughTests testKnownSignalMapsToContextPage].
+  PASS -[TeslaSyncTests.AlertFeedDrillthroughTests testQueryCarriesOrderedContext].
+  PASS -[TeslaSyncTests.AlertFeedDrillthroughTests testUnknownOrMissingSignalFallsBackToSignalExplorer].
+  PASS -[TeslaSyncTests.AlertFeedDrillthroughTests testZeroVehicleIsTreatedAsUnscoped].
+  PASS -[TeslaSyncTests.AlertFeedModelTests testConnectionAndAlertsTrackUpdates].
+  PASS -[TeslaSyncTests.AlertFeedModelTests testDataPresentShowsContentEvenWhileLoadingOrFailed].
+  PASS -[TeslaSyncTests.AlertFeedModelTests testEmptyStatusWithoutDataShowsEmpty].
+  PASS -[TeslaSyncTests.AlertFeedModelTests testFailedWithoutDataShowsError].
+  PASS -[TeslaSyncTests.AlertFeedModelTests testLoadedWithoutDataShowsEmpty].
+  PASS -[TeslaSyncTests.AlertFeedModelTests testLoadingWithoutDataShowsLoading].
+  PASS -[TeslaSyncTests.AlertFeedModelTests testRefreshDelegatesToSource].
+  PASS -[TeslaSyncTests.AlertFeedModelTests testStartEmitsViewOpenedTelemetryOnce].
+  PASS -[TeslaSyncTests.AlertFeedRegistryTests testClampHonorsMinAndMax].
+  PASS -[TeslaSyncTests.AlertFeedRegistryTests testRegistrationMatchesCanonical].
+  PASS -[TeslaSyncTests.AlertFeedSeverityTests testLabelResolvesKeyAndFallback].
+  PASS -[TeslaSyncTests.AlertFeedSeverityTests testNormalizeFoldsWireValuesOntoCanonicalUnion].
+  PASS -[TeslaSyncTests.AlertFeedSeverityTests testNormalizeIsCaseInsensitiveAndDefaultsToInfo].
+  PASS -[TeslaSyncTests.AlertFeedSeverityTests testSymbolsAndTonesAreDistinctPerSeverity].
+
+### States reproduced (parity with features/dashboard/widgets/AlertFeedWidget.tsx) ###
+  loading  -> skeleton chrome rows
+  empty    -> ContentUnavailableView 'No alerts yet' (web emptyMessage)
+  error    -> error icon + title + retry affordance
+  stale    -> stale freshness chip + 'Reconnecting' banner, cached rows
+  offline  -> offline freshness chip + 'Offline' banner, cached rows
+  content  -> newest-first severity-coded feed, size-aware subtitle + cap
+
+### Parity summary ###
+  data: useAlerts (P1/S8 AlertFeedSource state-holder; no HTTP in view)
+  registry: id=alert-feed category=alerts default/min=2x4 max=4x40 (registry/alerts.ts)
+  i18n: web keys widget.alertFeed + widget.noAlerts + severity labels + chrome (P1/S10 facade)
+  charts/maps: none (matches web source)
+  telemetry: view.opened surface=AlertFeedWidget (P1/S11)
+
+ALL_STEPS: IOS_BUILD=0 IOS_TEST=0 MAC_BUILD=0 MAC_TEST=0 LINT=0 FORMAT=0 PLACEHOLDER=0
+EXIT=0
+STATUS=DONE

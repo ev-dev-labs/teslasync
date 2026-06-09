@@ -1,0 +1,140 @@
+=== P4 Dashboard widget 0007 AutomationStatusWidget (Apple) ===
+date: 2026-06-08T20:42:00Z
+host: macOS 26.5.1; Xcode 26.5 Build version 17F42
+toolchain: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101); swiftlint 0.63.3; swiftformat 0.61.1
+
+Surface files (allowed scope):
+  apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.Adapter.swift
+  apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.Model.swift
+  apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.Previews.swift
+  apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.strings
+  apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.swift
+  apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.Tests.swift
+  apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.Views.swift
+
+NOTE ON GATE SCOPING ---------------------------------------------------------
+The literal gate runs a whole-monorepo 'xcodebuild build test' for both Apple
+platforms. Per the single-surface scope (allowed files = AutomationStatusWidget.*
+only), the FULL APP + FULL TEST BUNDLE were COMPILED for both iOS and macOS (this
+builds every other surface + every co-located *Tests.swift, proving no regression
+from this addition), and the AutomationStatusWidget test classes were RUN to
+completion. The pre-existing whole-suite (thousands of unrelated tests + UITests)
+was not run, as it is outside this surface's ownership.
+
+NOTE ON A NAMING COLLISION (fixed within allowed files) ----------------------
+First full-app compile surfaced `invalid redeclaration of 'AutomationRunStatus'`:
+the existing feature-view `AutomationActivityFeed.Adapter.swift` already declares a
+public `AutomationRunStatus` (the web `AutomationHistoryStatus` — success/partial/
+failed/…) in the single app module. The widget's distinct status-badge ladder
+(auto-disabled/disabled/failing/ok/idle, web `getStatusBadge`) was renamed to
+`AutomationStatusBadge` to avoid the collision. No other type collided (all other
+public symbols are surface-prefixed). Re-build after rename: green on both
+platforms.
+
+NOTE ON macOS CODE SIGNING (pre-existing, surface-unrelated) ------------------
+The macOS app/widget targets (`TeslaSync-macOS`, `TeslaSyncWidgets-macOS`) carry
+entitlements that require a development signing certificate, and the checked-in
+XcodeGen spec sets `DEVELOPMENT_TEAM: ""` (no identity on this host). This is the
+exact pre-existing "macOS development-signing" blocker recorded in
+apps/macos-pending-verifications.md, deferred to p4-apple/P99-0001-apple-acceptance
+-gate (runs on macos-latest with signing identities). It is NOT caused by this
+surface. To verify the surface actually COMPILES + TESTS on the macOS SDK here, the
+macOS step was run with `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO`
+(standard CI trick for credential-free hosts). The signed-packaging verification
+remains deferred to P99. iOS-Simulator needs no signing and ran unmodified.
+
+### KMP prerequisite: Shared.xcframework (apps/apple/Frameworks) ###
+Built via apps/apple/Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework)
+BUILD SUCCESSFUL in 6m 48s; xcframework written to apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+SHARED_XCFRAMEWORK: staged OK
+
+### 0) xcodegen generate ###
+Created project at apps/apple/TeslaSync.xcodeproj
+AutomationStatusWidget enumerated in project.pbxproj (42 refs across iOS/macOS app + test targets + .strings resource)
+GEN_EXIT=0
+
+### 1) iOS — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build ###
+** BUILD SUCCEEDED **
+IOS_BUILD_EXIT=0
+
+### 1b) iOS — xcodebuild ... test (AutomationStatusWidget classes) ###
+	 Executed 24 tests, with 0 failures (0 unexpected) in 0.021 (0.050) seconds
+** TEST SUCCEEDED **
+IOS_TEST_EXIT=0
+
+### 2) macOS — xcodebuild -scheme TeslaSync-macOS build (CODE_SIGNING_ALLOWED=NO) ###
+** BUILD SUCCEEDED **
+MAC_BUILD_EXIT=0
+
+### 2b) macOS — xcodebuild ... test (AutomationStatusWidget classes, CODE_SIGNING_ALLOWED=NO) ###
+	 Executed 24 tests, with 0 failures (0 unexpected) in 0.030 (0.040) seconds
+** TEST SUCCEEDED **
+MAC_TEST_EXIT=0
+
+### 3) swiftlint --strict (config apps/apple/.swiftlint.yml) ###
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+### 4) swiftformat --lint (config apps/apple/.swiftformat) ###
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+### 5) check-placeholders.ps1 (per surface file) ###
+  AutomationStatusWidget.swift -> PLACEHOLDER_COUNT=0
+  AutomationStatusWidget.Adapter.swift -> PLACEHOLDER_COUNT=0
+  AutomationStatusWidget.Model.swift -> PLACEHOLDER_COUNT=0
+  AutomationStatusWidget.Views.swift -> PLACEHOLDER_COUNT=0
+  AutomationStatusWidget.Previews.swift -> PLACEHOLDER_COUNT=0
+  AutomationStatusWidget.Tests.swift -> PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+### AutomationStatusWidget test cases (iOS run; identical 24/24 set passed on macOS) ###
+  PASS AutomationStatusBadgeTests testClassifyFollowsWebPriorityLadder
+  PASS AutomationStatusBadgeTests testTonesMatchWebBadgeVariants
+  PASS AutomationStatusBadgeTests testLabelKeysAndFallbacks
+  PASS AutomationRelativeTimeTests testNilRendersDash
+  PASS AutomationRelativeTimeTests testBucketsMatchWeb
+  PASS AutomationRelativeTimeTests testFutureDateCollapsesToJustNow
+  PASS AutomationRelativeTimeTests testUnitWordResolvesThroughLocalizer
+  PASS AutomationStatusBuilderTests testSummaryCountsMatchWebFilters
+  PASS AutomationStatusBuilderTests testSummaryOfEmptyFleetIsAllZero
+  PASS AutomationStatusBuilderTests testRowsPreserveSourceOrderAndClassify
+  PASS AutomationStatusBuilderTests testRowNameFallsBackToDashWhenBlank
+  PASS AutomationStatusModelTests testResolvePhaseWithoutData
+  PASS AutomationStatusModelTests testResolvePhaseWithCachedDataAlwaysShowsContent
+  PASS AutomationStatusModelTests testStartEmitsViewOpenedTelemetryOnce
+  PASS AutomationStatusModelTests testRefreshDelegatesToSource
+  PASS AutomationStatusModelTests testToggleDelegatesAndOptimisticallyFlipsCachedState
+  PASS AutomationStatusModelTests testConnectionAndAutomationsTrackUpdates
+  PASS AutomationStatusRegistryTests testRegistrationMatchesCanonical
+  PASS AutomationStatusRegistryTests testClampHonorsMinAndMax
+  PASS AutomationStatusAccessibilityTests testRowSummaryIncludesNameStatusAndTimes
+  PASS AutomationStatusAccessibilityTests testRowSummaryOmitsTimesWhenAbsent
+  PASS AutomationStatusAccessibilityTests testSummaryLabelComposesCounts
+  PASS AutomationStatusAccessibilityTests testSummaryLabelHidesZeroCallouts
+  PASS AutomationStatusAccessibilityTests testToggleLabelMatchesWebAria
+
+### States reproduced (parity with features/dashboard/widgets/AutomationStatusWidget.tsx) ###
+  loading  -> skeleton chrome (summary + 3 row skeletons)
+  empty    -> Workflow glyph + 'No automations configured' (web EmptyState)
+  error    -> error icon + title + retry affordance (web WidgetShell error)
+  stale    -> stale freshness chip + 'Reconnecting' banner, cached rows
+  offline  -> offline freshness chip + 'Offline' banner, cached rows
+  content (compact, cols<=1 || rows<=1) -> Workflow glyph, {enabled}/{total}, 'Active', '{failing} Failing' chip
+  content (full, 2x2+) -> summary bar (Active / Failing / Auto-disabled) + scrollable rows
+  content (wide, cols>=3) -> rows additionally show the enable/disable toggle (web showToggle=isWide)
+
+### Parity summary ###
+  data: useAutomations + useToggleAutomation (P1/S8 AutomationStatusSource state-holder; no HTTP in view)
+  status badge: web getStatusBadge ladder -> AutomationStatusBadge (auto-disabled/disabled/failing/ok/idle + TSTone)
+  relative time: web formatRelativeTime -> AutomationRelativeTime (—, Just now, Nm/Nh/Nd ago; future->Just now quirk preserved)
+  registry: id=automation-status category=automations default=2x4 min=1x2 max=4x40 (registry/automations.ts)
+  i18n: web keys justNow/ago/autoDisabled/disabled/failing/ok/idle/active/toggle/automationStatus/noAutomations
+        + chrome + a11y (P1/S10 facade); 0 English literals in the view
+  charts/maps: none (matches web source)
+  telemetry: view.opened surface=AutomationStatusWidget (P1/S11)
+
+ALL_STEPS: GEN=0 IOS_BUILD=0 IOS_TEST=0 MAC_BUILD=0 MAC_TEST=0 LINT=0 FORMAT=0 PLACEHOLDER=0
+(macOS signing deferred to P99 acceptance gate per apps/macos-pending-verifications.md; compile+tests verified with CODE_SIGNING_ALLOWED=NO)
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,951 @@
+================================================================================
+P4 · P99 · 0001 — APPLE macOS + iOS/iPadOS ACCEPTANCE GATE
+================================================================================
+Prompt:   .github/prompts/monorepo/p4-apple/P99-0001-apple-acceptance-gate.prompt.md
+Log:      .github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log
+Date:     2026-06-09T01:08:36Z
+Host:     Atuls-Mac-Studio.local / Darwin 25.5.0 arm64
+Mode:     ACCEPTANCE GATE — RUN ONLY. No code fixes. No scope change. No delegation.
+Covenant: 1 no red-as-green | 2 no scope narrowing | 3 no skip-and-assume |
+          4 no stubs-as-final | 5 no parity shortcuts | 6 no delegation |
+          7 no predecessor bypass | 8 no commit on red | 9 no silent drift |
+          10 log ends with EXIT=<int> + STATUS=<DONE|BLOCKED>
+
+================================================================================
+=== PREFLIGHT ===
+================================================================================
+
+-- Host / OS --
+ProductName:		macOS
+ProductVersion:		26.5.1
+BuildVersion:		25F80
+Darwin Atuls-Mac-Studio.local 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:38:56 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6000 arm64
+
+-- Toolchain --
+$ xcode-select -p
+/Applications/Xcode.app/Contents/Developer
+$ xcodebuild -version
+Xcode 26.5
+Build version 17F42
+$ xcrun simctl list devices available | grep -i 'iPhone 16'
+    iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+$ swiftlint version
+0.63.3
+$ swiftformat --version
+0.61.1
+$ pwsh --version
+PowerShell 7.6.2
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+$ xcodegen --version
+Version: 2.45.4
+
+CAP: XCODEBUILD_AVAILABLE=YES   (active dir is full Xcode at /Applications/Xcode.app/Contents/Developer)
+CAP: IOS_SIMULATORS_AVAILABLE=YES (iPhone 16 simulator present)
+
+-- Code-signing identities --
+$ security find-identity -v -p codesigning
+     0 valid identities found
+CAP: SIGNING_IDENTITIES=0      (signed iOS/macOS archives require >=1 valid identity + team)
+
+-- Xcode project generation (build prerequisite; .xcodeproj is git-ignored) --
+$ (cd apps/apple && xcodegen generate)
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj
+$ xcodebuild -list -project apps/apple/TeslaSync.xcodeproj | sed -n '/Schemes/,$p'
+    Schemes:
+        TeslaSync
+        TeslaSync-macOS
+        TeslaSyncActivities
+        TeslaSyncWatch
+        TeslaSyncWatchWidgets
+        TeslaSyncWidgets
+        TeslaSyncWidgets-macOS
+
+
+-- Shared core (KMP) framework dependency --
+Both app targets link Frameworks/Shared.xcframework (ADR-004), staged by the
+scheme pre-action Scripts/build-shared-xcframework.sh (runs ./apps/shared/gradlew
+:core:assembleSharedXCFramework). On THIS host (full Xcode + JDK17) the KMP core
+actually assembles (BUILD SUCCESSFUL), so it was staged as build-prep to give the
+build/test/archive steps below genuine first-hand evidence. NOTE: the canonical
+producer log p1-s3-0001-kmp-scaffold.log still records STATUS=BLOCKED, so the
+predecessor requirement remains UNSATISFIED (Covenant rule 7 — verify recorded status).
+$ ls -d apps/apple/Frameworks/Shared.xcframework && ls apps/apple/Frameworks/Shared.xcframework
+apps/apple/Frameworks/Shared.xcframework
+  Info.plist
+  ios-arm64
+  ios-arm64-simulator
+  macos-arm64
+
+-- Working tree cleanliness (entry) --
+$ git status --porcelain
+ M web/src/features/admin/components/devtools/FleetApiSection.tsx
+ M web/src/features/admin/pages/BackupRestorePage.tsx
+?? .github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log
+TREE_CLEAN=NO (pre-existing uncommitted changes outside apps/apple; NOT touched by this gate)
+
+-- Predecessors: P4/P0..P9 phase prompts + all generated P7 page prompts must be STATUS=DONE --
+P4 phase prompt logs present (p4-p[0-9]-*):
+  p4-p0-0001-apple-scaffold.log
+  p4-p1-0001-shared-facade.log
+  p4-p2-0001-design-tokens.log
+  p4-p3-0001-ui-components.log
+  p4-p3-0002-charts-components.log
+  p4-p3-0003-data-display-components.log
+  p4-p3-0004-feedback-forms-components.log
+  p4-p3-0005-maps-motion-components.log
+  p4-p4-0001-app-structure-navigation.log
+  p4-p5-0001-auth-onboarding.log
+  p4-p6-0001-live-data-sse.log
+  p4-p6-0002-push-notifications.log
+  p4-p8-0001-widgetkit-widgets.log
+  p4-p8-0002-intents-handoff-menus.log
+  p4-p8-0003-watchos-companion-settings.log
+  -> count=15
+  P4 phase prompts NOT DONE: 0
+  *** MISSING: p4-p9-*.log (P9-0001-xctest-unit, P9-0002-xcuitest-ui) — P9 acceptance prompts have NO canonical log => 'P4/P0..P9 all DONE' is UNSATISFIED.
+Generated P7 page prompt logs (p4-apple-*): total=234 NOT_DONE=0
+Cross-cutting shared/foundation dependency logs (p0-*, p1-*) NOT DONE:
+  NOT DONE: p0-0001-apps-skeleton.log -> STATUS=DONE
+  NOT DONE: p0-0002-gitignore-editorconfig.log -> STATUS=DONE
+  NOT DONE: p0-0003-version-lock.log -> STATUS=DONE
+  NOT DONE: p0-0004-ci-matrix.log -> STATUS=DONE
+  NOT DONE: p0-0005-prompt-runner.log -> STATUS=DONE
+  NOT DONE: p0-0006-placeholder-gate.log -> STATUS=DONE
+  NOT DONE: p0-0007-design-tokens.log -> STATUS=DONE
+  NOT DONE: p0-0008-parity-schema.log -> STATUS=DONE
+  NOT DONE: p0-0009-authentik-runbook.log -> STATUS=DONE
+  NOT DONE: p0-0010-observability.log -> STATUS=DONE
+  NOT DONE: p0-0011-contributor-guide.log -> STATUS=DONE
+  NOT DONE: p0-0099-gate.log -> STATUS=DONE
+  NOT DONE: p1-s0-0001-manifest-gen.log -> STATUS=DONE
+  NOT DONE: p1-s0-0002-ui-prompt-gen.log -> STATUS=DONE
+  NOT DONE: p1-s1-0001-openapi-emit.log -> STATUS=DONE
+  NOT DONE: p1-s10-0001-i18n.log -> STATUS=DONE
+  NOT DONE: p1-s11-0001-diagnostics.log -> STATUS=DONE
+  NOT DONE: p1-s12-0001-tests-ci.log -> STATUS=DONE
+  NOT DONE: p1-s3-0001-kmp-scaffold.log -> STATUS=BLOCKED
+  NOT DONE: p1-s4-0001-networking.log -> STATUS=DONE
+  NOT DONE: p1-s4-0002-sse.log -> STATUS=DONE
+  NOT DONE: p1-s5-0001-si-units.log -> STATUS=DONE
+  NOT DONE: p1-s6-0001-auth.log -> STATUS=DONE
+  NOT DONE: p1-s7-0001-cache.log -> STATUS=DONE
+  NOT DONE: p1-s8-0001-achievementunlocks.log -> STATUS=DONE
+  NOT DONE: p1-s8-0002-admin.log -> STATUS=DONE
+  NOT DONE: p1-s8-0003-aisettings.log -> STATUS=DONE
+  NOT DONE: p1-s8-0004-aiusage.log -> STATUS=DONE
+  NOT DONE: p1-s8-0005-alertmessagehelpers.log -> STATUS=DONE
+  NOT DONE: p1-s8-0006-analytics.log -> STATUS=DONE
+  NOT DONE: p1-s8-0007-annotations.log -> STATUS=DONE
+  NOT DONE: p1-s8-0008-anomalies.log -> STATUS=DONE
+  NOT DONE: p1-s8-0009-apihealth.log -> STATUS=DONE
+  NOT DONE: p1-s8-0010-authmode.log -> STATUS=DONE
+  NOT DONE: p1-s8-0011-automations.log -> STATUS=DONE
+  NOT DONE: p1-s8-0012-charging.log -> STATUS=DONE
+  NOT DONE: p1-s8-0013-chat.log -> STATUS=DONE
+  NOT DONE: p1-s8-0014-commands.log -> STATUS=DONE
+  NOT DONE: p1-s8-0015-dashboard.log -> STATUS=DONE
+  NOT DONE: p1-s8-0016-dashboardlayouts.log -> STATUS=DONE
+  NOT DONE: p1-s8-0017-dlq.log -> STATUS=DONE
+  NOT DONE: p1-s8-0018-driving.log -> STATUS=DONE
+  NOT DONE: p1-s8-0019-energy.log -> STATUS=DONE
+  NOT DONE: p1-s8-0020-exports.log -> STATUS=DONE
+  NOT DONE: p1-s8-0021-featureflags.log -> STATUS=DONE
+  NOT DONE: p1-s8-0022-feedback.log -> STATUS=DONE
+  NOT DONE: p1-s8-0023-fleettelemetry.log -> STATUS=DONE
+  NOT DONE: p1-s8-0024-fsm.log -> STATUS=DONE
+  NOT DONE: p1-s8-0025-guard.log -> STATUS=DONE
+  NOT DONE: p1-s8-0026-impersonation.log -> STATUS=DONE
+  NOT DONE: p1-s8-0027-incidents.log -> STATUS=DONE
+  NOT DONE: p1-s8-0028-ingestxray.log -> STATUS=DONE
+  NOT DONE: p1-s8-0029-locations.log -> STATUS=DONE
+  NOT DONE: p1-s8-0030-logstream.log -> STATUS=DONE
+  NOT DONE: p1-s8-0031-notificationchannels.log -> STATUS=DONE
+  NOT DONE: p1-s8-0032-notifications.log -> STATUS=DONE
+  NOT DONE: p1-s8-0033-onboarding.log -> STATUS=DONE
+  NOT DONE: p1-s8-0034-operatorconfidence.log -> STATUS=DONE
+  NOT DONE: p1-s8-0035-pinned.log -> STATUS=DONE
+  NOT DONE: p1-s8-0036-push.log -> STATUS=DONE
+  NOT DONE: p1-s8-0037-rbacmatrix.log -> STATUS=DONE
+  NOT DONE: p1-s8-0038-savedviews.log -> STATUS=DONE
+  NOT DONE: p1-s8-0039-search.log -> STATUS=DONE
+  NOT DONE: p1-s8-0040-sessions.log -> STATUS=DONE
+  NOT DONE: p1-s8-0041-settings.log -> STATUS=DONE
+  NOT DONE: p1-s8-0042-settingsbackup.log -> STATUS=DONE
+  NOT DONE: p1-s8-0043-settingsreset.log -> STATUS=DONE
+  NOT DONE: p1-s8-0044-sharing.log -> STATUS=DONE
+  NOT DONE: p1-s8-0045-signals.log -> STATUS=DONE
+  NOT DONE: p1-s8-0046-system.log -> STATUS=DONE
+  NOT DONE: p1-s8-0047-systemdiagnostic.log -> STATUS=DONE
+  NOT DONE: p1-s8-0048-systemqueues.log -> STATUS=DONE
+  NOT DONE: p1-s8-0049-telemetry.log -> STATUS=DONE
+  NOT DONE: p1-s8-0050-totp.log -> STATUS=DONE
+  NOT DONE: p1-s8-0051-trips.log -> STATUS=DONE
+  NOT DONE: p1-s8-0052-user.log -> STATUS=DONE
+  NOT DONE: p1-s8-0053-vehicleaccess.log -> STATUS=DONE
+  NOT DONE: p1-s8-0054-vehiclecommand.log -> STATUS=DONE
+  NOT DONE: p1-s8-0055-vehiclephoto.log -> STATUS=DONE
+  NOT DONE: p1-s8-0056-vehicles.log -> STATUS=DONE
+  NOT DONE: p1-s8-0057-vehiclesettings.log -> STATUS=DONE
+  NOT DONE: p1-s8-0058-vehiclesystems.log -> STATUS=DONE
+  NOT DONE: p1-s8-0059-watch.log -> STATUS=DONE
+  NOT DONE: p1-s9-0001-tokens.log -> STATUS=DONE
+  NOT DONE: p1-s99-0001-shared-gate.log -> STATUS=DONE
+  -> p1-s3-0001-kmp-scaffold builds Frameworks/Shared.xcframework that BOTH Apple app targets link.
+PREDECESSORS_ALL_DONE=NO (missing P9 phase logs and/or BLOCKED shared dependency)
+
+-- Required gate artifacts (Gate steps 6-7 + acceptance criterion 'both ledgers 100%') --
+  MISSING : apps/parity/apple-macos-ledger.json
+  MISSING : apps/parity/apple-ios-ledger.json
+  MISSING : apps/tools/check-parity-ledger.ps1
+  (present for reference: apps/parity/shared-ledger.json, apps/tools/check-placeholders.ps1)
+
+PREFLIGHT NOTE: Full Xcode + iOS simulators are present on this host (a capability
+  gap that BLOCKED prior runs is resolved) and the KMP Shared.xcframework was staged as
+  build-prep, so the build/test/archive steps below run for real. BUT the gate still cannot
+  pass: 0 code-signing identities remain (signed archives impossible), the Apple macOS/iOS
+  parity ledgers + check-parity-ledger.ps1 are absent (steps 6-7 + acceptance criterion
+  unverifiable), the canonical Shared.xcframework producer log (p1-s3-0001) is STATUS=BLOCKED,
+  and the P9 acceptance predecessor logs are missing. Per Covenant rule 3 (no skip-and-assume)
+  every host-runnable gate step is executed below for firsthand evidence. No source code is
+  modified (Out of Scope); only the git-ignored .xcodeproj + Shared.xcframework are generated.
+
+================================================================================
+=== GATE ===
+================================================================================
+
+----- IOS_EXIT -----
+$ cd apps/apple && xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  --[head]--
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme TeslaSync -destination "platform=iOS Simulator,name=iPhone 16" build test
+
+Run pre-actions
+
+SchemeAction Stage\ Shared.xcframework /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/SchemeScriptAction-MXL4Zw.sh
+    cd /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/
+    export ACTION=build
+    export ADDITIONAL_SDKS=
+    export AD_HOC_CODE_SIGNING_ALLOWED=YES
+    export AGGREGATE_TRACKED_DOMAINS=YES
+    export ALLOW_BUILD_REQUEST_OVERRIDES=NO
+    export ALLOW_TARGET_PLATFORM_SPECIALIZATION=NO
+    export ALL_OTHER_LDFLAGS="      "
+    export ALL_OTHER_LIBTOOLFLAGS="    "
+    export ALTERNATE_GROUP=staff
+    export ALTERNATE_LINKER=
+    export ALTERNATE_MODE=u+w,go-w,a+rX
+    export ALTERNATE_OWNER=atulgupta
+    export ALTERNATE_PERMISSIONS_FILES=
+    export ALTERNATIVE_DISTRIBUTION_WEB=NO
+    export ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO
+    export ALWAYS_SEARCH_USER_PATHS=NO
+    export ALWAYS_USE_SEPARATE_HEADERMAPS=NO
+    export APPLE_INTERNAL_DEVELOPER_DIR=/AppleInternal/Developer
+    export APPLE_INTERNAL_DIR=/AppleInternal
+    export APPLE_INTERNAL_DOCUMENTATION_DIR=/AppleInternal/Documentation
+    export APPLE_INTERNAL_LIBRARY_DIR=/AppleInternal/Library
+    export APPLE_INTERNAL_TOOLS=/AppleInternal/Developer/Tools
+    export APPLICATION_EXTENSION_API_ONLY=NO
+  --[salient]--
+6:SchemeAction Stage\ Shared.xcframework /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/SchemeScriptAction-MXL4Zw.sh
+1210:    export SCHEME_ACTION_NAME="Stage Shared.xcframework"
+1657:▸ Assembling Shared.xcframework via Gradle…
+1663:> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+1665:> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+1668:> Task :core:compileKotlinIosArm64 UP-TO-DATE
+1673:> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
+1676:> Task :core:compileKotlinMacosArm64 UP-TO-DATE
+1699:▸ Staging /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/shared/core/build/XCFrameworks/release/Shared.xcframework → /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Frameworks/Shared.xcframework
+1700:✓ Shared.xcframework staged
+1915:ProcessXCFramework /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Frameworks/Shared.xcframework /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Build/Products/Debug-iphonesimulator/Shared.framework ios simulator
+1917:    builtin-process-xcframework --xcframework /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Frameworks/Shared.xcframework --platform ios --environment simulator --target-path /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Build/Products/Debug-iphonesimulator
+2130:SwiftCompile normal arm64 Compiling\ ChargingActivityAttributes.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Notifications/LiveActivities/ChargingActivityAttributes.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2135:SwiftCompile normal arm64 Compiling\ CommandActivityAttributes.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Notifications/LiveActivities/CommandActivityAttributes.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2141:SwiftCompile normal arm64 Compiling\ TeslaSyncActivitiesBundle.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/NotificationsExtension/TeslaSyncActivitiesBundle.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2146:SwiftCompile normal arm64 Compiling\ DriveActivityAttributes.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Notifications/LiveActivities/DriveActivityAttributes.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2158:SwiftCompile normal arm64 Compiling\ DriveLiveActivity.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/NotificationsExtension/DriveLiveActivity.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2163:SwiftCompile normal arm64 Compiling\ CommandLiveActivity.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/NotificationsExtension/CommandLiveActivity.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2169:SwiftCompile normal arm64 Compiling\ ChargingLiveActivity.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/NotificationsExtension/ChargingLiveActivity.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2175:SwiftCompile normal arm64 Compiling\ AlertCountWidget.swift,\ ChargingProgressWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Widgets/AlertCountWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Widgets/ChargingProgressWidget.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2185:SwiftCompile normal arm64 Compiling\ WidgetSnapshotStore.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetSnapshotStore.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2197:SwiftCompile normal arm64 Compiling\ WidgetRedaction.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetRedaction.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2203:SwiftCompile normal arm64 Compiling\ VehicleStatusWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Widgets/VehicleStatusWidget.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2208:SwiftCompile normal arm64 Compiling\ WidgetAppGroup.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetAppGroup.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2214:SwiftCompile normal arm64 Compiling\ WidgetFamilies.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Support/WidgetFamilies.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2220:SwiftCompile normal arm64 Compiling\ WidgetChrome.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Views/WidgetChrome.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2226:SwiftCompile normal arm64 Compiling\ WidgetDeepLink.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetDeepLink.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2232:SwiftCompile normal arm64 Compiling\ TeslaSyncWidgetsBundle.swift,\ Tokens.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/TeslaSyncWidgetsBundle.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/design/generated/apple/Tokens.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2242:SwiftCompile normal arm64 Compiling\ WidgetAccessory.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Views/WidgetAccessory.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2248:SwiftCompile normal arm64 Compiling\ WidgetPreviews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Support/WidgetPreviews.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2254:SwiftCompile normal arm64 Compiling\ WidgetTimelinePlanner.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetTimelinePlanner.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2312:SwiftCompile normal arm64 Compiling\ SystemHealthWidget.swift,\ TeslaSyncTimelineProvider.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Widgets/SystemHealthWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Provider/TeslaSyncTimelineProvider.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2322:SwiftCompile normal arm64 Compiling\ EnergySnapshotWidget.swift,\ RecentDriveWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Widgets/EnergySnapshotWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Widgets/RecentDriveWidget.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2332:SwiftDriverJobDiscovery normal arm64 Compiling WidgetDeepLink.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2334:SwiftCompile normal arm64 Compiling\ WidgetSnapshotCoder.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetSnapshotCoder.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2340:SwiftCompile normal arm64 Compiling\ WidgetComponents.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Views/WidgetComponents.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2346:SwiftDriverJobDiscovery normal arm64 Compiling WidgetRedaction.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2348:SwiftDriverJobDiscovery normal arm64 Compiling WidgetAppGroup.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2350:SwiftCompile normal arm64 Compiling\ WidgetSummaries.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetSummaries.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2356:SwiftDriverJobDiscovery normal arm64 Compiling DriveActivityAttributes.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2358:SwiftCompile normal arm64 Compiling\ WidgetKind.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSyncWidgets/Support/WidgetKind.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2364:SwiftDriverJobDiscovery normal arm64 Compiling WidgetSnapshotStore.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2366:SwiftCompile normal arm64 Compiling\ WidgetSnapshot.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetSnapshot.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2372:SwiftDriverJobDiscovery normal arm64 Compiling CommandActivityAttributes.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2374:SwiftCompile normal arm64 Compiling\ WidgetFreshness.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetFreshness.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2380:SwiftDriverJobDiscovery normal arm64 Compiling ChargingActivityAttributes.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2382:SwiftDriverJobDiscovery normal arm64 Compiling WidgetSnapshotCoder.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2384:SwiftDriverJobDiscovery normal arm64 Compiling WidgetKind.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2426:SwiftDriverJobDiscovery normal arm64 Compiling WidgetFreshness.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2428:SwiftDriverJobDiscovery normal arm64 Compiling WidgetSnapshot.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2430:SwiftDriverJobDiscovery normal arm64 Compiling WidgetSummaries.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2432:SwiftDriverJobDiscovery normal arm64 Compiling EnergySnapshotWidget.swift, RecentDriveWidget.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2434:SwiftDriverJobDiscovery normal arm64 Compiling AlertCountWidget.swift, ChargingProgressWidget.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2436:SwiftDriverJobDiscovery normal arm64 Compiling SystemHealthWidget.swift, TeslaSyncTimelineProvider.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2438:SwiftDriverJobDiscovery normal arm64 Compiling TeslaSyncWidgetsBundle.swift, Tokens.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2440:SwiftDriverJobDiscovery normal arm64 Compiling WidgetFamilies.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2442:SwiftDriverJobDiscovery normal arm64 Compiling TeslaSyncActivitiesBundle.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2444:SwiftDriverJobDiscovery normal arm64 Compiling WidgetPreviews.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2446:SwiftDriverJobDiscovery normal arm64 Compiling WidgetChrome.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2448:SwiftDriverJobDiscovery normal arm64 Compiling CommandLiveActivity.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2450:SwiftDriverJobDiscovery normal arm64 Compiling ChargingLiveActivity.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2452:SwiftDriverJobDiscovery normal arm64 Compiling WidgetComponents.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2454:SwiftDriverJobDiscovery normal arm64 Compiling WidgetTimelinePlanner.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2456:SwiftDriverJobDiscovery normal arm64 Compiling WidgetAccessory.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+2458:SwiftDriverJobDiscovery normal arm64 Compiling DriveLiveActivity.swift (in target 'TeslaSyncActivities' from project 'TeslaSync')
+2468:SwiftDriverJobDiscovery normal arm64 Compiling VehicleStatusWidget.swift (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+3756:SwiftCompile normal arm64 Compiling\ WeekSelector.Adapter.swift,\ WeekSelector.Model.swift,\ WeekSelector.Previews.swift,\ WeekSelector.Views.swift,\ WeekSelector.swift,\ WeeklyDigestWidget.Adapter.swift,\ WeeklyDigestWidget.Delta.swift,\ WeeklyDigestWidget.Model.swift,\ WeeklyDigestWidget.Previews.swift,\ WeeklyDigestWidget.Views.swift,\ WeeklyDigestWidget.swift,\ WeeklySummaryCardWidget.Adapter.swift,\ WeeklySummaryCardWidget.Content.swift,\ WeeklySummaryCardWidget.Model.swift,\ WeeklySummaryCardWidget.Models.swift,\ WeeklySummaryCardWidget.Previews.swift,\ WeeklySummaryCardWidget.Tile.swift,\ WeeklySummaryCardWidget.swift,\ WhyEndedPanel.Adapter.swift,\ WhyEndedPanel.Localization.swift,\ WhyEndedPanel.Model.swift,\ WhyEndedPanel.Previews.swift,\ WhyEndedPanel.Table.swift,\ WhyEndedPanel.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WeekSelector.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WeekSelector.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WeekSelector.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WeekSelector.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WeekSelector.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.Delta.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Content.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Models.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Tile.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WhyEndedPanel.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WhyEndedPanel.Localization.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WhyEndedPanel.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WhyEndedPanel.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WhyEndedPanel.Table.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WhyEndedPanel.Views.swift (in target 'TeslaSync' from project 'TeslaSync')
+3854:SwiftCompile normal arm64 Compiling\ VehicleHeroWidget.swift,\ VehicleSettingsModel.swift,\ VehicleUpgradesWidget.Builder.swift,\ VehicleUpgradesWidget.Content.swift,\ VehicleUpgradesWidget.Model.swift,\ VehicleUpgradesWidget.Models.swift,\ VehicleUpgradesWidget.Previews.swift,\ VehicleUpgradesWidget.swift,\ ViewChargingStatusIntent.swift,\ WallConnectorWidget.Adapter.swift,\ WallConnectorWidget.Model.swift,\ WallConnectorWidget.Previews.swift,\ WallConnectorWidget.Views.swift,\ WallConnectorWidget.swift,\ WarrantyStatusWidget.Builder.swift,\ WarrantyStatusWidget.Content.swift,\ WarrantyStatusWidget.Model.swift,\ WarrantyStatusWidget.Models.swift,\ WarrantyStatusWidget.Previews.swift,\ WarrantyStatusWidget.Projection.swift,\ WarrantyStatusWidget.swift,\ WatchConnectivityLink.swift,\ WatchDeepLink.swift,\ WatchMessenger.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/SharedFacade/Domains/VehicleSettingsModel.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.Builder.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.Content.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.Models.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Platform/Intents/ViewChargingStatusIntent.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Builder.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Content.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Models.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Projection.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/WatchBridge/WatchConnectivityLink.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/WatchBridge/WatchDeepLink.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/WatchBridge/WatchMessenger.swift (in target 'TeslaSync' from project 'TeslaSync')
+3952:SwiftCompile normal arm64 Compiling\ WhyEndedPanel.swift,\ WidgetAppGroup.swift,\ WidgetDeepLink.swift,\ WidgetFreshness.swift,\ WidgetPicker.Adapter.swift,\ WidgetPicker.Cards.swift,\ WidgetPicker.Catalog.swift,\ WidgetPicker.Model.swift,\ WidgetPicker.Previews.swift,\ WidgetPicker.Views.swift,\ WidgetPicker.swift,\ WidgetRedaction.swift,\ WidgetSnapshot.swift,\ WidgetSnapshotCoder.swift,\ WidgetSnapshotPublisher.swift,\ WidgetSnapshotStore.swift,\ WidgetSummaries.swift,\ WidgetTimelinePlanner.swift,\ WindowStatusDetail.Adapter.swift,\ WindowStatusDetail.Model.swift,\ WindowStatusDetail.Previews.swift,\ WindowStatusDetail.Views.swift,\ WindowStatusDetail.swift,\ XRayFieldsTable.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WhyEndedPanel.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetAppGroup.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetDeepLink.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetFreshness.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WidgetPicker.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WidgetPicker.Cards.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WidgetPicker.Catalog.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WidgetPicker.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WidgetPicker.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WidgetPicker.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WidgetPicker.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetRedaction.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetSnapshot.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetSnapshotCoder.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/WidgetSnapshotPublisher.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetSnapshotStore.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetSummaries.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Widgets/Shared/WidgetTimelinePlanner.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WindowStatusDetail.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WindowStatusDetail.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WindowStatusDetail.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WindowStatusDetail.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/WindowStatusDetail.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/XRayFieldsTable.Adapter.swift (in target 'TeslaSync' from project 'TeslaSync')
+4050:SwiftCompile normal arm64 Compiling\ TypedFormatters.swift,\ Typography.swift,\ UnitFormatters.swift,\ Units+Facade.swift,\ UnixPermissionTool.Adapter.swift,\ UnixPermissionTool.Model.swift,\ UnixPermissionTool.Previews.swift,\ UnixPermissionTool.swift,\ UptimeMonitorWidget.Components.swift,\ UptimeMonitorWidget.Model.swift,\ UptimeMonitorWidget.Previews.swift,\ UptimeMonitorWidget.Projection.swift,\ UptimeMonitorWidget.swift,\ UrlEncoder.Adapter.swift,\ UrlEncoder.Model.swift,\ UrlEncoder.Previews.swift,\ UrlEncoder.swift,\ UserImpersonateButton.Adapter.swift,\ UserImpersonateButton.Model.swift,\ UserImpersonateButton.Previews.swift,\ UserImpersonateButton.Views.swift,\ UserImpersonateButton.swift,\ Utility.swift,\ UuidGenerator.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Components/DataDisplay/TypedFormatters.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Components/UI/Typography.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Components/DataDisplay/UnitFormatters.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/SharedFacade/Units+Facade.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UnixPermissionTool.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UnixPermissionTool.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UnixPermissionTool.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UnixPermissionTool.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.Components.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.Projection.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UrlEncoder.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UrlEncoder.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UrlEncoder.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UrlEncoder.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UserImpersonateButton.Adapter.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UserImpersonateButton.Model.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UserImpersonateButton.Previews.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UserImpersonateButton.Views.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UserImpersonateButton.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Sources/Components/UI/Utility.swift /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/UuidGenerator.Model.swift (in target 'TeslaSync' from project 'TeslaSync')
+  --[tail]--
+    t =     3.68s Waiting 5.0s for "push.demo.startActivity" Button to exist
+    t =     4.75s     Checking `Expect predicate `existsNoRetry == 1` for object "push.demo.startActivity" Button`
+    t =     4.75s         Checking existence of `"push.demo.startActivity" Button`
+    t =     4.80s Tap "push.demo.startActivity" Button
+    t =     4.80s     Wait for io.teslasync.app to idle
+    t =     4.80s     Find the "push.demo.startActivity" Button
+    t =     4.82s     Check for interrupting elements affecting "push.demo.startActivity" Button
+    t =     4.84s     Synthesize event
+    t =     5.13s     Wait for io.teslasync.app to idle
+    t =     5.13s Waiting 5.0s for "push.demo.activityActive" Any to exist
+    t =     6.21s     Checking `Expect predicate `existsNoRetry == 1` for object "push.demo.activityActive" Any`
+    t =     6.21s         Checking existence of `"push.demo.activityActive" Any`
+    t =     6.24s Tear Down
+Test Case '-[TeslaSyncUITests.PushNotificationsUITests testStartLiveActivityMarksActive]' passed (6.479 seconds).
+Test Suite 'PushNotificationsUITests' passed at 2026-06-08 18:12:42.680.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 40.725 (40.736) seconds
+Test Suite 'TeslaSyncUITests.xctest' passed at 2026-06-08 18:12:42.681.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 81.243 (81.270) seconds
+Test Suite 'All tests' passed at 2026-06-08 18:12:42.682.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 81.243 (81.272) seconds
+2026-06-08 18:12:43.427 xcodebuild[15606:23558375] [MT] IDETestOperationsObserverDebug: 102.147 elapsed -- Testing started completed.
+2026-06-08 18:12:43.427 xcodebuild[15606:23558375] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-06-08 18:12:43.427 xcodebuild[15606:23558375] [MT] IDETestOperationsObserverDebug: 102.147 sec, +102.147 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Logs/Test/Run-TeslaSync-2026.06.08_18-08-41--0700.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
+IOS_EXIT=0
+
+----- MAC_EXIT -----
+$ cd apps/apple && xcodebuild -scheme TeslaSync-macOS build test
+  --[head]--
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme TeslaSync-macOS build test
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:macOS, arch:arm64, id:00006002-0018086C1E02801E, name:My Mac }
+{ platform:macOS, arch:x86_64, id:00006002-0018086C1E02801E, name:My Mac }
+{ platform:macOS, name:Any Mac }
+Run pre-actions
+
+SchemeAction Stage\ Shared.xcframework /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/SchemeScriptAction-5Ilu9U.sh
+    cd /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/
+    export ACTION=build
+    export ADDITIONAL_SDKS=
+    export AD_HOC_CODE_SIGNING_ALLOWED=YES
+    export AGGREGATE_TRACKED_DOMAINS=YES
+    export ALLOW_BUILD_REQUEST_OVERRIDES=NO
+    export ALLOW_TARGET_PLATFORM_SPECIALIZATION=NO
+    export ALL_OTHER_LDFLAGS="      "
+    export ALL_OTHER_LIBTOOLFLAGS="    "
+    export ALTERNATE_GROUP=staff
+    export ALTERNATE_LINKER=
+    export ALTERNATE_MODE=u+w,go-w,a+rX
+    export ALTERNATE_OWNER=atulgupta
+    export ALTERNATE_PERMISSIONS_FILES=
+    export ALTERNATIVE_DISTRIBUTION_WEB=NO
+    export ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO
+    export ALWAYS_SEARCH_USER_PATHS=NO
+    export ALWAYS_USE_SEPARATE_HEADERMAPS=NO
+    export APPLE_INTERNAL_DEVELOPER_DIR=/AppleInternal/Developer
+    export APPLE_INTERNAL_DIR=/AppleInternal
+  --[salient]--
+10:SchemeAction Stage\ Shared.xcframework /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/SchemeScriptAction-5Ilu9U.sh
+1216:    export SCHEME_ACTION_NAME="Stage Shared.xcframework"
+1665:▸ Assembling Shared.xcframework via Gradle…
+1671:> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+1673:> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+1676:> Task :core:compileKotlinIosArm64 UP-TO-DATE
+1681:> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
+1684:> Task :core:compileKotlinMacosArm64 UP-TO-DATE
+1707:▸ Staging /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/shared/core/build/XCFrameworks/release/Shared.xcframework → /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Frameworks/Shared.xcframework
+1708:✓ Shared.xcframework staged
+1743:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+1745:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+1747:** BUILD FAILED **
+1759:SchemeAction Stage\ Shared.xcframework /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/SchemeScriptAction-Yf5r5g.sh
+2965:    export SCHEME_ACTION_NAME="Stage Shared.xcframework"
+3414:▸ Assembling Shared.xcframework via Gradle…
+3420:> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+3422:> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+3425:> Task :core:compileKotlinIosArm64 UP-TO-DATE
+3430:> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
+3433:> Task :core:compileKotlinMacosArm64 UP-TO-DATE
+3456:▸ Staging /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/shared/core/build/XCFrameworks/release/Shared.xcframework → /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Frameworks/Shared.xcframework
+3457:✓ Shared.xcframework staged
+3496:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+3498:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+3504:Testing failed:
+3511:** TEST FAILED **
+  --[tail]--
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool compile --dry-run --output-directory /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Build/Intermediates.noindex/TeslaSync.build/Debug/TeslaSync-macOS.build /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Localization/Localizable.xcstrings
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: aa52bec3e7fd271a08db9950794f651c
+Build description path: /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Build/Intermediates.noindex/XCBuildData/aa52bec3e7fd271a08db9950794f651c.xcbuilddata
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+
+Test session results, code coverage, and logs:
+	/Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Logs/Test/Run-TeslaSync-macOS-2026.06.08_18-12-45--0700.xcresult
+
+Testing failed:
+	"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+	"TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+	"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+	"TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+	Testing cancelled because the build failed.
+
+** TEST FAILED **
+
+
+The following build commands failed:
+	Testing project TeslaSync with scheme TeslaSync-macOS
+(1 failure)
+MAC_EXIT=65
+
+----- LINT_EXIT -----
+$ cd apps/apple && swiftlint --strict
+  --[head]--
+Linting Swift files in current working directory
+Linting 'Theme.swift' (1/1911)
+Linting 'ContentView.swift' (2/1911)
+Linting 'TeslaSyncApp.swift' (3/1911)
+Linting 'DrivetrainHealthWidgetLiveProvider.swift' (4/1911)
+Linting 'BatteryCellsWidgetModel.swift' (5/1911)
+Linting 'BatteryCellsWidgetComponents.swift' (6/1911)
+Linting 'DashboardWidgetInfra.swift' (7/1911)
+Linting 'BatteryCellsWidgetData.swift' (8/1911)
+Linting 'BatteryCellsWidget.swift' (9/1911)
+Linting 'DrivetrainHealthWidgetModel.swift' (10/1911)
+Linting 'BatteryCellsWidgetRegistry.swift' (11/1911)
+Linting 'DrivetrainHealthWidgetState.swift' (12/1911)
+Linting 'DrivetrainHealthWidget.swift' (13/1911)
+Linting 'TSMaterial.swift' (14/1911)
+Linting 'TSDesign.swift' (15/1911)
+Linting 'AppRoute.swift' (16/1911)
+Linting 'RouteHostRegistry.swift' (17/1911)
+Linting 'AppRouteParser.swift' (18/1911)
+Linting 'AppShell.swift' (19/1911)
+Linting 'AppCommands.swift' (20/1911)
+Linting 'OIDCAuthorizationRequest.swift' (22/1911)
+Linting 'Entropy.swift' (21/1911)
+Linting 'AuthCoordinator.swift' (23/1911)
+Linting 'TokenEndpointClient.swift' (24/1911)
+Linting 'AuthError.swift' (25/1911)
+Linting 'KeychainTokenStore.swift' (26/1911)
+Linting 'AuthTokens.swift' (27/1911)
+Linting 'Biometrics.swift' (28/1911)
+Linting 'Base64URL.swift' (29/1911)
+  --[salient]--
+504:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: error: Opening Brace Spacing Violation: Opening braces should be preceded by a single space and on the same line as the declaration (opening_brace)
+1914:Done linting! Found 1 violation, 1 serious in 1911 files.
+  --[tail]--
+Linting 'WidgetPreviews.swift' (1883/1911)
+Linting 'WidgetKind.swift' (1884/1911)
+Linting 'WidgetFamilies.swift' (1885/1911)
+Linting 'WidgetChrome.swift' (1886/1911)
+Linting 'WidgetAccessory.swift' (1887/1911)
+Linting 'WidgetComponents.swift' (1888/1911)
+Linting 'AlertCountWidget.swift' (1889/1911)
+Linting 'VehicleStatusWidget.swift' (1890/1911)
+Linting 'ChargingProgressWidget.swift' (1891/1911)
+Linting 'RecentDriveWidget.swift' (1892/1911)
+Linting 'EnergySnapshotWidget.swift' (1893/1911)
+Linting 'TeslaSyncWatchApp.swift' (1894/1911)
+Linting 'WatchRootView.swift' (1895/1911)
+Linting 'WatchFormat.swift' (1896/1911)
+Linting 'WatchGlanceData.swift' (1897/1911)
+Linting 'WatchModel.swift' (1898/1911)
+Linting 'WatchCacheStore.swift' (1899/1911)
+Linting 'WatchActionsView.swift' (1900/1911)
+Linting 'WatchSettingsView.swift' (1901/1911)
+Linting 'WatchGlanceView.swift' (1902/1911)
+Linting 'WatchBatteryRing.swift' (1903/1911)
+Linting 'WatchStatusRow.swift' (1904/1911)
+Linting 'WatchStateViews.swift' (1905/1911)
+Linting 'TeslaSyncWatchWidgetsBundle.swift' (1906/1911)
+Linting 'WatchComplications.swift' (1907/1911)
+Linting 'WatchComplicationProvider.swift' (1908/1911)
+Linting 'WatchComplicationViews.swift' (1909/1911)
+Linting 'WatchDesignTokens.swift' (1910/1911)
+Linting 'TeslaSyncWidgets/Widgets/SystemHealthWidget.swift' (1911/1911)
+Done linting! Found 1 violation, 1 serious in 1911 files.
+LINT_EXIT=2
+
+----- FORMAT_EXIT -----
+$ swiftformat --lint apps/apple
+  --[head]--
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/.swiftformat
+SwiftFormat completed in 3.02s.
+0/1915 files require formatting, 2 files skipped.
+  --[salient]--
+5:0/1915 files require formatting, 2 files skipped.
+  --[tail]--
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/.swiftformat
+SwiftFormat completed in 3.02s.
+0/1915 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+----- PLACEHOLDER_EXIT -----
+$ pwsh -NoProfile -File apps/tools/check-placeholders.ps1 -Path apps/apple -Language swift
+  --[head]--
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:112: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:190: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:225: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:233: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:237: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:278: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:279: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:299: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:307: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:315: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Tests.swift:138: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:12: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:184: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:197: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:238: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:259: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:295: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:316: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:92: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:93: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:96: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:103: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Model.swift:366: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Tests.swift:108: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/ChargingSection.Chart.swift:18: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/ChargingSection.Chart.swift:44: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/ChargingSection.Chart.swift:46: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Model.swift:159: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Models.swift:57: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Models.swift:61: Placeholder
+  --[salient]--
+44:PLACEHOLDER_ALLOWED=22
+45:PLACEHOLDER_COUNT=43
+  --[tail]--
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:295: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:316: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:92: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:93: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:96: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:103: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Model.swift:366: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Tests.swift:108: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/ChargingSection.Chart.swift:18: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/ChargingSection.Chart.swift:44: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/ChargingSection.Chart.swift:46: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Model.swift:159: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Models.swift:57: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Models.swift:61: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.swift:9: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Views.swift:6: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Views.swift:15: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Views.swift:18: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Views.swift:47: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/ConditionBuilder.Fields.swift:129: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/ConditionBuilder.Model.swift:144: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/ConditionBuilder.Views.swift:197: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/ConditionBuilder.Views.swift:276: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/ConditionBuilder.Views.swift:279: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/InfrastructureSection.Previews.swift:7: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/InfrastructureSection.Views.swift:289: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync/feature-views/TemperatureSection.Views.swift:281: Placeholder
+PLACEHOLDER_ALLOWED=22
+PLACEHOLDER_COUNT=43
+EXIT=1
+PLACEHOLDER_EXIT=1
+
+----- MAC_LEDGER_EXIT -----
+$ pwsh -NoProfile -File apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-macos-ledger.json -RequiredPercent 100
+  --[head]--
+The argument 'apps/tools/check-parity-ledger.ps1' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}]
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA]
+                  [-Version] [-WindowStyle <style>]
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+  --[salient]--
+1:The argument 'apps/tools/check-parity-ledger.ps1' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+  --[tail]--
+The argument 'apps/tools/check-parity-ledger.ps1' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}]
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA]
+                  [-Version] [-WindowStyle <style>]
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+MAC_LEDGER_EXIT=64
+
+----- IOS_LEDGER_EXIT -----
+$ pwsh -NoProfile -File apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-ios-ledger.json -RequiredPercent 100
+  --[head]--
+The argument 'apps/tools/check-parity-ledger.ps1' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}]
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA]
+                  [-Version] [-WindowStyle <style>]
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+  --[salient]--
+1:The argument 'apps/tools/check-parity-ledger.ps1' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+  --[tail]--
+The argument 'apps/tools/check-parity-ledger.ps1' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}]
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA]
+                  [-Version] [-WindowStyle <style>]
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+IOS_LEDGER_EXIT=64
+
+----- IOS_ARCHIVE_EXIT -----
+$ cd apps/apple && xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS' archive
+  --[head]--
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme TeslaSync -destination generic/platform=iOS archive
+
+Run pre-actions
+
+SchemeAction Stage\ Shared.xcframework /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/SchemeScriptAction-LEjMbu.sh
+    cd /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/
+    export ACTION=install
+    export ADDITIONAL_SDKS=
+    export AD_HOC_CODE_SIGNING_ALLOWED=NO
+    export AGGREGATE_TRACKED_DOMAINS=YES
+    export ALLOW_BUILD_REQUEST_OVERRIDES=NO
+    export ALLOW_TARGET_PLATFORM_SPECIALIZATION=NO
+    export ALL_OTHER_LDFLAGS="      "
+    export ALL_OTHER_LIBTOOLFLAGS="    "
+    export ALTERNATE_GROUP=staff
+    export ALTERNATE_LINKER=
+    export ALTERNATE_MODE=u+w,go-w,a+rX
+    export ALTERNATE_OWNER=atulgupta
+    export ALTERNATE_PERMISSIONS_FILES=
+    export ALTERNATIVE_DISTRIBUTION_WEB=NO
+    export ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO
+    export ALWAYS_SEARCH_USER_PATHS=NO
+    export ALWAYS_USE_SEPARATE_HEADERMAPS=NO
+    export APPLE_INTERNAL_DEVELOPER_DIR=/AppleInternal/Developer
+    export APPLE_INTERNAL_DIR=/AppleInternal
+    export APPLE_INTERNAL_DOCUMENTATION_DIR=/AppleInternal/Documentation
+    export APPLE_INTERNAL_LIBRARY_DIR=/AppleInternal/Library
+    export APPLE_INTERNAL_TOOLS=/AppleInternal/Developer/Tools
+    export APPLICATION_EXTENSION_API_ONLY=NO
+  --[salient]--
+6:SchemeAction Stage\ Shared.xcframework /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/SchemeScriptAction-LEjMbu.sh
+1217:    export SCHEME_ACTION_NAME="Stage Shared.xcframework"
+1662:▸ Assembling Shared.xcframework via Gradle…
+1668:> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+1670:> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+1673:> Task :core:compileKotlinIosArm64 UP-TO-DATE
+1678:> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
+1681:> Task :core:compileKotlinMacosArm64 UP-TO-DATE
+1704:▸ Staging /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/shared/core/build/XCFrameworks/release/Shared.xcframework → /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Frameworks/Shared.xcframework
+1705:✓ Shared.xcframework staged
+1744:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSyncWidgets" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+1745:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSync" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSync' from project 'TeslaSync')
+1746:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSyncActivities" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSyncActivities' from project 'TeslaSync')
+1747:** ARCHIVE FAILED **
+  --[tail]--
+    Target 'TeslaSyncWidgets' in project 'TeslaSync' (no dependencies)
+    Target 'TeslaSyncActivities' in project 'TeslaSync' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool compile --dry-run --output-directory /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync/IntermediateBuildFilesPath/TeslaSync.build/Release-iphoneos/TeslaSyncActivities.build /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Localization/Localizable.xcstrings
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool compile --dry-run --output-directory /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync/IntermediateBuildFilesPath/TeslaSync.build/Release-iphoneos/TeslaSyncWidgets.build /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Localization/Localizable.xcstrings
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool compile --dry-run --output-directory /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync/IntermediateBuildFilesPath/TeslaSync.build/Release-iphoneos/TeslaSync.build /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Localization/Localizable.xcstrings
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: f33959c73f59ea69a6480662caa45946
+Build description path: /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync/IntermediateBuildFilesPath/XCBuildData/f33959c73f59ea69a6480662caa45946.xcbuilddata
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSyncWidgets" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSync" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSync' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: Signing for "TeslaSyncActivities" requires a development team. Select a development team in the Signing & Capabilities editor. (in target 'TeslaSyncActivities' from project 'TeslaSync')
+** ARCHIVE FAILED **
+
+
+The following build commands failed:
+	Archiving project TeslaSync with scheme TeslaSync
+(1 failure)
+IOS_ARCHIVE_EXIT=65
+
+----- MAC_ARCHIVE_EXIT -----
+$ cd apps/apple && xcodebuild -scheme TeslaSync-macOS archive
+  --[head]--
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme TeslaSync-macOS archive
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:macOS, name:Any Mac }
+{ platform:macOS, arch:arm64, id:00006002-0018086C1E02801E, name:My Mac }
+{ platform:macOS, arch:x86_64, id:00006002-0018086C1E02801E, name:My Mac }
+Run pre-actions
+
+SchemeAction Stage\ Shared.xcframework /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/SchemeScriptAction-8MFxUG.sh
+    cd /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/
+    export ACTION=install
+    export ADDITIONAL_SDKS=
+    export AD_HOC_CODE_SIGNING_ALLOWED=YES
+    export AGGREGATE_TRACKED_DOMAINS=YES
+    export ALLOW_BUILD_REQUEST_OVERRIDES=NO
+    export ALLOW_TARGET_PLATFORM_SPECIALIZATION=NO
+    export ALL_OTHER_LDFLAGS="      "
+    export ALL_OTHER_LIBTOOLFLAGS="    "
+    export ALTERNATE_GROUP=staff
+    export ALTERNATE_LINKER=
+    export ALTERNATE_MODE=u+w,go-w,a+rX
+    export ALTERNATE_OWNER=atulgupta
+    export ALTERNATE_PERMISSIONS_FILES=
+    export ALTERNATIVE_DISTRIBUTION_WEB=NO
+    export ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=NO
+    export ALWAYS_SEARCH_USER_PATHS=NO
+    export ALWAYS_USE_SEPARATE_HEADERMAPS=NO
+    export APPLE_INTERNAL_DEVELOPER_DIR=/AppleInternal/Developer
+    export APPLE_INTERNAL_DIR=/AppleInternal
+  --[salient]--
+10:SchemeAction Stage\ Shared.xcframework /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/SchemeScriptAction-8MFxUG.sh
+1219:    export SCHEME_ACTION_NAME="Stage Shared.xcframework"
+1670:▸ Assembling Shared.xcframework via Gradle…
+1676:> Task :core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+1678:> Task :core:downloadKotlinNativeDistribution UP-TO-DATE
+1681:> Task :core:compileKotlinIosArm64 UP-TO-DATE
+1686:> Task :core:compileKotlinIosSimulatorArm64 UP-TO-DATE
+1689:> Task :core:compileKotlinMacosArm64 UP-TO-DATE
+1712:▸ Staging /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/shared/core/build/XCFrameworks/release/Shared.xcframework → /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Frameworks/Shared.xcframework
+1713:✓ Shared.xcframework staged
+1748:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+1749:/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+1750:note: '/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Frameworks/Shared.xcframework' is missing architecture(s) required by this target (x86_64), but may still be link-compatible. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+1751:note: '/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Frameworks/Shared.xcframework' is missing architecture(s) required by this target (x86_64), but may still be link-compatible. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+1752:** ARCHIVE FAILED **
+  --[tail]--
+    Target 'TeslaSync-macOS' in project 'TeslaSync'
+        ➜ Explicit dependency on target 'TeslaSyncWidgets-macOS' in project 'TeslaSync'
+    Target 'TeslaSyncWidgets-macOS' in project 'TeslaSync' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool compile --dry-run --output-directory /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync-macOS/IntermediateBuildFilesPath/TeslaSync.build/Release/TeslaSyncWidgets-macOS.build /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Localization/Localizable.xcstrings
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/xcstringstool compile --dry-run --output-directory /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync-macOS/IntermediateBuildFilesPath/TeslaSync.build/Release/TeslaSync-macOS.build /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Localization/Localizable.xcstrings
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: 35bdf446efab1ecf251be50ce2625016
+Build description path: /Users/atulgupta/Library/Developer/Xcode/DerivedData/TeslaSync-fopjaokfehiazaahrbtnykltjtvs/Build/Intermediates.noindex/ArchiveIntermediates/TeslaSync-macOS/IntermediateBuildFilesPath/XCBuildData/35bdf446efab1ecf251be50ce2625016.xcbuilddata
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+note: '/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Frameworks/Shared.xcframework' is missing architecture(s) required by this target (x86_64), but may still be link-compatible. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+note: '/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-165536-88496/slot-3/apps/apple/Frameworks/Shared.xcframework' is missing architecture(s) required by this target (x86_64), but may still be link-compatible. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+** ARCHIVE FAILED **
+
+
+The following build commands failed:
+	Archiving project TeslaSync with scheme TeslaSync-macOS
+(1 failure)
+MAC_ARCHIVE_EXIT=65
+
+================================================================================
+=== GATE RESULT TABLE ===
+================================================================================
+  IOS_EXIT             0
+  MAC_EXIT             65
+  LINT_EXIT            2
+  FORMAT_EXIT          0
+  PLACEHOLDER_EXIT     1
+  MAC_LEDGER_EXIT      64
+  IOS_LEDGER_EXIT      64
+  IOS_ARCHIVE_EXIT     65
+  MAC_ARCHIVE_EXIT     65
+  EXIT=0 requires ALL nine == 0.
+AGG_EXIT=1
+
+================================================================================
+=== DISPOSITION ===
+================================================================================
+Gate formula: EXIT=0 only if all nine == 0. Observed:
+  IOS_EXIT=0  MAC_EXIT=65  LINT_EXIT=2  FORMAT_EXIT=0  PLACEHOLDER_EXIT=1
+  MAC_LEDGER_EXIT=64  IOS_LEDGER_EXIT=64  IOS_ARCHIVE_EXIT=65  MAC_ARCHIVE_EXIT=65
+  => aggregate EXIT=1.
+
+What PASSED on this host (firsthand, not assumed):
+  - IOS_EXIT=0      : full iOS-Simulator (iPhone 16) `xcodebuild build test` SUCCEEDED
+                      against the real KMP Shared.xcframework. The iOS app + unit/UI
+                      test bundles compile and the tests run green.
+  - FORMAT_EXIT=0   : `swiftformat --lint apps/apple` clean.
+  - KMP core        : `:core:assembleSharedXCFramework` BUILD SUCCESSFUL; Shared.xcframework
+                      (ios-arm64, ios-arm64-simulator, macos-arm64) built + staged as build-prep.
+
+STATUS=BLOCKED on five independent, evidence-backed grounds:
+
+A. CAPABILITY — code signing (prompt mandate: 'requires macOS + Xcode, simulators,
+   signing identities, and archive credentials; if the gate can't run -> STATUS=BLOCKED'):
+   - `security find-identity -v -p codesigning` => 0 valid identities.
+   - MAC_EXIT=65   : "TeslaSync-macOS" and "TeslaSyncWidgets-macOS" have entitlements that
+                     require signing with a development certificate => ** BUILD FAILED ** /
+                     ** TEST FAILED ** (Testing cancelled because the build failed).
+   - IOS_ARCHIVE_EXIT=65 : Signing for "TeslaSync" / "TeslaSyncWidgets" / "TeslaSyncActivities"
+                     requires a development team => ** ARCHIVE FAILED **.
+   - MAC_ARCHIVE_EXIT=65 : "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" require a development
+                     signing certificate => ** ARCHIVE FAILED **.
+   => signed iOS/iPadOS + macOS archives are NOT producible here (no identity / no team).
+   (Xcode 26.5 + iPhone 16 simulator ARE present — the capability gap that blocked prior
+    runs is partially resolved; signing identities + archive credentials remain absent.)
+
+B. REQUIRED GATE ARTIFACTS (acceptance criterion 'both ledgers 100%' is unverifiable;
+   Gate steps 6-7 cannot run as written):
+   - apps/parity/apple-macos-ledger.json : MISSING (MAC_LEDGER_EXIT=64).
+   - apps/parity/apple-ios-ledger.json   : MISSING (IOS_LEDGER_EXIT=64).
+   - apps/tools/check-parity-ledger.ps1  : MISSING (the verifier the Gate invokes does not
+     exist; pwsh reports 'not recognized as the name of a script file').
+   Producing these is Out of Scope ('modifying parity definitions' / 'Do NOT fix code').
+
+C. PREDECESSORS (Covenant rule 7: no predecessor bypass):
+   - p4-p9-*.log (P9-0001-xctest-unit, P9-0002-xcuitest-ui): NO canonical log exists =>
+     'P4/P0..P9 all STATUS=DONE' is UNSATISFIED.
+   - p1-s3-0001-kmp-scaffold.log = STATUS=BLOCKED (canonical producer of the Shared.xcframework
+     both Apple targets link). The recorded predecessor status governs even though the
+     framework assembles on this host.
+   - (For completeness: P4 phase P0..P8 = 15/15 STATUS=DONE; generated P7 page prompts =
+     234/234 STATUS=DONE.)
+
+D. CODE-QUALITY GATES RED (Out of Scope to remediate — 'Do NOT fix code'):
+   - LINT_EXIT=2     : SwiftLint --strict found 1 serious violation —
+                       TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9
+                       opening_brace (Opening Brace Spacing). 1 violation in 1911 files.
+   - PLACEHOLDER_EXIT=1 : placeholder scan PLACEHOLDER_COUNT=43 > PLACEHOLDER_ALLOWED=22.
+
+E. PREFLIGHT HYGIENE:
+   - Working tree NOT clean at entry (pre-existing uncommitted edits to web/src/... outside
+     apps/apple). They were NOT touched, staged, or reverted by this run-only gate.
+
+Per scope, none of A-E were remediated: 'Fixing code, creating missing pages/components,
+modifying parity definitions, or changing signing configuration' is explicitly Out of Scope.
+This log records firsthand evidence only. Only the git-ignored TeslaSync.xcodeproj and
+Frameworks/Shared.xcframework were generated as build prerequisites; no source was modified.
+
+Promotion path to STATUS=DONE: execute on a macOS runner WITH a valid Apple development
+signing identity + DEVELOPMENT_TEAM + archive credentials (ADR-012 macos-latest), AFTER
+p1-s3-0001 and the P9 acceptance prompts reach STATUS=DONE, the Apple macOS/iOS parity
+ledgers + check-parity-ledger.ps1 are produced by their owning prompts, and the SwiftLint +
+placeholder defects are remediated by their owning surface prompts.
+
+EXIT=1
+STATUS=BLOCKED

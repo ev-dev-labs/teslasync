@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure to understand the web source, the Apple native app structure, and the supporting infrastructure (P4 core, P1 state holders, tokens, i18n).
+
+Good — Xcode 26.5, swiftlint, swiftformat all available. Let me read the web source and explore the Apple app structure.
+
+The Apple app has an established `dashboard-widgets` directory. Let me examine existing widgets to learn the pattern, and check whether AutomationStatusWidget files already exist.
+
+The widget doesn't exist yet — I need to create it following the established 7-file pattern. Let me study a representative existing list-style widget (`AlertFeedWidget`) end-to-end and read the full `Automation` type + registry.
+
+Let me read the AlertFeedWidget reference files from the saved output and find the base `AutomationModel` type.
+
+Now let me read the strings, previews, tests files, the shared tokens, and a widget with a toggle (GuardModeWidget) to complete my understanding of the pattern.
+
+Let me locate the design tokens and the shared Badge/Toggle components (the web widget uses `Badge` and `Toggle`).
+
+The tokens are in `Sources/Design/TSDesign.swift` and `Sources/Theme.swift`. Let me read these plus the Badge component (since the widget uses `Badge` and `Toggle`).
+
+The web widget has an interactive toggle mutation (`useToggleAutomation`). Let me study how an existing interactive widget (`GuardModeWidget`) models its mutation/action in the state-holder.
+
+`SignalLogWidget` has an interactive action. Let me examine how it models a write action in the source protocol and view.
+
+All tooling is present. Let me see the rest of project.yml (test targets, schemes, how `.strings` are handled) and the check-placeholders script.
+
+Let me check the placeholder-check script, the shared framework staging, and the swiftlint/swiftformat configs before establishing a baseline build.
+
+The build depends on a KMP `Shared.xcframework` built via Gradle. Let me check the pending-verifications doc and whether the shared framework build is feasible here.
+
+This is the key finding: the repo documents that the full-app `xcodebuild build test` is **blocked by pre-existing, unrelated issues** (unstaged KMP `Shared.xcframework`, dev-signing), and prior surface prompts (ToolCard, AlertMessageEditor, FSMTimelineChart) verified their surface green **in isolation** (SwiftPM + `swiftc -typecheck` + lint/format/placeholder) and recorded the full build as macOS-pending. Let me check for an isolation harness, the lint configs, and current collision state.
+
+Let me read a prior sibling widget's gate log to follow the exact established verification + reporting precedent.
+
+This host **matches the AlertFeedWidget log host exactly** (macOS 26.5.1, Xcode 26.5), where the full gate passed once `Shared.xcframework` was staged via Gradle. So the full gate is achievable here. The KMP/Gradle build is the long pole — let me kick it off in the background now while I write code.
+
+The Gradle KMP build is running in the background. While it builds, let me read the `WidgetShell` web component and confirm the base `Automation` model fields + a good automation SF Symbol.
+
+I have all the field semantics. Let me check existing Apple code for an automation/workflow SF Symbol choice to stay consistent, then write the plan and start creating files.
+
+Found the canonical icon: `MiniGridPreview.Catalog.swift` maps `"automation-status"` → `"point.3.connected.trianglepath.dotted"`. I now have everything needed. Let me set up the plan/todos and start writing the 7 surface files.
+
+The KMP build finished. Let me confirm it staged successfully, then write the source files.
+
+`Shared.xcframework` is staged (STAGE_EXIT=0). The build prerequisite is satisfied. Now let me write the 7 surface files. Starting with the Model and Adapter (core types).
+
+All 7 files are written. Let me verify my spy-telemetry pattern matches the established working one in a sibling test, then run the fast standalone checks.
+
+Let me fix my spy telemetry to match the established `@unchecked Sendable` pattern.
+
+Now let me run the fast standalone checks (swiftformat, swiftlint, placeholder gate) on my new files to iterate quickly before the heavy build.
+
+swiftformat wants auto-fixes (number grouping, `count(where:)`, line wrapping). Let me apply swiftformat (which is what the gate expects), then re-lint.
+
+swiftformat passes. Let me verify the auto-applied `count(where:)` rewrite is valid, then run swiftlint and the placeholder gate.
+
+swiftlint passes (0 violations), `count(where:)` is valid. Now the placeholder gate per file.
+
+All standalone checks green (format 0, lint 0, placeholder 0). Now regenerate the Xcode project and confirm it enumerates the new files.
+
+Project regenerates and enumerates the new files (42 refs). Now the heavy step. Let me verify a simulator is available, then start the iOS build+test (scoped to my test classes) in the background.
+
+iPhone 16 simulator is booted. Starting the iOS build + scoped test (long pole) in the background.
+
+iOS build exited 65 with "(4 failures)". Let me inspect the log to see whether these are my tests or compile errors.
+
+A naming collision: the existing `AutomationActivityFeed` feature-view already declares `AutomationRunStatus` in the same module. I must rename my types to be surface-specific. Let me find **all** collisions between my public type names and the existing codebase.
+
+Only `AutomationRunStatus` collides. Let me confirm my replacement name `AutomationStatusBadge` is free, then rename it across my 3 files.
+
+Confirmed — the existing `AutomationRunStatus` is a different concept (execution-history statuses). My replacement `AutomationStatusBadge` is free. Let me rename it across my 3 files.
+
+Renamed cleanly. Re-running the iOS build + scoped tests (incremental, should be faster).
+
+iOS: **TEST SUCCEEDED** (EXIT=0). Let me confirm the test counts and capture the per-test results.
+
+All 6 suites passed (24 tests, 0 failures), **BUILD + TEST SUCCEEDED**. Now the macOS build + scoped tests.
+
+macOS failed in 7s — likely a signing/test-host setup issue, not a compile error. Let me check.
+
+This is the **pre-existing, documented macOS dev-signing blocker** (empty `DEVELOPMENT_TEAM` + entitlements on `TeslaSync-macOS`/`TeslaSyncWidgets-macOS`), unrelated to my surface — deferred to the P99 acceptance gate per `macos-pending-verifications.md`. The standard way to verify compilation + tests without signing identities is `CODE_SIGNING_ALLOWED=NO`. Let me retry the macOS build+test that way.
+
+macOS: **TEST SUCCEEDED** (EXIT=0) with signing disabled. Let me confirm the macOS test counts.
+
+Both platforms green: 24 tests, 0 failures, all 6 suites pass. Let me run the final official gate checks and gather artifacts (per-test names, toolchain versions) for the log.
+
+All final checks green (format 0, lint 0). Let me extract the per-test PASS lines and the Swift toolchain version for the log.
+
+Both platforms fully green: 24 tests each, lint/format/placeholder clean. Now let me write the gate log (the only other allowed file). I'll document the one transparent deviation — macOS `CODE_SIGNING_ALLOWED=NO` to bypass the pre-existing dev-cert signing requirement.
+
+Log written. Let me verify git state so I commit only the surface files + log (not the generated project or staged framework).
+
+Clean — the generated project and framework are gitignored, and the two modified `web/...` files are pre-existing (not mine). Let me stage only my surface files + log and commit.
+
+Committed cleanly (only my 8 files). The web source lists `@/components/motion` (FadeIn) as a used component — let me verify how siblings map it before finalizing, to avoid a parity gap.
+
+Confirmed — no sibling widget ports the web `<FadeIn>` (the native Motion module doesn't even export one); all ~74 siblings drop it in favor of native rendering + reduce-motion-respecting skeletons. My surface matches that established precedent exactly. The task is complete. Let me finalize the todos and do a last clean-state check.
+
+All 9 todos done. Commit `ef37af6c9` contains exactly the 8 allowed files (1804 insertions); the only other working-tree changes are 2 pre-existing unrelated `web/` files I correctly left untouched. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...shboard-widgets-0007-AutomationStatusWidget.log | 140 +++++++++
+ .../AutomationStatusWidget.Adapter.swift           | 238 ++++++++++++++
+ .../AutomationStatusWidget.Model.swift             | 303 ++++++++++++++++++
+ .../AutomationStatusWidget.Previews.swift          | 153 +++++++++
+ .../AutomationStatusWidget.Tests.swift             | 344 +++++++++++++++++++++
+ .../AutomationStatusWidget.Views.swift             | 335 ++++++++++++++++++++
+ .../AutomationStatusWidget.strings                 |  50 +++
+ .../dashboard-widgets/AutomationStatusWidget.swift | 241 +++++++++++++++
+ 8 files changed, 1804 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0007-AutomationStatusWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.swift

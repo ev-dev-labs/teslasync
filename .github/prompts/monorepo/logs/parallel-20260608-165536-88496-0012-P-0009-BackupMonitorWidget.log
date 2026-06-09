@@ -1,0 +1,32 @@
+I'll start by exploring the repository structure and checking the runner's capabilities for Apple native development.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple structure.
+
+The `dashboard-widgets` directory already exists with many widgets. Let me examine the existing patterns to follow conventions precisely.
+
+Each widget follows a 7-file pattern. Let me study a complete reference widget (AlertFeedWidget) to understand all conventions.
+
+Excellent, this is a very well-structured codebase. Let me read the remaining AlertFeed files and the shared infrastructure.
+
+Now let me read the test/preview/strings files plus the shared infrastructure and the web data hooks in parallel.
+
+I have a thorough grasp of the 7-file pattern. Now let me find the shared infrastructure (tokens, registration, StatCard/Badge/WidgetShell equivalents) and the web data types.
+
+Found the shared infra. Let me read the core infrastructure files and the design tokens.
+
+Now let me read the design tokens, feedback components, and study how a structurally similar "system" widget (AuditLog) handles stat tiles, badges, and lists.
+
+Let me locate the token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) and see how widgets render badges/empty-states with runtime text.
+
+The tokens appear only in the Watch shared file. Let me examine `project.yml` to understand target structure and how the main app gets these tokens.
+
+Now I understand the build wiring. Let me check the build toolchain availability and the design tokens API, plus study the closest "system" analog (AuditLog) fully.
+
+Let me read the full token API, the shared-framework build script, and check simulator + `Shared` dependency surface.
+
+Let me check build feasibility (KMP framework script, `Shared` imports, simulators) and study the AuditLog analog fully.
+
+Simulator is ready; widgets don't import the KMP `Shared`. Let me study the AuditLog analog fully and the web `useDateFormat`, and check where `Shared` is imported.
+
+I have the full token API and structural model. Let me read the web registry entry, `WidgetShell`, the `useBackupRuns` hook, and the AuditLog Model/Adapter/strings to finalize conventions.
+

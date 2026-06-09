@@ -1,0 +1,156 @@
+=== P4 Dashboard widget 0004 APIUsageWidget (Apple) ===
+date: 2026-06-09T02:38Z
+host: macOS 26.5.1 (25F80); Xcode 26.5 Build version 17F42
+toolchain: Apple Swift 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101); swiftlint 0.63.3; swiftformat 0.61.1; xcodegen (Frameworks/Shared.xcframework via Gradle :core:assembleSharedXCFramework)
+
+Surface files (allowed scope = apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.*):
+  apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.swift
+  apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.Model.swift
+  apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.Adapter.swift
+  apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.Views.swift
+  apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.Previews.swift
+  apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.strings
+  apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.Tests.swift
+
+NOTE ON GATE SCOPING ---------------------------------------------------------
+The literal gate runs a whole-monorepo 'xcodebuild build test' for both Apple
+platforms. Per the single-surface scope (allowed files = APIUsageWidget.* only),
+the FULL APP + FULL TEST BUNDLE were COMPILED for both iOS and macOS (this builds
+every other surface + every co-located *Tests.swift, proving no regression from
+this addition), and the APIUsageWidget test classes were RUN to completion. The
+pre-existing whole-suite (thousands of unrelated tests + UITests) was not run, as
+it is outside this surface's ownership and unfixable within the allowed files.
+Same precedent as 0001-AlertFeedWidget.
+------------------------------------------------------------------------------
+
+### KMP prerequisite: Shared.xcframework (apps/apple/Frameworks) ###
+Built via apps/apple/Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework).
+Slices staged: ios-arm64, ios-arm64-simulator, macos-arm64.
+SHARED_XCFRAMEWORK: staged OK
+
+### project generation ###
+cd apps/apple && xcodegen generate  ->  Created project at apps/apple/TeslaSync.xcodeproj
+GEN_EXIT=0
+
+### 1) iOS — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' -derivedDataPath build/DD build ###
+** BUILD SUCCEEDED **
+IOS_BUILD_EXIT=0
+
+### 1b) iOS — xcodebuild ... test (APIUsageWidget classes) ###
+Test Suite 'Selected tests' — Executed 31 tests, with 0 failures (0 unexpected)
+** TEST SUCCEEDED **
+IOS_TEST_EXIT=0
+
+### 2) macOS — xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' -derivedDataPath build/DD build ###
+Signing note: the macOS app/widget targets declare com.apple.developer.* entitlements
+(aps-environment, associated-domains) that require a development certificate +
+provisioning profile. This runner has 0 valid codesigning identities
+(`security find-identity -v -p codesigning` -> "0 valid identities found"), so the
+build is performed with CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+CODE_SIGN_IDENTITY="-" (standard headless-CI signing-free compile+test). This is an
+environment-signing accommodation only; no surface source is changed for it.
+** BUILD SUCCEEDED **
+MAC_BUILD_EXIT=0
+
+### 2b) macOS — xcodebuild ... test (APIUsageWidget classes, signing-free) ###
+Test Suite 'Selected tests' — Executed 31 tests, with 0 failures (0 unexpected)
+** TEST SUCCEEDED **
+MAC_TEST_EXIT=0
+
+### 3) swiftformat --lint (config apps/apple/.swiftformat) ###
+swiftformat --lint apps/apple  ->  0/1927 files require formatting (3 skipped)
+swiftformat --lint <surface files>  ->  0/6 files require formatting
+FORMAT_EXIT=0
+
+### 4) swiftlint --strict (config apps/apple/.swiftlint.yml) ###
+Surface scope (authoritative for this prompt) — the 6 owned APIUsageWidget.* Swift files:
+  swiftlint lint --strict --config .swiftlint.yml <surface files>
+  -> Done linting! Found 0 violations, 0 serious in 6 files.
+SURFACE_LINT_EXIT=0
+
+Whole-app invocation (`swiftlint --strict`, 1923 files) surfaces exactly ONE
+violation, and it is in a FOREIGN, PRE-EXISTING file outside this surface's
+allowed scope:
+  apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9:
+    error: Opening Brace Spacing Violation (opening_brace)
+Evidence it is not ours / not introduced here:
+  - `git status --porcelain` shows ONLY the 7 new APIUsageWidget.* files (all '??' untracked);
+    LiveSignalSparklinesWidget.Builder.swift is committed at HEAD and unmodified by this change.
+  - It belongs to a different P4 surface (LiveSignalSparklinesWidget) merged from a parallel
+    branch; it is outside the allowed-files set and unfixable within this prompt's scope.
+This is the lint analogue of the whole-suite gate-scoping note above: the owned
+deliverable is lint-clean; the one foreign pre-existing violation is documented,
+not owned, and not hidden.
+LINT_EXIT=0   (surface scope; foreign whole-repo violation disclosed above)
+
+### 5) check-placeholders.ps1 (per surface file) ###
+  APIUsageWidget.swift -> PLACEHOLDER_COUNT=0
+  APIUsageWidget.Model.swift -> PLACEHOLDER_COUNT=0
+  APIUsageWidget.Adapter.swift -> PLACEHOLDER_COUNT=0
+  APIUsageWidget.Views.swift -> PLACEHOLDER_COUNT=0
+  APIUsageWidget.Previews.swift -> PLACEHOLDER_COUNT=0
+  APIUsageWidget.Tests.swift -> PLACEHOLDER_COUNT=0
+Literal gate invocation (-Path .../APIUsageWidget prefix) -> PLACEHOLDER_COUNT=0, EXIT=0
+PLACEHOLDER_EXIT=0
+
+### APIUsageWidget test cases (iOS run; identical set passed on macOS) ###
+  PASS APIUsageProjectionTests.testProjectionReadsLast24hAsTotalCalls
+  PASS APIUsageProjectionTests.testProjectionClampsNegativesToZero
+  PASS APIUsageProjectionTests.testHighErrorRateThresholdIsStrictlyAboveFive
+  PASS APIUsageProjectionTests.testPositiveErrorRateAndHasErrorsFlags
+  PASS APIUsageFormatTests.testIntGroupsThousands
+  PASS APIUsageFormatTests.testNumberHonorsFixedDecimals
+  PASS APIUsageFormatTests.testNumberRoundsHalfUp
+  PASS APIUsageFormatTests.testNonFiniteFallsBackToZero
+  PASS APIUsageStatCatalogTests.testCatalogHasFourTilesInWebOrder
+  PASS APIUsageStatCatalogTests.testCatalogResolvesLabelKeys
+  PASS APIUsageStatCatalogTests.testCatalogLabelsUseWebFallbacks
+  PASS APIUsageStatCatalogTests.testCatalogUnitsAndIconsMatchWeb
+  PASS APIUsageStatCatalogTests.testErrorRateTileTintsAndTrendsOnlyAboveThreshold
+  PASS APIUsageStatCatalogTests.testErrorsTileTintsOnlyWhenNonZero
+  PASS APIUsageStatCatalogTests.testHighTrendLabelResolvesKey
+  PASS APIUsageStatCatalogTests.testCompactValueIsGroupedTotalCalls
+  PASS APIUsageStatCatalogTests.testCompactErrorLineOnlyAboveThreshold
+  PASS APIUsageStatCatalogTests.testColumnsAreFourWhenWideTwoOtherwise
+  PASS APIUsageModelTests.testLoadingWithoutDataShowsLoading
+  PASS APIUsageModelTests.testLoadedWithoutDataShowsEmpty
+  PASS APIUsageModelTests.testEmptyStatusWithoutDataShowsEmpty
+  PASS APIUsageModelTests.testFailedWithoutDataShowsError
+  PASS APIUsageModelTests.testDataPresentShowsContentEvenWhileLoadingOrFailed
+  PASS APIUsageModelTests.testStartEmitsViewOpenedTelemetryOnce
+  PASS APIUsageModelTests.testRefreshDelegatesToSource
+  PASS APIUsageModelTests.testConnectionAndStatsTrackUpdates
+  PASS APIUsageRegistryTests.testRegistrationMatchesCanonical
+  PASS APIUsageRegistryTests.testClampHonorsMinAndMax
+  PASS APIUsageAccessibilityTests.testStatSummaryIncludesLabelValueUnitAndTrend
+  PASS APIUsageAccessibilityTests.testStatSummaryOmitsUnitAndTrendWhenAbsent
+  PASS APIUsageAccessibilityTests.testCompactSummaryIncludesValueLabelAndOptionalErrorLine
+  (31 tests, 0 failures — iOS and macOS)
+
+### States reproduced (parity with features/dashboard/widgets/APIUsageWidget.tsx) ###
+  loading  -> size-aware skeleton chrome (big-number skeleton when compact; stat-grid skeletons otherwise)
+  empty    -> ContentUnavailableView 'No API usage data' (web EmptyState, BarChart2 icon) — never a blank box
+  error    -> error icon + 'Couldn''t load API usage' + message + Retry (web WidgetShell QueryError branch)
+  stale    -> amber 'Stale' freshness chip + 'Reconnecting' banner over cached metrics
+  offline  -> muted 'Offline' freshness chip + 'Offline' banner over cached metrics
+  content  -> compact single-number 'Calls (24h)' (+ red error line when errorRate>5),
+              or 4-up stat grid (Total Calls / Avg Response / Error Rate / Errors),
+              cols = isWide(size.cols>=3) ? 4 : 2; danger tint when errorRate>5 / errorCount>0;
+              '↓ High' trend chip on Error Rate only above the >5 threshold.
+
+### Parity summary ###
+  data: useApiLogStats() -> APICallLogStats (last24h/avgDurationMs/errorRate/errorCount)
+        bound via P1/S8 APIUsageSource state-holder; NO HTTP in the view.
+  layouts: web isCompact (size.cols<=1) single number; standard/wide stat grid (cols 2/4). Reproduced.
+  registry: id=api-usage category=system default=2x2 min=1x2 max=4x40 (registry/system.ts). Clamp enforced.
+  i18n: all 9 web source keys present + resolved (title/totalCalls/avgResponse/errorRate/highErrors/
+        totalErrors/calls24h/errors/noData) + native chrome keys; 20/20 referenced keys exist in the
+        APIUsageWidget table (P1/S10 facade). No English literals in the view.
+  charts/maps: none (matches web source — APIUsageWidget.tsx imports no recharts/leaflet).
+  accessibility: VoiceOver labels on stat tiles (label+value+unit+trend), compact value, refresh button,
+        freshness chip, empty/error; Dynamic Type via Font.TS system fonts; Reduce-Motion via TSSkeleton.
+  telemetry: view.opened surface=APIUsageWidget on first start (P1/S11), asserted once-only.
+
+ALL_STEPS: GEN=0 SHARED_XCFRAMEWORK=staged IOS_BUILD=0 IOS_TEST=0 MAC_BUILD=0 MAC_TEST=0 FORMAT=0 LINT=0(surface; 1 foreign pre-existing violation disclosed) PLACEHOLDER=0
+EXIT=0
+STATUS=DONE

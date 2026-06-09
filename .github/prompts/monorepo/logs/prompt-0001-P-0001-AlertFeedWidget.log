@@ -1,0 +1,60 @@
+I'll start by exploring the repository structure and the key files referenced in this task. Let me investigate the environment and the web source in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Now let me read the web source spec and explore the Apple app structure.
+
+Let me read the web source's dependencies and the existing log, plus explore the Apple app's existing structure for patterns.
+
+The Apple app already has a `dashboard-widgets/` directory. Let me examine existing native widgets for patterns plus the remaining web dependencies.
+
+419 files in dashboard-widgets — rich existing patterns. Let me study a complete widget set and find any existing alert/notification/feed widget to mirror conventions.
+
+`SentryEventLogWidget` is the closest analog (event-log feed with severity) and `NotificationStatsWidget` is the sibling in the same `alerts` registry. Let me read both complete sets to mirror conventions exactly.
+
+Excellent — this is a comprehensive, well-architected reference. Let me read the remaining SentryEventLog files, the web `useAlerts` hook/Alert type, and the project config.
+
+Now let me read the Previews, the shared native infra types, the web `useAlerts`/`Alert` type, and the full `normalizeSeverity`/drillthrough logic.
+
+I have the full pattern now. Let me read the drillthrough logic (AlertFeedWidget uses `href` unlike Sentry), the shared native infra types (`DashboardWidgetSize`, `DashboardWidgetRegistration`, `TSTone`, tokens), the nav facade, and project config.
+
+Let me locate the canonical definitions of the shared types and understand the project/build config.
+
+The project root is `apps/apple/` and there are two source trees. Let me read the project config and the core infra/token definitions.
+
+Now let me find the P1/S9 design token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`), `TSTone`, `TSSkeleton`, and verify `xcodegen` is available.
+
+Let me read the token definitions to confirm the exact API surface I'll use.
+
+The design tokens live at `apps/design/generated/apple/`. Let me read them and the component APIs.
+
+I have all token APIs. Let me check `TSTone`, the sibling `NotificationStatsWidget` for any shared alert types, and scan for naming collisions.
+
+Two conventions exist. The sibling `NotificationStatsWidget` (same `alerts` registry) uses a richer `DashboardWidgetSurface`/`DashboardWidgetDescriptor`/`DashboardWidgetProps` infra. Let me examine the full shared P4-core infra to pick the canonical pattern.
+
+The dominant pattern is `DashboardWidgetRegistration` (67 widgets, incl. SentryEventLogWidget) vs `DashboardWidgetSurface` (1). I'll follow the SentryEventLogWidget template. Let me read `TSTone` and check the existing `AlertCard` feature-view symbols to avoid collisions.
+
+Many `Alert*` symbols already exist in feature-views (`AlertSeverity`, `AlertDrillthrough`, etc.) — same module, so I must prefix everything with `AlertFeed`. Let me confirm no `AlertFeed*` symbol exists and verify the swiftlint config before writing.
+
+No collisions. Let me read the lint/format configs and the existing `AlertCard.Drillthrough.swift` (for semantic reference) before writing.
+
+The existing `AlertCard.Drillthrough.swift` confirms the faithful port pattern. Let me quickly check the existing `AlertSeverity` icon/color mapping in AlertCard for cross-surface consistency, then I'll write the files.
+
+I now have a complete understanding of the conventions, tokens, data shapes, and the dominant `DashboardWidgetRegistration` pattern (67 widgets). I'll mirror the `SentryEventLogWidget` template exactly, prefixing all types with `AlertFeed` to avoid collisions with the existing `Alert*` symbols. Let me set up a tracking plan and write the 7 files.
+
+All 7 files written. Now let me format/lint my files early and check the build prerequisites (Shared.xcframework + the prebuild script) before the expensive xcodebuild.
+
+swiftformat reformatted one file; framework + xcodeproj exist. Let me read the prebuild script and regenerate the Xcode project to pick up the new files.
+
+The prebuild runs Gradle (Kotlin/Native) — but `Shared.xcframework` is already staged (built today), so the daemon is warm. Let me regenerate the Xcode project to include the new files, and confirm the Gradle prebuild works cleanly so the xcodebuild preAction is fast.
+
+Project regenerated with all 7 files referenced (42 entries across app + test targets). Now let me set up the gate log and run the iOS build+test (the heavy step — Gradle prebuild + full compile + XCTest).
+
+Build is in the preAction/early phase. Let me continue waiting — the Gradle prebuild plus full compile and tests take several minutes.
+
+iOS build+test shell completed. Let me check the actual `IOS_EXIT` code and test results from the log.
+
+The app **BUILD SUCCEEDED** (widget code compiles cleanly). The TEST target failed to compile: two test methods use `try XCTUnwrap` but aren't marked `throws`. Let me fix those signatures.
+
+Fixed. Now let me re-run the iOS build+test (incremental — app already built, only test target recompiles) and start a fresh official gate log.
+
+Build succeeded and tests are passing (0 failures across suites). The full test bundle is still running. Let me wait for completion and the final `IOS_EXIT`.
+

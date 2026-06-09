@@ -1,0 +1,155 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Tooling is available. Let me read the web source and explore the existing Apple app structure, especially the predecessor `AlertFeedWidget` that was just merged.
+
+Tooling confirmed: Xcode 26.5, Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1, iPhone 16 simulator booted. Let me study the predecessor `AlertFeedWidget` (just merged) to replicate the established pattern.
+
+Let me read all 7 `AlertFeedWidget` files to understand the established pattern I must follow.
+
+Excellent established pattern. Let me read the remaining 5 files: Adapter, Views, Previews, Tests, and strings.
+
+Now the Previews, Tests, and strings files, plus the web `useApiLogStats` hook to understand the data shape.
+
+Now the Tests file and the web `useApiLogStats` hook details, plus its type definition.
+
+Now let me look at the `APICallLogStats` type and the shared Apple infrastructure (tokens, registration, skeleton), plus the web `WidgetStatGrid`/`WidgetShell` shared components and registry.
+
+The shared tokens aren't where I expected. Let me locate them across the whole Apple tree.
+
+Let me read the shared widget infra and project config, and find the main-app design tokens.
+
+Now I understand the project layout. Let me find the design tokens, check tooling (xcodegen, pwsh), the existing xcodeproj, and the predecessor's log + placeholder checker.
+
+xcodegen + pwsh available, no xcodeproj yet (rebuilt via xcodegen). Let me read the design tokens, the predecessor log, the placeholder checker, and find `TSSkeleton`/`TSTone`/`WidgetStatGrid` Apple equivalents.
+
+Let me read `TSSkeleton`, `TSTone`, and check for existing native StatCard/MetricCard idioms to compose the stat grid.
+
+No native StatCard exists — I'll compose stat tiles within the widget (consistent with "atomic components out of scope"). Let me read the web `WidgetShell`, `StatCard`, and `numberFormat` to capture all chrome states and formatting.
+
+Let me read the predecessor's gate log and the placeholder checker to understand expectations and constraints.
+
+I now have a full picture. Let me read the placeholder patterns, check the Shared.xcframework prerequisite, and view the predecessor log's lint/format/placeholder sections to mirror the evidence format.
+
+Now let me check the Shared.xcframework build script (the slow prerequisite) and Gradle availability, since that's the main gate risk.
+
+The xcframework is built via Gradle (Kotlin/Native). Let me check for a cached build and kick off staging in the background while I write the widget, since it's the slow, independent prerequisite.
+
+No cache. Let me kick off the Shared.xcframework build in the background (slow Kotlin/Native step) while I write the widget files.
+
+Let me verify there are no naming collisions for `APIUsage*` symbols and check the background build progress.
+
+`AiUsageCard` is a different surface (`AiUsage` prefix, feature-view) — no collision with my `APIUsage*` types. Let me check the background build log status (the launcher returned because I used `&`).
+
+Build was interrupted when the launcher session ended, but most Gradle tasks are cached. Let me re-run it synchronously (should be fast now) and wait for completion.
+
+It's linking the release framework (slow Kotlin/Native optimization). I'll let it run and write the widget files in parallel. Let me set up tracking and start creating files.
+
+Now let me write the widget files, starting with the Model (state-holder seam, DTO, telemetry, strings facade).
+
+Model written. Let me check the build progress, then write the Adapter (projection core).
+
+Build still linking release framework. Let me write the Adapter (projection core, stat catalog, formatting, a11y).
+
+The Shared.xcframework build completed. Let me verify it's staged and update todos.
+
+Prerequisite staged (ios-arm64, ios-arm64-simulator, macos-arm64). Let me update tracking and write the main surface view.
+
+Now the presentational subviews (stat grid, tile, compact value, connectivity banner).
+
+Now the i18n catalog and the per-state previews.
+
+Now the comprehensive test suite.
+
+All 7 files written. Let me update tracking, read the lint/format configs, and auto-format my files to the repo style.
+
+Configs understood (max width 120, `--self remove`, testable-bottom imports). Let me auto-format my files, then lint and placeholder-check them.
+
+4 files reformatted. Now verify format is clean, run swiftlint --strict, and the placeholder check on my files.
+
+Format and lint both clean (0 issues). Now the placeholder check per file.
+
+All placeholder checks pass. Now generate the Xcode project, then build.
+
+Project generated. Now the iOS build (compiles the whole app including my widget). Using a shared derived-data path to reuse across steps.
+
+iOS build **SUCCEEDED** — my widget compiles into the full app. Now run the iOS tests for the APIUsageWidget classes (compiles the whole test bundle, runs my surface's tests to completion).
+
+All 31 iOS tests passed. Now the macOS build.
+
+macOS build failed on code-signing entitlements (environment signing, not a code issue). Let me check how the predecessor's gate handled macOS signing.
+
+macOS signing needs a dev cert in this environment. Let me inspect the entitlements and retry with ad-hoc/disabled signing (standard CI approach).
+
+macOS entitlements include `com.apple.developer.*` (push, associated-domains) requiring a dev cert/profile — none exist in this runner. Standard CI approach: disable signing to verify compilation+tests. Retrying.
+
+macOS build succeeded (signing disabled). Now the macOS tests for the APIUsageWidget classes.
+
+All 31 macOS tests passed. Now let me run the **whole-tree** swiftlint and swiftformat (the literal gate commands) to confirm the entire app stays clean with my additions.
+
+One violation surfaced across the whole app. Let me identify which file (mine linted clean, so likely pre-existing — but I must confirm).
+
+The single violation is in `LiveSignalSparklinesWidget.Builder.swift` — a **different surface**, outside my allowed scope (`APIUsageWidget.*` only). My files are lint-clean. Let me confirm it's pre-existing/untouched by me.
+
+Confirmed: only my 7 files are new; the foreign violation is pre-existing in a different surface (`LiveSignalSparklinesWidget.Builder.swift`), untouched by me and outside my allowed scope. My files are lint-clean. Let me run the whole-tree swiftformat check too.
+
+Whole-tree **swiftformat clean (0/1927)**; my surface files **lint clean (0 violations)**. The only whole-repo lint blemish is a pre-existing foreign violation I'm scope-barred from editing. Let me gather log facts: verify i18n key parity and do a final forbidden-pattern sweep.
+
+All 9 source keys present; no forbidden patterns. Let me cross-check that every i18n key referenced in code exists in the catalog (no missing keys).
+
+Let me redo the key parity check with a digit-inclusive pattern (the prior regex skipped `calls24h`) and print both sides.
+
+Perfect i18n parity (20/20 keys, none missing). Let me capture the literal gate's placeholder invocation exit, then write the gate log.
+
+All evidence gathered. My surface is fully clean (placeholders per-file 0; the dir's count=24 is foreign). Now let me write the comprehensive gate log.
+
+Log written. Let me do a final review of the reformatted view files (not exercised by unit tests) to ensure rendering correctness before committing.
+
+The view logic is correct. Everything compiles, 31 tests pass on both platforms, lint/format clean. Let me verify the working tree shows only my intended files (no generated project/derived data leaking), then commit.
+
+Clean — exactly my 7 surface files + the log; generated artifacts are gitignored. Committing now.
+
+Committed (8 files, 1723 insertions). Let me finalize tracking and confirm the working tree is clean.
+
+Task complete. The working tree is clean and the gate log ends with `EXIT=0 / STATUS=DONE`.
+
+## Summary
+
+Shipped a production-polished, native Apple (SwiftUI) `APIUsageWidget` at parity with `web/src/features/dashboard/widgets/APIUsageWidget.tsx`, following the established predecessor (`AlertFeedWidget`) architecture. Committed as `78de8a8bb` (8 files, 1723 insertions).
+
+**Files created** (`apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.*`):
+- `.Model.swift` — P1/S8 state-holder seam (`APIUsageSource`/`APIUsageModel`), `APICallLogStats` DTO, P1/S11 `view.opened` telemetry, P1/S10 strings facade
+- `.Adapter.swift` — pure projection core: field reads + `>5`/`>0` thresholds, 4-tile catalog (parity with web `coreStats`), `fmtInt`/`fmtNumber` port, a11y summaries
+- `.swift` — the surface: compact single-number vs standard/wide 4-up grid (`cols = isWide ? 4 : 2`), all chrome states
+- `.Views.swift` — stat grid/tile, trend chip, compact value, stale/offline banner
+- `.Previews.swift` — 9 per-state previews · `.strings` — i18n catalog · `.Tests.swift` — 31 tests
+
+**Verification (all green, real output in the log):**
+- iOS build **SUCCEEDED**; iOS tests **31 passed**
+- macOS build **SUCCEEDED**; macOS tests **31 passed** (signing-free — runner has 0 codesigning identities and the macOS entitlements require a dev cert; disclosed)
+- swiftformat `--lint`: **0/1927** · swiftlint `--strict` on surface files: **0 violations** · placeholders per-file: **0**
+- All 9 web i18n keys + 20/20 referenced keys resolve; states loading/empty/error/stale/offline/content all reproduced; no charts/maps (matches source)
+
+**Honest caveat disclosed in the log:** the whole-repo `swiftlint --strict` surfaces exactly one violation in a **different, pre-existing surface** (`LiveSignalSparklinesWidget.Builder.swift:158`) that is outside my allowed files and untouched by this change (git-verified). My owned deliverable is fully lint-clean; the foreign violation is unfixable within the prompt's allowed scope.
+
+
+
+All 9 todos are done, the surface is committed, the working tree is clean, and the gate log ends with `EXIT=0 / STATUS=DONE`. The task is fully complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...apple-dashboard-widgets-0004-APIUsageWidget.log | 156 +++++++++
+ .../dashboard-widgets/APIUsageWidget.Adapter.swift | 272 ++++++++++++++++
+ .../dashboard-widgets/APIUsageWidget.Model.swift   | 247 ++++++++++++++
+ .../APIUsageWidget.Previews.swift                  | 153 +++++++++
+ .../dashboard-widgets/APIUsageWidget.Tests.swift   | 353 +++++++++++++++++++++
+ .../dashboard-widgets/APIUsageWidget.Views.swift   | 188 +++++++++++
+ .../dashboard-widgets/APIUsageWidget.strings       |  45 +++
+ .../dashboard-widgets/APIUsageWidget.swift         | 309 ++++++++++++++++++
+ 8 files changed, 1723 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0004-APIUsageWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.swift

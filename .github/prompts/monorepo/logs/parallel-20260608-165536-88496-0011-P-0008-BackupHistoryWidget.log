@@ -1,0 +1,84 @@
+I'll start by exploring the repository structure to understand the existing Apple app, the web source, and the supporting infrastructure.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iPhone 16 simulator booted). Let me explore the Apple app structure and the web source.
+
+Now let me examine the existing Apple dashboard widgets to understand established patterns, plus the project structure.
+
+There's a `TeslaSync/dashboard-widgets` directory. Let me look at it and study an existing complete widget pattern.
+
+Let me study a close analog — `SuperchargerHistory` (energy history widget) — and the shared facade/registry infrastructure.
+
+`SuperchargerHistory` is the closest analog (energy history widget with stat cards + list). Let me read its full implementation plus the shared facade infrastructure.
+
+Excellent, very thorough pattern. Let me read the remaining SuperchargerHistory files and the shared infrastructure.
+
+Now let me examine the design tokens, the project build config, and how `.strings`/test files get wired in.
+
+Let me check the registry metadata, the web API hooks/types for backup history, and the `useDateFormat`/`fmtInt` helpers for parity.
+
+Let me read the `TeslaBackupEvent` type, the full registry entry (min/max sizes), and the `formatDateTime`/`fmtInt` implementations.
+
+I now have the complete data model and web spec. Let me verify the build tooling (xcodegen, schemes, check-placeholders) and the Localization structure before writing code.
+
+`xcodegen` 2.45.4 is available; project needs generation. Let me check the Shared.xcframework dependency and a few more existing-widget details before I start building.
+
+The `Shared.xcframework` isn't present (only `.gitkeep`) — full `xcodebuild` needs the KMP framework. Let me check how existing widgets are verified (the Previews mention a "swiftc host gate").
+
+This clarifies the verification methodology: isolated SwiftPM build + `swiftc -typecheck` (iOS 18 + macOS 15) + swiftlint + swiftformat + placeholder gate, since the full `xcodebuild` is blocked by pre-existing parallel-merge collisions (absent `Shared.xcframework`, `DashboardWidgetSize` redefinitions). `pwsh` is available. Let me check `TSSkeleton` and remaining collisions.
+
+`DashboardWidgetSize` is now consolidated (single definition) — the historical collisions are resolved. `TSSkeleton` is self-contained. Let me check the native shared components (StatCard, Badge, EmptyState equivalents) I should reuse, since the prompt requires mapping `data-display`, `ui`, and `feedback`.
+
+Let me confirm whether sibling widgets reuse shared `TSStatCard`/`TSBadge`/`TSEmptyState` or build self-contained subviews, so I follow the established convention.
+
+The established convention is clear — I'll mirror the `SuperchargerHistoryWidget` sibling exactly (self-contained subviews + i18n facade + adapter/model/tests/strings). Let me read the exact placeholder patterns I must avoid, then set up my plan.
+
+Forbidden words noted (incl. "Placeholder", "not implemented"). Logs dir exists. Let me set up tracking and the plan, then author the files.
+
+Now I'll author the files, starting with the pure adapter layer.
+
+Now the state-holder model (with the `noSite` branch the web has).
+
+Now the subviews file.
+
+Now the main surface view with the full state machine.
+
+Now the previews, tests, and strings files.
+
+Now the comprehensive test suite.
+
+Now the i18n strings catalog.
+
+All 7 files created. Now let me set up isolated verification. Let me check `TSCard`/`Cards.swift` dependencies (needed by `Skeletons.swift`) so I can assemble a minimal harness.
+
+Dependencies identified: `Tokens.swift`, `DashboardWidgetInfra.swift`, `Cards.swift`, `Skeletons.swift`. Let me build an isolated SwiftPM harness (module `TeslaSync`) to compile + run the tests under Swift 6 strict concurrency.
+
+The dependency files' own `#if DEBUG` preview blocks reference components I didn't include. I'll strip those internal preview blocks from the copied dependency files (they're irrelevant to verifying my surface), keeping my own Previews intact.
+
+`Cards.swift` pulls in a large component web (`tsGlassPanel`, `TSPanelTitle`…). Since my surface only uses `TSSkeleton`, I'll trim the harness to just that struct (copied verbatim from the real file) and drop `Cards.swift`.
+
+Build succeeds under Swift 6. Now let me run the tests.
+
+All 31 tests pass. Now the real-SDK `swiftc -typecheck` for iOS 18 + macOS 15 under Swift 6 strict concurrency.
+
+Both SDK typechecks pass. Now swiftlint, swiftformat, and the placeholder gate on my files.
+
+swiftlint clean (0 violations). Now swiftformat --lint and the placeholder gate.
+
+Placeholder gate clean (COUNT=0). swiftformat wants numeric-literal grouping (`13500`→`13_500`). Let me auto-format my files and re-verify.
+
+Both formatters clean. Let me re-sync the formatted files into the harness, re-run tests, then validate `xcodegen generate` enumerates the new files.
+
+All green: 31 tests pass, `xcodegen generate` succeeds and enumerates all 7 files. Now let me attempt the actual full `xcodebuild` gate to capture honest evidence of its status (expected to be blocked by the absent KMP `Shared.xcframework`).
+
+`apps/shared` + gradlew + java exist, so I'll make a time-boxed attempt to build the KMP `Shared.xcframework` (the gating dependency). Let me check the JDK and launch the gradle assemble in the background.
+
+JDK 17 + Gradle 8.14.5. First run must download the Gradle distribution + Kotlin/Native toolchain. Let me attempt it time-boxed in the background.
+
+Gradle is downloading/compiling. Let me check progress while it runs.
+
+It's nearly done — the debug xcframework is written and release frameworks are linking. Let me wait for completion.
+
+`Shared.xcframework` built successfully (ios-arm64, ios-arm64-simulator, macos-arm64). The gating dependency is resolved. Let me check how the script stages it, then run the full `xcodebuild` gate.
+
+Let me pre-stage the framework, then run the full iOS Simulator `build test` gate (backgrounded, monitored).
+

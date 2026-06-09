@@ -1,0 +1,103 @@
+I'll start by understanding this acceptance gate task. This is a P4/P99 Apple acceptance gate that requires running (not fixing) a gate, recording evidence, and committing a log with DONE/BLOCKED status. Let me explore the repository structure and check capabilities.
+
+Good — this is a real macOS environment with Xcode 26.5, swiftlint, swiftformat, swift, and pwsh all present. The `apps/apple`, `apps/parity`, and `apps/tools` directories exist. Let me explore the structure deeper.
+
+Key finding: `apps/parity/` does **not** contain `apple-macos-ledger.json` or `apple-ios-ledger.json` — only `shared-ledger.json` and `parity-manifest.json`. Let me read the actual prompt, methodology, prior run logs, and parity README to understand expectations.
+
+The previous run (different host state) was BLOCKED on capability — no full Xcode, no simulators, 0 signing identities. **But this host now has full Xcode 26.5.** I must re-verify capabilities fresh per the honesty covenant. Let me read the full prior artifact log for format reference, then re-check all capabilities.
+
+This host has full Xcode 26.5 + iPhone 16 simulator (booted), but **0 valid code-signing identities** — so signed archives are not producible. Let me read the prior artifact log format and verify predecessors, ledgers, and the Apple project setup.
+
+I now have the full prior-log format as a template. The host capability has **changed** (full Xcode + simulators now present), so per Covenant rule 3 (no skip-and-assume) I must run everything fresh and record genuine current evidence — not copy the old log. Let me verify predecessors, project generation, and ledger/tool state on this host.
+
+Important: all 249 canonical `p4-*.log` predecessor logs now show `STATUS=DONE` (the `artifact-*`/`parallel-*` entries are historical run artifacts, not canonical predecessor logs). But Apple ledgers + `check-parity-ledger.ps1` are still missing, and signing identities = 0. Let me do a precise canonical-predecessor scan and check the previously-blocked logs.
+
+Now I see the real picture. Critical findings for the disposition:
+- `p4-p9-*` canonical logs (xctest/xcuitest) are **absent** (0 logs); `p1-s3-0001-kmp-scaffold.log` is still **STATUS=BLOCKED**.
+- Apple ledgers + `check-parity-ledger.ps1` **missing** (Out of Scope to create).
+- 0 signing identities.
+
+I must still run every host-runnable gate step for genuine evidence. Let me read the project spec, frameworks, scripts, and the pending-verifications doc to run the build steps properly.
+
+The `macos-pending-verifications.md` is decisive: it explicitly defers full-app build/test verification **to this very gate (P99-0001)** "runs on macos-latest **with signing identities**", and confirms `Shared.xcframework` is unbuilt (p1-s3 BLOCKED) plus known parallel-merge collisions. This host has Xcode+simulators but **0 signing identities**. Let me check the framework-staging script and gitignore, then run the full gate for genuine evidence.
+
+Everything is now clear. The `.xcodeproj` and `Shared.xcframework` are gitignored (safe to generate). The build's preAction builds the KMP `Shared.xcframework` via gradlew. Let me prep: confirm timeout tooling, generate the Xcode project (documented build-prep), and list schemes.
+
+Project generated. `timeout`/`gtimeout` available. Let me confirm schemes exist and that the generated project stays out of `git status`.
+
+Both `TeslaSync` and `TeslaSync-macOS` schemes exist; the project is gitignored. Let me precisely enumerate the P4 phase prompt logs (P0..P9) and generated-page logs for an accurate predecessor report before running the gate.
+
+Precise predecessor evidence confirmed:
+- **P4 P9 phase logs (xctest-unit, xcuitest-ui) are MISSING** — "P4/P0..P9 all DONE" fails.
+- 15 P4 phase logs (P0..P8) + 234 generated P7 page logs all DONE.
+- `p1-s3-0001-kmp-scaffold` (Shared.xcframework producer) = BLOCKED.
+
+Now I'll write a reproducible gate-runner script (in the session folder, not the repo) that runs all 9 steps with timeouts and produces the acceptance log. Let me create it.
+
+Let me validate the script syntax and check the KMP/Java prerequisite before launching the full gate.
+
+Script is valid; Java 17 present for KMP. No prior XCFramework build, so the first iOS build will trigger a fresh Kotlin/Native framework build via the scheme pre-action (bounded by my 900s timeout). Launching the full gate now and monitoring.
+
+Gate is running. Let me monitor progress by tailing the log (the iOS build step triggers the KMP framework build first).
+
+The gate completed faster than expected — likely fast failures. Let me read the results and the produced log.
+
+Gate completed (builds failed fast at exit 66, not timeouts). Results: `IOS=66 MAC=66 LINT=2 FORMAT=0 PLACEHOLDER=1 MAC_LEDGER=64 IOS_LEDGER=64 IOS_ARCHIVE=66 MAC_ARCHIVE=66` → aggregate EXIT=1. I notice a cosmetic label-doubling bug (`IOS_EXIT_EXIT=`). Let me inspect the produced log's evidence quality before fixing labels.
+
+Preflight looks accurate and honest. Let me read the predecessor conclusion, required-artifacts, and the GATE step evidence (especially why iOS/macOS builds returned 66).
+
+I found a real mechanics bug: the xcodebuild steps ran from the repo root and failed instantly with "does not contain an Xcode project" (exit 66) — that's a cwd artifact, not genuine build evidence. The Apple build must run from `apps/apple`. I also see the cosmetic `IOS_EXIT_EXIT=` label doubling and duplicated head output. Let me fix the script and re-run so the build steps produce honest evidence.
+
+Syntax OK. Before the long full run, let me probe the KMP framework build (the long pole / known-BLOCKED producer) directly with a bounded timeout to learn how the build steps will behave.
+
+KMP build is doing real work (>120s, not a fast failure). Let me wait for the bounded probe to finish.
+
+Key insight: the KMP framework **builds successfully** on this host (the BLOCKED status was a prior-runner capability artifact). It downloaded Kotlin/Native, compiled iOS/macOS, wrote the debug XCFramework, and was finishing release linking when my 300s probe timed out. The compile cache is now warm. Let me complete the framework staging once so the gate's build steps run efficiently, then launch the full gate.
+
+Shared.xcframework built and staged successfully (`BUILD SUCCESSFUL in 2m 7s`; ios-arm64 / ios-arm64-simulator / macos-arm64 slices present). The compile cache is warm so the gate's build steps will be efficient. Let me refine the log's framework/preflight notes to honestly reflect that I staged it as build-prep (while the canonical p1-s3 producer log remains BLOCKED), then run the full gate.
+
+Launching the full gate. The build steps now run for real against the staged framework — the iOS build is the long pole, so I'll poll periodically.
+
+I'll wait for the gate to progress through the iOS build (the long pole). Let me check in after a few minutes.
+
+iOS build+test is running (real compile in progress). Let me continue waiting.
+
+Excellent — this is genuine, nuanced evidence now:
+- **IOS_EXIT=0** ✅ (iOS Simulator build+test actually passed against the real framework!)
+- **MAC_EXIT=65** ❌, **LINT_EXIT=2** ❌, **PLACEHOLDER_EXIT=1** ❌, **MAC_LEDGER/IOS_LEDGER=64** ❌, **IOS_ARCHIVE/MAC_ARCHIVE=65** ❌ → aggregate **EXIT=1**.
+
+Let me extract the genuine failure causes (macOS build, archives/signing, lint, placeholder) for an accurate disposition.
+
+Let me read the genuine failure evidence for macOS build, the archives (to confirm signing cause), lint, and placeholder.
+
+Clear genuine root cause for **MAC_EXIT=65**: the macOS targets (`TeslaSync-macOS`, `TeslaSyncWidgets-macOS`) have entitlements that **require a development signing certificate** — which is exactly the 0-signing-identities capability gap (iOS simulator passed because it doesn't need a real cert). Let me confirm the archives have the same signing cause, plus the lint/placeholder specifics.
+
+All causes confirmed and genuine:
+- **MAC_EXIT / MAC_ARCHIVE**: macOS targets need a **development signing certificate** (0 identities).
+- **IOS_ARCHIVE**: `Signing for TeslaSync/Widgets/Activities requires a development team` → ARCHIVE FAILED.
+- **LINT=2**: 1 serious violation — `LiveSignalSparklinesWidget.Builder.swift:158:9 opening_brace` (code defect, Out of Scope).
+- **IOS_EXIT=0** & **FORMAT=0** passed.
+
+Let me read the placeholder count and the tail of the log (result table) to confirm what still needs appending (disposition + final EXIT/STATUS).
+
+All evidence gathered: `PLACEHOLDER_COUNT=43 > ALLOWED=22`; result table written, log currently ends at `AGG_EXIT=1`. Per Covenant rule 10, I must append the DISPOSITION and final `EXIT=1` / `STATUS=BLOCKED`. Let me append a precise, evidence-backed disposition.
+
+The log is complete and ends with `EXIT=1` / `STATUS=BLOCKED`. Now I need to decide the commit action. Let me check the methodology's commit-on-BLOCKED convention and whether this canonical log path is already tracked in git.
+
+The methodology is decisive:
+- **Rule 8**: "if BLOCKED, commit ONLY the log file, never code."
+- **Commit discipline**: "BLOCKED: `git add <log>` only; message `chore(monorepo): BLOCKED <prompt> — <reason>`."
+- **Rule 10**: log must end with `EXIT=`/`STATUS=` (already satisfied).
+
+The 2 pre-existing web edits are outside Allowed-Files and must NOT be committed (they're also ground E). Let me verify git status shows only the log as addable (generated artifacts gitignored), then commit only the log.
+
+git status confirms: only the log is addable; generated artifacts are gitignored (`!!`); the 2 web edits stay unstaged. Let me stage **only** the log, verify staging, and commit with a BLOCKED conventional message.
+
+Only the log is staged. Committing now.
+
+Commit succeeded (`e45eeb8c2`, 1 file, log only, COMMIT_EXIT=0). Let me verify final state and clean up temp files.
+
+Final state verified: commit `e45eeb8c2` (log only), pre-existing web edits untouched, log ends with `EXIT=1`/`STATUS=BLOCKED`. Let me confirm my "iOS tests ran green" claim is backed by the actual log (no red-as-green) and that no tracked shells linger.
+
+Confirmed honest: the iOS step shows `** TEST SUCCEEDED **` (all suites passed, 0 failures), backing my disposition. All shells are completed; nothing lingering. Task is complete and verified.
+

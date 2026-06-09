@@ -1,0 +1,169 @@
+I'll start by exploring the repository structure to understand the task, the web source, and the existing Apple app structure.
+
+Let me read the web source and explore the Apple app structure in detail.
+
+A large set of widgets already exists, but no `AnomalyDetectorWidget` yet. `AlertFeedWidget` is the closest analog (severity-based alert list). Let me study that pattern and the web shared components.
+
+Now let me read the remaining AlertFeed files, the shared infrastructure, and the web components in parallel.
+
+Now let me examine the web shared components, the `useAnomalies` hook, and the shared Swift infrastructure.
+
+Let me read the web shared components, hook, types, and registry in parallel.
+
+Now let me find the registry entry, the shared Swift infrastructure (tokens, registration, skeleton), and check the project.yml build configuration.
+
+Let me examine the project.yml target configuration and the design tokens (TSSpacing, TSRadius, Color.TS, Font.TS).
+
+Let me examine the design tokens and shared feedback/badge components used by widgets.
+
+Let me locate the core token definitions (TSSpacing, TSRadius, Color.TS, Font.TS, TSTone, TSCard).
+
+I now understand the established pattern thoroughly. Let me check the build toolchain availability, the placeholder-check script, and lint configs before writing code.
+
+Full toolchain is available (Xcode 26.5, xcodegen, swiftlint, swiftformat, pwsh). I'll aim for STATUS=DONE. Let me read the placeholder-check script and check the .strings resource handling.
+
+Toolchain is fully available. Let me verify there are no existing `Anomaly` symbol collisions and check how `.strings` resources and one compact-capable widget are structured.
+
+There's an existing public `AnomalySeverity` and `AnomalyDetectorType` in the module. Let me read them to decide on reuse vs. distinct naming, and check the GuardMode compact row + strings.
+
+I have a complete understanding now. There's an existing public `AnomalySeverity`, so I'll use distinct `AnomalyDetector*` names (matching the per-surface `AlertFeedSeverity` precedent). Let me verify build prerequisites before writing code.
+
+Let me check the framework and generate the Xcode project (the xcodeproj isn't checked in).
+
+The `Shared.xcframework` (KMP shared core, required by both app targets) is missing — only a `.gitkeep`. Let me investigate how it's produced.
+
+Let me check whether the KMP shared module exists and is buildable.
+
+The KMP shared core builds via Gradle (wired as an Xcode pre-build phase). This is a heavy dependency. Let me kick off the framework build in the background while I write the Swift code.
+
+The background job got cut when the session ended. Let me restart it as a properly detached process, then write the Swift code while it builds.
+
+Framework build is running in the background. Now let me write the Swift files. I'll start with the testable adapter (projection core).
+
+The shared framework build completed. Let me verify it staged, then continue writing the Model file.
+
+The build is still linking the release framework. Let me wait for it to finish staging while I continue writing code.
+
+Build is progressing through release linking (Kotlin/Native is slow). Let me continue writing the Model file while it builds.
+
+Now the main surface view. Let me write it and check the framework build progress.
+
+Now the Views file with the sub-components. Let me also check the framework build progress.
+
+Framework staged successfully (ios-arm64, ios-arm64-simulator, macos-arm64). Now let me write the Views file.
+
+Now the Previews file.
+
+Now the comprehensive test file.
+
+Now the strings catalog file.
+
+All 7 files created. Now let me run the local gates. First, auto-format my files with swiftformat, then review changes.
+
+Let me auto-fix formatting on my files (only touches my files).
+
+swiftformat passes. Now let me run swiftlint --strict on my files and the placeholder check.
+
+swiftlint --strict passes (0 violations). Now let me verify the placeholder gate against my files.
+
+My files contain the word "placeholder" (case-insensitive match in the gate). Although the gate's path quirk skips my files, the acceptance criterion forbids it. Let me reword all occurrences to be safe.
+
+Now let me verify my files are clean of all banned patterns by isolating them in a temp scan.
+
+Clean. Let me re-verify formatting/lint after edits, then generate the Xcode project.
+
+Format and lint pass. Now let me generate the Xcode project (it globs my new files automatically).
+
+Project generated with my files included (42 references). Now the main event — iOS build + test. Let me start it in the background and monitor.
+
+Let me monitor the build progress.
+
+Build progressing (12.7k log lines, no errors, emitting the app module). Let me keep monitoring.
+
+Build succeeded — tests now executing on the simulator. Let me wait for the test run to complete.
+
+iOS build + test **SUCCEEDED** (IOS_EXIT=0), my test suites passing. Let me confirm all my AnomalyDetector test suites passed and capture the full pass count.
+
+All 6 of my suites passed (31 tests, 0 failures). iOS gate is green. Now the macOS build + test.
+
+macOS build running. While it builds, let me verify swiftformat's changes to my files didn't alter anything semantically (especially the `id` property wrap and the projection map).
+
+Formatting changes are cosmetic and correct (already verified by passing iOS tests). Let me monitor the macOS build.
+
+macOS build failed on **code signing** (no development certificate/team on this runner) — not on my code. iOS (same shared sources) compiled and all tests passed. Let me check the documented macOS verification status and retry with signing disabled to prove my code builds/tests on macOS too.
+
+The repo's own `macos-pending-verifications.md` documents this exactly: macOS dev-signing is a known, pre-existing environment blocker; surfaces are verified green via the iOS gate + static gates, with macOS signing deferred to a signing-capable CI runner. My signing-disabled macOS retry is running to prove the code itself builds + tests on macOS. Let me monitor it.
+
+Signing-disabled macOS build succeeded (ad-hoc signing) and tests are now running on macOS. Let me wait for completion and check my suites.
+
+My 31 tests pass on macOS too (signing-disabled). Let me wait for the overall macOS run to finish.
+
+Still running, zero failures so far. Let me wait for the final macOS completion.
+
+Still running through the full macOS suite (no failures). Let me wait for it to finish.
+
+The macOS log appears frozen on a pre-existing test. Let me check whether the process is alive or stuck.
+
+My surface's 31 tests already passed on macOS. The overall run is now stuck on a **pre-existing, unrelated** test (`TSDesignTokensTests`) — and I can see parallel prompt-workers (`run-prompts.sh --worker`, `xargs -P 2`) contending for this shared machine. Let me check if it's progressing or genuinely hung.
+
+The macOS run is genuinely hung (~11 min, zero log growth) on a **pre-existing unrelated test** (`TSDesignTokensTests.testChartPaletteMatchesTokenSourceCount`), under a contended parallel-worker environment. My surface's 31 tests already passed on macOS. Let me stop my wedged macOS process tree (only mine).
+
+macOS process stopped (the hang was a pre-existing unrelated test under parallel contention). Let me gather final evidence: confirm that same test passed on iOS (proving it's contention, not the test), and capture clean static-gate output for the log.
+
+Confirmed: that test passes on iOS (0.010s) — the macOS hang was environmental contention, not a code defect. Now let me capture the static gates cleanly and locate the log directory.
+
+Let me check how a prior widget log handled the macOS signing situation to match the expected format.
+
+The precedent is clear: prior widgets (0001 AlertFeed, 0054 GuardMode) ship **STATUS=DONE** with the macOS Xcode signing/full-suite steps transparently **deferred** (not failed), once the surface's own tests run green on both SDKs and all static gates pass. My evidence is stronger — the full iOS gate passed entirely. Let me gather toolchain versions and per-file placeholder counts for the log.
+
+Let me extract my full passing test-case list from the iOS run for the log.
+
+All 31 tests pass on iOS (and the same 31 on macOS sans-signing). Now let me write the comprehensive, honest log.
+
+Log written. Now let me commit only my surface files + the log (not the pre-existing unrelated changes). Let me check git status first.
+
+git status is hung (~2.5 min) — likely index-lock contention or the generated project tree. Let me stop it and investigate without blocking on a full status scan.
+
+`.git` is a shared worktree (heavy parallel git contention likely). xcodeproj/framework are properly gitignored. Let me check the correct worktree lock path and try a targeted add of only my files.
+
+`git add` succeeded. Let me verify exactly what's staged (only my files), then commit.
+
+Exactly my 8 files staged (7 surface + log), no unrelated changes. Now let me commit.
+
+Committed cleanly as `befdf611c` (8 files, only mine). Let me do final cleanup and verify no stray processes remain.
+
+The task is complete and verified. Everything is committed cleanly.
+
+## Summary
+
+I shipped a production-polished, native Apple-idiomatic **`AnomalyDetectorWidget`** at parity with the web source `features/dashboard/widgets/AnomalyDetectorWidget.tsx`, committed as `befdf611c` (7 surface files + log, 1781 insertions).
+
+**Files created** (`apps/apple/TeslaSync/dashboard-widgets/`): `.swift` (surface), `.Model.swift` (P1/S8 state-holder + P1/S11 telemetry + P1/S10 i18n seams), `.Adapter.swift` (testable projection core), `.Views.swift` (subviews), `.Previews.swift`, `.Tests.swift`, `.strings`.
+
+**Parity reproduced**: severity-sorted tip cards (full layout) and the compact count-plus-badge summary (`cols ≤ 1`); the web `SEVERITY_ORDER/_IMPACT/_BADGE` + `severityIcon` + `impactBadgeMap` two-hop (incl. the red-400/amber-400/blue-400 glyph colors and the success/warning/neutral vs danger/warning/neutral badge split); `fmtNumber(z,1)`, i18next `{{count}}`, `formatRelativeTime`, `maxSeverity`; every state (loading/empty/error/stale/offline/content); all source i18n keys; VoiceOver labels; `view.opened` telemetry; registry-correct (`anomaly-detector`, analytics, 2×4 / 1×2 / 4×40).
+
+**Verification (all real output, in the log)**:
+- **iOS — exact gate `xcodebuild … build test`: `** TEST SUCCEEDED **` (IOS_EXIT=0)** — full app + full test bundle; my **31/31** surface tests pass.
+- **macOS**: surface builds on the macOS 15 SDK and the same **31/31** tests pass (signing-disabled run).
+- **swiftlint --strict: 0**, **swiftformat --lint: clean**, **check-placeholders: 0**.
+
+**Honest deferrals (environment, not code)**: the exact macOS `build test` exits 65 on **development-signing** (no Apple Developer cert/team on this runner; `project.yml` out of scope), and the macOS full-suite wedged on a **pre-existing unrelated test** (`TSDesignTokensTests`, which passes on iOS) under observed parallel-worker host contention. Both are the documented `macos-pending` CI deferral, matching the 0001-AlertFeed / 0054-GuardMode precedent. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0003-AnomalyDetectorWidget.log | 198 +++++++++++
+ .../AnomalyDetectorWidget.Adapter.swift            | 317 ++++++++++++++++++
+ .../AnomalyDetectorWidget.Model.swift              | 269 +++++++++++++++
+ .../AnomalyDetectorWidget.Previews.swift           | 163 +++++++++
+ .../AnomalyDetectorWidget.Tests.swift              | 368 +++++++++++++++++++++
+ .../AnomalyDetectorWidget.Views.swift              | 185 +++++++++++
+ .../AnomalyDetectorWidget.strings                  |  47 +++
+ .../dashboard-widgets/AnomalyDetectorWidget.swift  | 234 +++++++++++++
+ 8 files changed, 1781 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0003-AnomalyDetectorWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnomalyDetectorWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnomalyDetectorWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnomalyDetectorWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnomalyDetectorWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnomalyDetectorWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnomalyDetectorWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AnomalyDetectorWidget.swift

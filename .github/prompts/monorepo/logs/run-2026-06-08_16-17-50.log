@@ -1,0 +1,4 @@
+[2026-06-08 16:17:53] [1/1] START  p4-apple/dashboard-widgets/P-0001-AlertFeedWidget.prompt.md
+[2026-06-08 16:53:02] [1/1] TIMEOUT after 35 min - force stopped
+[2026-06-08 16:53:02] [1/1] FAILED (exit 124) after 35.1 min
+[2026-06-08 16:53:02] STOPPED at red prompt 1 (exit). Resume with: --start-from 1

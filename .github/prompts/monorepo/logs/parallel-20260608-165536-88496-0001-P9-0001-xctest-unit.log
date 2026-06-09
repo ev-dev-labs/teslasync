@@ -1,0 +1,156 @@
+I'll start by understanding the task and environment. Let me explore the repository structure and check capabilities.
+
+macOS + Xcode 26.5 + Swift 6.3.2 + swiftlint + swiftformat are all available — the capability gate CAN run. Let me explore the Apple project structure.
+
+This is a substantial, mature Apple project with many existing tests. Let me understand the page view-models (P7 parity units) and the current test coverage gaps, plus locate the prompt/log directory.
+
+Large monorepo with extensive existing tests. Let me read the prior run's log and the canonical prompt to understand expected structure and the gate behavior.
+
+The prior run (a day earlier, different slot) was BLOCKED because (A) macOS had no signing identity and (B) P7 pages didn't exist. But the repo has clearly advanced — `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` now exist with co-located `.Model.swift` and `.Tests.swift` files. I need to assess the CURRENT state. Let me measure coverage gaps precisely.
+
+My base extraction was polluted by multi-dot filenames. Let me derive bases correctly from `.Model.swift` files (the view-models) and check each for a sibling test file.
+
+Coverage is remarkably complete: of 171 feature-view models, only `ToolCard` lacks a co-located test (it's tested centrally in `Tests/Unit/FeatureViews/ToolCardTests.swift`), and of 55 widget models, only `DigitalTwinMiniWidget` (tested centrally too). Let me understand the build/gate situation: signing identity, Shared.xcframework staging, xcodegen, and the documented macOS disposition.
+
+Key findings: no signing identity, Shared.xcframework not staged, no .xcodeproj yet. Critically, recent commits in THIS slot show a prior agent did "P4 baseline" work — "repair full-app build to green on iOS + macOS" and "fix pre-existing unit-test failures." Let me understand what that baseline did (especially re: macOS signing) and confirm the 5-state test pattern.
+
+Now I understand the situation fully. The **P4 baseline commits in this slot (1d816167c…5c7662ef7) already resolved the structural blockers** that caused the two prior runs to be BLOCKED — co-located tests routed out of app targets, 110 type collisions resolved, full app builds green on iOS + macOS. The two prior P9-0001 logs predate this fix. The remaining unknowns: macOS signing (0 identities) and actually running the gate.
+
+Let me verify KMP build prerequisites and kick off the long-pole Shared.xcframework build in the background.
+
+Host is healthy now: load 6.46, ~10.5 GB free RAM (the prior contended run had ~3.6 MB free). Let me kick off the Shared.xcframework build (the ~23 min long pole) in the background, then investigate while it runs.
+
+While the KMP framework builds, let me study the test pattern (do they cover the 5 states?) and the macOS signing config.
+
+Excellent — the test coverage is genuinely comprehensive and high-quality. `AcDcStatsPanel` covers all 5 required states (loading/empty/error/success/stale via the connection axis) plus formatters, projection, model wiring, telemetry, and accessibility. The surfaces were generated with co-located tests by prior parity prompts. My core job is to **run the gate honestly**. Let me check the KMP build progress and the macOS signing config.
+
+The baseline did NOT touch signing — the macOS entitlements still require a dev certificate (`aps-environment`, `associated-domains`), and there are 0 signing identities. So the macOS signing gap is real and unchanged (the documented ADR-012 capability gap). The baseline only added project.yml test-routing rules. Let me verify the iOS simulator and placeholder script while the KMP build runs.
+
+iPhone 16 simulator (iOS 26.5) is booted and ready. The host-only gates (swiftlint, swiftformat, placeholder) don't need the framework — let me run them now in parallel with the KMP build.
+
+Let me set up tracking while the gates run.
+
+The host gates completed. Let me read the results.
+
+Two real host-gate failures to fix:
+- **swiftformat**: clean (0/1915) ✓
+- **swiftlint**: 1 serious violation ✗
+- **placeholder**: COUNT=43 vs ALLOWED=22 ✗
+
+Let me pinpoint the swiftlint violation and understand the placeholder script's logic (many hits may be legitimate SwiftUI/WidgetKit `.placeholder` API usage).
+
+Now I understand the placeholder gate: it flags lines matching forbidden patterns from `placeholder-patterns.json` unless they carry a `// parity:allow <reason>` marker. COUNT=43 are un-opted-out matches (my `tail -25` truncated the full list). 22 surfaces already added valid opt-outs. Let me read the patterns and get the FULL violation list with context to determine if these are legitimate SwiftUI/WidgetKit `.placeholder` API usages or real stubs.
+
+Clear, actionable failures:
+- **SwiftLint**: 1 error — `LiveSignalSparklinesWidget.Builder.swift:158:9` opening brace spacing.
+- **Placeholder**: 43 matches of the literal word "Placeholder" across 13 files lacking a `// parity:allow <reason>` marker (22 other surfaces already use that opt-out mechanism).
+
+The placeholder pattern is broad — it matches legitimate SwiftUI/WidgetKit `.placeholder` API. I must verify each is legitimate (not a real stub) before adding an honest opt-out. The patterns file is outside my allowed scope (`apps/tools/`), so the correct fix is per-line opt-outs within `apps/apple/**`. Let me print all 43 flagged lines with content.
+
+All 43 are **legitimate** uses of the word "placeholder" — none are stubs:
+- Em-dash (`—`) placeholder constants/usages for missing values (web parity)
+- SwiftUI `.redacted(reason: .placeholder)` loading skeletons
+- i18n keys like `commands.search.placeholder` (TextField prompts)
+- Doc comments and test names mentioning "placeholder"
+
+The sanctioned mechanism is `// parity:allow <reason>` (22 surfaces already use it). Let me check the existing opt-out convention to match it.
+
+The existing 22 opt-outs are all on verbatim web i18n key literals (`// parity:allow web i18n key`), and the green surfaces kept the bare word out of prose. My 43 hits mix i18n keys, the `.redacted(reason: .placeholder)` API, an em-dash constant + its usages, test names, and doc-comment prose. Let me view each cluster to apply the cleanest honest fix (sanctioned opt-out for code/APIs/keys; precise rewording for mid-sentence doc prose).
+
+I see the pattern. Let me view the remaining clusters and check reference counts for the `placeholder` em-dash constant (to decide rename vs opt-out safely).
+
+The `WatchSummaryProjection.placeholder` constant has 5 refs (all in-cluster). I have enough to decide an honest, convention-consistent strategy: keep code tokens (i18n keys, the em-dash constant, SwiftUI `.placeholder`, test names) and add the sanctioned `// parity:allow <reason>` marker (matching the existing 22), and reword pure descriptive prose to precise synonyms (matching how the green surfaces are written). Let me view the remaining ambiguous clusters to reword accurately.
+
+The KMP build finished. Let me check its result, then proceed with the placeholder fixes.
+
+KMP build succeeded in 6m56s (warm cache + healthy host) with all 3 slices (ios-arm64, ios-arm64-simulator, macos-arm64). Let me stage it, check the YearReview constant refs, and view the swiftlint brace violation before making edits.
+
+I have the placeholder context. The swiftlint `opening_brace` violation (line 158, a standalone `{` after a multi-line condition) may conflict with swiftformat's `wrapMultilineStatementBraces`. Let me check the .swiftformat config and how sibling multi-line conditions handle braces before fixing.
+
+KMP framework staged. Now I understand the swiftlint conflict: swiftformat's `wrapMultilineStatementBraces` *enforces* the standalone `{` for multi-line conditions, while swiftlint's `opening_brace` rejects it — so I'll refactor that `if` into a single-condition form. For the 43 placeholder hits, my plan: reword pure prose to precise synonyms (em-dash/prompt/skeleton/empty-state/token), add the sanctioned `// parity:allow <reason>` to code tokens (i18n keys, em-dash constant, SwiftUI `.redacted(reason:.placeholder)`), and rename the local var + two test names. Let me apply all placeholder edits via line-addressed sed.
+
+Placeholder gate now **PASSES** (COUNT=0, ALLOWED=36). Now the swiftlint brace fix — refactor the multi-line `if` (whose standalone brace swiftformat enforces but swiftlint rejects) into a single-condition form that satisfies both.
+
+Let me re-run swiftlint and swiftformat to confirm both are green after all edits.
+
+Brace refactor is clean and the sanity check confirms 0 un-handled "placeholder" mentions remain. Let me read the lint/format results.
+
+My appended comments pushed two already-long lines (CommandSearch.Views:47, Infrastructure:289) over the 120-width limit, triggering swiftformat `wrap`. Let me get exact line lengths, the swiftlint violations, and the full swiftformat list.
+
+Both regressions are the same root cause: my opt-out comments pushed lines 47 (now 136) and 289 (now 129) over the 120 limit (swiftlint `line_length` counts the trailing comment; swiftformat `wrap` too). For 289 (base 82), a shorter reason fits under 120. For 47 (base 98), even a minimal comment overflows, so I'll wrap the key onto its own line. Let me view the context.
+
+Let me fix both: wrap the key onto its own line for 47 (base 98 can't fit any comment), and shorten the reason for 289 (base 82 fits a shorter reason).
+
+Let me re-verify swiftformat and swiftlint are both green now.
+
+While those run, let me review the diff to confirm all sed edits landed cleanly.
+
+The diffs are clean and surgical. Let me read the lint/format results.
+
+swiftlint is now **0 violations** ✓. One swiftformat issue remains: line 57 of CommandSearch.Models.swift — my opt-out pushed that doc comment over `--max-width`. Since it's a doc comment embedding a verbatim key literal, the cleanest honest fix is to reword the prose to drop the literal key (which lives in code at Views:47 with its own opt-out) — no opt-out needed, line short. Let me view the exact line first.
+
+Let me re-run all three host gates to confirm they're all green now.
+
+Let me confirm the host gates, then launch the iOS build.
+
+All three host gates are **GREEN**: swiftlint 0 violations, swiftformat 0/1915, placeholder COUNT=0. Now let me generate the Xcode project and launch the iOS build+test gate (the long pole).
+
+Project generated; Xcode 26.5 is active. Now launching the iOS build+test gate (the long pole) with code coverage enabled to capture the ADR-010 metric. I'll log full output for inspection.
+
+The iOS gate is building in the background. Let me monitor its progress.
+
+Let me check the raw build log for actual progress.
+
+Build is progressing well — Shared.xcframework staged, now emitting the TeslaSync Swift module. No errors so far. Let me continue monitoring.
+
+🎉 The iOS gate **PASSED FULLY**:
+- **TeslaSyncTests: 6588 unit tests, 0 failures** (the core deliverable)
+- **TeslaSyncUITests: 13 tests, 0 failures**
+- `** TEST SUCCEEDED **`, **IOS_EXIT=0**
+
+The healthy host means no OOM flakes (unlike prior runs). Now let me extract coverage and run the macOS gate (the exact command — expecting the documented signing gap).
+
+Coverage: TeslaSync.app shows 30.33% overall — but that includes ~220K lines dominated by declarative SwiftUI `.Views`/`.Previews` bodies. The spec's ≥80% targets **presentation/logic** (Models/Adapters/Projections). Let me compute the logic-layer coverage precisely from the xcresult while the macOS gate runs.
+
+Logic-layer coverage meets the bar: **Model 88.70%, Adapter 95.48%, combined core logic 83.70%** (≥80% ADR-010 target). The 30% overall is diluted by declarative SwiftUI Views (6.7%) and Previews (0%), which unit tests don't exercise. The macOS gate finished — let me read its result.
+
+The macOS gate failed **exactly** as the documented ADR-012 capability gap predicts: `BUILD SUCCESSFUL` (compilation passes) but signing validation errors — `"TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate` (0 identities on this host). MAC_EXIT=65. This is an infra/signing gap, not a test-quality issue.
+
+To prove the macOS *tests* themselves pass (isolating the blocker to signing only), let me run a clearly-labeled supplementary pass with ad-hoc signing.
+
+While the supplementary macOS pass builds, let me quantify per-parity-unit state coverage for the log.
+
+Strong evidence: **1203 test classes, 6595 test methods** across 313 test files; state coverage is broad (loading 229, empty 224, error 229, stale 159 of 262 co-located test files). Let me verify the golden-vector test is data-driven and check the macOS supplementary build.
+
+The golden-vector test is genuinely data-driven (loads `apps/shared/spec/units-golden.json`, iterates all cases, asserts conversion parity at 1e-6 through the Swift Units facade). The macOS supplementary pass is still compiling the macOS module. Let me wait for it.
+
+The supplementary macOS pass is **running tests and they're passing** (0 failures) under ad-hoc signing — confirming the macOS test suite itself is green and the only blocker is dev-cert signing. Let me wait for it to complete.
+
+The macOS supplementary tests continue passing (0 failures). Let me wait for the final summary and exit code.
+
+The supplementary log is stalled at the same line — likely pipe block-buffering, or a slow/hung test near the end. Since this is supplementary evidence (the macOS tests were already observed passing across many suites with 0 failures), let me give it more time and check process liveness.
+
+The macOS supplementary progressed **past the unit tests into the (out-of-scope) UI tests** — the `TeslaSync-macOSUITests-Runner` is up, confirming the macOS unit bundle completed. Output is block-buffered so the file lags. Since macOS XCUITests are explicitly out of P9-0001 scope and may hang under ad-hoc signing, let me check once more for the flushed unit-bundle summary, then proceed.
+
+The macOS supplementary is hung on the **out-of-scope** macOS XCUITests (block-buffered, stuck at 35268 lines), but the flushed log shows **5451 "passed" lines, 0 failures** for the macOS unit phase under ad-hoc signing — exactly the proof I need. Let me stop the hung supplementary run and clean up its processes.
+
+4305 cleaned up. Let me capture the final macOS supplementary evidence for the log.
+
+Decisive evidence captured. The macOS supplementary: **`** BUILD SUCCEEDED **`** under ad-hoc signing, **985 distinct macOS unit test classes, 5451 "passed" lines, 0 failures** — proving the macOS test suite is green and the sole verbatim-command blocker is the dev-cert signing of restricted entitlements (the result-bundle/UI stall is an out-of-scope ad-hoc quirk).
+
+I now have all gate results: IOS=0, LINT=0, FORMAT=0, PLACEHOLDER=0, **MAC=65** (signing). Per the gate formula (all five must be 0), EXIT=65 → STATUS=BLOCKED on the documented ADR-012 dev-cert gap. Let me write the comprehensive honest log.
+
+Log written. Now let me commit precisely — only my apps/apple changes + the log, NOT the pre-existing dirty web files or git-ignored build artifacts. Let me verify git state first.
+
+Git state is exactly right: 18 apps/apple files modified (mine), 2 web files (pre-existing, NOT mine), log untracked, build artifacts git-ignored. Let me stage only apps/apple + the log and commit.
+
+Staged set is exactly correct: 18 apps/apple files + the log; the 2 pre-existing web files remain unstaged. Let me commit.
+
+Committed as `a1d5f277f`. Working tree now shows only the 2 pre-existing web files (untouched). Let me do a final sanity re-run of the host gates on the committed tree and update tracking.
+
+My `cd` math broke the chained re-run (swiftformat ran from the wrong dir). swiftlint already re-confirmed 0 violations. Let me re-run swiftformat + placeholder cleanly from the repo root.
+
+All three host gates re-confirmed **green** on the committed tree (swiftlint 0, swiftformat 0/1915, placeholder COUNT=0). Commit `a1d5f277f` is in place. Let me update the plan and finalize.
+
+Let me clean up the temporary build artifacts I created, then finalize.
+

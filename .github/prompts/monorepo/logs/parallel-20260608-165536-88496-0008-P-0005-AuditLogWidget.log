@@ -1,0 +1,128 @@
+I'll start by exploring the codebase structure, the web source spec, and the Apple toolchain capabilities in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, swiftlint, swiftformat, simulators). Now let me read the web source spec and explore the Apple app structure.
+
+There's an established multi-file widget pattern. `AlertFeedWidget` is the closest analog (event feed). Let me study it in full, plus check whether AuditLogWidget already exists.
+
+Excellent — mature, well-structured codebase. Let me read the rest of the AlertFeedWidget reference files plus the web hooks and shared components.
+
+Now let me read the test/preview reference files and the web data hooks + shared components to nail the exact data shapes.
+
+Let me get the exact web data types and find the shared Apple core primitives.
+
+The shared core primitives are defined elsewhere. Let me locate them across the whole apple tree.
+
+Now let me read the build config (project.yml) and the remaining web shared components to fully understand wiring and the feed/shell behavior.
+
+I have the full pattern. Now let me assess build feasibility (xcodegen, the Shared.xcframework dependency) before writing code.
+
+Build needs xcodegen (available) + a Gradle/KMP `Shared.xcframework`. Let me check if the KMP toolchain is viable here.
+
+Let me check the prior gate logs to see how previous widget builds resolved (DONE vs BLOCKED) and what the real evidence looks like.
+
+Java 17 + gradlew available, and history shows full Xcode builds DO pass for some widgets (0001) while others honestly DEFERRED the Xcode build (KMP infra) and verified via SwiftPM harness + lint. Let me check git state and kick off the long-pole KMP framework build in the background while I write code.
+
+KMP build running in background. Let me study the DEFERRED-log fallback approach and check the placeholder script + pwsh availability.
+
+Now I understand the full approach and honesty model. Let me check the lint/format configs (to pass `--strict`) and the KMP build progress.
+
+Configs are clear (mirror AlertFeed's compliant style; line ≤120). KMP build is progressing. Let me set up tracking and start writing the surface, beginning with the Model and Adapter cores.
+
+The compact badge passes a resolved string into `TSBadge` (which expects a localization key) — that would mis-localize. Let me replace it with an inline tone-styled chip using the resolved string verbatim.
+
+Now the main widget view with header chrome and state switching.
+
+Now the i18n strings catalog and previews. Let me also check the KMP build progress.
+
+KMP build finished successfully — the full Xcode build path is viable. Let me confirm the framework staged, then write Previews + Tests.
+
+Framework built (cached for the gate pre-action). Now the Previews and comprehensive Tests.
+
+All 7 files written. Let me auto-format and lint my files before the heavy build.
+
+swiftformat clean; swiftlint flags only file-length (445 > 400) on the Tests file. There's established precedent for `*.ModelTests.swift` split files. Let me split the model/registry/accessibility tests into a second file.
+
+I'll create the split `ModelTests` file and trim the original.
+
+Now trim the original Tests file to keep only the adapter tests.
+
+Let me update the trimmed Tests file's header to reflect the split, then re-run format + lint on all 7 files.
+
+All clean: swiftformat 0/7, swiftlint --strict 0 violations, all files <400 lines. Let me verify no placeholder-trigger words and run the placeholder gate, then generate the Xcode project.
+
+Only hit: a test method name containing "Placeholder" (a forbidden common pattern). Let me rename it, then run the placeholder gate.
+
+Placeholder gate passes on my surface (COUNT=0, EXIT=0); the 24 dir-wide hits are pre-existing in other widgets, none in mine. Now generate the Xcode project and start the iOS build+test.
+
+The exact "iPhone 16" simulator is available and booted. Project generated. Now I'll run the iOS build+test (the long pole) in the background, teeing output to a temp log.
+
+iOS build running. Let me monitor progress while it compiles.
+
+iOS finished. Let me verify the real xcodebuild result and that my AuditLog tests ran and passed.
+
+iOS test failed (exit 65). Let me find the actual compile/test errors.
+
+Root cause: `SecurityEventInput` (and possibly other names) collide with existing types in the single-module app — `EventHistoryTable` already defines `SecurityEventInput`. The Previews errors cascade from that. Let me find all collisions with my public type names.
+
+Only `SecurityEventInput` collides (defined in `EventHistoryTable.Adapter.swift`). I'll rename mine to `AuditSecurityEventInput`. Let me confirm the existing type's shape differs, then rename across my files.
+
+Confirmed: the existing `SecurityEventInput` has a totally different shape (`SecuritySignal`-based). Mine must be renamed. I'll rename to `AuditSecurityEventInput` across my files.
+
+Renamed (23 refs). The longer name may push lines over 120 — let me re-format and re-lint.
+
+Format + lint clean, no >120 lines. The EventHistoryTable errors were caused by my ambiguity and will clear now. Let me re-run the iOS build+test.
+
+iOS rebuild running. Let me wait for it to compile and run tests.
+
+BUILD SUCCEEDED and tests are executing with 0 failures so far. The full app test suite runs all targets, so let me wait for completion.
+
+iOS build+test completed. Let me confirm the final TEST result, the stored exit code, and that all my AuditLog suites passed.
+
+iOS is fully green: **BUILD SUCCEEDED**, **TEST SUCCEEDED**, IOS_EXIT=0, and all 7 AuditLog suites passed. Now the macOS build+test.
+
+macOS building. Let me wait for it to compile and test.
+
+macOS `build test` failed — but purely on an **environmental code-signing gap** (`entitlements ... require signing with a development certificate`), not my code. This matches the documented precedent (signed macOS runs deferred to a signed CI runner). Let me prove my code compiles on macOS by building with signing disabled (and compile the macOS test bundle too).
+
+While that compiles, let me capture the whole-tree `swiftformat --lint` and `swiftlint --strict` results (the gate runs these repo-wide).
+
+Whole-tree format is clean (FORMAT_EXIT=0). Swiftlint reports exactly 1 violation across 1930 files — let me locate it (my files lint clean individually).
+
+The single lint violation is in a **pre-existing, out-of-scope** file (`LiveSignalSparklinesWidget.Builder.swift:158`), not mine. Let me confirm it's untracked-by-me/pre-existing and check the macOS no-sign build.
+
+Confirmed pre-existing and out-of-scope; my 7 files lint strict-clean. Let me check the macOS no-sign compile result.
+
+macOS **TEST BUILD SUCCEEDED** (signing disabled) — my surface + tests compile on macOS; the signed `build test` failure is purely the dev-certificate entitlements gap. I have all evidence. Let me gather precise per-suite test counts and the key evidence lines for the gate log.
+
+All 7 suites passed (35 tests, 0 failures). I have complete evidence. Let me write the gate log.
+
+Gate log written. Now let me review git state and commit only my surface files + the log (excluding the generated project and pre-existing unrelated changes).
+
+Clean — generated project is gitignored, the two modified web files are pre-existing (not mine). Let me stage only my surface files + log and commit.
+
+Committed (44e2eb1c0) with exactly my 8 surface files + the gate log. Let me finalize tracking and clean up temp artifacts.
+
+All committed cleanly (1899 insertions across 9 files); only pre-existing web edits remain unstaged (correctly untouched). Let me confirm all todos are complete.
+
+All 9 todos complete. The AuditLogWidget Apple surface is shipped and verified.
+
+Merge made by the 'ort' strategy.
+ ...apple-dashboard-widgets-0005-AuditLogWidget.log | 187 ++++++++++++
+ .../dashboard-widgets/AuditLogWidget.Adapter.swift | 339 +++++++++++++++++++++
+ .../dashboard-widgets/AuditLogWidget.Model.swift   | 306 +++++++++++++++++++
+ .../AuditLogWidget.ModelTests.swift                | 170 +++++++++++
+ .../AuditLogWidget.Previews.swift                  | 132 ++++++++
+ .../dashboard-widgets/AuditLogWidget.Tests.swift   | 295 ++++++++++++++++++
+ .../dashboard-widgets/AuditLogWidget.Views.swift   | 183 +++++++++++
+ .../dashboard-widgets/AuditLogWidget.strings       |  54 ++++
+ .../dashboard-widgets/AuditLogWidget.swift         | 233 ++++++++++++++
+ 9 files changed, 1899 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0005-AuditLogWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AuditLogWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AuditLogWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AuditLogWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AuditLogWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AuditLogWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AuditLogWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AuditLogWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AuditLogWidget.swift

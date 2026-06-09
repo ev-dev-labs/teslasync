@@ -266,3 +266,9 @@ p4-apple/feature-views/P-0238-AnomalyInlineRow.prompt.md
 p4-apple/feature-views/P-0245-helpers.prompt.md
 p4-apple/feature-views/P-0233-LiveControls.prompt.md
 p4-apple/feature-views/P-0237-AiUsageCard.prompt.md
+p4-apple/dashboard-widgets/P-0001-AlertFeedWidget.prompt.md
+p4-apple/dashboard-widgets/P-0004-APIUsageWidget.prompt.md
+p4-apple/dashboard-widgets/P-0003-AnomalyDetectorWidget.prompt.md
+p4-apple/dashboard-widgets/P-0005-AuditLogWidget.prompt.md
+p4-apple/dashboard-widgets/P-0007-AutomationStatusWidget.prompt.md
+p4-apple/dashboard-widgets/P-0006-AutomationHistoryWidget.prompt.md

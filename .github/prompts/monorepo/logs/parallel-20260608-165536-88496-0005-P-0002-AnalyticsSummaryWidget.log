@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities in parallel.
+
+Apple toolchain is fully available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat, iOS simulators). Capability requirement met. Now reading the web source and exploring the Apple app structure.
+
+Now let me explore the existing dashboard-widgets structure to understand conventions and find a reference implementation already ported.
+
+There's a clear multi-file convention. `LifetimeStatsWidget` (analytics category, stat-grid based) is the closest reference. Let me study it completely along with the shared infrastructure and build config.
+
+Excellent reference. Now I need to understand the shared infrastructure (tokens, shared components, registry types). Let me read the remaining reference files and locate shared types.
+
+I have a thorough understanding of the pattern. Now let me locate the shared infrastructure types (tokens, registry, shared components) and the web hook/components for parity.
+
+Let me read the shared infrastructure files and the web type definition in parallel.
+
+Now let me read the design tokens, the sparkline component, and the project build config to understand how files are included.
+
+Let me find the exact definitions of the design tokens (Color.TS, TSSpacing, TSRadius, Font.TS).
+
+The tokens resolve at compile time (LifetimeStats uses them in the same target). The critical question now is how files get included in the build. Let me read project.yml.
+
+Build is glob-based by folder — no project.yml edits needed. Now let me assess full-gate feasibility: check xcodegen, existing xcodeproj, the Shared.xcframework, pwsh, and the placeholder script.
+
+Key finding: the full `xcodebuild` gate requires a KMP `Shared.xcframework` (built via Gradle/Kotlin-Native) — `Frameworks/` only has a `.gitkeep`. Let me assess whether that heavyweight build is feasible here, and read the placeholder script.
+
+`pwsh`, `xcodegen`, `java`+`gradlew` are all present — the full gate is potentially runnable (KMP framework download is the main risk). Let me read the placeholder patterns, lint configs, and the web shared components for exact parity.
+
+Let me read the generated design tokens (for icon colors + chart palette) and the web AnimatedNumber/StatCard for final parity details.
+
+I now have the full token vocabulary and parity details. Let me pin exact expected formatting values with a quick Node script (replicating `Intl.NumberFormat`) so my tests assert correct strings, then I'll write the files.
+
+Exact values pinned. Let me verify the shared component signatures I'll call (TSAnimatedNumber, TSSkeleton) before writing.
+
+I have everything needed. Let me set up tracking and write the plan, then create the 6 surface files.
+
+Now writing the surface files. First the pure-logic Adapter:
+
+Now the SwiftUI surface view:
+
+Now the Previews file:
+
+Now the i18n strings catalog:
+
+Now the test suite, asserting the exact values I pinned:
+
+All 6 files written. Now verifying — first swiftformat and swiftlint on my new files:
+
+swiftformat clean. Now swiftlint --strict on my files:
+
+Two strict violations: view file >400 lines and Adapter `project` body >50 lines. I'll mirror LifetimeStats' approach: extract helpers in the Adapter, and move the stat tile into its own `AnalyticsSummaryWidget.Tile.swift` (allowed by the `AnalyticsSummaryWidget.*` glob). Let me view the exact sections to refactor.
+
+Let me view the exact boundary where the tile section begins in the view file:
+
+I'll extract the tile into its own file and refactor the Adapter's `project` into helpers. Creating the Tile file and applying both edits:
+
+Now refactor the Adapter's `project` into helpers:
+
+Now normalize with swiftformat (write) and re-run swiftlint --strict on all 6 files:
+
+`makeStats` now has 7 params (>5). I'll bundle the formatted values into a small struct so it takes one param. Let me view the current projector to rewrite it precisely.
+
+I'll bundle formatted values into a nested `StatValues` struct (3 edits):
+
+Now re-run swiftformat + swiftlint --strict on all files:
+
+Both linters pass clean (0 violations). Now a fast pre-check: compile the pure-logic files standalone (Swift 6 mode) and run the projector to confirm exact value parity before the heavy Xcode build.
+
+The error is in my probe harness (Swift 6 top-level MainActor), not the surface files. Let me fix the harness and recompile:
+
+All parity assertions PASS and the pure logic compiles clean under Swift 6 strict concurrency. Now the placeholder gate + whole-tree lint. Let me also locate the log directory.
+
+Placeholder gate clean (0 violations, self-test passes). There's a prior artifact log for this surface — let me inspect it and the acceptance-gate log to understand how the heavy Xcode/KMP build behaves in this environment.
+
+Critical insight from prior logs: KMP xcframework build takes ~23 min, and a prior run placed this surface under `Sources/Dashboard/Widgets/` instead of the now-canonical `TeslaSync/dashboard-widgets/`. I must check for a pre-existing/colliding `AnalyticsSummaryWidget` and duplicate i18n keys in this checkout.
+
+No type collisions and my placement is correct. Two catalog files reference the `analytics-summary` id, and the master xcstrings already has 6 keys. Let me verify these are metadata-only (no compile dependency on my type) and inspect the existing keys.
+
+Catalogs are metadata-only (no compile dependency) and confirm my registry metadata. No collisions. Now I'll attempt the full gate. The KMP xcframework build is the long pole (~23 min per prior logs), so I'll start it in the background first, then run the whole-tree host gates while it builds.
+
+Gradle is using cached Kotlin/Native artifacts (FROM-CACHE) so it should be far faster than a cold 23-min build. While it links, let me run the whole-tree host gates (swiftformat + swiftlint) that the gate requires.
+
+Whole-tree swiftformat is GREEN (0/1921 need formatting). Now whole-tree swiftlint --strict:
+
+Whole-tree swiftlint found exactly one violation — but in `LiveSignalSparklinesWidget.Builder.swift` (a pre-existing sibling widget, NOT my file and outside my allowed-files scope). Let me confirm it's the only one, that it's pre-existing, and check gradle progress.
+
+Confirmed: exactly one tree-wide swiftlint violation, pre-existing in `LiveSignalSparklinesWidget.Builder.swift` (not mine, outside my allowed-files scope). My files contribute zero. Gradle has already produced the debug xcframework and is linking release. Let me wait for it to finish staging, then generate the project and build for iOS.
+
+Gradle is linking the release frameworks now. Let me wait for it to finish, then generate the Xcode project.
+
+Gradle succeeded (release xcframework with iOS + macOS slices, 6m48s). Now generate the Xcode project and confirm my files are included.
+
+Project generated (42 refs to my surface) and xcframework staged. Now the iOS Simulator build to prove my surface compiles in the real target:
+
+**iOS BUILD SUCCEEDED** — my surface compiles cleanly in the real app target with zero errors. Now run my surface's XCTest classes (scoped, reusing the build) to verify they pass:
+
+All 23 of my XCTest cases pass on the iOS Simulator (real target) — **TEST SUCCEEDED**. Now the macOS build to confirm cross-platform compile (the app shares one SwiftUI source group across iOS/macOS):
+
+macOS app **BUILD SUCCEEDED** as well — my surface compiles on both platforms. Now attempt the scoped macOS tests (ad-hoc signed):
+
+Both platforms fully green for my surface: iOS build+test (23 pass) and macOS build+test (23 pass). The only non-green gate step is the whole-tree swiftlint's single pre-existing violation in an unrelated file. Let me check how the prior per-surface logs recorded their footer/STATUS to follow precedent.
+
+The pattern matches the established precedent exactly. My surface is fully green on both platforms (build+test), but the FULL literal `build test` gate bundles XCUITest (headless-runner limitation) and unsigned macOS test-host. To record real exit codes honestly (not assume), let me run the literal gate commands. macOS literal `build test` first:
+
+macOS literal `build test` = MAC_EXIT=65: the macOS targets require a development signing certificate (absent) — "Testing cancelled because the build failed." Purely a signing/env limitation (my surface itself passed macOS build+test with signing disabled). Now the literal iOS `build test` (includes XCUITest) in an async session so I can guard against a UI-test hang:
+
+Notably, on this runner the XCUITests ARE running and passing (AuthOnboarding 3/3, LiveData 3/3) — better than the prior environment. The unit tests already passed. Let me keep waiting for completion.
+
+The literal iOS `build test` completed **IOS_EXIT=0** — fully green on this runner (unit + UI tests). Let me confirm the final iOS summary and re-confirm the whole-tree lint state.
+
+Confirmed: the full literal iOS `build test` is GREEN — `TeslaSyncTests` (unit, incl. all 6 AnalyticsSummary suites) **and** `TeslaSyncUITests` (13 UI tests) both passed → **TEST SUCCEEDED**, IOS_EXIT=0. Let me capture exact totals for the log.
+
+Let me get the precise unit-bundle total, then write the gate log.
+
+I have complete evidence. The full iOS `build test` ran **6611 unit tests + 13 UI tests, 0 failures** (incl. all 23 of my surface tests) → IOS_EXIT=0. Now writing the honest gate log.
+
+Now committing only my 7 surface files + the log (not the pre-existing web/admin drift):
+
+Staging is correctly scoped (7 surface files + log; pre-existing web drift untouched). Committing:
+
+Committed (HEAD `bc90e3dc4`). Let me finalize tracking and clean up temp artifacts.
+
+The task is complete. Let me provide the final summary.
+

@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain is available (Xcode 26.5, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and examine existing Apple widget patterns.
+
+Now I understand the architecture. Let me check the build tooling and whether there's a central registry to be aware of.
+
+Let me assess build feasibility — check whether app Sources depend on the KMP `Shared` framework (which needs Gradle to build).
+
+Toolchain confirmed (xcodegen, pwsh, Java 17 all present), but the full `xcodebuild` requires a Gradle-built `Shared.xcframework` (currently just a `.gitkeep`). I'll build the surface following the proven `GuardModeWidget` pattern, then verify with swiftformat/swiftlint/placeholder gates + a focused `swiftc` typecheck. Let me set up tracking and start writing.
+
+Now I'll write the surface files. Starting with the Adapter (pure projection core).
+
+Now the Model file (state-holder seam, telemetry, registry, i18n facade).
+
+Now the main surface view.
+
+Now the presentational subviews.
+
+Now the previews and strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files created. Let me fix the todo tracking and start verification with swiftformat/swiftlint on the new files.
+
+Now let me run the format/lint gates on the new files.
+
+swiftformat found fixable issues. Let me auto-format the files (the project's own formatter) and re-check.
+
+Formatting passes. Let me verify the auto-format didn't alter logic, then run swiftlint.
+
+swiftformat and swiftlint both pass (0 violations). Now the placeholder gate. Let me check how it resolves the `-Path` argument.
+
+The script uses `-LiteralPath`, so the prompt's extension-less path scans nothing. I'll run it meaningfully against each new `.swift` file.
+
+Placeholder gate passes for all files. Now the critical correctness check — a focused `swiftc` typecheck. The full `xcodebuild` needs the Gradle-built `Shared.xcframework`, but my surface only depends on a small, well-defined set of real tokens/infra. I'll typecheck against the real token/infra files plus a faithful `TSSkeleton` shim, under the project's Swift 6 + strict-concurrency settings.
+
+App-target files typecheck cleanly under Swift 6 strict concurrency. Now the Tests file (strip the `@testable import` since the harness is a single module, add XCTest framework path).
+
+All 218 errors are XCTest symbols not loading (no "no such module", none reference my API). The raw `swiftc` invocation isn't finding XCTest's Swift overlay. Let me locate it and add the right search path.
+
+**All files typecheck cleanly** (including tests) under Swift 6 + strict concurrency. Now let me attempt the real gate. First validate the project generates and picks up my files, then probe whether the KMP `Shared.xcframework` (the build's heavy dependency) is buildable here.
+
+Project generates and all 42 AlertFeedWidget references are wired into the targets. Now probe the KMP `Shared.xcframework` build (the gate's heavy prerequisite) with a bounded attempt.
+
+Gradle runs offline with the Kotlin/Native toolchain present and `assembleSharedXCFramework` is available. Let me build the `Shared.xcframework` — if it succeeds, the full `xcodebuild` gate becomes runnable.
+
+KMP build is compiling (Kotlin/Native for 3 targets takes time). Let me keep waiting.
+
+`Shared.xcframework` built successfully (6m 23s) and staged. The full `xcodebuild` gate is now runnable. Let me check available simulators, then build the iOS app (real in-module compile of my files).
+
+iPhone 16 simulator is available (and booted). Now let me run the real iOS app build — this compiles all app sources including my new files in-module. Running async with monitoring.
+
+iOS build running in background. Let me monitor progress.
+
+Build reported 6 failures. Let me identify whether they're in my files or pre-existing.
+
+Real issue: `AlertDrillthrough` collides with an existing type in the module. My isolated typecheck couldn't catch this. Let me find the existing definition.
+
+Found it — an existing `AlertDrillthrough` struct in the `AlertCard` feature-view, plus a colliding `AlertDrillthroughTests` class. Let me see the full collision scan and examine the existing type.
+
+More collisions surfacing (`AlertSeverity`, `AlertDrillthrough`). The existing `AlertCard` feature-view owns these names. Let me get the complete collision list.
+
+This is a namespace collision — the existing `AlertCard`/`AlertsSection` feature-views already own generic `Alert*` names (`AlertSeverity`, `AlertDrillthrough`, etc.). `GuardModeWidget` avoided this by using a surface-specific prefix (`Guard*`). I must do the same with `AlertFeed*`. Let me confirm the `AlertFeed` prefix is collision-free before renaming.
+
+`AlertFeed` prefix is confirmed collision-free. I'll rename my colliding generic `Alert*` types to surface-specific `AlertFeed*` names (exactly as `GuardModeWidget` uses `Guard*`). Applying across all 6 files with word-boundary-safe substitutions.
+
+Only `AlertTriangle`/`AlertOctagon` remain — those are in doc comments (web lucide icon references), not Swift types. Let me verify, then re-run format/lint and rebuild.
+
+Renames clean; format & lint still pass (0 violations). Now rebuild the iOS app to confirm the collision is resolved in-module.
+
+**iOS BUILD SUCCEEDED** — the collision is resolved and my files compile in the real app module. Now run my tests in the real XCTest bundle (scoped to my classes).
+
+**iOS TEST SUCCEEDED.** Let me confirm the test count and which tests ran.
+
+All **29 tests pass, 0 failures** on iOS. Now the macOS half of the gate — build the macOS app and run my tests there too.
+
+**macOS BUILD SUCCEEDED.** Now run my tests on macOS.
+
+**macOS TEST SUCCEEDED.** Let me confirm the count, then write the gate log.
+
+Both platforms: **29 tests, 0 failures.** Full verification matrix is green. Let me update tracking and write the gate log with the real captured evidence.
+
+Now append the lint/format/placeholder sections (run live) and the final status.
+
+Now append the per-test detail and final status block.
+
+Log complete. Now clean up temp artifacts and verify git state before committing only the allowed files.
+
+All temp artifacts (generated project, framework, derived data) are git-ignored. Only my 7 surface files + the log are untracked. The two modified web files are pre-existing (not mine) — I'll exclude them. Staging exactly the allowed scope and committing.
+
+Exactly 8 files staged (7 surface + log), no pre-existing web edits included. Committing.
+
+Committed cleanly (`08baa38f7`, 8 files, 1641 insertions). Final state verification.
+
+Task complete. Everything is committed, the working tree contains only pre-existing (non-mine) web edits, and all todos are done.
+
+Merge made by the 'ort' strategy.
+ ...pple-dashboard-widgets-0001-AlertFeedWidget.log | 112 +++++++
+ .../AlertFeedWidget.Adapter.swift                  | 333 +++++++++++++++++++
+ .../dashboard-widgets/AlertFeedWidget.Model.swift  | 261 +++++++++++++++
+ .../AlertFeedWidget.Previews.swift                 | 135 ++++++++
+ .../dashboard-widgets/AlertFeedWidget.Tests.swift  | 354 +++++++++++++++++++++
+ .../dashboard-widgets/AlertFeedWidget.Views.swift  | 160 ++++++++++
+ .../dashboard-widgets/AlertFeedWidget.strings      |  48 +++
+ .../dashboard-widgets/AlertFeedWidget.swift        | 238 ++++++++++++++
+ 8 files changed, 1641 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0001-AlertFeedWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.swift
