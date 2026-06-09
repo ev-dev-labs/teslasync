@@ -1,0 +1,49 @@
+/*
+  ChargeStatusWidget.strings
+  TeslaSync — P4 dashboard widget · 0021 · ChargeStatusWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargeStatusWidget` resolves (table "ChargeStatusWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/ChargeStatusWidget.tsx + registry/charging.ts). The
+  remaining keys back the native-only chrome (freshness chip, retry/empty/error copy,
+  connectivity banners, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.charging" = "Charging";
+"widget.power" = "Power";
+"widget.rate" = "Rate";
+"widget.battery" = "Battery";
+"widget.timeToFull" = "Time to Full";
+"widget.notCharging" = "Not Charging";
+"widget.noChargeData" = "No charge data";
+
+/* --- Registry (registry/charging.ts → "charge-status") --- */
+"widget.chargeStatus" = "Charge Status";
+"widget.chargeStatus.description" = "Current charge state, amps, time remaining";
+"widget.chargeStatus.title" = "Charge Status";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.chargeStatus.live" = "Live";
+"widget.chargeStatus.updating" = "Updating";
+"widget.chargeStatus.stale" = "Stale";
+"widget.chargeStatus.offline" = "Offline";
+"widget.chargeStatus.refresh" = "Refresh";
+"widget.chargeStatus.retry" = "Retry";
+"widget.chargeStatus.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.chargeStatus.loading" = "Loading charge status";
+"widget.chargeStatus.emptyHint" = "Charge data will appear once your vehicle reports in.";
+"widget.chargeStatus.errorTitle" = "Couldn't load charge status";
+"widget.chargeStatus.offlineBanner" = "Offline — showing last known charge state";
+"widget.chargeStatus.staleBanner" = "Reconnecting — charge state may be stale";
+
+/* --- Accessibility --- */
+"widget.chargeStatus.openA11y" = "Open the Charging page";
