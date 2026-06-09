@@ -418,6 +418,16 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
+    P2 feature-views: the TeslaApiRefTool's UI-thread-free logic (the static endpoint catalog, the
+    pure search adapter, the registration metadata, the PII-safe diagnostics, and the state-holder
+    view-model) lives in the WinUI app project but is WinUI-free by construction. Link those two source
+    files in so the headless (net10.0) test project verifies the adapter + per-state transitions +
+    diagnostics + a11y names without a UI host. The WinUI view itself (feature-views\TeslaApiRefTool.cs)
+    is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.Model.cs" Link="FeatureViews\TeslaApiRefTool.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" Link="FeatureViews\TeslaApiRefTool.ViewModel.cs" />
   </ItemGroup>
 
   <!--
