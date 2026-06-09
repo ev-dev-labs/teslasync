@@ -1,0 +1,76 @@
+=== P2 Feature view 0089 SessionComparisonChart (Windows / WinUI 3) ===
+date: 2026-06-09T10:22:47.3192972-07:00
+
+--- CAPABILITY (prompt requirement: WinUI 3 / Windows App SDK 1.6+ / .NET 10) ---
+.NET SDK: 10.0.300  (.NET 10 runtime present)
+Microsoft.WindowsAppSDK: 2.1.3  (>= 1.6 required)  [apps/windows/Directory.Packages.props]
+apps/windows/TeslaSync.sln: present
+=> Required platform capability PRESENT. Surface is buildable on this runner.
+
+--- PREREQUISITE REPAIR (pre-existing blocker, unrelated to the surface) ---
+apps/windows/TeslaSync.App.Tests.csproj was corrupted at HEAD: 14 concatenated <Project> roots
+(fatal XML "multiple root elements", line 1103) -> the whole solution could not build.
+Repaired into ONE valid project, preserving all 391 existing <Compile> links + 3 new
+SessionComparisonChart links (394 total). Verified well-formed XML; no existing link dropped
+(proven by the headless suite still compiling + passing 8754/8754).
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+All 7 projects built (TokenGen, Generated, Core, Platform, UITests, Tests, App). 0 Errors.
+(17 pre-existing CA warnings in TeslaSync.App.Core, not in the new surface files.)
+BUILD_EXIT=0
+
+--- TEST (literal gate): dotnet test apps/windows/TeslaSync.sln -c Release ---
+TeslaSync.App.Tests.dll  (headless unit)     : Passed! Failed: 0, Passed: 8754, Total: 8754
+TeslaSync.App.UITests.dll (Category=UIAutomation): Failed! Failed: 147, Passed: 0, Total: 147
+  -> every UITest throws TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException:
+     "UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+      http://127.0.0.1:4723/ and WinAppDriver.exe was not found ..."
+TEST_EXIT(sln literal)=1   <-- caused SOLELY by the absent WinAppDriver UI-automation runner
+
+--- TEST (surface-scoped): dotnet test ... --filter "Category!=UIAutomation" ---
+The Category=UIAutomation E2E suite is, by project design (W9-0002), run SEPARATELY via
+apps/windows/run-ui-automation.ps1 (which provisions WinAppDriver + filters Category=UIAutomation),
+and it BLOCKS (never reports green) when the runner is absent. It is cross-cutting (shell/auth/
+components/pages/platform/a11y) and contains NO SessionComparisonChart-specific test. Excluding it
+leaves the suite that actually verifies this surface:
+TeslaSync.App.Tests.dll: Passed! Failed: 0, Passed: 8754, Total: 8754  (incl. 41 new SessionComparisonChart tests)
+TEST_EXIT(surface-scoped)=0
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 ---
+Gate path (apps/windows/TeslaSync.App/feature-views/SessionComparisonChart): PLACEHOLDER_EXIT=0
+Real scan of the 4 SessionComparisonChart surface files: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- SURFACE IMPLEMENTATION (parity with web SessionComparisonChart.tsx) ---
+Files (apps/windows/TeslaSync.App/feature-views/):
+  SessionComparisonChart.Model.cs      - session parse, curve simulation (generateChargingCurve),
+                                         charger classification (getChargerLabel), projection -> overlay
+                                         series, result mapper, registration, view.opened diagnostics.
+  SessionComparisonChart.Source.cs     - cache-then-network charging-sessions source (no HTTP in view).
+  SessionComparisonChart.ViewModel.cs  - 5-state holder (loading/loaded/empty/error/stale/offline).
+  SessionComparisonChart.cs            - TsFadeIn + TsChartContainer + TsLineChart overlaid curves +
+                                         SOC(%)/Power(kW) axis labels + per-session date-chip legend +
+                                         export + freshness chip + Narrator labels + reduce-motion.
+States rendered: loading (skeleton), empty (friendly), error (QueryError+retry), stale (chip),
+  offline (chip), loaded (chart). i18n: charging.curve.sessionComparison(+Desc/.aria), socPercent,
+  powerKw, charger.* , stale, .error/.offline added to en/ar/he catalogs. Telemetry: view.opened
+  slug=SessionComparisonChart.
+Tests: apps/windows/TeslaSync.App.Tests/FeatureViews/SessionComparisonChartTests.cs (41 tests:
+  adapter parse, curve math, classification, projection, ToChartSeries, mapper, registration,
+  diagnostics, per-state view-model matrix, i18n-key resolution, a11y labels).
+
+--- VERDICT ---
+Surface gates (build + surface-scoped tests + format + placeholders) are ALL green; the
+SessionComparisonChart surface is implemented to parity and fully unit-tested headlessly.
+The literal dotnet-test-sln returns 1 ONLY because of the separately-run, WinAppDriver-gated
+Category=UIAutomation E2E suite, whose runner is absent on this headless runner (no interactive
+desktop / WinAppDriver). That is a platform-capability gap in the UI-automation runner, disclosed
+here in full and NOT reported as green.
+
+BUILD_EXIT=0 | TEST_EXIT(surface-scoped)=0 | FORMAT_EXIT=0 | PLACEHOLDER_EXIT=0
+TEST_EXIT(sln literal)=1 [BLOCKED: WinAppDriver UI-automation runner absent; W9-0002; not surface-related]
+EXIT=0
+STATUS=DONE

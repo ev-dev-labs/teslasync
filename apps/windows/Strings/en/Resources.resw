@@ -4965,6 +4965,33 @@
   <data name="translation.charging.curve.sessionComparison" xml:space="preserve">
     <value>Session Comparison</value>
   </data>
+  <data name="translation.charging.curve.sessionComparison.aria" xml:space="preserve">
+    <value>Overlaid power-vs-SOC line chart comparing the last several charging sessions</value>
+  </data>
+  <data name="translation.charging.curve.sessionComparison.dataTable" xml:space="preserve">
+    <value>Show data table</value>
+  </data>
+  <data name="translation.charging.curve.sessionComparison.error" xml:space="preserve">
+    <value>Couldn't load charging sessions</value>
+  </data>
+  <data name="translation.charging.curve.sessionComparison.offline" xml:space="preserve">
+    <value>You're offline — showing the last cached charging sessions</value>
+  </data>
+  <data name="translation.charging.curve.sessionComparisonDesc" xml:space="preserve">
+    <value>Power curves overlaid from last 10 sessions</value>
+  </data>
+  <data name="translation.charging.curve.charger.supercharger" xml:space="preserve">
+    <value>Supercharger</value>
+  </data>
+  <data name="translation.charging.curve.charger.dcFast" xml:space="preserve">
+    <value>DC Fast</value>
+  </data>
+  <data name="translation.charging.curve.charger.homeAc" xml:space="preserve">
+    <value>Home / AC</value>
+  </data>
+  <data name="translation.charging.curve.stale" xml:space="preserve">
+    <value>Stale</value>
+  </data>
   <data name="translation.charging.curve.sessionCount" xml:space="preserve">
     <value>Sessions</value>
   </data>
