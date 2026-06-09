@@ -241,3 +241,4 @@ p2-windows/feature-views/W-0028-StatusHeader.prompt.md
 p2-windows/feature-views/W-0029-EndpointSidebar.prompt.md
 p2-windows/feature-views/W-0027-EntriesTable.prompt.md
 p2-windows/feature-views/W-0030-ChangesPanel.prompt.md
+p2-windows/feature-views/W-0031-FlagsTable.prompt.md
