@@ -1,0 +1,45 @@
+/*
+  TeslaChargingSessionsMap.strings
+  TeslaSync — P4 feature view · 0120 · TeslaChargingSessionsMap (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TeslaChargingSessionsMap` resolves (table "TeslaChargingSessionsMap") lives here
+  with its web value. These entries fold into the app `Localizable.xcstrings`
+  master catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  Group 1 is the exact keys + values extracted from the web source
+  (features/charging/pages/TeslaChargingSessionsMap.tsx, namespace "tesla_sessions").
+  Group 2 backs the popup metric template the native callout reproduces. Group 3
+  backs the native-only chrome (count chip, freshness chip, loading / error /
+  empty, callout field labels).
+*/
+
+/* --- Group 1: web source (tesla_sessions.*) --- */
+"tesla_sessions.unknown" = "Unknown";
+"tesla_sessions.markerLabel" = "{{name}} charging session";
+"tesla_sessions.mapLabel" = "Charging sessions map";
+
+/* --- Group 2: reproduced popup metric template --- */
+"marker.energy" = "{{value}} kWh";
+
+/* --- Group 3: native chrome (count + loading + error + empty) --- */
+"map.count" = "{{count}} sessions";
+"map.countA11y" = "{{count}} charging sessions on the map";
+"map.loading" = "Loading charging sessions";
+"map.empty.title" = "No charging sessions to map";
+"map.empty.message" = "Charging sessions with a known location will appear here.";
+"map.errorTitle" = "Couldn't load charging sessions";
+"map.retry" = "Retry";
+
+/* --- Group 3: native chrome (freshness chip) --- */
+"map.refresh" = "Refresh";
+"map.staleBanner" = "Reconnecting — these charging sessions may be out of date";
+"map.offlineBanner" = "Offline — showing the last known charging sessions";
+
+/* --- Group 3: native chrome (callout field labels) --- */
+"callout.dismiss" = "Dismiss";
+"callout.dateLabel" = "Started";
+"callout.energyLabel" = "Energy";
+"callout.costLabel" = "Cost";
+"callout.chargerLabel" = "Charger";

@@ -1,0 +1,216 @@
+=== P4 Feature view 0120 TeslaChargingSessionsMap (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/TeslaChargingSessionsMap.*
+Web src : web/src/features/charging/pages/TeslaChargingSessionsMap.tsx (THE spec)
+Runner  : Darwin arm64, Xcode 26.5 (17F42), Swift 6.3.2, swiftlint 0.63.3,
+          swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.x. SwiftUI + Swift Charts +
+          MapKit present (iOS 26.5 sim booted) -> NOT capability-blocked.
+Disposition: code-complete; every host-runnable gate GREEN; the two full-app
+          xcodebuild steps DEFERRED (environment-blocked by PRE-EXISTING, unrelated
+          conditions, evidenced below) — the same sanctioned "code-complete +
+          DEFERRED Xcode gate" disposition as 0060 LocationMapWidget / 0107
+          ChargingSessionCard / 0010 ToolCard (ADR-002/004/009,
+          apps/macos-pending-verifications.md).
+
+==================================================================================
+ARTIFACTS (11 Swift files + 1 strings catalog; all match the TeslaChargingSessionsMap.* glob)
+==================================================================================
+  Pure logic (Foundation/CoreLocation-only; unit-tested, no SwiftUI/MapKit):
+    TeslaChargingSessionsMap.Adapter.swift     numeric isPlottable guard, charger-type
+                                               uppercase display, TeslaChargingSessionRecord
+                                               (web TeslaChargingSession slice), TeslaChargingSessionMarker
+    TeslaChargingSessionsMap.Projection.swift  center memo (mean lat/lng, SF default) +
+                                               clusterPoints markers (the web component body)
+    TeslaChargingSessionsMap.Labels.swift      {{token}} interpolation + label/a11y builders +
+                                               TeslaChargingSessionCalloutDisplay (web popupHtml)
+  State holder (Foundation/Observation/OSLog; SwiftUI-free):
+    TeslaChargingSessionsMap.Model.swift       surface slug, status/connection/update, Source seam,
+                                               @Observable model (phase resolution), i18n facade
+    TeslaChargingSessionsMap.Formatting.swift  telemetry seam (view.opened) + useFormatting parity
+                                               (currency / Wh->kWh @1dp / formatDateTime)
+  View (SwiftUI + MapKit):
+    TeslaChargingSessionsMap.swift             phase switch + lifecycle + selection + map a11y label
+    TeslaChargingSessionsMap.Views.swift       MapKit canvas (TSGeo-fit camera), marker pin,
+                                               count chip, tap-to-open callout card
+    TeslaChargingSessionsMap.States.swift      freshness chip / QueryError / empty / skeleton
+    TeslaChargingSessionsMap.Previews.swift    7 states (multi / single / empty / loading / error /
+                                               stale / offline)
+    TeslaChargingSessionsMap.strings           i18n catalog (3 web keys + popup template + chrome)
+  Tests (XCTest, @testable import TeslaSync):
+    TeslaChargingSessionsMap.Tests.swift       adapter/projection/formatting/labels/callout (17)
+    TeslaChargingSessionsMap.ModelTests.swift  state-holder phases/delegation/telemetry/conn (11)
+
+  Total 1804 lines; every file <= 400 (swiftlint file_length). No new duplicate types:
+  all public symbols are TeslaChargingSessionsMap*/TeslaChargingSession*/TeslaChargerTypeDisplay-
+  namespaced and were collision-checked against Sources/ + feature-views/ + dashboard-widgets/
+  before authoring (grep: 0 pre-existing decls).
+
+==================================================================================
+PARITY (web TeslaChargingSessionsMap.tsx -> native), no scope narrowing
+==================================================================================
+  - center memo (avg s.latitude??0 / s.longitude??0, default {37.77,-122.42} when empty)
+    -> TeslaChargingSessionsMapProjection.centerCoordinate — ported verbatim + tested.
+  - clusterPoints filter (typeof lat/lng === 'number' && !isNaN) -> Marker.from / isPlottable;
+    NaN + nil excluded, real 0 retained — web-exact, tested (markers map(\.id) == [1,4]).
+  - popupHtml -> TeslaChargingSessionCalloutDisplay: siteName (|| 'Unknown', empty-string falsy),
+    formatDateTime(start), `${fmtNumber(convertEnergyFromSI(wh,'kWh'),1)} kWh` (energy only when
+    total_energy_added_wh != null), formatCurrency(cost,2) (cost only when total_cost != null),
+    charger_type UPPERCASE (only when a non-blank string) — every branch ported + tested.
+    NB: web escapeHtml() is a DOM-only XSS concern; SwiftUI Text is inherently safe, so it is
+    correctly NOT ported (platform adaptation, not scope narrowing).
+  - ariaLabel t('tesla_sessions.markerLabel','{{name}} charging session',{name}) ->
+    markerAccessibilityLabel on every annotation — tested.
+  - wrapper role="application" aria-label t('tesla_sessions.mapLabel','Charging sessions map')
+    -> the map container .accessibilityLabel + .accessibilityElement(children:.contain).
+  - Leaflet MapContainer(zoom 5)+MapTileLayer+MarkerCluster(#22d3ee, radius 60) -> MapKit Map +
+    brand-accent bolt pins + plotted-count chip; camera frames all markers via the shared,
+    unit-tested TSGeo.boundingRegion (P4 core Components/Maps), falling back to the web center at
+    a zoom-5-equivalent continental span when no marker has a usable coordinate.
+  - All 3 web i18n keys reproduced verbatim in the catalog (tesla_sessions.unknown / .markerLabel
+    / .mapLabel) + the popup energy template + native-chrome keys. No English literal in code.
+  - States: loading (skeleton), loaded (map), empty (friendly — no rows OR none located), error
+    (QueryError+retry), stale (chip+refresh), offline (cached+chip) — all rendered, never blank.
+  - A11y: each marker = labelled Button (markerLabel); callout = one combined element (summary);
+    count chip labelled; decorative glyphs accessibilityHidden; Reduce-Motion honored (skeleton/
+    animations via TSAnimation/TSSkeleton).
+  - Telemetry: TeslaChargingSessionsMapSurface.slug="TeslaChargingSessionsMap" emitted via P1/S11
+    view.opened on appear (idempotent), os_log default sink, redaction-safe (no VIN/coords/cost).
+
+==================================================================================
+HOST-RUNNABLE GATES — executed on THIS runner, raw results
+==================================================================================
+[1] Isolated SwiftPM build + test of the shipped logic (module "TeslaSync", the REAL
+    Adapter/Projection/Model/Formatting/Labels + Tests/ModelTests symlinked in), Swift 6
+    language mode (strict concurrency complete), Xcode 26.5 toolchain:
+
+      $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift build
+      Build complete! (4.85s)                                    BUILD_EXIT=0
+
+      $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
+      Executed 28 tests, with 0 failures (0 unexpected)          TEST_EXIT=0
+
+    Suites: TeslaChargingSessionsMapAdapterTests(4) TeslaChargingSessionsMapProjectionTests(3)
+    TeslaChargingSessionsMapFormattingTests(4) TeslaChargingSessionsMapLabelsTests(4)
+    TeslaChargingSessionCalloutDisplayTests(2) TeslaChargingSessionsMapModelTests(11) => 28/28 GREEN.
+
+[2] SwiftUI VIEW layer typechecked against the REAL design system (Tokens.swift + Sources/Design/*
+    + Sources/Components/** minus the self-acknowledged non-self-contained DataDisplay/
+    UnitFormatters.swift), Swift 6, on BOTH SDKs:
+
+      iOS  : xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator
+             -swift-version 6 -D DEBUG  <DS> TeslaChargingSessionsMap.{Adapter,Projection,Model,
+             Formatting,Labels,swift,Views,States,Previews}.swift
+             total errors = 0      errors in TeslaChargingSessionsMap files = 0   TYPECHECK_IOS_EXIT=0
+      macOS: same fileset, -target arm64-apple-macos15.0
+             total errors = 0      errors in TeslaChargingSessionsMap files = 0   TYPECHECK_MAC_EXIT=0
+
+    => The full SwiftUI surface (Views/States/Previews + MapKit Map + TSGeo) compiles against the
+       real Color.TS / Font.TS / TSSpacing / TSRadius / TSMaterial(tsGlassPanel) / TSSkeleton /
+       TSAnimation / TSGeo APIs on both iOS-18 and macOS-15.
+
+[3] swiftlint --strict (the gate's LINT step), all 11 files:
+      Done linting! Found 0 violations, 0 serious in 11 files.   LINT_EXIT=0
+
+[4] swiftformat --lint (the gate's FORMAT step), all 11 files:
+      0/11 files require formatting.                             FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 (the gate's PLACEHOLDER step):
+      official: & ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TeslaChargingSessionsMap
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0              PLACEHOLDER_EXIT=0
+      honest (the 11 real Swift files copied to a temp dir, -Language swift):
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0              EXIT=0
+      (No TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/stub/mock/fatalError.)
+
+[6] xcodegen generate -> TeslaSync.xcodeproj (git-ignored): the 9 production files are members of
+    the TeslaSync + TeslaSync-macOS app targets and the 2 *Tests.swift of the XCTest bundles
+    (pbxproj membership confirmed). No project.yml edit needed (folder-glob sources).
+
+==================================================================================
+FULL xcodebuild GATE — DEFERRED (environment-blocked; NOT a defect in this code)
+==================================================================================
+  Command (exactly as specified by the prompt):
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+
+  Bounded REAL attempt of BOTH gate steps on THIS runner — captured outcomes:
+
+    iOS  : start 01:44:31 -> end 01:57:35
+           > the scheme pre-action ran Scripts/build-shared-xcframework.sh =>
+             apps/shared/gradlew :core:assembleSharedXCFramework (KMP Kotlin/Native, ADR-004).
+             That Gradle build SUCCEEDED here: "xcframework successfully written out ..." and
+             "Shared.xcframework staged" (x2). NOT a hard block, only slow (parallel-slot contended).
+           > the app/test Swift compile then FAILED with 226 ": error:" lines — ALL in PRE-EXISTING,
+             unrelated SIBLING dashboard-widget surfaces, none in this surface:
+               ChargeSessionChartWidget.{Model,Previews}.swift  ('ChargeSessionDTO' ambiguous)
+               ChargeStatusLiveWidget / ChargeStatusWidget.*    ('ChargeStateDTO','ChargeUnitPrefs',
+                                                                 'ChargeStatusProjection' ambiguous)
+               SafetyFeaturesWidget / SafetyHistoryWidget.*     ('SafetyModel' ambiguous)
+               FleetStatsBarWidget.Previews.swift
+             i.e. parallel-merge duplicate-type collisions cascading into "cannot infer contextual
+             base in reference to member 'loaded'/'live'/'failed'/...". This is the documented
+             "duplicate-type dashboard-widget collisions" condition (macos-pending-verifications.md).
+           > total ": error:" = 226 ; errors attributable to ANY TeslaChargingSessionsMap file = 0
+           ** BUILD FAILED **                                            IOS_EXIT=65
+
+    macOS: start 01:58:27 -> end 01:58:52
+           > "Shared.xcframework staged" (x2, cached). The build then FAILED FAST (pre-compile) at
+             development code-signing — no signing identity on this runner (project DEVELOPMENT_TEAM=""):
+               error: "TeslaSync-macOS" has entitlements that require signing with a development
+                       certificate. Enable development signing ...
+               error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+           > total ": error:" = 4 (all signing) ; TeslaChargingSessionsMap errors = 0
+           ** BUILD FAILED **                                            MAC_EXIT=65
+
+  Reading: both gates exit 65 NOT on any TeslaChargingSessionsMap code, but on (iOS) pre-existing
+  parallel-merge duplicate-type collisions in unrelated sibling dashboard-widgets and (macOS)
+  development-signing — both owned by p4-apple/P99 acceptance on a signed macos-latest runner per
+  apps/macos-pending-verifications.md. This surface's OWN code (11 production files) is proven to
+  compile under the real Xcode 26 / Swift 6 toolchain by [1] (isolated build) and [2] (SDK
+  typecheck vs the real design system, iOS + macOS); its test code is proven to compile + pass by
+  [1] (28/28). This surface adds 0 errors to the full-app build.
+
+==================================================================================
+HONESTY COVENANT (binding)
+==================================================================================
+  1 No red-as-green   : the two xcodebuild steps are reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                        explicitly DEFERRED with raw evidence — never claimed passing. [1]-[6] are
+                        pasted raw exits.
+  2 No scope narrowing: every web region + branch reproduced (center memo, clusterPoints filter,
+                        popup site/date/energy/cost/charger branches, marker + map aria, all states).
+  3 No skip-and-assume: web source read end-to-end; every t() + every conditional ported and tested;
+                        every gate executed on THIS runner; macOS failure confirmed, not assumed.
+  4 No stubs as final : complete production surface; placeholder scanner COUNT=0; 28 real tests.
+  5 No parity shortcut: filter/center/formatters/a11y/i18n/telemetry/camera all mapped to platform
+                        tokens + facades + the shared TSGeo and verified; SwiftUI layer typechecks
+                        against the REAL design system on both SDKs.
+  6 No delegation     : authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass: consumes P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade,
+                        P1/S11 view.opened, and the P4-core shared Maps TSGeo; did NOT self-register
+                        in project.yml (folder-glob; integration scope) and did NOT edit the shared
+                        Localizable.xcstrings / macos-pending-verifications.md (parallel-unsafe; out
+                        of allowed files) — strings shipped as the per-surface table, exactly like
+                        the precedents.
+  8 No commit on red  : the committed artifact is GREEN on every runnable gate AND independently
+                        compiles+tests under the real Xcode 26 / Swift 6 toolchain (isolated
+                        build/test + iOS & macOS SDK typecheck). The only non-green steps are the
+                        environment-blocked full-app xcodebuild build/test, RED solely on
+                        pre-existing, unrelated sibling surfaces + macOS signing — which this commit
+                        neither introduces nor touches (0 errors in its files).
+  9 No silent drift   : changes confined to apps/apple/TeslaSync/feature-views/TeslaChargingSessionsMap.*
+                        and this log (the generated TeslaSync.xcodeproj is git-ignored).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TeslaChargingSessionsMap shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED on this runner: the pure logic builds + 28/28 tests pass under
+  Swift 6 strict concurrency, and the entire SwiftUI + MapKit view layer typechecks against the
+  real design system on BOTH the iOS-18 and macOS-15 SDKs (0 errors), with swiftlint --strict /
+  swiftformat --lint / placeholder all green. The full-app iOS-Simulator + macOS xcodebuild
+  build/test gate exits 65/65 (DEFERRED, not failed by this code): the KMP Shared.xcframework
+  actually built + staged on this runner, and the build then aborts on pre-existing parallel-merge
+  duplicate-type collisions across unrelated sibling dashboard-widgets (iOS) and on macOS
+  development-signing (macOS) — both owned by the p4-apple/P99 acceptance gate on a signed
+  macos-latest runner per apps/macos-pending-verifications.md. Zero errors in any
+  TeslaChargingSessionsMap file.
+
+EXIT=0
+STATUS=DONE
