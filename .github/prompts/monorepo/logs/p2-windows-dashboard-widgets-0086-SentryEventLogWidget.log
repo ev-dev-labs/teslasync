@@ -1,0 +1,101 @@
+=== P2 Dashboard widget 0086 SentryEventLogWidget (Windows) ===
+captured: 2026-06-08T21:11:27.0411472-07:00
+host: headless CI (no interactive desktop / no WinAppDriver)
+
+--- CAPABILITY: WinUI 3 (Windows App SDK) + .NET 10 ---
+.NET SDK: 10.0.300
+Target: net10.0-windows10.0.19041.0 (UseWinUI=true, Microsoft.WindowsAppSDK, MSIX)
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-10\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- TEST (authoritative, headless surface + logic suite): dotnet test apps/windows/TeslaSync.App.Tests ---
+Passed!  - Failed:     0, Passed:  4662, Skipped:     0, Total:  4662, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- TEST (SentryEventLogWidget surface only): --filter SentryEventLogWidgetTests ---
+Passed!  - Failed:     0, Passed:    65, Skipped:     0, Total:    65, Duration: 566 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+--- TEST (full solution, includes WinAppDriver UI-automation harness): dotnet test apps/windows/TeslaSync.sln ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 223 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  4662, Skipped:     0, Total:  4662, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+UITest root cause: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+FULL_SLN_TEST_EXIT=1
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+no formatting changes required for SentryEventLogWidget sources
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/dashboard-widgets/SentryEventLogWidget ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- IMPLEMENTATION (native WinUI 3, parity port of features/dashboard/widgets/SentryEventLogWidget.tsx) ---
+Files (apps/windows/TeslaSync.App/dashboard-widgets/SentryEventLogWidget/):
+  * SentryEventLogWidget.Model.cs      DTO/parse (tri-state bools + string-only door_state), deriveEvent
+                                       classification ladder, SentryEventLogSize.MaxItems (eventLimit
+                                       10/7/4), projection (newest-first sort + cap + subtitle + a11y name),
+                                       result mapper (cache-then-network status preservation), state enum.
+  * SentryEventLogWidget.ViewModel.cs  ISentryEventLogSource port, registry metadata, PII-safe diagnostics,
+                                       SentryEventLogViewModel (6-state holder, INotifyPropertyChanged).
+  * SentryEventLogWidget.Source.cs     repository-backed source: resolves primary/explicit vehicle, reads
+                                       GET /security?vehicle_id={id} (get_api_v1_security) via the shared
+                                       CacheThenNetworkEngine; empty short-circuit when no vehicle.
+  * SentryEventLogWidget.cs            WinUI 3 ContentControl view: Shield + title + freshness/refresh header
+                                       over a scrolling feed; skeleton / error+retry / empty / rows surfaces.
+Test wiring: apps/windows/TeslaSync.App.Tests/Widgets/SentryEventLogWidgetTests.cs (65 tests); the Model/
+  ViewModel/Source are <Compile Include .. Link> into the headless net10.0 test project (the established
+  pattern used by AlertFeed/AuditLog/etc.) so the WinUI-free logic is verified without a UI host.
+
+Parity covered (web -> native):
+  * deriveEvent precedence: door open -> sentry on -> sentry off -> locked -> unlocked -> state updated.
+  * subtitle (wide only): lock + sentry state joined ' · ' or '—'; web hex accents mapped to design tokens.
+  * eventLimit = isWide?10:isTall?7:4 applied as the projection cap (WidgetEventFeed maxItems); vehicle_id
+    scopes the request (sibling convention: ChargeHistory WindowLimit / AlertFeed MaxItems).
+  * all 6 states render (loading skeleton / loaded rows / empty / error+retry / stale / offline) — never hidden.
+  * i18n: widget.sentryEventLog + widget.noSentryEvents resolve from the P1/S10 catalog
+    (apps/shared/i18n/catalog/en.json); derived titles/subtitles route through ILocalizer with the web
+    English as the keyed fallback (the repo convention). No bare English literals.
+  * accessibility: Narrator names on Refresh + error Retry and on every feed row; decorative icons set
+    AccessibilityView=Raw; loading column is a polite live region.
+  * diagnostics: view.opened slug=SentryEventLogWidget (PII-safe), asserted in tests.
+  * registry: id sentry-event-log, category security, default 2x4, min 2x4, max 4x40 (asserted in tests).
+
+--- NOTE: the 147 TeslaSync.App.UITests failures are the generic WinAppDriver UI-automation harness ---
+They are environment-gated (require a WinAppDriver/Appium runner on 127.0.0.1:4723 + a deployed MSIX + an
+  interactive desktop), pre-existing (identical at baseline), and 0 relate to SentryEventLogWidget — grep
+  'SentryEventLog' across TeslaSync.App.UITests = 0 hits, and every one of the 147 throws
+  UiAutomationUnavailableException in WinAppDriverSession.EnsureReady() before any test logic runs.
+  WinUI 3 + .NET 10 ARE present (BUILD and the headless suite pass); only the UI-automation RUNNER is absent
+  on this host. Provisioning it (WinAppDriver install + MSIX deploy + live UIA desktop session) is infeasible
+  on a shared headless runner and out of scope for one widget surface (those tests cover whole-app shell/auth/
+  page-state). This mirrors sibling 0005-AuditLogWidget, which recorded the same 147/FULL_SLN_TEST_EXIT=1 and
+  concluded STATUS=DONE on the headless authoritative suite.
+
+--- SUMMARY ---
+SentryEventLogWidget deliverable COMPLETE and verified on every gate it controls:
+  BUILD_EXIT=0          (full solution; 0 errors under TreatWarningsAsErrors + .NET analyzers)
+  TEST_EXIT=0           (headless TeslaSync.App.Tests 4662/4662, incl. 65 new SentryEventLogWidget tests
+                         covering parse adapter, the deriveEvent ladder, projection/a11y, the result mapper,
+                         the source's vehicle-resolution + request shape + cached->projection, and all 6 states)
+  SURFACE_TEST_EXIT=0   (65/65 SentryEventLogWidget tests)
+  FORMAT_EXIT=0         PLACEHOLDER_EXIT=0
+Environment-only (out of scope): the full-solution dotnet test also runs the WinAppDriver UI-automation
+  harness, unavailable on this runner -> FULL_SLN_TEST_EXIT=1 (147 UITests, 0 relating to this widget;
+  evidence above). Recorded with evidence rather than reported as green.
+
+EXIT=0
+STATUS=DONE
