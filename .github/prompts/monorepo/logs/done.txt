@@ -155,3 +155,4 @@ p2-windows/dashboard-widgets/W-0050-FleetStatsBarWidget.prompt.md
 p2-windows/dashboard-widgets/W-0055-LifetimeStatsWidget.prompt.md
 p2-windows/dashboard-widgets/W-0051-FleetStatsWidget.prompt.md
 p2-windows/dashboard-widgets/W-0053-GeofenceWidget.prompt.md
+p2-windows/dashboard-widgets/W-0054-GuardModeWidget.prompt.md
