@@ -1,0 +1,111 @@
+=== P2 Feature view 0124 KioskOverlay (Windows) ===
+date: 2026-06-09T14:00:07-07:00
+runner: windows  dotnet: 10.0.300  HEAD: 8b79dbeed
+
+--- platform capability probe (ADR-002/ADR-009: WinUI 3 + .NET 10 + Fluent) ---
+net10 sdk present: 10.0.300 [C:\Program Files\dotnet\sdk]
+WindowsDesktop runtime present: 10.0.8 (Microsoft.WindowsDesktop.App)
+WindowsAppSDK pinned: 2.1.3 (>= 1.6 requirement) via apps/windows/Directory.Packages.props
+Capability AVAILABLE -> not BLOCKED. The WinUI 3 app + the new view compile (BUILD_EXIT=0) and the headless
+surface-logic suite is green; only the separate W9-0002 UIAutomation E2E suite cannot run on this headless
+runner (no WinAppDriver/Appium + no deployed MSIX), exactly as for feature-views 0078 / 0093 / 0114.
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    0 Error(s)
+    17 Warning(s)  (all pre-existing in TeslaSync.App.Core: CA1716/CA1720/CA1000/CA1859 — none in the new
+                    KioskOverlay sources; the App project enforces TreatWarningsAsErrors and is clean, incl.
+                    the user32!ShowCursor LibraryImport in KioskOverlay.cs.)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 241 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  9577, Skipped:     0, Total:  9577, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite).
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its
+standard install paths or on PATH.
+  at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() ... WinAppDriverSession.cs:line 75
+  -> WinAppDriver/Appium runner + a deployed MSIX are absent on this headless runner; that suite fails fast by
+     design (never silently skipped) and is gated by the separate W9-0002 prompt, not feature-view 0124.
+
+### STEP 2b: dotnet test --filter Category!=UIAutomation (headless surface-logic gate, the documented W9-0002 separation)
+Passed!  - Failed:     0, Passed:  9577, Skipped:     0, Total:  9577, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+KioskOverlay tests: Passed!  - Failed:     0, Passed:    36, Skipped:     0, Total:    36, Duration: 51 ms - TeslaSync.App.Tests.dll (net10.0)
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+The three new KioskOverlay sources + the new KioskOverlayTests.cs + the repaired test csproj were created with
+CRLF; the repo standard is LF (.editorconfig: end_of_line=lf, insert_final_newline=true,
+trim_trailing_whitespace=true). Normalized all of them to LF (CR=0) before verifying; re-ran:
+format: clean (no changes needed across the whole solution)
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/KioskOverlay
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+### Pre-existing integration-branch repair required to make the gate runnable (documented per Honesty Covenant #9)
+This auto-integration branch HEAD did not build before this change, for reasons unrelated to the surface:
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was corrupt again — several concatenated <Project>
+roots (the build failed at XML load with MSB4025 "An XML comment cannot contain '--'" at line 7: a nested <!--
+inside an already-open comment). The working tree held 6 <Project ...> root openers (lines 1,5,28,30,58,80) and
+5 </Project> closers, duplicated PropertyGroup / PackageReference / ProjectReference / Content groups, and 454
+<Compile> lines for only 442 distinct linked sources (~duplication from repeated bad integration merges).
+Repaired in place exactly as feature-views 0093 / 0114 did before later merges re-introduced the corruption:
+collapsed to ONE valid <Project> root holding the deduplicated UNION of all distinct <Compile> links, the single
+PropertyGroup, the 3 PackageReferences, the 2 ProjectReferences and the 3 distinct Content fixtures, normalized
+to LF, and added the two new KioskOverlay links. No test coverage dropped — 9577 headless tests pass. New
+distinct <Compile> count after repair: 444 (442 prior + KioskOverlay.Model.cs + KioskOverlay.ViewModel.cs).
+
+### Surface deliverable (feature-views/KioskOverlay/)
+KioskOverlay.Model.cs / .ViewModel.cs / .cs + Tests/FeatureViews/KioskOverlayTests.cs (36 test cases). Parity
+port of web features/dashboard/components/KioskOverlay.tsx: the screen-filling, mostly click-through kiosk
+chrome. Every conditional layer of the web source is reproduced and unit-tested:
+  - Dim burn-in layer (web isDimmed): a black rectangle at opacity = 1 - dimLevel (clamped 0..1), hit-test
+    invisible, exactly as the web inline style.
+  - Cursor auto-hide (web isCursorHidden): driven through an idempotent IKioskCursorController; the production
+    controller toggles the Win32 cursor display count (user32!ShowCursor via [LibraryImport]) — the canonical
+    kiosk technique — only on a real transition so the global counter stays balanced, and restores the cursor
+    on Dispose. The controller's transition logic is injected (Action<bool>) so it is unit-tested headlessly
+    without touching Win32.
+  - Clock overlay (web config.showClock + clockPosition): time (web formatTime, "02:30 PM") over weekday+date
+    (web formatDateWithDay, "Mon, Jun 8") anchored to the configured corner, re-projected every second by a
+    DispatcherQueueTimer (web setInterval 1000) and exposed to Narrator.
+  - Rotation dots (web dashboardCount>1 && config.rotateInterval>0): one dot per dashboard, the active one
+    wider, hit-test invisible, decorative to Narrator.
+  - Exit affordance (web onExit): a Subtle TsButton (X glyph + "Exit Kiosk"), top-right, always in the tree and
+    Narrator-reachable, fading in on pointer activity and hiding after 3s (web mousemove/touchstart -> 3000ms);
+    activation raises the ExitRequested event. The fade is an instant opacity change (no storyboard) so the
+    system reduced-motion preference is honoured by construction; font sizes scale with the system text-scale.
+The web component performs no data fetch (it binds only useTranslation + useDateFormat), so — like the
+committed ReferenceLinksSection precedent — there is no loading/error/offline/stale DATA state to fabricate;
+the honest native surface reproduces exactly the conditional overlay layers above. All state flows through the
+shared KioskOverlayViewModel; the view performs no HTTP. view.opened slug=KioskOverlay is emitted once on open
+(PII-safe — no config/time/dashboard value in diagnostics).
+
+### i18n (P1/S10) — every source key resolves in the catalog
+The web source passes three keys to t(); all resolve in Strings/{en,ar,he}/Resources.resw and the shared
+catalog (apps/shared/i18n/catalog), so no catalog edit was needed:
+  translation.kiosk.exit ("Exit kiosk mode"), translation.kiosk.exitLabel ("Exit Kiosk"),
+  translation.dashboard.kiosk ("Kiosk", reused as the accessibility landmark name).
+Keys are fully namespaced (translation.*) so they resolve through the shell ResourceLoader bridge in every
+shipped language, with the English fallback kept for the headless / missing-resource path.
+
+### Platform capability determination
+Enumerated capabilities (ADR-002/ADR-009: WinUI 3 / Windows App SDK 1.6+ / .NET 10 / Fluent) ARE present: the
+WinUI app + view compile (BUILD_EXIT=0) and the headless logic suite is green (HEADLESS_TEST_EXIT=0, 9577 tests
+incl. 36 for this surface). The 147 TeslaSync.App.UITests are Category=UIAutomation E2E tests gated by the
+SEPARATE W9-0002 prompt; they require a WinAppDriver/Appium runner + a deployed MSIX, absent on this headless
+runner, so they fail fast by design. That is the only contributor to WHOLE_SOLUTION_TEST_EXIT=1 and is out of
+scope for feature-view 0124.
+
+### Gate result (feature-view scope: build + headless tests + format + placeholders)
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation suite, evidenced above.)
+
+EXIT=0
+STATUS=DONE
