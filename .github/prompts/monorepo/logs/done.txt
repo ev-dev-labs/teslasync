@@ -246,3 +246,4 @@ p2-windows/feature-views/W-0032-XRayBucketChart.prompt.md
 p2-windows/feature-views/W-0035-XRayHeader.prompt.md
 p2-windows/feature-views/W-0036-LiveSignalsTable.prompt.md
 p2-windows/feature-views/W-0034-XRayFieldsTable.prompt.md
+p2-windows/feature-views/W-0038-RateLimitStatusPanel.prompt.md
