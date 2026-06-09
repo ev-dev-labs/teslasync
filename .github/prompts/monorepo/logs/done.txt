@@ -160,3 +160,4 @@ p2-windows/dashboard-widgets/W-0052-FSMDistributionWidget.prompt.md
 p2-windows/dashboard-widgets/W-0058-LiveSignalsWidget.prompt.md
 p2-windows/dashboard-widgets/W-0057-LiveSignalSparklinesWidget.prompt.md
 p2-windows/dashboard-widgets/W-0064-MileageStatsWidget.prompt.md
+p2-windows/dashboard-widgets/W-0062-MediaHistoryWidget.prompt.md
