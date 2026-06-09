@@ -1,0 +1,65 @@
+/*
+  GasPriceSettings.strings
+  TeslaSync — P4 feature view · 0206 · GasPriceSettings (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `GasPriceSettings` resolves through the facade (table "GasPriceSettings") lives here
+  with its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/settings/components/GasPriceSettings.tsx, namespace "settings"). The second
+  group backs the native chrome: the P4 leaf freshness / loading / empty / error copy,
+  the mutation-failure toasts (web hook `onError` fallbacks), and the descriptive
+  accessibility labels, so the Swift sources hold no English literals.
+
+  The two field-help strings (`help.fields.settings.gasPriceAutoPoll`,
+  `help.fields.settings.gasPricePollInterval`) are resolved against the app's GLOBAL
+  catalog (the native analogue of the web global `t()`), not this per-surface table, so
+  they are intentionally not redefined here — only their English fallback ships inline
+  in `GasPriceSettings.Views.swift`.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"gas.title" = "Gas Price Auto-Poll";
+"gas.subtitle" = "Automatically fetch US average gas prices from EIA";
+"gas.autoPoll" = "Auto-Poll";
+"gas.running" = "Running";
+"gas.stopped" = "Stopped";
+"gas.pollInterval" = "Poll Interval";
+"gas.daily" = "Daily";
+"gas.weekly" = "Weekly";
+"gas.biweekly" = "Bi-weekly";
+"gas.monthly" = "Monthly";
+"gas.currentPrice" = "Current Price";
+"gas.lastPolled" = "Last Polled";
+"gas.never" = "Never";
+"gas.pollNow" = "Poll Now";
+"gas.source" = "Source: U.S. Energy Information Administration";
+"gas.enabled" = "Auto-poll enabled";
+"gas.disabled" = "Auto-poll disabled";
+"gas.intervalUpdated" = "Poll interval updated";
+"gas.pollTriggered" = "Gas price poll triggered";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error --- */
+"gas.live" = "Live";
+"gas.stale" = "Stale";
+"gas.offline" = "Offline";
+"gas.staleBanner" = "Reconnecting — prices may be stale";
+"gas.offlineBanner" = "Offline — showing last known prices";
+"gas.refresh" = "Refresh";
+"gas.loadingA11y" = "Loading gas price settings";
+"gas.noData" = "Gas price tracking isn't configured yet. Click Refresh to fetch from the EIA.";
+"gas.errorTitle" = "Couldn't load gas price settings";
+"gas.retry" = "Retry";
+
+/* --- Native chrome: mutation-failure toasts (web hook onError fallbacks) --- */
+"gas.toggleError" = "Failed to toggle gas price tracking";
+"gas.intervalError" = "Failed to update gas price config";
+"gas.pollError" = "Failed to poll gas prices";
+
+/* --- Native chrome: accessibility --- */
+"gas.helpFor" = "Help for %@";
+"gas.toggleHint" = "Toggle automatic gas-price polling";
