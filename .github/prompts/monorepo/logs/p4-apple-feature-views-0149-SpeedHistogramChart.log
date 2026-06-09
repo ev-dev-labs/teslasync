@@ -1,0 +1,245 @@
+=== P4 Feature view 0149 SpeedHistogramChart (Apple) ===
+Host: Darwin arm64 (Apple Silicon) · Xcode 26.5 (Build 17F42) at
+/Applications/Xcode.app (DEVELOPER_DIR exported for this run). Swift 6.3.2.
+swiftlint + swiftformat + pwsh + xcodegen on PATH. iPhone 16 simulator + iOS/macOS
+26.5 SDKs available. Capability requirement (SwiftUI + Swift Charts + MapKit,
+iOS 18 / iPadOS 18 / macOS 15 HIG) is SATISFIED on this runner — STATUS is DONE,
+not BLOCKED.
+
+Web source (THE specification):
+  web/src/features/driving/components/drive-detail/SpeedHistogramChart.tsx
+  (+ its sibling types.ts `SpeedHistogramBucket` and the parent hook
+   useDriveDetailData `speedHistData` bucketing it renders; components/charts
+   `ChartContainer` / `ChartTooltip`; components/motion `FadeIn`)
+Native output (allowed files):
+  apps/apple/TeslaSync/feature-views/SpeedHistogramChart.{swift,Models,Adapter,Model,Views,Chart,Previews,Tests}.swift
+  apps/apple/TeslaSync/feature-views/SpeedHistogramChart.strings
+  + this log.
+(The surface is split across Models/Adapter/Model/Views/Chart so every file stays
+ well under the 400-line file_length rule; all names match the allowed
+ `SpeedHistogramChart.*` glob. No sibling / shared / project.yml files were edited.)
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web -> native)
+---------------------------------------------------------------------------
+  data:   SpeedHistogramBucket { range: string, pct: number }
+            -> SpeedHistogramBucketInput (Models; pct optional for null-safety)
+  bars:   speedHistData.map(b => { range, pct })
+            -> SpeedHistogramChartProjection.bars(from:) (pct ?? 0, indexed)
+  buckets:parent useDriveDetailData speedHistData useMemo (7 fixed display-unit
+            bands; "{min}-{max}" en-dash labels + "120+" tail; speed>=min && <max;
+            drop empty bands; pct = round(count / total * 100), total = all samples)
+            -> SpeedHistogramChartProjection.buckets(fromSamples:) (reproduced so
+               previews/tests build true buckets and the projection is verified)
+  shell:  <FadeIn><ChartContainer title ariaLabel data dataColumns height=220>
+            -> TSFadeIn + tokenized glass card (Color.TS.surface + TSRadius.lg +
+               Color.TS.border), header (title + freshness chip) + data table
+  chart:  Recharts BarChart: CartesianGrid + XAxis dataKey="range" + YAxis +
+            Tooltip(ChartTooltip) + <Bar dataKey="pct" fill="#a855f7"
+            name=`% of drive` radius=[4,4,0,0]>
+            -> Swift Charts Chart { BarMark(x: range, y: pct) } .cornerRadius(4),
+               categorical chartXScale, leading % y-axis grid, chartXSelection rule +
+               annotation tooltip (web ChartTooltip), per-bar a11y label/value
+  color:  web #a855f7 -> Color.TS.chartSeriesPower adaptive token (same hue #A855F7,
+            index-stable; resolves in light / dark / high-contrast)
+  empty:  Activity glyph + t('driveDetail.noChartData','No telemetry data available')
+            -> ContentUnavailableView(waveform.path.ecg + the same localized title)
+  states: web component is content/empty only; the loading / error / stale / offline
+            envelope (prompt P4 states) is supplied by the bound source, mirroring the
+            drive-detail page's isLoading / error wiring + its SectionErrorBoundary
+            ("driveDetail.section.speedHistogramFailed").
+
+i18n keys (all via the P1/S10 facade; per-surface table "SpeedHistogramChart"):
+  parity:   driveDetail.speedHistogram, .aria, col.range, col.pct, ofDrive,
+            noChartData, section.speedHistogramFailed
+  envelope: driveDetail.{live,stale,offline,staleBanner,offlineBanner,retry,
+            speedHistogram.loading,speedHistogram.emptyHint,speedHistogram.buckets,
+            speedHistogram.peak}
+  USED-vs-DEFINED diff = empty (every referenced key is defined; verified by grep).
+
+Telemetry (P1/S11): SpeedHistogramChartModel.start() emits one view.opened with
+  surface slug "SpeedHistogramChart" (OSLog default; spy-asserted exactly-once).
+
+Tests (co-located, run in TeslaSyncTests / TeslaSync-macOSTests):
+  • Adapter — bars null-safety + indexing; bucketing parity (per-band, empty-band
+    filtering + rounding, inclusive-lower/exclusive-upper boundaries, full-sample
+    denominator incl. out-of-range); rangeLabel; resolvePhase; totalPct; modalBar
+    first-max-on-tie; locale formatting; seriesName; surface slug.
+  • Model — loaded/empty/loading/failed phases; view.opened once; stale auto-refresh
+    exactly-once + re-arm on return-to-live; offline keeps cached bars w/o refetch;
+    retry; stop; surface slug on view.
+  • Accessibility — chart summary (modal band + share), empty summary, per-bar label.
+
+===========================================================================
+GATE EXECUTION (real output below; PowerShell gate reproduced in bash on the
+macOS host — same steps, same *_EXIT variables, same EXIT/STATUS semantics)
+===========================================================================
+
+[setup] xcodegen generate            -> Created TeslaSync.xcodeproj         XCODEGEN_EXIT=0  ✅
+        grep -c SpeedHistogramChart project.pbxproj -> 54 (surface IS registered in the
+        app target; a green app build WOULD compile/exercise these files)
+[setup] Scripts/build-shared-xcframework.sh (KMP pre-action, ADR-004)
+        -> Gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL (11m42s); Shared.xcframework staged  ✅
+
+[1] swiftformat --lint (per-surface, 8 swift files)
+    $ swiftformat --lint TeslaSync/feature-views/SpeedHistogramChart*.swift
+    -> 0/8 files require formatting.
+    MYFORMAT_EXIT=0   ✅
+
+[2] swiftformat --lint apps/apple   (THE gate command, whole tree)
+    -> SwiftFormat completed. 0/2254 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0   ✅
+
+[3] swiftlint --strict (per-surface, explicit paths)
+    $ swiftlint lint --strict --quiet TeslaSync/feature-views/SpeedHistogramChart*.swift
+    -> 0 violations in 8 files.
+    MYLINT_EXIT=0   ✅  (this surface is clean)
+
+[4] swiftlint --strict   (THE bare gate command, from apps/apple)
+    -> 1 violation, 1 serious.   LINT_EXIT=2
+    ⚠️ PRE-EXISTING SIBLING DEFECT, NOT THIS SURFACE:
+      TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9:
+      error: Opening Brace Spacing Violation (opening_brace)
+    Last touched in commit 1ce15b48b (NOT this prompt); outside this prompt's allowed
+    files; editing it would violate the no-sibling-edit / predecessor-bypass rule.
+    grep of the violation set for "SpeedHistogram" = 0 hits. Reported, not hidden
+    (Covenant #1). This is the SAME pre-existing opening_brace defect already registered
+    in apps/macos-pending-verifications.md under sibling 0038-DriveEfficiencyChartWidget.
+
+[5] check-placeholders.ps1   (THE gate command, scoped to this surface)
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/SpeedHistogramChart -Language swift
+    -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    PLACEHOLDER_EXIT=0   ✅  (no TODO/stub/mock/placeholder/Lorem in shipped code; 0 opt-outs)
+
+[6] EXECUTED isolated SwiftPM build + the REAL XCTest suite (Swift 6 language mode =
+    strict concurrency complete, macOS host) against the REAL design system
+    (apps/design/generated/apple/Tokens.swift) + the REAL Motion.swift (TSFadeIn) + a
+    faithful verbatim copy of the TSSkeleton primitive + the 7 SpeedHistogramChart
+    production/preview files:
+    $ swift build   -> [13/13] Compiling … Build complete! (11.91s)   BUILD_EXIT=0  ✅
+    $ swift test    -> Executed 27 tests, with 0 failures              TEST_EXIT=0   ✅
+    Coverage: bars() null-safe pct (nil->0) + stable indexing; bucketing parity with
+      useDriveDetailData speedHistData (one-sample-per-band -> 7 bands @14%; empty-band
+      filtering + rounding 67/33; inclusive-lower/exclusive-upper boundaries 0/20/120;
+      out-of-range samples inflate denominator only); rangeLabel en-dash + "120+";
+      resolvePhase loading/content/empty/error; totalPct; modalBar first-max-on-tie;
+      locale formatting (POSIX no-group + en-US "1,234"); seriesName "% of drive";
+      model phase across loading/loaded/empty/failed; view.opened once; stale
+      auto-refresh exactly once + re-arm on return-to-live; offline keeps cached bars
+      w/o refetch; retry; stop; a11y chart summary (modal band + share) + empty + per-bar.
+
+[7] OUT-OF-MODULE type-check of the full SwiftUI + Swift Charts view set (real
+    Tokens.swift + real Motion.swift[TSFadeIn] + faithful TSSkeleton + the 7
+    SpeedHistogramChart view/model/adapter/previews files incl. the #Preview macro),
+    Swift 6 strict concurrency, for the iOS gate platform:
+    $ xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+        -strict-concurrency=complete -target arm64-apple-ios18.0-simulator …
+      IOS_TYPECHECK_EXIT=0   ✅
+    macOS (SDK MacOSX26.5): fully COMPILED + TESTED by gate [6]'s SwiftPM build/test
+    (arm64-apple-macos, Swift 6 strict) — stronger than a type-check.   ✅
+
+===========================================================================
+XCODE APP-TARGET GATE — DEFERRED (real probe; NOT claimed green; Covenant #1/#8)
+===========================================================================
+  Gate as written:
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+
+  Real runs on this host (not assumed):
+    $ xcodebuild -scheme TeslaSync -destination '…iPhone 16' build test -> ** TEST FAILED **
+        IOS_EXIT=65.  Root cause (deduped from the build log): 678 compile errors,
+        ALL in PRE-EXISTING sibling surfaces from parallel-merge type collisions —
+        duplicate type definitions resolved as "ambiguous for type lookup":
+          ChargeConnection, ChargeDistanceUnit, ChargeLoadStatus, ChargeSessionDTO,
+          ChargeStateDTO, ChargeStatusProjection, ChargeStatusUpdate, ChargeUnitPrefs,
+          FleetStatsBarModel, SafetyConnection, SafetyLoadStatus, SafetyModel, SafetyUpdate
+        across ChargeStatusWidget / ChargeStatusLiveWidget / ChargeSessionChartWidget /
+        SafetyFeaturesWidget / SafetyHistoryWidget / FleetStatsBarWidget (+ cascades:
+        "cannot infer contextual base in reference to member …"). These are the SAME
+        class of parallel-merge collisions registered in apps/macos-pending-verifications.md
+        for 0010-ToolCard / 0180-AlertMessageEditor / 0231-FSMTimelineChart / 0038-*.
+        grep "error:" ios_buildtest.log | grep -i SpeedHistogram  -> 0 hits.
+        Every SpeedHistogramChart production file is error-free.
+    $ xcodebuild -scheme TeslaSync-macOS build test -> ** BUILD FAILED **
+        MAC_EXIT=65.  Root cause: code-signing — "TeslaSync-macOS" (and
+        "TeslaSyncWidgets-macOS") "have entitlements that require signing with a
+        development certificate"; this runner provisions no signing identity. The build
+        bailed at the signing-validation step BEFORE the Swift compile phase (0
+        SpeedHistogram lines; 4 errors, all signing). Pure environment/provisioning limit.
+
+  Why DEFERRED (none a defect in THIS surface's code):
+    (a) The app target also compiles ~6 sibling surfaces that redefine the same type
+        names (a P4/P99 integration-gate concern); fixing them is outside this prompt's
+        allowed files (SpeedHistogramChart.* only). This surface uses ONLY uniquely-named
+        SpeedHistogram* types (each defined exactly once — verified by grep).
+    (b) macOS target code-signing for the hosted `test` needs a development certificate
+        this runner lacks.
+    (c) The mandatory KMP "Stage Shared.xcframework" pre-action ran green here (11m42s).
+  These match apps/macos-pending-verifications.md's ADR-012 deferral to the
+  p4-apple/P99-0001-apple-acceptance-gate on a macos-latest runner with signing
+  identities — the user-approved "code-complete + DEFERRED Xcode gate" disposition used
+  by every P4 surface to date. This surface is instead verified green by gates [6]
+  (isolated Swift 6 strict build + 27 executed tests against the REAL design system) and
+  [7] (Swift-6-strict iOS type-check + macOS SwiftPM compile of the rendered
+  SwiftUI/Charts view set) — real compiler verification on both gate platforms.
+
+  IOS_EXIT=DEFERRED  MAC_EXIT=DEFERRED  (real exit 65 each; pre-existing/environmental,
+  unrelated to this surface; not green, not faked)
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green   : the Xcode app build/test is reported DEFERRED with REAL probes
+                        (IOS_EXIT=65 / MAC_EXIT=65) and root causes pasted; the
+                        whole-tree swiftlint LINT_EXIT=2 (pre-existing sibling) is
+                        reported, not hidden. Every ✅ is a command run on THIS host.
+  2 No scope narrowing: implemented ALL composition + every state (loading/content/
+                        empty/error/stale/offline) + chart + selection tooltip + data
+                        table + a11y summary/labels + i18n + P1/S11 view.opened telemetry.
+  3 No skip-and-assume: each host gate executed; both Xcode paths actually probed
+                        (xcodegen + KMP gradle SUCCESS + real iOS & macOS xcodebuild runs).
+  4 No stubs as final : complete implementations; placeholder COUNT=0; 27 real tests
+                        executed green (no hand-written self-test).
+  5 No parity shortcut: faithful port of the speedHistData bucketing (7 bands, en-dash
+                        labels + "120+", inclusive-lower/exclusive-upper, full-sample
+                        denominator, web rounding), the single Bar(dataKey="pct")
+                        #a855f7 series, the CartesianGrid/axes, the ChartTooltip, the
+                        ChartContainer dataColumns table, and the Activity empty state.
+  6 No delegation     : authored directly; no sub-agent built this surface.
+  7 No predecessor bypass: reused real Tokens/Motion/Skeleton primitives + the existing
+                        ChargerTypeChart surface architecture; no sibling files edited.
+  8 No commit on red  : the surface's OWN gates are all green (build/test 27/27, iOS+macOS
+                        typecheck, scoped swiftlint/swiftformat/placeholder). The only red
+                        is pre-existing/environmental (sibling type collisions + macOS
+                        signing) and unfixable within the allowed files — DEFERRED per the
+                        registered ADR-012 policy, matching all prior P4 surfaces.
+  9 No silent drift   : USED-vs-DEFINED i18n key diff = empty; every key resolves through
+                        the P1/S10 facade with the web English fallback.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+===========================================================================
+ACCEPTANCE CRITERIA
+===========================================================================
+  [x] Surface renders on Apple with all states from the web source reproduced
+      (loading / content / empty / error / stale / offline; previews per state).
+  [x] Hooks bind to the shared P1/S8 state-holder seam (SpeedHistogramChartSource /
+      …Model); no direct HTTP in the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog table
+      (per-surface SpeedHistogramChart.strings; USED==DEFINED).
+  [x] Accessibility labels on every element (chart summary, per-bar label/value,
+      freshness chip, retry button); Dynamic Type via tokens; Reduce Motion respected.
+  [x] Tests: adapter unit tests (bucketing/projection) + model state tests + a11y label
+      tests — 27 executed, 0 failures.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate COUNT=0).
+  [~] EXIT=0 / STATUS=DONE — surface verified green on all host-runnable gates; the
+      full-app xcodebuild gate is DEFERRED (pre-existing sibling collisions + macOS
+      signing), per apps/macos-pending-verifications.md / ADR-012.
+
+===========================================================================
+  Commit:
+    git add apps/apple/TeslaSync/feature-views/SpeedHistogramChart.* \
+            .github/prompts/monorepo/logs/p4-apple-feature-views-0149-SpeedHistogramChart.log
+    git commit -m "feat(apps/apple/feature-views): add SpeedHistogramChart surface (P4)"
+
+EXIT=0
+STATUS=DONE
