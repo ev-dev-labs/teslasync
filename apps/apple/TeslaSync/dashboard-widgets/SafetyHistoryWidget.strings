@@ -1,0 +1,71 @@
+/*
+  SafetyHistoryWidget.strings
+  TeslaSync — P4 dashboard widget · 0084 · SafetyHistoryWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SafetyHistoryWidget` resolves (table "SafetyHistoryWidget") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/dashboard/widgets/SafetyHistoryWidget.tsx) and the dashboard i18n catalog
+  (web/src/i18n/en.json): the widget title, the stat labels, the trend words, and the
+  empty-feed message. The web `classifySnapshot` titles + `buildSubtitle` fragments +
+  `typeLabels` are hardcoded literals in the web source; the native port routes them
+  through this table (with the exact web English as the fallback value) so the Swift
+  view holds no literals. The remaining keys back the native-only chrome (freshness
+  chip, refresh/retry/empty/error copy, accessibility).
+*/
+
+/* --- Keys from the web source / dashboard catalog (parity) --- */
+"widget.safetyHistory" = "Safety History";
+"widget.safetyHistory.description" = "ADAS event timeline: collision warnings, AEB, lane departures, disengagements";
+"widget.safetyEvents" = "events";
+"widget.noSafetyEvents" = "No safety events";
+"widget.safetyTotal" = "Events (30d)";
+"widget.safetyMostCommon" = "Most Common";
+"widget.safetyTrend" = "Trend";
+"widget.trendUp" = "Increasing";
+"widget.trendDown" = "Decreasing";
+"widget.trendFlat" = "Stable";
+
+/* --- Event titles (web `classifySnapshot` `title`) --- */
+"widget.safetyAebTitle" = "AEB Activation";
+"widget.safetyFcwTitle" = "FCW: %@";
+"widget.safetyLaneTitle" = "Lane Departure: %@";
+"widget.safetyBswTitle" = "Blind Spot Warning";
+"widget.safetyEldaTitle" = "Emergency Lane Departure Avoidance";
+"widget.safetyGeneralTitle" = "Safety State Update";
+
+/* --- Most-common type labels (web `typeLabels`) --- */
+"widget.safetyTypeAeb" = "AEB";
+"widget.safetyTypeFcw" = "FCW";
+"widget.safetyTypeLane" = "Lane Departure";
+"widget.safetyTypeBsw" = "Blind Spot";
+"widget.safetyTypeElda" = "Emergency Lane";
+"widget.safetyTypeGeneral" = "General";
+
+/* --- Subtitle fragments (web `buildSubtitle`) --- */
+"widget.safetySpeedLimit" = "Speed Limit: %@";
+"widget.safetyFollow" = "Follow: %@";
+"widget.safetyPinToDrive" = "PIN to Drive";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.safety30dWindow" = "(30d)";
+"widget.open" = "Open";
+"widget.safetyLive" = "Live";
+"widget.safetyStale" = "Stale";
+"widget.safetyOffline" = "Offline";
+"widget.safetyRefresh" = "Refresh";
+"widget.safetyRetry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.safetyLoading" = "Loading safety events";
+"widget.safetyEmptyHint" = "Safety events will appear once your vehicle reports an ADAS event.";
+"widget.safetyErrorTitle" = "Couldn't load safety events";
+"widget.safetyOfflineBanner" = "Offline — showing last known events";
+"widget.safetyStaleBanner" = "Reconnecting — events may be stale";
+
+/* --- Accessibility --- */
+"widget.safetyOpenA11y" = "Open the safety page";
