@@ -7,7 +7,7 @@ using TeslaSync.App.Core.Data.Net;
 using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Widgets;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.SafetyFeatures;
 
 /// <summary>
 /// The repository-backed <see cref="ISafetyFeaturesSource"/> — the native data adapter for the Safety Features
