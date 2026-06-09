@@ -1,17 +1,21 @@
 /*
   LoadingSkeleton.strings
-  TeslaSync — P4 feature view · 0088 · LoadingSkeleton (Apple)
+  TeslaSync — P4 feature view · LoadingSkeleton (Apple)
 
   The P1/S10 i18n catalog contribution for this surface (table
-  "LoadingSkeleton"). The web source
-  (features/charging/components/charging-curve/LoadingSkeleton.tsx) is an
-  anonymous skeleton with no t() calls, so the only string is the native
-  VoiceOver label the Apple HIG busy/loading-state contract requires — the
-  surface is announced as one busy element rather than reading every decorative
-  shimmer block. It folds into the app Localizable.xcstrings master catalog at
-  integration time; it is kept in a per-surface table so each parallel surface
-  prompt owns its own strings without editing the shared catalog.
+  "LoadingSkeleton"). Two web sources map to this native file
+  (charging-curve/LoadingSkeleton.tsx and cost-analysis/LoadingSkeleton.tsx);
+  both are anonymous skeletons with no t() calls, so the only strings are the
+  native VoiceOver labels the Apple HIG busy/loading-state contract requires —
+  one per layout, announcing the whole surface as a single busy element rather
+  than reading every decorative shimmer block. They fold into the app
+  Localizable.xcstrings master catalog at integration time; kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
 */
 
 /* VoiceOver label announcing the charging-curve loading skeleton as one busy element. */
 "chargingCurve.loading.accessibilityLabel" = "Loading charging analysis";
+
+/* VoiceOver label announcing the cost-analysis loading skeleton as one busy element. */
+"costAnalysis.loading.accessibilityLabel" = "Loading cost analysis";

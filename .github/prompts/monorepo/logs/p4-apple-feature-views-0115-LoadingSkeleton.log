@@ -1,0 +1,162 @@
+=== P4 Feature view 0115 LoadingSkeleton (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42)
+  Toolchain          : Apple Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 ·
+                       pwsh 7.6.2 · OpenJDK 17.0.19 · Kotlin/Native prebuilt 2.4.0 (cached in ~/.konan)
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, booted) present · macOS 15 SDK present ·
+                       iPhoneSimulator SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 10m37s; debug + release
+                       XCFrameworks written and staged to apps/apple/Frameworks/Shared.xcframework ✓).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators + KMP toolchain all present
+                       → NOT capability-BLOCKED. Every gate in this prompt was EXECUTED on this runner; the
+                       full-app xcodebuild reds below are pre-existing repo-wide conditions, not capability gaps.
+
+WEB SOURCE (the specification)
+  web/src/features/charging/components/cost-analysis/LoadingSkeleton.tsx — a PURE presentational skeleton
+  (named export), rendered by the cost-analysis view while its query isLoading. It imports only GlassPanel
+  (@/components/ui), Skeleton (@/components/feedback), FadeIn (@/components/motion) and renders FOUR stacked
+  regions (root `space-y-6 p-6`), block-for-block (Tailwind 1 unit = 4 pt; Skeleton width "Npx"/"P%"/default-full,
+  `rounded` → pill):
+    1. header   flex-col gap-4 sm:flex-row sm:items-center sm:justify-between :
+                  left: Skeleton 220×28 ; Skeleton 340×16 (mt-2)
+                  right: Skeleton 200×36 rounded (pill button)
+    2. cards    grid-cols-2 lg:3 xl:6 gap-4 : 6× GlassPanel.p-4 { h14 w-60% ; h24 w-80% mt-2 ; h12 w-40% mt-1 }
+    3. charts   grid-cols-1 lg:2 gap-4 : 2× GlassPanel.p-4 { h16 w-40% ; h200 w-full mt-4 }
+    4. table    GlassPanel.p-4 { h16 w-30% ; mt-4 space-y-2 → 5× h32 w-full }
+  Data sources: NONE (prompt records "(none — pure presentational component)"). No t() calls — the surface is
+  anonymous. No loading/empty/error/stale/offline branches exist in the source: the skeleton IS the loading
+  affordance; the parent cost-analysis surface swaps it out for content/empty/error once the query resolves.
+  Reproduced 1:1 (covenant pt 2). The one native-only string is the VoiceOver busy label the Apple HIG states
+  contract requires.
+
+FILENAME COLLISION (resolved without predecessor regression — covenant pt 7)
+  TWO web sources map to the SAME native file apps/apple/TeslaSync/feature-views/LoadingSkeleton.*:
+    • charging-curve/LoadingSkeleton.tsx  → P4·0088 (already shipped; log p4-apple-feature-views-0088-…)
+    • cost-analysis/LoadingSkeleton.tsx   → P4·0115 (THIS prompt)
+  The 0088 surface was already layout-parameterized (LoadingSkeleton(layout: .chargingCurve)), i.e. authored
+  for exactly this extension. Resolution: generalize the surface to a region-array projection model that renders
+  BOTH layouts from one engine (DRY / Open-Closed). `.chargingCurve` is preserved 1:1 (same regions, blocks,
+  breakpoints, spacing tokens, VoiceOver label) and STILL asserted block-for-block by its tests; `.costAnalysis`
+  is added 1:1. No 0088 behaviour is dropped or drifted; the default `LoadingSkeleton()` still resolves to
+  `.chargingCurve` so existing call sites are untouched.
+
+ARTIFACTS SHIPPED  (allowed scope: apps/apple/TeslaSync/feature-views/LoadingSkeleton.* + this log)
+  LoadingSkeleton.Model.swift      — region-array model: SkeletonWidth (points/fraction/fill), SkeletonShape
+                                     (rounded/pill), SkeletonBlock (+ .fixed/.fraction/.fill factories),
+                                     SkeletonHeader/StatCell/StatGrid/ChartPanel/ChartGrid/Table, SkeletonGridGap,
+                                     LoadingSkeletonRegion (+ typed accessors), ResponsiveColumns, LoadingSkeletonLayout,
+                                     LoadingSkeletonSurface (slug + reportOpen), LSStrings i18n facade + StringsKey
+  LoadingSkeleton.Layouts.swift    — the two static projections: .chargingCurve (P4·0088, 7 regions) and
+                                     .costAnalysis (P4·0115, 4 regions), each 1:1 with its web source
+  LoadingSkeleton.Telemetry.swift  — LoadingSkeletonTelemetry seam + OSLogLoadingSkeletonTelemetry
+                                     (redaction-safe os_log "view.opened", P1/S11)
+  LoadingSkeleton.Views.swift      — SkeletonBlockView (fixed/fraction/fill + pill), FractionalWidthSkeleton
+                                     (GeometryReader % width), LoadingSkeletonHeaderView (optional trailing pill,
+                                     size-class row/column), StatCell / ChartPanel / Table / Grid / RegionView
+  LoadingSkeleton.swift            — LoadingSkeleton SwiftUI view: walks the layout regions, resolves grid columns
+                                     from horizontalSizeClass (#if os(iOS), macOS = regular), VoiceOver busy element,
+                                     .task → view.opened
+  LoadingSkeleton.Previews.swift   — #if DEBUG previews: Cost Analysis Dark/Light/DynamicType-a11y3 + Charging
+                                     Curve Dark (no-op telemetry sink)
+  LoadingSkeleton.strings          — "LoadingSkeleton" table: chargingCurve.loading.accessibilityLabel +
+                                     costAnalysis.loading.accessibilityLabel
+  LoadingSkeleton.Tests.swift      — 30 XCTest cases (both projections block-for-block + responsive columns +
+                                     block primitives + telemetry + i18n)
+  Generated TeslaSync.xcodeproj wires all 8 files into the TeslaSync (iOS) + TeslaSync-macOS app targets and the
+  Tests file into the XCTest bundles (48 pbxproj refs). The new .Layouts.swift is picked up automatically by the
+  feature-views source glob; no project.yml / .swiftlint.yml / Localizable.xcstrings edits were required.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel              → TSGlassPanel (Sources/Components/UI/Cards.swift) — system material + glass border
+  Skeleton (h/w/rounded)  → TSSkeleton (Sources/Components/Feedback/Skeletons.swift) — shimmer that respects
+                            Reduce Motion; web "Npx"→points, "P%"→GeometryReader fraction, w-full→fill,
+                            rounded→TSRadius.pill, mt-*→topInset
+  space-y-6 / gap-4/6     → TSSpacing tokens (root xl · gap-4 lg · gap-6 xl) — native rhythm; per-region gaps
+                            carried as the semantic SkeletonGridGap and resolved by the view
+  header flex justify-between → size-class HStack(.center)+Spacer (regular) / VStack (compact); trailing pill optional
+  cols-2 lg:3 xl:6 etc.   → ResponsiveColumns(compact, regular) resolved by horizontalSizeClass
+                            (cards 2/6 · charts 1/2 ; 0088 summary 2/6 · comparison 1/2 · footer 2/4)
+  i18n                    : zero English literals in code; the per-layout VoiceOver labels resolve via LSStrings
+                            (NSLocalizedString, table "LoadingSkeleton") with the English values in .strings
+  a11y                    : whole surface is ONE VoiceOver element (.accessibilityElement(children:.ignore) +
+                            per-layout label + .updatesFrequently); decorative shimmer blocks are
+                            .accessibilityHidden (in TSSkeleton). No interactive elements exist in the source.
+  telemetry               : view.opened surface="LoadingSkeleton" via LoadingSkeletonSurface.reportOpen (P1/S11),
+                            default OSLog sink; previews use a no-op sink.
+  states                  : the surface is itself the LOADING affordance; empty/error/stale/offline belong to the
+                            parent (web Data sources = none). Documented, reproduced 1:1 — no scope narrowing.
+
+GATES
+  [GREEN]    swiftformat --lint  (LoadingSkeleton scope, 7 swift files)   : 0/7 require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (LoadingSkeleton scope, 7 swift files)   : 0 violations, 0 serious   (LINT_EXIT=0)
+             (Model.swift split into Model + Layouts to satisfy the 400-line file_length rule.)
+  [GREEN]    check-placeholders.ps1 (per real shipped .swift file)        : PLACEHOLDER_COUNT=0       (PLACEHOLDER_EXIT=0)
+             (scanner -SelfTest PASS; the .strings file is correctly out of code-extension scope)
+  [GREEN]    LoadingSkeleton build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             the app's own setting), compiling the EXACT shipped LoadingSkeleton.* sources (incl. all #if DEBUG
+             previews) against the REAL repo design system (Tokens · TSMaterial · Typography · Cards · Badges ·
+             Buttons · Skeletons):
+                 Build complete!  ·  Executed 30 tests, with 0 failures                              (SWIFT_TEST_EXIT=0)
+  [GREEN]    iOS 18 SDK typecheck — xcrun --sdk iphonesimulator swiftc -typecheck -target
+             arm64-apple-ios18.0-simulator -swift-version 6 (surface + design system) — exercises the
+             #if os(iOS) horizontalSizeClass branch the macOS host build does not compile : IOS_TYPECHECK_EXIT=0
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  Both xcodebuild gates were EXECUTED on this runner (Shared.xcframework staged first; iOS preAction confirmed
+  "✓ Shared.xcframework staged"). Both are RED for PRE-EXISTING, repo-wide reasons that this commit neither
+  introduces nor touches:
+    • iOS (IOS_EXIT=65): 226 compile errors in UNRELATED peer surfaces — "Cannot infer contextual base in
+      reference to member 'loaded'/'live'/'loading'/'failed'/'offline'/'stale'", "'SafetyModel'/'SafetyUpdate'
+      ambiguous for type lookup", "Cannot use explicit 'return' in a ViewBuilder" across LegacyAlertStudioRedirect.*,
+      LegacyNotificationsRedirect.*, LifetimeSummary.*, ChargeStatusWidget.*, ChargeStatusLiveWidget.*,
+      SafetyFeaturesWidget.*, SafetyHistoryWidget.*, FleetStatsBarWidget.*, LineCharts.swift, Lists.swift — the
+      same parallel-merge collisions tracked in apps/macos-pending-verifications.md. ZERO LoadingSkeleton errors.
+    • macOS (MAC_EXIT=65): 8 development-signing errors — TeslaSync-macOS / TeslaSyncWidgets-macOS "have
+      entitlements that require signing with a development certificate" (project.yml DEVELOPMENT_TEAM=""; no
+      identity on this runner). ZERO LoadingSkeleton errors.
+  Grep proof: `grep "error:" ios-gate.log | grep -i LoadingSkeleton` → 0 matches; same for mac-gate.log. The
+  shipped surface is INDEPENDENTLY proven to compile + test green (SwiftPM 30/30 + iOS 18 SDK typecheck). These
+  two full-app gates are the artifact apps/macos-pending-verifications.md defers to
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner — the sanctioned disposition used by
+  every P4 surface to date (cf. 0010 ToolCard, 0180 AlertMessageEditor, 0231 FSMTimelineChart). Not edited here
+  (out of this prompt's allowed-files scope); recorded for the P99 gate to fold in.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with its real exits + root causes — never reported as passing.
+  2  No scope narrowing : every web region/block/breakpoint reproduced 1:1 (4 regions: header+pill, 6×3-line card
+                          grid, 2-up chart grid, 5-row table); the source's no-data/no-branch nature documented.
+  3  No skip-and-assume : web source read end-to-end; every dimension/%/mt-/grid asserted in tests; every gate
+                          EXECUTED on THIS runner with raw exits pasted (incl. the 10m37s xcframework + both xcodebuilds).
+  4  No stubs as final  : complete production surface (8 files) + 30 real tests; placeholder scanner = 0.
+  5  No parity shortcut : material/skeleton/%-width/pill/columns/i18n/a11y/telemetry all mapped to platform tokens.
+  6  No delegation      : authored directly; delegation FORBIDDEN; none used.
+  7  No predecessor bypass: 0088 charging-curve preserved 1:1 (regions/blocks/breakpoints/label) and still tested;
+                          P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened, P4 core design system all consumed.
+  8  No commit on red   : the COMMITTED artifact (LoadingSkeleton.* + this log) is GREEN on every in-scope gate AND
+                          on a real isolated Swift 6 strict-concurrency build+test (30/30) + iOS 18 SDK typecheck;
+                          the deferred full-app gate is RED only on pre-existing repo-wide conditions (peer-surface
+                          parallel-merge collisions; macOS dev-signing) which this commit neither introduces nor touches.
+  9  No silent drift    : changes confined to feature-views/LoadingSkeleton.{Model,Layouts,Telemetry,Views,swift,
+                          Previews,strings,Tests} + this log. The generated TeslaSync.xcodeproj + DerivedData +
+                          staged Frameworks/Shared.xcframework are git-ignored build artifacts and are NOT committed.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic cost-analysis LoadingSkeleton shipped at parity with the web source by
+  generalizing the shared (filename-colliding) surface into one region-array engine that renders BOTH the
+  cost-analysis (P4·0115) and the preserved charging-curve (P4·0088) layouts. INDEPENDENTLY VERIFIED: it compiles
+  under the app's own Swift 6 strict-concurrency rules against the real design system, its 30 tests pass, it
+  typechecks against the iOS 18 simulator SDK, and lint/format/placeholder are all green. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the
+  pre-existing repo-wide peer-surface parallel-merge collisions and macOS development-signing — both owned by
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE
