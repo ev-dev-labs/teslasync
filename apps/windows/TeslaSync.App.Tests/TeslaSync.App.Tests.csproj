@@ -482,7 +482,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    P2/W2-0001 — headless unit tests for the UI-thread-free logic models (Model / Source / ViewModel).
+    P2/W2-0001 - headless unit tests for the UI-thread-free logic models (Model / Source / ViewModel).
     Targets plain net10.0 so `dotnet test` runs without a WinUI/UI-thread host. The WinUI app targets a
     WinUI TFM, so its testable sources are <Compile>-linked here rather than project-referenced; the views
     (*.cs) themselves are exercised by the app build.
@@ -539,6 +539,11 @@
     load with MSB4025. Consolidated again here into a single valid root: the deduplicated union of every
     previously linked source is preserved (so every existing test still compiles) plus the charging
     HeroGauges (charging-list) surface logic links.
+    Repair note (P2 feature-views/0102 EfficiencyPanel): an integration merge had again left this file with
+    multiple concatenated <Project> roots and duplicated <Compile> items that failed XML load (MSB4025).
+    The duplicate roots were removed and every distinct linked source consolidated below as a single
+    deduplicated union (preserving every previously linked widget/feature-view source), plus the new
+    EfficiencyPanel surface. Keep this as ONE <Project> root with a single Compile ItemGroup.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -568,6 +573,7 @@
   <!-- Test fixtures / manifests copied next to the test assembly. -->
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget card template). -->
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
+  <!-- Test data + manifests copied next to the test assembly (golden SI vectors, MSIX manifest, widget template). -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -906,6 +912,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPanel.Model.cs" Link="FeatureViews\EfficiencyPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPanel.Source.cs" Link="FeatureViews\EfficiencyPanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPanel.ViewModel.cs" Link="FeatureViews\EfficiencyPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.Model.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.ViewModel.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EntriesTable\EntriesTable.Model.cs" Link="FeatureViews\EntriesTable\EntriesTable.Model.cs" />
