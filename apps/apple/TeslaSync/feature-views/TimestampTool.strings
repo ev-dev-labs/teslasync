@@ -1,0 +1,43 @@
+/*
+  TimestampTool.strings
+  TeslaSync — P4 feature view · 0021 · TimestampTool (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TimestampTool` resolves (table "TimestampTool") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/admin/components/devtools/tools/TimestampTool.tsx). The web en.json
+  carries Timestamp / Now / Iso / Local / Relative / Unix verbatim and has NO entry
+  for "Timestamp Desc" / "Unix Timestamp" / "Iso Timestamp", so i18next renders
+  those keys as-is — the native fallbacks reproduce that exactly. The remaining
+  keys back native-only chrome: the empty/invalid field hints, the relative-time
+  unit formats (the web hardcodes these in getRelativeTime; native keeps the
+  identical English default but stays translatable), and accessibility.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Timestamp" = "Timestamp";
+"Timestamp Desc" = "Timestamp Desc";
+"Now" = "Now";
+"Unix Timestamp" = "Unix Timestamp";
+"Iso" = "Iso";
+"Local" = "Local";
+"Relative" = "Relative";
+"Iso Timestamp" = "Iso Timestamp";
+"Unix" = "Unix";
+
+/* --- Native chrome: relative-time unit formats (web getRelativeTime parity) --- */
+"Timestamp Rel Seconds" = "%@s ago";
+"Timestamp Rel Minutes" = "%@m ago";
+"Timestamp Rel Hours" = "%@h ago";
+"Timestamp Rel Days" = "%@d ago";
+
+/* --- Native chrome: empty / invalid field hints --- */
+"Timestamp Unix Empty Hint" = "Enter Unix epoch seconds (for example, 1700000000) to convert to ISO and local time.";
+"Timestamp Unix Invalid Hint" = "That is not a readable Unix timestamp — enter whole epoch seconds or milliseconds.";
+"Timestamp Iso Empty Hint" = "Enter an ISO-8601 string (for example, 2024-01-01T00:00:00Z) to convert to Unix time.";
+"Timestamp Iso Invalid Hint" = "That is not a readable ISO-8601 date — try a value like 2024-01-01T00:00:00Z.";
