@@ -1,0 +1,63 @@
+/*
+  OperationsSection.strings
+  TeslaSync — P4 feature view · 0250 · OperationsSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  OperationsSection resolves (table "OperationsSection") lives here with its web
+  t(key, default) English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/system/components/status/OperationsSection.tsx, where the bare English
+  string is the t() key). The second group backs the native chrome (description,
+  freshness / loading / empty / error copy, accordion accessibility) so the Swift
+  sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Operations" = "Operations";
+"Notification delivery and audit trail" = "Notification delivery and audit trail";
+"success rate" = "success rate";
+"Notification Delivery" = "Notification Delivery";
+"Total Sent" = "Total Sent";
+"Failed" = "Failed";
+"Success Rate" = "Success Rate";
+"Channels" = "Channels";
+"Success" = "Success";
+"Status" = "Status";
+"Title" = "Title";
+"Message" = "Message";
+"Time" = "Time";
+"Audit Log" = "Audit Log";
+"Action" = "Action";
+"Resource" = "Resource";
+"Details" = "Details";
+"common.noData" = "No data available";
+"No recent notifications" = "No recent notifications";
+"No audit log entries" = "No audit log entries";
+"No audit entries" = "No audit entries";
+
+/* --- Native chrome: description + empty states --- */
+"operations.description" = "Notification delivery and audit trail";
+"operations.noStats" = "No notification statistics yet";
+"operations.noRecent" = "No recent notifications";
+"operations.noAudit" = "No audit log entries";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"operations.live" = "Live";
+"operations.stale" = "Stale";
+"operations.offline" = "Offline";
+"operations.staleBanner" = "Reconnecting — data may be stale";
+"operations.offlineBanner" = "Offline — showing last known data";
+"operations.refresh" = "Refresh";
+"operations.refreshHint" = "Reloads notification stats, recent notifications, and the audit log";
+"operations.loadingA11y" = "Loading operations";
+"operations.errorTitle" = "Couldn't load operations";
+"operations.retry" = "Retry";
+
+/* --- Native chrome: accordion accessibility --- */
+"a11y.expanded" = "Expanded";
+"a11y.collapsed" = "Collapsed";
+"a11y.toggleHint" = "Double tap to show or hide the operations details";
