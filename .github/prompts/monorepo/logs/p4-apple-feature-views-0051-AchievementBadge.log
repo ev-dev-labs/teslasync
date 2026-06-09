@@ -1,0 +1,236 @@
+================================================================================
+P4 · Feature view · 0051 — AchievementBadge (Apple)
+Run: 2026-06-09T01:25-0700   Host: Darwin arm64   Branch: auto/20260608-211853-78201/72
+Base: 01529bc6d0c1c852800c8af248fab9e53084d50c
+Prompt: P4/feature-views/0051 — Feature view: AchievementBadge
+Web source (spec): web/src/features/analytics/components/AchievementBadge.tsx
+Native output: apps/apple/TeslaSync/feature-views/AchievementBadge.*
+Mode: code-complete + host-gates GREEN; full-app xcodebuild build/test attempted on
+      this host and shown DEFERRED (blocked ONLY by pre-existing, unrelated parallel
+      surfaces — zero AchievementBadge errors). ADR-002/004/009, Honesty rule 1/7/8.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (toolchain) .......... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)      OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)             OK
+  iOS Simulator .............. iPhone 16 (iOS 26.5 runtime; runs iOS-18.0 apps), Booted OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)      OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... 2.45.4 — project generates cleanly (evidence below)   OK
+  Shared.xcframework ......... ASSEMBLED via Kotlin/Native gradle + STAGED to
+                               apps/apple/Frameworks/Shared.xcframework
+                               (ios-arm64 + ios-arm64-simulator + macos-arm64)       OK
+  feature-views in project.yml  REGISTERED — xcodegen enumerates all 9 files (below) OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/data-display". The core requirement is SwiftUI, which is
+  AVAILABLE and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles + the
+  executed XCTest suite below. The capability-BLOCKED escape hatch (SwiftUI/Charts/
+  MapKit unavailable) does NOT apply — the surface is authored, host-compiled on both
+  SDKs, host-tested (31/31 XCTest), and compiled with ZERO errors inside the real
+  iOS app target (full xcodebuild evidence below).
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/AchievementBadge.*) ===
+  AchievementBadge.Adapter.swift   130  testable projection core — AchievementBadgeData
+                                        (web AchievementData), AchievementBadgeSize (sm/md/lg),
+                                        AchievementBadgeMetrics (isNearComplete = !unlocked &&
+                                        progress>=0.8; percentInt = Math.round(progress*100);
+                                        ringFraction = pct/100 clamped), AchievementBadgeFormat
+                                        ({pct}% label), AchievementBadgeAccessibility (pure)
+  AchievementBadge.Model.swift     289  P1/S8 state-holder seam (AchievementBadgeSource →
+                                        AchievementBadgeModel) + P1/S11 telemetry seam
+                                        (view.opened) + P1/S10 strings facade + connection axis
+                                        (live/stale/offline) + input/resolved + projection
+                                        (loading/empty/error/data) + in-memory source
+  AchievementBadge.Views.swift     297  presentational subviews — size→layout metrics,
+                                        inline progress ring (web ProgressRing; amber/grey),
+                                        near-complete pulse (web animate-pulse, reduce-motion
+                                        aware), the badge tile (locked ring + grayscale icon /
+                                        unlocked icon + name + description + status), freshness
+                                        chip; shared achievementBadgeSurface() tile modifier (DRY)
+  AchievementBadge.States.swift    112  P4 leaf chrome — loading skeleton tile, empty
+                                        placeholder tile (trophy glyph), error tile + Retry
+  AchievementBadge.swift            73  the surface (state composition + freshness chip +
+                                        onAppear view.opened + onDisappear + surfaceSlug)
+  AchievementBadge.Previews.swift  137  #if DEBUG previews — unlocked / near-complete / locked /
+                                        sizes (sm,md,lg) / empty / loading / error / stale / offline
+  AchievementBadge.Tests.swift     208  XCTest — metrics/percent/ring/format/projection/a11y (20)
+  AchievementBadge.ModelTests.swift 160 XCTest — state-holder wiring/telemetry/freshness (11)
+  AchievementBadge.strings          34  P1/S10 catalog contribution (table "AchievementBadge")
+  Largest .swift = 297 lines (swiftlint file_length<=400 honored). 8 .swift + 1 .strings;
+  6 production files + 2 test files. No file imports the Shared xcframework (the seams are
+  Swift protocols; prod injects the facade-backed holder, previews/tests inject in-memory).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data source: web `useTranslation` only — AchievementBadge.tsx is a pure presentational
+    leaf fed an `achievement: AchievementData` (+ `size`) prop by its parent (Lifetime Stats
+    page / RecentlyUnlockedAchievements / AchievementUnlockedToast). Native binds the snapshot
+    through the P1/S8 AchievementBadgeSource seam; NO HTTP in the view.
+  - Derived values (verbatim): isNearComplete = !unlocked && progress>=0.8; pct =
+    Math.round(progress*100); locked ring sweep = pct/100 (web <ProgressRing value={pct}
+    max={100}/>). Reproduced + unit-tested incl. the .5-rounds-up and non-finite branches.
+  - Composition (web rounded tile):
+      • badge circle -> ZStack: when LOCKED, an inline progress ring (amber statusWarning when
+        near-complete = web #eab308, else muted = web #6b7280) with the icon centered at 50%
+        opacity + grayscale (web `opacity-50 grayscale`); when UNLOCKED, the full-colour icon.
+      • name        -> semibold, centered; amber (statusWarning = web yellow-400) when unlocked,
+        secondary otherwise.
+      • description -> muted, centered (web text-muted).
+      • status      -> unlocked: t('lifetime.unlocked', '✓ Unlocked'); locked: `{pct}%`
+        (monospaced/tabular-nums, web tabular-nums).
+      • tile        -> unlocked amber tint+border (web yellow-500/[0.08]+/30); locked faint
+        neutral tint via textPrimary@0.04 + border (web white/[0.03]+/[0.06], theme-adaptive);
+        near-complete pulse (web animate-pulse), suppressed under Reduce Motion.
+      • size sm/md/lg -> ring 56/72/96, stroke 3/4/5, icon 20/30/36, gap 4/8/12, name 12/14/16
+        (web sizeConfig verbatim).
+  - States (ALL rendered; each has a #if DEBUG preview + a projection/model unit test):
+      loading (skeleton tile) · empty (resolved w/o achievement → friendly trophy placeholder,
+      never a blank box) · error (parent query failure → message + Retry, web QueryError peer) ·
+      data (unlocked / near-complete / locked) · stale (freshness chip + one-shot auto-refresh) ·
+      offline (cached achievement kept + offline chip).
+  - i18n (P1/S10): the web key is preserved VERBATIM — lifetime.unlocked = "✓ Unlocked".
+    Native chrome namespaced achievement.{live,stale,offline,staleA11y,offlineA11y,loadingA11y,
+    empty,errorTitle,retry} + achievement.a11y.{unlockedStatus,progressStatus}. Every
+    code-referenced key is declared in AchievementBadge.strings; NO English literals in native
+    code (all via AchievementBadgeStrings + Text(verbatim:)). achievement name/description/icon
+    are data (Text(verbatim:)), exactly as the web renders props (not translated).
+  - Accessibility: the tile is one combined VoiceOver element (name, description, spoken status —
+    "Unlocked" / "N percent complete"); the freshness chip + Retry are labelled buttons; icon is
+    decorative (accessibilityHidden); Dynamic-Type system fonts; reduce-motion honored (pulse +
+    TSSkeleton shimmer + TSFadeIn).
+  - Telemetry (P1/S11): AchievementBadgeModel.start() emits view.opened with surface slug
+    "AchievementBadge" exactly once (OSLog default; prod injects the shared diagnostics adapter)
+    — unit-asserted once-only + idempotent.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Isolated closure = the 6 production files compiled with the REAL apps/apple component
+  closure (design Tokens + Design/{TSDesign,TSMaterial} + all Sources/Components except the
+  unrelated DataDisplay/UnitFormatters.swift, which depends on the out-of-closure
+  UnitPreferences/TSUnitsKey and is NOT used by this surface). Module named TeslaSync so the
+  co-located *Tests.swift `@testable import TeslaSync` resolves unchanged.
+
+  [1] swift build — isolated SwiftPM library, Swift 6 tools/language mode (strict
+        concurrency = complete), macOS host:
+          Compiling … AchievementBadge.Adapter/.Model/.Views/.States/.swift/.Previews …
+          Build complete!
+        SWIFTPM_BUILD_EXIT=0                                                       OK
+  [2] swift test — the FULL XCTest suite EXECUTED on the macOS host via the same SwiftPM
+        harness (real production Adapter/Model/Views/States/surface + real design tokens +
+        real TS component closure), Swift 6:
+          Test Suite 'AchievementBadgeNearCompleteTests'  passed — 4 tests,  0 failures
+          Test Suite 'AchievementBadgePercentTests'       passed — 3 tests,  0 failures
+          Test Suite 'AchievementBadgeRingFractionTests'  passed — 3 tests,  0 failures
+          Test Suite 'AchievementBadgeFormatTests'        passed — 1 test,   0 failures
+          Test Suite 'AchievementBadgeProjectionTests'    passed — 7 tests,  0 failures
+          Test Suite 'AchievementBadgeAccessibilityTests' passed — 2 tests,  0 failures
+          Test Suite 'AchievementBadgeModelTests'         passed — 11 tests, 0 failures
+          Executed 31 tests, with 0 failures (0 unexpected) in 0.004 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: near-complete threshold (locked/unlocked/non-finite), Math.round percent
+        (incl. .5-up + non-finite→0), ring fraction (clamp + non-finite), {pct}% label,
+        projection error>loading>empty>data + unlocked/near-complete/size-flows-through,
+        a11y join/drop-empty; model start-applies-initial + view.opened-once + slug,
+        loading→data push, stale one-shot auto-refresh + re-arm, offline-keeps-cache,
+        manual refresh, stop/restart.
+  [3] swiftc -typecheck — iOS 18 SIMULATOR SDK (Swift 6, real library closure):
+        xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+          -target arm64-apple-ios18.0-simulator <47 lib files incl. this surface>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [4] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [5] swiftlint --strict (config apps/apple/.swiftlint.yml; the 8 surface .swift files):
+          Done linting! Found 0 violations, 0 serious in 8 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/8 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate):
+        ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AchievementBadge -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — FULL-APP XCODEBUILD (ATTEMPTED on this host; real output; DEFERRED — NOT faked) ===
+    xcodegen generate                                                  XCODEGEN_EXIT=0   OK
+      -> TeslaSync.xcodeproj written; all 9 AchievementBadge files enumerated in the
+         app + test targets:
+           AchievementBadge.{swift,Adapter,Model,Views,States,Previews}.swift  (app target)
+           AchievementBadge.{Tests,ModelTests}.swift                           (test bundle)
+           AchievementBadge.strings                                            (resource)
+
+    Shared.xcframework: ASSEMBLED via `apps/shared/gradlew :core:assembleSharedXCFramework`
+      (Kotlin/Native, BUILD SUCCESSFUL) and staged to apps/apple/Frameworks/Shared.xcframework.
+
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+      ** BUILD FAILED **                                               IOS_BUILD_EXIT=65
+      Error tally:  TOTAL compile errors = 226   |   AchievementBadge errors = 0
+      ALL 226 errors are in OTHER, pre-existing, parallel-authored surfaces — a duplicate
+      type-definition collision and its cascade, e.g.:
+        TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Model.swift:74:
+          error: 'ChargeSessionDTO' is ambiguous for type lookup in this context
+        (root cause: `ChargeSessionDTO` is declared TWICE —
+           apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift
+           apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Models.swift)
+        + cascading "cannot infer contextual base" in the dependent ChargeStatusWidget /
+          ChargeStatusLiveWidget / SafetyFeaturesWidget / SafetyHistoryWidget /
+          ChargeSessionChartWidget / FleetStatsBarWidget previews/models.
+      These files are OUTSIDE this prompt's allowed scope (AchievementBadge.* + the log);
+      fixing them is the job of their own prompts / the P4 acceptance gate. Greps confirm
+      ZERO AchievementBadge.* diagnostics in the entire build log.
+
+    xcodebuild -scheme TeslaSync-macOS build test                      MAC_BUILD = DEFERRED
+      Shares the IDENTICAL platform-agnostic Swift collision (ChargeSessionDTO et al.), plus
+      macOS app/widget code-signing on a signed runner (ADR-012). The AchievementBadge surface
+      itself is proven on macOS 15 by step [4] (swiftc -typecheck, exit 0) + step [2]
+      (XCTest executed green on the macOS host).
+
+    Disposition (predecessor parity — UserImpersonateButton/0050, AlertMessageEditor/0180,
+    FSMTimelineChart/0231; ADR-012, Honesty rule 7/8): the full repo-wide `xcodebuild build
+    test` cannot go green until the unrelated parallel surfaces above are de-collided, which is
+    outside this surface's allowed files. This surface is verified green on EVERY runnable gate
+    and produces ZERO errors inside the real iOS app-target compile. The repo-wide build/test is
+    deferred to the P4 acceptance gate (P99-0001-apple-acceptance-gate, macos-latest). It is
+    recorded here with its REAL exit code + cause — never represented as passing.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (unlocked / near-complete / locked +
+      loading / empty / error / stale / offline) — implemented; each has a #if DEBUG preview;
+      phase + derived logic unit-tested + EXECUTED green (31/31).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (AchievementBadgeSource →
+      AchievementBadgeModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — lifetime.unlocked preserved
+      verbatim; native chrome namespaced; referenced==declared.
+  [x] Accessibility labels on every interactive element (combined tile label incl. spoken
+      status; freshness chip + Retry are labelled buttons).
+  [x] Tests: adapter unit + per-state projection/model + a11y label — 31 methods, EXECUTED
+      31/31, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — every host-runnable gate green; the surface compiles with ZERO
+      errors inside the real iOS app target; repo-wide xcodebuild build/test DEFERRED with
+      captured real evidence (unrelated parallel-surface collision + signing), per precedent.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the repo-wide xcodebuild is shown
+                          with its REAL exit 65 + root cause (other surfaces), never as pass.
+  2 No scope narrowing ... full surface (8 files), all 6 states, the seam, 31 tests.
+  3 No skip-and-assume ... web source read end-to-end; the t() call + every render branch +
+                          sizeConfig reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. progress ring + grayscale-locked/colour-unlocked icon + amber/grey
+                          + pulse + name/description/status + sm/md/lg + 6 rendered states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0050 UserImpersonateButton host-gate + deferral.
+  8 No commit on red ..... committed work is green on every runnable gate AND emits zero
+                          errors in the real app-target compile; the only non-green step is the
+                          repo-wide build blocked by UNRELATED parallel surfaces (evidence
+                          above), deferred per the accepted predecessor disposition.
+  9 No silent drift ...... Views split into Views+States to honor file_length<=400; one
+                          harness-only exclusion (UnitFormatters.swift, unused by this surface)
+                          documented above; no behavioural drift from the web source.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
