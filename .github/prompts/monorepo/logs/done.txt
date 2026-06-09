@@ -324,3 +324,4 @@ p2-windows/feature-views/W-0136-CostSavingsPanel.prompt.md
 p2-windows/feature-views/W-0137-DriveDetailHeader.prompt.md
 p2-windows/feature-views/W-0138-DriveOverviewChart.prompt.md
 p2-windows/feature-views/W-0140-DriveTimeline.prompt.md
+p2-windows/feature-views/W-0145-MoreDetailsPanel.prompt.md
