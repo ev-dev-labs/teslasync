@@ -1,0 +1,45 @@
+/*
+  JsonFormatter.strings
+  TeslaSync — P4 feature view · 0017 · JsonFormatter (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `JsonFormatter` resolves (table "JsonFormatter") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/admin/components/devtools/tools/JsonFormatter.tsx). The remainder back
+  the native-only chrome (copy affordance, empty state), the accessibility summary,
+  and the engine-style parse messages (the native analogue of the web `e.message`,
+  which the web renders verbatim; `Invalid Json` is its localized fallback/headline).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Json Formatter" = "Json Formatter";
+"Json Formatter Desc" = "Json Formatter Desc";
+"Json Input" = "Json Input";
+"Formatted" = "Formatted";
+"Invalid Json" = "Invalid JSON";
+
+/* --- Native chrome: copy affordance --- */
+"action.copy" = "Copy";
+"action.copied" = "Copied";
+
+/* --- Native chrome: empty state --- */
+"json.emptyTitle" = "No formatted output yet";
+"json.emptyHint" = "Paste JSON above to see it formatted here.";
+
+/* --- Accessibility: VoiceOver summary --- */
+"a11y.json.empty" = "Enter JSON to format";
+"a11y.json.formatted" = "Formatted JSON";
+
+/* --- Parse messages (engine-style; the web `e.message` analogue) --- */
+"json.error.unexpectedCharacter" = "Unexpected character %@ in JSON at position %lld";
+"json.error.unexpectedEnd" = "Unexpected end of JSON input";
+"json.error.invalidNumber" = "Invalid number in JSON at position %lld";
+"json.error.invalidEscape" = "Invalid string escape in JSON at position %lld";
+"json.error.invalidUnicodeEscape" = "Invalid Unicode escape in JSON at position %lld";
+"json.error.unexpectedToken" = "Unexpected token in JSON at position %lld";
+"json.error.trailingCharacters" = "Unexpected non-whitespace character after JSON at position %lld";
