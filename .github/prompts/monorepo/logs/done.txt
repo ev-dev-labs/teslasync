@@ -320,3 +320,4 @@ p2-windows/feature-views/W-0128-MiniGridPreview.prompt.md
 p2-windows/feature-views/W-0131-RecentlyViewedWidget.prompt.md
 p2-windows/feature-views/W-0130-RecentActivity.prompt.md
 p2-windows/feature-views/W-0133-VehicleHero.prompt.md
+p2-windows/feature-views/W-0136-CostSavingsPanel.prompt.md
