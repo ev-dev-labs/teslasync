@@ -1,0 +1,47 @@
+/*
+  EnergySiteInfoWidget.strings
+  TeslaSync — P4 dashboard widget · 0047 · EnergySiteInfoWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `EnergySiteInfoWidget` resolves (table "EnergySiteInfoWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/EnergySiteInfoWidget.tsx + registry/energy.ts). The
+  remaining keys back the native-only chrome (freshness chip, retry/empty/error copy,
+  connectivity banners, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.energySiteInfo.title" = "Energy Site";
+"widget.energySiteInfo.solarSize" = "Solar System";
+"widget.energySiteInfo.powerwall" = "Powerwalls";
+"widget.energySiteInfo.firmware" = "Gateway Firmware";
+"widget.energySiteInfo.timezone" = "Installation Timezone";
+"widget.energySiteInfo.noSite" = "No Tesla Energy site linked";
+"widget.energySiteInfo.noData" = "No site info available";
+
+/* --- Registry metadata (registry/energy.ts → "energy-site-info") --- */
+"widget.energySiteInfo.name" = "Energy Site";
+"widget.energySiteInfo.description" = "Tesla Energy system: solar capacity, Powerwall count, gateway firmware";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.energySiteInfo.live" = "Live";
+"widget.energySiteInfo.updating" = "Updating";
+"widget.energySiteInfo.stale" = "Stale";
+"widget.energySiteInfo.offline" = "Offline";
+"widget.energySiteInfo.refresh" = "Refresh";
+"widget.energySiteInfo.retry" = "Retry";
+"widget.energySiteInfo.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.energySiteInfo.loading" = "Loading energy site";
+"widget.energySiteInfo.errorTitle" = "Couldn't load energy site";
+"widget.energySiteInfo.offlineBanner" = "Offline — showing last known site info";
+"widget.energySiteInfo.staleBanner" = "Reconnecting — site info may be stale";
+
+/* --- Accessibility --- */
+"widget.energySiteInfo.openA11y" = "Open the Energy page";
