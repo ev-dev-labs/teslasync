@@ -21291,11 +21291,35 @@
   <data name="translation.widget.costForecast.costLabel" xml:space="preserve">
     <value>Cost</value>
   </data>
+  <data name="translation.widget.costForecast.description" xml:space="preserve">
+    <value>6-month charging cost projection with seasonal trends</value>
+  </data>
+  <data name="translation.widget.costForecast.error" xml:space="preserve">
+    <value>Couldn't load cost forecast</value>
+  </data>
+  <data name="translation.widget.costForecast.error.auth" xml:space="preserve">
+    <value>Sign in to view cost forecast</value>
+  </data>
+  <data name="translation.widget.costForecast.error.offline" xml:space="preserve">
+    <value>You're offline — showing the last cached cost forecast</value>
+  </data>
+  <data name="translation.widget.costForecast.loading" xml:space="preserve">
+    <value>Loading cost forecast</value>
+  </data>
+  <data name="translation.widget.costForecast.name" xml:space="preserve">
+    <value>Cost Forecast</value>
+  </data>
   <data name="translation.widget.costForecast.nextMonth" xml:space="preserve">
     <value>Next Month</value>
   </data>
   <data name="translation.widget.costForecast.noData" xml:space="preserve">
     <value>No forecast data</value>
+  </data>
+  <data name="translation.widget.costForecast.refresh" xml:space="preserve">
+    <value>Refresh cost forecast</value>
+  </data>
+  <data name="translation.widget.costForecast.retry" xml:space="preserve">
+    <value>Retry</value>
   </data>
   <data name="translation.widget.costForecast.title" xml:space="preserve">
     <value>Cost Forecast</value>
