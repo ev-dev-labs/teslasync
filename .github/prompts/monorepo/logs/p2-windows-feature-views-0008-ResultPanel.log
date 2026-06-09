@@ -1,0 +1,119 @@
+=== P2 Feature view 0008 ResultPanel (Windows) ===
+
+ARTIFACT
+  Web source : web/src/features/admin/components/devtools/ResultPanel.tsx (THE spec)
+  Native out : apps/windows/TeslaSync.App/feature-views/ResultPanel.{Model,Source,ViewModel}.cs + ResultPanel.cs
+  Tests      : apps/windows/TeslaSync.App.Tests/FeatureViews/ResultPanelTests.cs (headless; logic linked into the
+               net10.0 test project the same way every sibling widget links its UI-thread-free logic)
+
+----------------------------------------------------------------------------------------------------
+CAPABILITY PROBE (prompt requires WinUI 3 / Windows App SDK 1.6+ / .NET 10, Fluent Design System)
+----------------------------------------------------------------------------------------------------
+  dotnet --version                 -> 10.0.300  (PASS: .NET 10 SDK present)
+  dotnet --list-sdks               -> 9.0.314, 10.0.300
+  Windows App SDK / WinUI 3 build  -> PASS: the Release solution build below compiles the WinUI app project
+                                      (App.xaml, XAML compiler, Microsoft.WindowsAppSDK) to 0 errors, so the
+                                      build + Fluent UI capability is present on this runner.
+  WinAppDriver / Appium UIA runner -> ABSENT (see TEST step) — required only by the pre-existing
+                                      TeslaSync.App.UITests shell suite, not by this surface.
+
+----------------------------------------------------------------------------------------------------
+PARITY NOTES (native reproduces the web source's data, composition, states and i18n)
+----------------------------------------------------------------------------------------------------
+  The web ResultPanel is a pure, prop-driven presentational component (props: title, data?, error?,
+  idleMessage?). It owns NO data source and has exactly three mutually-exclusive render branches in this
+  precedence: error -> rose/danger text (red-tinted card); data != null -> JSON.stringify(data, null, 2)
+  in a scrollable <pre> + CopyButton (green-tinted card); else -> italic muted `idleMessage ?? "No result
+  yet"` (neutral card). The header always shows `title` (small, secondary) and the CopyButton iff data != null
+  (even while an error is shown — reproduced as HasCopyAction).
+
+  Native reproduction:
+    - ResultPanelProjection (the cached->projection adapter) reproduces the branch precedence, the two-space
+      indented serialization, the per-state semantic tint tokens (TsColorDanger/Success/TextPrimary brushes,
+      never neon), and routes every owned string through the P1/S10 ILocalizer facade.
+    - ResultPanel.cs (WinUI ContentControl) binds Title/Data/Error/IdleMessage as bindable DPs (the web props),
+      renders via the shared ResultPanelViewModel (no HTTP in the view), uses the shared TsCopyButton, JetBrains
+      Mono (TsTypeFontFamilyMono) for the <pre>, design tokens for every colour/space/radius, names the card as
+      an Automation region, announces the body as a live region per state, and emits view.opened on Loaded.
+    - States: the generic loading / stale / offline branches are intentionally NOT present because the web
+      source has none (it is presentational and prop-driven). This mirrors the established QuickNavWidget
+      precedent ("There is deliberately no loading / error / stale / offline state because the web source has
+      none"). The web's three real branches (error / result / idle-empty) are all reproduced and tested.
+    - i18n: the web source itself is anonymous (no t() calls — title/error/idleMessage are caller-fed). The
+      strings this surface owns route through the facade with English fallbacks (the sibling-widget convention;
+      keys are not added to Strings/*/Resources.resw here): featureView.resultPanel.noResult = "No result yet",
+      featureView.resultPanel.title = "Result", featureView.resultPanel.resultReady = "Result ready",
+      common.copyButton.copy = "Copy", common.copyButton.copied = "Copied" (the last two match the web CopyButton).
+
+----------------------------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER FIXED (required to make the solution compile at all)
+----------------------------------------------------------------------------------------------------
+  At HEAD the solution did NOT build: two independently-merged P2 widget commits both declared
+  `public sealed record SystemHealthSnapshot(...)` in the SAME namespace TeslaSync.App.DashboardWidgets:
+    - dashboard-widgets/SystemHealthWidget/SystemHealthWidget.Model.cs   (commit bae7b5b15)
+    - dashboard-widgets/UptimeMonitorWidget/UptimeMonitorWidget.Model.cs (commit b73820953)
+  -> CS0101 (duplicate definition) + CS8863 in BOTH TeslaSync.App.csproj and TeslaSync.App.Tests.csproj,
+     which also cascaded into WMC0001 XAML errors in ComponentGallery.xaml (the C# assembly never built).
+  This is an integration regression unrelated to ResultPanel. Resolved with the smallest, behaviour-
+  preserving fix: renamed the SMALLER-footprint occurrence (SystemHealthWidget's record, 16 refs across 2
+  files) to `SystemHealthReport`; UptimeMonitorWidget keeps its own `SystemHealthSnapshot`. No behaviour
+  change — verified by the green widget suites below (SystemHealthWidget + UptimeMonitorWidget: 140/140).
+  Files touched: SystemHealthWidget.Model.cs (5), SystemHealthWidgetTests.cs (11).
+
+----------------------------------------------------------------------------------------------------
+BUILD  ::  dotnet build apps/windows/TeslaSync.sln -c Release
+----------------------------------------------------------------------------------------------------
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+  BUILD_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+TEST   ::  dotnet test apps/windows/TeslaSync.sln -c Release
+----------------------------------------------------------------------------------------------------
+  Passed!  - Failed: 0, Passed: 6359, Skipped: 0, Total: 6359 - TeslaSync.App.Tests.dll (net10.0)
+      ResultPanel (this surface)                 -> Passed: 33,  Failed: 0  (--filter ~ResultPanel)
+      SystemHealthWidget + UptimeMonitorWidget   -> Passed: 140, Failed: 0  (collision-fix regression check)
+
+  Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+      Every one of the 147 failures is the identical fixture exception, raised before any assertion:
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+        WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+        WinAppDriver.exe was not found at its standard install paths or on PATH.
+        at WinAppDriverSession.EnsureReady() ... WinAppDriverSession.cs:line 75
+      Per the suite's own contract (apps/windows/TeslaSync.App.UITests/README.md): "every test fails fast
+      with an explicit reason (it is never silently skipped), and the gate ends STATUS=BLOCKED" when the
+      WinAppDriver runner is absent. These 147 tests are pre-existing app-level shell/auth/page-state/a11y
+      tests (ShellNavigationTests, AuthenticationFlowTests, ...) — they do NOT reference ResultPanel and are
+      unrelated to this surface. Driving them needs WinAppDriver + an MSIX deploy + an interactive desktop
+      session, infeasible on this shared headless host and out of scope for this surface.
+  TEST_EXIT=1   (blocked solely by the absent WinAppDriver/Appium UI-automation runner — recorded with
+                 evidence, never reported as green; Honesty Covenant #1/#10)
+
+----------------------------------------------------------------------------------------------------
+FORMAT ::  dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+----------------------------------------------------------------------------------------------------
+  (no changes required)
+  FORMAT_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+PLACEHOLDER ::  ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ResultPanel
+----------------------------------------------------------------------------------------------------
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+CONCLUSION
+----------------------------------------------------------------------------------------------------
+  ResultPanel is complete and at web-source parity (web/src/features/admin/components/devtools/ResultPanel.tsx).
+  The surface builds clean in the Release solution, its headless adapter / per-state / a11y / diagnostics tests
+  pass (33/33), and the format + placeholder gates are green. The single red gate step (TEST) is blocked solely
+  by the absent WinAppDriver/Appium UI-automation runner that the pre-existing TeslaSync.App.UITests shell suite
+  requires — a platform-capability gap recorded with evidence rather than reported as green, exactly as the 91
+  sibling P2 surfaces recorded the identical block. The ResultPanel surface + tests + this log are committed
+  "-- deferred" per that convention; the necessary pre-existing SystemHealthSnapshot collision fix is included
+  so the committed tree builds.
+
+EXIT=1
+STATUS=BLOCKED

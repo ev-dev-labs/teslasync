@@ -33,6 +33,19 @@
     a UI host — the same pattern used for the Core widget logic. The WinUI view itself is exercised
     by the app build.
   -->
+  <!--
+    P2 feature-views (0008 ResultPanel): the surface's UI-thread-free logic (the input/display records, the
+    projection adapter, the source seam, the diagnostics, and the state-holder view-model) lives in the WinUI
+    app project under feature-views/ but is WinUI-free by construction. Link those three source files in so
+    this headless (net10.0) test project verifies the adapter + per-state transitions without a UI host — the
+    same pattern used for the dashboard-widget logic below. The WinUI view itself is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.Model.cs" Link="FeatureViews\ResultPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.Source.cs" Link="FeatureViews\ResultPanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.ViewModel.cs" Link="FeatureViews\ResultPanel.ViewModel.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
