@@ -888,6 +888,17 @@
     <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" />
+    P2 feature-views/0059 OverviewTab: the analytics-overview surface's UI-thread-free logic (the
+    FleetAnalytics subset parse, the SI→display projection for the three charts + the Quick Links, the
+    cache-then-network result mapper, the source seam, the PII-safe diagnostics and the state-holder
+    view-model) is WinUI-free by construction. Link those three source files in so this headless (net10.0)
+    test project verifies the adapter + per-state transitions + a11y names without a UI host. The WinUI view
+    itself (OverviewTab.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Model.cs" Link="FeatureViews\OverviewTab\OverviewTab.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Source.cs" Link="FeatureViews\OverviewTab\OverviewTab.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.ViewModel.cs" Link="FeatureViews\OverviewTab\OverviewTab.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
