@@ -1,0 +1,48 @@
+/*
+  SignalHistoryTable.strings
+  TeslaSync — P4 feature view · 0269 · SignalHistoryTable (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SignalHistoryTable` resolves (table "SignalHistoryTable") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of strings the web source localizes
+  (features/telemetry/components/SignalHistoryTable.tsx — its panel title, the four
+  DataTable column headers, the header meta words, and the EmptyState title/message).
+  The second group backs the Type-column badge labels (the web renders the raw
+  `valueType` string verbatim; routed through the facade here so the native code holds
+  no literal). The last group backs the native-only chrome (the P4 leaf freshness chip /
+  banner, the error/retry state, and the accessibility labels) the Apple HIG states
+  contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"telemetry.signalHistory.title" = "Signal Data";
+"telemetry.signalHistory.col.timestamp" = "Timestamp";
+"telemetry.signalHistory.col.signal" = "Signal";
+"telemetry.signalHistory.col.value" = "Value";
+"telemetry.signalHistory.col.type" = "Type";
+"telemetry.signalHistory.page" = "Page";
+"telemetry.signalHistory.total" = "total";
+"telemetry.signalHistory.noData" = "No data";
+"telemetry.signalHistory.noDataMessage" = "No signal data found for this query.";
+
+/* --- Value-type badge labels (web `valueType` strings) --- */
+"telemetry.signalHistory.type.number" = "number";
+"telemetry.signalHistory.type.string" = "string";
+"telemetry.signalHistory.type.boolean" = "boolean";
+
+/* --- Native chrome: freshness axis + states + accessibility --- */
+"telemetry.signalHistory.live" = "Live";
+"telemetry.signalHistory.stale" = "Stale";
+"telemetry.signalHistory.offline" = "Offline";
+"telemetry.signalHistory.staleBanner" = "Reconnecting — data may be stale";
+"telemetry.signalHistory.offlineBanner" = "Offline — showing last known data";
+"telemetry.signalHistory.refresh" = "Refresh";
+"telemetry.signalHistory.loadingA11y" = "Loading signal history";
+"telemetry.signalHistory.rawPayload" = "Raw signal payload";
+"telemetry.signalHistory.errorTitle" = "Couldn't load signal history";
+"telemetry.signalHistory.retry" = "Retry";
