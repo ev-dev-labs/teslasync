@@ -175,3 +175,4 @@ p2-windows/dashboard-widgets/W-0071-OnboardingChecklistWidget.prompt.md
 p2-windows/dashboard-widgets/W-0076-RangeBarWidget.prompt.md
 p2-windows/dashboard-widgets/W-0073-PowerFlowHistoryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0078-RecentDrivesListWidget.prompt.md
+p2-windows/dashboard-widgets/W-0079-RecentDrivesWidget.prompt.md
