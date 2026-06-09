@@ -271,13 +271,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Source.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.Source.cs" />
     <!--
       P2 dashboard-widgets (TirePressureVisualWidget): its headless logic + state-holder view-model are
-      exercised by TirePressureVisualWidgetTests, but the three WinUI-free source files were not linked in,
-      so the test could not resolve TirePressureLevel / TirePressureReading / ITirePressureVisualSource /
-      TirePressureVisualViewModel. Link them in to match the widget pattern above.
+      exercised by TirePressureVisualWidgetTests; the three WinUI-free source files are linked in once above
+      (NETSDK1022: this block previously duplicated those identical Compile items, breaking the test build).
     -->
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Model.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Source.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Source.cs" />
@@ -313,9 +309,6 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Model.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.ViewModel.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Source.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Source.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Model.cs" Link="Widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.ViewModel.cs" Link="Widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Source.cs" Link="Widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Source.cs" />
@@ -375,6 +368,19 @@
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Model.cs" Link="FeatureViews\BackendTool\BackendTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Source.cs" Link="FeatureViews\BackendTool\BackendTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.ViewModel.cs" Link="FeatureViews\BackendTool\BackendTool.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0015 — the HashCalculator tool's UI-thread-free logic (the pure SHA-256 digest +
+    lowercase-hex helper, the IHashComputer adapter, the outcome model, and the state-holder view-model)
+    lives in the WinUI app project but is WinUI-free by construction. Link those three source files in so the
+    headless (net10.0) test project verifies the digest adapter + per-state transitions row-for-row without a
+    UI host. The WinUI view itself (HashCalculator.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Model.cs" Link="FeatureViews\HashCalculator\HashCalculator.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Source.cs" Link="FeatureViews\HashCalculator\HashCalculator.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.ViewModel.cs" Link="FeatureViews\HashCalculator\HashCalculator.ViewModel.cs" />
   </ItemGroup>
 
   <!--
