@@ -1,0 +1,39 @@
+/*
+  MonthlyCostTable.strings
+  TeslaSync — P4 feature view · 0117 · MonthlyCostTable (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `MonthlyCostTable` resolves (table "MonthlyCostTable") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/charging/components/cost-analysis/MonthlyCostTable.tsx). The second group
+  backs the native chrome: the P4 leaf freshness / loading / empty / error / refresh copy
+  and the table accessibility label, so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"costAnalysis.table.title" = "Monthly Cost Breakdown";
+"costAnalysis.table.month" = "Month";
+"costAnalysis.table.sessions" = "Sessions";
+"costAnalysis.table.energy" = "Energy";
+"costAnalysis.table.cost" = "Cost";
+"costAnalysis.table.avgRate" = "Avg $/kWh";
+"costAnalysis.table.gasEquiv" = "Gas Equiv";
+"costAnalysis.table.savings" = "Savings";
+"costAnalysis.table.noData" = "No monthly data available";
+
+/* --- Native chrome: P4 leaf freshness / loading / error / a11y --- */
+"monthlyCost.live" = "Live";
+"monthlyCost.stale" = "Stale";
+"monthlyCost.offline" = "Offline";
+"monthlyCost.staleBanner" = "Reconnecting — data may be stale";
+"monthlyCost.offlineBanner" = "Offline — showing last known data";
+"monthlyCost.refresh" = "Refresh";
+"monthlyCost.loadingA11y" = "Loading monthly cost breakdown";
+"monthlyCost.errorTitle" = "Couldn't load monthly costs";
+"monthlyCost.retry" = "Retry";
+"monthlyCost.tableA11y" = "Monthly cost breakdown table";
