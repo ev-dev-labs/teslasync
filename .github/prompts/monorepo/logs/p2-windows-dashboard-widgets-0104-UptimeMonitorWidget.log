@@ -1,0 +1,96 @@
+=== P2 Dashboard widget 0104 UptimeMonitorWidget (Windows) ===
+date: 2026-06-08T23:05:02.3503974-07:00
+runner: headless (no WinAppDriver/GUI); WinUI 3 (Windows App SDK 2.1.0) + .NET 10.0.300 present
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+
+D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.Core\Data\State\LoadState.cs(37,26): warning CA1716: Rename type LoadState<T>.Error so that it no longer conflicts with the reserved language keyword 'Error'. Using a reserved keyword as the name of a type makes it harder for consumers in other languages to use the type. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1716) [D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+Build succeeded.
+D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.Core\Data\State\LoadState.cs(37,26): warning CA1716: Rename type LoadState<T>.Error so that it no longer conflicts with the reserved language keyword 'Error'. Using a reserved keyword as the name of a type makes it harder for consumers in other languages to use the type. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1716) [D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+    17 Warning(s)
+    0 Error(s)
+
+BUILD_EXIT=0
+
+--- TEST (authoritative, headless): dotnet test TeslaSync.App.Tests ---
+
+Passed!  - Failed:     0, Passed:  5450, Skipped:     0, Total:  5450, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+
+HEADLESS_TEST_EXIT=0
+  (includes 67 new UptimeMonitorWidget test cases across all 6 states; renamed SafetyHistory* types verified green)
+
+--- TEST (full sln, gate command): dotnet test apps/windows/TeslaSync.sln -c Release ---
+
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 771 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  5450, Skipped:     0, Total:  5450, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+
+FULL_SLN_TEST_EXIT=1
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 -Path .../UptimeMonitorWidget ---
+
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+PLACEHOLDER_EXIT=0
+new UptimeMonitorWidget test cases (Fact+Theory rows): 67
+
+--- PARITY (web/src/features/dashboard/widgets/UptimeMonitorWidget.tsx) ---
+Registry uptime-monitor, category system, 2x2 / 1x2 / 4x40 (cols x rows), slug UptimeMonitorWidget.
+Data via useSystemHealth -> GET /system/health (generated op get_api_v1_system_health; resolves to
+/system/health in the generated endpoint table, asserted by a test). No HTTP in the view; flows through the
+shared P1/S8 IUptimeMonitorSource -> UptimeMonitorViewModel (cache-then-network).
+Composition: ServiceKeys [database, mqtt, tesla_api, fleet_telemetry]; statusVariant ok/healthy->success,
+degraded->warning, else->danger (dot + badge tone). Overall = status ?? 'unknown'; overall badge
+healthy->"All OK" else raw status. Service label = t(`widget.uptime.${key}`, TitleCase(key)) (faithful C#
+port of the JS replace(/_/g,' ').replace(/\b\w/g, upper) fallback); service badge "OK" for healthy else raw
+status. isCompact (cols==1 && rows==1) -> centred healthyCount/total; else per-service rows; isTall (rows>=2)
+-> DB Size / Tables footer (each ?? em-dash; the live /system/health body omits database_size/table_count, so
+the footer shows em-dash exactly as the web's ?? '—'). data null/non-object -> EmptyState "No system health
+data". States loading/loaded/empty/error/stale/offline all render.
+i18n: the 6 source keys (title, overall, allOk, dbSize, tables, noData) are already present in
+Strings/{en,he,ar}/Resources.resw + apps/shared/i18n/catalog/{en,he,ar}.json; service labels use computed
+fallbacks (the web has no catalog keys for them either). All strings resolve through the P1/S10 ILocalizer
+facade — no English literals in native code (check-placeholders clean).
+Accessibility: Narrator names on overall row, each service row, compact metric, footer rows, and the refresh
+button; status dots are AccessibilityView.Raw; loading is a polite LiveRegion. System font scale flows via
+WinUI effective-pixel sizing; no custom animation so reduced-motion is inherently honoured.
+Telemetry: view.opened slug=UptimeMonitorWidget (PII-safe; never a status/error/db-size).
+New tests: 67 cases (parse adapter incl. snake_case + camelCase + non-object; statusVariant/IsHealthy/
+TitleCase ports; size flags; projection overall/services/healthy-count/footer/absent; full view-model state
+matrix loading/loaded/empty/error/stale/offline + size reproject + i18n + PropertyChanged; source single-call
++ op-id; registry metadata/bounds/clamp/op-id-resolves; diagnostics).
+
+--- PRE-EXISTING BLOCKER FIXED (required for a green solution build) ---
+The integration base (HEAD 46d9aedd8) did not compile: SafetyFeaturesWidget.Model.cs AND
+SafetyHistoryWidget.Model.cs BOTH declared SafetyValue / SafetyValueKind / SafetyEnumField / SafetySnapshot in
+namespace TeslaSync.App.DashboardWidgets (CS0101 duplicate definition). That fails MarkupCompilePass1 -> no
+LocalAssembly -> cascading XAML WMC0001/WMC9999 across ComponentGallery.xaml / Styles.xaml / ShellWindow.xaml,
+so the whole TeslaSync.App project (and thus the gate) was RED before this surface was touched. The required
+capability (WinUI 3 + .NET 10) is present and proven by a clean Release build below. Surgical fix: renamed the
+four colliding types in the SafetyHistoryWidget feature (the side with fewer references, all confined to its
+own 4 files + its test, 0 external referencers) to SafetyHistory{Value,ValueKind,EnumField,Snapshot}. The
+SafetyHistoryWidget view class stays in the flat namespace (no external reference breakage). SafetyHistory +
+SafetyFeatures tests remain green (210/210 for the three widgets together; 5450/5450 overall). Also added the
+three UptimeMonitorWidget logic files to TeslaSync.App.Tests.csproj <Compile> (every widget is wired this way
+so its UI-thread-free logic is unit-tested without the WinUI assembly).
+
+--- ENVIRONMENT (out of scope) ---
+The full-solution `dotnet test` also runs TeslaSync.App.UITests (147 WinAppDriver UI-automation tests). This
+runner is headless: nothing listens on http://127.0.0.1:4723 and WinAppDriver.exe is absent, so every one of
+the 147 throws UiAutomationUnavailableException (FULL_SLN_TEST_EXIT=1). 0 of those failures reference this
+surface (grep "Uptime" over the UITests output = 0). The surface's UI-thread-free state + projection + a11y
+naming logic is fully covered by the green headless suite (HEADLESS_TEST_EXIT=0, 5450/5450). This matches the
+accepted predecessor p2-windows-dashboard-widgets-0094-SpeedHeatmapWidget (same WinAppDriver limitation).
+
+GATES: BUILD_EXIT=0  TEST(headless)=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+       FULL_SLN_TEST_EXIT=1 attributable solely to absent WinAppDriver (147/147 UiAutomationUnavailable, 0 on this surface).
+
+EXIT=0
+STATUS=DONE
