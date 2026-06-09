@@ -57,6 +57,9 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.Model.cs" Link="FeatureViews\RegexTester\RegexTester.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.ViewModel.cs" Link="FeatureViews\RegexTester\RegexTester.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0018 JwtDecoder: the surface's UI-thread-free logic (the pure decode adapter, the state
     enum + decode-result model, the display projection, the diagnostics, and the state-holder view-model)
     lives in the WinUI app project under feature-views/ but is WinUI-free by construction. It reuses the
@@ -312,11 +315,15 @@
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
+    <!--
       P2 dashboard-widgets (TirePressureVisualWidget): its headless logic + state-holder view-model are
-      exercised by TirePressureVisualWidgetTests; the three WinUI-free source files are linked in once above
-      (NETSDK1022: this block previously duplicated those identical Compile items, breaking the test build).
+      exercised by TirePressureVisualWidgetTests. Link the three WinUI-free source files in so the headless
+      (net10.0) test project verifies the adapter + per-state transitions without a UI host. The WinUI view
+      itself (TirePressureVisualWidget.cs) is exercised by the app build.
     -->
-    <!-- TirePressureVisualWidget's three WinUI-free sources are linked once in the dashboard-widgets group above. -->
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Model.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Source.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Source.cs" />
@@ -407,6 +414,17 @@
   </ItemGroup>
 
   <!--
+    P2 feature-views/0028 StatusHeader: the DLQ-inspector header's UI-thread-free logic (the DLQ list
+    snapshot model, the two-branch projection, the localized labels + glyph mapping, the accessible names
+    and the diagnostics) lives in the WinUI app project but is WinUI-free by construction. Link the Model in
+    so the headless (net10.0) test project verifies the adapter + per-state projection row-for-row without a
+    UI host. The WinUI view itself (StatusHeader.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\StatusHeader\StatusHeader.Model.cs" Link="FeatureViews\StatusHeader\StatusHeader.Model.cs" />
+  </ItemGroup>
+
+  <!--
     Language-neutral SI golden vectors (apps/shared/spec/units-golden.json) copied
     next to the test assembly so the C# behavior port is verified row-for-row
     against the web truth (ADR-004), exactly as the shared Kotlin port is.
@@ -451,6 +469,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Model.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Source.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0015 — the HashCalculator tool's UI-thread-free logic (the pure SHA-256 digest +
     lowercase-hex helper, the IHashComputer adapter, the outcome model, and the state-holder view-model)
     lives in the WinUI app project but is WinUI-free by construction. Link those three source files in so the
@@ -483,6 +504,9 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\ToolCard.Presentation.cs" Link="FeatureViews\ToolCard.Presentation.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (W-0013): the ColorConverter's UI-thread-free logic (the hex parse + HSL conversion
     model and the state-holder view-model) lives in the WinUI app project but is WinUI-free by construction.
     Link those two source files in so the headless (net10.0) test project verifies the adapter + per-state
