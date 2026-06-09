@@ -1,0 +1,50 @@
+/*
+  ChargeCostTrackerWidget.strings
+  TeslaSync — P4 dashboard widget · 0016 · ChargeCostTrackerWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargeCostTrackerWidget` resolves (table "ChargeCostTrackerWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/ChargeCostTrackerWidget.tsx + registry/charging.ts). Where the web
+  value used an `{{interpolation}}` token, the native value uses the matching printf token
+  (`%d` / `%@`) so `String(format:)` renders identical text. The remaining keys back the
+  native-only chrome (freshness chip, retry/empty/error copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.chargeCost.title" = "Charge Cost Tracker";
+"widget.chargeCost.description" = "Monthly charging cost breakdown: total kWh, total cost, cost per mile, vs gas savings";
+"widget.chargeCost.monthly" = "30-day cost";
+"widget.chargeCost.noData" = "No charge data";
+"widget.chargeCost.totalEnergy" = "Total Energy";
+"widget.chargeCost.sessions" = "%d sessions";
+"widget.chargeCost.totalCost" = "Total Cost";
+"widget.chargeCost.kwh" = "kWh";
+"widget.chargeCost.costPerDistance" = "Cost / %@";
+"widget.chargeCost.gasSavings" = "vs Gas Savings";
+"widget.chargeCost.savingsNote" = "30-day estimate";
+"widget.chargeCost.configureGas" = "Set gas price in settings";
+"widget.chargeCost.saved" = "Saved %@ vs gas";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.chargeCost.live" = "Live";
+"widget.chargeCost.updating" = "Updating";
+"widget.chargeCost.stale" = "Stale";
+"widget.chargeCost.offline" = "Offline";
+"widget.chargeCost.refresh" = "Refresh";
+"widget.chargeCost.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.chargeCost.loading" = "Loading charge costs";
+"widget.chargeCost.emptyHint" = "Charge your vehicle to start tracking what each session costs.";
+"widget.chargeCost.errorTitle" = "Couldn't load charge costs";
+"widget.chargeCost.offlineBanner" = "Offline — showing last known costs";
+"widget.chargeCost.staleBanner" = "Reconnecting — costs may be stale";
+
+/* --- Accessibility --- */
+"widget.chargeCost.openA11y" = "Open the Charging page";
