@@ -1,0 +1,72 @@
+=== P2 Feature view 0120 TeslaChargingSessionsMap (Windows / WinUI 3) ===
+run: 2026-06-09T13:44:49.8180317-07:00
+
+Web source : web/src/features/charging/pages/TeslaChargingSessionsMap.tsx
+Native out : apps/windows/TeslaSync.App/feature-views/TeslaChargingSessionsMap/{*.Model,*.Source,*.ViewModel,*}.cs
+Test       : apps/windows/TeslaSync.App.Tests/FeatureViews/TeslaChargingSessionsMapTests.cs (31 tests)
+
+CAPABILITY: .NET SDK 10.0.300 present; WinUI 3 (Microsoft.WindowsAppSDK) app TeslaSync.App builds
+  to bin/x64/Release/net10.0-windows10.0.19041.0/TeslaSync.App.dll -> WinUI 3 + .NET 10 AVAILABLE.
+
+----------------------------------------------------------------------------------------------------
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    TeslaSync.App.Core      -> ok
+    TeslaSync.App.Platform  -> ok
+    TeslaSync.App.UITests   -> ok
+    TeslaSync.App.Tests     -> ok
+    TeslaSync.App           -> bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+    Build succeeded. 0 Warning(s) 0 Error(s)
+BUILD_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+[2a] HEADLESS suite  ->  dotnet test TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+    Passed!  - Failed: 0, Passed: 9443, Skipped: 0, Total: 9443 - TeslaSync.App.Tests.dll (net10.0)
+    (includes the 31 new TeslaChargingSessionsMapTests: parse adapter, result mapper, projection
+     center/markers/popup/aria, state matrix loading|ready|empty|stale|offline|error, source request
+     shape + offline fallback, i18n facade key coverage, a11y labels, registration slug, diagnostics.)
+HEADLESS_TEST_EXIT=0
+
+[2b] WHOLE-SOLUTION test  ->  dotnet test apps/windows/TeslaSync.sln -c Release
+    Passed!  - Failed: 0,   Passed: 9443, Total: 9443 - TeslaSync.App.Tests.dll   (net10.0)
+    Failed!  - Failed: 147, Passed: 0,    Total: 147  - TeslaSync.App.UITests.dll  (net10.0)
+    Every one of the 147 failures is the SAME platform-capability gap (verbatim):
+      TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+      WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+      WinAppDriver.exe was not found at its standard install paths or on PATH.
+        at WinAppDriverSession.EnsureReady() WinAppDriverSession.cs:line 75
+    These are the W9-0002 out-of-process E2E suite (every test [Trait("Category","UIAutomation")]);
+    by design (WinAppDriverSession) they fail loudly rather than skip. They require an env-supplied
+    WinAppDriver/Appium runner + a deployed MSIX, ABSENT on this headless runner. They reference only
+    TeslaSync.App.Core and do NOT touch this surface, so they are unaffected by this change and are
+    out of scope for a feature-view prompt (same gap recorded by 0108 / 0110 / 0114).
+WHOLE_SOLUTION_TEST_EXIT=1   (env-gated UIAutomation only; see evidence above)
+
+----------------------------------------------------------------------------------------------------
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes
+FORMAT_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+[4] ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TeslaChargingSessionsMap
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+DELIVERED
+  feature-views/TeslaChargingSessionsMap/TeslaChargingSessionsMap.Model.cs      (parse, projection, registration, diagnostics)
+  feature-views/TeslaChargingSessionsMap/TeslaChargingSessionsMap.Source.cs     (ITeslaChargingSessionsMapSource cache-then-network /tesla/charging/sessions/)
+  feature-views/TeslaChargingSessionsMap/TeslaChargingSessionsMap.ViewModel.cs  (INotifyPropertyChanged state matrix)
+  feature-views/TeslaChargingSessionsMap/TeslaChargingSessionsMap.cs            (WinUI TsMapControl + TsMarkerCluster + popup + freshness/skeleton/error)
+  TeslaSync.App.Tests/FeatureViews/TeslaChargingSessionsMapTests.cs             (31 headless tests)
+REPAIR (coupled, required to run tests):
+  TeslaSync.App.Tests.csproj  — was corrupt AT HEAD (5 concatenated <Project> roots + malformed XML
+  comments => MSB4025, the whole test project could not load). Consolidated into ONE valid <Project>
+  preserving the deduplicated, path-sorted union of all 433 Compile links (incl. the 3 new ones).
+i18n: all source keys resolve in apps/shared/i18n/catalog/en.json
+  tesla_sessions.mapLabel / .unknown / .markerLabel / .noMapData (+ shared common.* / error.* chrome).
+
+GATE: BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite, evidenced above.)
+
+EXIT=0
+STATUS=DONE
