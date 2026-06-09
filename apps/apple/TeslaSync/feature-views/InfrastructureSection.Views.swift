@@ -1,364 +1,334 @@
 //
 //  InfrastructureSection.Views.swift
-//  TeslaSync — P4 feature view · 0006 · InfrastructureSection (Apple)
+//  TeslaSync — P4 feature view · 0248 · InfrastructureSection (Apple)
 //
-//  The composable sub-views for the dev-tools Infrastructure grid — native ports of
-//  the web `ToolCard`, `ResultPanel`, `BackendTool`, and `MqttTestTool`. Every
-//  view is token-driven (P1/S9), localizes through `InfrastructureStrings` (P1/S10),
-//  reuses the shared component library (`@/components/ui`), and carries VoiceOver
-//  labels on each interactive element. No view performs networking — they read the
-//  bound `InfrastructureModel` and call its `run` / `refresh` seams.
+//  Presentational chrome composed by `InfrastructureSection`: the collapsible
+//  accordion shell (web `<AccordionSection>` — Globe icon box + title + subtitle +
+//  trailing connection badge + chevron), the Connected/Disconnected + Active/Standby
+//  badges (web `<Badge>`), the card header (web `<CardHeader title action>`), the
+//  key/value row (web `<KVList>` item), the database-pool metric tile (web
+//  `<InlineMetric>`), and the stale / offline freshness chip + connectivity banner
+//  (the P4 live-state contract). All copy resolves through the P1/S10 facade; all
+//  chrome is token-driven (P1/S9). No networking and no Tailwind ports live here. The
+//  two content cards live in `.Sections`; the loading / empty / error states in
+//  `.States`.
 //
 
 import SwiftUI
 
-// MARK: - Tool card shell (web `ToolCard`)
+// MARK: - Accordion shell (web `<AccordionSection>`)
 
-/// A frosted card with an icon box, title, description, and arbitrary content —
-/// the native port of the web `ToolCard` (`GlassPanel` + icon + title + body).
-struct InfraToolCard<Content: View>: View {
+/// The collapsible panel shell — the native parity of the web `AccordionSection`: a
+/// header row (cyan Globe `IconBox`, the title + description, the trailing connection
+/// badge, a chevron that rotates on expand) over a divider-separated body. The header
+/// is a single button (web `role="button"` + `aria-expanded`); the chevron + reveal
+/// honor Reduce Motion. `defaultOpen` mirrors the web prop.
+struct InfrastructureAccordion<Trailing: View, Content: View>: View {
     let systemImage: String
-    let tone: InfraTone
     let titleKey: String
     let titleFallback: String
     let descriptionKey: String
     let descriptionFallback: String
-    @ViewBuilder let content: () -> Content
+    @ViewBuilder var trailing: () -> Trailing
+    @ViewBuilder var content: () -> Content
 
-    var body: some View {
-        TSGlassPanel {
-            VStack(alignment: .leading, spacing: TSSpacing.md) {
-                HStack(alignment: .top, spacing: TSSpacing.md) {
-                    TSIconBox(systemName: systemImage, tone: tone.tsTone)
-                    VStack(alignment: .leading, spacing: TSSpacing.xs) {
-                        TSPanelTitle(InfrastructureStrings.key(titleKey, titleFallback))
-                        TSCaption(InfrastructureStrings.key(descriptionKey, descriptionFallback))
-                    }
-                    Spacer(minLength: 0)
-                }
-                content()
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .accessibilityElement(children: .contain)
-    }
-}
+    @State private var expanded: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-// MARK: - Status badge (web `Badge variant=success|danger dot`)
-
-/// The run-outcome badge shown next to the run button (web success/failed badge).
-struct InfraStatusBadge: View {
-    let result: InfraToolResult
-
-    var body: some View {
-        if result.didSucceed {
-            TSBadge(InfrastructureStrings.key("Success", "Success"), tone: .success)
-                .accessibilityLabel(Text(verbatim: InfraAccessibility.statusLabel(result)))
-        } else {
-            TSBadge(InfrastructureStrings.key("Failed", "Failed"), tone: .danger)
-                .accessibilityLabel(Text(verbatim: InfraAccessibility.statusLabel(result)))
-        }
-    }
-}
-
-// MARK: - Freshness chip (native connectivity chrome)
-
-/// The surface freshness chip (online / stale / offline) — a colored dot + label,
-/// mirroring the established widget connection chip.
-struct InfraFreshnessChip: View {
-    let connection: InfraConnection
-
-    private var tone: Color {
-        switch connection {
-        case .online: Color.TS.statusSuccess
-        case .stale: Color.TS.statusWarning
-        case .offline: Color.TS.textMuted
-        }
-    }
-
-    private var label: String {
-        InfraAccessibility.freshnessLabel(connection)
+    init(
+        systemImage: String,
+        titleKey: String,
+        titleFallback: String,
+        descriptionKey: String,
+        descriptionFallback: String,
+        defaultOpen: Bool = false,
+        @ViewBuilder trailing: @escaping () -> Trailing,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.systemImage = systemImage
+        self.titleKey = titleKey
+        self.titleFallback = titleFallback
+        self.descriptionKey = descriptionKey
+        self.descriptionFallback = descriptionFallback
+        _expanded = State(initialValue: defaultOpen)
+        self.trailing = trailing
+        self.content = content
     }
 
     var body: some View {
-        HStack(spacing: TSSpacing.xs) {
-            Circle().fill(tone).frame(width: 6, height: 6)
-            Text(verbatim: label)
-                .font(Font.TS.caption)
-                .foregroundStyle(Color.TS.textMuted)
-        }
-        .padding(.horizontal, TSSpacing.sm)
-        .padding(.vertical, 3)
-        .background(Color.TS.surface, in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.TS.border, lineWidth: 1))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: label))
-    }
-}
-
-// MARK: - Result panel (web `ResultPanel`)
-
-/// The per-tool result panel: success → pretty JSON in a scrollable mono surface
-/// with a copy button; failure → the error message; idle → a friendly empty hint.
-/// A stale result also surfaces a "stale" chip (web has no live feed; this is the
-/// native freshness affordance from the state matrix).
-struct InfraResultPanel: View {
-    let titleKey: String
-    let titleFallback: String
-    let phase: InfraToolPhase
-    let isStale: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: TSSpacing.xs) {
+        VStack(spacing: 0) {
             header
-            body(for: phase)
+            if expanded {
+                Divider().overlay(Color.TS.border)
+                content()
+                    .padding(TSSpacing.lg)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(reduceMotion ? .identity : .opacity)
+            }
         }
-        .padding(TSSpacing.md)
-        .background(tint, in: RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous)
-                .strokeBorder(Color.TS.border.opacity(0.6), lineWidth: 1)
-        )
-        .accessibilityElement(children: .contain)
+        .tsGlassPanel()
     }
 
     private var header: some View {
-        HStack(spacing: TSSpacing.sm) {
+        Button {
+            if reduceMotion {
+                expanded.toggle()
+            } else {
+                withAnimation(.easeInOut(duration: TSMotion.normalDuration)) { expanded.toggle() }
+            }
+        } label: {
+            HStack(spacing: TSSpacing.md) {
+                TSIconBox(systemName: systemImage, tone: .accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: InfrastructureStrings.string(titleKey, titleFallback))
+                        .font(Font.TS.panel)
+                        .foregroundStyle(Color.TS.textPrimary)
+                    Text(verbatim: InfrastructureStrings.string(descriptionKey, descriptionFallback))
+                        .font(Font.TS.caption)
+                        .foregroundStyle(Color.TS.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: TSSpacing.sm)
+                trailing()
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.TS.textMuted)
+                    .rotationEffect(.degrees(expanded ? 180 : 0))
+            }
+            .padding(TSSpacing.lg)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: accessibilityHeaderLabel))
+        .accessibilityValue(Text(verbatim: expanded
+                ? InfrastructureStrings.string("Expanded", "Expanded")
+                : InfrastructureStrings.string("Collapsed", "Collapsed")))
+        .accessibilityHint(Text(verbatim: InfrastructureStrings.string(
+            "Toggle Section",
+            "Double tap to expand or collapse"
+        )))
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var accessibilityHeaderLabel: String {
+        let title = InfrastructureStrings.string(titleKey, titleFallback)
+        let description = InfrastructureStrings.string(descriptionKey, descriptionFallback)
+        return "\(title). \(description)"
+    }
+}
+
+// MARK: - State badge (web `<Badge variant size dot>`)
+
+/// A small tinted pill — the native parity of the web `<Badge>`: an optional leading
+/// state dot + a localized label, tinted by tone. Used for the header
+/// Connected/Disconnected badge (with dot) and the Active/Standby + Connection-State
+/// badges (without dot).
+struct InfraStateBadge: View {
+    let titleKey: String
+    let fallback: String
+    let tone: TSTone
+    var dot: Bool = false
+
+    var body: some View {
+        let color = tone.color
+        return HStack(spacing: 4) {
+            if dot {
+                Circle()
+                    .fill(color)
+                    .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
+            }
+            Text(verbatim: InfrastructureStrings.string(titleKey, fallback))
+                .font(Font.TS.caption)
+                .fontWeight(.medium)
+                .foregroundStyle(color)
+        }
+        .padding(.horizontal, TSSpacing.sm)
+        .padding(.vertical, 2)
+        .background(color.opacity(0.15), in: Capsule())
+        .overlay(Capsule().strokeBorder(color.opacity(0.3), lineWidth: 1))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: InfrastructureStrings.string(titleKey, fallback)))
+    }
+}
+
+// MARK: - Card header (web `<CardHeader title action>`)
+
+/// A card's header row — a title with a trailing accessory (web `<CardHeader>` with an
+/// `action`). The title resolves through the P1/S10 facade and renders verbatim.
+struct InfraSectionCardHeader<Action: View>: View {
+    let titleKey: String
+    let titleFallback: String
+    @ViewBuilder var action: () -> Action
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: TSSpacing.sm) {
             Text(verbatim: InfrastructureStrings.string(titleKey, titleFallback))
-                .font(Font.TS.label)
-                .foregroundStyle(Color.TS.textSecondary)
-            if isStale, case .completed = phase {
-                staleChip
-            }
-            Spacer(minLength: 0)
-            if case let .completed(.success(json), _) = phase {
-                TSCopyButton(value: json)
-            }
-        }
-    }
-
-    private var staleChip: some View {
-        Text(verbatim: InfrastructureStrings.string("Stale", "Stale"))
-            .font(Font.TS.caption)
-            .fontWeight(.medium)
-            .foregroundStyle(Color.TS.statusWarning)
-            .padding(.horizontal, TSSpacing.sm)
-            .padding(.vertical, 2)
-            .background(Color.TS.statusWarning.opacity(0.15), in: Capsule())
-            .accessibilityLabel(InfrastructureStrings.text("Stale Result A11y", "Result may be out of date"))
-    }
-
-    @ViewBuilder
-    private func body(for phase: InfraToolPhase) -> some View {
-        switch phase {
-        case .idle:
-            Text(verbatim: InfrastructureStrings.string("No Result Yet", "No result yet"))
-                .font(Font.TS.bodySm)
-                .italic()
-                .foregroundStyle(Color.TS.textMuted)
-        case .running:
-            TSSpinner(label: InfrastructureStrings.key("Running", "Running…"))
-        case let .completed(.success(json), _):
-            successBody(json)
-        case let .completed(.failure(message), _):
-            Text(verbatim: message ?? InfrastructureStrings.string("Request Failed", "Request failed"))
-                .font(Font.TS.body)
-                .foregroundStyle(Color.TS.statusDanger)
-                .textSelection(.enabled)
-                .accessibilityLabel(
-                    Text(verbatim: InfrastructureStrings.string("Error A11y", "Error")
-                        + ": " + (message ?? InfrastructureStrings.string("Request Failed", "Request failed")))
-                )
-        }
-    }
-
-    private func successBody(_ json: String) -> some View {
-        ScrollView {
-            Text(verbatim: json)
-                .font(.system(.caption, design: .monospaced))
+                .font(Font.TS.panel)
                 .foregroundStyle(Color.TS.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .textSelection(.enabled)
+                .accessibilityAddTraits(.isHeader)
+            action()
         }
-        .frame(maxHeight: 256)
-        .padding(TSSpacing.sm)
-        .background(Color.TS.bg, in: RoundedRectangle(cornerRadius: TSRadius.sm, style: .continuous))
-        .accessibilityLabel(InfrastructureStrings.text("Result A11y", "Result"))
-        .accessibilityValue(Text(verbatim: json))
-    }
-
-    private var tint: Color {
-        guard case let .completed(result, _) = phase else {
-            return Color.TS.surface.opacity(0.4)
-        }
-        return result.didSucceed
-            ? Color.TS.statusSuccess.opacity(0.08)
-            : Color.TS.statusDanger.opacity(0.08)
     }
 }
 
-// MARK: - Backend tool (web `BackendTool`)
+// MARK: - Key/value row (web `<KVList>` item)
 
-/// A one-shot backend dev-tool card: a run button, a success/failed badge, and the
-/// result panel — the native port of the web `BackendTool`.
-struct InfraBackendToolView: View {
-    let model: InfrastructureModel
-    let tool: InfraTool
-
-    private var state: InfraToolState? {
-        model.tools.first { $0.id == tool.id }
-    }
+/// One key/value line — the native parity of a web `<KVList>` item: a muted label on
+/// the leading edge and the value view on the trailing edge.
+struct InfraKVRow<Value: View>: View {
+    let labelKey: String
+    let labelFallback: String
+    @ViewBuilder var value: () -> Value
 
     var body: some View {
-        InfraToolCard(
-            systemImage: tool.systemImage,
-            tone: tool.tone,
-            titleKey: tool.titleKey,
-            titleFallback: tool.titleFallback,
-            descriptionKey: tool.descriptionKey,
-            descriptionFallback: tool.descriptionFallback
-        ) {
-            VStack(alignment: .leading, spacing: TSSpacing.md) {
-                HStack(spacing: TSSpacing.sm) {
-                    runButton
-                    if let result = state?.result {
-                        InfraStatusBadge(result: result)
-                    }
-                    Spacer(minLength: 0)
-                }
-                if let state, state.phase != .idle {
-                    InfraResultPanel(
-                        titleKey: tool.titleKey,
-                        titleFallback: tool.titleFallback,
-                        phase: state.phase,
-                        isStale: model.isStale(state)
-                    )
-                }
-            }
+        HStack(alignment: .firstTextBaseline, spacing: TSSpacing.md) {
+            Text(verbatim: InfrastructureStrings.string(labelKey, labelFallback))
+                .font(Font.TS.bodySm)
+                .foregroundStyle(Color.TS.textMuted)
+            Spacer(minLength: TSSpacing.md)
+            value()
+        }
+        .padding(.vertical, 3)
+    }
+}
+
+/// A plain trailing value for an `InfraKVRow` — a primary-text string, em-dash for an
+/// absent value (the projection already substitutes it).
+struct InfraKVValue: View {
+    let text: String
+
+    var body: some View {
+        Text(verbatim: text)
+            .font(Font.TS.bodySm)
+            .foregroundStyle(Color.TS.textPrimary)
+            .multilineTextAlignment(.trailing)
+            .textSelection(.enabled)
+    }
+}
+
+// MARK: - Database-pool metric tile (web `<InlineMetric icon value label>`)
+
+/// One database-pool metric — the native parity of the web `<InlineMetric>`: a tinted
+/// SF Symbol, the large locale-formatted value, and a muted label underneath.
+struct InfraMetricTile: View {
+    let stat: InfraPoolStat
+
+    private var tone: Color {
+        switch stat.metric.tone {
+        case .accent: Color.TS.accent
+        case .success: Color.TS.statusSuccess
+        case .warning: Color.TS.statusWarning
         }
     }
 
-    private var runButton: some View {
-        TSButton(
-            variant: .primary,
-            size: .small,
-            isLoading: state?.isRunning ?? false,
-            action: { model.run(toolID: tool.id) },
-            label: {
-                Label {
-                    InfrastructureStrings.text("Run", "Run")
-                } icon: {
-                    Image(systemName: "play.fill")
-                }
-                .labelStyle(.titleAndIcon)
+    var body: some View {
+        let label = InfrastructureStrings.string(stat.metric.labelKey, stat.metric.labelKey)
+        return HStack(spacing: TSSpacing.sm) {
+            Image(systemName: stat.metric.symbol)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(tone)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: stat.value)
+                    .font(Font.TS.section)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.TS.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text(verbatim: label)
+                    .font(Font.TS.caption)
+                    .foregroundStyle(Color.TS.textMuted)
+                    .lineLimit(1)
             }
+            Spacer(minLength: 0)
+        }
+        .padding(TSSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.TS.surface, in: RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous)
+                .strokeBorder(Color.TS.border, lineWidth: 1)
         )
-        .disabled(model.isOffline)
-        .accessibilityLabel(Text(verbatim: InfraAccessibility.runLabel(tool: tool)))
-        .accessibilityHint(InfrastructureStrings.text("Run Hint", "Runs this backend tool"))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: "\(label): \(stat.value)"))
     }
 }
 
-// MARK: - MQTT test tool (web `MqttTestTool`)
+// MARK: - Freshness chip (Stale / Offline)
 
-/// The MQTT publish tool card: topic + message inputs, a send button, and the
-/// result panel — the native port of the web `MqttTestTool` (its own `useState`
-/// topic/message + `useMutation`).
-struct InfraMqttToolView: View {
-    let model: InfrastructureModel
-    let tool: InfraTool
+/// A small live-state chip shown next to the connection badge when the bound source is
+/// not live (ADR-013). The web accordion has no freshness concept; this is the prompt's
+/// "stale chip" / "offline chip", invisible while live so the normal header matches the
+/// web.
+struct InfraFreshnessChip: View {
+    let connection: InfraConnection
 
-    @State private var topic = ""
-    @State private var message = ""
-
-    private var state: InfraToolState? {
-        model.tools.first { $0.id == tool.id }
+    private struct Descriptor {
+        let tone: Color
+        let key: String
+        let fallback: String
+        let symbol: String
     }
 
     var body: some View {
-        InfraToolCard(
-            systemImage: tool.systemImage,
-            tone: tool.tone,
-            titleKey: tool.titleKey,
-            titleFallback: tool.titleFallback,
-            descriptionKey: tool.descriptionKey,
-            descriptionFallback: tool.descriptionFallback
-        ) {
-            VStack(alignment: .leading, spacing: TSSpacing.md) {
-                TSTextField(
-                    InfrastructureStrings.key("Mqtt Topic Placeholder", "test/topic"),
-                    text: $topic,
-                    label: InfrastructureStrings.key("Topic", "Topic")
-                )
-                .accessibilityLabel(InfrastructureStrings.text("Topic", "Topic"))
-
-                TSTextArea(
-                    text: $message,
-                    label: InfrastructureStrings.key("Message", "Message"),
-                    minHeight: 72
-                )
-                .accessibilityLabel(InfrastructureStrings.text("Message", "Message"))
-
-                HStack(spacing: TSSpacing.sm) {
-                    sendButton
-                    if let result = state?.result {
-                        InfraStatusBadge(result: result)
-                    }
-                    Spacer(minLength: 0)
-                }
-
-                if let state, state.phase != .idle {
-                    InfraResultPanel(
-                        titleKey: tool.titleKey,
-                        titleFallback: tool.titleFallback,
-                        phase: state.phase,
-                        isStale: model.isStale(state)
-                    )
-                }
+        if let descriptor = Self.descriptor(for: connection) {
+            HStack(spacing: 4) {
+                Image(systemName: descriptor.symbol)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(descriptor.tone)
+                Text(verbatim: InfrastructureStrings.string(descriptor.key, descriptor.fallback))
+                    .font(Font.TS.caption)
+                    .foregroundStyle(Color.TS.textMuted)
             }
+            .padding(.horizontal, TSSpacing.sm)
+            .padding(.vertical, 2)
+            .background(descriptor.tone.opacity(0.12), in: Capsule())
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(Text(verbatim: InfrastructureStrings.string(descriptor.key, descriptor.fallback)))
         }
     }
 
-    private var sendButton: some View {
-        TSButton(
-            variant: .primary,
-            size: .small,
-            isLoading: state?.isRunning ?? false,
-            action: { model.run(toolID: tool.id, inputs: InfraToolInputs(topic: topic, message: message)) },
-            label: {
-                Label {
-                    InfrastructureStrings.text("Send Test", "Send Test")
-                } icon: {
-                    Image(systemName: "play.fill")
-                }
-                .labelStyle(.titleAndIcon)
-            }
-        )
-        .disabled(model.isOffline)
-        .accessibilityLabel(Text(verbatim: InfraAccessibility.sendLabel()))
-        .accessibilityHint(InfrastructureStrings.text("Send Test Hint", "Publishes a test MQTT message"))
+    private static func descriptor(for connection: InfraConnection) -> Descriptor? {
+        switch connection {
+        case .live:
+            nil
+        case .stale:
+            Descriptor(tone: Color.TS.statusWarning, key: "Stale", fallback: "Stale", symbol: "clock.arrow.circlepath")
+        case .offline:
+            Descriptor(tone: Color.TS.textMuted, key: "Offline", fallback: "Offline", symbol: "wifi.slash")
+        }
     }
 }
 
-// MARK: - Loading skeleton (initial-mount chrome)
+// MARK: - Connectivity banner (stale / offline)
 
-/// A skeleton tool card shown while the surface resolves initial connectivity.
-struct InfraToolSkeleton: View {
+/// The stale / offline banner shown above the content when the bound source is not
+/// live, so a cached infrastructure snapshot is clearly labeled.
+struct InfraConnectivityBanner: View {
+    let connection: InfraConnection
+
     var body: some View {
-        TSGlassPanel {
-            VStack(alignment: .leading, spacing: TSSpacing.md) {
-                HStack(spacing: TSSpacing.md) {
-                    TSSkeleton(width: 36, height: 36, cornerRadius: TSRadius.md)
-                    VStack(alignment: .leading, spacing: TSSpacing.xs) {
-                        TSSkeleton(width: 120, height: 14)
-                        TSSkeleton(width: 180, height: 10)
-                    }
-                    Spacer(minLength: 0)
-                }
-                TSSkeleton(width: 96, height: 28, cornerRadius: TSRadius.md)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        let offline = connection == .offline
+        let key = offline ? "Offline Banner" : "Stale Banner"
+        let fallback = offline
+            ? "Offline — showing last known infrastructure status"
+            : "Reconnecting — infrastructure status may be out of date"
+        let tone = offline ? Color.TS.textMuted : Color.TS.statusWarning
+        return HStack(spacing: TSSpacing.xs) {
+            Image(systemName: offline ? "wifi.slash" : "clock.arrow.circlepath")
+                .font(.system(size: 11, weight: .semibold))
+            Text(verbatim: InfrastructureStrings.string(key, fallback))
+                .font(Font.TS.caption)
         }
-        .accessibilityHidden(true)
+        .foregroundStyle(tone)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, TSSpacing.sm)
+        .padding(.vertical, TSSpacing.xs)
+        .background(tone.opacity(0.12), in: RoundedRectangle(cornerRadius: TSRadius.sm, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 }

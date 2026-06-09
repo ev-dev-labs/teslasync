@@ -1,19 +1,18 @@
 //
 //  InfrastructureSection.Model.swift
-//  TeslaSync — P4 feature view · 0006 · InfrastructureSection (Apple)
+//  TeslaSync — P4 feature view · 0248 · InfrastructureSection (Apple)
 //
-//  State-holder seam (P1/S8) + telemetry seam (P1/S11) + i18n facade (P1/S10) for
-//  the dev-tools Infrastructure surface. The view binds through `InfrastructureModel`
-//  and never performs networking itself: tool execution + connectivity flow through
-//  an injected `InfrastructureSource` (the production app wires it to the dev-tools
-//  client; previews/tests use `InMemoryInfrastructureSource`).
+//  State-holder seam (P1/S8) + telemetry seam (P1/S11 diagnostics) + i18n facade
+//  (P1/S10) for the system-status "Infrastructure" surface. The view binds through
+//  `InfrastructureModel`; no networking lives in the view. SwiftUI parity of
+//  features/system/components/status/InfrastructureSection.tsx.
 //
-//  The web source is a grid of on-demand `useMutation` tools (no live query): four
-//  `BackendTool`s (db-stats, migration-status, env-check, runtime-info) plus an MQTT
-//  test tool (topic+message → mqtt-test). Each tool owns its own run lifecycle
-//  (idle → running → completed). The surface additionally carries a reachability /
-//  freshness state so every required state (loading/empty/error/stale/offline)
-//  renders, mirroring the established widget connection model.
+//  The web component composes two interval-refetched reads — `getTelemetryStatus`
+//  (2s) and `getExtendedHealth` (30s). The native source seam coalesces those into
+//  one `InfraStatusUpdate` so every prompt-required state (loading / empty / error /
+//  stale / offline / content) renders here. There is no manual refresh in the web
+//  accordion; the only refresh paths are the error-state retry and the one-shot stale
+//  auto-refresh (both silent), matching the web's auto-refetch behavior.
 //
 
 import Foundation
@@ -23,14 +22,14 @@ import SwiftUI
 
 // MARK: - Telemetry seam (P1/S11 diagnostics contract)
 
-/// Emits the surface-open product-analytics event. The default logs via
-/// `os.Logger`; the production app injects an adapter forwarding to the shared
-/// core `Telemetry.track(.screenView(screen:…))` (consent-gated + redacted there).
+/// Emits the `view.opened` product-analytics event for the surface. The default logs
+/// via `os.Logger`; the production app injects an adapter that forwards to the shared
+/// core `Telemetry.track(.screenView(screen:…))` (ADR-016), consent-gated + redacted.
 public protocol InfrastructureTelemetry: Sendable {
     func viewOpened(surface: String)
 }
 
-/// `os.Logger`-backed default that records the surface open as a `screen_view`.
+/// `os.Logger`-backed default that records the surface open as a `view.opened`.
 public struct OSLogInfrastructureTelemetry: InfrastructureTelemetry {
     private let logger: Logger
 
@@ -39,203 +38,222 @@ public struct OSLogInfrastructureTelemetry: InfrastructureTelemetry {
     }
 
     public func viewOpened(surface: String) {
-        logger.info("screen_view surface=\(surface, privacy: .public)")
+        logger.info("view.opened surface=\(surface, privacy: .public)")
     }
 }
 
-// MARK: - Connectivity / freshness (native chrome for the required states)
+// MARK: - Localization facade (P1/S10) — web `t(key, default)`
 
-/// Dev-tools service reachability + freshness, mirroring `LiveConnectionState`
-/// (ADR-013). `online` = reachable; `stale` = reachable but the last contact is
-/// older than the freshness window (auto-refresh nudge); `offline` = unreachable
-/// (run is disabled, cached results stay visible behind an offline chip).
-public enum InfraConnection: Sendable, Equatable {
-    case online
-    case stale
-    case offline
+/// Resolves the surface's strings by key with the web English fallback, so the view
+/// holds no hardcoded literals. Keys live in the "InfrastructureSection" table
+/// (mirroring the web `useTranslation()` `t('Infrastructure')`-style calls, where the
+/// English label IS the key), folded into the app `Localizable.xcstrings` catalog at
+/// integration time; the per-surface table keeps each parallel surface prompt
+/// self-contained.
+public enum InfrastructureStrings {
+    public static let table = "InfrastructureSection"
+
+    public static func string(_ key: String, _ fallback: String) -> String {
+        NSLocalizedString(key, tableName: table, bundle: .main, value: fallback, comment: "")
+    }
+
+    public static func text(_ key: String, _ fallback: String) -> Text {
+        Text(verbatim: string(key, fallback))
+    }
 }
 
-// MARK: - State-holder seam (P1/S8 layer)
+// MARK: - Source snapshot
 
-/// One coalesced connectivity snapshot pushed by a source.
-public struct InfraConnectivityUpdate: Sendable, Equatable {
+/// One coalesced snapshot pushed by an `InfrastructureSource`: the two composed reads
+/// (telemetry status, database pool) + the load status + the live-state connection +
+/// the sync timestamp.
+public struct InfraStatusUpdate: Sendable, Equatable {
+    public var status: InfraLoadStatus
+    /// The web `getTelemetryStatus()` result (`telemetry`).
+    public var telemetry: InfraTelemetryDTO?
+    /// The web `extHealth.database_pool` slice (`getExtendedHealth()`).
+    public var pool: InfraDatabasePoolDTO?
     public var connection: InfraConnection
     public var updatedAt: Date?
 
-    public init(connection: InfraConnection, updatedAt: Date? = nil) {
+    public init(
+        status: InfraLoadStatus = .loading,
+        telemetry: InfraTelemetryDTO? = nil,
+        pool: InfraDatabasePoolDTO? = nil,
+        connection: InfraConnection = .live,
+        updatedAt: Date? = nil
+    ) {
+        self.status = status
+        self.telemetry = telemetry
+        self.pool = pool
         self.connection = connection
         self.updatedAt = updatedAt
     }
 }
 
-/// The seam the view binds through. The production app implements this over the
-/// dev-tools client + the shared connectivity store; previews/tests use
-/// `InMemoryInfrastructureSource`. The view never talks to the network directly.
+// MARK: - State-holder seam (P1/S8 layer)
+
+/// The seam the view binds through. The production app implements this over the shared
+/// P1/S8 state holders — composing the `getTelemetryStatus` / `getExtendedHealth` reads
+/// — and projects each emission to an `InfraStatusUpdate`. Previews + tests use
+/// `InMemoryInfrastructureSource`. The view never talks to the network.
 @MainActor
 public protocol InfrastructureSource: AnyObject {
-    /// Pushes connectivity/freshness changes (reachability of the dev-tools API).
-    var onConnectivity: (@MainActor (InfraConnectivityUpdate) -> Void)? { get set }
-    /// Begins observing connectivity.
+    var onUpdate: (@MainActor (InfraStatusUpdate) -> Void)? { get set }
     func start()
-    /// Stops observing.
     func stop()
-    /// Re-probes connectivity (wired to the surface refresh affordance).
+    /// Re-runs the composed reads (the web auto-refetch). A fresh snapshot arrives via
+    /// `onUpdate`. Wired to the error-state retry and the stale auto-refresh.
     func refresh()
-    /// Executes a tool against its endpoint and returns the projected result.
-    func run(toolID: String, inputs: InfraToolInputs) async -> InfraToolResult
 }
 
-/// Freshness policy: a completed result older than `window` is "stale".
-public enum InfraFreshness {
-    /// Default freshness window (web dev-tools have no live feed; 60s is a sensible
-    /// "this snapshot may be out of date, re-run" threshold).
-    public static let window: TimeInterval = 60
+// MARK: - State holder (P1/S8)
 
-    public static func isStale(ranAt: Date?, now: Date, window: TimeInterval = window) -> Bool {
-        guard let ranAt else { return false }
-        return now.timeIntervalSince(ranAt) > window
-    }
-}
-
-/// The surface view-model. Owns the per-tool run lifecycles + the connectivity
-/// chip, subscribes to an `InfrastructureSource`, and exposes everything the grid
-/// renders. `@Observable` so SwiftUI tracks fine-grained changes.
+/// The surface's observable view-model. Subscribes to an `InfrastructureSource`,
+/// projects each snapshot into the SSE-connection info, polling-engine info, and
+/// database-pool tiles + a render `InfraPhase`, drives the error-state retry and the
+/// one-shot stale auto-refresh, and emits the `view.opened` diagnostics event once on
+/// first appearance. `@Observable` for fine-grained SwiftUI tracking.
 @MainActor
 @Observable
 public final class InfrastructureModel {
-    /// Surface render phase: `loading` until the first connectivity snapshot lands
-    /// (initial skeleton chrome), then `ready` (the tool grid, including the offline
-    /// presentation). The web renders the grid immediately; the brief skeleton is
-    /// the native-idiomatic initial-mount affordance required by the state matrix.
-    public enum Phase: Sendable, Equatable {
-        case loading
-        case ready
-    }
-
-    public private(set) var phase: Phase = .loading
-    public private(set) var connection: InfraConnection = .online
-    public private(set) var tools: [InfraToolState]
+    public private(set) var phase: InfraPhase = .loading
+    public private(set) var connection: InfraConnection = .live
+    public private(set) var sse: InfraSSEInfo = .init(
+        connected: false,
+        endpoint: InfrastructureDisplay.emDash,
+        protocolName: InfrastructureDisplay.emDash,
+        fallbackActive: false
+    )
+    public private(set) var polling: InfraPollingInfo = .init(
+        active: false,
+        mode: InfrastructureDisplay.unknownMode,
+        speedup: InfrastructureDisplay.emDash,
+        fleetTelemetryLatency: InfrastructureDisplay.emDash,
+        fleetApiPolling: InfrastructureDisplay.emDash
+    )
+    /// The database-pool tiles, or `nil` when the source has no pool snapshot (web
+    /// `{extHealth?.database_pool && …}` — the row is omitted, not blanked).
+    public private(set) var poolStats: [InfraPoolStat]?
     public private(set) var updatedAt: Date?
-
-    /// Whether the dev-tools API is currently unreachable (run disabled, cached
-    /// results stay visible behind the offline chip).
-    public var isOffline: Bool {
-        connection == .offline
-    }
 
     @ObservationIgnored private let source: any InfrastructureSource
     @ObservationIgnored private let telemetry: any InfrastructureTelemetry
-    @ObservationIgnored private let now: @MainActor () -> Date
+    @ObservationIgnored private let locale: Locale
     @ObservationIgnored private var started = false
+    @ObservationIgnored private var didAutoRefreshForStale = false
 
     public init(
         source: any InfrastructureSource,
         telemetry: any InfrastructureTelemetry = OSLogInfrastructureTelemetry(),
-        catalog: [InfraTool] = InfraToolCatalog.all,
-        now: @escaping @MainActor () -> Date = { Date() }
+        locale: Locale = .current
     ) {
         self.source = source
         self.telemetry = telemetry
-        self.now = now
-        tools = catalog.map { InfraToolState(tool: $0) }
-        source.onConnectivity = { [weak self] update in self?.apply(update) }
+        self.locale = locale
+        source.onUpdate = { [weak self] update in self?.apply(update) }
+    }
+
+    /// Whether the SSE / Fleet-Telemetry stream is connected (header badge + a11y).
+    public var sseConnected: Bool {
+        sse.connected
+    }
+
+    /// Whether the database-pool tiles have data to show.
+    public var hasPool: Bool {
+        poolStats != nil
+    }
+
+    /// Whether the surface has any content (a telemetry read or a database pool).
+    public var hasContent: Bool {
+        phase == .content
+    }
+
+    /// The combined VoiceOver summary for the section header.
+    public var accessibilitySummary: String {
+        InfrastructureAccessibility.sectionSummary(
+            hasContent: hasContent,
+            sseConnected: sseConnected,
+            localize: InfrastructureStrings.string
+        )
     }
 
     /// Begins observing and emits the `view.opened` diagnostics event. Idempotent.
     public func start() {
         guard !started else { return }
         started = true
-        telemetry.viewOpened(surface: InfrastructureSection.surfaceSlug)
+        telemetry.viewOpened(surface: InfrastructureSurface.slug)
         source.start()
     }
 
-    /// Stops observing the connectivity feed.
+    /// Stops observing the upstream reads.
     public func stop() {
         started = false
         source.stop()
     }
 
-    /// Re-probes connectivity (wired to the surface freshness chip refresh).
-    public func refresh() {
+    /// The error-state retry (web `QueryError` refetch): a silent re-fetch — the bound
+    /// source pushes a fresh snapshot via `onUpdate`.
+    public func retry() {
         source.refresh()
     }
 
-    /// Runs a tool (web `mutation.mutate()`), fire-and-forget for the UI. No-op
-    /// while that tool is already running or while offline (run is disabled with the
-    /// cached result visible).
-    public func run(toolID: String, inputs: InfraToolInputs = .empty) {
-        Task { @MainActor [weak self] in
-            await self?.performRun(toolID: toolID, inputs: inputs)
-        }
-    }
-
-    /// The awaitable core of `run` — sets the tool `running`, awaits the source, and
-    /// lands the projected result. Returns `nil` when the run was skipped (offline /
-    /// already running / unknown tool). Exposed so tests drive runs deterministically.
-    @discardableResult
-    public func performRun(toolID: String, inputs: InfraToolInputs = .empty) async -> InfraToolResult? {
-        guard connection != .offline else { return nil }
-        guard let index = tools.firstIndex(where: { $0.id == toolID }), !tools[index].isRunning else { return nil }
-        tools[index].phase = .running
-        let result = await source.run(toolID: toolID, inputs: inputs)
-        if let landing = tools.firstIndex(where: { $0.id == toolID }) {
-            tools[landing].phase = .completed(result, ranAt: now())
-        }
-        return result
-    }
-
-    /// Restores previously-fetched (cached) results — e.g. the last successful run
-    /// reloaded so the surface shows data immediately and keeps it visible while
-    /// offline. Also used by previews/tests to seed deterministic completed states.
-    public func restore(_ cached: [String: InfraToolResult], at date: Date) {
-        for (toolID, result) in cached {
-            guard let index = tools.firstIndex(where: { $0.id == toolID }) else { continue }
-            tools[index].phase = .completed(result, ranAt: date)
-        }
-    }
-
-    /// Whether a tool's latest result is older than the freshness window.
-    public func isStale(_ state: InfraToolState) -> Bool {
-        InfraFreshness.isStale(ranAt: state.ranAt, now: now())
-    }
-
-    private func apply(_ update: InfraConnectivityUpdate) {
+    private func apply(_ update: InfraStatusUpdate) {
         connection = update.connection
         updatedAt = update.updatedAt
-        phase = .ready
+        sse = InfrastructureProjection.sseInfo(from: update.telemetry)
+        polling = InfrastructureProjection.pollingInfo(from: update.telemetry)
+        poolStats = InfrastructureProjection.poolStats(from: update.pool, locale: locale)
+        phase = InfrastructureProjection.resolvePhase(
+            update.status,
+            hasTelemetry: update.telemetry != nil,
+            hasPool: update.pool != nil
+        )
+        handleAutoRefresh(for: update.connection)
+    }
+
+    /// Stale → one guarded auto-refresh (prompt "stale chip + auto-refresh"); reset
+    /// once live so a later stale episode re-triggers exactly once. Offline keeps the
+    /// cached snapshot on screen and does not refetch. The auto-refresh is silent — the
+    /// web has no toast on this surface.
+    private func handleAutoRefresh(for connection: InfraConnection) {
+        switch connection {
+        case .stale:
+            guard !didAutoRefreshForStale else { return }
+            didAutoRefreshForStale = true
+            source.refresh()
+        case .live:
+            didAutoRefreshForStale = false
+        case .offline:
+            break
+        }
     }
 }
 
 // MARK: - In-memory source (previews + tests)
 
-/// In-memory `InfrastructureSource` for previews + unit/UI tests. Returns canned
-/// results per tool id and lets tests drive connectivity with `push(_:)`.
+/// In-memory source for previews + unit tests. Seeds an optional initial snapshot on
+/// `start()`, counts lifecycle calls, and optionally pushes a follow-up snapshot to
+/// simulate the refetch driven by `refresh()`.
 @MainActor
 public final class InMemoryInfrastructureSource: InfrastructureSource {
-    public var onConnectivity: (@MainActor (InfraConnectivityUpdate) -> Void)?
+    public var onUpdate: (@MainActor (InfraStatusUpdate) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
     public private(set) var refreshCount = 0
-    public private(set) var runCount = 0
-    public private(set) var lastInputs: InfraToolInputs?
+    /// An optional snapshot pushed when `refresh()` runs (the web read refetch).
+    public var refreshedUpdate: InfraStatusUpdate?
 
-    private let initial: InfraConnectivityUpdate?
-    private let results: [String: InfraToolResult]
-    private let defaultResult: InfraToolResult
+    private let initial: InfraStatusUpdate?
 
-    public init(
-        initial: InfraConnectivityUpdate? = InfraConnectivityUpdate(connection: .online, updatedAt: Date()),
-        results: [String: InfraToolResult] = [:],
-        defaultResult: InfraToolResult = .success(json: "{\n  \"ok\": true\n}")
-    ) {
+    public init(initial: InfraStatusUpdate? = nil, refreshedUpdate: InfraStatusUpdate? = nil) {
         self.initial = initial
-        self.results = results
-        self.defaultResult = defaultResult
+        self.refreshedUpdate = refreshedUpdate
     }
 
     public func start() {
         startCount += 1
-        if let initial { onConnectivity?(initial) }
+        if let initial { onUpdate?(initial) }
     }
 
     public func stop() {
@@ -244,17 +262,20 @@ public final class InMemoryInfrastructureSource: InfrastructureSource {
 
     public func refresh() {
         refreshCount += 1
-        if let initial { onConnectivity?(initial) }
+        if let refreshedUpdate { onUpdate?(refreshedUpdate) }
     }
 
-    public func run(toolID: String, inputs: InfraToolInputs) async -> InfraToolResult {
-        runCount += 1
-        lastInputs = inputs
-        return results[toolID] ?? defaultResult
+    /// Pushes a snapshot to the bound model (test / preview affordance).
+    public func push(_ update: InfraStatusUpdate) {
+        onUpdate?(update)
     }
+}
 
-    /// Pushes a connectivity snapshot to the bound model (test/preview affordance).
-    public func push(_ update: InfraConnectivityUpdate) {
-        onConnectivity?(update)
+// MARK: - Surface identity
+
+public extension InfrastructureSection {
+    /// Diagnostics surface slug (P1/S11 `view.opened`).
+    static var surfaceSlug: String {
+        InfrastructureSurface.slug
     }
 }
