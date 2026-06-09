@@ -1,0 +1,47 @@
+/*
+  XRayBucketChart.strings
+  TeslaSync — P4 feature view · 0032 · XRayBucketChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `XRayBucketChart` resolves (table "XRayBucketChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/ingest-xray/XRayBucketChart.tsx — every `t()` call,
+  including the `ChartContainer` title / subtitle / ariaLabel, the `dataColumns`
+  headers, and the tooltip series name). The remainder back the native state envelope
+  (freshness chip, connectivity banner, loading / empty / error chrome) and the chart's
+  accessibility summary.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.xray.chart.title" = "Samples per bucket";
+"admin.xray.chart.subtitle" = "Time-series of ingested telemetry rows over the selected window.";
+"admin.xray.chart.ariaLabel" = "Bar chart of ingest sample counts per time bucket.";
+"admin.xray.chart.cols.bucket" = "Bucket";
+"admin.xray.chart.cols.count" = "Samples";
+"admin.xray.chart.tooltip" = "Samples";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"admin.xray.chart.live" = "Live";
+"admin.xray.chart.stale" = "Stale";
+"admin.xray.chart.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"admin.xray.chart.staleBanner" = "Reconnecting — sample counts may be stale";
+"admin.xray.chart.offlineBanner" = "Offline — showing the last loaded sample counts";
+
+/* --- Loading / empty / error chrome --- */
+"admin.xray.chart.loading" = "Loading sample counts";
+"admin.xray.chart.emptyTitle" = "No samples";
+"admin.xray.chart.empty" = "No samples in this window. Try widening the window or confirm the vehicle is publishing.";
+"admin.xray.chart.errorTitle" = "Couldn't load sample counts";
+"admin.xray.chart.retry" = "Retry";
+
+/* --- Accessibility summary scaffolding --- */
+"admin.xray.chart.a11y.buckets" = "buckets";
+"admin.xray.chart.a11y.peak" = "busiest at";
+"admin.xray.chart.a11y.samples" = "samples";
