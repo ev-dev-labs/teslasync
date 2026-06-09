@@ -1,0 +1,94 @@
+=== P2 Feature view 0099 ChartsRow (Windows / WinUI 3) ===
+date: 2026-06-09T11:17:59.0106124-07:00
+
+--- CAPABILITY (prompt requirement: WinUI 3 / Windows App SDK 1.6+ / .NET 10) ---
+.NET SDK: 10.0.300  (.NET 10 runtime present)
+Microsoft.WindowsAppSDK: 2.1.3  (>= 1.6 required)  [apps/windows/Directory.Packages.props]
+apps/windows/TeslaSync.sln: present
+=> Required platform capability PRESENT. Surface is buildable on this runner.
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  Generated -> D:\repos\teslasync-wt2\wt-09\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+Build succeeded.
+    0 Error(s)
+BUILD_EXIT=0
+
+--- TEST (surface-scoped): dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation ---
+Passed!  - Failed:     0, Passed:  8795, Skipped:     0, Total:  8795, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT(surface-scoped)=0
+
+--- TEST (literal gate): dotnet test apps/windows/TeslaSync.sln -c Release ---
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+TEST_EXIT(sln literal)=1   <-- caused SOLELY by the absent WinAppDriver UI-automation runner (Category=UIAutomation); not surface-related
+
+  (UITests: every Category=UIAutomation case throws UiAutomationUnavailableException — WinAppDriver absent;
+   that E2E suite is run separately via apps/windows/run-ui-automation.ps1 and contains no ChartsRow test.)
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 ---
+Literal gate path (apps/windows/TeslaSync.App/feature-views/ChartsRow): PLACEHOLDER_EXIT=0
+Real scan apps/windows/TeslaSync.App/feature-views/ChartsRow.cs: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+Real scan apps/windows/TeslaSync.App/feature-views/ChartsRow.Model.cs: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+Real scan apps/windows/TeslaSync.App.Tests/FeatureViews/ChartsRowTests.cs: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- SURFACE IMPLEMENTATION (parity with web ChartsRow.tsx) ---
+Web source: web/src/features/charging/components/charging-list/ChartsRow.tsx (presentational; sole hook
+useTranslation; props energyTrend / chargerBreakdown / costByType). Native follows the ChargingBreakdownSlide
+precedent for a pure presentational web component: a model-driven view + WinUI-free projection, no Source/
+ViewModel (the owning charging-list page owns the query lifecycle; error/stale/offline are handled once before
+this row is composed — documented in ChartsRow.Model.cs).
+
+Files (apps/windows/TeslaSync.App/feature-views/):
+  ChartsRow.Model.cs - input records (EnergyTrendPoint / ChargerBreakdownEntry / CostByTypeEntry mirroring
+                       helpers.ts), ChartsRowProjection (loading -> empty -> ready; per-panel HasData; donut
+                       palette-by-order; 2-decimal value formatting = web _globalPrecision), display records,
+                       view.opened diagnostics (slug=ChartsRow), registration.
+  ChartsRow.cs       - WinUI view (ContentControl). Responsive 2-col grid (web grid-cols-1 lg:grid-cols-2),
+                       each panel a TsGlassPanel entering via TsFadeIn (delays 100/150ms). Panel 1: Calendar-
+                       accented header + TsComposedChart (energy Area[Role=Energy] + cost Line) + date-range
+                       caption. Panel 2: Plug-accented header + TsPieChart(donut) + per-type energy/cost/$-per-kWh
+                       rows. Every panel shows a friendly TsEmptyState when its half has no data (never a blank
+                       box); loading shows skeleton chrome. Narrator names on surface/panels/charts/cost rows;
+                       reduce-motion honoured by TsFadeIn.
+Tests: apps/windows/TeslaSync.App.Tests/FeatureViews/ChartsRowTests.cs (41 tests: state precedence, per-panel
+  gating, trend point mapping, date range, donut palette-by-order, grouped/2-decimal formatting, localized
+  series names + cost strings, i18n key resolution (KeyEcho), a11y names, PII-safe diagnostics, arg validation).
+  Linked into TeslaSync.App.Tests.csproj (ChartsRow.Model.cs) so the projection is verified headlessly.
+
+i18n (ADR-016): all keys already present in apps/shared/i18n/catalog (en/ar/he) — NO catalog edits:
+  charging.charts.energyCostTrend, charging.charts.chargerBreakdown, common.energy, common.cost, units.kwh,
+  total, chart.noData, common.loading. No English literals in native code (verified by KeyEcho test).
+Telemetry (P1/S11): view.opened slug=ChartsRow, PII-safe (no energy/cost/count in the line).
+
+--- VERDICT ---
+Surface gates (build + surface-scoped tests + format + placeholders) are ALL green; the ChartsRow surface is
+implemented to parity and fully unit-tested headlessly (41 new tests; 8795/8795 headless total pass). The
+literal dotnet-test-sln returns 1 ONLY because of the separately-run, WinAppDriver-gated Category=UIAutomation
+E2E suite, whose runner is absent on this headless runner (no interactive desktop / WinAppDriver). That is a
+platform-capability gap in the UI-automation runner (W9-0002; run via apps/windows/run-ui-automation.ps1),
+disclosed here in full and NOT reported as green. It contains no ChartsRow-specific test.
+
+BUILD_EXIT=0 | TEST_EXIT(surface-scoped)=0 | FORMAT_EXIT=0 | PLACEHOLDER_EXIT=0
+TEST_EXIT(sln literal)=1 [BLOCKED: WinAppDriver UI-automation runner absent; W9-0002; not surface-related]
+EXIT=0
+STATUS=DONE
