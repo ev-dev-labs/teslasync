@@ -261,3 +261,4 @@ p2-windows/feature-views/W-0057-DrivingTemperatureStats.prompt.md
 p2-windows/feature-views/W-0062-DriveHighlightSlide.prompt.md
 p2-windows/feature-views/W-0061-ChargingBreakdownSlide.prompt.md
 p2-windows/feature-views/W-0059-OverviewTab.prompt.md
+p2-windows/feature-views/W-0060-OverviewVehicleComparison.prompt.md
