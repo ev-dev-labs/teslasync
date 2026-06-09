@@ -1,0 +1,45 @@
+=== P2 Feature view 0072 BatteryHealthSection (Windows) ===
+date: 2026-06-09T08:27:46.0903907-07:00
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- TEST: dotnet test apps/windows/TeslaSync.sln -c Release ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 235 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  8176, Skipped:     0, Total:  8176, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+-- representative UITests failure reason (environmental) --
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TEST_EXIT=1
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 (gate path + real per-file scan) ---
+PLACEHOLDER_EXIT=0
+-- supplementary real scan of the shipped files --
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+--- PLATFORM-CAPABILITY EVIDENCE (E2E UI-automation runner) ---
+WinAppDriver std path1 exists: False
+WinAppDriver std path2 exists: False
+WinAppDriver on PATH: NOT FOUND
+Appium/WinAppDriver port 4723 listening: False
+
+--- SUMMARY ---
+BatteryHealthSection surface: implemented; build clean (warnings-as-errors), format clean, no placeholders.
+Headless suite TeslaSync.App.Tests: 8176/8176 PASS, including 51 new BatteryHealthSection projection/a11y/diagnostics tests.
+Full-solution gate is RED ONLY on TeslaSync.App.UITests: 147/147 E2E tests cannot run because the WinAppDriver/Appium
+UI-automation runner is absent on this runner (port 4723 closed; WinAppDriver.exe not installed). None of the 147 is a
+BatteryHealthSection test. This is the platform-capability gap the prompt's BLOCKED clause anticipates.
+
+EXIT=1
+STATUS=BLOCKED
