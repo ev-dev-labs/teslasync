@@ -46,6 +46,19 @@
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.ViewModel.cs" Link="FeatureViews\ResultPanel.ViewModel.cs" />
   </ItemGroup>
 
+  <!--
+    P2 feature-views (0019 RegexTester): the surface's UI-thread-free logic (the pure RegexEvaluator, the
+    registration + flag-option metadata, the diagnostics, and the state-holder view-model) lives in the WinUI
+    app project under feature-views/RegexTester/ but is WinUI-free by construction. Link the two source files
+    in so this headless (net10.0) test project verifies the adapter + per-state transitions without a UI host —
+    the same pattern used for the dashboard-widget logic. The WinUI view itself (RegexTester.cs) is exercised by
+    the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.Model.cs" Link="FeatureViews\RegexTester\RegexTester.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.ViewModel.cs" Link="FeatureViews\RegexTester\RegexTester.ViewModel.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -282,15 +295,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Model.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.ViewModel.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Source.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.Source.cs" />
-    <!--
-      P2 dashboard-widgets (TirePressureVisualWidget): its headless logic + state-holder view-model are
-      exercised by TirePressureVisualWidgetTests, but the three WinUI-free source files were not linked in,
-      so the test could not resolve TirePressureLevel / TirePressureReading / ITirePressureVisualSource /
-      TirePressureVisualViewModel. Link them in to match the widget pattern above.
-    -->
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
+    <!-- TirePressureVisualWidget's three WinUI-free sources are linked once in the dashboard-widgets group above. -->
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Model.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Source.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Source.cs" />
@@ -351,9 +356,6 @@
     -->
     <Compile Include="..\TeslaSync.App\feature-views\ReferenceLinksSection.Model.cs" Link="FeatureViews\ReferenceLinksSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ReferenceLinksSection.ViewModel.cs" Link="FeatureViews\ReferenceLinksSection.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Model.cs" Link="FeatureViews\InfrastructureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.ViewModel.cs" Link="FeatureViews\InfrastructureSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Source.cs" Link="FeatureViews\InfrastructureSection.Source.cs" />
