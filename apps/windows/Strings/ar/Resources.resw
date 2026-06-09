@@ -6699,6 +6699,9 @@
   <data name="translation.costAnalysis.empty.title" xml:space="preserve">
     <value>No Charging Data</value>
   </data>
+  <data name="translation.costAnalysis.environment.desc" xml:space="preserve">
+    <value>By driving electric instead of a gas car, you have avoided the equivalent of</value>
+  </data>
   <data name="translation.costAnalysis.environment.dollarsSaved" xml:space="preserve">
     <value>$ saved total</value>
   </data>
@@ -6725,6 +6728,9 @@
   </data>
   <data name="translation.costAnalysis.environment.treeNote" xml:space="preserve">
     <value>That's the same as</value>
+  </data>
+  <data name="translation.costAnalysis.environment.treesAbsorbing" xml:space="preserve">
+    <value>trees absorbing carbon for a full year.</value>
   </data>
   <data name="translation.costAnalysis.forecast.actual" xml:space="preserve">
     <value>Actual Cost</value>
