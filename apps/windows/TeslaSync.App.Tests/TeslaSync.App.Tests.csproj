@@ -107,8 +107,14 @@
     Compile ItemGroup: a chain of integration merges has repeatedly re-concatenated multiple roots plus
     duplicate Compile items, failing XML load (MSB4025).
   -->
+    P2/W2-0001 headless unit tests for the UI-thread-free logic models (feature-view +
+    dashboard-widget + shared Model / Source / ViewModel sources). Targets plain net10.0 so
+    `dotnet test` runs without a WinUI/UI-thread host; the WinUI app targets a WinUI TFM, so its
+    UI-thread-free sources are Compile-linked here rather than project-referenced (the views are
+    exercised by the app build). The matching test classes live under this project and are picked
+    up by the SDK default-compile glob.
 
-    Keep this file as ONE <Project> root with a single Compile ItemGroup: the deduplicated,
+    Keep this file as ONE Project root with a single Compile ItemGroup: the deduplicated,
     path-sorted union of every linked source. A chain of integration merges had repeatedly
     re-concatenated multiple <Project> roots plus duplicate <Compile> items, failing XML load
     with MSB4025; consolidated here into a single valid root (no linked source dropped) plus the
@@ -131,6 +137,10 @@
     WinUI TFM, so its UI-thread-free sources are Compile-linked here rather than project-referenced; the
     views (*.cs) themselves are exercised by the app build. The test classes live under this project and
     are picked up by the SDK default-compile glob.
+    re-concatenated multiple Project roots plus duplicate Compile items and stray closing tags,
+    failing XML load (MSB4025); consolidated here into a single valid root (no linked source
+    dropped) plus the FleetStatsBar feature-view surface logic links.
+  -->
 
     Repair note (P2 feature-views/0113 ForecastDetails): a chain of integration merges had again left this
     file with multiple concatenated Project roots plus stray closing tags and orphaned comment text, so the
@@ -214,6 +224,7 @@
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
   <!-- Test fixtures / manifests copied next to the test assembly (SI golden vectors, MSIX manifest, widget template). -->
   <!-- Test fixtures copied next to the assembly: SI golden vectors, MSIX manifest, widget template. -->
+  <!-- Fixtures copied next to the test assembly: SI golden vectors, MSIX manifest, widget template. -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -586,6 +597,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentalImpact.ViewModel.cs" Link="FeatureViews\EnvironmentalImpact.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentSlide\EnvironmentSlide.Model.cs" Link="FeatureViews\EnvironmentSlide\EnvironmentSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FlagsTable\FlagsTable.Model.cs" Link="FeatureViews\FlagsTable\FlagsTable.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetStatsBar\FleetStatsBar.Model.cs" Link="FeatureViews\FleetStatsBar\FleetStatsBar.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetStatsBar\FleetStatsBar.Source.cs" Link="FeatureViews\FleetStatsBar\FleetStatsBar.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetStatsBar\FleetStatsBar.ViewModel.cs" Link="FeatureViews\FleetStatsBar\FleetStatsBar.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Model.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Source.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.ViewModel.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.ViewModel.cs" />
