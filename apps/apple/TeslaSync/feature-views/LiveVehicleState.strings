@@ -1,0 +1,47 @@
+/*
+  LiveVehicleState.strings
+  TeslaSync — P4 feature view · 0044 · LiveVehicleState (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `LiveVehicleState` resolves (table "LiveVehicleState") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/security-access/LiveVehicleState.tsx). The second group
+  backs the native-only chrome (loading / empty / error / retry / freshness) the
+  Apple HIG states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.security.liveState" = "Live Vehicle State";
+"admin.security.live.indicator" = "Live";
+
+"admin.security.on" = "On";
+"admin.security.off" = "Off";
+
+"admin.security.live.hazards" = "Hazards";
+"admin.security.live.highBeams" = "High Beams";
+"admin.security.live.turnSignal" = "Turn Signal";
+"admin.security.live.driverSeat" = "Driver Seat";
+"admin.security.live.occupied" = "Occupied";
+"admin.security.live.empty" = "Empty";
+"admin.security.live.pairedKeys" = "Paired Keys";
+"admin.security.live.valetMode" = "Valet Mode";
+"admin.security.live.serviceMode" = "Service Mode";
+"admin.security.live.speedLimit" = "Speed Limit";
+"admin.security.live.homelinkDevices" = "HomeLink Devices";
+"admin.security.live.centerDisplay" = "Center Display";
+
+"admin.security.live.noData" = "No live state data available";
+
+/* --- Native chrome: states + freshness + accessibility --- */
+"admin.security.live.loadingA11y" = "Loading live vehicle state";
+"admin.security.live.errorTitle" = "Couldn't load live vehicle state";
+"admin.security.live.retry" = "Retry";
+"admin.security.live.stale" = "Stale";
+"admin.security.live.offline" = "Offline";
+"admin.security.live.staleBanner" = "Reconnecting — live state may be stale";
+"admin.security.live.offlineBanner" = "Offline — showing last known live state";
