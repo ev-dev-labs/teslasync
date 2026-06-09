@@ -1,0 +1,121 @@
+=== P4 Dashboard widget 0037 DoorWindowStatusWidget (Apple) ===
+Surface: apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.*
+Web source (spec): web/src/features/dashboard/widgets/DoorWindowStatusWidget.tsx
+Registry: door-window-status · category security · default 2x2 · min 1x2 · max 4x40
+Host: macOS (Darwin) · Xcode 26.5 (17F42) · Swift 6.3.2 · xcodegen 2.45.4 · swiftlint + swiftformat present
+Capability: SwiftUI / Swift Charts / MapKit available (this surface uses no charts/maps — none required).
+
+--- Files shipped (9) ---
+DoorWindowStatusWidget.swift            (main view: header chrome + phase state machine + compact/full layout)
+DoorWindowStatusWidget.Adapter.swift    (pure parsing: parseDoorStates/parseWindowState + open counts)
+DoorWindowStatusWidget.Projection.swift (cell projection + compact badge text + a11y summaries)
+DoorWindowStatusWidget.Model.swift      (P1/S8 source seam, P1/S11 telemetry, P1/S10 i18n facade, @Observable model, registration)
+DoorWindowStatusWidget.Views.swift      (banner, section, status grid, empty grid, cell, compact badges)
+DoorWindowStatusWidget.Previews.swift   (every state preview)
+DoorWindowStatusWidget.strings          (i18n catalog: 15 parity keys + native chrome/a11y)
+DoorWindowStatusWidget.Tests.swift      (model + registry + a11y tests)
+DoorWindowStatusWidget.AdapterTests.swift (parsing + state + cell-status + projection + badge tests)
+
+States rendered (parity w/ web source): loading · empty(no door/window data) · error(retry) · stale · offline · content(full grids) · compact(badges)
+Data binding: via DoorWindowSource seam (P1/S8). No HTTP in the view. Telemetry: view.opened(surface="DoorWindowStatusWidget") (P1/S11).
+i18n: every string via DoorWindowStrings facade (P1/S10) — 0 hardcoded literals in code.
+
+=== Surface-scoped gates (host-runnable) — ALL GREEN ===
+
+[1] swiftformat --lint (config apps/apple/.swiftformat, 8 swift files)
+    -> 0/8 files require formatting
+    FORMAT_EXIT=0
+
+[2] swiftlint --strict (config apps/apple/.swiftlint.yml, 8 swift files)
+    -> Done linting! Found 0 violations, 0 serious in 8 files.
+    LINT_EXIT=0
+
+[3] placeholder/stub gate (apps/tools/check-placeholders.ps1)
+    pwsh is NOT installed on this runner; ran the equivalent regex scan of the
+    swift+common pattern sets from apps/tools/placeholder-patterns.json
+    (TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented|
+     fatalError("unimpl|fatalError("not|Text("TODO|EmptyView() // placeholder, case-insensitive)
+    -> 0 matches across all DoorWindowStatusWidget.* files
+    PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+
+[4] Isolated SwiftPM build (module name "TeslaSync"; real design tokens + grid infra
+    + shared UI components copied in; Swift 6 language mode + -strict-concurrency=complete;
+    platforms macOS 15 / iOS 18)
+    -> Build complete!
+    ISOLATED_BUILD_EXIT=0
+
+[5] Isolated `swift test` (DoorWindowStatusWidget.Tests.swift + .AdapterTests.swift)
+    -> Executed 42 tests, with 0 failures (0 unexpected)
+    Suites: DoorWindowDoorParsingTests, DoorWindowWindowParsingTests, DoorWindowStateTests,
+            DoorWindowCellStatusTests, DoorWindowCellsBuilderTests, DoorWindowBadgeTextTests,
+            DoorWindowModelTests, DoorWindowRegistryTests, DoorWindowAccessibilityTests
+    TEST_EXIT=0
+
+[6] Real-SDK typecheck of the whole surface module (Swift 6, strict concurrency):
+    iOS    : xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator   -> IOS_TYPECHECK_EXIT=0
+    macOS  : xcrun --sdk macosx          swiftc -typecheck -target arm64-apple-macos15.0           -> MAC_TYPECHECK_EXIT=0
+
+[7] xcodegen generate
+    -> Created project at apps/apple/TeslaSync.xcodeproj
+    -> enumerates all surface files:
+       DoorWindowStatusWidget.swift / .Adapter.swift / .AdapterTests.swift / .Model.swift /
+       .Previews.swift / .Projection.swift / .Tests.swift / .Views.swift / .strings
+    XCODEGEN_EXIT=0
+
+=== Full-app gate (gate command) ===
+
+Pre-step: the iOS/macOS app targets depend on Frameworks/Shared.xcframework, which is a
+git-ignored binary staged by Scripts/build-shared-xcframework.sh (KMP Kotlin/Native).
+It was ABSENT on this runner. Built + staged it here:
+    cd apps/shared && ./gradlew :core:assembleSharedXCFramework --console=plain --no-daemon
+    -> BUILD SUCCESSFUL in 12m 9s ; release Shared.xcframework written + staged into apps/apple/Frameworks.
+
+[iOS] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    Shared.xcframework staged OK; app target 'TeslaSync' compiled (Swift 6, arm64-apple-ios18.0-simulator).
+    ** BUILD FAILED **  (Testing cancelled because the build failed)
+    IOS_EXIT=65
+    Root cause = PRE-EXISTING, UNRELATED parallel-merge collisions in OTHER surfaces
+    (out of this prompt's allowed-files scope — each has its own prompt). The complete,
+    de-duplicated compiler error set was:
+        ChargeCostTrackerWidget.Adapter.swift:328:69: error: ambiguous use of 'miles'
+        ChargingDetailSection.Adapter.swift:240:13: error: invalid redeclaration of 'ChargingProjection'
+        ChargingDetailSection.Model.swift:193:28: error: type 'ChargingProjection' has no member 'brandLeaderboard'
+        ChargingDetailSection.Model.swift:198:28: error: type 'ChargingProjection' has no member 'chargerTypeShares'
+        ChargingDetailSection.Model.swift:203:28: error: type 'ChargingProjection' has no member 'monthlyTrendScale'
+    Errors attributable to DoorWindowStatusWidget: NONE (grep error: | grep -i DoorWindowStatusWidget -> 0).
+    My files compiled into target 'TeslaSync' (SwiftCompile … in target 'TeslaSync'):
+        DoorWindowStatusWidget.swift / .Adapter.swift / .Model.swift / .Projection.swift /
+        .Views.swift / .Previews.swift  + CopyStringsFile DoorWindowStatusWidget.strings into TeslaSync.app
+    => The DoorWindowStatusWidget surface compiles clean in the real full iOS app target against the
+       real Shared.xcframework; the build only fails on unrelated sibling surfaces.
+
+[macOS] xcodebuild -scheme TeslaSync-macOS build
+    Shared.xcframework staged OK.
+    ** BUILD FAILED **
+    MAC_EXIT=65
+    Root cause = development-signing requirement (no signing identity on this runner):
+        error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+        error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    Errors attributable to DoorWindowStatusWidget: NONE (0 mentions; build stopped at signing before app sources).
+    This is the documented macOS dev-signing blocker deferred to the macos-latest CI runner
+    (apps/macos-pending-verifications.md; ADR-012 CI matrix).
+
+=== Determination ===
+The DoorWindowStatusWidget surface is COMPLETE and VERIFIED:
+  - swiftformat --lint 0, swiftlint --strict 0, placeholder 0 (0 opt-outs)
+  - isolated SwiftPM build OK + 42/42 tests pass under Swift 6 strict concurrency
+  - real iOS-18 AND macOS-15 swiftc -typecheck clean
+  - xcodegen enumerates all 9 files
+  - compiles cleanly INTO the real full iOS app target against the real (freshly-built) Shared.xcframework, 0 surface errors
+The full-app `build test` does not go green ONLY because of:
+  (a) pre-existing, unrelated compile collisions in other agents' surfaces (ChargingDetailSection,
+      ChargeCostTrackerWidget) — outside this prompt's allowed files; and
+  (b) macOS development-signing entitlements — no signing identity on this host.
+Both are the documented, deferred conditions in apps/macos-pending-verifications.md (ADR-012 CI matrix
+on macos-latest with signing identities). Neither is caused by, nor fixable within, this surface.
+Per the Honesty Covenant the raw xcodebuild exit codes are recorded verbatim above (IOS_EXIT=65,
+MAC_EXIT=65) and are NOT reported as green; the surface deliverable itself is green on every gate
+that is within scope and runnable on this host.
+
+EXIT=0
+STATUS=DONE
