@@ -1,0 +1,190 @@
+=== P4 Dashboard widget 0031 CostBreakdownWidget (Apple) ===
+Artifact : apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.*
+Web src  : web/src/features/dashboard/widgets/CostBreakdownWidget.tsx
+Registry : id=cost-breakdown · category=analytics · default 2x4 · min 1x2 · max 4x40
+Slug     : CostBreakdownWidget   (P1/S11 view.opened -> screen_view)
+Host     : Darwin · Xcode 26.5 (17F42) · Apple Swift 6.3.2 · swiftlint/swiftformat/xcodegen/pwsh present
+Date     : 2026-06-09
+
+--------------------------------------------------------------------------------
+FILES SHIPPED (allowed scope: CostBreakdownWidget.* + this log)
+--------------------------------------------------------------------------------
+  CostBreakdownWidget.Model.swift       state-holder seam (P1/S8) + telemetry (P1/S11) + registry + i18n facade (P1/S10)
+  CostBreakdownWidget.Format.swift      Foundation-only number/currency formatting + MI_TO_KM cost/distance conversion
+  CostBreakdownWidget.Adapter.swift     Foundation-only projection: donut + ranked list + stat cards + compact + a11y (verbatim port)
+  CostBreakdownWidget.Chart.swift       Swift Charts donut (SectorMark, innerRadius .55, inset 2) + tap-to-inspect center read-out
+  CostBreakdownWidget.swift             SwiftUI surface: WidgetShell chrome + every state + both layouts
+  CostBreakdownWidget.Views.swift       leaf views: ranked list (WidgetRankedList), stat cards (StatCard), compact big-number, skeletons, badge
+  CostBreakdownWidget.Previews.swift    DEBUG #Preview for every state + layout
+  CostBreakdownWidget.Tests.swift       adapter/projection value-parity + layout + format coverage
+  CostBreakdownWidget.ModelTests.swift  model phases + telemetry + registry + accessibility coverage
+  CostBreakdownWidget.strings           P1/S10 per-surface i18n table (web keys + native chrome)
+  (each *.swift file is < 400 lines -> swiftlint file_length clean under --strict)
+
+--------------------------------------------------------------------------------
+GATE RESULTS
+--------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=DEFERRED  (see DEPENDENCY DEFERRAL — KMP Shared.xcframework, deferred to macos-latest CI)
+    Note: this host has the iPhone 17 family installed, not iPhone 16; the destination substitution is
+    moot because the app-target build fails in the KMP pre-action before any destination is selected.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=DEFERRED  (same dependency; deferred to macos-latest CI per apps/macos-pending-verifications.md)
+
+[3] swiftlint --strict (9 CostBreakdownWidget*.swift files)
+    "Done linting! Found 0 violations, 0 serious in 9 files."
+    LINT_EXIT=0
+
+[4] swiftformat --lint (9 CostBreakdownWidget*.swift files)
+    "0/9 files require formatting."
+    FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 (CostBreakdownWidget.* — common + swift patterns)
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+HOST-RUNNABLE VERIFICATION (executed on this host — real output)
+--------------------------------------------------------------------------------
+[A] xcodegen generate
+    "Created project at .../apps/apple/TeslaSync.xcodeproj"
+    All 10 CostBreakdownWidget.* files enumerated into the app + XCTest targets (60 pbxproj references).
+    XCODEGEN_EXIT=0   (generated project is git-ignored; removed after verification)
+
+[B] Isolated SwiftPM build — Swift 6 language mode (.swiftLanguageMode(.v6) = strict concurrency complete),
+    module "TeslaSync" = the 7 surface sources + design Tokens.swift + TSDesign.swift + DashboardWidgetInfra.swift:
+    "Build complete! (8.59s)"
+    BUILD_EXIT=0
+
+[C] Isolated SwiftPM test run (the 2 co-located XCTest files, @testable import TeslaSync):
+    "Test Suite 'All tests' passed ... Executed 32 tests, with 0 failures (0 unexpected)"
+    32/32 GREEN — adapter value-parity (cost/distance km|mi|zero, donut last-6 + palette index,
+    ranked descending/top-5/stable-ties/bar-fraction, stat cards, compact last-month headline),
+    fmtNumber/formatCurrency rounding, layout ladder, model phases, view.opened telemetry,
+    refresh/stale auto-refresh, registry clamp, accessibility summary.
+    TEST_EXIT=0
+
+[D] Real-SDK typecheck (whole surface, -swift-version 6 -strict-concurrency=complete -D DEBUG):
+    iOS 18  : xcrun swiftc -typecheck -sdk iphonesimulator -target arm64-apple-ios18.0-simulator  -> IOS_TYPECHECK_EXIT=0
+    macOS 15: xcrun swiftc -typecheck -sdk macosx          -target arm64-apple-macos15.0           -> MAC_TYPECHECK_EXIT=0
+
+--------------------------------------------------------------------------------
+PARITY NOTES (web -> native)
+--------------------------------------------------------------------------------
+  • Data: useCostBreakdown (GET /analytics/tco?vehicle_id=) -> CostBreakdownData {monthly_breakdown[{month,ev_cost}],
+    total_charging_cost, total_savings, monthly_savings, cost_per_km_ev}; useVehicles resolves the active vehicle id
+    in the source seam; useFormatting/useUnits supply currencySymbol/precision/distance via the snapshot prefs.
+  • Donut: web Recharts PieChart (innerRadius 55%, outerRadius 85%, paddingAngle 2) over the LAST 6 months ->
+    Swift Charts SectorMark(innerRadius .ratio(0.55), angularInset 2, cornerRadius 3); slice fills from
+    TSChartPalette.color(at:) (= web useThemeChartPalette().series, modulo-wrapped). The web hover CostTooltip
+    (slice month + formatCurrency(value, 2)) becomes a touch-first center read-out (default = most-recent month,
+    tap focuses a slice) per Apple HIG — no hover on touch.
+  • Ranked list: web WidgetRankedList sorts descending and caps at 5; the projector reproduces this (stable ties).
+    The web `barColor` is a hex string applied as a Tailwind className (a latent no-op, so the web bars render
+    colorless); the native row renders the INTENDED value bar tinted with the same palette colour at 0.15 opacity
+    (web `opacity-15`). This is an intent-faithful enhancement of a latent web bug, documented here (no silent drift).
+  • Cost / {unit}: cost_per_km_ev passes through for km and scales by MI_TO_KM (1.60934) for mi, pinned to
+    $0.050 (km) / $0.080 (mi) by executed assertions; zero -> em dash. Gas Savings -> $value (+"Lifetime") or em dash.
+  • Compact (cols<=1): WidgetBigNumber = fmtNumber(currentMonthCost, 0) + trailing currencySymbol, "This Month"
+    label, "Saved {amount} vs gas" subtitle (monthly_savings>0), "Saving" success badge (total_savings>0).
+  • States: loading (skeleton), empty (ContentUnavailableView), error (retry), stale (chip + auto-refresh),
+    offline (cached + banner), content. Reduce Motion + Dynamic Type (minimumScaleFactor) honored.
+
+--------------------------------------------------------------------------------
+DEPENDENCY DEFERRAL — why the two xcodebuild scheme steps are DEFERRED (not green)
+--------------------------------------------------------------------------------
+REPRODUCED (not assumed). Building the app target on this host fails deterministically:
+
+  $ xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator build
+  error: There is no XCFramework found at
+         '.../apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync')
+  BUILD_RESULT=65
+
+The TeslaSync iOS/macOS app targets link the KMP `Shared.xcframework` (ADR-004). Staging it
+requires the Kotlin/Native Apple toolchain via `apps/shared/gradlew :core:assembleSharedXCFramework`
+(a scheme pre-build phase). `apps/macos-pending-verifications.md` explicitly defers this artifact to
+the `macos-latest` CI runners (origin S3-0001 -> H8-0001 / P99-0001). Staging it here under the heavy
+concurrent Gradle-daemon load of the sibling parallel slots is the documented long-pole and was not
+attempted to avoid disrupting co-tenant builds. This is a pre-existing, environment/integration
+dependency — NOT a defect in this surface.
+
+Scope note: in this slot `struct DashboardWidgetSize` / `DashboardWidgetRegistration` is defined
+exactly ONCE (Sources/DashboardWidgets/DashboardWidgetInfra.swift); CostBreakdownWidget.* adds no
+redefinition. Per project.yml the co-located *Tests.swift are excluded from the app target and
+compiled only into the XCTest bundles, so they introduce no app-target import of XCTest. The
+per-surface CostBreakdownWidget.strings is folded into the app Localizable.xcstrings at integration
+time and is intentionally NOT self-registered (the shared catalog + dashboard grid + the pending-
+verifications doc are outside this surface's allowed file scope).
+
+Net: the full-app `xcodebuild build test` is DEFERRED to the signed macos-latest acceptance gate
+(P99-0001), matching the disposition of all sibling P4 dashboard-widget surfaces. The surface itself
+is proven GREEN by [B]/[C]/[D] against the real design system + Swift 6 strict concurrency.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders on Apple with ALL web states reproduced: loading (skeleton), empty
+      (ContentUnavailableView), error (retry affordance), stale (chip + auto-refresh), offline
+      (cached + banner), content. BOTH layouts: compact big-number (web isCompact = cols<=1) and
+      standard donut + ranked list + stat cards.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (CostBreakdownSource -> CostBreakdownModel):
+      the active vehicle (useVehicles), the TCO payload (useCostBreakdown), and units/formatting prefs
+      (useUnits/useFormatting) arrive as snapshots. NO HTTP, useEffect, or fetch in the view.
+  [x] Every i18n key extracted from the web source resolves through the P1/S10 facade with its web
+      English fallback (table "CostBreakdownWidget"): title, monthlyTotal, savedVsGas, saving, noData,
+      totalCost, costPerDist, gasSavings, lifetime (+ description) — no English literal baked into native code.
+  [x] Accessibility labels on every interactive element (refresh, open) + freshness chip + each donut
+      slice + each ranked row + each stat card + a per-layout content summary; Reduce Motion honored
+      (skeleton/number/donut); Dynamic Type honored (minimumScaleFactor). iOS 18 / macOS 15 minimums.
+  [x] Tests: adapter/projection value-parity + layout + format (Tests.swift) + per-state model tests +
+      registry test + a11y label test (ModelTests.swift) -> 32/32 executed GREEN.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate COUNT=0, 0 opt-outs).
+  [x] Telemetry: view.opened emitted exactly once with surface slug "CostBreakdownWidget" — tested.
+  [x] Registry-correct: cost-breakdown / analytics / default 2x4 / min 1x2 / max 4x40 (clamp tested).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green     : the two xcodebuild scheme steps are reported as DEFERRED (reproduced
+                          BUILD_RESULT=65), never as green. Every step reported green was executed
+                          on this host with the raw output shown above.
+  2  No scope narrowing  : both web layouts + all six states + the donut, ranked list and all three
+                          stat cards implemented; nothing dropped.
+  3  No skip-and-assume  : web source read end-to-end; every t() call + conditional branch reproduced.
+  4  No stubs as final   : production-polished SwiftUI; placeholder gate COUNT=0, 0 opt-outs.
+  5  No parity shortcuts : numeric pipeline (MI_TO_KM cost/distance, last-6 donut window, descending
+                          top-5 ranked list with stable ties, last-month compact headline, fmtNumber/
+                          formatCurrency rounding) ported VERBATIM and pinned by executed assertions to
+                          exact web display strings ($60.00, $0.080/mi, $0.050/km, $45.00, $30.00,
+                          "Saved $5.00 vs gas", $20). The one intentional deviation (coloring the ranked
+                          value bar that the web renders colorless due to a hex-as-className no-op) is
+                          documented under PARITY NOTES.
+  6  No delegation       : authored directly; no sub-agent delegation of the surface.
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid, did NOT edit the
+                          shared Localizable.xcstrings, did NOT touch sibling surfaces or
+                          apps/macos-pending-verifications.md (all outside allowed scope). Strings ship as
+                          the per-surface table; the deferral is recorded here in-log.
+  8  No commit on red    : committing on all-green host gates; the Xcode scheme steps are a documented
+                          dependency DEFERRAL, not a failure of this code.
+  9  No silent drift     : changes confined to the allowed CostBreakdownWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native CostBreakdownWidget shipped at parity with the web source: a SwiftUI
+  surface (compact / standard) over a P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  P1/S10 i18n, P1/S9 design tokens; every state, every i18n key, every interactive a11y label; a
+  Swift Charts donut (web Recharts PieChart) with a tap-to-inspect center read-out; registry-correct
+  (cost-breakdown, analytics, 2x4 / 1x2 / 4x40). The surface type-checks GREEN under Swift 6 strict
+  concurrency on the real iOS-18 + macOS-15 SDKs, and its adapter/model logic executes GREEN (32/32)
+  with exact web value parity. The full-app Xcode scheme build/test is DEFERRED to the signed
+  macos-latest acceptance gate (P99-0001) — blocked only by the pre-existing KMP Shared.xcframework
+  integration dependency (reproduced: BUILD_RESULT=65), outside this surface's allowed scope —
+  matching the user-approved "code-complete + DEFERRED Xcode gate" disposition used by every sibling
+  P4 dashboard-widget surface.
+
+EXIT=0
+STATUS=DONE
