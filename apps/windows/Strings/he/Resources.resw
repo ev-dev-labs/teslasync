@@ -21726,6 +21726,57 @@
   <data name="translation.widget.failing" xml:space="preserve">
     <value>Failing</value>
   </data>
+  <data name="translation.widget.fleetStats.alerts" xml:space="preserve">
+    <value>Alerts</value>
+  </data>
+  <data name="translation.widget.fleetStats.average" xml:space="preserve">
+    <value>fleet average</value>
+  </data>
+  <data name="translation.widget.fleetStats.description" xml:space="preserve">
+    <value>Fleet-wide metrics and totals</value>
+  </data>
+  <data name="translation.widget.fleetStats.distance" xml:space="preserve">
+    <value>Distance (30d)</value>
+  </data>
+  <data name="translation.widget.fleetStats.efficiency" xml:space="preserve">
+    <value>Efficiency</value>
+  </data>
+  <data name="translation.widget.fleetStats.energy" xml:space="preserve">
+    <value>Energy (30d)</value>
+  </data>
+  <data name="translation.widget.fleetStats.error" xml:space="preserve">
+    <value>Couldn't load fleet stats</value>
+  </data>
+  <data name="translation.widget.fleetStats.error.auth" xml:space="preserve">
+    <value>Sign in to view fleet stats</value>
+  </data>
+  <data name="translation.widget.fleetStats.error.offline" xml:space="preserve">
+    <value>You're offline — showing the last cached fleet stats</value>
+  </data>
+  <data name="translation.widget.fleetStats.fleetSize" xml:space="preserve">
+    <value>Fleet Size</value>
+  </data>
+  <data name="translation.widget.fleetStats.loading" xml:space="preserve">
+    <value>Loading fleet stats</value>
+  </data>
+  <data name="translation.widget.fleetStats.noData" xml:space="preserve">
+    <value>No fleet data</value>
+  </data>
+  <data name="translation.widget.fleetStats.online" xml:space="preserve">
+    <value>online</value>
+  </data>
+  <data name="translation.widget.fleetStats.refresh" xml:space="preserve">
+    <value>Refresh fleet stats</value>
+  </data>
+  <data name="translation.widget.fleetStats.retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="translation.widget.fleetStats.title" xml:space="preserve">
+    <value>Fleet Stats</value>
+  </data>
+  <data name="translation.widget.fleetStats.unread" xml:space="preserve">
+    <value>unread</value>
+  </data>
   <data name="translation.widget.fleetStatsBar.distance30d" xml:space="preserve">
     <value>Distance (30d)</value>
   </data>
