@@ -1,0 +1,95 @@
+=== P2 Feature view 0035 XRayHeader (Windows) ===
+
+Platform capability: WinUI 3 (Windows App SDK, pinned in apps/windows/Directory.Packages.props) + .NET 10
+  (SDK 10.0.300, runtime 10.0.8) + maui-windows workload are all present; apps/windows/TeslaSync.sln builds
+  WinUI 3 in Release. => capability AVAILABLE, NOT blocked.
+
+---- dotnet build apps/windows/TeslaSync.sln -c Release ----
+Build succeeded.
+    17 Warning(s)   (all pre-existing, in TeslaSync.App.Core; none in the XRayHeader surface)
+    0 Error(s)
+BUILD_EXIT=0
+
+---- dotnet test (headless: TeslaSync.App.Tests) -c Release ----
+Passed!  - Failed: 0, Passed: 7298, Skipped: 0, Total: 7298 - TeslaSync.App.Tests.dll (net10.0)
+  (of which 34 are the XRayHeader surface: parse adapter, result mapper, projection, window/bucket wire
+   mapping, full state matrix loading/ready/empty/stale/offline/error, source request shape, i18n facade
+   coverage, a11y label presence, registration slug, view.opened diagnostics.)
+TEST_EXIT=0
+
+---- dotnet format apps/windows/TeslaSync.sln --verify-no-changes ----
+(clean — no formatting changes required)
+FORMAT_EXIT=0
+
+---- check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/XRayHeader ----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+Surface: apps/windows/TeslaSync.App/feature-views/XRayHeader/{XRayHeader.Model.cs, XRayHeader.Source.cs,
+  XRayHeader.ViewModel.cs, XRayHeader.cs}. Tests: TeslaSync.App.Tests/FeatureViews/XRayHeaderTests.cs.
+  Web source: web/src/features/admin/components/ingest-xray/XRayHeader.tsx.
+
+  Data sources: web XRayHeader's only hook is useTranslation; its data (IngestXRayResponse) + windowSel
+    arrive as props from IngestXRayPage's useIngestXRay. The native surface is self-contained per the
+    FleetTelemetryHealth/UuidGenerator pattern: IXRayHeaderSource (P1/S8 seam) runs a cache-then-network
+    read of GET /system/ingest-xray/{vehicleID}?window=&bucket=&limit= (generated operation
+    get_api_v1_system_ingest_xray_vehicleID), maps the snake_case body (total_samples, unique_fields) to
+    IngestXRaySummary, and XRayHeaderViewModel projects it. The view performs NO HTTP.
+
+  Shared components (web -> native): @/components/data-display StatCard -> TsStatCard (x3 in a
+    @/components/layout Grid -> TsGrid, Columns=3). Native superset chrome reuses the shared library only:
+    TsDataFreshness, TsBadge, TsButton, DisplayPrimitives. No direct recharts/leaflet equivalents (the
+    header strip has no chart/map).
+
+  States (every one renders; none hidden): loading ('—' on samples/fields, window label always shown),
+    ready (grouped integers via the fmtInt port NumberFormatting.Format(.,null,0)), empty (zero-sample ->
+    "0" + the admin.xray.fields.empty hint; also the no-vehicle guard, web parity for enabled:numericId>0),
+    stale (cached-past-freshness -> values + a Stale chip; the cache-then-network engine auto-refreshes),
+    offline (network-failed-with-cache -> cached values + an Offline chip), error (hard failure, no cache ->
+    '—' + a Retry affordance). The view's per-state branch is driven entirely by XRayHeaderViewModel.State,
+    asserted row-for-row headlessly; the WinUI view compiles in the full solution build.
+
+  i18n: every string flows through the P1/S10 ILocalizer facade (asserted by a RecordingLocalizer test).
+    The 6 source stat keys admin.xray.stats.{samples,samplesSub,fields,fieldsSub,window,windowSub} are
+    catalog-backed (present in Strings/en/Resources.resw). The 5 source window keys
+    admin.xray.windowLabel.{5m,15m,1h,6h,24h} resolve through the facade with the web's WINDOW_LABEL
+    fallbacks — exactly as the web t(key, default) does; the i18n catalog is a P1/S10 dependency outside this
+    surface's allowed-files scope, so no .resw is authored here. The native-superset status keys
+    admin.xray.status.{stale,offline,retry,error,offlineMessage} use the same facade-fallback mechanism, and
+    the loading/empty hints reuse the existing admin.xray.fields.{loading,empty} catalog keys. No English
+    literals in native code.
+
+  Accessibility: each TsStatCard sets AutomationName "{Label}: {Value}"; the Retry control and the
+    Stale/Offline badges carry Narrator names; the status line is a polite live region (LiveRegion); the
+    surface adds no custom motion, so reduced-motion is honoured by construction.
+
+  Telemetry: XRayHeaderDiagnostics emits "view.opened slug=XRayHeader" (P1/S11; PII-safe — never a vehicle
+    id, count or any operator data) on first load.
+
+Pre-existing build-unblock (NOT introduced by this surface, repaired so the gate can run):
+  The integration baseline did not load. TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was malformed at SIX
+  feature-view junctions: each had lost its "</ItemGroup>" + "<!--" pair (the next comment's body leaked into
+  the preceding, then-unclosed ItemGroup), producing MSB4025 "ItemGroup start tag does not match end tag of
+  Project" and blocking the WHOLE solution build/test for ANY surface on this branch. At HEAD the tag counts
+  were ItemGroup 24 open / 18 close and comment 23 open / 30 close. Separately, a prior NETSDK1022
+  "Duplicate Compile items" fix had over-removed ALL THREE TirePressureVisualWidget Compile links (leaving
+  the long-standing TirePressureVisualWidgetTests uncompilable once the XML parsed). Minimal repair:
+  re-inserted the 6 missing "</ItemGroup>" closers and the 7 missing "<!--" openers (structure-only and
+  purely additive — every original line preserved as a subsequence; counts now balance ItemGroup 25/25,
+  comment 31/31, file parses as XML), and restored the 3 dropped TirePressureVisualWidget Compile links
+  exactly once. No Compile items were reordered and none of the XRayHeader links were affected. Verified:
+  7298 headless tests pass with zero regressions.
+
+Note: the Category=UIAutomation suite (TeslaSync.App.UITests, 147 tests) drives the packaged MSIX over
+      WinAppDriver and is run independently via run-ui-automation.ps1 per its csproj contract; by design it
+      fails-loud (never silently skips) when the runner is absent. On this headless host WinAppDriver/Appium
+      is not installed and nothing listens on http://127.0.0.1:4723/ (UiAutomationUnavailableException from
+      WinAppDriverSession.EnsureReady) — an honest BLOCKED condition for THAT suite's own gate, intentionally
+      excluded from this surface's headless gate (same convention as predecessors 0026 et al.). The XRayHeader
+      WinUI view still compiles in the Release solution build above.
+
+Gate: BUILD_EXIT=0  TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE

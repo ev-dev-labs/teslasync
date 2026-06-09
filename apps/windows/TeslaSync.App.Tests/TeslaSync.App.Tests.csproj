@@ -47,6 +47,20 @@
   </ItemGroup>
 
   <!--
+    P2 feature-views (0035 XRayHeader): the surface's UI-thread-free logic (the ingest-xray summary DTO/parse,
+    the window/bucket wire mapping, the projection, the cache-then-network result mapper, the source seam, the
+    diagnostics, and the state-holder view-model) lives in the WinUI app project under feature-views/XRayHeader/
+    but is WinUI-free by construction. Link those three source files in so this headless (net10.0) test project
+    verifies the adapter + per-state transitions without a UI host — the same pattern used for the sibling
+    feature-views above. The WinUI view itself (XRayHeader.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Model.cs" Link="FeatureViews\XRayHeader\XRayHeader.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Source.cs" Link="FeatureViews\XRayHeader\XRayHeader.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0019 RegexTester): the surface's UI-thread-free logic (the pure RegexEvaluator, the
     registration + flag-option metadata, the diagnostics, and the state-holder view-model) lives in the WinUI
     app project under feature-views/RegexTester/ but is WinUI-free by construction. Link the two source files
@@ -57,6 +71,9 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.Model.cs" Link="FeatureViews\RegexTester\RegexTester.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.ViewModel.cs" Link="FeatureViews\RegexTester\RegexTester.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0018 JwtDecoder: the surface's UI-thread-free logic (the pure decode adapter, the state
     enum + decode-result model, the display projection, the diagnostics, and the state-holder view-model)
     lives in the WinUI app project under feature-views/ but is WinUI-free by construction. It reuses the
@@ -67,6 +84,9 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.Model.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.ViewModel.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0021 TimestampTool): the surface's UI-thread-free logic (the timestamp converter, the
     field-state enum, the registration metadata, the diagnostics, and the state-holder view-model) lives in
     the WinUI app project under feature-views/ but is WinUI-free by construction. Link the two source files
@@ -328,10 +348,15 @@
       (NETSDK1022: this block previously duplicated those identical Compile items, breaking the test build).
     -->
     <!-- TirePressureVisualWidget's three WinUI-free sources are linked once in the dashboard-widgets group above. -->
+
+  <!--
       TirePressureVisualWidget's three WinUI-free sources are linked exactly once (in the widget ItemGroup
       above). Two further duplicate triples here were a pre-existing merge artifact that made the build fail
       with NETSDK1022 "Duplicate 'Compile' items"; removed so the gate can build.
     -->
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Model.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Source.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Source.cs" />
@@ -419,6 +444,9 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views: the TeslaApiRefTool's UI-thread-free logic (the static endpoint catalog, the
     pure search adapter, the registration metadata, the PII-safe diagnostics, and the state-holder
     view-model) lives in the WinUI app project but is WinUI-free by construction. Link those two source
@@ -489,6 +517,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Model.cs" Link="FeatureViews\HashCalculator\HashCalculator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Source.cs" Link="FeatureViews\HashCalculator\HashCalculator.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.ViewModel.cs" Link="FeatureViews\HashCalculator\HashCalculator.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0017 JsonFormatter): the tool's UI-thread-free logic (the parse/format projection, the
     input/display records, the source seam, and the state-holder view-model) lives in the WinUI app project but
     is WinUI-free by construction. Link those three source files in so the headless (net10.0) test project
@@ -560,6 +591,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Model.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Source.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.ViewModel.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0024-UuidGenerator): the surface's UI-thread-free logic (the history projection, the
     RFC 4122 v4 generation seam + format, the registration / PII-safe diagnostics and the state-holder
     view-model) lives in the WinUI app project but is WinUI-free by construction. Link those two source
@@ -570,6 +604,9 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.Model.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.ViewModel.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0023 UrlEncoder): the surface's UI-thread-free logic (the pure
     encodeURIComponent/decodeURIComponent codec, the registration metadata, the PII-safe diagnostics, and
     the state-holder view-model) lives in the WinUI app project but is WinUI-free by construction. Link those
