@@ -438,6 +438,18 @@
   </ItemGroup>
 
   <!--
+    P2 feature-views (0061 ChargingBreakdownSlide): the surface's UI-thread-free logic (the loading/empty/ready
+    projection, the web zero-share segment filter + palette-by-filtered-position colouring, the Math.round
+    percentage + grouped session-count formatting, the yearReview.avgStartSOC token interpolation, the
+    diagnostics and registration) is WinUI-free by construction. Link the Model in so this headless (net10.0)
+    test project verifies the adapter + per-state projection + a11y names + diagnostics without a UI host.
+    The WinUI view itself (ChargingBreakdownSlide.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingBreakdownSlide.Model.cs" Link="FeatureViews\ChargingBreakdownSlide.Model.cs" />
+  </ItemGroup>
+
+  <!--
     TirePressureVisualWidget's three WinUI-free sources (linked exactly once) — restored so the headless
     TirePressureVisualWidgetTests can resolve TirePressureLevel / TirePressureReading / the source +
     view-model. A prior cleanup removed every triple (not just the NETSDK1022 duplicates), breaking the build.
