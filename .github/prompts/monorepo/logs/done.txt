@@ -209,3 +209,4 @@ p2-windows/dashboard-widgets/W-0112-WallConnectorWidget.prompt.md
 p2-windows/dashboard-widgets/W-0110-VehicleUpgradesWidget.prompt.md
 p2-windows/dashboard-widgets/W-0111-VersionInfoWidget.prompt.md
 p2-windows/dashboard-widgets/W-0116-WeeklyDigestWidget.prompt.md
+p2-windows/dashboard-widgets/W-0113-WarrantyStatusWidget.prompt.md
