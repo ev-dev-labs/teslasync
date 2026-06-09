@@ -278,3 +278,4 @@ p2-windows/feature-views/W-0076-HighlightCard.prompt.md
 p2-windows/feature-views/W-0079-WeekSelector.prompt.md
 p2-windows/feature-views/W-0075-DrivingSection.prompt.md
 p2-windows/feature-views/W-0078-WeekOverWeekSummary.prompt.md
+p2-windows/feature-views/W-0088-LoadingSkeleton.prompt.md
