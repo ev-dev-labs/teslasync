@@ -138,6 +138,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveTelemetryWidget\DriveTelemetryWidget.Model.cs" Link="Widgets\DriveTelemetryWidget\DriveTelemetryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveTelemetryWidget\DriveTelemetryWidget.ViewModel.cs" Link="Widgets\DriveTelemetryWidget\DriveTelemetryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveTelemetryWidget\DriveTelemetryWidget.Source.cs" Link="Widgets\DriveTelemetryWidget\DriveTelemetryWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DrivingCoachWidget\DrivingCoachWidget.Model.cs" Link="Widgets\DrivingCoachWidget\DrivingCoachWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DrivingCoachWidget\DrivingCoachWidget.ViewModel.cs" Link="Widgets\DrivingCoachWidget\DrivingCoachWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DrivingCoachWidget\DrivingCoachWidget.Source.cs" Link="Widgets\DrivingCoachWidget\DrivingCoachWidget.Source.cs" />
   </ItemGroup>
 
   <!--
