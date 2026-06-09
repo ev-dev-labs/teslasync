@@ -7,7 +7,7 @@ using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.DataDisplay;
 using TeslaSync.App.Core.Notifications;
 using TeslaSync.App.Core.Widgets;
-using TeslaSync.App.DashboardWidgets;
+using TeslaSync.App.DashboardWidgets.SafetyHistory;
 using TeslaSync.App.Tests.Data;
 using Xunit;
 using GeneratedApi = TeslaSync.Windows.Generated.Api;

@@ -262,6 +262,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SoftwareUpdateHistoryWidget\SoftwareUpdateHistoryWidget.Model.cs" Link="Widgets\SoftwareUpdateHistoryWidget\SoftwareUpdateHistoryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SoftwareUpdateHistoryWidget\SoftwareUpdateHistoryWidget.ViewModel.cs" Link="Widgets\SoftwareUpdateHistoryWidget\SoftwareUpdateHistoryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SoftwareUpdateHistoryWidget\SoftwareUpdateHistoryWidget.Source.cs" Link="Widgets\SoftwareUpdateHistoryWidget\SoftwareUpdateHistoryWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Model.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.ViewModel.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Source.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Source.cs" />
   </ItemGroup>
 
   <!--

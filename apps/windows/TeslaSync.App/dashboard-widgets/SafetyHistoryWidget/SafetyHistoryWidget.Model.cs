@@ -5,7 +5,7 @@ using TeslaSync.App.Core.DataDisplay;
 using TeslaSync.App.Core.Notifications;
 using TeslaSync.App.Core.Units;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.SafetyHistory;
 
 /// <summary>
 /// The lifecycle state a <see cref="SafetyHistoryViewModel"/> can be in — the native union of the

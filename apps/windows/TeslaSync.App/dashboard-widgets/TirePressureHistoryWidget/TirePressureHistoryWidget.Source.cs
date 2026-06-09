@@ -7,38 +7,38 @@ using TeslaSync.App.Core.Data.Net;
 using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Widgets;
 
-namespace TeslaSync.App.DashboardWidgets.SafetyHistory;
+namespace TeslaSync.App.DashboardWidgets;
 
 /// <summary>
-/// The data port the <see cref="SafetyHistoryViewModel"/> binds to (P1/S8 state-holder seam). It yields
-/// the cache-then-network sequence of parsed safety-timeline lists for the primary (or explicit) vehicle —
-/// the native analogue of the web <c>useVehicles</c> + <c>useSafetyHistory</c> hook composition
-/// (web/src/features/dashboard/widgets/SafetyHistoryWidget.tsx). The view never performs HTTP itself; the
-/// concrete <see cref="SafetyHistorySource"/> (or a test fake) drives this.
+/// The data port the <see cref="TirePressureHistoryViewModel"/> binds to (P1/S8 state-holder seam). It yields
+/// the cache-then-network sequence of parsed TPMS-timeline lists for the primary (or explicit) vehicle —
+/// the native analogue of the web <c>useVehicles</c> + <c>useTirePressureHistory</c> hook composition
+/// (web/src/features/dashboard/widgets/TirePressureHistoryWidget.tsx). The view never performs HTTP itself;
+/// the concrete <see cref="TirePressureHistorySource"/> (or a test fake) drives this.
 /// </summary>
-public interface ISafetyHistorySource
+public interface ITirePressureHistorySource
 {
-    /// <summary>Stream the cache-then-network safety-history snapshots, newest cache first.</summary>
-    IAsyncEnumerable<RepositoryResult<IReadOnlyList<SafetySnapshot>>> StreamAsync(CancellationToken cancellationToken = default);
+    /// <summary>Stream the cache-then-network tire-pressure snapshots, newest cache first.</summary>
+    IAsyncEnumerable<RepositoryResult<IReadOnlyList<TirePressureSample>>> StreamAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// The repository-backed <see cref="ISafetyHistorySource"/> — the native data adapter for the Safety
-/// History surface. It first resolves the primary vehicle from the shared <see cref="IWidgetVehicleSource"/>
-/// (the native analogue of the web component's <c>vehicleId ?? vehicles?.[0]?.id</c>), then runs one
-/// cache-then-network read of the safety change feed (generated operation <c>get_api_v1_safety</c> —
-/// <c>GET /api/v1/safety?vehicle_id={id}</c>, the web <c>useSafetyHistory</c> query) through the shared
-/// <see cref="CacheThenNetworkEngine"/>, caching the raw JSON so the snake_case wire shape round-trips
-/// losslessly, and parses each emission into <see cref="SafetySnapshot"/> rows via
-/// <see cref="SafetyHistoryResultMapper"/>. When no vehicle is available the read short-circuits to
-/// <see cref="RepositoryResult{T}.Empty()"/>, mirroring the web hook's disabled query
-/// (<c>enabled: !!vehicleId</c>). No HTTP touches the view.
+/// The repository-backed <see cref="ITirePressureHistorySource"/> — the native data adapter for the Tire
+/// Pressure History surface. It first resolves the primary vehicle from the shared
+/// <see cref="IWidgetVehicleSource"/> (the native analogue of the web component's
+/// <c>vehicleId ?? vehicles?.[0]?.id ?? 0</c>), then runs one cache-then-network read of the TPMS change feed
+/// (generated operation <c>get_api_v1_tire_pressure</c> — <c>GET /api/v1/tire-pressure?vehicle_id={id}</c>,
+/// the web <c>useTirePressureHistory</c> query) through the shared <see cref="CacheThenNetworkEngine"/>,
+/// caching the raw JSON so the snake_case wire shape round-trips losslessly, and parses each emission into
+/// <see cref="TirePressureSample"/> rows via <see cref="TirePressureHistoryResultMapper"/>. When no vehicle
+/// is available the read short-circuits to <see cref="RepositoryResult{T}.Empty"/>, mirroring the web hook's
+/// disabled query (<c>enabled: !!vehicleId</c>). No HTTP touches the view.
 /// </summary>
-public sealed class SafetyHistorySource : ISafetyHistorySource
+public sealed class TirePressureHistorySource : ITirePressureHistorySource
 {
-    // GET /api/v1/safety (the safety change feed). The generated endpoint declares no query parameters,
+    // GET /api/v1/tire-pressure (the TPMS change feed). The generated endpoint declares no query parameters,
     // so the engine passes vehicle_id through verbatim — the backend's List handler requires it.
-    private const string SafetyHistoryOperation = "get_api_v1_safety";
+    private const string TirePressureHistoryOperation = "get_api_v1_tire_pressure";
     private const string VehicleQueryParam = "vehicle_id";
 
     private readonly IWidgetVehicleSource _vehicles;
@@ -53,7 +53,7 @@ public sealed class SafetyHistorySource : ISafetyHistorySource
     /// <param name="engine">The shared cache-then-network read engine.</param>
     /// <param name="options">The shared API client options (for JSON settings).</param>
     /// <param name="vehicleId">An explicit vehicle id; when null the primary cached vehicle is used.</param>
-    public SafetyHistorySource(
+    public TirePressureHistorySource(
         IWidgetVehicleSource vehicles,
         IApiClient api,
         CacheThenNetworkEngine engine,
@@ -72,20 +72,20 @@ public sealed class SafetyHistorySource : ISafetyHistorySource
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<RepositoryResult<IReadOnlyList<SafetySnapshot>>> StreamAsync(
+    public async IAsyncEnumerable<RepositoryResult<IReadOnlyList<TirePressureSample>>> StreamAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         long? vehicleId = await ResolveVehicleIdAsync(cancellationToken).ConfigureAwait(false);
         if (vehicleId is not { } vid)
         {
-            // Web parity: with no vehicle the useSafetyHistory query is disabled and `data` is undefined.
-            yield return RepositoryResult<IReadOnlyList<SafetySnapshot>>.Empty();
+            // Web parity: with no vehicle the useTirePressureHistory query is disabled and `data` is undefined.
+            yield return RepositoryResult<IReadOnlyList<TirePressureSample>>.Empty();
             yield break;
         }
 
-        string cacheKey = string.Create(CultureInfo.InvariantCulture, $"safety:{vid}:history");
+        string cacheKey = string.Create(CultureInfo.InvariantCulture, $"tire-pressure:{vid}:history");
         var request = new ApiRequest(
-            SafetyHistoryOperation,
+            TirePressureHistoryOperation,
             Query: new Dictionary<string, object?>(StringComparer.Ordinal)
             {
                 [VehicleQueryParam] = vid,
@@ -101,7 +101,7 @@ public sealed class SafetyHistorySource : ISafetyHistorySource
 
         await foreach (var emission in raw.ConfigureAwait(false))
         {
-            yield return SafetyHistoryResultMapper.Map(emission);
+            yield return TirePressureHistoryResultMapper.Map(emission);
         }
     }
 

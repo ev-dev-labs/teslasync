@@ -2,39 +2,40 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Notifications;
+using TeslaSync.App.Core.Units;
 
-namespace TeslaSync.App.DashboardWidgets.SafetyHistory;
+namespace TeslaSync.App.DashboardWidgets;
 
 /// <summary>
-/// Canonical registry metadata for the Safety History surface — the native mirror of the web registry
-/// entry in web/src/features/dashboard/widgets/registry/security.ts (<c>safety-history</c>). The dashboard
+/// Canonical registry metadata for the Tire Pressure History surface — the native mirror of the web registry
+/// entry in web/src/features/dashboard/widgets/registry/tires.ts (<c>tire-pressure-history</c>). The dashboard
 /// grid system binds this surface with the same <see cref="Id"/> and honours the same size constraints.
 /// </summary>
-public static class SafetyHistoryRegistration
+public static class TirePressureHistoryRegistration
 {
     /// <summary>Stable registry id (matches the web registry).</summary>
-    public const string Id = "safety-history";
+    public const string Id = "tire-pressure-history";
 
     /// <summary>Widget category (matches the web registry).</summary>
-    public const string Category = "security";
+    public const string Category = "tires";
 
     /// <summary>Diagnostics surface slug emitted with the <c>view.opened</c> event.</summary>
-    public const string Slug = "SafetyHistoryWidget";
+    public const string Slug = "TirePressureHistoryWidget";
 
     /// <summary>Default footprint: 2 columns × 4 rows.</summary>
-    public static SafetyHistorySize DefaultSize => new(2, 4);
+    public static TirePressureHistorySize DefaultSize => new(2, 4);
 
     /// <summary>Minimum footprint: 2 columns × 4 rows.</summary>
-    public static SafetyHistorySize MinSize => new(2, 4);
+    public static TirePressureHistorySize MinSize => new(2, 4);
 
     /// <summary>Maximum footprint: 4 columns × 40 rows.</summary>
-    public static SafetyHistorySize MaxSize => new(4, 40);
+    public static TirePressureHistorySize MaxSize => new(4, 40);
 
-    /// <summary>Localized registry display name (web registry "Safety History").</summary>
+    /// <summary>Localized registry display name (web registry "Tire Pressure History").</summary>
     public static string Name(ILocalizer localizer)
     {
         ArgumentNullException.ThrowIfNull(localizer);
-        return localizer.GetString("widget.safetyHistory", "Safety History");
+        return localizer.GetString("widget.tirePressureHistory.title", "Tire Pressure History");
     }
 
     /// <summary>Localized description (web registry copy).</summary>
@@ -42,68 +43,68 @@ public static class SafetyHistoryRegistration
     {
         ArgumentNullException.ThrowIfNull(localizer);
         return localizer.GetString(
-            "widget.safetyHistory.description",
-            "ADAS event timeline: collision warnings, AEB, lane departures, disengagements");
+            "widget.tirePressureHistory.description",
+            "Pressure trends for all 4 tires over time with recommended range");
     }
 
     /// <summary>True when <paramref name="size"/> falls within the min/max footprint constraints.</summary>
-    public static bool IsWithinBounds(SafetyHistorySize size) =>
+    public static bool IsWithinBounds(TirePressureHistorySize size) =>
         size.Cols >= MinSize.Cols && size.Cols <= MaxSize.Cols &&
         size.Rows >= MinSize.Rows && size.Rows <= MaxSize.Rows;
 
     /// <summary>Clamp <paramref name="size"/> into the supported min/max footprint.</summary>
-    public static SafetyHistorySize Clamp(SafetyHistorySize size) => new(
+    public static TirePressureHistorySize Clamp(TirePressureHistorySize size) => new(
         Math.Clamp(size.Cols, MinSize.Cols, MaxSize.Cols),
         Math.Clamp(size.Rows, MinSize.Rows, MaxSize.Rows));
 }
 
 /// <summary>
-/// PII-safe diagnostics for the Safety History surface (P1/S11 diagnostics contract). Records only the
-/// operational <c>view.opened</c> event with the surface slug — never an event title, ADAS value, VIN or
-/// vehicle id — so a diagnostics line can never leak what a safety event was about. Thread-safe.
+/// PII-safe diagnostics for the Tire Pressure History surface (P1/S11 diagnostics contract). Records only the
+/// operational <c>view.opened</c> event with the surface slug — never a corner pressure, VIN or vehicle id —
+/// so a diagnostics line can never leak fleet data. Thread-safe.
 /// </summary>
-public sealed class SafetyHistoryDiagnostics
+public sealed class TirePressureHistoryDiagnostics
 {
     private readonly Action<string>? _sink;
     private long _viewsOpened;
 
     /// <summary>Creates the collector over an optional PII-safe diagnostics sink.</summary>
-    public SafetyHistoryDiagnostics(Action<string>? sink = null) => _sink = sink;
+    public TirePressureHistoryDiagnostics(Action<string>? sink = null) => _sink = sink;
 
     /// <summary>Number of times the surface has been opened.</summary>
     public long ViewsOpened => Interlocked.Read(ref _viewsOpened);
 
-    /// <summary>Record that the surface was opened, emitting <c>view.opened slug=SafetyHistoryWidget</c>.</summary>
+    /// <summary>Record that the surface was opened, emitting <c>view.opened slug=TirePressureHistoryWidget</c>.</summary>
     public void RecordViewOpened()
     {
         Interlocked.Increment(ref _viewsOpened);
-        _sink?.Invoke($"view.opened slug={SafetyHistoryRegistration.Slug}");
+        _sink?.Invoke($"view.opened slug={TirePressureHistoryRegistration.Slug}");
     }
 }
 
 /// <summary>
-/// UI-thread-free state holder backing the WinUI <see cref="SafetyHistoryWidget"/> view — the native port
-/// of the web <c>SafetyHistoryWidget</c>'s hook composition
-/// (web/src/features/dashboard/widgets/SafetyHistoryWidget.tsx). It consumes the cache-then-network
-/// <see cref="ISafetyHistorySource"/>, applies the web <c>list.length === 0</c> gate (no snapshot renders
-/// the friendly empty surface), projects the rest through <see cref="SafetyHistoryProjection"/> against an
-/// injected clock, and exposes the mutually-exclusive <see cref="State"/> plus the header freshness flags
-/// so the view is a thin renderer. Drive it from one confinement (the UI thread); it is not internally
-/// synchronised.
+/// UI-thread-free state holder backing the WinUI <see cref="TirePressureHistoryWidget"/> view — the native
+/// port of the web <c>TirePressureHistoryWidget</c>'s hook composition
+/// (web/src/features/dashboard/widgets/TirePressureHistoryWidget.tsx). It consumes the cache-then-network
+/// <see cref="ITirePressureHistorySource"/>, applies the web <c>hasData</c> gate (a list with no timestamped
+/// TPMS row renders the friendly empty state, mirroring <c>WidgetChartSummary isEmpty</c>), projects the rest
+/// through <see cref="TirePressureHistoryProjection"/> with the active units, and exposes the
+/// mutually-exclusive <see cref="State"/> plus the header freshness flags so the view is a thin renderer.
+/// Drive it from one confinement (the UI thread); it is not internally synchronised.
 /// </summary>
-public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
+public sealed class TirePressureHistoryViewModel : INotifyPropertyChanged, IDisposable
 {
-    private readonly ISafetyHistorySource _source;
+    private readonly ITirePressureHistorySource _source;
     private readonly ILocalizer _localizer;
-    private readonly Func<DateTimeOffset> _clock;
 
-    private SafetyHistorySize _size;
+    private TirePressureHistorySize _size;
+    private UnitPref _units;
     private CancellationTokenSource? _cts;
-    private RepositoryResult<IReadOnlyList<SafetySnapshot>>? _last;
+    private RepositoryResult<IReadOnlyList<TirePressureSample>>? _last;
     private bool _disposed;
 
-    private SafetyHistoryState _state = SafetyHistoryState.Loading;
-    private SafetyHistoryDisplay _display;
+    private TirePressureHistoryState _state = TirePressureHistoryState.Loading;
+    private TirePressureHistoryDisplay _display;
     private DateTimeOffset? _updatedAt;
     private bool _isFetching;
     private bool _isError;
@@ -111,38 +112,38 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
     private string? _errorMessage;
     private int _attempts;
 
-    /// <summary>Creates the holder over its data source, localizer, footprint and (optional) clock.</summary>
-    /// <param name="source">The cache-then-network safety-history source.</param>
+    /// <summary>Creates the holder over its data source, localizer, footprint and unit preference.</summary>
+    /// <param name="source">The cache-then-network tire-pressure source.</param>
     /// <param name="localizer">The i18n facade resolving every label.</param>
     /// <param name="size">The widget footprint (drives the compact / standard layout).</param>
-    /// <param name="clock">The wall clock used for the 30/60-day windows and relative times; defaults to <see cref="DateTimeOffset.Now"/>.</param>
-    public SafetyHistoryViewModel(
-        ISafetyHistorySource source,
+    /// <param name="units">The user's unit preference; defaults to metric when null.</param>
+    public TirePressureHistoryViewModel(
+        ITirePressureHistorySource source,
         ILocalizer localizer,
-        SafetyHistorySize size,
-        Func<DateTimeOffset>? clock = null)
+        TirePressureHistorySize size,
+        UnitPref? units = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
         _size = size;
-        _clock = clock ?? (() => DateTimeOffset.Now);
-        _display = SafetyHistoryProjection.Project(Array.Empty<SafetySnapshot>(), _size, _localizer, _clock());
+        _units = units ?? UnitPref.Metric;
+        _display = TirePressureHistoryProjection.Project(Array.Empty<TirePressureSample>(), _size, _units, _localizer);
     }
 
     /// <inheritdoc />
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>The current mutually-exclusive surface state.</summary>
-    public SafetyHistoryState State
+    public TirePressureHistoryState State
     {
         get => _state;
         private set => Set(ref _state, value);
     }
 
-    /// <summary>The projected, render-ready display model (stats + compact summary + feed).</summary>
-    public SafetyHistoryDisplay Display
+    /// <summary>The projected, render-ready display model (stats + chart series + reference lines).</summary>
+    public TirePressureHistoryDisplay Display
     {
         get => _display;
         private set
@@ -194,14 +195,14 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
         private set => Set(ref _attempts, value);
     }
 
-    /// <summary>Localized widget title shown in the header (web <c>widget.safetyHistory</c>).</summary>
-    public string Title => _localizer.GetString("widget.safetyHistory", "Safety History");
+    /// <summary>Localized widget title shown in the header (web <c>widget.tirePressureHistory.title</c>).</summary>
+    public string Title => _localizer.GetString("widget.tirePressureHistory.title", "Tire Pressure History");
 
-    /// <summary>Localized empty-state message (web <c>widget.noSafetyEvents</c> "recorded" fallback).</summary>
-    public string EmptyMessage => _localizer.GetString("widget.noSafetyEvents", "No safety events recorded");
+    /// <summary>Localized empty-state message (web <c>widget.tirePressureHistory.noData</c>).</summary>
+    public string EmptyMessage => _localizer.GetString("widget.tirePressureHistory.noData", "No tire pressure history");
 
     /// <summary>The widget footprint; reassigning re-projects the current list for the new layout.</summary>
-    public SafetyHistorySize Size
+    public TirePressureHistorySize Size
     {
         get => _size;
         set
@@ -213,6 +214,24 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
 
             _size = value;
             Raise(nameof(Size));
+            Reproject();
+        }
+    }
+
+    /// <summary>The user's unit preference; reassigning re-projects the corner pressures.</summary>
+    public UnitPref Units
+    {
+        get => _units;
+        set
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            if (_units == value)
+            {
+                return;
+            }
+
+            _units = value;
+            Raise(nameof(Units));
             Reproject();
         }
     }
@@ -271,9 +290,9 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private bool HasContent() =>
-        _state is SafetyHistoryState.Loaded or SafetyHistoryState.Stale or SafetyHistoryState.Offline;
+        _state is TirePressureHistoryState.Loaded or TirePressureHistoryState.Stale or TirePressureHistoryState.Offline;
 
-    private void Apply(RepositoryResult<IReadOnlyList<SafetySnapshot>> result)
+    private void Apply(RepositoryResult<IReadOnlyList<TirePressureSample>> result)
     {
         _last = result;
         switch (result.Status)
@@ -314,17 +333,18 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private void ApplySnapshot(
-        IReadOnlyList<SafetySnapshot> snapshots,
+        IReadOnlyList<TirePressureSample> samples,
         DateTimeOffset? fetchedAt,
         bool stale,
         bool fetching,
         RepositoryError? error,
         bool offline = false)
     {
-        var display = SafetyHistoryProjection.Project(snapshots, _size, _localizer, _clock());
+        var display = TirePressureHistoryProjection.Project(samples, _size, _units, _localizer);
 
-        // Web parity: list.length === 0 renders the friendly empty surface regardless of freshness.
-        if (!display.HasSnapshots)
+        // Web parity: WidgetChartSummary's isEmpty gate — no timestamped row renders the empty state
+        // regardless of freshness.
+        if (!display.HasData)
         {
             SetEmpty(fetchedAt);
             return;
@@ -337,8 +357,8 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
         IsError = false;
         ErrorMessage = offline ? ErrorTextFor(error) : null;
         State = offline
-            ? SafetyHistoryState.Offline
-            : stale ? SafetyHistoryState.Stale : SafetyHistoryState.Loaded;
+            ? TirePressureHistoryState.Offline
+            : stale ? TirePressureHistoryState.Stale : TirePressureHistoryState.Loaded;
     }
 
     private void Reproject()
@@ -349,7 +369,7 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
         }
         else
         {
-            Display = SafetyHistoryProjection.Project(Array.Empty<SafetySnapshot>(), _size, _localizer, _clock());
+            Display = TirePressureHistoryProjection.Project(Array.Empty<TirePressureSample>(), _size, _units, _localizer);
         }
     }
 
@@ -357,18 +377,18 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
     {
         IsError = false;
         ErrorMessage = null;
-        State = SafetyHistoryState.Loading;
+        State = TirePressureHistoryState.Loading;
     }
 
     private void SetEmpty(DateTimeOffset? fetchedAt)
     {
-        Display = SafetyHistoryProjection.Project(Array.Empty<SafetySnapshot>(), _size, _localizer, _clock());
+        Display = TirePressureHistoryProjection.Project(Array.Empty<TirePressureSample>(), _size, _units, _localizer);
         UpdatedAt = fetchedAt;
         IsFetching = false;
         IsStale = false;
         IsError = false;
         ErrorMessage = null;
-        State = SafetyHistoryState.Empty;
+        State = TirePressureHistoryState.Empty;
     }
 
     private void SetError(RepositoryError? error)
@@ -377,23 +397,23 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
         IsStale = false;
         IsError = true;
         ErrorMessage = ErrorTextFor(error);
-        State = SafetyHistoryState.Error;
+        State = TirePressureHistoryState.Error;
     }
 
     private string ErrorTextFor(RepositoryError? error)
     {
         string key = error?.Kind switch
         {
-            RepositoryErrorKind.Unauthorized => "widget.safetyHistory.error.auth",
-            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "widget.safetyHistory.error.offline",
-            _ => "widget.safetyHistory.error",
+            RepositoryErrorKind.Unauthorized => "widget.tirePressureHistory.error.auth",
+            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "widget.tirePressureHistory.error.offline",
+            _ => "widget.tirePressureHistory.error",
         };
 
         string fallback = error?.Kind switch
         {
-            RepositoryErrorKind.Unauthorized => "Sign in to view safety history",
-            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "You're offline — showing the last cached safety history",
-            _ => "Couldn't load safety history",
+            RepositoryErrorKind.Unauthorized => "Sign in to view tire pressure history",
+            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "You're offline — showing the last cached tire pressure history",
+            _ => "Couldn't load tire pressure history",
         };
 
         return _localizer.GetString(key, fallback);
