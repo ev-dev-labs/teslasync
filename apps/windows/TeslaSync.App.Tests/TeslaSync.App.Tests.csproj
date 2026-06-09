@@ -532,6 +532,17 @@
     auto-integration merges repeatedly left it with several concatenated <Project> roots that failed XML
     load (MSB4025). The links below are the deduplicated, path-sorted union of every previously linked
     source, plus the P2 feature-views/0108 ChargerTypeBreakdown surface.
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    P2/W2-0001 — headless unit tests for the WinUI-free UI-primitive logic models.
+
+    Targets plain net10.0 so `dotnet test` runs without a WinUI / UI-thread host. This project links the
+    WinUI-free *.Model.cs / *.Source.cs / *.ViewModel.cs / *.Presentation.cs sources from TeslaSync.App so
+    each adapter + per-state projection + diagnostics is verified row-for-row; the WinUI views themselves are
+    exercised by the app build. Keep this file as ONE <Project> root with a single Compile ItemGroup — a
+    chain of integration merges has repeatedly re-concatenated multiple roots plus duplicate Compile items,
+    failing XML load with MSB4025.
   -->
 
   <PropertyGroup>
@@ -557,6 +568,10 @@
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget card template). -->
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
   <!-- Test data + manifests copied next to the test assembly (golden SI vectors, MSIX manifest, widget template). -->
+  <!--
+    Test data copied next to the assembly: the language-neutral SI golden vectors (units-golden.json), the
+    MSIX package manifest (packaging assertions) and the widget Adaptive Card template (drift test).
+  -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -570,9 +585,8 @@
   </ItemGroup>
 
   <!--
-    Linked WinUI-free feature-view, dashboard-widget and shared logic sources (Model / Source / ViewModel).
-    The headless (net10.0) test project verifies each adapter + projection + diagnostics without a UI host;
-    the WinUI views themselves are exercised by the app build. Deduplicated union of the test surface.
+    Linked WinUI-free feature-view, dashboard-widget and shared logic sources (Model / Source / ViewModel /
+    Presentation). Deduplicated, sorted union of the test surface — one Compile item per linked file.
   -->
 
   <!--
@@ -880,11 +894,13 @@
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Model.cs" Link="FeatureViews\ChargingTab\ChargingTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Source.cs" Link="FeatureViews\ChargingTab\ChargingTab.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.ViewModel.cs" Link="FeatureViews\ChargingTab\ChargingTab.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChartsRow.Model.cs" Link="FeatureViews\ChartsRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Model.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Source.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.ViewModel.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.Model.cs" Link="FeatureViews\ColorConverter\ColorConverter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.ViewModel.cs" Link="FeatureViews\ColorConverter\ColorConverter.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostPerKwhChart\CostPerKwhChart.Model.cs" Link="FeatureViews\CostPerKwhChart\CostPerKwhChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
@@ -1023,6 +1039,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+</Project>
+    <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
+  </ItemGroup>
+
 </Project>
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
   </ItemGroup>
