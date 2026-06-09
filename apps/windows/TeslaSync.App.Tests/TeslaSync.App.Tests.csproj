@@ -302,11 +302,14 @@
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
+    <!--
       P2 dashboard-widgets (TirePressureVisualWidget): its headless logic + state-holder view-model are
-      exercised by TirePressureVisualWidgetTests; the three WinUI-free source files are linked in once above
-      (NETSDK1022: this block previously duplicated those identical Compile items, breaking the test build).
+      exercised by TirePressureVisualWidgetTests; the three WinUI-free source files are linked in here once
+      (a prior edit dropped these Compile items, which the TirePressureVisualWidgetTests build requires).
     -->
-    <!-- TirePressureVisualWidget's three WinUI-free sources are linked once in the dashboard-widgets group above. -->
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Model.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Source.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Source.cs" />
@@ -441,6 +444,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Model.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Source.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0015 — the HashCalculator tool's UI-thread-free logic (the pure SHA-256 digest +
     lowercase-hex helper, the IHashComputer adapter, the outcome model, and the state-holder view-model)
     lives in the WinUI app project but is WinUI-free by construction. Link those three source files in so the
@@ -473,6 +479,9 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\ToolCard.Presentation.cs" Link="FeatureViews\ToolCard.Presentation.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (W-0013): the ColorConverter's UI-thread-free logic (the hex parse + HSL conversion
     model and the state-holder view-model) lives in the WinUI app project but is WinUI-free by construction.
     Link those two source files in so the headless (net10.0) test project verifies the adapter + per-state
@@ -495,6 +504,18 @@
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Model.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Source.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.ViewModel.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0027 EntriesTable: the DLQ-inspector entries-table surface's UI-thread-free logic (the
+    DlqEntrySummary mirror, the sort/format/pagination helpers, the per-state projection, the diagnostics and
+    the registration) lives in the WinUI app project under feature-views/EntriesTable/ but is WinUI-free by
+    construction. Link the model source file into the headless (net10.0) test project so the projection adapter
+    + per-state branches + sort/format + a11y names + the view.opened diagnostics are verified without a UI
+    host. The WinUI view itself (EntriesTable.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\EntriesTable\EntriesTable.Model.cs" Link="FeatureViews\EntriesTable\EntriesTable.Model.cs" />
   </ItemGroup>
 
 </Project>
