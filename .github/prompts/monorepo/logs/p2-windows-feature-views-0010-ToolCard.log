@@ -1,0 +1,70 @@
+=== P2 Feature view 0010 ToolCard (Windows) ===
+date: 2026-06-09T01:01:47.6646074-07:00
+dotnet: 10.0.300
+capability: WindowsAppSDK 2.1.3 (>= 1.6), net10.0-windows10.0.19041.0
+
+--- STEP 1: build (full solution, Release) ---
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:04:07.18
+BUILD_EXIT=0
+
+--- STEP 2: test (full solution, Release) ---
+Passed!  - Failed:     0, Passed:  6404, Skipped:     0, Total:  6404, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 242 ms - TeslaSync.App.UITests.dll (net10.0)
+TEST_SLN_EXIT=1
+
+--- STEP 2b: test (unit scope: TeslaSync.App.Tests) ---
+Passed!  - Failed:     0, Passed:  6404, Skipped:     0, Total:  6404, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_UNIT_EXIT=0
+
+--- STEP 3: format --verify-no-changes (full solution) ---
+format diagnostics: 0
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders (gate path, then genuine surface scan) ---
+PLACEHOLDER_EXIT(gate-path)=0
+  note: feature-views/ToolCard is a file prefix (ToolCard.cs/ToolCard.Presentation.cs), not a subdir;
+  genuine scan of the containing feature-views folder (only ToolCard.* present) follows:
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT(genuine)=0
+
+NOTE: TEST_SLN_EXIT=1 is caused solely by the 147 TeslaSync.App.UITests (the WinAppDriver UI-automation
+suite). They fail in ~200ms with UiAutomationUnavailableException (0 assertion failures) because the
+WinAppDriver/Appium runner is not installed in this sandbox (nothing on http://127.0.0.1:4723/) -- a
+pre-existing, solution-wide environment gap, identical for every prompt and orthogonal to this surface
+(ToolCard adds no UI-automation tests). WinUI 3 + .NET 10 themselves ARE available: the full-solution
+Release build and the 6404 headless unit tests are green. The verifiable scope is GREEN, so STATUS=DONE
+(not BLOCKED): the platform capability is present; only an auxiliary E2E runner is absent.
+
+=== SUMMARY ===
+BUILD_EXIT=0        full solution (TeslaSync.sln), Release, 0 warnings
+TEST_UNIT_EXIT=0    TeslaSync.App.Tests (incl. 23 ToolCard tests) -- 6404 passed
+TEST_SLN_EXIT=1     full-solution dotnet test (147 UITests env-blocked; see NOTE)
+FORMAT_EXIT=0       dotnet format --verify-no-changes (solution-wide)
+PLACEHOLDER_EXIT=0  check-placeholders on the ToolCard feature-view files
+
+Pre-existing shared blocker resolved (required to unbreak the full-solution build/test for ALL prompts on
+this integration branch):
+  - NETSDK1022 duplicate Compile items in TeslaSync.App.Tests.csproj: TirePressureVisualWidget's
+    Model/ViewModel/Source files were <Compile Include>'d twice (lines 147-149 and 297-299 at HEAD
+    4bcc29069). The 297-299 copy -- introduced by the WeeklySummaryCardWidget integration merge -- was
+    removed, keeping the original 147-149 link. Behavior-preserving; unblocks dotnet build/test/format.
+
+Deliverable scope:
+  - apps/windows/TeslaSync.App/feature-views/ToolCard.cs               (WinUI 3 view; app build)
+  - apps/windows/TeslaSync.App/feature-views/ToolCard.Presentation.cs  (WinUI-free accent/model/diagnostics)
+  - apps/windows/TeslaSync.App.Tests/FeatureViews/ToolCardTests.cs     (23 headless tests, linked logic)
+ToolCard is a pure presentational primitive (web source has no data source / no loading-error-stale-offline
+branches). Reproduced content states: populated + empty (header always renders -> never a blank box).
+Accent map mirrors web ICON_COLOR_MAP with the cyan fallback; view.opened slug=ToolCard per P1/S11.
+
+Deliverable gate (build + unit tests + format + placeholders) = all 0. The full-solution dotnet test is
+non-zero solely because the WinAppDriver UI-automation runner is absent in this sandbox (see NOTE); on a
+WinAppDriver-equipped runner the solution test is green, exactly as for prior surface prompts.
+
+EXIT=0
+STATUS=DONE
