@@ -236,3 +236,4 @@ p2-windows/feature-views/W-0022-UnixPermissionTool.prompt.md
 p2-windows/feature-views/W-0024-UuidGenerator.prompt.md
 p2-windows/feature-views/W-0023-UrlEncoder.prompt.md
 p2-windows/feature-views/W-0026-AuditPanel.prompt.md
+p2-windows/feature-views/W-0025-VinDecoder.prompt.md
