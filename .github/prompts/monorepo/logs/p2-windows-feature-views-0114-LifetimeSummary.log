@@ -1,0 +1,103 @@
+=== P2 Feature view 0114 LifetimeSummary (Windows) ===
+date: 2026-06-09T12:39:11-07:00
+runner: windows  dotnet: 10.0.300  HEAD: ee8227b5f
+
+--- platform capability probe (ADR-002/ADR-009: WinUI 3 + .NET 10 + Fluent) ---
+net10 sdk present: 10.0.300 [C:\Program Files\dotnet\sdk]
+WindowsDesktop runtime present: 10.0.8 (Microsoft.WindowsDesktop.App)
+WindowsAppSDK pinned: True (Microsoft.WindowsAppSDK via Directory.Packages.props)
+Capability AVAILABLE -> not BLOCKED. The WinUI 3 app + the new view compile (BUILD_EXIT=0) and the headless
+surface-logic suite is green; only the separate W9-0002 UIAutomation E2E suite cannot run on this headless
+runner (no WinAppDriver/Appium + no deployed MSIX), exactly as for feature-views 0078 / 0093.
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    0 Error(s)
+    17 Warning(s)  (all pre-existing in TeslaSync.App.Core: CA1716/CA1720/CA1000/CA1859 — none in the new
+                    LifetimeSummary sources; the App project enforces TreatWarningsAsErrors and is clean.)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 265 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  9287, Skipped:     0, Total:  9287, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite).
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its
+standard install paths or on PATH.
+  -> WinAppDriver/Appium runner + a deployed MSIX are absent on this headless runner; that suite fails fast by
+     design (never silently skipped) and is gated by the separate W9-0002 prompt, not feature-view 0114.
+
+### STEP 2b: dotnet test --filter Category!=UIAutomation (headless surface-logic gate, the documented W9-0002 separation)
+Passed!  - Failed:     0, Passed:  9287, Skipped:     0, Total:  9287, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+LifetimeSummary tests: Passed!  - Failed:     0, Passed:    26, Skipped:     0, Total:    26 - TeslaSync.App.Tests.dll (net10.0)
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+The five new LifetimeSummary sources + the repaired test csproj were created with CRLF; the repo standard is LF
+(.editorconfig: end_of_line=lf, insert_final_newline=true, trim_trailing_whitespace=true). Normalized all six
+files to LF (CR=0) before verifying; re-ran:
+format: clean (no changes needed)
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/LifetimeSummary
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+### Pre-existing integration-branch repair required to make the gate runnable (documented per Honesty Covenant #9)
+This auto-integration branch HEAD did not build before this change, for reasons unrelated to the surface:
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was corrupt again — multiple concatenated <Project>
+roots (the build failed at XML load with MSB4025 "An XML comment cannot contain '--'" at line 10, a nested <!--
+inside an already-open comment). The file held 6 </Project> closers, duplicated PropertyGroup / PackageReference
+/ ProjectReference / Content groups, and 825 <Compile> lines for only 424 distinct linked sources (~2x
+duplication from repeated bad integration merges). Repaired in place exactly as feature-views 0078 / 0093 did
+before later merges re-introduced the corruption: collapsed to ONE valid <Project> root holding the
+deduplicated UNION of all distinct <Compile> links (424, each verified present on disk -> 0 stale), the single
+PropertyGroup, the 3 PackageReferences, the 2 ProjectReferences and the 3 distinct Content fixtures, normalized
+to LF, and added the new LifetimeSummary links. No test coverage dropped — 9287 headless tests pass (vs 8739 at
+the 0093 baseline; the count grew as surfaces landed since). New distinct <Compile> count after repair: 427
+(424 + LifetimeSummary.Model/.Source/.ViewModel.cs).
+
+### Surface deliverable (feature-views/LifetimeSummary/)
+LifetimeSummary.Model.cs / .Source.cs / .ViewModel.cs / .cs + Tests/FeatureViews/LifetimeSummaryTests.cs (26
+test cases). Parity port of web LifetimeSummary.tsx: a cyan-glow GlassPanel headed by a trending-up icon +
+"Lifetime Summary" title, wrapping a responsive 2/3-column grid of the seven lifetime metric tiles (Total
+Spent / Total Energy / Total Sessions / Avg Session Cost / Avg Energy per Session / Avg Duration / Free
+Sessions). The figures reproduce the web Cost-Analysis page coreStats + lifetimeMetrics memos verbatim: total
+cost = Σ cost_decimal (?? 0); total energy = convertEnergyFromSI(Σ total_energy_added_wh, kWh) = Σwh/1000; total
+duration = Σ per-session whole minutes; the lifetime averages = count>0 ? total/count : 0; free sessions = the
+sessions whose cost is absent/zero, and free energy keeps the RAW Σ total_energy_added_wh (Wh) yet is labeled
+"kWh" — the web's own quirk, reproduced exactly (a unit-test asserts "2 (10,000.0 kWh)" so the parity is
+pinned, not silently "fixed"). Currency = formatCurrency(…, 2); energy = fmtWithUnit(…, 'kWh', 1); counts =
+fmtInt; duration = `${fmtNumber(…,0)} min`. Full native state matrix: loading (per-metric skeletons) / loaded
+(the seven tiles) / empty (the web "No data" surface when no sessions back the figures) / error (retry surface)
+/ stale (stale chip) / offline (offline chip + cached tiles). Data via GET /charging-sessions through the shared
+cache-then-network engine (no HTTP in the view). Narrator names on every tile and interactive element; the
+trend icon is marked decorative (AccessibilityView.Raw); the loading grid is a polite live region;
+view.opened slug=LifetimeSummary emitted once on open (PII-safe — no cost/energy/count in diagnostics).
+
+### i18n (P1/S10) — every source key resolves in the catalog
+All nine keys the web source passes to t() resolve in Strings/{en,ar,he}/Resources.resw (9/9 each), so no
+catalog edit was needed:
+  translation.costAnalysis.lifetime.{title,totalSpent,totalEnergy,totalSessions,avgSessionCost,avgEnergy,
+                                     avgDuration,freeSessions,noData}
+Native superset chrome reuses existing common.{loading,offline,refresh,retry} (common.stale falls back to its
+literal, as in 0093); the error surface uses costAnalysis.lifetime.error[.auth/.offline] via the GetString
+fallback pattern.
+
+### Platform capability determination
+Enumerated capabilities (ADR-002/ADR-009: WinUI 3 / Windows App SDK 1.6+ / .NET 10 / Fluent) ARE present: the
+WinUI app + view compile (BUILD_EXIT=0) and the headless logic suite is green (HEADLESS_TEST_EXIT=0, 9287 tests
+incl. 26 for this surface). The 147 TeslaSync.App.UITests are Category=UIAutomation E2E tests gated by the
+SEPARATE W9-0002 prompt; they require a WinAppDriver/Appium runner + a deployed MSIX, absent on this headless
+runner, so they fail fast by design. That is the only contributor to WHOLE_SOLUTION_TEST_EXIT=1 and is out of
+scope for feature-view 0114.
+
+### Gate result (feature-view scope: build + headless tests + format + placeholders)
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation suite, evidenced above.)
+
+EXIT=0
+STATUS=DONE
