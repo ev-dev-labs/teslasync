@@ -1,0 +1,44 @@
+/*
+  RegenEfficiencyWidget.strings
+  TeslaSync — P4 dashboard widget · 0081 · RegenEfficiencyWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `RegenEfficiencyWidget` resolves (table "RegenEfficiencyWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block holds the exact strings extracted from the web source
+  (features/dashboard/widgets/RegenEfficiencyWidget.tsx + registry/driving.ts). The
+  remaining keys back the native-only chrome (freshness chip, refresh/retry/empty/error
+  copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.regenEfficiency.title" = "Regen Braking";
+"widget.regenEfficiency.description" = "Regenerative braking recovery rate, total kWh recovered, max regen power";
+"widget.regenEfficiency.totalKwh" = "Total Recovered";
+"widget.regenEfficiency.monthlyAvg" = "Monthly Avg";
+"widget.regenEfficiency.freeCharges" = "Free Charges";
+"widget.regenEfficiency.recovery" = "recovery";
+"widget.regenEfficiency.noData" = "No regen data";
+"help.regenEfficiency.body" = "Energy recovered through regenerative braking divided by total energy used during driving. Higher is better — Tesla cars typically reach 15–30% recovery in mixed driving.";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.regenEfficiency.live" = "Live";
+"widget.regenEfficiency.stale" = "Stale";
+"widget.regenEfficiency.offline" = "Offline";
+"widget.regenEfficiency.updating" = "Updating";
+"widget.regenEfficiency.refresh" = "Refresh";
+"widget.regenEfficiency.retry" = "Retry";
+"widget.regenEfficiency.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.regenEfficiency.loading" = "Loading regen data";
+"widget.regenEfficiency.emptyHint" = "Regen data will appear here once the vehicle reports drives.";
+"widget.regenEfficiency.errorTitle" = "Couldn't load regen data";
+
+/* --- Accessibility --- */
+"widget.regenEfficiency.openA11y" = "Open regen braking details";
+"widget.regenEfficiency.helpA11y" = "More info about Regen Braking";
