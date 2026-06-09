@@ -483,9 +483,13 @@
 
   <!--
     P2/W2-0001 - headless unit tests for the UI-thread-free logic models (Model / Source / ViewModel).
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    P2/W2-0001 headless unit tests for the UI-thread-free logic models (Model / Source / ViewModel).
     Targets plain net10.0 so `dotnet test` runs without a WinUI/UI-thread host. The WinUI app targets a
-    WinUI TFM, so its testable sources are <Compile>-linked here rather than project-referenced; the views
-    (*.cs) themselves are exercised by the app build.
+    WinUI TFM, so its testable sources are Compile-linked here rather than project-referenced; the views
+    (the *.cs files) themselves are exercised by the app build.
 
     Repair note (P2 feature-views/0093 SummaryStatsGrid): a chain of integration merges had again left this
     file with multiple concatenated <Project> roots and duplicated <Compile> items that failed XML load
@@ -543,6 +547,11 @@
     exercised by the app build. Keep this file as ONE <Project> root with a single Compile ItemGroup — a
     chain of integration merges has repeatedly re-concatenated multiple roots plus duplicate Compile items,
     failing XML load with MSB4025.
+    Repair note (P2 feature-views 0107 ChargingSessionCard): a chain of auto-integration merges had again
+    left this file with several concatenated project roots and a nested XML comment that failed XML load
+    (MSB4025). The duplicate roots and the broken comment were removed and every distinct linked source was
+    consolidated below as a single deduplicated union (preserving every previously linked widget and
+    feature-view source), plus the new ChargingSessionCard surface.
   -->
 
   <PropertyGroup>
@@ -891,6 +900,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Source.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.ViewModel.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingSection.Model.cs" Link="FeatureViews\ChargingSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingSessionCard\ChargingSessionCard.Model.cs" Link="FeatureViews\ChargingSessionCard\ChargingSessionCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Model.cs" Link="FeatureViews\ChargingTab\ChargingTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Source.cs" Link="FeatureViews\ChargingTab\ChargingTab.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.ViewModel.cs" Link="FeatureViews\ChargingTab\ChargingTab.ViewModel.cs" />
@@ -1044,6 +1054,8 @@
   </ItemGroup>
 
 </Project>
+    <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
+  </ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
   </ItemGroup>
 
