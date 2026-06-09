@@ -1,0 +1,67 @@
+=== P2 Feature view 0146 PowerProfileChart (Windows) ===
+run-utc: 2026-06-09T23:57:29.0396146Z
+runner: Windows_NT; dotnet 10.0.300; WinUI 3 (Microsoft.WindowsAppSDK) + .NET 10 (net10.0-windows10.0.19041.0) BUILD capability PRESENT.
+
+Artifact : apps/windows/TeslaSync.App/feature-views/PowerProfileChart/{PowerProfileChart.cs, PowerProfileChart.Model.cs}
+Tests    : apps/windows/TeslaSync.App.Tests/FeatureViews/PowerProfileChartTests.cs  (34 tests)
+Web spec : web/src/features/driving/components/drive-detail/PowerProfileChart.tsx
+Note     : apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was pre-existing-broken on HEAD
+           (MSB4025: 3 concatenated <Project> roots + a nested comment); consolidated to ONE valid root
+           with a deduplicated, path-sorted Compile union (476 prior links preserved + the new
+           PowerProfileChart.Model.cs), per the recurring repair-note invariant in that file.
+
+### STEP 1 - dotnet build apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App.Platform -> bin/Release/net10.0-windows10.0.19041.0/TeslaSync.App.Platform.dll
+  TeslaSync.App          -> bin/x64/Release/net10.0-windows10.0.19041.0/TeslaSync.App.dll
+  Build succeeded.  0 Warning(s)  0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2 - dotnet test apps/windows/TeslaSync.sln -c Release   (full solution)
+Failed!  - Failed:   147, Passed:     0, Skipped: 0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 10262, Skipped: 0, Total: 10262 - TeslaSync.App.Tests.dll  (net10.0)
+TEST_EXIT=1
+  Representative cause shared by ALL 147 UITests (none specific to PowerProfileChart):
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+      at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() WinAppDriverSession.cs:line 75
+
+### STEP 2b - headless surface suite: dotnet test TeslaSync.App.Tests (where PowerProfileChartTests lives)
+Passed!  - Failed: 0, Passed: 10262, Skipped: 0, Total: 10262 - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+### STEP 2c - PowerProfileChart surface tests only (--filter PowerProfileChartTests)
+Passed!  - Failed: 0, Passed: 34, Skipped: 0, Total: 34 - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+### STEP 3 - dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (clean; 'Warnings were encountered while loading the workspace' is informational only)
+FORMAT_EXIT=0
+
+### STEP 4 - apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/PowerProfileChart
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+### WinAppDriver UI-automation runtime availability  (evidence for the only red step)
+  127.0.0.1:4723 reachable .................. False
+  WinAppDriver.exe present (PF / PF x86) .... False
+  process elevated (could install MSI) ...... False
+  WinUI app MSIX-deployed ................... False (executed from build output only; no interactive desktop)
+  RunnerAvailability.Probe => Available=false. By design the suite FAILS, never skips
+  (WinAppDriverSession.EnsureReady throws; see RunnerAvailability.cs:10 'never silently skipped').
+
+### Determination
+PowerProfileChart is COMPLETE and verified by every check this runner can execute:
+  BUILD_EXIT=0  HEADLESS_TEST_EXIT=0 (10262 pass, incl. the 34 new adapter/state/a11y/diagnostics tests)
+  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+The ONLY red step is the full-solution dotnet test, red solely because the pre-existing, repo-wide
+TeslaSync.App.UITests harness (147 tests, none specific to this surface) requires an out-of-process
+WinAppDriver/Appium UI-automation runner + an MSIX-deployed app on an interactive desktop - none of
+which exist on this runner. Per the honesty covenant ('No red-as-green') the full gate cannot be
+declared green here.
+
+BUILD_EXIT=0 TEST_EXIT=1 HEADLESS_TEST_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED
