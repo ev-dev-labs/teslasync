@@ -201,6 +201,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.Model.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.ViewModel.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.Source.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.Model.cs" Link="Widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.ViewModel.cs" Link="Widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.Source.cs" Link="Widgets\RegenEfficiencyWidget\RegenEfficiencyWidget.Source.cs" />
   </ItemGroup>
 
   <!--
