@@ -1,0 +1,65 @@
+/*
+  SignalHealthWidget.strings
+  TeslaSync — P4 dashboard widget · 0088 · SignalHealthWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  SignalHealthWidget resolves (table "SignalHealthWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact key set extracted from the web source
+  (features/dashboard/widgets/SignalHealthWidget.tsx). The web `{{count}}`
+  interpolation maps to the `%lld` positional argument. The remaining keys back
+  the native-only relative formatter words, chrome (freshness chip, refresh /
+  retry / open, loading / error / stale / offline copy), and accessibility.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.signalHealth.title" = "Signal Health";
+"widget.signalHealth.noData" = "No signal health data";
+"widget.signalHealth.signals" = "signals";
+"widget.signalHealth.totalSignals" = "Total Signals";
+"widget.signalHealth.active" = "Active";
+"widget.signalHealth.withGaps" = "With Gaps";
+"widget.signalHealth.freshness" = "Freshness";
+"widget.signalHealth.status" = "Status";
+"widget.signalHealth.healthy" = "Healthy";
+"widget.signalHealth.degraded" = "Degraded";
+"widget.signalHealth.critical" = "Critical";
+"widget.signalHealth.unknown" = "Unknown";
+"widget.signalHealth.staleSignals" = "Stale / Gap Signals";
+"widget.signalHealth.secAgo" = "%llds ago";
+"widget.signalHealth.minAgo" = "%lldm ago";
+"widget.signalHealth.hrAgo" = "%lldh ago";
+
+/* --- Registry metadata (registry/telemetry.ts) --- */
+"widget.signalHealth.description" = "Telemetry signal coverage: active signals, data gaps, freshness";
+
+/* --- Native relative formatter (lib/dateFormat formatRelative) --- */
+"widget.signalHealth.justNow" = "just now";
+"widget.signalHealth.dayAgo" = "%lldd ago";
+
+/* --- Native chrome: freshness --- */
+"widget.signalHealth.live" = "Live";
+"widget.signalHealth.stale" = "Stale";
+"widget.signalHealth.offline" = "Offline";
+
+/* --- Native chrome: actions --- */
+"widget.signalHealth.refresh" = "Refresh";
+"widget.signalHealth.retry" = "Retry";
+"widget.signalHealth.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.signalHealth.loading" = "Loading signal health";
+"widget.signalHealth.errorTitle" = "Couldn't load signal health";
+"widget.signalHealth.staleBanner" = "Reconnecting — coverage may be stale";
+"widget.signalHealth.offlineBanner" = "Offline — showing last synced coverage";
+
+/* --- Accessibility --- */
+"widget.signalHealth.openA11y" = "Open the live signals page";
+"widget.signalHealth.totalA11y" = "%lld total signals";
+"widget.signalHealth.activeA11y" = "%lld active";
+"widget.signalHealth.gapsA11y" = "%lld with gaps";
+"widget.signalHealth.gapA11y" = "Signal %1$@, last seen %2$@";
