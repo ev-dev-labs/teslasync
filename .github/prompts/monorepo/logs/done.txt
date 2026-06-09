@@ -229,3 +229,4 @@ p2-windows/feature-views/W-0015-HashCalculator.prompt.md
 p2-windows/feature-views/W-0016-HttpStatusTool.prompt.md
 p2-windows/feature-views/W-0019-RegexTester.prompt.md
 p2-windows/feature-views/W-0018-JwtDecoder.prompt.md
+p2-windows/feature-views/W-0017-JsonFormatter.prompt.md
