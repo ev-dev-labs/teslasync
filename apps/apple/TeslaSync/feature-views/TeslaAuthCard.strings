@@ -1,0 +1,54 @@
+/*
+  TeslaAuthCard.strings
+  TeslaSync — P4 feature view · 0258 · TeslaAuthCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `TeslaAuthCard`
+  resolves (table "TeslaAuthCard") lives here with its web English value. These entries fold into the
+  app `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface
+  table so each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The web source (features/system/components/status/TeslaAuthCard.tsx) is "anonymous" — it uses
+  hardcoded English literals (the prompt extracts only the "Tesla account" title). Per the native
+  no-English-literals rule, every one of those literals is promoted to a key here. The first group is
+  the parity set extracted from the web source; the second group backs the native chrome (the P4 leaf
+  freshness / loading / error copy) so the Swift sources hold no English prose literals.
+*/
+
+/* --- Parity: title --- */
+"teslaAuth.title" = "Tesla account";
+
+/* --- Parity: status badge labels (web TONE.label) --- */
+"teslaAuth.status.connected" = "Connected";
+"teslaAuth.status.expiresSoon" = "Expires soon";
+"teslaAuth.status.tokenExpired" = "Token expired";
+"teslaAuth.status.notConnected" = "Not connected";
+"teslaAuth.status.unknown" = "Unknown";
+
+/* --- Parity: detail copy (web `detail`) --- */
+"teslaAuth.detail.disconnected" = "No Tesla account is currently connected.";
+"teslaAuth.detail.expiryUnknown" = "Token expiry unknown — re-authenticate to refresh.";
+"teslaAuth.detail.unparseable" = "Token expiry unparseable.";
+"teslaAuth.detail.expiredToday" = "Expired today — re-authenticate to resume Fleet API calls.";
+"teslaAuth.detail.expiredAgo" = "Expired %@ ago — re-authenticate to resume Fleet API calls.";
+"teslaAuth.detail.expiresLaterToday" = "Token expires later today.";
+"teslaAuth.detail.expiresInOneDay" = "Token expires in 1 day.";
+"teslaAuth.detail.expiresInDays" = "Token expires in %@ days.";
+"teslaAuth.unit.daysShort" = "%@d";
+
+/* --- Parity: CTA label (web Link text) --- */
+"teslaAuth.cta.reauthenticate" = "Re-authenticate";
+"teslaAuth.cta.manage" = "Manage";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"teslaAuth.live" = "Live";
+"teslaAuth.stale" = "Stale";
+"teslaAuth.offline" = "Offline";
+"teslaAuth.staleBanner" = "Reconnecting — status may be stale";
+"teslaAuth.offlineBanner" = "Offline — showing last known status";
+"teslaAuth.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error / a11y --- */
+"teslaAuth.loadingA11y" = "Loading Tesla account status";
+"teslaAuth.errorTitle" = "Couldn't load Tesla account status";
+"teslaAuth.retry" = "Retry";
+"teslaAuth.manageHint" = "Opens Tesla account settings";
