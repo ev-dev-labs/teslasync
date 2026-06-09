@@ -215,3 +215,4 @@ p2-windows/dashboard-widgets/W-0117-WeeklySummaryCardWidget.prompt.md
 p2-windows/dashboard-widgets/W-0114-WatchSummaryWidget.prompt.md
 p2-windows/feature-views/W-0002-BackendTool.prompt.md
 p2-windows/feature-views/W-0003-ClientUtilitiesSection.prompt.md
+p2-windows/feature-views/W-0005-FleetTelemetryHealth.prompt.md
