@@ -1,0 +1,52 @@
+/*
+  XRayControls.strings
+  TeslaSync — P4 feature view · 0033 · XRayControls (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `XRayControls` resolves (table "XRayControls") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/ingest-xray/XRayControls.tsx) — the empty vehicle
+  sentinel, the three `aria-label`s, and the window/bucket option labels (whose
+  web fallback is the raw wire token, e.g. "5m" / "30s"). The remaining keys back
+  the native chrome (the numbered vehicle fallback, the loading/empty/error
+  vehicle-slot states, the retry copy, and the freshness banners) the picker
+  renders around the selectors.
+*/
+
+/* --- Extracted from the web source (parity) --- */
+"admin.xray.controls.selectVehicle" = "Select vehicle…";
+"admin.xray.controls.vehicleAria" = "Vehicle";
+"admin.xray.controls.windowAria" = "Window";
+"admin.xray.controls.bucketAria" = "Bucket";
+
+/* --- Window option labels from the web source (fallback = raw token, parity) --- */
+"admin.xray.windowOption.5m" = "5m";
+"admin.xray.windowOption.15m" = "15m";
+"admin.xray.windowOption.1h" = "1h";
+"admin.xray.windowOption.6h" = "6h";
+"admin.xray.windowOption.24h" = "24h";
+
+/* --- Bucket option labels from the web source (fallback = raw token, parity) --- */
+"admin.xray.bucketOption.30s" = "30s";
+"admin.xray.bucketOption.1m" = "1m";
+"admin.xray.bucketOption.5m" = "5m";
+"admin.xray.bucketOption.15m" = "15m";
+"admin.xray.bucketOption.1h" = "1h";
+
+/* --- Native chrome: vehicle label fallback (web `Vehicle ${v.id}`) --- */
+"admin.xray.controls.vehicleFallback" = "Vehicle %lld";
+
+/* --- Native chrome: vehicle-slot states --- */
+"admin.xray.controls.loadingVehicles" = "Loading vehicles";
+"admin.xray.controls.emptyHint" = "No vehicles available yet";
+"admin.xray.controls.errorTitle" = "Couldn't load vehicles";
+"admin.xray.controls.retry" = "Retry";
+
+/* --- Native chrome: freshness banners --- */
+"admin.xray.controls.staleBanner" = "Refreshing — the vehicle list may be stale";
+"admin.xray.controls.offlineBanner" = "Offline — showing the last loaded vehicles";
