@@ -140,6 +140,18 @@
     consolidated here into a single valid root plus the DriveOverviewChart (drive-detail) surface logic.
   -->
 
+    Headless (net10.0) unit tests for the WinUI app's UI-thread-free logic. The project runs without a
+    WinUI / UI-thread host and Compile-links each surface's WinUI-free sources (Model / Source / ViewModel /
+    Presentation) from TeslaSync.App so the adapters, per-state projections and diagnostics are verified
+    row for row; the WinUI views themselves are exercised by the app build. The matching test classes live
+    under this project and are picked up by the SDK default-compile glob.
+
+    Keep this file as ONE <Project> root with a single, path-sorted, deduplicated Compile ItemGroup. A chain
+    of integration merges had repeatedly re-concatenated this file into multiple <Project> roots plus duplicate
+    <Compile> items, failing XML load (MSB4025); consolidated for P2 feature-views/0140 DriveTimeline into this
+    single canonical root (no linked source dropped) plus the new DriveTimeline surface Model link.
+  -->
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -508,6 +520,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.Model.cs" Link="FeatureViews\DriveOverviewChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.Source.cs" Link="FeatureViews\DriveOverviewChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.ViewModel.cs" Link="FeatureViews\DriveOverviewChart.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveTimeline\DriveTimeline.Model.cs" Link="FeatureViews\DriveTimeline\DriveTimeline.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" />
@@ -570,6 +583,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetry\LiveTelemetry.Model.cs" Link="FeatureViews\LiveTelemetry\LiveTelemetry.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LoadingSkeleton.Model.cs" Link="FeatureViews\LoadingSkeleton.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MiniGridPreview\MiniGridPreview.Model.cs" Link="FeatureViews\MiniGridPreview\MiniGridPreview.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MonthlyCostChart\MonthlyCostChart.Model.cs" Link="FeatureViews\MonthlyCostChart\MonthlyCostChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Model.cs" Link="FeatureViews\OverviewTab\OverviewTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Source.cs" Link="FeatureViews\OverviewTab\OverviewTab.Source.cs" />
