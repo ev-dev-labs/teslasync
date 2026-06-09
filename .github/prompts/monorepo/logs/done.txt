@@ -218,3 +218,4 @@ p2-windows/feature-views/W-0003-ClientUtilitiesSection.prompt.md
 p2-windows/feature-views/W-0005-FleetTelemetryHealth.prompt.md
 p2-windows/feature-views/W-0007-ReferenceLinksSection.prompt.md
 p2-windows/feature-views/W-0010-ToolCard.prompt.md
+p2-windows/feature-views/W-0008-ResultPanel.prompt.md
