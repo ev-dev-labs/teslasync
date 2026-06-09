@@ -3,121 +3,121 @@ using System.Runtime.CompilerServices;
 using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Notifications;
 
-namespace TeslaSync.App.DashboardWidgets.SafetyFeatures;
+namespace TeslaSync.App.DashboardWidgets.TelemetryErrors;
 
 /// <summary>
-/// The data port the <see cref="SafetyFeaturesViewModel"/> binds to (P1/S8 state-holder seam). It yields the
-/// cache-then-network sequence of ADAS snapshots for the primary (or explicit) vehicle — the native analogue
-/// of the web <c>useVehicles</c> + <c>useSafety</c> hook composition
-/// (web/src/features/dashboard/widgets/SafetyFeaturesWidget.tsx). The view never performs HTTP itself; the
-/// concrete <see cref="SafetyFeaturesSource"/> (or a test fake) drives this.
+/// The data port the <see cref="TelemetryErrorsViewModel"/> binds to (P1/S8 state-holder seam). It yields
+/// the merged cache-then-network sequence of telemetry-error snapshots — the combination of
+/// <c>GET /tesla/fleet-telemetry/error-vins</c> and <c>GET /tesla/fleet-telemetry/errors</c> — the native
+/// analogue of the web component's <c>useFleetTelemetryErrorVINs</c> + <c>useFleetTelemetryErrors</c> hook
+/// composition. The view never performs HTTP itself; the concrete <see cref="TelemetryErrorsSource"/> (or a
+/// test fake) drives this.
 /// </summary>
-public interface ISafetyFeaturesSource
+public interface ITelemetryErrorsSource
 {
-    /// <summary>Stream the cache-then-network ADAS snapshots, newest cache first.</summary>
-    IAsyncEnumerable<RepositoryResult<SafetySnapshot>> StreamAsync(CancellationToken cancellationToken = default);
+    /// <summary>Stream the merged cache-then-network telemetry-error snapshots, newest cache first.</summary>
+    IAsyncEnumerable<RepositoryResult<TelemetryErrorsSnapshot>> StreamAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// Canonical registry metadata for the Safety Features surface — the native mirror of the web registry entry
-/// in web/src/features/dashboard/widgets/registry/security.ts (<c>safety-features</c>). The dashboard grid
-/// system binds this surface with the same <see cref="Id"/> and honours the same size constraints.
+/// Canonical registry metadata for the Telemetry Errors surface — the native mirror of the web registry
+/// entry in web/src/features/dashboard/widgets/registry/system.ts (id <c>telemetry-errors</c>). The
+/// dashboard grid system binds this surface with the same <see cref="Id"/> and honours the same size
+/// constraints (default 2×4, min 1×2, max 4×40).
 /// </summary>
-public static class SafetyFeaturesRegistration
+public static class TelemetryErrorsRegistration
 {
     /// <summary>Stable registry id (matches the web registry).</summary>
-    public const string Id = "safety-features";
+    public const string Id = "telemetry-errors";
 
     /// <summary>Widget category (matches the web registry).</summary>
-    public const string Category = "security";
+    public const string Category = "system";
 
     /// <summary>Diagnostics surface slug emitted with the <c>view.opened</c> event.</summary>
-    public const string Slug = "SafetyFeaturesWidget";
+    public const string Slug = "TelemetryErrorsWidget";
 
     /// <summary>Default footprint: 2 columns × 4 rows (web registry <c>defaultSize</c>).</summary>
-    public static SafetyFeaturesSize DefaultSize => new(2, 4);
+    public static TelemetryErrorsSize DefaultSize => new(2, 4);
 
     /// <summary>Minimum footprint: 1 column × 2 rows (web registry <c>minSize</c>).</summary>
-    public static SafetyFeaturesSize MinSize => new(1, 2);
+    public static TelemetryErrorsSize MinSize => new(1, 2);
 
     /// <summary>Maximum footprint: 4 columns × 40 rows (web registry <c>maxSize</c>).</summary>
-    public static SafetyFeaturesSize MaxSize => new(4, 40);
+    public static TelemetryErrorsSize MaxSize => new(4, 40);
 
-    /// <summary>Localized display name (web registry "Safety Features").</summary>
+    /// <summary>Localized registry display name (web registry "Telemetry Errors").</summary>
     public static string Name(ILocalizer localizer)
     {
         ArgumentNullException.ThrowIfNull(localizer);
-        return localizer.GetString("widget.safety.title", "Safety Features");
+        return localizer.GetString("widget.telemetryErrors.title", "Telemetry Errors");
     }
 
-    /// <summary>Localized description (web registry copy).</summary>
+    /// <summary>Localized registry description (web registry copy).</summary>
     public static string Description(ILocalizer localizer)
     {
         ArgumentNullException.ThrowIfNull(localizer);
         return localizer.GetString(
-            "widget.safety.description",
-            "ADAS status: autopilot, collision warning, lane departure, blind spot");
+            "widget.telemetryErrors.description",
+            "Fleet Telemetry error monitor: VINs with errors, error types, counts");
     }
 
     /// <summary>True when <paramref name="size"/> falls within the min/max footprint constraints.</summary>
-    public static bool IsWithinBounds(SafetyFeaturesSize size) =>
+    public static bool IsWithinBounds(TelemetryErrorsSize size) =>
         size.Cols >= MinSize.Cols && size.Cols <= MaxSize.Cols &&
         size.Rows >= MinSize.Rows && size.Rows <= MaxSize.Rows;
 
     /// <summary>Clamp <paramref name="size"/> into the supported min/max footprint.</summary>
-    public static SafetyFeaturesSize Clamp(SafetyFeaturesSize size) => new(
+    public static TelemetryErrorsSize Clamp(TelemetryErrorsSize size) => new(
         Math.Clamp(size.Cols, MinSize.Cols, MaxSize.Cols),
         Math.Clamp(size.Rows, MinSize.Rows, MaxSize.Rows));
 }
 
 /// <summary>
-/// PII-safe diagnostics for the Safety Features surface (P1/S11 diagnostics contract). Records only the
-/// operational <c>view.opened</c> event with the surface slug — never an ADAS field value, VIN or vehicle id —
-/// so a diagnostics line can never leak which driver-assist features a vehicle has enabled. Thread-safe.
+/// PII-safe diagnostics for the Telemetry Errors surface (P1/S11 diagnostics contract). Records only the
+/// operational <c>view.opened</c> event with the surface slug — never a VIN, error code or error message —
+/// so a diagnostics line can never leak which vehicle or fault was involved. Thread-safe.
 /// </summary>
-public sealed class SafetyFeaturesDiagnostics
+public sealed class TelemetryErrorsDiagnostics
 {
     private readonly Action<string>? _sink;
     private long _viewsOpened;
 
     /// <summary>Creates the collector over an optional PII-safe diagnostics sink.</summary>
-    public SafetyFeaturesDiagnostics(Action<string>? sink = null) => _sink = sink;
+    public TelemetryErrorsDiagnostics(Action<string>? sink = null) => _sink = sink;
 
     /// <summary>Number of times the surface has been opened.</summary>
     public long ViewsOpened => Interlocked.Read(ref _viewsOpened);
 
-    /// <summary>Record that the surface was opened, emitting <c>view.opened slug=SafetyFeaturesWidget</c>.</summary>
+    /// <summary>Record that the surface was opened, emitting <c>view.opened slug=TelemetryErrorsWidget</c>.</summary>
     public void RecordViewOpened()
     {
         Interlocked.Increment(ref _viewsOpened);
-        _sink?.Invoke($"view.opened slug={SafetyFeaturesRegistration.Slug}");
+        _sink?.Invoke($"view.opened slug={TelemetryErrorsRegistration.Slug}");
     }
 }
 
 /// <summary>
-/// UI-thread-free state holder backing the WinUI <see cref="SafetyFeaturesWidget"/> view — the native port of
-/// the web <c>SafetyFeaturesWidget</c>'s hook composition
-/// (web/src/features/dashboard/widgets/SafetyFeaturesWidget.tsx). It consumes the cache-then-network
-/// <see cref="ISafetyFeaturesSource"/>, projects each snapshot through <see cref="SafetyFeaturesProjection"/>
-/// for the active footprint, and exposes the mutually-exclusive <see cref="State"/> plus the freshness flags
-/// so the view is a thin renderer. A surface with a resolved safety object always renders the grid/count (web
-/// <c>data ? … : empty</c>); the engine collapses a body with no safety object to
-/// <see cref="SafetyFeaturesState.Empty"/>. Reassigning <see cref="Size"/> re-projects (the compact / grid
-/// layout depends on the footprint). Drive it from one confinement (the UI thread); it is not internally
-/// synchronised.
+/// UI-thread-free state holder backing the WinUI <see cref="TelemetryErrorsWidget"/> view — the native port
+/// of the web <c>TelemetryErrorsWidget</c>'s hook composition
+/// (web/src/features/dashboard/widgets/TelemetryErrorsWidget.tsx). It consumes the merged
+/// cache-then-network <see cref="ITelemetryErrorsSource"/>, projects each snapshot through
+/// <see cref="TelemetryErrorsProjection"/>, and exposes the mutually-exclusive <see cref="State"/> plus the
+/// header freshness flags so the view is a thin renderer. Drive it from one confinement (the UI thread); it
+/// is not internally synchronised.
 /// </summary>
-public sealed class SafetyFeaturesViewModel : INotifyPropertyChanged, IDisposable
+public sealed class TelemetryErrorsViewModel : INotifyPropertyChanged, IDisposable
 {
-    private readonly ISafetyFeaturesSource _source;
+    private readonly ITelemetryErrorsSource _source;
     private readonly ILocalizer _localizer;
+    private readonly Func<DateTimeOffset> _clock;
 
-    private SafetyFeaturesSize _size;
+    private TelemetryErrorsSize _size;
     private CancellationTokenSource? _cts;
-    private RepositoryResult<SafetySnapshot>? _last;
+    private RepositoryResult<TelemetryErrorsSnapshot>? _last;
     private bool _disposed;
 
-    private SafetyFeaturesState _state = SafetyFeaturesState.Loading;
-    private SafetyFeaturesDisplay? _display;
+    private TelemetryErrorsState _state = TelemetryErrorsState.Loading;
+    private TelemetryErrorsDisplay _display;
     private DateTimeOffset? _updatedAt;
     private bool _isFetching;
     private bool _isError;
@@ -125,59 +125,59 @@ public sealed class SafetyFeaturesViewModel : INotifyPropertyChanged, IDisposabl
     private string? _errorMessage;
     private int _attempts;
 
-    /// <summary>Creates the holder over its data source, localizer and footprint.</summary>
-    /// <param name="source">The cache-then-network ADAS source.</param>
-    /// <param name="localizer">The i18n facade resolving every label.</param>
-    /// <param name="size">The widget footprint (registry metadata; drives the compact / grid layout).</param>
-    public SafetyFeaturesViewModel(
-        ISafetyFeaturesSource source,
+    /// <summary>Creates the holder over its data source, localizer, footprint and (optional) clock.</summary>
+    public TelemetryErrorsViewModel(
+        ITelemetryErrorsSource source,
         ILocalizer localizer,
-        SafetyFeaturesSize size)
+        TelemetryErrorsSize size,
+        Func<DateTimeOffset>? clock = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
         _size = size;
+        _clock = clock ?? (() => DateTimeOffset.Now);
+        _display = TelemetryErrorsProjection.Project(TelemetryErrorsSnapshot.Empty, _size, _localizer, _clock());
     }
 
     /// <inheritdoc />
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>The current mutually-exclusive surface state.</summary>
-    public SafetyFeaturesState State
+    public TelemetryErrorsState State
     {
         get => _state;
         private set => Set(ref _state, value);
     }
 
-    /// <summary>The projected, render-ready safety model (null until a snapshot resolves / when empty).</summary>
-    public SafetyFeaturesDisplay? Display
+    /// <summary>The projected, render-ready display model (the compact hero or the error feed).</summary>
+    public TelemetryErrorsDisplay Display
     {
         get => _display;
         private set
         {
             _display = value;
             Raise(nameof(Display));
-            Raise(nameof(HasSnapshot));
+            Raise(nameof(HasData));
         }
     }
 
-    /// <summary>Last successful update timestamp surfaced in the freshness chip.</summary>
+    /// <summary>Last successful update timestamp surfaced in the header freshness chip.</summary>
     public DateTimeOffset? UpdatedAt
     {
         get => _updatedAt;
         private set => Set(ref _updatedAt, value);
     }
 
-    /// <summary>True while a background refresh is in flight (freshness chip pulses).</summary>
+    /// <summary>True while a background refresh is in flight (header chip pulses).</summary>
     public bool IsFetching
     {
         get => _isFetching;
         private set => Set(ref _isFetching, value);
     }
 
-    /// <summary>True when the last load failed (drives the error surface + freshness chip).</summary>
+    /// <summary>True when the last load failed (drives the error surface + header chip).</summary>
     public bool IsError
     {
         get => _isError;
@@ -191,7 +191,7 @@ public sealed class SafetyFeaturesViewModel : INotifyPropertyChanged, IDisposabl
         private set => Set(ref _isStale, value);
     }
 
-    /// <summary>Localized error message shown in the error / offline surface.</summary>
+    /// <summary>Localized error message shown in the error surface.</summary>
     public string? ErrorMessage
     {
         get => _errorMessage;
@@ -205,17 +205,17 @@ public sealed class SafetyFeaturesViewModel : INotifyPropertyChanged, IDisposabl
         private set => Set(ref _attempts, value);
     }
 
-    /// <summary>True when a safety object has resolved and the grid/count are renderable (web <c>data</c> truthy).</summary>
-    public bool HasSnapshot => _display is not null;
+    /// <summary>True when the snapshot has data to render (web <c>hasData</c>).</summary>
+    public bool HasData => _display.HasData;
 
-    /// <summary>Localized widget title (web <c>widget.safety.title</c> "Safety Features").</summary>
-    public string Title => _localizer.GetString("widget.safety.title", "Safety Features");
+    /// <summary>Localized widget title (web <c>widget.telemetryErrors.title</c>).</summary>
+    public string Title => _localizer.GetString("widget.telemetryErrors.title", "Telemetry Errors");
 
-    /// <summary>Localized empty-state message (web <c>widget.safety.noData</c> "No safety data").</summary>
-    public string EmptyMessage => _localizer.GetString("widget.safety.noData", "No safety data");
+    /// <summary>Localized empty-state message (web <c>widget.telemetryErrors.noData</c>).</summary>
+    public string EmptyMessage => _localizer.GetString("widget.telemetryErrors.noData", "No telemetry error data");
 
-    /// <summary>The widget footprint. Reassigning re-projects (the compact / grid layout depends on the footprint).</summary>
-    public SafetyFeaturesSize Size
+    /// <summary>The widget footprint; reassigning re-projects the current snapshot for the new layout.</summary>
+    public TelemetryErrorsSize Size
     {
         get => _size;
         set
@@ -233,7 +233,7 @@ public sealed class SafetyFeaturesViewModel : INotifyPropertyChanged, IDisposabl
 
     /// <summary>
     /// Run a cache-then-network load: counts the attempt, shows the skeleton only when nothing is already
-    /// visible (otherwise keeps the grid/count while refreshing), and folds every emission into
+    /// visible (otherwise keeps content while refreshing), and folds every merged emission into
     /// <see cref="State"/> + <see cref="Display"/>. A superseding load cancels the prior one.
     /// </summary>
     public async Task LoadAsync(CancellationToken cancellationToken = default)
@@ -285,9 +285,9 @@ public sealed class SafetyFeaturesViewModel : INotifyPropertyChanged, IDisposabl
     }
 
     private bool HasContent() =>
-        _state is SafetyFeaturesState.Loaded or SafetyFeaturesState.Stale or SafetyFeaturesState.Offline;
+        _state is TelemetryErrorsState.Loaded or TelemetryErrorsState.Stale or TelemetryErrorsState.Offline;
 
-    private void Apply(RepositoryResult<SafetySnapshot> result)
+    private void Apply(RepositoryResult<TelemetryErrorsSnapshot> result)
     {
         _last = result;
         switch (result.Status)
@@ -328,29 +328,38 @@ public sealed class SafetyFeaturesViewModel : INotifyPropertyChanged, IDisposabl
     }
 
     private void ApplySnapshot(
-        SafetySnapshot snapshot,
+        TelemetryErrorsSnapshot snapshot,
         DateTimeOffset? fetchedAt,
         bool stale,
         bool fetching,
         RepositoryError? error,
         bool offline = false)
     {
-        Display = SafetyFeaturesProjection.Project(snapshot, _size, _localizer);
+        Display = TelemetryErrorsProjection.Project(snapshot, _size, _localizer, _clock());
+
+        if (!snapshot.HasData)
+        {
+            SetEmpty(fetchedAt, keepDisplay: true);
+            return;
+        }
+
         UpdatedAt = fetchedAt;
         IsFetching = fetching;
         IsStale = stale;
         IsError = false;
         ErrorMessage = offline ? ErrorTextFor(error) : null;
-        State = offline
-            ? SafetyFeaturesState.Offline
-            : stale ? SafetyFeaturesState.Stale : SafetyFeaturesState.Loaded;
+        State = offline ? TelemetryErrorsState.Offline : stale ? TelemetryErrorsState.Stale : TelemetryErrorsState.Loaded;
     }
 
     private void Reproject()
     {
-        if (_last is { } last)
+        if (_last is { HasValue: true } last && last.Value is { } snapshot)
         {
-            Apply(last);
+            Display = TelemetryErrorsProjection.Project(snapshot, _size, _localizer, _clock());
+        }
+        else
+        {
+            Display = TelemetryErrorsProjection.Project(TelemetryErrorsSnapshot.Empty, _size, _localizer, _clock());
         }
     }
 
@@ -358,18 +367,22 @@ public sealed class SafetyFeaturesViewModel : INotifyPropertyChanged, IDisposabl
     {
         IsError = false;
         ErrorMessage = null;
-        State = SafetyFeaturesState.Loading;
+        State = TelemetryErrorsState.Loading;
     }
 
-    private void SetEmpty(DateTimeOffset? fetchedAt)
+    private void SetEmpty(DateTimeOffset? fetchedAt, bool keepDisplay = false)
     {
-        Display = null;
+        if (!keepDisplay)
+        {
+            Display = TelemetryErrorsProjection.Project(TelemetryErrorsSnapshot.Empty, _size, _localizer, _clock());
+        }
+
         UpdatedAt = fetchedAt;
         IsFetching = false;
         IsStale = false;
         IsError = false;
         ErrorMessage = null;
-        State = SafetyFeaturesState.Empty;
+        State = TelemetryErrorsState.Empty;
     }
 
     private void SetError(RepositoryError? error)
@@ -378,23 +391,23 @@ public sealed class SafetyFeaturesViewModel : INotifyPropertyChanged, IDisposabl
         IsStale = false;
         IsError = true;
         ErrorMessage = ErrorTextFor(error);
-        State = SafetyFeaturesState.Error;
+        State = TelemetryErrorsState.Error;
     }
 
     private string ErrorTextFor(RepositoryError? error)
     {
         string key = error?.Kind switch
         {
-            RepositoryErrorKind.Unauthorized => "widget.safety.error.auth",
-            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "widget.safety.error.offline",
-            _ => "widget.safety.error",
+            RepositoryErrorKind.Unauthorized => "widget.telemetryErrors.error.auth",
+            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "widget.telemetryErrors.error.offline",
+            _ => "widget.telemetryErrors.error",
         };
 
         string fallback = error?.Kind switch
         {
-            RepositoryErrorKind.Unauthorized => "Sign in to view safety features",
-            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "You're offline — showing the last cached safety state",
-            _ => "Couldn't load safety features",
+            RepositoryErrorKind.Unauthorized => "Sign in to view telemetry errors",
+            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "You're offline — showing the last cached telemetry errors",
+            _ => "Couldn't load telemetry errors",
         };
 
         return _localizer.GetString(key, fallback);
