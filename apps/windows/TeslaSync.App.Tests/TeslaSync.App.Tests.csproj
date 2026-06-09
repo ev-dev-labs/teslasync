@@ -490,6 +490,18 @@
     linked WinUI-app source (the UI-thread-free *.Model/Source/ViewModel files) is preserved as the
     deduplicated union of all roots, so every existing test still compiles, and the new
     SessionDetailPanel.Model.cs link is added.
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    P2/W2-0001 - headless unit tests for the UI-primitive logic models.
+    Targets plain net10.0 so dotnet test runs without a WinUI/UI-thread host.
+
+    Repair note (P2 feature-views/0094 TimeToChargeSection): a chain of auto-integration merges had
+    left this file with several concatenated <Project> roots and malformed comment / ItemGroup
+    boundaries that failed XML load (MSB4025: multiple root elements). The duplicate roots and broken
+    boundaries were removed and every previously linked source consolidated below (deduplicated to
+    avoid NETSDK1022), preserving every link from all discarded roots and adding the new
+    TimeToChargeSection surface.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -499,11 +511,13 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
     <ProjectReference Include="..\Generated\Generated.csproj" />
@@ -514,6 +528,7 @@
     assembly so the C# behavior port is verified row-for-row against the web truth (ADR-004).
   -->
   <!-- Test fixtures / manifests copied next to the test assembly. -->
+  <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget card template). -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -926,6 +941,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" Link="FeatureViews\TeslaApiRefTool.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.Model.cs" Link="FeatureViews\TimestampTool\TimestampTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.ViewModel.cs" Link="FeatureViews\TimestampTool\TimestampTool.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.Model.cs" Link="FeatureViews\TimeToChargeSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.Source.cs" Link="FeatureViews\TimeToChargeSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.ViewModel.cs" Link="FeatureViews\TimeToChargeSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TitleSlide\TitleSlide.Model.cs" Link="FeatureViews\TitleSlide\TitleSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ToolCard.Presentation.cs" Link="FeatureViews\ToolCard.Presentation.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.Model.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.Model.cs" />
