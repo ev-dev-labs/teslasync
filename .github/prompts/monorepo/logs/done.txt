@@ -314,3 +314,4 @@ p2-windows/feature-views/W-0123-FleetStatsBar.prompt.md
 p2-windows/feature-views/W-0122-DashboardGrid.prompt.md
 p2-windows/feature-views/W-0125-LayoutManager.prompt.md
 p2-windows/feature-views/W-0126-LayoutSwitcher.prompt.md
+p2-windows/feature-views/W-0129-QuickNav.prompt.md
