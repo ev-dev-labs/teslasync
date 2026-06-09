@@ -1,0 +1,31 @@
+/*
+  ResponseViewer.strings
+  TeslaSync — P4 feature view · 0041 · ResponseViewer (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ResponseViewer` (and the exported `ResponseSnippetPanel`) resolves (table
+  "ResponseViewer") lives here with its web `t(key, default)` English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/ResponseViewer.tsx, incl. the exported SnippetPanel).
+  The second group backs the native chrome (VoiceOver labels + disclosure state)
+  so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"playground.response" = "Response";
+"playground.noResponse" = "Send a request to see the response";
+"playground.history" = "Recent Requests";
+"playground.responseHeaders" = "Response Headers";
+"playground.codeSnippet" = "Code Snippet";
+"playground.copy" = "Copy";
+
+/* --- Native chrome: VoiceOver + disclosure state --- */
+"responseViewer.panelA11y" = "API response viewer";
+"responseViewer.responseBodyA11y" = "Response body";
+"responseViewer.loadingA11y" = "Loading response";
+"responseViewer.expanded" = "Expanded";
+"responseViewer.collapsed" = "Collapsed";
