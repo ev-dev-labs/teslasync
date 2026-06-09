@@ -1,0 +1,134 @@
+=== P4 Feature view 0254 StatusPageSkeleton (Apple) ===
+Runner: Darwin (Apple Silicon) · Xcode 26.5 (build 17F42) · Swift 6.3.2 · swiftlint/swiftformat (Homebrew) · pwsh 7
+Web source (THE spec): web/src/features/system/components/status/StatusPageSkeleton.tsx
+Native output       : apps/apple/TeslaSync/feature-views/StatusPageSkeleton.{Model,Telemetry,Views,swift,Previews,Tests}.swift + .strings
+Capability          : SwiftUI + (no charts / no maps) on iOS 18 / iPadOS 18 / macOS 15 — AVAILABLE on this runner.
+
+------------------------------------------------------------------------------------------------------------------
+SURFACE SUMMARY (web → native, 1:1)
+------------------------------------------------------------------------------------------------------------------
+StatusPageSkeleton is the layout-shaped loading state the System Status page renders during its initial fetch. It is
+a PURE presentational component: the web source owns no data, fires no hook, makes no t() call, and has NO
+conditional render branch — it IS the page's `loading` state (the empty / error / stale / offline states belong to
+the parent page that swaps this skeleton out once its query resolves). Reproduced child-for-child from the web root
+`space-y-5 max-w-3xl mx-auto` (nine stacked children), mapped to platform tokens (no Tailwind ported):
+
+  region[0] hero          GlassPanel.p-5 flex items-start gap-4 : avatar 56×56 pill · flex-1 {h-6 w-60% ; h-3.5 w-40% mt-2} · 120×36
+  region[1] chip bar      flex gap-2 overflow-hidden            : 8× Skeleton 92×32 rounded-full (clipped, not scrolling)
+  region[2] health rows   GlassPanel.p-3 space-y-1              : heading 80×18 mb-2 ; 6× SkeletonRow h-11 (44pt), gap 4
+  region[3] action items  GlassPanel.p-4 space-y-2              : heading 180×18 ; 2× SkeletonRow h-8  (32pt), gap 8
+  region[4] resources     GlassPanel.p-4 space-y-3             : heading 120×18 ; 5× SkeletonRow h-7  (28pt), gap 12
+  region[5..8] accordions 4× GlassPanel.p-5 flex items-center gap-3 : icon 20×20 · flex-1 {h-4 w-40% ; h-3 w-60% mt-1} · 60×24
+
+  • Width-shape per block carried as fixed-pt / fraction / fill + rounded|pill (web `rounded`/`rounded-full` → pill);
+    `mt-{n}` / `space-y-{n}` carried as exact web points (Tailwind 1u = 4pt); region/row gaps resolved to platform
+    spacing tokens (TSSpacing) by the view → native rhythm, not ported pixels.
+  • max-w-3xl (48rem = 768pt) + mx-auto reproduced as a 768pt content cap, centred.
+  • A11y: the whole surface is one VoiceOver "busy" element (web role=status / aria-busy) via
+    accessibilityElement(.ignore) + .updatesFrequently; the decorative shimmer blocks are accessibilityHidden; the
+    busy label (web aria-label="Loading system status") resolves through the P1/S10 i18n facade (no hardcoded literal).
+  • Reduce Motion: the shimmer opt-out lives in the shared TSSkeleton (prefers-reduced-motion parity). Dynamic Type:
+    no fixed text; previews exercise light/dark + accessibility3.
+  • P1/S11 diagnostics: emits view.opened with slug "StatusPageSkeleton" on .task (redaction-safe os_log sink).
+  • Shared-component mapping: web @/components/feedback/Skeleton → TSSkeleton ; web @/components/ui GlassPanel → TSGlassPanel ;
+    P1/S9 tokens TSSpacing/TSRadius/Color.TS. No direct library imports; no charts/maps in this surface.
+  • Data sources / hooks: NONE (pure presentational — the layout projection is the host-free "adapter" the tests assert).
+
+Files shipped (7): StatusPageSkeleton.Model.swift · .Telemetry.swift · .Views.swift · .swift · .Previews.swift ·
+                   .Tests.swift · .strings   (one exported View per file; barrel-free; namespaced types avoid any
+                   collision with the peer LoadingSkeleton surface's Skeleton* primitives).
+
+------------------------------------------------------------------------------------------------------------------
+GATE RESULTS (every step EXECUTED on THIS runner — raw exits pasted; nothing assumed from precedent)
+------------------------------------------------------------------------------------------------------------------
+  [GREEN]  swiftformat --lint  (6 shipped .swift files, apps/apple/.swiftformat)        : 0/6 require formatting   FORMAT_EXIT=0
+  [GREEN]  swiftlint --strict  (6 shipped .swift files, apps/apple/.swiftlint.yml)      : 0 violations, 0 serious  LINT_EXIT=0
+  [GREEN]  check-placeholders.ps1                                                       : PLACEHOLDER_COUNT=0      PLACEHOLDER_EXIT=0
+           • the prompt's literal `-Path …/StatusPageSkeleton` (no extension) is not a directory → Get-ChildItem
+             -LiteralPath yields 0 files → trivially clean. To avoid a hollow pass the 6 real shipped .swift files
+             were ALSO copied into a StatusPageSkeleton/ dir and scanned (-Language swift): PLACEHOLDER_COUNT=0,
+             PLACEHOLDER_ALLOWED=0 (zero opt-outs). The .strings file is correctly out of code-extension scope.
+  [GREEN]  isolated SwiftPM harness — swift-tools 6.0, .swiftLanguageMode(.v6) (Swift 6 language mode = strict
+           concurrency complete, the app target's own setting), module named TeslaSync, compiling the EXACT shipped
+           StatusPageSkeleton.{Model,Telemetry,Views,swift,Previews} sources against the REAL repo design system
+           (Tokens · TSMaterial · TSDesign · Typography · Badges · Buttons · Cards · Skeletons):
+               Build complete!  ·  Executed 21 tests, with 0 failures                              SWIFT_TEST_EXIT=0
+           (10 layout-projection + 5 block-primitive + 3 telemetry + 3 i18n-facade tests)
+  [GREEN]  iOS 18 SDK typecheck — xcrun --sdk iphonesimulator swiftc -typecheck -target
+           arm64-apple-ios18.0-simulator -swift-version 6 -D DEBUG (surface + design system, incl. #Preview)        IOS_TYPECHECK_EXIT=0
+  [GREEN]  macOS 15 SDK typecheck — xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0
+           -swift-version 6 -D DEBUG (surface + design system, incl. #Preview)                                     MAC_TYPECHECK_EXIT=0
+  [GREEN]  xcodegen generate (TeslaSync.xcodeproj) — all 7 files enumerated into iOS + macOS app & test targets
+           (42 pbxproj references)                                                                                 XCODEGEN_EXIT=0
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO StatusPageSkeleton errors; every blocker pre-exists this change):
+    Shared.xcframework : BUILT + STAGED successfully by the scheme preAction (Gradle :core:assembleSharedXCFramework;
+                         ios-arm64 + ios-arm64-simulator + macos-arm64 slices staged to
+                         apps/apple/Frameworks/Shared.xcframework ✓; ~10m50s wall for the iOS run). NOT a blocker.
+    iOS  : the app target fails to compile on PRE-EXISTING duplicate-type collisions between OTHER (peer) surfaces
+           that the parallel-merge composition adds to the same TeslaSync module. 284 `error:` lines, 0 of them in
+           StatusPageSkeleton (grep "StatusPageSkeleton…error:" = 0). Top root causes (each a type declared in 2+
+           peer files → "is ambiguous for type lookup"): SafetyModel ×16, ChargeUnitPrefs ×16, ChargeStatusProjection
+           ×16, ChargeStateDTO ×16, ChargeSessionDTO ×16, SafetyUpdate ×8, SafetyLoadStatus ×8, SafetyConnection ×8,
+           FleetStatsBarModel ×8, DrivingCoachLoadStatus ×8, … (e.g. `public struct ChargingProjection` in
+           ChargeStatusWidget.Adapter.swift vs `public enum ChargingProjection` in ChargingDetailSection.Adapter.swift).
+           The failing SwiftCompile batch is WhyEndedPanel / WidgetPicker / WindowStatusDetail / XRayFieldsTable —
+           NOT this surface. These predate and are independent of StatusPageSkeleton and live OUTSIDE this prompt's
+           allowed files (StatusPageSkeleton.* only); fixing them is forbidden by the task rules.
+    macOS: 4 `error:` lines, all development-signing — "TeslaSync-macOS" and "TeslaSyncWidgets-macOS" have
+           entitlements that require signing with a development certificate, which this runner does not provision.
+           Zero StatusPageSkeleton errors (grep = 0).
+    Both blockers are EXACTLY the artifacts apps/macos-pending-verifications.md defers to the
+    p4-apple/P99-0001-apple-acceptance-gate on a signed `macos-latest` runner (the peer-surface duplicate-type
+    re-homing + macOS dev-signing are owned by that acceptance gate / a project.yml change, NOT a single feature-view
+    prompt). The shipped surface itself is INDEPENDENTLY proven to compile (SwiftPM harness + iOS 18 + macOS 15 SDK
+    typechecks) and its 21 tests pass.
+
+------------------------------------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------------------------------------
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with its real exits + root causes — never reported as passing.
+  2  No scope narrowing  : every web region + block + count + dimension + width-shape + corner + inset reproduced
+                           1:1 (9 root children, 8 chips, 6+2+5 rows, 4 accordions, 768pt cap); the source's
+                           no-data / no-branch nature documented, not hidden.
+  3  No skip-and-assume  : web source read end-to-end; every dimension/inset/count asserted in tests; every gate
+                           EXECUTED on THIS runner with raw exits pasted (incl. the ~10m50s Gradle xcframework build
+                           and BOTH full-app xcodebuilds — not assumed from precedent).
+  4  No stubs as final   : complete production surface (7 files) + 21 real tests; placeholder scanner = 0, 0 opt-outs;
+                           no TODO/FIXME/Placeholder/Lorem/"not implemented" anywhere in shipped code.
+  5  No parity shortcut  : material / skeleton / spacing / width-shapes / corner / i18n / a11y / Reduce-Motion /
+                           telemetry all mapped to platform tokens + verified (charts/maps N/A for this surface).
+  6  No delegation       : authored directly; delegation FORBIDDEN; none used.
+  7  No predecessor bypass: P1/S8 (presentational — no data holder needed; the layout projection is the host-free
+                           adapter the tests assert), P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened, P4-core
+                           design system (TSSkeleton/TSGlassPanel) — all present and consumed.
+  8  No commit on red    : the COMMITTED artifact (StatusPageSkeleton.* + this log) is GREEN on every in-scope gate
+                           AND on a real isolated Swift 6 strict-concurrency build+test (21/21) + iOS 18 + macOS 15
+                           SDK typechecks; the deferred full-app gate is RED only on pre-existing, repo-wide
+                           conditions (peer-surface duplicate-type ambiguities; macOS dev-signing) which this commit
+                           neither introduces nor touches (0 StatusPageSkeleton errors in either build).
+  9  No silent drift     : changes confined to feature-views/StatusPageSkeleton.{Model,Telemetry,Views,swift,
+                           Previews,Tests,strings} + this log. The generated TeslaSync.xcodeproj + DerivedData +
+                           staged Frameworks/Shared.xcframework are build artifacts and are NOT committed (gitignored).
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+------------------------------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------------------------------
+  Production-polished, Apple-idiomatic StatusPageSkeleton shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles under the app target's own Swift 6 strict-concurrency rules against the real design system,
+  its 21 tests pass, it typechecks against BOTH the iOS 18 simulator and macOS 15 SDKs, and
+  swiftlint/swiftformat/placeholder/xcodegen are all green. The full-app iOS-Simulator + macOS xcodebuild build/test
+  gate is DEFERRED (not failed by this code): the KMP Shared.xcframework now builds + stages cleanly, and the only
+  remaining blockers are the pre-existing repo-wide peer-surface duplicate-type ambiguities (SafetyModel /
+  Charge*DTO / ChargingProjection / … across other surfaces) and macOS development-signing — both owned by the
+  p4-apple/P99-0001 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md, and
+  both OUTSIDE this prompt's allowed files. This matches the sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date (cf. 0088 LoadingSkeleton, 0010 ToolCard, 0180 AlertMessageEditor).
+
+EXIT=0
+STATUS=DONE
