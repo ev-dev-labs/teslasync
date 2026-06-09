@@ -1,0 +1,141 @@
+=== P4 Dashboard widget 0025 ChargingTelemetryWidget (Apple) ===
+run-at: 2026-06-08T22:43:56-0700
+host: macOS 26.5.1 | Xcode 26.5 Build version 17F42 
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+### Allowed files shipped (apps/apple/TeslaSync/dashboard-widgets/ChargingTelemetryWidget.*):
+  TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Builder.swift
+  TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Components.swift
+  TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Model.swift
+  TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Models.swift
+  TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Previews.swift
+  TeslaSync/dashboard-widgets/ChargingTelemetryWidget.strings
+  TeslaSync/dashboard-widgets/ChargingTelemetryWidget.swift
+  TeslaSync/dashboard-widgets/ChargingTelemetryWidget.Tests.swift
+
+=== GATE 1: swiftformat --lint (new files) ===
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-211853-78201/slot-20/apps/apple/.swiftformat
+SwiftFormat completed in 7.17s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+=== GATE 2: swiftlint --strict (new files) ===
+Linting 'ChargingTelemetryWidget.Previews.swift' (6/7)
+Linting 'ChargingTelemetryWidget.Tests.swift' (7/7)
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+=== GATE 3: placeholder/stub gate (check-placeholders.ps1, swift) — scoped to the surface ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+=== GATE 4: xcodegen generate — surface files enumerated in the app + test targets ===
+GEN_EXIT=0
+  enumerated: ChargingTelemetryWidget.Builder.swift
+  enumerated: ChargingTelemetryWidget.Components.swift
+  enumerated: ChargingTelemetryWidget.Model.swift
+  enumerated: ChargingTelemetryWidget.Models.swift
+  enumerated: ChargingTelemetryWidget.Previews.swift
+  enumerated: ChargingTelemetryWidget.strings
+  enumerated: ChargingTelemetryWidget.swift
+  enumerated: ChargingTelemetryWidget.Tests.swift
+
+=== GATE 5: isolated SwiftPM build+test of the surface (Swift 6 strict concurrency, real execution) ===
+   harness includes the surface + REAL DashboardWidgetInfra.swift + REAL design Tokens.swift; one minimal TSSkeleton shim.
+[9/9] Compiling CTKit ChargingTelemetryWidget.Model.swift
+Build complete! (2.81s)
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+	 Executed 31 tests, with 0 failures (0 unexpected) in 0.007 (0.010) seconds
+Test Suite 'All tests' passed at 2026-06-08 22:45:23.004.
+	 Executed 31 tests, with 0 failures (0 unexpected) in 0.007 (0.012) seconds
+
+=== GATE 6: iOS Simulator app build (xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16') ===
+Shared.xcframework built from KMP via Gradle (BUILD SUCCESSFUL 9m36s) and staged:
+  apps/apple/Frameworks/Shared.xcframework
+App build result (captured from the build action):
+  8788:** BUILD SUCCEEDED **
+Proof the surface compiled + linked into the real TeslaSync.app target (Objects-normal/arm64):
+  ChargingTelemetryWidget.Builder.o
+  ChargingTelemetryWidget.Components.o
+  ChargingTelemetryWidget.Model.o
+  ChargingTelemetryWidget.Models.o
+  ChargingTelemetryWidget.o
+  ChargingTelemetryWidget.Previews.o
+Test bundle compiled (my *.Tests.swift linked into the real XCTest bundle):
+  apps/apple/build/DerivedData/Build/Products/Debug-iphonesimulator/TeslaSync.app/PlugIns/TeslaSyncTests.xctest
+
+=== GATE 7: iOS on-simulator test run (xcodebuild ... build test) — DEFERRED (shared-runner contention) ===
+  The app build action completed green (GATE 6). The `test` action then re-runs the scheme
+  pre-action `build-shared-xcframework.sh`, which `rm -rf`+`cp -R` re-stages Shared.xcframework
+  (new mtime) and so forces a full second app+test recompile. On this host the build is a SHARED
+  runner executing ~9 concurrent slot builds of the same large app (observed cwds: slot-7, slot-9,
+  slot-10, slot-14, slot-15, slot-20, …). My xcodebuild (pid 42526) sat at 0% CPU / state S
+  (CPU-starved) for >15 min straight at 1:08:30 elapsed, so the on-simulator XCTest run does not
+  complete in a bounded window here. This is an environment/runner-contention limit, NOT a code
+  defect: the surface's compilation FOR the iOS-Simulator target is already PROVEN by GATE 6
+  (** BUILD SUCCEEDED ** + the six ChargingTelemetryWidget*.o objects in the app target), and the
+  test bundle compiled (TeslaSyncTests.xctest built). The identical XCTest assertions execute GREEN
+  in GATE 5 (31/31, Swift 6 strict concurrency). Deferred to the signed CI acceptance gate
+  (p4-apple/P99-0001-apple-acceptance-gate, macos-latest) per apps/macos-pending-verifications.md.
+
+=== GATE 8: macOS build test (xcodebuild -scheme TeslaSync-macOS build test) — DEFERRED (signing) ===
+  The macOS app target sets CODE_SIGN_STYLE=Automatic with an empty DEVELOPMENT_TEAM and
+  ENABLE_HARDENED_RUNTIME=YES; a hosted-test macOS run needs a signing identity that is absent on
+  this dev host (documented blocker in apps/macos-pending-verifications.md). The surface is
+  platform-agnostic SwiftUI shared by both app targets (ADR-002) and is proven to typecheck/compile
+  by GATE 5 (host, macOS .v15 SwiftPM) + GATE 6 (iOS). Deferred to the signed CI runner (P99-0001).
+
+=== SUMMARY (real, captured exit codes) ===
+  GATE 1 swiftformat --lint ............... EXIT 0   (0/7 require formatting)
+  GATE 2 swiftlint --strict ............... EXIT 0   (0 violations, 0 serious)
+  GATE 3 placeholder/stub gate ............ EXIT 0   (PLACEHOLDER_COUNT=0, ALLOWED=0)
+  GATE 4 xcodegen generate ................ EXIT 0   (8/8 surface files enumerated)
+  GATE 5 isolated SwiftPM build + test .... EXIT 0   (Swift 6 strict; 31/31 tests, 0 failures)
+  GATE 6 iOS-Simulator app build .......... ** BUILD SUCCEEDED ** (widget compiled + linked)
+  GATE 7 iOS on-simulator test run ........ DEFERRED (shared-runner CPU starvation; evidence above)
+  GATE 8 macOS build test ................. DEFERRED (no signing identity on dev host)
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : GATE 7 (iOS test run) + GATE 8 (macOS) shown DEFERRED, NOT green. Every EXIT
+                       0 above is a command actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL states (loading/empty/error/stale/offline/charging content)
+                       + compact/standard/wide layouts + every stat + badge + sparkline + i18n + a11y
+                       + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green. iOS app build executed to
+                       ** BUILD SUCCEEDED **; the six widget .o objects verified on disk.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0, 0 opt-outs.
+  5  No parity shortcuts: faithful port of the web chargerType/efficiency memos, the rolling power
+                       history (MAX_POWER_HISTORY=30, ts-gated), the stat grid, and all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into the dashboard grid (integration prompt scope)
+                       and did NOT edit the shared Localizable.xcstrings (parallel-unsafe across the
+                       concurrent slots) — strings shipped as the per-surface table. REUSED the shared
+                       DashboardWidgetSize/Registration. Renamed my types to surface-unique names to
+                       avoid colliding with the existing ChargingSection/ChargerTypeChart surfaces.
+  8  No commit on red  : committing on all-green host gates + iOS ** BUILD SUCCEEDED **; the two Xcode
+                       build-test ACTIONS are explicitly DEFERRED (environment), not failed.
+  9  No silent drift   : changes confined to the allowed ChargingTelemetryWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ChargingTelemetryWidget shipped at parity with the web source
+  (features/dashboard/widgets/ChargingTelemetryWidget.tsx): a pure-Swift cached→projection adapter
+  (executed-green, parity with the chargerType/efficiency memos + rolling power history), a P1/S8
+  state-holder seam (ChargingTelemetrySource/Model — no HTTP in the view), P1/S11 view.opened
+  telemetry, the P1/S10 per-surface i18n table (every extracted key + native chrome), every render
+  state (loading / not-charging empty / error+retry / stale + offline banners / charging content),
+  the compact/standard/wide responsive layouts, the stat grid, AC/DC charger badge, a Swift Charts
+  power sparkline, and full VoiceOver / Dynamic-Type / Reduce-Motion accessibility. Registry-correct
+  (charging-telemetry, charging, 2x2 / 1x2 / 4x40). All host-runnable gates pass; the iOS app build
+  is ** BUILD SUCCEEDED ** with the surface compiled + linked; the full iOS build-test run and the
+  macOS build-test are DEFERRED to the signed CI acceptance gate (shared-runner contention +
+  macOS dev-signing) — neither a defect in this code.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/ChargingTelemetryWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0025-ChargingTelemetryWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add ChargingTelemetryWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

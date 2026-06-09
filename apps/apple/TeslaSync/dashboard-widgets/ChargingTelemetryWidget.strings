@@ -1,0 +1,58 @@
+/*
+  ChargingTelemetryWidget.strings
+  TeslaSync — P4 dashboard widget · 0025 · ChargingTelemetryWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargingTelemetryWidget` resolves (table "ChargingTelemetryWidget") lives here
+  with its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact keys extracted from the web source
+  (features/dashboard/widgets/ChargingTelemetryWidget.tsx, namespace "dashboard").
+  The remaining keys back the native-only chrome (units, freshness chip,
+  refresh/retry, states, banners, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.chargingTelemetry.title" = "Charging Telemetry";
+"widget.chargingTelemetry.voltage" = "Voltage";
+"widget.chargingTelemetry.current" = "Current";
+"widget.chargingTelemetry.power" = "Power";
+"widget.chargingTelemetry.phases" = "Phases";
+"widget.chargingTelemetry.efficiency" = "Efficiency";
+"widget.chargingTelemetry.notCharging" = "Not currently charging";
+"widget.chargingTelemetry.charger" = "Charger";
+
+/* --- Registry description (registry/charging.ts) --- */
+"widget.chargingTelemetry.description" = "Live charging metrics: voltage, amperage, power, phases, charger type";
+
+/* --- Native chrome: units --- */
+"widget.chargingTelemetry.unitVolt" = "V";
+"widget.chargingTelemetry.unitAmp" = "A";
+"widget.chargingTelemetry.unitKw" = "kW";
+"widget.chargingTelemetry.unitPercent" = "%";
+
+/* --- Native chrome: charger families --- */
+"widget.chargingTelemetry.chargerAc" = "AC";
+"widget.chargingTelemetry.chargerDc" = "DC";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.chargingTelemetry.live" = "Live";
+"widget.chargingTelemetry.stale" = "Stale";
+"widget.chargingTelemetry.offline" = "Offline";
+"widget.chargingTelemetry.refresh" = "Refresh";
+"widget.chargingTelemetry.retry" = "Retry";
+"widget.chargingTelemetry.open" = "Open";
+
+/* --- Native chrome: states + banners --- */
+"widget.chargingTelemetry.loading" = "Loading charging telemetry";
+"widget.chargingTelemetry.notChargingHint" = "Live voltage, current and power appear here while the vehicle is charging.";
+"widget.chargingTelemetry.errorTitle" = "Couldn't load charging telemetry";
+"widget.chargingTelemetry.offlineBanner" = "Offline — showing last known reading";
+"widget.chargingTelemetry.staleBanner" = "Reconnecting — values may be stale";
+
+/* --- Native chrome: accessibility --- */
+"widget.chargingTelemetry.powerTrend" = "Charging power trend";
+"widget.chargingTelemetry.openA11y" = "Open the Charging page";
