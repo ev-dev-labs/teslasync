@@ -1,0 +1,136 @@
+=== P2 Feature view 0021 TimestampTool (Windows) ===
+Runner: Windows_NT, .NET SDK 10.0.300 (net10.0-windows10.0.19041.0), WinUI 3 / Windows App SDK 2.1.3.
+Web source (spec): web/src/features/admin/components/devtools/tools/TimestampTool.tsx
+Native output: apps/windows/TeslaSync.App/feature-views/TimestampTool/{TimestampTool.Model.cs, TimestampTool.ViewModel.cs, TimestampTool.cs}
+Tests:         apps/windows/TeslaSync.App.Tests/FeatureViews/TimestampToolTests.cs (predecessor convention; links Model+ViewModel)
+
+Gate commands (as specified by the prompt):
+  dotnet build  apps/windows/TeslaSync.sln -c Release                       -> BUILD_EXIT
+  dotnet test   apps/windows/TeslaSync.sln -c Release                       -> TEST_EXIT
+  dotnet format apps/windows/TeslaSync.sln --verify-no-changes              -> FORMAT_EXIT
+  ./apps/tools/check-placeholders.ps1 -Path .../feature-views/TimestampTool -> PLACEHOLDER_EXIT
+
+================================================================================
+GATE RESULTS (raw exit codes)
+================================================================================
+BUILD_EXIT=1        (4 errors, ALL in the PRE-EXISTING sibling surface FleetTelemetryHealth.cs; ZERO in TimestampTool)
+TEST_EXIT=1         (headless TeslaSync.App.Tests = 6750 passed / 0 failed incl. the 39 new TimestampTool cases;
+                     TeslaSync.App.UITests = 147 failed, ALL on the absent WinAppDriver UI-automation runner)
+FORMAT_EXIT=2       (all flagged files are the PRE-EXISTING sibling surface BackendTool.* CRLF line endings; ZERO in TimestampTool)
+PLACEHOLDER_EXIT=0  (PLACEHOLDER_COUNT=0 in apps/windows/TeslaSync.App/feature-views/TimestampTool)
+
+Supplementary verification of the TimestampTool surface in isolation:
+HEADLESS_EXIT=0     dotnet test TeslaSync.App.Tests.csproj -c Release -> Passed! 6750 / Failed 0 (incl. 39 TimestampTool cases).
+SCOPED_BUILD        the full Release build reported 0 (zero) diagnostics referencing any TimestampTool file.
+SCOPED_FORMAT_EXIT=0  dotnet format --verify-no-changes scoped to the 3 TimestampTool source files + the test = clean.
+SCOPED_WS_EXIT=0    dotnet format whitespace --verify-no-changes scoped to the view (TimestampTool.cs) = clean.
+LINE_ENDINGS        all 4 new files are LF, no-BOM, final-newline (per .editorconfig [*] charset=utf-8, end_of_line=lf).
+
+================================================================================
+BUILD output -- the 4 errors (ALL pre-existing sibling FleetTelemetryHealth.cs, committed at 5355a9430 by prompt 0020):
+================================================================================
+apps/windows/TeslaSync.App/feature-views/FleetTelemetryHealth.cs(231,30): error CA1859: Change return type of method 'BuildFilterChip' from 'Microsoft.UI.Xaml.FrameworkElement' to 'TeslaSync.App.Components.UI.TsBadge' for improved performance
+apps/windows/TeslaSync.App/feature-views/FleetTelemetryHealth.cs(494,22): error CA1822: Member 'BuildRefreshButton' does not access instance data and can be marked as static
+apps/windows/TeslaSync.App/feature-views/FleetTelemetryHealth.cs(510,24): error CA1822: Member 'BuildLoading' does not access instance data and can be marked as static
+apps/windows/TeslaSync.App/feature-views/FleetTelemetryHealth.cs(578,96): error CA1859: Change type of parameter 'cells' from 'System.Collections.Generic.IReadOnlyList<Microsoft.UI.Xaml.UIElement>' to 'Microsoft.UI.Xaml.UIElement[]' for improved performance
+Build FAILED.  4 Error(s)
+
+TEST output (solution):
+  TeslaSync.App.Tests.dll  (headless unit suite, includes new TimestampTool cases): Passed: 6750, Failed: 0, Skipped: 0.
+  TeslaSync.App.UITests.dll (WinAppDriver/Appium UI automation):                    Passed:    0, Failed: 147.
+    Root cause (every one of the 147): UiAutomationUnavailableException : "UI automation cannot run: WinAppDriver/Appium
+    runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard
+    install paths or on PATH." (WinAppDriverSession.EnsureReady hard-fails by design -- it never reports an absent
+    runner as green.) This is the identical platform-capability block recorded for sibling 0011 (Base64Tool).
+
+FORMAT output -- distinct files flagged (ALL pre-existing sibling BackendTool.*, committed at 9de15d030 by prompt 0019):
+  BackendTool.cs (397), BackendTool.ViewModel.cs (304), BackendToolTests.cs (356), BackendTool.Model.cs (121),
+  BackendTool.Source.cs (65)  -- every error is "ENDOFLINE: Fix end of line marker. Replace 2 characters with '\n'"
+  (CRLF instead of the .editorconfig-mandated LF). ZERO TimestampTool files are flagged.
+
+PLACEHOLDER output:
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0   (apps/windows/TeslaSync.App/feature-views/TimestampTool clean of TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/stub)
+
+================================================================================
+=== Honesty Covenant evidence -- the red gate steps are PRE-EXISTING sibling defects + the absent UI-automation
+=== runner, NOT TimestampTool defects (#1 no red-as-green, #10 log ends with EXIT/STATUS).
+================================================================================
+
+WORKING-TREE CHANGES (git status --short) -- only TimestampTool + its test infrastructure:
+  ?? apps/windows/TeslaSync.App/feature-views/TimestampTool/        (the 3 new surface files)
+  ?? apps/windows/TeslaSync.App.Tests/FeatureViews/TimestampToolTests.cs
+  M  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj    (test links + a pre-existing duplicate fix; see below)
+  No FleetTelemetryHealth.cs, no BackendTool.* changes -- those surfaces are untouched by this prompt.
+
+WHY BUILD_EXIT=1 is NOT a TimestampTool defect:
+  The full Release build's COMPLETE error inventory is exactly 4 errors, every one in
+  feature-views/FleetTelemetryHealth.cs -- a DIFFERENT, already-committed surface (HEAD 5355a9430,
+  "feat(apps/windows/feature-views): add FleetTelemetryHealth surface (P2)"). They are CA1822/CA1859
+  analyzer findings promoted to errors by the App project's TreatWarningsAsErrors. ZERO diagnostics
+  reference any TimestampTool file. Per the prompt's Allowed-files (feature-views/TimestampTool.*, the
+  log) and the engineering rule "Don't fix pre-existing issues unrelated to your task", FleetTelemetryHealth
+  (a sibling surface with its own prompt/owner) was NOT modified. The 0020 owner can clear the build with
+  four mechanical, non-behavioral edits: mark BuildRefreshButton + BuildLoading static, return TsBadge from
+  BuildFilterChip, and take UIElement[] for the 'cells' parameter.
+
+WHY FORMAT_EXIT=2 is NOT a TimestampTool defect:
+  Every ENDOFLINE error is in feature-views/BackendTool/* (+ BackendToolTests.cs) -- a DIFFERENT,
+  already-committed surface (HEAD 9de15d030, "feat(apps/windows/feature-views): add BackendTool surface
+  (P2)") whose .cs files were committed with CRLF instead of the .editorconfig-mandated LF. ZERO TimestampTool
+  files are flagged; all 4 new TimestampTool files are LF/no-BOM/final-newline and pass a scoped
+  `dotnet format --verify-no-changes`. BackendTool is a sibling surface and was NOT modified (same scope rule).
+
+WHY TEST_EXIT=1 is a platform-capability block (NOT a surface defect):
+  * Headless TeslaSync.App.Tests.dll: Passed 6750 / Failed 0 -- this INCLUDES the 39 new TimestampTool cases
+    (24 converter-adapter facts/theories covering Unix/ISO parsing incl. the >10-char seconds/millis boundary,
+    JS-parseInt leading-integer + negative handling, out-of-range -> null, ISO offset normalization, floor-toward
+    -inf seconds, toISOString shape, the formatDateTime local shape, and the getRelativeTime s/m/h/d buckets +
+    the Math.abs "future reads ago" quirk; the per-field empty/valid/invalid state matrix + clear-to-empty +
+    INotifyPropertyChanged for the projections and the live row + the no-op guard; the registration metadata;
+    the PII-safe view.opened diagnostics; the Narrator a11y names; and the exact 9 web t() i18n keys).
+  * TeslaSync.App.UITests.dll: Passed 0 / Failed 147 -- ALL fail with UiAutomationUnavailableException because no
+    WinAppDriver/Appium runner is present on this machine (nothing on 127.0.0.1:4723). The UITests do not
+    reference the TimestampTool surface; this is the identical environmental block recorded for committed
+    sibling 0011 (Base64Tool). The surface's UI-thread-free state + a11y + i18n logic is fully covered by the
+    green headless suite; the WinUI view itself (TimestampTool.cs) is verified to compile clean (0 diagnostics)
+    in the same Release build.
+
+ALLOWED-FILES NOTE (transparency, Honesty Covenant #2/#9):
+  The prompt's primary allowed-files glob is feature-views/TimestampTool.*. Two additional, prompt-mandated
+  edits follow the established per-surface convention used by committed siblings (e.g. 0011 Base64Tool):
+    1. TeslaSync.App.Tests/FeatureViews/TimestampToolTests.cs -- the adapter + per-field-state + a11y +
+       diagnostics + i18n tests required by the Acceptance Criteria and the `dotnet test` gate.
+    2. TeslaSync.App.Tests.csproj -- two <Compile Include> links for the WinUI-free TimestampTool.Model.cs /
+       TimestampTool.ViewModel.cs (the headless test project links app source directly; it has no
+       ProjectReference to the WinUI app). The WinUI view (TimestampTool.cs) is intentionally NOT linked.
+  PRE-EXISTING TEST-PROJECT FIX (required to reach a runnable gate, same category as 0011's fix):
+    TeslaSync.App.Tests.csproj included the TirePressureVisualWidget Model/ViewModel/Source <Compile> triple
+    THREE times (a merge artifact), which fails the build with NETSDK1022 "Duplicate 'Compile' items".
+    Removed the two duplicate triples so the headless test project builds; it is now linked exactly once.
+
+SURFACE SUMMARY -- TimestampTool is complete and at web-source parity:
+  Built from shared native components only (TsGlassPanel chrome with a green Clock accent chip; a live row
+  -- DispatcherTimer @ 1 Hz, the analogue of the web setInterval -- showing current Unix seconds | ISO with a
+  "Now" button that fills both fields; two TsInput fields with leading Hash / Clock FontIcons; each field
+  reveals an Iso/Local/Relative (Unix/Local/Relative) conversion block when its input parses, exactly as the
+  web {fromUnix && ...} / {fromIso && ...} memos do). All conversion flows through the pure TimestampConverter
+  via the UI-thread-free TimestampToolViewModel; the view performs no I/O. Tokenized (no inline hex), localized
+  through the i18n facade (all 9 web t() keys), Narrator-labelled on every interactive element, and emits the
+  view.opened slug=TimestampTool diagnostic. States honestly reproduce the web source: the tool's only hook is
+  useTranslation and it has no data source, so there is no loading/error/stale/offline branch -- the per-field
+  Empty/Valid/Invalid is the complete, honest state set (the field + label are always visible, so no surface is
+  ever a blank box). This mirrors the accepted sibling 0011 (Base64Tool) precedent.
+
+CONCLUSION: The TimestampTool surface is production-complete, at parity, and verified clean on every dimension
+within its scope -- it compiles with zero diagnostics, its 39 headless tests pass inside a 6750-green suite, it
+is placeholder-clean, and it is format-clean (LF). The solution-wide gate cannot go green because the inherited
+wt-04 base is degraded by two PRE-EXISTING, already-committed sibling surfaces -- FleetTelemetryHealth (0020, 4
+analyzer build errors) and BackendTool (0019, CRLF format errors) -- which are outside this prompt's allowed
+files and were therefore not modified, plus the absent WinAppDriver UI-automation runner (the sanctioned
+platform-capability block, identical to sibling 0011). Reported with evidence rather than as green
+(Honesty Covenant #1/#8/#10).
+
+EXIT=1
+STATUS=BLOCKED
