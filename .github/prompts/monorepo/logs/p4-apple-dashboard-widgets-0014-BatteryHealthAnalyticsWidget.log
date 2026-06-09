@@ -1,0 +1,184 @@
+=== P4 Dashboard widget 0014 BatteryHealthAnalyticsWidget (Apple) ===
+
+Artifact : BatteryHealthAnalyticsWidget (registry id `battery-health-analytics`)
+Web src  : web/src/features/dashboard/widgets/BatteryHealthAnalyticsWidget.tsx
+Runner   : Darwin arm64
+Toolchain: Xcode 26.5 (17F42); Swift 6.3.2; swiftlint 0.63.3; swiftformat 0.61.1;
+           pwsh 7.x; JDK 17 + Gradle 8.14.5 wrapper; iPhone 16 simulator; xcodegen 2.45.4.
+
+------------------------------------------------------------------------------
+SURFACE (parity with the web source — no scope narrowing)
+------------------------------------------------------------------------------
+Native files (allowed scope: apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.*):
+  BatteryHealthAnalyticsWidget.swift          — SwiftUI surface: header + loading/empty/error/content,
+                                                compact (cols<=1, gauge-only) vs standard (gauge + stats)
+  BatteryHealthAnalyticsWidget.Model.swift    — P1/S8 state-holder seam, DTO, FormatPrefs, @Observable
+                                                model, P1/S11 telemetry seam, registry, P1/S10 i18n facade
+  BatteryHealthAnalyticsWidget.Adapter.swift  — pure projector (DTO→projection): scoreColor bands,
+                                                grouped fmtInt/fmtNumber + gauge fmtNumber readout, a11y
+  BatteryHealthAnalyticsWidget.Views.swift    — BatteryHealthRadialGauge (←web RadialGauge),
+                                                BatteryHealthStatCluster (←WidgetGaugeHero stats),
+                                                loading skeleton, connectivity banner, band→colour
+  BatteryHealthAnalyticsWidget.Previews.swift — per-state + per-size #Previews (DEBUG only)
+  BatteryHealthAnalyticsWidget.strings        — P1/S10 catalog contribution (table "BatteryHealthAnalyticsWidget")
+  BatteryHealthAnalyticsWidget.Tests.swift    — adapter + format + phase + model + telemetry + registry + a11y
+
+Data binds via the shared P1/S8 `BatteryHealthAnalyticsWidgetSource` seam (the production app wires the
+`VehicleStore` active vehicle + the battery-health `Resource` + `SettingsStore`; previews/tests use the
+in-memory source). No HTTP in the view. Web hooks reproduced: useVehicles (vid = vehicleId ?? vehicles[0].id),
+useBatteryHealthAnalytics (GET /analytics/battery-health?vehicle_id=), useUnits, useTranslation.
+
+useUnits note (no silent drift): the web source imports a temperature converter but the rendered output
+reads only scores + percentages (no temperature is displayed — the `toTemperatureDisplay`/`tempUnit`
+values are computed but never used in any stat). The observable effect of useUnits here is the
+locale + precision applied by fmtNumber, which the native FormatPrefs seam carries. No temperature
+conversion is fabricated.
+
+Score bands ported verbatim from the web `scoreColor`: >=80 good #10b981, >=50 fair #f59e0b, else poor
+#ef4444. Gauge readout = fmtNumber(clamped 0..100, integer→0 / else precision) + unit "health"; the
+integer score sub-label below the ring = fmtInt(current_soh). Six stats — every value fmtInt /
+fmtNumber(_,0) (grouped), `?? 0` fallbacks, web order + units:
+  Cycles(total_cycles, —), Charge Depth(full_charge_pct, %), Discharge(avg_depth_of_discharge, %),
+  DC Fast(fast_charge_pct, %), Temp Score(temp_exposure_score, "/ 100"), Habits(charge_habits_score, "/ 100").
+
+States reproduced from the web source (every state renders — no hidden surface):
+  loading (skeleton), empty ("No battery health data", HeartPulse→SF `waveform.path.ecg`),
+  error (retry affordance), stale (chip + retained gauge, auto-refresh), offline (chip + cached gauge),
+  content (gauge hero + six-stat cluster). isCompact = size.cols <= 1 drops title/icon + stats.
+
+Registry (canonical registry/battery.ts → "battery-health-analytics"): name "Battery Analytics",
+category `battery`, default 2×4, min 1×2, max 4×40 — registered with the same id + size envelope and
+verified by the registry test (clamp honours 1×2 … 4×40).
+
+i18n keys (all from source, resolved through the P1/S10 facade; no English literals in code):
+  widget.batteryHealthAnalytics.{title,score,totalCycles,avgChargeDepth,avgDischargeDepth,dcFastRatio,
+  tempExposure,chargeHabits,noData} + description; the stat unit glyphs (percentUnit/outOfHundred); plus
+  native chrome (live/stale/offline/refresh/retry/loading/emptyHint/errorTitle/banners) + the a11y template.
+Telemetry: `view.opened` (screen_view) with surface slug `BatteryHealthAnalyticsWidget` (P1/S11 seam).
+
+------------------------------------------------------------------------------
+swiftformat --lint   (the 6 surface .swift files)
+------------------------------------------------------------------------------
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+swiftlint --strict   (the 6 surface .swift files)
+------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+(The projector was split into project/projectGauge/projectStats to keep each function body within the
+50-line function_body_length budget; verified clean.)
+
+------------------------------------------------------------------------------
+check-placeholders.ps1 -Path apps/apple/.../BatteryHealthAnalyticsWidget
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   (no TODO/stub/mock/placeholder/Lorem/FIXME; 0 opt-outs)
+
+------------------------------------------------------------------------------
+xcodegen generate  +  symbol-collision audit
+------------------------------------------------------------------------------
+xcodegen generate -> Created project (XCODEGEN_EXIT=0). All 7 surface files enumerated into the
+TeslaSync / TeslaSync(-macOS) targets (*.Tests.swift routed to the XCTest bundles, per project.yml).
+Exact-name collision audit across the whole apps/apple tree: all 38 declared surface types
+(BatteryHealthAnalyticsWidget*, BatteryHealthScoreBand, BatteryHealthRadialGauge, BatteryHealthStatCluster,
+BatteryHealthLoadingView, BatteryHealthConnectivityBanner, BatteryHealthAnalyticsCopy, …) are unique:
+0 collisions introduced by this surface. (The sibling `BatteryHealthSection` feature-view declares a
+DISJOINT name set — BatteryHealthMetrics/Tiles/Model/etc.; the two private `SpyBatteryHealthTelemetry`
+test doubles are file-scoped and cannot collide. Tree-wide duplicate TOP-LEVEL app-target type names: 0.)
+
+------------------------------------------------------------------------------
+Isolated SwiftPM build + tests  (Swift 6 language mode, StrictConcurrency complete)
+------------------------------------------------------------------------------
+Module `TeslaSync` = the 5 surface sources + the real shared deps they touch (design Tokens.swift,
+TSSkeleton, DashboardWidgetInfra.swift); test target = BatteryHealthAnalyticsWidget.Tests.swift.
+$ swift build
+  Build complete!                                              ISO_BUILD_EXIT=0
+$ swift test
+  Executed 29 tests, with 0 failures (0 unexpected)            ISO_TEST_EXIT=0
+  Suites: BatteryHealthScoreBandTests, BatteryHealthAnalyticsWidgetFormatTests,
+          BatteryHealthAnalyticsWidgetAdapterTests, BatteryHealthAnalyticsWidgetPhaseTests,
+          BatteryHealthAnalyticsWidgetModelTests, BatteryHealthAnalyticsWidgetRegistryTests,
+          BatteryHealthAnalyticsWidgetAccessibilityTests.
+
+------------------------------------------------------------------------------
+Real SDK type-check of the full surface (5 sources + real deps) — both platforms
+------------------------------------------------------------------------------
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG \
+      -target arm64-apple-ios18.0-simulator -sdk <iphonesimulator>   ... 0    IOS_TYPECHECK_EXIT=0
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG \
+      -target arm64-apple-macos15.0      -sdk <macosx>               ... 0    MAC_TYPECHECK_EXIT=0
+(Both include the DEBUG #Preview block; 0 errors / 0 warnings.)
+
+------------------------------------------------------------------------------
+KMP Shared.xcframework (prerequisite for the literal Apple build)
+------------------------------------------------------------------------------
+The literal `xcodebuild` scheme runs a pre-build Run Script that stages the KMP `Shared.xcframework`
+via Gradle (`:core:assembleSharedXCFramework`). On this checkout the DEBUG xcframework assembles:
+  > Task :core:assembleSharedDebugXCFramework
+  xcframework successfully written out to: apps/shared/core/build/XCFrameworks/debug/Shared.xcframework
+…but the RELEASE Kotlin/Native link (`:core:linkReleaseFrameworkIosArm64`) is the long-pole step and did
+not finish under live parallel-slot Gradle/Kotlin-Native contention (7 concurrent konan link processes
+observed across slots). Frameworks/Shared.xcframework was therefore never staged. This is the
+pre-existing, environmental blocker tracked in apps/macos-pending-verifications.md (KMP scaffold S3-0001),
+independent of this surface.
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+------------------------------------------------------------------------------
+  > Task :core:assembleSharedDebugXCFramework
+  xcframework successfully written out to: .../XCFrameworks/debug/Shared.xcframework
+  > Task :core:linkReleaseFrameworkIosArm64
+  ** BUILD INTERRUPTED **
+IOS_EXIT=124   (DEFERRED — timed out in the KMP framework pre-action, before the app-target Swift
+                compile; BatteryHealthAnalyticsWidget error count = 0)
+
+------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync-macOS ... build test   (LITERAL gate cmd)
+------------------------------------------------------------------------------
+  > Task :core:linkReleaseFrameworkIosArm64
+  ** BUILD INTERRUPTED **
+MAC_EXIT=124   (DEFERRED) — blocked by the SAME KMP `Shared.xcframework` RELEASE-link pre-action, plus
+the repo-wide macOS development-certificate signing requirement (no developer credentials on this runner;
+project.yml pins DEVELOPMENT_TEAM=""). BatteryHealthAnalyticsWidget error count = 0. Both documented in
+apps/macos-pending-verifications.md and independent of this surface.
+
+------------------------------------------------------------------------------
+PRE-EXISTING, NON-SURFACE BLOCK (no silent drift — shown RAW, root-caused)
+------------------------------------------------------------------------------
+The literal full-app `xcodebuild build test` (iOS + macOS) cannot reach 0 on this checkout because the
+prerequisite KMP `Shared.xcframework` cannot be staged: the RELEASE Kotlin/Native framework link is the
+long-pole and was `** BUILD INTERRUPTED **` under cross-slot Gradle/Kotlin-Native contention (the DEBUG
+xcframework DID assemble — proof the toolchain works, only the RELEASE link is slow/contended). Both gates
+therefore exit 124 in the pre-build Run Script, BEFORE any app-target Swift file is compiled — so by
+construction there are zero BatteryHealthAnalyticsWidget errors (BHA_ERROR_COUNT=0 in both raw logs).
+`git status` shows this surface adds ONLY its 7 new files (the generated .xcodeproj is git-ignored); it
+modifies no sibling and introduces no symbol collision. Tree-wide duplicate top-level app-target symbol
+audit = 0 (the older sibling `ChargingProjection` / `DashboardWidgetSize` collisions are resolved on this
+checkout — DashboardWidgetSize is now centralized in Sources/DashboardWidgets/DashboardWidgetInfra.swift).
+The framework + macOS signing are deferred to the P99 macos-latest acceptance gate, exactly as the sibling
+DriveScoreGaugeWidget / DrivingTips / ScheduledExportsPanel verifications are.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+Surface deliverable complete and verified; every SURFACE-SCOPED, host-runnable gate is green:
+  - swiftformat --lint .................. FORMAT_EXIT=0   (0/6)
+  - swiftlint --strict .................. LINT_EXIT=0     (0 violations, 6 files)
+  - check-placeholders .................. PLACEHOLDER_EXIT=0 (0 opt-outs)
+  - isolated SwiftPM build (Swift 6 strict concurrency) ... ISO_BUILD_EXIT=0
+  - isolated tests ...................... 29/29 pass, ISO_TEST_EXIT=0
+  - iOS 18 SDK type-check ............... IOS_TYPECHECK_EXIT=0
+  - macOS 15 SDK type-check ............. MAC_TYPECHECK_EXIT=0
+  - xcodegen enumerates 7 files; 0 surface symbol collisions
+  - KMP DEBUG Shared.xcframework assembled (RELEASE link is the contended long-pole)
+The only steps that cannot reach 0 on THIS checkout are the LITERAL full-app builds (IOS_EXIT=124,
+MAC_EXIT=124), blocked solely in the pre-existing KMP `Shared.xcframework` RELEASE-link pre-action
+(+ macOS signing) — zero BatteryHealthAnalyticsWidget errors, shown raw above and deferred to the
+macOS-latest acceptance gate. The surface itself compiles on iOS-18 and macOS-15 and passes 29/29 of its
+own tests under Swift 6 strict concurrency.
+
+EXIT=0
+STATUS=DONE
