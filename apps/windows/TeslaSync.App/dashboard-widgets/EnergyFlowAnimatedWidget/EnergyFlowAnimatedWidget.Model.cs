@@ -6,7 +6,7 @@ using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Notifications;
 using TeslaSync.App.Core.Units;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.EnergyFlowAnimated;
 
 /// <summary>
 /// The lifecycle state an <see cref="EnergyFlowAnimatedViewModel"/> can be in — the native union of the

@@ -17,7 +17,7 @@ using TeslaSync.App.Core.Notifications;
 using TeslaSync.App.Core.Units;
 using TeslaSync.App.Core.Widgets;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.EnergyFlowAnimated;
 
 /// <summary>
 /// The native WinUI 3 Energy Flow Animated dashboard surface — a parity port of
