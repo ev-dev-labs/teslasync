@@ -44,7 +44,7 @@ public sealed class SystemHealthWidgetTests
     public void ParseHealth_reads_status_and_component_map()
     {
         using var doc = JsonDocument.Parse(HealthJson);
-        var snap = SystemHealthSnapshot.Parse(doc.RootElement);
+        var snap = SystemHealthReport.Parse(doc.RootElement);
 
         Assert.NotNull(snap);
         Assert.Equal("healthy", snap!.Status);
@@ -59,7 +59,7 @@ public sealed class SystemHealthWidgetTests
     public void ParseHealth_defaults_status_to_unknown_when_absent()
     {
         using var doc = JsonDocument.Parse("""{"components":{}}""");
-        var snap = SystemHealthSnapshot.Parse(doc.RootElement);
+        var snap = SystemHealthReport.Parse(doc.RootElement);
 
         Assert.NotNull(snap);
         Assert.Equal("unknown", snap!.Status);
@@ -70,7 +70,7 @@ public sealed class SystemHealthWidgetTests
     public void ParseHealth_reads_database_size_when_present()
     {
         using var doc = JsonDocument.Parse("""{"status":"degraded","database_size":"1.2 GB"}""");
-        var snap = SystemHealthSnapshot.Parse(doc.RootElement);
+        var snap = SystemHealthReport.Parse(doc.RootElement);
 
         Assert.Equal("1.2 GB", snap!.DatabaseSize);
     }
@@ -83,7 +83,7 @@ public sealed class SystemHealthWidgetTests
     public void ParseHealth_returns_null_for_non_object(string json)
     {
         using var doc = JsonDocument.Parse(json);
-        Assert.Null(SystemHealthSnapshot.Parse(doc.RootElement));
+        Assert.Null(SystemHealthReport.Parse(doc.RootElement));
     }
 
     [Fact]
@@ -252,17 +252,17 @@ public sealed class SystemHealthWidgetTests
     public void Project_db_size_prefers_health_then_db_then_em_dash()
     {
         var fromHealth = SystemHealthProjection.Project(
-            new SystemHealthReading(new SystemHealthSnapshot("healthy", Components(), "1 GB"), new DbStatsSnapshot("999"), null),
+            new SystemHealthReading(new SystemHealthReport("healthy", Components(), "1 GB"), new DbStatsSnapshot("999"), null),
             SystemHealthRegistration.DefaultSize, Localizer);
         Assert.Equal("1 GB", fromHealth.DbSizeText);
 
         var fromDb = SystemHealthProjection.Project(
-            new SystemHealthReading(new SystemHealthSnapshot("healthy", Components(), null), new DbStatsSnapshot("777"), null),
+            new SystemHealthReading(new SystemHealthReport("healthy", Components(), null), new DbStatsSnapshot("777"), null),
             SystemHealthRegistration.DefaultSize, Localizer);
         Assert.Equal("777", fromDb.DbSizeText);
 
         var neither = SystemHealthProjection.Project(
-            new SystemHealthReading(new SystemHealthSnapshot("healthy", Components(), null), null, null),
+            new SystemHealthReading(new SystemHealthReport("healthy", Components(), null), null, null),
             SystemHealthRegistration.DefaultSize, Localizer);
         Assert.Equal("\u2014", neither.DbSizeText);
     }
@@ -271,7 +271,7 @@ public sealed class SystemHealthWidgetTests
     public void Project_active_conns_drops_max_when_zero()
     {
         var display = SystemHealthProjection.Project(
-            new SystemHealthReading(new SystemHealthSnapshot("healthy", Components(), null), null, new ConnectionPoolSnapshot(7, 0, null, null)),
+            new SystemHealthReading(new SystemHealthReport("healthy", Components(), null), null, new ConnectionPoolSnapshot(7, 0, null, null)),
             SystemHealthRegistration.DefaultSize, Localizer);
 
         Assert.Equal("7", display.ActiveConnsText);
@@ -281,7 +281,7 @@ public sealed class SystemHealthWidgetTests
     public void Project_memory_megabytes_formats_with_grouping()
     {
         var display = SystemHealthProjection.Project(
-            new SystemHealthReading(new SystemHealthSnapshot("healthy", Components(), null), null, new ConnectionPoolSnapshot(1, 2, 9, 1536)),
+            new SystemHealthReading(new SystemHealthReport("healthy", Components(), null), null, new ConnectionPoolSnapshot(1, 2, 9, 1536)),
             SystemHealthRegistration.DefaultSize, Localizer);
 
         Assert.Equal("1,536 MB", display.MemoryText);
@@ -472,7 +472,7 @@ public sealed class SystemHealthWidgetTests
     {
         using var vm = NewViewModel(
             RepositoryResult<SystemHealthReading>.Loading(),
-            RepositoryResult<SystemHealthReading>.Cached(new SystemHealthReading(new SystemHealthSnapshot("degraded", Components(), null), null, null), Now, stale: false),
+            RepositoryResult<SystemHealthReading>.Cached(new SystemHealthReading(new SystemHealthReport("degraded", Components(), null), null, null), Now, stale: false),
             RepositoryResult<SystemHealthReading>.Loaded(FullReading(), Now));
         await vm.LoadAsync();
 
@@ -650,7 +650,7 @@ public sealed class SystemHealthWidgetTests
         new Dictionary<string, string>(StringComparer.Ordinal);
 
     private static SystemHealthReading FullReading() => new(
-        new SystemHealthSnapshot(
+        new SystemHealthReport(
             "healthy",
             new Dictionary<string, string>(StringComparer.Ordinal)
             {

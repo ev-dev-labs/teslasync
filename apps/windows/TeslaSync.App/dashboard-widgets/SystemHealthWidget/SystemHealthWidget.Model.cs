@@ -62,7 +62,7 @@ public readonly record struct SystemHealthSize(int Cols, int Rows)
 /// <param name="Status">The overall service status ("healthy" / "degraded" / "unhealthy" / …).</param>
 /// <param name="Components">Component-name → status string (e.g. <c>database</c> → <c>healthy</c>).</param>
 /// <param name="DatabaseSize">The database-size text when the health body carries it, else null.</param>
-public sealed record SystemHealthSnapshot(
+public sealed record SystemHealthReport(
     string Status,
     IReadOnlyDictionary<string, string> Components,
     string? DatabaseSize)
@@ -72,7 +72,7 @@ public sealed record SystemHealthSnapshot(
     /// <c>unknown</c>, the web fallback), the <c>components</c> object (each entry's <c>status</c> string) and
     /// an optional <c>database_size</c> scalar. A non-object body yields <see langword="null"/>.
     /// </summary>
-    public static SystemHealthSnapshot? Parse(JsonElement root)
+    public static SystemHealthReport? Parse(JsonElement root)
     {
         if (root.ValueKind != JsonValueKind.Object)
         {
@@ -101,7 +101,7 @@ public sealed record SystemHealthSnapshot(
             }
         }
 
-        return new SystemHealthSnapshot(status, components, JsonScalar.ReadText(root, "database_size"));
+        return new SystemHealthReport(status, components, JsonScalar.ReadText(root, "database_size"));
     }
 }
 
@@ -197,7 +197,7 @@ public static class JsonScalar
 /// <param name="Db">The parsed db-stats body (web <c>dbStats.data</c>), or null when the read carried nothing.</param>
 /// <param name="Pool">The parsed runtime-info body (web <c>pool.data</c>), or null when the read carried nothing.</param>
 public sealed record SystemHealthReading(
-    SystemHealthSnapshot? Health,
+    SystemHealthReport? Health,
     DbStatsSnapshot? Db,
     ConnectionPoolSnapshot? Pool)
 {
@@ -487,7 +487,7 @@ public static class SystemHealthResultMapper
         RepositoryResult<JsonElement>? db,
         RepositoryResult<JsonElement>? pool)
     {
-        var healthSnap = HasContent(health) && health.Value is { } healthEl ? SystemHealthSnapshot.Parse(healthEl) : null;
+        var healthSnap = HasContent(health) && health.Value is { } healthEl ? SystemHealthReport.Parse(healthEl) : null;
         var dbSnap = db is { } d && HasContent(d) && d.Value is { } dbEl ? DbStatsSnapshot.Parse(dbEl) : null;
         var poolSnap = pool is { } p && HasContent(p) && p.Value is { } poolEl ? ConnectionPoolSnapshot.Parse(poolEl) : null;
 
