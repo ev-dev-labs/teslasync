@@ -1,0 +1,179 @@
+/*
+  SettingsSearch.strings
+  TeslaSync — P4 feature view · 0215 · SettingsSearch (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "SettingsSearch"). Every key the native
+  `SettingsSearch` resolves lives here with its English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table so
+  each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first three keys are the ones extracted from the web source
+  (features/settings/components/SettingsSearch.tsx — `settings.search.placeholder`,
+  `settings.search.label`, `settings.search.noResults`). The `search.entries.*` keys are the verbatim
+  port of features/settings/searchIndex.ts (`getSettingsIndex`) — same keys + English fallbacks the web
+  `t(key, default)` uses. The remaining `settingsSearch.*` keys back the native state envelope (field
+  role / clear, idle / loading / empty / error chrome, the freshness chip, the connectivity banner) and
+  the accessibility summaries — none of which exist as English literals in the Swift sources.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"settings.search.placeholder" = "Search settings…";
+"settings.search.label" = "Search settings";
+"settings.search.noResults" = "No matching settings.";
+
+/* --- Index entries (port of getSettingsIndex) — Tesla account --- */
+"search.entries.tesla.connect.title" = "Connect Tesla account";
+"search.entries.tesla.connect.desc" = "Authorize TeslaSync to access your Tesla account.";
+"search.entries.tesla.refreshToken.title" = "Tesla refresh token";
+"search.entries.tesla.refreshToken.desc" = "Manually refresh the cached Tesla OAuth token.";
+"search.entries.tesla.disconnect.title" = "Disconnect Tesla account";
+"search.entries.tesla.disconnect.desc" = "Sign out and remove the cached OAuth token.";
+"search.entries.tesla.syncVehicles.title" = "Sync vehicles from Tesla";
+"search.entries.tesla.syncVehicles.desc" = "Pull the current vehicle list from the Tesla Fleet API.";
+
+/* --- Region & API / features / orders --- */
+"search.entries.region.title" = "Region & Fleet API endpoint";
+"search.entries.region.desc" = "Tesla account region and the resolved Fleet API base URL.";
+"search.entries.features.title" = "Feature flags";
+"search.entries.features.desc" = "Tesla account feature configuration synced from the Fleet API.";
+"search.entries.orders.title" = "Active orders";
+"search.entries.orders.desc" = "Vehicle orders and delivery tracking from Tesla.";
+
+/* --- General — units & cost --- */
+"search.entries.general.distance.title" = "Distance unit";
+"search.entries.general.distance.desc" = "Show distances in kilometers or miles.";
+"search.entries.general.temperature.title" = "Temperature unit";
+"search.entries.general.temperature.desc" = "Show temperatures in Celsius or Fahrenheit.";
+"search.entries.general.pressure.title" = "Tire pressure unit";
+"search.entries.general.pressure.desc" = "Show tire pressure in Bar or PSI.";
+"search.entries.general.range.title" = "Preferred range";
+"search.entries.general.range.desc" = "Display rated or ideal range for the battery.";
+"search.entries.general.precision.title" = "Decimal precision";
+"search.entries.general.precision.desc" = "Number of decimal places shown on numeric metrics.";
+"search.entries.general.language.title" = "Language";
+"search.entries.general.language.desc" = "Application interface language.";
+"search.entries.general.currency.title" = "Currency";
+"search.entries.general.currency.desc" = "Currency symbol used in cost and savings displays.";
+"search.entries.general.locale.title" = "Number & date locale";
+"search.entries.general.locale.desc" = "Locale used for number, date, and time formatting.";
+"search.entries.general.timezone.title" = "Time zone";
+"search.entries.general.timezone.desc" = "Whether timestamps follow the vehicle, your local time, or UTC.";
+"search.entries.general.electricityCost.title" = "Electricity cost (per kWh)";
+"search.entries.general.electricityCost.desc" = "Per-kWh price used in charging cost calculations.";
+"search.entries.general.gasPriceManual.title" = "Comparison gas price";
+"search.entries.general.gasPriceManual.desc" = "Manual gas price used in EV-vs-ICE savings comparisons.";
+"search.entries.general.mpg.title" = "Comparison vehicle MPG";
+"search.entries.general.mpg.desc" = "Average MPG of the equivalent gas car for savings calculations.";
+"search.entries.gasPrice.title" = "Gas price auto-poll";
+"search.entries.gasPrice.desc" = "Automatically fetch US average gas prices from EIA.";
+
+/* --- Notifications --- */
+"search.entries.notifications.browser.title" = "Browser notifications";
+"search.entries.notifications.browser.desc" = "Enable browser notifications when the tab is in the background.";
+"search.entries.notifications.alerts.title" = "Alert notifications";
+"search.entries.notifications.alerts.desc" = "Get notified when an alert rule fires.";
+"search.entries.notifications.exportStatus.title" = "Export completion notifications";
+"search.entries.notifications.exportStatus.desc" = "Get notified when a CSV/JSON export finishes.";
+"search.entries.notifications.tabBadge.title" = "Browser tab unread badge";
+"search.entries.notifications.tabBadge.desc" = "Show unread count in the browser tab title and favicon.";
+"search.entries.notifications.criticalFlash.title" = "Critical alert tab flash";
+"search.entries.notifications.criticalFlash.desc" = "Flash the browser tab title on critical alerts.";
+"search.entries.notifications.soundMaster.title" = "Notification sounds";
+"search.entries.notifications.soundMaster.desc" = "Play short audio cues when alerts and completion events arrive.";
+"search.entries.notifications.soundChannels.title" = "Per-channel notification sounds";
+"search.entries.notifications.soundChannels.desc" = "Toggle sound separately for critical, warning, and info alerts plus charge/drive/automation completions.";
+"search.entries.notifications.soundVolume.title" = "Notification sound volume";
+"search.entries.notifications.soundVolume.desc" = "Adjust how loud notification cues play.";
+
+/* --- Quiet hours / Do-Not-Disturb --- */
+"search.entries.quietHours.windows.title" = "Quiet hours windows";
+"search.entries.quietHours.windows.desc" = "Defer non-critical notifications during sleep, work meetings, or any time-of-day window.";
+"search.entries.quietHours.bypass.title" = "Quiet hours bypass severities";
+"search.entries.quietHours.bypass.desc" = "Choose which severities (e.g. critical) still ring through during quiet hours.";
+"search.entries.quietHours.timezone.title" = "Quiet hours timezone";
+"search.entries.quietHours.timezone.desc" = "Pick the IANA timezone the start/end times are evaluated against.";
+
+/* --- Appearance --- */
+"search.entries.appearance.theme.title" = "Theme";
+"search.entries.appearance.theme.desc" = "Choose light, dark, or system mode and pick an accent color.";
+"search.entries.appearance.density.title" = "Information density";
+"search.entries.appearance.density.desc" = "Compact, comfortable, or spacious row sizing across tables and cards.";
+"search.entries.appearance.timeFormat.title" = "Default time format";
+"search.entries.appearance.timeFormat.desc" = "Show timestamps as relative (\"2h ago\") or absolute (\"Nov 12, 13:42\").";
+"search.entries.appearance.chartPalette.title" = "Chart palette";
+"search.entries.appearance.chartPalette.desc" = "Color-blind safe (Okabe-Ito) or stylistic neon chart colors.";
+"search.entries.appearance.statusBar.title" = "Status bar";
+"search.entries.appearance.statusBar.desc" = "Show or hide the always-on footer status bar.";
+"search.entries.appearance.celebrations.title" = "Achievement celebrations";
+"search.entries.appearance.celebrations.desc" = "Celebration toasts and sound when an achievement unlocks.";
+
+/* --- Security (TOTP + sessions) --- */
+"search.entries.security.totpEnroll.title" = "Enable two-factor authentication";
+"search.entries.security.totpEnroll.desc" = "Set up TOTP from your authenticator app to protect destructive admin actions.";
+"search.entries.security.totpBackupCodes.title" = "TOTP backup codes";
+"search.entries.security.totpBackupCodes.desc" = "Regenerate or download the backup codes used when you lose access to your authenticator.";
+"search.entries.security.totpDisable.title" = "Disable two-factor authentication";
+"search.entries.security.totpDisable.desc" = "Remove the TOTP credential and revoke all backup codes for the current subject.";
+"search.entries.security.sessionsList.title" = "Active sessions";
+"search.entries.security.sessionsList.desc" = "See which browsers and devices are currently signed in to TeslaSync and revoke individual sessions.";
+"search.entries.security.sessionsRevokeAll.title" = "Sign out all other devices";
+"search.entries.security.sessionsRevokeAll.desc" = "Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer.";
+
+/* --- Privacy (browser-local data) --- */
+"search.entries.privacy.recentPagesClear.title" = "Clear recently viewed pages";
+"search.entries.privacy.recentPagesClear.desc" = "Wipe the local list of pages used by the dashboard widget and the Recent section in the command palette.";
+"search.entries.privacy.consentManage.title" = "Cookies & analytics consent";
+"search.entries.privacy.consentManage.desc" = "Re-grant, withdraw, or reset the cookie / analytics consent banner state for this browser.";
+
+/* --- Advanced + backup / restore --- */
+"search.entries.advanced.restoreConfirms.title" = "Restore confirmation prompts";
+"search.entries.advanced.restoreConfirms.desc" = "Re-enable “Don’t ask again” prompts you previously silenced.";
+"search.entries.backup.export.title" = "Export settings as JSON";
+"search.entries.backup.export.desc" = "Download a portable bundle of general settings, alert rules, geofences, and quiet-hours windows.";
+"search.entries.backup.import.title" = "Import settings from JSON";
+"search.entries.backup.import.desc" = "Restore alert rules, geofences, and quiet-hours windows from a previously exported bundle.";
+
+/* --- Webhook channels --- */
+"search.entries.webhooks.list.title" = "Webhook channels";
+"search.entries.webhooks.list.desc" = "Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver.";
+"search.entries.webhooks.signing.title" = "Webhook HMAC signing";
+"search.entries.webhooks.signing.desc" = "Sign outbound webhooks with a shared secret so receivers can verify authenticity via the X-TeslaSync-Signature header.";
+"search.entries.webhooks.test.title" = "Test a webhook channel";
+"search.entries.webhooks.test.desc" = "Fire a test event at a configured webhook to verify your receiver and signature pipeline.";
+
+/* --- Reset to defaults --- */
+"search.entries.reset.section.title" = "Reset a section to defaults";
+"search.entries.reset.section.desc" = "Wipe one section at a time — alert rules, geofences, channels, automations, dashboard layouts, quiet hours, or general/appearance preferences.";
+"search.entries.reset.all.title" = "Reset ALL settings";
+"search.entries.reset.all.desc" = "Danger zone — wipe every user-discoverable preference, alert rule, channel, geofence, automation, and dashboard layout in one transaction. Requires typing RESET to confirm.";
+
+/* --- Helix (AI integration) --- */
+"search.entries.helix.integration.title" = "Helix (AI integration)";
+"search.entries.helix.integration.desc" = "Optional AI integration — provider, API key, cost cap, and per-feature opt-in toggles. Off by default.";
+
+/* --- Field chrome --- */
+"settingsSearch.settingRole" = "Setting";
+"settingsSearch.clear" = "Clear search";
+
+/* --- Result-area states (idle / loading / empty / error) --- */
+"settingsSearch.idleHint" = "Type to search settings";
+"settingsSearch.idleHintCount" = "Search across %d settings";
+"settingsSearch.loading" = "Loading settings…";
+"settingsSearch.noResultsHint" = "Try a different name, unit, or keyword.";
+"settingsSearch.errorTitle" = "Couldn't load settings";
+"settingsSearch.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"settingsSearch.live" = "Live";
+"settingsSearch.stale" = "Stale";
+"settingsSearch.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"settingsSearch.staleBanner" = "Settings index is %@ old — reconnecting.";
+"settingsSearch.offlineBanner" = "Offline — showing the cached settings index";
+
+/* --- Accessibility summaries --- */
+"settingsSearch.a11y.idle" = "Type to search settings";
+"settingsSearch.a11y.loading" = "Loading settings";
+"settingsSearch.a11y.results" = "%d settings match your search";
+"settingsSearch.a11y.error" = "Couldn't load settings";

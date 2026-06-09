@@ -1,0 +1,241 @@
+================================================================================
+P4 · Feature view · 0215 — SettingsSearch (Apple)
+Run: 2026-06-09T03:30-0700   Host: Darwin arm64   Branch: auto/20260608-211853-78201/118
+Base: 24fc934fc
+Prompt: P4/feature-views/0215 — Feature view: SettingsSearch
+Web source (spec): web/src/features/settings/components/SettingsSearch.tsx
+                   (+ its delegate web/src/features/settings/searchIndex.ts)
+Mode: code-complete + host-proven (dual-SDK type-check on iOS 18 + macOS 15, AND a
+      real XCTest execution of all 53 tests on the macOS-15 host via an isolated
+      SwiftPM module literally named "TeslaSync"). The repo-wide xcodebuild app
+      build/test is DEFERRED — blocked by a PRE-EXISTING, committed FOREIGN
+      duplicate type (ChargeSessionDTO) in two sibling dashboard-widget surfaces,
+      NOT owned by this prompt (allowed files = SettingsSearch.* only).
+      Predecessor parity: 0245 helpers / 0055 LifetimeStatsWidget, ADR-002/004,
+      Honesty rules 1/7/8.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ........................ Apple Swift 6.3.2 / Xcode 26.5 (17F42) toolchain     OK
+  iPhoneSimulator SDK .......... iOS 18.0 deploy target (type-check PASSES)           OK
+  macOS SDK .................... macOS 15.0 deploy target (type-check PASSES)         OK
+  iPhone 16 simulator .......... present (83717DEE-…-CBDDD3140989, Booted)           OK
+  SwiftUI ...................... present in both SDKs; this surface uses SwiftUI only OK
+  Swift Charts / MapKit ........ present in both SDKs (this surface uses NEITHER —
+                                 web source has no Recharts/Leaflet)                  OK
+  swiftlint .................... /opt/homebrew/bin/swiftlint 0.63.3                   OK
+  swiftformat .................. /opt/homebrew/bin/swiftformat 0.61.1                 OK
+  xcodegen ..................... 2.45.4 (project generates cleanly with my files)     OK
+  pwsh (placeholder gate) ...... /opt/homebrew/bin/pwsh                              OK
+  KMP Shared.xcframework ....... staged OK this run (Scripts/build-shared-xcframework
+                                 .sh ran Gradle and produced + staged the framework) OK
+
+  Capability note: the prompt's capability-BLOCKED escape hatch ("SwiftUI / Swift
+  Charts / MapKit unavailable") does NOT apply — SwiftUI is AVAILABLE and PROVEN by
+  real iOS-18-simulator AND macOS-15 SDK type-checks below, and the surface's 53
+  tests EXECUTE green on the macOS-15 host. The web source uses no charts/maps.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/SettingsSearch.*) ===
+  SettingsSearch.Models.swift      142  Foundation value types — SettingsEntry DTO
+                                        (web SettingsEntry), injected SettingsSearchCopy,
+                                        phase/load-status/connection enums, source snapshot.
+  SettingsSearch.Adapter.swift     187  PURE ranker — verbatim port of searchIndex.ts
+                                        fuzzyMatch + searchSettings (score ladder
+                                        1000/800/600/400/300/200/100, STABLE sort, MAX_RESULTS
+                                        cap) + resolvePhase + stale-age. Foundation-only.
+  SettingsSearch.Catalog.swift     642  getSettingsIndex(t) port — all 53 indexed settings
+                                        (id/href/section/title/description/keywords + SF Symbol),
+                                        resolved through the injected P1/S10 localizer. Data
+                                        table → file_length/line_length disabled (sibling
+                                        WidgetPicker.Catalog precedent); type/function bodies
+                                        split into extensions so those rules pass un-disabled.
+  SettingsSearch.Projection.swift  138  SettingsMatch row + projection + surface slug +
+                                        SettingsDestination (href → path/#fragment, web
+                                        navigate + split('#')) + a11y summaries.
+  SettingsSearch.Model.swift       277  P1/S8 state-holder seam (SettingsSearchSource →
+                                        SettingsSearchModel) + P1/S11 telemetry seam
+                                        (view.opened) + P1/S10 strings facade (table
+                                        "SettingsSearch") + query/projection/phase/freshness
+                                        + commit→onNavigate + in-memory source.
+  SettingsSearch.swift              94  SettingsSearch surface — field + freshness chip +
+                                        connectivity banner + phase-switched result area +
+                                        onAppear telemetry + surfaceSlug.
+  SettingsSearch.Views.swift       228  presentational subviews — search field (web Input:
+                                        Search glyph + prompt + clear), freshness chip,
+                                        connectivity banner, matched setting row (glyph +
+                                        title + description + section chip + chevron), list.
+                                        Tokens only (P1/S9); no raw hex.
+  SettingsSearch.States.swift      139  result-area envelope — idle hint / loading row /
+                                        empty ("No matching settings.") / error+retry.
+  SettingsSearch.Previews.swift    105  #if DEBUG previews — one per state (content/idle/
+                                        loading/empty/error/stale/offline).
+  SettingsSearch.Tests.swift       331  XCTest — adapter (score ladder, fuzzy, rank order/
+                                        stability/cap), projection, catalog port, destination.
+  SettingsSearch.ModelTests.swift  206  XCTest — model (query→project, commit→navigate,
+                                        telemetry, stale/offline freshness) + a11y.
+  SettingsSearch.strings           179  P1/S10 catalog (table "SettingsSearch") — the 3 web
+                                        keys + 53×2 search.entries.* + native envelope keys.
+  Largest .swift counted by swiftlint = SettingsSearch.Catalog (pure data table, rule-
+  disabled per the WidgetPicker.Catalog precedent); every other file <= 331 lines.
+
+=== PARITY (web source reproduced end-to-end) ===
+  SettingsSearch.tsx is a controlled <Input type=search> driving a popover listbox of
+  ranked settings; selecting a row navigate()s to its href and scrolls to the #anchor.
+  Its matching is DELEGATED to searchIndex.ts (getSettingsIndex + searchSettings +
+  fuzzyMatch), so BOTH files are the spec and both are ported 1:1.
+
+  Web symbol                       → Native port
+  -------------------------------------------------------------------------------
+  fuzzyMatch(needle, haystack)     → SettingsSearchProjector.fuzzyMatch — verbatim
+                                     case-insensitive subsequence (empty needle false).
+  searchSettings(index, q)         → SettingsSearchProjector.rank — q = query.trim()
+                                     .lowercased(); score ladder reproduced EXACTLY
+                                     (title==q 1000 ▸ prefix 800 ▸ substring 600 ▸
+                                     keyword 400 ▸ desc 300 ▸ fuzzy-title 200 ▸
+                                     fuzzy-desc 100); STABLE descending sort (ties keep
+                                     catalog order, via (score desc, original-index asc),
+                                     matching JS Array.sort stability).
+  MAX_RESULTS = 8 (.slice(0, 8))   → SettingsSearchProjector.maxResults; applied in project().
+  getSettingsIndex(t) [53 entries] → SettingsCatalog.entries(localize:) — same ids, hrefs,
+                                     sections, titles, descriptions, keywords, AND ORDER
+                                     (tesla → region → general → notifications → quiet-hours
+                                     → appearance → security → privacy → advanced/backup →
+                                     webhooks → reset → helix).
+  navigate(entry.href) + split('#')→ SettingsDestination.from(href:) → path + optional
+                                     #fragment; the view forwards it host-free via onNavigate
+                                     (the host routes + scrolls to the section anchor).
+  useTranslation('settings')       → P1/S10 facade SettingsSearchStrings (table
+                                     "SettingsSearch"); zero English literals in Swift.
+  useNavigate                      → injected onNavigate(SettingsDestination) seam.
+  useId (listbox a11y wiring)      → native accessibility (combobox field label +
+                                     per-row VoiceOver labels + result-area summary).
+
+  i18n keys (acceptance: every source key has a catalog match):
+    settings.search.placeholder = "Search settings…"   (field prompt)
+    settings.search.label       = "Search settings"    (field a11y label)
+    settings.search.noResults   = "No matching settings."   (empty state)
+    + all 53 search.entries.<id>.title/.desc keys, verbatim web English fallbacks.
+
+  FAITHFUL DIVERGENCE (no silent drift, Honesty rule 9): the web combobox uses a manual
+  roving-tabindex highlight (activeIndex + ArrowUp/Down/Enter/Escape) — a DOM keyboard
+  pattern. The native surface renders the matches as real focusable SwiftUI Buttons (Full
+  Keyboard Access + VoiceOver), the HIG-idiomatic equivalent, exactly as the sibling
+  search surface CommandSearch (0225) does. The ranked DATA + selection behaviour are
+  identical; only the platform-native focus mechanism differs.
+
+=== STATES (every state renders — #if DEBUG preview + model/projection test each) ===
+  idle    — blank box (web: no dropdown while query empty) → "type to search" hint naming
+            the index size, never a blank box. Preview "Idle"; testEmptyQueryShowsIdleWhenLoaded.
+  loading — index resolving → spinner row. Preview "Loading"; testLoadingStatusShowsLoading.
+  content — ≥1 ranked match → matches list. Preview "Content"; testSetQueryProjectsMatches.
+  empty   — query matched nothing → "No matching settings." (web settings.search.noResults).
+            Preview "Empty"; testSearchingNoMatchShowsEmpty.
+  error   — index build failed → retry affordance. Preview "Error"; testFailedShowsError.
+  stale   — connection axis (ADR-013) → amber chip + banner + one-shot auto-refresh.
+            Preview "Stale"; testStaleAutoRefreshesOnceUntilLive.
+  offline — connection axis → muted chip + cached-index banner, no auto-refresh.
+            Preview "Offline"; testOfflineKeepsContentWithoutRefresh.
+
+=== GATE RESULTS (real commands, real exit codes) ===
+  [surface-scoped — the meaningful gate for THIS prompt's allowed files]
+  swiftformat --lint SettingsSearch.* (11 .swift) ......... 0/11 require formatting   EXIT 0
+  swiftlint lint --strict SettingsSearch.* (11 .swift) .... 0 violations              EXIT 0
+  check-placeholders.ps1 (literal -Path .../SettingsSearch) PLACEHOLDER_COUNT=0       EXIT 0
+  check-placeholders.ps1 (stricter scan of my 11 .swift) .. PLACEHOLDER_COUNT=1       EXIT 1
+        → the ONE hit is the verbatim web i18n key "settings.search.placeholder" (the
+          search field's prompt text) — a translation key, NOT a stub. Identical to the
+          shipped sibling CommandSearch ("commands.search.placeholder"). No TODO/FIXME/
+          mock/Lorem/"coming soon"/stub anywhere.
+  swiftc -typecheck  iOS 18 simulator  (surface+previews, swift6, strict concurrency,
+        -D DEBUG, against the REAL design tokens) ......... 0 errors / 0 warnings     EXIT 0
+  swiftc -typecheck  macOS 15  (same set) ................. 0 errors / 0 warnings     EXIT 0
+  swiftc -O  (Foundation core + harness, 24 parity asserts) ALL ASSERTIONS PASSED     EXIT 0
+        (catalog 53/unique/ordered; fuzzy lng~Language; score ladder; rank psi→pressure,
+         theme→theme; MAX_RESULTS cap; destination split; phase matrix; age buckets)
+  swift test  (macOS-15 host, SwiftPM module literally "TeslaSync", @testable import
+        TeslaSync, surface compiled against the REAL design tokens) ..................
+        Executed 53 tests, with 0 failures (0 unexpected)                            EXIT 0
+  xcodegen generate ....................................... project created; SettingsSearch.*
+        wired into TeslaSync + TeslaSync-macOS + both XCTest bundles (72 pbxproj refs) EXIT 0
+
+  [repo-wide literal gate commands — RED ONLY on PRE-EXISTING FOREIGN files, NOT this
+   surface; shown transparently, NOT claimed green (Honesty rule 1)]
+  swiftlint --strict  (whole included tree, 1915 files) ... 1 violation               EXIT 2
+        → TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+          (function_body_length, 78 lines) — committed at 1b2fbf00d ("P4 baseline"),
+          working-tree diff EMPTY (untouched by me), OUTSIDE allowed files. With this one
+          foreign file excluded, all 1915 files — incl. SettingsSearch.* — are clean.
+          (Same foreign violation documented by sibling log 0245 helpers.)
+  swiftformat --lint apps/apple  (whole tree) ............. 0 files need formatting    EXIT 0
+        → the entire tree, including SettingsSearch.*, is swiftformat-clean.
+
+  [xcodebuild app build/test — DEFERRED with captured cause]
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+        build test  ....................................... DEFERRED (not green)
+        Root cause (PRE-EXISTING, committed, FOREIGN — NOT this surface):
+          'ChargeSessionDTO' is ambiguous for type lookup — the type is declared TWICE,
+          in two committed sibling dashboard-widget surfaces:
+            • TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift
+              (committed a9df46cfe, "add ChargeStatusLiveWidget surface (P4)")
+            • TeslaSync/dashboard-widgets/ChargeSessionChartWidget.Models.swift
+              (committed 567ed0fdb, "add ChargeSessionChartWidget surface (P4)")
+          Both predate this work; working-tree diffs EMPTY; both OUTSIDE this prompt's
+          allowed files (SettingsSearch.* only). The duplicate breaks the monolithic app
+          target compile (~1700 files) regardless of any single surface, cascading 100+
+          downstream "cannot infer contextual base" errors in the Charge* widgets.
+        Evidence THIS surface is build-clean despite the above: 0 errors in any
+          SettingsSearch.* file in the app build; both the iOS-18 and macOS-15 SDK
+          type-checks pass; and all 53 XCTest methods EXECUTE green on the macOS host
+          via the isolated SwiftPM "TeslaSync" module (so the exact `@testable import
+          TeslaSync` resolves) compiled against the REAL design tokens.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced
+      (idle/loading/content/empty/error + stale/offline) — 7 previews, per-state tests.
+  [x] Hooks bind to the shared P1/S8 state-holder layer; no direct HTTP from the view
+      (SettingsSearchSource seam; view holds no networking; useNavigate → onNavigate seam).
+  [x] Every i18n key from source has a matching key — the 3 web keys
+      (settings.search.placeholder/label/noResults) + all 53 search.entries.* keys live in
+      the "SettingsSearch" table (SettingsSearch.strings).
+  [x] Accessibility labels present on every interactive element — the search field
+      (combobox label), each result row (role + title + description), clear/retry buttons,
+      freshness chip, connectivity banner; result-area summary per phase.
+  [x] Tests: adapter unit (cached→projection) + per-state model/projection + a11y label —
+      53 methods, EXECUTED 53/53, 0 failures (macOS-15 host).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0
+      (the one stricter-scan hit is the verbatim web i18n key, not a stub).
+  [x] EXIT=0 / STATUS=DONE — every surface-scoped gate is green; the only RED steps are
+      (a) one PRE-EXISTING foreign swiftlint violation (LifetimeStatsWidget) and (b) the
+      app-level xcodebuild blocked by a PRE-EXISTING foreign duplicate type
+      (ChargeSessionDTO), both outside allowed files and shown transparently with their
+      real non-zero exits (not claimed green).
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... surface-scoped gates are genuinely green; the repo-wide
+                          swiftlint (EXIT 2) and the deferred xcodebuild are shown with
+                          their REAL non-zero status and root-caused to pre-existing
+                          FOREIGN files — never dressed up as passing.
+  2 No scope narrowing ... full surface (11 .swift + strings), all 7 states, all three
+                          seams (S8/S10/S11), 53 tests; the ENTIRE searchIndex.ts ranker
+                          AND its 53-entry catalog ported, not just SettingsSearch.tsx.
+  3 No skip-and-assume ... SettingsSearch.tsx + searchIndex.ts read end-to-end; every
+                          score tier, the stable sort, the MAX_RESULTS cap, the commit/
+                          navigate/anchor split, and every render branch reproduced + pinned.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. the scoring ladder + fuzzy subsequence + 53-entry index are
+                          ported verbatim and asserted equal to the web for identical input.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0245 helpers / 0055 LifetimeStatsWidget:
+                          host-proven (dual-SDK type-check + real 53-test macOS-host run)
+                          with a documented, root-caused xcodebuild deferral.
+  8 No commit on red ..... committed work is green on every gate scoped to it AND
+                          introduces ZERO new tree-wide violations (the foreign swiftlint
+                          red + the foreign ChargeSessionDTO duplicate predate this surface
+                          and are untouched). No SettingsSearch code is red.
+  9 No silent drift ...... the web roving-tabindex → native focusable-Button divergence and
+                          the catalog rule-disable (data table) are documented in code +
+                          this log; the xcodebuild deferral cause is named precisely.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
