@@ -1,0 +1,46 @@
+/*
+  MonthlyCostChart.strings
+  TeslaSync — P4 feature view · 0116 · MonthlyCostChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `MonthlyCostChart` resolves (table "MonthlyCostChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/charging/components/cost-analysis/MonthlyCostChart.tsx), verified
+  against web/src/i18n/en.json. The remainder back the native state envelope
+  (freshness chip, connectivity banner, loading / empty / error chrome) and the
+  chart's accessibility summary.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"costAnalysis.charts.monthlyCost" = "Monthly Cost Trend";
+"costAnalysis.charts.monthlyCost.aria" = "Monthly charging cost trend area chart";
+"costAnalysis.charts.col.month" = "Month";
+"costAnalysis.charts.col.cost" = "Cost ($)";
+"costAnalysis.charts.cost" = "Cost ($)";
+"costAnalysis.charts.noData" = "Not enough data";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"costAnalysis.charts.live" = "Live";
+"costAnalysis.charts.stale" = "Stale";
+"costAnalysis.charts.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"costAnalysis.charts.staleBanner" = "Reconnecting — cost data may be stale";
+"costAnalysis.charts.offlineBanner" = "Offline — showing last known cost data";
+
+/* --- Loading / error chrome --- */
+"costAnalysis.charts.errorTitle" = "Couldn't load monthly cost trend";
+"costAnalysis.charts.retry" = "Retry";
+
+/* --- Accessibility (VoiceOver summary) --- */
+"costAnalysis.charts.a11y.months" = "months";
+"costAnalysis.charts.a11y.total" = "total";
+"costAnalysis.charts.a11y.latest" = "latest";
+"costAnalysis.charts.a11y.range" = "range";
+"costAnalysis.charts.a11y.average" = "average";
+"costAnalysis.charts.a11y.loading" = "Loading monthly cost trend";
