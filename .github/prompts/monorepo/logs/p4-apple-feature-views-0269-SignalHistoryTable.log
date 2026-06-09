@@ -1,0 +1,130 @@
+=== P4 Feature view 0269 SignalHistoryTable (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/SignalHistoryTable.*
+Web src : web/src/features/telemetry/components/SignalHistoryTable.tsx (THE spec)
+Toolchain: Xcode 26 / iPhoneSimulator26.5 SDK / Swift 6 strict concurrency / swiftlint + swiftformat + pwsh present
+Disposition: code-complete + DEFERRED full-app Xcode gate (ADR-012), matching every P4 feature-view surface
+            to date (0010 ToolCard, 0031 FlagsTable, 0042 EventHistoryTable, 0048 SummaryStatsRow, 0096
+            AcDcStatsPanel). The COMMITTED artifact (SignalHistoryTable.* + this log) is GREEN on every
+            host-runnable gate AND on a real isolated iOS-simulator build + Swift-6 XCTest. The full-app
+            xcodebuild build/test is RED only on PRE-EXISTING, unrelated conditions this commit neither
+            introduces nor touches (zero SignalHistoryTable errors), deferred to the signed macos-latest
+            acceptance runner per apps/macos-pending-verifications.md.
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEP 1 — xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test
+────────────────────────────────────────────────────────────────────────────────
+  Result : ** BUILD FAILED ** (xcodebuild exit 65)
+  Errors : 568 total — 0 from SignalHistoryTable.* (grep 'error:' | grep -c SignalHistoryTable = 0)
+  Nature : ALL are cross-surface duplicate-symbol collisions produced by globbing all 1,879 sibling
+           feature-views into the single TeslaSync module (project.yml `path: TeslaSync/feature-views`):
+             336  error: cannot infer contextual base in reference to member 'X'  (e.g. .loaded/.live/.failed)
+             160  error: 'X' is ambiguous for type lookup in this context          (e.g. SafetyModel,
+                                                                                     ChargeStateDTO, FleetStatsBarModel)
+              52  error: 'X' requires a contextual type
+              16  error: reference to member 'X' cannot be resolved without a contextual type
+           This surface is namespaced (SignalHistory*/SH*/SignalLogInput) and contributes ZERO new
+           collisions. Pre-existing/baseline condition, owned by the P4 integration/acceptance prompt — NOT a
+           defect in this code and outside this prompt's allowed files.
+  IOS_EXIT=65   (DEFERRED — see ISOLATED VERIFICATION below)
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEP 2 — xcodebuild -scheme TeslaSync-macOS build test
+────────────────────────────────────────────────────────────────────────────────
+  Result : ** BUILD FAILED ** (xcodebuild exit 65)
+  Errors : 4 total — 0 from SignalHistoryTable.*, 0 compile errors. All four are development-signing:
+             2x "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+             2x "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+           Environmental (no dev certificate in this slot) — owned by the signed macos-latest CI runner per
+           apps/macos-pending-verifications.md. NOT a defect in this code.
+  MAC_EXIT=65   (DEFERRED — environmental signing)
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEP 3 — swiftlint --strict
+────────────────────────────────────────────────────────────────────────────────
+  Global (2,561 files): Found 1 violation, 1 serious.
+    /apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9 (opening_brace)
+    → PRE-EXISTING, in a dashboard-widget owned by another prompt; outside this surface's allowed files.
+  This surface (6 files): swiftlint lint --strict → "Found 0 violations, 0 serious in 6 files."
+  LINT_EXIT=2 global (1 pre-existing, unrelated) ; SURFACE_LINT_EXIT=0 (green)
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEP 4 — swiftformat --lint apps/apple
+────────────────────────────────────────────────────────────────────────────────
+  Global: "0/2565 files require formatting, 2 files skipped."
+  This surface (6 files): "0/6 files require formatting."
+  FORMAT_EXIT=0 (green)
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEP 5 — check-placeholders.ps1 -Path .../feature-views/SignalHistoryTable
+────────────────────────────────────────────────────────────────────────────────
+  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  PLACEHOLDER_EXIT=0 (green — no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+────────────────────────────────────────────────────────────────────────────────
+ISOLATED VERIFICATION (real Xcode 26 toolchain, this surface only — no sibling collisions)
+────────────────────────────────────────────────────────────────────────────────
+  • swiftc -typecheck -sdk iphonesimulator26.5 -target arm64-apple-ios18.0-simulator -swift-version 6
+      Inputs: the 11 real shared UI/token files (Tokens, TSDesign, TSMaterial, Typography, Badges, Buttons,
+              Cards, DataTable, Disclosure, Motion, Skeletons) + SignalHistoryTable.{Adapter,Model,swift,
+              Views,Previews}.swift
+      Result: TYPECHECK_EXIT=0 — 0 errors, 0 warnings. The full surface (incl. SwiftUI views + previews)
+              compiles against the REAL design system on the iOS 18 simulator SDK under Swift 6 strict mode.
+  • swift test (SwiftPM, platforms macOS v15, .swiftLanguageMode(.v6))
+      Inputs: real SignalHistoryTable.Adapter.swift + SignalHistoryTable.Model.swift as target "TeslaSync";
+              real SignalHistoryTable.Tests.swift as @testable test target.
+      Result: "Executed 26 tests, with 0 failures (0 unexpected)" — 26/26 GREEN under Swift 6 strict
+              concurrency. Covers: formatValue/valueType priority + JS numberString, JSON.stringify parity +
+              escaping, ISO/fractional/epoch timestamp parse + dash, fmtInt grouping + pageCount math, row
+              projection (palette index from selectedSignals, unique ids for duplicate composite keys),
+              comparator, projection phases (loading→error→data/empty) + carried pagination metadata, model
+              wiring + view.opened telemetry-once + clamped goToPage + stale one-shot auto-refresh +
+              offline-no-refresh, and the a11y Type label / row summary / header meta.
+
+────────────────────────────────────────────────────────────────────────────────
+PARITY (web SignalHistoryTable.tsx → native)
+────────────────────────────────────────────────────────────────────────────────
+  Data sources : useTranslation → SHStrings (P1/S10 facade) ; useDateFormat → SignalHistoryFormat.absolute.
+  Shared maps  : GlassPanel→TSGlassPanel · DataTable/Column→TSDataTable/TSColumn(.rowDetail JSON) ·
+                 Pagination→TSPagination (1-based↔0-based bridge) · Badge→tokenised tinted capsule ·
+                 EmptyState→SHEmptyView · Skeleton→TSSkeleton · FadeIn→TSFadeIn · CHART_COLORS→TSChartPalette.
+  Columns      : Timestamp (sortable, formatDateTime) · Signal (palette dot+mono when in selectedSignals,
+                 else primary mono) · Value (mono formatValue) · Type (badge: number→info/string→success/
+                 boolean→warning). Row expansion = JSON.stringify(r,null,2) parity.
+  Header       : Activity icon (waveform.path.ecg) + title(title ?? "Signal Data") + "Page X · fmtInt(total) total".
+  States       : loading · data · empty("No data" / "No signal data found for this query.") · error(retry,
+                 native QueryError peer) · stale(chip+banner+1-shot auto-refresh) · offline(chip+banner).
+                 EVERY state renders — no hidden surface.
+  i18n         : every web-localized string + the value-type labels + native chrome resolve through the
+                 per-surface "SignalHistoryTable" .strings table (web English as the fallback value); no
+                 English literal in native code. Shipped as a per-surface table (NOT edited into the shared
+                 Localizable.xcstrings — parallel-unsafe), exactly like 0042/0096.
+  a11y         : VoiceOver header trait; refresh/retry/pagination/row-expand labelled; signal dot hidden;
+                 row summary + raw-payload labels; Dynamic Type via system fonts; Reduce-Motion via TSFadeIn/
+                 TSSkeleton. P1/S11 view.opened emitted once with slug "SignalHistoryTable".
+
+────────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+────────────────────────────────────────────────────────────────────────────────
+  1  No red-as-green   : the RED full-app iOS/macOS xcodebuild (exit 65) + the 1 global swiftlint violation are
+                         reported verbatim above with exit codes; NONE are claimed green. DONE rests on the
+                         host gates + isolated real-toolchain build/test that ARE green for this surface.
+  2  No scope narrowing: all four web columns, the row-expansion JSON, the pagination, the header meta, and
+                         every state reproduced; nothing dropped.
+  3  No skip-and-assume: every gate command actually executed; macOS + iOS builds run to completion and their
+                         real errors enumerated (not assumed).
+  4  No stubs as final : zero TODO/stub/mock/placeholder (gate step 5 green); full implementations.
+  5  No parity shortcut: value/type/JSON/timestamp/pagination logic ported 1:1 from the web source + helpers.
+  6  No delegation     : implemented directly; no agents/sub-tasks.
+  7  No predecessor bypass: consumes P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4
+                         shared components as-is; did NOT self-register project.yml/.swiftlint.yml (already
+                         glob feature-views) and did NOT edit the shared xcstrings catalog.
+  8  No commit on red  : the COMMITTED artifact (SignalHistoryTable.* + this log) is GREEN on every host gate
+                         AND on a real isolated iOS-sim build + 26/26 Swift-6 XCTest; the deferred full-app
+                         gate is RED only on pre-existing, unrelated conditions (sibling-surface symbol
+                         collisions + macOS dev-signing + 1 pre-existing dashboard-widget lint nit) that this
+                         commit neither introduces nor touches and that lie outside its allowed files.
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/feature-views/SignalHistoryTable.* + this log.
+  10 Log ends with EXIT/STATUS below.
+
+EXIT=0
+STATUS=DONE
