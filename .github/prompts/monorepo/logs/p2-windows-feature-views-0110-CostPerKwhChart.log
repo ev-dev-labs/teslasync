@@ -1,0 +1,95 @@
+=== P2 Feature view 0110 CostPerKwhChart (Windows) ===
+Prompt : p2-windows / feature-views / W-0110-CostPerKwhChart
+Branch : auto/p/p2-windows__feature-views__W-0110-CostPerKwhChart.prompt.md
+Web src: web/src/features/charging/components/cost-analysis/CostPerKwhChart.tsx   (THE specification)
+Native : apps/windows/TeslaSync.App/feature-views/CostPerKwhChart/CostPerKwhChart.{cs,Model.cs}
+Tests  : apps/windows/TeslaSync.App.Tests/FeatureViews/CostPerKwhChartTests.cs
+
+Platform capability (ADR-002 / ADR-004 / ADR-009):
+  WinUI 3 / Windows App SDK + .NET 10 PRESENT -> `dotnet build -c Release` succeeds (see BUILD below).
+  .NET SDK 10.0.300 ; Microsoft.WindowsAppSDK pinned via Directory.Packages.props ;
+  TFM net10.0-windows10.0.19041.0 ; Fluent Design token dictionary apps/design/generated/windows/Tokens.xaml.
+
+Surface model (presentational parity, mirrors the web prop-driven component):
+  The web CostPerKwhChart is a pure presentational child of the cost-analysis page: it takes a
+  data: { date; costPerKwh }[] prop and renders either a recharts LineChart (data.length > 0) or a
+  centered "Not enough data" empty state. It performs no fetching; the page owns the query lifecycle.
+  The native surface follows the established presentational-leaf precedent (BatteryLevelChart, 0097): a
+  ContentControl bound to a CostPerKwhChartModel (the web data prop + the parent's fetch flag),
+  projected by the WinUI-free CostPerKwhChartProjection into a CostPerKwhChartDisplay. Never any HTTP.
+
+Hooks bound (web -> native ; P1/S8 + P1/S9 + P1/S10):
+  useTranslation  -> ILocalizer            (i18n facade ; English fallbacks asserted by PassthroughLocalizer)
+  useChartPalette -> ChartPalette          (categorical brand brushes ; line = KeyForIndex(2) = web palette[2])
+  useFormatting   -> ScalarFormatters.FormatCurrency   (the native formatCurrency ; 2-dp range summary)
+
+Shared components (web -> native counterparts):
+  @/components/ui     GlassPanel        -> TsGlassPanel (p-4 = Thickness 16) ; section title -> PanelTitle
+  @/components/charts LineChart/Line/XAxis/YAxis/Tooltip -> TsLineChart (TsCartesianChart) + built-in
+                      TsChartTooltip cursor ; empty -> TsEmptyState ; loading -> TsSkeleton
+  (Per the established native charting precedent (SpeedTrendChart/SessionComparisonChart) the cartesian
+   surface draws a numeric value axis; the web formatCurrency value-axis is reproduced for assistive
+   technology via the currency-formatted range summary, see Accessibility.)
+
+States (every branch renders a visible surface ; none hidden):
+  [x] loading  parent fetch in flight -> title + TsSkeleton(260) ; LiveRegion announce
+  [x] empty    web data.length === 0  -> title + TsEmptyState("Not enough data") (web h-[260px] box)
+  [x] ready    web data.length > 0    -> title + TsLineChart (single $/kWh line, palette[2], 2-dp)
+  error / stale / offline are owned by the data-fetching parent page, NOT this presentational leaf —
+  exactly as the web source has only data/empty branches; rationale documented on CostPerKwhChartState
+  (the same scoping the BatteryLevelChart precedent uses).
+
+i18n keys (P1/S10 catalog Strings/en/Resources.resw ; exact web t() defaults ; no English literals in code):
+  costAnalysis.charts.costPerKwh -> "Cost per kWh Trend"   (GlassPanel title)
+  costAnalysis.charts.rateLabel  -> "$/kWh"                (Line series name)
+  costAnalysis.charts.noData     -> "Not enough data"      (empty state)
+  common.loading                 -> "Loading"              (loading branch)
+  All four resolve through the facade; PassthroughLocalizer asserts the fallbacks row-for-row in tests.
+
+Accessibility:
+  Surface AutomationProperties.Name per state (title + loading / empty message / rate + currency range).
+  Chart AutomationName = currency range summary ("$min-$max" via FormatCurrency, en-dash) — the spoken
+  analogue of the web formatCurrency value axis. Decorative header icon = AccessibilityView.Raw.
+  System font scale + theme (light/dark/high-contrast) honoured via tokens (no hard-coded hex).
+
+Diagnostics (P1/S11):
+  CostPerKwhChartDiagnostics.RecordViewOpened -> "view.opened slug=CostPerKwhChart" ; PII-safe
+  (never a date label or rate value ; test asserts the line carries no '$').
+
+Tests (CostPerKwhChartTests, 25 facts, headless net10.0):
+  branch precedence (loading > empty > ready, web data.length gate), point indexing + date passthrough +
+  em-dash for a blank date, non-finite (NaN/Infinity) guard, currency range summary (min-max / single /
+  empty / 2-dp padding through FormatCurrency), resolved i18n labels, per-state Narrator names,
+  diagnostics slug + PII-safety, argument validation. All green.
+
+Pre-req repair (recurring; cf. 0058-HeroGauges log "merge=union corruption"):
+  apps/windows/TeslaSync.App.Tests.csproj was committed at HEAD with multiple concatenated <Project>
+  roots + a malformed nested XML comment + ~2x duplicated <Compile> items (815 raw / 415 unique). The
+  solution failed to load (`dotnet build`/`dotnet test` -> MSB4025: "An XML comment cannot contain '--'"
+  then "There are multiple root elements") BEFORE any CostPerKwhChart work. Repaired in place to ONE
+  <Project> root with a single, deduplicated + sorted Compile ItemGroup (416 entries = the 415 canonical
+  links + the new CostPerKwhChart.Model.cs link). No linked source dropped (the union is preserved);
+  verified by the full headless suite still compiling and passing 9172 tests.
+
+=== GATE ===
+SURFACE DELIVERABLE GATE  (build + headless tests + format + placeholder) : ALL EXIT=0
+  BUILD_EXIT=0          dotnet build TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+                        (17 warnings, all pre-existing in TeslaSync.App.Core; TeslaSync.App builds clean
+                         under TreatWarningsAsErrors=true, i.e. the new view + model are warning-free)
+  TEST_HEADLESS_EXIT=0  dotnet test TeslaSync.App.Tests -c Release -> Passed 9172 / Failed 0
+                        (CostPerKwhChartTests: Passed 25 / Failed 0)
+  FORMAT_EXIT=0         dotnet format TeslaSync.sln --verify-no-changes -> no changes (LF normalised)
+  PLACEHOLDER_EXIT=0    check-placeholders.ps1 -Path apps/windows/.../CostPerKwhChart -> PLACEHOLDER_COUNT=0
+
+APP-WIDE UIAUTOMATION SUITE : TEST_UIAUTOMATION_EXIT=1  -- BLOCKED on absent env-supplied WinAppDriver
+  dotnet test TeslaSync.App.UITests -> Failed 147 / Passed 0. Every test throws
+  TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException:
+    "UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+     http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH."
+  By design (WinAppDriverSession) these fail loudly rather than skip; they require an env-supplied
+  UI-automation runner that is not present on this runner. They are unrelated to this surface — the 147
+  are shell / navigation tests and CostPerKwhChart adds no UI-automation test. (Identical to the
+  established precedent, e.g. 0058-HeroGauges, where this same suite is BLOCKED and the surface is DONE.)
+
+EXIT=0
+STATUS=DONE
