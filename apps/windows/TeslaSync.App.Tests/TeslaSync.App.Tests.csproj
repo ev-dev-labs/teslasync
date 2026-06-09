@@ -509,6 +509,19 @@
     boundaries were removed and every previously linked source consolidated below (deduplicated to
     avoid NETSDK1022), preserving every link from all discarded roots and adding the new
     TimeToChargeSection surface.
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    P2/W2-0001 â€” headless unit tests for the UI-thread-free logic models. Targets plain net10.0 so
+    `dotnet test` runs without a WinUI/UI-thread host.
+
+    Repair note (P2 feature-views/0098 ChargerSpecsPanel): a chain of auto-integration merges had
+    left this file with multiple concatenated <Project> roots plus several stray </Project> /
+    </ItemGroup> boundaries and orphaned comment fragments, so the solution failed to load with
+    MSB4025 "multiple root elements". The duplicate roots and broken boundaries were removed and the
+    union of every linked WinUI-app source (the UI-thread-free *.Model/Source/ViewModel files, which
+    target a WinUI TFM and so are <Compile>-linked here rather than project-referenced) was folded
+    back into this single canonical project. No linked source was dropped.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -531,8 +544,9 @@
   </ItemGroup>
 
   <!--
-    Language-neutral SI golden vectors (apps/shared/spec/units-golden.json) copied next to the test
-    assembly so the C# behavior port is verified row-for-row against the web truth (ADR-004).
+    Fixtures copied next to the test assembly: the language-neutral SI golden vectors
+    (apps/shared/spec/units-golden.json) verify the C# behaviour port row-for-row against the web
+    truth (ADR-004); the app manifest + widget template back the packaging/widget model tests.
   -->
   <!-- Test fixtures / manifests copied next to the test assembly. -->
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget card template). -->
@@ -578,6 +592,9 @@
     Linked WinUI-free feature-view, dashboard-widget and shared logic sources (Model / Source / ViewModel).
     The headless (net10.0) test project verifies each adapter + projection + diagnostics without a UI host;
     the WinUI views themselves are exercised by the app build. Single deduplicated, sorted union.
+    Linked WinUI-app test sources (one <Compile> per UI-thread-free *.Model/Source/ViewModel file),
+    sorted by path. The matching test classes themselves live under this project and are picked up by
+    the SDK default-compile glob.
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
@@ -861,6 +878,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Source.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChangesPanel\ChangesPanel.Model.cs" Link="FeatureViews\ChangesPanel\ChangesPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargerSpecsPanel\ChargerSpecsPanel.Model.cs" Link="FeatureViews\ChargerSpecsPanel\ChargerSpecsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingBreakdownSlide.Model.cs" Link="FeatureViews\ChargingBreakdownSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Model.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Source.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Source.cs" />
