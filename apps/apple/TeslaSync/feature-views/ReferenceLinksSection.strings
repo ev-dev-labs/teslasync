@@ -1,0 +1,45 @@
+/*
+  ReferenceLinksSection.strings
+  TeslaSync — P4 feature view · 0007 · ReferenceLinksSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ReferenceLinksSection` resolves (table "ReferenceLinksSection") lives here with
+  its web `t(key, default)` value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of title keys the web source passes to
+  `t(link.title)` (features/admin/components/devtools/ReferenceLinksSection.tsx via
+  the `REFERENCE_LINKS` constant). These keys are absent from the web en catalog, so
+  the web renders the raw key text; the native fallbacks here humanise each key from
+  its destination, matching the sibling `ClientUtilitiesSection` precedent. The
+  remaining keys back the native-only chrome (the freshness chip + banner, the
+  loading / empty / error copy, and accessibility), so the Swift sources hold no
+  English literals.
+*/
+
+/* --- Title keys from the web source (`REFERENCE_LINKS`, parity) --- */
+"devtools.ref.fleetOverview" = "Fleet API Overview";
+"devtools.ref.partnerEndpoints" = "Partner Endpoints";
+"devtools.ref.devPortal" = "Developer Portal";
+"devtools.ref.telemetryGuide" = "Fleet Telemetry Guide";
+
+/* --- Native chrome: freshness chip + connectivity banner --- */
+"devtools.ref.live" = "Live";
+"devtools.ref.stale" = "Stale";
+"devtools.ref.offline" = "Offline";
+"devtools.ref.staleBanner" = "Reconnecting — the links may be out of date";
+"devtools.ref.offlineBanner" = "Offline — showing the last known links";
+"devtools.ref.refresh" = "Refresh";
+
+/* --- Native chrome: loading / empty / error --- */
+"devtools.ref.loadingA11y" = "Loading reference links";
+"devtools.ref.empty" = "No reference links available";
+"devtools.ref.emptyHint" = "Developer documentation links will appear here once they are enabled.";
+"devtools.ref.errorTitle" = "Couldn't load reference links";
+"devtools.ref.retry" = "Retry";
+
+/* --- Accessibility --- */
+"devtools.ref.a11y" = "Reference links";
+"devtools.ref.linkA11y" = "link";
