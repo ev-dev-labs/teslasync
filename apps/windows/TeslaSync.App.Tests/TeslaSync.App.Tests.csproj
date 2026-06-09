@@ -334,29 +334,6 @@
       (net10.0) test project verifies the adapter + per-state transitions without a UI host. The WinUI view
       itself (TirePressureVisualWidget.cs) is exercised by the app build.
     -->
-    <!-- TirePressureVisualWidget's three WinUI-free sources are linked once in the dashboard-widgets group above. -->
-      TirePressureVisualWidget's three WinUI-free sources are linked exactly once (in the widget ItemGroup
-      above). Two further duplicate triples here were a pre-existing merge artifact that made the build fail
-      with NETSDK1022 "Duplicate 'Compile' items"; removed so the gate can build.
-    -->
-      exercised by TirePressureVisualWidgetTests. The three WinUI-free source files are linked in here once
-      (NETSDK1022: do not duplicate these identical Compile items elsewhere — duplicates break the test build).
-    -->
-      exercised by TirePressureVisualWidgetTests; the three WinUI-free source files are linked in here once
-      (a prior edit dropped these Compile items, which the TirePressureVisualWidgetTests build requires).
-    -->
-      P2 dashboard-widgets (TirePressureVisualWidget): its WinUI-free logic (the TirePressureLevel /
-      TirePressureReading model, the ITirePressureVisualSource seam and the TirePressureVisualViewModel
-      state-holder) is exercised by TirePressureVisualWidgetTests. Linked exactly once here in the
-      dashboard-widgets group. (A prior merge's NETSDK1022 duplicate-removal dropped all three copies
-      instead of just the extra duplicates, leaving the test without its types.)
-    -->
-      P2 dashboard-widgets (TirePressureVisualWidget): its UI-thread-free logic (the level/reading model, the
-      projection, the source seam, and the state-holder view-model) is WinUI-free by construction and is
-      exercised by TirePressureVisualWidgetTests. Link those three source files in exactly once so the headless
-      (net10.0) test project verifies the adapter + per-state transitions without a UI host. The WinUI view
-      itself (TirePressureVisualWidget.cs) is exercised by the app build.
-    -->
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
@@ -605,6 +582,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Model.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Source.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.ViewModel.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0024-UuidGenerator): the surface's UI-thread-free logic (the history projection, the
     RFC 4122 v4 generation seam + format, the registration / PII-safe diagnostics and the state-holder
     view-model) lives in the WinUI app project but is WinUI-free by construction. Link those two source
@@ -615,6 +595,9 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.Model.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.ViewModel.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0023 UrlEncoder): the surface's UI-thread-free logic (the pure
     encodeURIComponent/decodeURIComponent codec, the registration metadata, the PII-safe diagnostics, and
     the state-holder view-model) lives in the WinUI app project but is WinUI-free by construction. Link those
@@ -636,6 +619,9 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\AuditPanel\AuditPanel.Model.cs" Link="FeatureViews\AuditPanel\AuditPanel.Model.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (W-0025 VinDecoder): the VinDecoder surface's UI-thread-free logic (the pure VIN decode
     + reference tables + field catalog model and the state-holder view-model) lives in the WinUI app project
     but is WinUI-free by construction. Link those two source files in so the headless (net10.0) test project
@@ -694,6 +680,22 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\FlagsTable\FlagsTable.Model.cs" Link="FeatureViews\FlagsTable\FlagsTable.Model.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0041 ResponseViewer: the API-playground response viewer's UI-thread-free logic (the
+    ApiResponseSnapshot / RequestHistoryEntry mirrors, the three-branch projection, the formatBytes /
+    statusColor / method-badge helpers, the body-rendering rule, the pure code-snippet generator + snippet
+    projection, the source seam, the state-holder view-model, the registration and the PII-safe diagnostics)
+    lives in the WinUI app project under feature-views/ but is WinUI-free by construction. Link the three
+    source files in so this headless (net10.0) test project verifies the adapter + per-state transitions +
+    a11y names + the view.opened diagnostics without a UI host. The WinUI views themselves (ResponseViewer.cs
+    and ResponseViewer.Snippet.cs) are exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Model.cs" Link="FeatureViews\ResponseViewer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Source.cs" Link="FeatureViews\ResponseViewer.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.ViewModel.cs" Link="FeatureViews\ResponseViewer.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
