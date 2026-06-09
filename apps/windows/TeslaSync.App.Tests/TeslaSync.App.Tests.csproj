@@ -86,6 +86,17 @@
     views themselves are exercised by the app build. The link set below is the deduplicated union of
     every previously linked source (kept as ONE valid Project root after a recurring integration-merge
     corruption had concatenated multiple roots and failed XML load with MSB4025).
+    P2/W2-0001 - headless unit tests for the UI-thread-free logic models (feature-view +
+    dashboard-widget + shared Model/Source/ViewModel sources). Targets plain net10.0 so
+    `dotnet test` runs without a WinUI/UI-thread host; the WinUI app targets a WinUI TFM, so its
+    UI-thread-free sources are <Compile>-linked here rather than project-referenced. The matching
+    test classes live under this project and are picked up by the SDK default-compile glob.
+
+    Keep this file as ONE <Project> root with a single Compile ItemGroup: the deduplicated,
+    path-sorted union of every linked source. A chain of integration merges had repeatedly
+    re-concatenated multiple <Project> roots plus duplicate <Compile> items, failing XML load
+    with MSB4025; consolidated here into a single valid root (no linked source dropped) plus the
+    CostSummaryCards (charging cost-analysis) feature-view surface logic links.
   -->
 
   <PropertyGroup>
@@ -117,6 +128,10 @@
   <!--
     Fixtures copied next to the test assembly: the language-neutral SI golden vectors (ADR-004), the
     MSIX package manifest (packaging assertions) and the packaged widget Adaptive Card template.
+  <!--
+    Fixtures copied next to the test assembly: the language-neutral SI golden vectors
+    (apps/shared/spec/units-golden.json) verify the C# behaviour port row-for-row against the web
+    truth (ADR-004); the app manifest + widget template back the packaging/widget model tests.
   -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
@@ -146,6 +161,11 @@
   <!-- Linked UI-thread-free sources from the WinUI app project (deduplicated union). -->
   <!-- Linked WinUI-free sources from the WinUI app project (deduplicated, path-sorted union). -->
     Linked WinUI-free feature-view, dashboard-widget and shared logic sources (deduplicated union).
+  -->
+    Linked WinUI-free feature-view, dashboard-widget and shared logic sources (Model / Source /
+    ViewModel). The headless (net10.0) test project verifies each adapter + projection + diagnostics
+    without a UI host; the WinUI views themselves are exercised by the app build. Single
+    deduplicated, path-sorted union of the test surface.
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
@@ -456,6 +476,12 @@
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.Model.cs" Link="FeatureViews\CostForecastSection\CostForecastSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.Source.cs" Link="FeatureViews\CostForecastSection\CostForecastSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.ViewModel.cs" Link="FeatureViews\CostForecastSection\CostForecastSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Model.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Source.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.ViewModel.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.Model.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.Source.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.ViewModel.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
