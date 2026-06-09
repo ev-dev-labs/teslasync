@@ -87,6 +87,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeStatusLiveWidget\ChargeStatusLiveWidget.Model.cs" Link="Widgets\ChargeStatusLiveWidget\ChargeStatusLiveWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeStatusLiveWidget\ChargeStatusLiveWidget.ViewModel.cs" Link="Widgets\ChargeStatusLiveWidget\ChargeStatusLiveWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeStatusLiveWidget\ChargeStatusLiveWidget.Source.cs" Link="Widgets\ChargeStatusLiveWidget\ChargeStatusLiveWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyFlowAnimatedWidget\EnergyFlowAnimatedWidget.Model.cs" Link="Widgets\EnergyFlowAnimatedWidget\EnergyFlowAnimatedWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyFlowAnimatedWidget\EnergyFlowAnimatedWidget.ViewModel.cs" Link="Widgets\EnergyFlowAnimatedWidget\EnergyFlowAnimatedWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyFlowAnimatedWidget\EnergyFlowAnimatedWidget.Source.cs" Link="Widgets\EnergyFlowAnimatedWidget\EnergyFlowAnimatedWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeStatusWidget\ChargeStatusWidget.Model.cs" Link="Widgets\ChargeStatusWidget\ChargeStatusWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeStatusWidget\ChargeStatusWidget.ViewModel.cs" Link="Widgets\ChargeStatusWidget\ChargeStatusWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ChargeStatusWidget\ChargeStatusWidget.Source.cs" Link="Widgets\ChargeStatusWidget\ChargeStatusWidget.Source.cs" />
