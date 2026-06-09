@@ -1,0 +1,43 @@
+/*
+  PowerProfileChart.strings
+  TeslaSync — P4 feature view · 0146 · PowerProfileChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `PowerProfileChart` resolves (table "PowerProfileChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/drive-detail/PowerProfileChart.tsx). The remainder back the
+  native state envelope (freshness chip, connectivity banner, loading / empty / error
+  chrome) and the accessibility summary scaffolding.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.powerProfile" = "Power Profile";
+"driveDetail.powerProfile.aria" = "Drive power profile area chart over time";
+"driveDetail.power" = "Power";
+"driveDetail.noChartData" = "No telemetry data available";
+"driveDetail.maxPower" = "Max Power";
+"driveDetail.maxRegen" = "Max Regen";
+"driveDetail.avgLabel" = "Avg";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"driveDetail.live" = "Live";
+"driveDetail.stale" = "Stale";
+"driveDetail.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"driveDetail.staleBanner" = "Reconnecting — the power trace may be out of date";
+"driveDetail.offlineBanner" = "Offline — showing the last loaded power trace";
+
+/* --- Loading / empty / error chrome --- */
+"driveDetail.loading" = "Loading power profile";
+"driveDetail.emptyHint" = "The power profile appears here once this drive has streamed a few telemetry samples.";
+"driveDetail.errorTitle" = "Couldn't load the power profile";
+"driveDetail.retry" = "Retry";
+
+/* --- Accessibility --- */
+"driveDetail.chart.samples" = "samples";
