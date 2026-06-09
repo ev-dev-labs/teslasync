@@ -36,6 +36,9 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SentryEventLogWidget\SentryEventLogWidget.Model.cs" Link="Widgets\SentryEventLogWidget\SentryEventLogWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SentryEventLogWidget\SentryEventLogWidget.ViewModel.cs" Link="Widgets\SentryEventLogWidget\SentryEventLogWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SentryEventLogWidget\SentryEventLogWidget.Source.cs" Link="Widgets\SentryEventLogWidget\SentryEventLogWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.Model.cs" Link="Widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.ViewModel.cs" Link="Widgets\OnboardingChecklistWidget\OnboardingChecklistWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\GuardModeWidget\GuardModeWidget.Model.cs" Link="Widgets\GuardModeWidget\GuardModeWidget.Model.cs" />
