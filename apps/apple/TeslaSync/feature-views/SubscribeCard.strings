@@ -1,0 +1,48 @@
+/*
+  SubscribeCard.strings
+  TeslaSync — P4 feature view · 0255 · SubscribeCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SubscribeCard` resolves (table "SubscribeCard") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The web source (features/system/components/status/SubscribeCard.tsx) is a
+  presentational component that renders English literals directly (its only
+  external dependency is the router `<Link>`). Those literals are promoted here to
+  keys with byte-equal English values so the Swift sources hold no hardcoded
+  prose. The second group backs the native-only chrome — the VoiceOver copy and
+  the loading / empty / error / connectivity states the prompt requires.
+*/
+
+/* --- Keys promoted from the web source (header + caption) --- */
+"subscribe.title" = "Get notified about incidents";
+"subscribe.description" = "Self-hosted: configure your own channels for status events.";
+
+/* --- Keys promoted from the web source (the five <ChannelTile> rows) --- */
+"subscribe.channel.email.label" = "Email";
+"subscribe.channel.email.description" = "SMTP-based delivery";
+"subscribe.channel.slack.label" = "Slack";
+"subscribe.channel.slack.description" = "Webhook channel";
+"subscribe.channel.discord.label" = "Discord";
+"subscribe.channel.discord.description" = "Webhook channel";
+"subscribe.channel.webhook.label" = "Webhook";
+"subscribe.channel.webhook.description" = "Custom HTTP endpoint";
+"subscribe.channel.browserPush.label" = "Browser push";
+"subscribe.channel.browserPush.description" = "Opt-in PWA notifications";
+
+/* --- Native chrome: accessibility --- */
+"subscribe.openHint" = "Opens %@";
+"subscribe.loadingA11y" = "Loading notification channels";
+
+/* --- Native chrome: empty / error states --- */
+"subscribe.emptyTitle" = "No channels";
+"subscribe.emptyHint" = "Notification channels will appear here.";
+"subscribe.errorTitle" = "Couldn't load channels";
+"subscribe.retry" = "Retry";
+
+/* --- Native chrome: live-state connectivity chip --- */
+"subscribe.live" = "Live";
+"subscribe.stale" = "Stale";
+"subscribe.offline" = "Offline";
