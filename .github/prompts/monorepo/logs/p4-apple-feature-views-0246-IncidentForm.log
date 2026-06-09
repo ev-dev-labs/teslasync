@@ -1,0 +1,226 @@
+=== P4 Feature view 0246 IncidentForm (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/IncidentForm.*
+Web spec: web/src/features/system/components/status/IncidentForm.tsx
+Tier    : Feature view (composed status component below page level)
+Runner  : Darwin · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftformat + swiftlint + pwsh + xcodegen + gradle/KMP present
+ADR refs: ADR-002 (one SwiftUI source group, iOS+macOS) · ADR-004 (KMP Shared core) · ADR-009
+
+Capability check (prompt gate): SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 — ALL PRESENT on this
+runner (Xcode 26.5 ships the iOS 26.5 + macOS 26.5 SDKs which include the 18.0/15.0 deployment targets; iPhone 16
+simulator present + booted). This surface uses no chart/map (the web source has none). NOT BLOCKED.
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: IncidentForm.* + this log)
+--------------------------------------------------------------------------------
+  IncidentForm.Types.swift     — pure, SwiftUI-free value model: IncidentSeverity (minor/major/critical) +
+                                 IncidentStatus (investigating/identified/monitoring/resolved) with web option order +
+                                 web `useState` defaults; IncidentDraft (controlled form state); CreateIncidentRequest
+                                 (the web create body: title / severity / status / initial_message / affected_components);
+                                 CreatedIncidentSummary; CreateIncidentError (offline / failed). IncidentFieldBounds
+                                 mirrors the web client+server limits (title 3–200, message ≤4000). Reuses the shared
+                                 module `LocalizedText` (ConditionBuilder.Types.swift) — not redefined.
+  IncidentForm.Adapter.swift   — pure projection core (Foundation only): the web title guard `trim().length < 3`,
+                                 the request builder (`initial_message: message.trim() || undefined`,
+                                 `affected_components: components.split(',').map(trim).filter(Boolean)`), the maxLength
+                                 clamps, the submit-button label (`isPending ? 'Logging…' : 'Log incident'`), the toast
+                                 projection (validation / success / offline / `err.message`→fallback), the severity/
+                                 status option text, and the a11y builders. All copy as `LocalizedText` descriptors.
+  IncidentForm.Model.swift     — P1/S8 state holder (@MainActor @Observable IncidentFormModel: the controlled fields,
+                                 the submit phase idle/submitting/succeeded/failed, the toast, the `shouldDismiss` signal
+                                 the host honors on success = web `onClose()`), the P1/S8 create seam (IncidentCreating,
+                                 web `useCreateIncident` + list invalidation), the InMemory + Controllable sources, the
+                                 P1/S11 telemetry seam (view.opened, once) + slug, and the P1/S10 facade
+                                 (IncidentFormStrings). SwiftUI-free (Foundation/Observation/OSLog) → host-runs.
+  IncidentForm.swift           — SwiftUI surface: the web `<Modal title="Log an incident">` as a self-contained,
+                                 sheet-presentable card (title + close), the controlled form (title / severity+status
+                                 2-col / affected components / initial message), the Cancel + primary submit actions
+                                 (spinner + "Logging…" + disabled while pending), and the toast banner. Emits the P1/S11
+                                 view.opened on appear, autofocuses the title (web `autoFocus`), runs `onClose()` on the
+                                 success dismiss signal. Built from P1/S9 tokens + shared TS components; no view I/O.
+  IncidentForm.Views.swift     — the SwiftUI i18n bridge (IFView) + the labeled-field wrapper (web `<label>` + muted
+                                 note), the title/severity/status/components/message fields (TSTextField/TSSelect/
+                                 TSTextArea), the responsive actions bar (web `flex justify-end`), and the tone-colored
+                                 dismissible toast. Full a11y (labels + hints + identifiers); icons decorative.
+  IncidentForm.Previews.swift  — #if DEBUG previews: empty / filled editing / submitting / validation / success /
+                                 offline / generic-failure, driven by the in-memory source + DEBUG preview seams.
+  IncidentForm.Tests.swift     — XCTest (co-located → TeslaSync(/-macOS) test bundles): the Adapter projections + the
+                                 model lifecycle (success→succeeded+invalidate+dismiss, validation→idle+toast+no seam
+                                 call, offline, generic failure, in-flight + re-entrancy guard, clamps, dismiss,
+                                 view.opened-once) + the i18n facade. The identical assertions execute GREEN in the host
+                                 harness below (56/56).
+  IncidentForm.strings         — per-surface P1/S10 i18n table (every web string + native chrome).
+
+--------------------------------------------------------------------------------
+PARITY (reproduced from the web source — composition, data, states, i18n)
+--------------------------------------------------------------------------------
+  Data hooks : web useCreateIncident (POST /status/incidents + list invalidation) → P1/S8 `IncidentCreating` seam ;
+               web useToast (success/error) → the model's published `IncidentFormToast` + the view's toast banner ;
+               web useId (label/input associations) → SwiftUI label-for-control + FocusState (title autoFocus).
+  Submit     : web handleSubmit → `IncidentFormModel.submit()`: trim title, guard length<3 (toast.error, NO network,
+               stay open), else mutateAsync({ title, severity, status, initial_message?, affected_components[] }) →
+               toast.success("Incident logged.") + onClose() ; onError → toast.error(err.message ?? 'Failed to log
+               incident'). Button "Logging…" + disabled while pending. Re-entrancy guarded.
+  i18n keys  : every web literal shipped in the "IncidentForm" table — title "Log an incident"; labels Title / Severity /
+               Status / Affected components (+"(comma-separated, optional)") / Initial timeline message (+"(optional)");
+               options Minor/Major/Critical + Investigating/Identified/Monitoring/Resolved; prompts; Cancel / "Log
+               incident" / "Logging…"; toasts "Title must be at least 3 characters." / "Incident logged." / "Failed to
+               log incident". Native-only chrome (still localized): close, offline toast, dismiss, a11y hints. The view
+               holds no bare English literal (all via the IncidentFormStrings facade).
+  States     : this is a create FORM — the web source has NO data fetch (no useQuery), so the generic loading / empty /
+               stale read-states are N/A by parity (no async read source exists to be in them). The form's real states
+               ARE reproduced and tested, none hidden: editing (always-rendered fields, never a blank box) / submitting
+               ("Logging…", disabled) / validation-error (toast) / submit-error (generic + offline toast = the prompt's
+               `error`/`offline` branches) / success (toast + dismiss). Every branch has a preview + a unit test + an
+               executed host check.
+  Apple HIG  : SwiftUI card dialog (sheet-presentable), native menu Pickers for the selects, TextEditor for the
+               multiline message, ProgressView on the in-flight submit, Dynamic Type (token fonts), Reduce-Motion-safe
+               animations, VoiceOver labels/hints on every control, decorative icons hidden. iOS 18 / iPadOS 18 (compact
+               width stacks the selects + actions) / macOS 15 (AppKit token branches) all compile.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+       -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator
+       (IncidentForm .Types/.Adapter/.Model/.swift/.Views/.Previews vs the REAL design system: 40 files from
+        Sources/Components + Sources/Design + design/generated/apple/Tokens.swift — the exact symbols the app build
+        resolves: TSGlassPanel/TSCard, TSButton, TSSelect/TSTextField/TSTextArea, TSLabel/TSPanelTitle, Color.TS,
+        Font.TS, TSSpacing, TSRadius, TSMotion — plus the shared LocalizedText from ConditionBuilder.Types.swift; 48
+        files total)
+       → error count = 0 ; warning count = 0
+       TYPECHECK_IOS_EXIT=0
+       (Only design file excluded: Sources/Components/DataDisplay/UnitFormatters.swift, which uses the KMP `Units.*`
+        API and is unused by this surface — the 0021 precedent. Zero diagnostics originate in IncidentForm.*.)
+
+[HOST] swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+       -sdk <MacOSX26.5> -target arm64-apple-macos15.0   (same 48-file set)
+       → error count = 0 ; warning count = 0
+       TYPECHECK_MAC_EXIT=0
+       (Confirms the surface compiles for BOTH app targets — iOS 18 + macOS 15 — incl. the AppKit token branches.)
+
+[HOST] swiftc -swift-version 6 -strict-concurrency=complete  (Types + Adapter + Model + executed driver)
+       → === IncidentForm host harness ===  CHECKS=56 FAILURES=0  HARNESS_OK
+       HARNESS_EXIT=0
+       Verified GREEN by execution: title validity ("",2-char,3-char,padded); title/message maxLength clamps (250→200,
+       4200→4000); components split/trim/filter; request build (trim title, initial_message ""→nil, components);
+       short-title→nil request; submit label idle/submitting; toast project validation/success/offline + failure
+       (server msg vs "Failed to log incident" fallback); a11y builders; option order. Model: initial idle +
+       minor/investigating defaults; submit SUCCESS → succeeded + success toast + shouldDismiss + invalidate(1) +
+       lastCreated + the exact request body; VALIDATION (title "no") → stays idle, validation toast, NEVER calls the
+       seam (createCount=0); OFFLINE → failed(offline) toast, no dismiss/invalidate; generic FAILURE → server message;
+       in-flight submitting+disabled+"Logging…" then succeeds (Controllable seam); re-entrancy guard (createCount=1
+       under a double submit); model setters clamp; view.opened emitted once with slug "IncidentForm"; dismissToast.
+
+[HOST] swiftformat --lint  (THIS surface — its 7 Swift files, repo .swiftformat config)
+       → 0/7 files require formatting
+       FORMAT_SURFACE_EXIT=0
+
+[HOST] cd apps/apple && swiftlint lint --strict  (THIS surface — its 7 Swift files, repo .swiftlint.yml)
+       → Done linting! Found 0 violations, 0 serious in 7 files.
+       LINT_SURFACE_EXIT=0
+
+[HOST] pwsh apps/tools/check-placeholders.ps1  (real ADR-011 gate script)
+       → genuine coverage of all 7 shipped Swift files (temp copy, -Language swift): PLACEHOLDER_COUNT=0, ALLOWED=0
+       → verbatim gate path -Path .../feature-views/IncidentForm (a file PREFIX, not a dir) → COUNT=0
+       PLACEHOLDER_EXIT=0
+       (No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented/stub/mock. The web `placeholder=` props are
+        rendered natively as field `prompt`s, so the forbidden token never appears in shipped code.)
+
+[GRADLE/KMP] apps/apple/Scripts/build-shared-xcframework.sh  (ADR-004 — the Apple build links a fresh Shared.xcframework)
+       → BUILD SUCCESSFUL in 13m53s ; ✓ Shared.xcframework staged (ios-arm64, ios-arm64-simulator, macos-arm64)
+       SHARED_XCFRAMEWORK_EXIT=0
+       (The KMP/Kotlin-Native Apple toolchain is fully functional on this runner — the framework the scheme links built
+        clean from source.)
+
+[HOST] xcodegen generate
+       → Created apps/apple/TeslaSync.xcodeproj ; all 7 IncidentForm.* files REGISTERED (Types/Adapter/Model/swift/
+         Views/Previews in the iOS+macOS app targets, Tests in the XCTest bundles, .strings as a resource — 48 refs).
+       XCODEGEN_EXIT=0
+
+[RAN, RED-on-PREDECESSOR] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+                          -derivedDataPath /tmp/ts-dd build
+       → ** BUILD FAILED ** — 142 errors, ZERO of them in IncidentForm.* (grep "IncidentForm.*error:" = 0). My
+         IncidentForm.strings was copied + validated into the app bundle (builtin-copyStrings --validate → "detected
+         encoding UTF-8"), i.e. the surface integrates cleanly.
+         Every error is in 8 OUT-OF-SCOPE sibling surfaces authored by other parallel prompts:
+           ChargeSessionChartWidget, ChargeStatusLiveWidget, ChargeStatusWidget, DrivingCoachSection, DrivingCoachWidget,
+           FleetStatsBarWidget, SafetyFeaturesWidget, SafetyHistoryWidget.
+         ROOT CAUSE: a duplicate public `ChargeSessionDTO` type is defined by TWO parallel-authored files —
+           apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift
+           apps/apple/TeslaSync/feature-views/ChargeSessionChartWidget.Models.swift
+         → "'ChargeSessionDTO' is ambiguous for type lookup" cascades (the .loaded/.live "cannot infer contextual base"
+         follow-ons). These files are OUTSIDE this prompt's allowed scope (IncidentForm.* + the log); editing them is
+         forbidden by the covenant (#6 no delegation / #7 no predecessor bypass). DEFERRED to the owning prompts / the
+         P99 apple-acceptance integration gate.
+       IOS_SCHEME_EXIT=65  (RED — out-of-scope predecessor breakage only; 0 in-scope errors)
+
+[RAN, RED-on-ENVIRONMENT] xcodebuild -scheme TeslaSync-macOS -derivedDataPath /tmp/ts-dd-mac build
+       → ** BUILD FAILED ** — 2 errors, ZERO in IncidentForm.*. Both are a pre-existing ENVIRONMENTAL code-signing
+         constraint, not code:
+           "TeslaSync-macOS"        has entitlements that require signing with a development certificate.
+           "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+         project.yml ships DEVELOPMENT_TEAM="" + macOS entitlements + hardened runtime; this runner has no provisioning
+         certificate, so the macOS app/widgets fail to sign BEFORE the Swift compile is reached. Independent of this
+         surface (TYPECHECK_MAC_EXIT=0 already proves the code compiles for macOS 15). DEFERRED to a signing-capable CI
+         runner per apps/macos-pending-verifications.md.
+       MAC_SCHEME_EXIT=65  (RED — environmental signing only; 0 in-scope errors)
+
+  (`test` cannot run while the app target is RED on the predecessor `ChargeSessionDTO` ambiguity / macOS signing; the
+   test bundle hosts in the app. The IncidentForm.Tests.swift assertions are the SAME ones executed GREEN in the host
+   harness above — 56/56 — so the surface's behavior is proven by execution, with the XCTest run deferred to the
+   integration gate once the sibling duplicate-type + macOS signing are resolved by their owners.)
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT (binding — addressed verbatim)
+--------------------------------------------------------------------------------
+  1  No red-as-green     : the two xcodebuild SCHEME builds are reported RED with exit 65 + root causes; NOT claimed
+                           green. The GREEN claims (typecheck iOS+macOS, host harness, format, lint, placeholder,
+                           xcodegen, framework) are each a real command with its real exit code pasted above.
+  2  No scope narrowing  : every web branch reproduced — the full controlled form (5 inputs), the trim<3 validation,
+                           the create body incl. initial_message→undefined + comma-split components, the pending
+                           "Logging…"/disabled, success→onClose, the success/error toasts, all source i18n keys.
+  3  No skip-and-assume  : the parity/validation/submit lifecycle executed GREEN (host harness, 56 checks); not assumed.
+  4  No stubs as final   : production SwiftUI + a pure executed projection core + a real P1/S8 seam; no TODO/stub/mock/
+                           placeholder (ADR-011 gate COUNT=0 over all 7 files).
+  5  No parity shortcuts : trimmed title, message ""→nil, comma-split/trim/filter components, maxLength clamps, the
+                           err.message→"Failed to log incident" fallback, the no-network validation early-return, and
+                           the success-only dismiss are each pinned by a unit test + an executed host check.
+  6  No delegation       : implemented here; no sub-agents.
+  7  No predecessor bypass: did NOT edit the failing sibling surfaces (ChargeSessionDTO duplicate, etc.), project.yml,
+                           or the shared Localizable.xcstrings — strings shipped as the per-surface table (0021/0241
+                           precedent). Changes confined to the allowed IncidentForm.* files + this log.
+  8  No commit on red    : committing on all-GREEN IN-SCOPE gates (typecheck iOS+macOS, executed harness, format, lint,
+                           placeholder, xcodegen registration, framework build). The only RED is out-of-scope
+                           predecessor files (#7-forbidden to touch) + an environmental macOS signing gap; both are
+                           DEFERRED, not faked — matching the 0011/0021/0054 "code-complete + DEFERRED Xcode scheme"
+                           precedent, with stronger evidence (framework built + surface compiles clean on BOTH SDKs +
+                           56/56 executed + zero in-scope errors in the real full build + strings validated into bundle).
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/feature-views/IncidentForm.* + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native IncidentForm shipped at parity with the web source: an executed-green, Swift-6
+  strict-concurrency projection core (validation + create-body + toast parity, 56/56 host checks), a P1/S8 state holder
+  binding the create through a seam (no view HTTP) with the web success-dismiss + list-invalidation, P1/S11 view.opened
+  telemetry, every state the web FORM produces (editing / submitting / validation / offline+generic error / success —
+  none hidden), every source i18n key through the P1/S10 facade, P1/S9 tokens (no Tailwind ported), and full a11y
+  (VoiceOver labels + hints, Dynamic Type, Reduce-Motion). All host-runnable gates pass AND the surface type-checks
+  against BOTH the iOS 18 and macOS 15 SDKs with the real design system under Swift 6. The KMP Shared.xcframework built
+  clean from source. The full xcodebuild SCHEMES are RED only on (a) an out-of-scope duplicate `ChargeSessionDTO` from
+  two other parallel prompts and (b) an environmental macOS code-signing gap — both forbidden/impossible to fix from
+  this prompt's allowed files and DEFERRED to their owners / the P99 integration gate, with ZERO IncidentForm errors in
+  either build and the IncidentForm.strings validated into the app bundle.
+
+--------------------------------------------------------------------------------
+COMMIT
+--------------------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/IncidentForm.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0246-IncidentForm.log
+  git commit -m "feat(apps/apple/feature-views): add IncidentForm surface (P4)"
+
+EXIT=0
+STATUS=DONE
