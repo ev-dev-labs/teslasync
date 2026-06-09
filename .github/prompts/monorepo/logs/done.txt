@@ -305,3 +305,4 @@ p2-windows/feature-views/W-0112-EnvironmentalImpact.prompt.md
 p2-windows/feature-views/W-0113-ForecastDetails.prompt.md
 p2-windows/feature-views/W-0115-LoadingSkeleton.prompt.md
 p2-windows/feature-views/W-0116-MonthlyCostChart.prompt.md
+p2-windows/feature-views/W-0121-AddWidgetButton.prompt.md
