@@ -1,8 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    P2/W2-0001 - headless unit tests for the UI-thread-free logic models (Model / Source / ViewModel).
-<Project Sdk="Microsoft.NET.Sdk">
+    P2/W2-0001 — headless unit tests for the WinUI-free UI-thread-free logic models (Model / Source /
+    ViewModel / Presentation). Targets plain net10.0 so `dotnet test` runs without a WinUI / UI-thread host;
+    the WinUI app targets a WinUI TFM, so its UI-thread-free sources are Compile-linked here rather than
+    project-referenced (the views themselves are exercised by the app build). The matching test classes live
+    under this project and are picked up by the SDK default-compile glob.
 
   <!--
     P2/W2-0001 headless unit tests for the UI-thread-free logic models (Model / Source / ViewModel).
@@ -91,6 +94,12 @@
     `dotnet test` runs without a WinUI/UI-thread host; the WinUI app targets a WinUI TFM, so its
     UI-thread-free sources are <Compile>-linked here rather than project-referenced. The matching
     test classes live under this project and are picked up by the SDK default-compile glob.
+    Keep this file as ONE Project root with a single Compile ItemGroup. A chain of integration merges has
+    repeatedly re-concatenated multiple roots plus duplicate Compile items, failing XML load with MSB4025;
+    this consolidation removes the duplicate roots and keeps the deduplicated, path-sorted union of every
+    linked source (so every existing test still compiles), plus the P2 feature-views/0121 AddWidgetButton
+    surface.
+  -->
 
     Keep this file as ONE <Project> root with a single Compile ItemGroup: the deduplicated,
     path-sorted union of every linked source. A chain of integration merges had repeatedly
@@ -158,9 +167,6 @@
     <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
   </ItemGroup>
 
-  <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget card template). -->
-  <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
-  <!-- Test data + manifests copied next to the test assembly (golden SI vectors, MSIX manifest, widget template). -->
   <!--
     Test data copied next to the assembly: the language-neutral SI golden vectors (units-golden.json), the
     MSIX package manifest (packaging assertions) and the widget Adaptive Card template (drift test).
@@ -186,20 +192,6 @@
     </Content>
   </ItemGroup>
 
-  <!--
-    Linked WinUI-free feature-view, dashboard-widget and shared logic sources (Model / Source / ViewModel /
-    Presentation). Deduplicated, sorted union of the test surface — one Compile item per linked file.
-  -->
-
-  <!--
-    Linked WinUI-free feature-view, dashboard-widget and shared logic sources (Model / Source / ViewModel).
-    The headless (net10.0) test project verifies each adapter + projection + diagnostics without a UI host;
-    the WinUI views themselves are exercised by the app build. Single deduplicated, sorted union.
-    Linked WinUI-app test sources (one <Compile> per UI-thread-free *.Model/Source/ViewModel file),
-    sorted by path. The matching test classes themselves live under this project and are picked up by
-    the SDK default-compile glob.
-  -->
-  <!-- Linked UI-thread-free sources from the WinUI app project (deduplicated union). -->
   <!-- Linked WinUI-free sources from the WinUI app project (deduplicated, path-sorted union). -->
     Linked WinUI-free feature-view, dashboard-widget and shared logic sources (deduplicated union).
   -->
@@ -481,6 +473,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.Model.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.Source.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AddWidgetButton\AddWidgetButton.Model.cs" Link="FeatureViews\AddWidgetButton\AddWidgetButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertsSection\AlertsSection.Model.cs" Link="FeatureViews\AlertsSection\AlertsSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AuditPanel\AuditPanel.Model.cs" Link="FeatureViews\AuditPanel\AuditPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Model.cs" Link="FeatureViews\BackendTool\BackendTool.Model.cs" />
@@ -513,10 +506,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.ViewModel.cs" Link="FeatureViews\ClientUtilitiesSection\ClientUtilitiesSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.Model.cs" Link="FeatureViews\ColorConverter\ColorConverter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.ViewModel.cs" Link="FeatureViews\ColorConverter\ColorConverter.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\CostPerKwhChart\CostPerKwhChart.Model.cs" Link="FeatureViews\CostPerKwhChart\CostPerKwhChart.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Model.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Source.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.ViewModel.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.Model.cs" Link="FeatureViews\CostForecastSection\CostForecastSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.Source.cs" Link="FeatureViews\CostForecastSection\CostForecastSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.ViewModel.cs" Link="FeatureViews\CostForecastSection\CostForecastSection.ViewModel.cs" />
@@ -529,6 +518,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Model.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Source.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.ViewModel.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostPerKwhChart\CostPerKwhChart.Model.cs" Link="FeatureViews\CostPerKwhChart\CostPerKwhChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
