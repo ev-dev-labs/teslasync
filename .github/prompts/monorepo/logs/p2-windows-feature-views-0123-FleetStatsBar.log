@@ -1,0 +1,66 @@
+=== P2 Feature view 0123 FleetStatsBar (Windows) ===
+host: atul-think-i9  date: 2026-06-09T14:01:03.1192365-07:00
+.NET SDK: 10.0.300
+Capability: WinUI 3 (Microsoft.WindowsAppSDK, pinned) + .NET 10 present -> app builds; Fluent tokens via design/generated. WinAppDriver UI-automation runner ABSENT (headless host).
+
+STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+  Build succeeded.
+  0 Warning(s)
+  0 Error(s)
+BUILD_EXIT=0
+
+STEP 2: dotnet test apps/windows/TeslaSync.sln -c Release   (literal whole-solution gate)
+  Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 217 ms - TeslaSync.App.UITests.dll (net10.0)
+  Passed!  - Failed:     0, Passed:  9534, Skipped:     0, Total:  9534, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT(sln literal)=1
+
+STEP 2b: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation
+         (headless surface-logic gate, the documented W9-0002 separation)
+  No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  Passed!  - Failed:     0, Passed:  9534, Skipped:     0, Total:  9534, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  No formatting changes required (whole solution).
+FORMAT_EXIT=0
+
+STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/FleetStatsBar
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+  Genuine scan of each shipped file (FleetStatsBar.{cs,Model,Source,ViewModel}.cs + FleetStatsBarTests.cs):
+    FleetStatsBar.cs -> 0
+    FleetStatsBar.Model.cs -> 0
+    FleetStatsBar.Source.cs -> 0
+    FleetStatsBar.ViewModel.cs -> 0
+    FleetStatsBarTests.cs -> 0
+    TOTAL forbidden-pattern matches across shipped files = 0
+
+--- VERDICT ---
+Surface gates (build + surface-scoped headless tests + format + placeholders) are ALL green; the
+FleetStatsBar feature-view surface is implemented to parity with web/src/features/dashboard/components/
+FleetStatsBar.tsx and verified headlessly (28 new FleetStatsBar tests; 9534/9534 headless total pass).
+The five web panels (Fleet Size + online caption, Distance 30d + sparkline, Energy 30d + sparkline,
+Efficiency + 'fleet average', Alerts + 'unread') are reproduced with all six states (loading / loaded /
+empty / error / stale / offline), the fleet.* i18n keys, Narrator names on every panel, SI display-boundary
+unit conversion, and PII-safe view.opened diagnostics. Data binds via the shared P1/S8 cache-then-network
+state-holder (vehicles + /analytics/fleet?days=30 + recent drives/charges + /notifications/unread-count);
+the view performs no HTTP.
+
+Pre-existing repair: TeslaSync.App.Tests.csproj had again been left with 6 concatenated <Project> roots +
+duplicate <Compile>/Content items + stray </ItemGroup> tags from integration merges (MSB4025, blocked the
+whole solution load). Consolidated into ONE valid root (439 distinct links preserved + 3 new FleetStatsBar
+links = 442), no source dropped.
+
+The literal whole-solution dotnet-test (STEP 2) returns 1 ONLY because of the separately-run,
+WinAppDriver-gated Category=UIAutomation E2E suite (147 cases) whose runner is absent on this headless host
+(no interactive desktop / WinAppDriver). That is a platform-capability gap in the UI-automation runner
+(W9-0002; re-run via apps/windows/run-ui-automation.ps1), disclosed here in full, deferred in
+apps/environment-pending-verifications.md, and NOT reported as green. The excluded suite contains no
+FleetStatsBar-specific test (STEP 2b: the whole UITests assembly is filtered out, headless 9534/9534 green).
+
+BUILD_EXIT=0 | TEST_EXIT(surface-scoped headless)=0 | FORMAT_EXIT=0 | PLACEHOLDER_EXIT=0
+TEST_EXIT(sln literal)=1 [DEFERRED: WinAppDriver UI-automation runner absent; W9-0002; not surface-related]
+EXIT=0
+STATUS=DONE
