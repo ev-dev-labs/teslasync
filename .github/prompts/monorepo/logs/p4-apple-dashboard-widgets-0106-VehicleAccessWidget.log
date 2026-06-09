@@ -1,0 +1,213 @@
+=== P4 Dashboard widget 0106 VehicleAccessWidget (Apple) ===
+Surface : apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.*
+Web src : features/dashboard/widgets/VehicleAccessWidget.tsx (+ registry/security.ts -> "vehicle-access")
+Host    : Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / xcodegen / swiftlint + swiftformat (Homebrew) / pwsh
+Capability present: SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 SDKs, iPhone 16 simulator.
+                    This is NOT a BLOCKED-on-capability run. (Web source uses NO charts/maps -> none needed.)
+
+Honesty Covenant: this log states per-step truth. This surface's APP target compiles + integrates GREEN on
+BOTH Apple platforms (** BUILD SUCCEEDED ** on iOS-Simulator AND macOS) with ZERO VehicleAccess errors. The
+full-app `xcodebuild build test` TEST action is RED, but ONLY because the shared XCTest bundle fails to COMPILE
+on a PRE-EXISTING, OUT-OF-SCOPE sibling-widget defect (duplicate test-class names in other widgets' *.Tests.swift)
+proven below to be non-attributable to this surface. This surface is verified green by every in-scope means
+(iOS + macOS app-target compile, isolated SwiftPM `swift test` 31/31, standalone real-source harness 69/69,
+swiftlint --strict, swiftformat --lint tree-wide, placeholder gate, xcodegen, i18n parity).
+
+Files shipped (7; 1852 total lines):
+  VehicleAccessWidget.swift            surface view (WidgetShell chrome: person.2 icon/title/freshness/refresh/open) + states
+  VehicleAccessWidget.Content.swift    CompactView + StandardView + WidgetDetailCard parity (label/value/badge rows) + chip + banner
+  VehicleAccessWidget.Model.swift      P1/S8 state-holder seam (3-query coalesce) + P1/S11 view.opened telemetry + registry + i18n
+  VehicleAccessWidget.Adapter.swift    pure projection (driver/invitation rows, badge tones, formatDateShort port, layout, a11y)
+  VehicleAccessWidget.Previews.swift   9 #Preview states (content/compact/drivers-only/mobile-only/loading/empty/error/stale/offline)
+  VehicleAccessWidget.strings          P1/S10 catalog (34 keys; table "VehicleAccessWidget"); 19/19 web keys + registry + chrome
+  VehicleAccessWidget.Tests.swift      31 XCTest cases (adapter/format/model+phase/registry/layout/a11y)
+
+============================================================
+STEP 0 - Predecessor prep: KMP Shared.xcframework (ADR-004)
+============================================================
+cd apps/shared && ./gradlew :core:assembleSharedXCFramework
+  -> BUILD SUCCESSFUL in 12m 45s - release + debug XCFrameworks written:
+     apps/shared/core/build/XCFrameworks/{release,debug}/Shared.xcframework {ios-arm64, ios-arm64-simulator, macos-arm64}
+  The scheme pre-action (Scripts/build-shared-xcframework.sh) re-ran incrementally + staged it to
+  apps/apple/Frameworks/Shared.xcframework for both the iOS and macOS xcodebuild invocations below.
+  STEP0_EXIT=0
+
+============================================================
+STEP 1 - iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+============================================================
+evidence: /tmp/xcb-ios.log
+  -> APP TARGET: ** BUILD SUCCEEDED ** - the iOS app (incl. this surface) compiled + linked green.
+       SwiftCompile of VehicleAccessWidget.{swift,Adapter,Content,Model,Previews}.swift = 0 errors.
+       CopyStringsFile VehicleAccessWidget.strings -> validated UTF-8, 0 errors.
+       grep -c "VehicleAccess.*error:" /tmp/xcb-ios.log = 0   (zero errors attributable to this surface)
+  -> TEST BUNDLE (TeslaSyncTests): compile FAILED -> ** TEST FAILED ** (xcodebuild exit 65).
+       The 5 compiler errors are ALL "invalid redeclaration of 'ChargeStatus{Adapter,Phase,Model,Registry,
+       Accessibility}Tests'" in TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Tests.swift -- which collide
+       with the IDENTICAL class names already declared in ChargeStatusWidget.Tests.swift. Both are PRE-EXISTING
+       sibling widgets; NEITHER is this surface. VehicleAccess error lines: 0.
+  IOS_EXIT=65 (app build green; test-bundle compile blocked by pre-existing out-of-scope collision)
+
+ROOT CAUSE (pre-existing, out-of-scope - NOT this surface):
+  Two already-committed sibling charging widgets declare the SAME XCTestCase subclasses in the one app test
+  module: ChargeStatusWidget.Tests.swift AND ChargeStatusLiveWidget.Tests.swift both define
+  ChargeStatusAdapterTests / ChargeStatusPhaseTests / ChargeStatusModelTests / ChargeStatusRegistryTests /
+  ChargeStatusAccessibilityTests. In one module that is an invalid-redeclaration collision that fails the whole
+  XCTest bundle compile. This is the documented "pre-existing parallel-merge collision" class in
+  apps/macos-pending-verifications.md (same family as the DashboardWidgetSize x15 squat + the
+  LiveSignalSparklinesWidget.Builder.swift opening_brace already parked there). This surface deliberately
+  prefixes EVERY type/test `VehicleAccess*` so it never participates in such a collision.
+
+PROOF the failure is pre-existing (not attributable to this surface):
+  - git status --short: the ONLY working-tree changes are the 7 VehicleAccessWidget.* files (all untracked/new).
+  - The 5 redeclaration errors are entirely between ChargeStatusWidget.Tests.swift <-> ChargeStatusLiveWidget.
+    Tests.swift; this surface's test classes are uniquely named (VehicleAccessAdapterTests / VehicleAccessFormat
+    Tests / VehicleAccessModelTests / VehicleAccessRegistryTests / VehicleAccessAccessibilityTests) and share NO
+    symbol with them. Removing all 7 VehicleAccess files cannot resolve a collision that is wholly between two
+    other files -> the bundle is red without this surface.
+  IOS_FULLAPP_TEST=pre-existing-collision-blocked (NOT this surface; deferred to P99 acceptance gate)
+
+SURFACE-GREEN substitutes (in-scope, REAL execution) - see STEP 1a/1b.
+
+------------------------------------------------------------
+STEP 1a - Isolated SwiftPM build + test of the REAL Tests.swift (Swift 6 strict concurrency, macOS 15)
+------------------------------------------------------------
+SwiftPM package (Sources/TeslaSync = real symlinks: Tokens.swift + DashboardWidgetInfra.swift + this surface's
+Model + Adapter + view + Content + a faithful TSSkeleton shim; Tests/TeslaSyncTests = this surface's REAL
+VehicleAccessWidget.Tests.swift via `@testable import TeslaSync`), .swiftLanguageMode(.v6), platforms [.macOS(.v15)]:
+  swift test
+  -> Test Suite 'All tests' passed
+     Executed 31 tests, with 0 failures (0 unexpected) in 0.085s
+  SWIFTPM_TEST_EXIT=0
+  (This also proves the SwiftUI view + Content compile under Swift 6 strict concurrency on macOS 15.)
+
+Test inventory (31 - real XCTest execution, 0 failures):
+  VehicleAccessAdapterTests        (8)  driver rows (label name->email->dash, Owner/Driver badge tone, formatDateShort
+                                        "Jun 9"/"May 28", missing date->dash), invitation rows (Pending/Accepted/Expired
+                                        -> warning/success/danger, accepted+unknown statuses), mobile badge mapping,
+                                        hasAnyData predicate (drivers||invitations||mobile!=nil), VehicleAccessProjection.empty
+  VehicleAccessFormatTests         (4)  dateShort short month/day, fractional seconds, date-only, nil/blank/invalid -> em-dash
+  VehicleAccessModelTests          (11) resolvePhase matrix, initial empty projection, loaded-without-data->empty,
+                                        mobile-only->content, failed-without-data->error, content-while-failed, view.opened
+                                        once, refresh delegation, stale auto-refresh gating, freshness flags, stop re-emit
+  VehicleAccessRegistryTests       (3)  canonical id/category/sizes (vehicle-access, security, 2x4 / 1x2 / 4x40), clamp, isCompact
+  VehicleAccessAccessibilityTests  (5)  standard summary (every row), empty-drivers summary, compact summary, mobile dot
+                                        labels (on/off/unknown), empty-state summary
+
+------------------------------------------------------------
+STEP 1b - Standalone real-source assertion harness (additional, redundant proof)
+------------------------------------------------------------
+swiftc -parse-as-library -swift-version 6 -strict-concurrency=complete  (real DashboardWidgetInfra.swift + this
+surface's Model.swift + Adapter.swift + a 69-assertion runner) -> compiled clean, ran:
+  -> ALL PASS (69/69 assertions: projector rows/badges/mobile/hasAnyData, dateShort incl. fractional + date-only +
+     dashes, resolvePhase matrix, model telemetry-once/refresh/auto-refresh/freshness, registry+clamp, layout, a11y)
+  HARNESS_EXIT=0
+
+============================================================
+STEP 2 - macOS: xcodebuild -scheme TeslaSync-macOS build test  (CODE_SIGNING_ALLOWED=NO)
+============================================================
+evidence: /tmp/xcb-mac2.log
+  -> APP TARGET: ** BUILD SUCCEEDED ** - the macOS app (incl. this surface) compiled + linked green.
+       7 SwiftCompile entries for VehicleAccessWidget.* ; grep -c "VehicleAccess.*error:" = 0.
+  -> TEST BUNDLE (TeslaSync-macOSTests): compile FAILED -> ** TEST FAILED ** (exit 65). The redeclaration error
+       surfaced here is in TeslaSync/feature-views/DrivingCoachSection.ModelTests.swift -- ANOTHER pre-existing
+       sibling duplicate-test-class collision (already parked in apps/macos-pending-verifications.md as origin
+       prompt p4-apple/feature-views/0167-DrivingCoachSection). VehicleAccess error lines: 0.
+  (First macOS attempt without CODE_SIGNING_ALLOWED=NO failed earlier with development-signing/entitlements errors
+   on TeslaSync-macOS + TeslaSyncWidgets-macOS - an environment signing constraint, not code; re-run with signing
+   disabled per the established gate convention.)
+  MAC_EXIT=65 (app build green; test-bundle compile blocked by pre-existing out-of-scope collision)
+  MAC_SURFACE_BUILD=** BUILD SUCCEEDED ** ; MAC_SURFACE_TESTS=31/31 (STEP 1a, macOS 15, Swift 6)
+
+============================================================
+STEP 3 - swiftlint --strict
+============================================================
+This surface (the 6 shipped .swift files):
+  swiftlint lint --strict --config apps/apple/.swiftlint.yml <6 files>
+  -> Done linting! Found 0 violations, 0 serious in 6 files.   SWIFTLINT_SURFACE_EXIT=0
+Tree-wide (`cd apps/apple && swiftlint --strict`, 2687 files):
+  -> Found 1 violation, 1 serious -> SWIFTLINT_ALL_EXIT=2
+  -> The single violation is PRE-EXISTING + OUT-OF-SCOPE, NOT this surface:
+       TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: opening_brace
+     (git: that file is unmodified by this prompt; it is the SAME opening_brace defect already parked in
+      apps/macos-pending-verifications.md by p4-apple/dashboard-widgets/0038 + feature-views/0167.)
+  SWIFTLINT_EXIT(this surface)=0
+
+============================================================
+STEP 4 - swiftformat --lint apps/apple
+============================================================
+cd <repo> && swiftformat --lint apps/apple   (config: apps/apple/.swiftformat)
+  -> SwiftFormat completed. 0/2691 files require formatting, 3 files skipped.   FORMAT_EXIT=0
+  (This surface's 6 .swift files included in that clean tree-wide pass; also lint-clean in isolation.)
+
+============================================================
+STEP 5 - check-placeholders (this surface)
+============================================================
+pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget
+  -> PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0
+Real grep over the 7 shipped files for TODO/FIXME/XXX/coming soon/placeholder/lorem/not implemented/stub/mock/
+fatalError -> 0 matches (clean). PLACEHOLDER_EXIT=0
+
+============================================================
+STEP 6 - xcodegen generate (file enumeration)
+============================================================
+cd apps/apple && xcodegen generate
+  -> Created project at apps/apple/TeslaSync.xcodeproj   XCODEGEN_EXIT=0
+  -> grep -c VehicleAccessWidget project.pbxproj = 42 (iOS app + macOS app + both XCTest bundles enumerate all 7
+     files; the 6 .swift compile into the app/test targets, .strings copies as a resource).
+
+============================================================
+STEP 7 - i18n key parity (web -> native catalog)
+============================================================
+Web `t('widget.vehicleAccess*')` keys extracted from VehicleAccessWidget.tsx (19): vehicleAccess, vehicleAccessDrivers,
+  vehicleAccessMobileOn, vehicleAccessMobileOff, vehicleAccessMobileUnknown, vehicleAccessMobile, vehicleAccessEnabled,
+  vehicleAccessDisabled, vehicleAccessUnknown, vehicleAccessAuthorized, vehicleAccessNoDrivers, vehicleAccessPending,
+  vehicleAccessNoInvitations, vehicleAccessOwner, vehicleAccessDriver, vehicleAccessPendingStatus, vehicleAccessAccepted,
+  vehicleAccessExpired, vehicleAccessNoData
+  -> all 19 present in VehicleAccessWidget.strings. Registry name/description present (vehicle-access).
+  -> 34 keys total (19 web + 2 registry + 13 native chrome: freshness/refresh/open/loading/error/retry/banners/a11y).
+  I18N_PARITY=ok (0 web keys missing, 0 Swift-referenced keys missing)
+
+============================================================
+SUMMARY (per-step truth)
+============================================================
+  STEP0  Shared.xcframework assemble                 = 0   (BUILD SUCCESSFUL, 12m45s)
+  STEP1  iOS  app-target build                       = 0   (** BUILD SUCCEEDED **, 0 VehicleAccess errors)
+         iOS  full `build test`                      = 65  (test bundle blocked by PRE-EXISTING ChargeStatus*Tests collision)
+  STEP1a SwiftPM `swift test` (real Tests.swift)     = 0   (31/31 pass, macOS 15, Swift 6 language mode)
+  STEP1b standalone real-source harness              = 0   (69/69 assertions)
+  STEP2  macOS app-target build                      = 0   (** BUILD SUCCEEDED **, 0 VehicleAccess errors)
+         macOS full `build test`                     = 65  (test bundle blocked by PRE-EXISTING DrivingCoach*ModelTests collision)
+  STEP3  swiftlint --strict (this surface)           = 0   (0 violations / 6 files; tree-wide 1 pre-existing out-of-scope)
+  STEP4  swiftformat --lint apps/apple               = 0   (0/2691 need formatting)
+  STEP5  check-placeholders                          = 0   (COUNT=0, ALLOWED=0; grep clean)
+  STEP6  xcodegen generate                           = 0   (42 refs enumerated)
+  STEP7  i18n parity                                 = 0   (19/19 web keys; 0 missing)
+
+Acceptance criteria (this surface):
+  [x] Renders on Apple with all web states reproduced: loading / empty (no access data) / error+retry / stale /
+      offline / content, in compact (web CompactView) and full (web StandardView) layouts - 9 #Previews + per-state model tests.
+  [x] Hooks bind to the shared P1/S8 state-holder seam (VehicleAccessSource coalescing useVehicleDrivers +
+      useVehicleInvitations + useVehicleMobileEnabled + useVehicles); NO direct HTTP in the view.
+  [x] Every web i18n key has a matching key in the P1/S10 catalog (19/19 + registry) - diff-verified, 0 missing.
+  [x] Accessibility: VoiceOver labels on every interactive element (refresh/open/retry) + combined compact/standard/
+      empty summaries + mobile-dot status; a11y label tests green.
+  [x] Tests: adapter unit (cached->projection) + per-state model/phase + registry + layout + a11y = 31, executed
+      green via SwiftPM (+ 69-assertion standalone harness over the real sources).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate green + grep clean, 0 opt-outs).
+  [x] Compiles + links on iOS-18 AND macOS-15 app targets under Swift 6 strict concurrency (** BUILD SUCCEEDED ** x2).
+  [x] Telemetry: model.start() emits `view.opened` with surface slug "VehicleAccessWidget" exactly once (tested).
+  [~] Full-app iOS + macOS `xcodebuild build test` TEST action: BLOCKED by PRE-EXISTING, out-of-scope sibling
+      duplicate-test-class collisions (ChargeStatusWidget/ChargeStatusLiveWidget Tests on iOS; DrivingCoachSection
+      ModelTests on macOS) + the parked LiveSignalSparklinesWidget.Builder.swift opening_brace - all proven
+      non-attributable to this surface and OUTSIDE its allowed-files scope. Deferred to
+      p4-apple/P99-0001-apple-acceptance-gate (the apps/macos-pending-verifications.md protocol). Both APP targets
+      build green with this surface; zero VehicleAccess errors in either platform.
+
+The only non-green literal-gate items are the full-app `xcodebuild build test` TEST action (STEP 1/2) and the
+tree-wide swiftlint (STEP 3), and BOTH are RED solely for documented PRE-EXISTING parallel-merge collisions in
+OTHER widgets' files - outside this surface's allowed-files scope (VehicleAccessWidget.* + this log) and proven
+non-attributable to this surface. This surface itself is verified green on both Apple platforms (app build +
+31/31 tests + lint/format/placeholder/i18n).
+
+EXIT=0
+STATUS=DONE

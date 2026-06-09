@@ -1,0 +1,60 @@
+/*
+  VehicleAccessWidget.strings
+  TeslaSync — P4 dashboard widget · 0106 · VehicleAccessWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VehicleAccessWidget` resolves (table "VehicleAccessWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/VehicleAccessWidget.tsx + registry/security.ts). The
+  remaining keys back the native-only chrome (freshness chip, refresh/open/retry,
+  loading/error copy, connectivity banners, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.vehicleAccess" = "Vehicle Access";
+"widget.vehicleAccessDrivers" = "Drivers";
+"widget.vehicleAccessMobileOn" = "Mobile access enabled";
+"widget.vehicleAccessMobileOff" = "Mobile access disabled";
+"widget.vehicleAccessMobileUnknown" = "Mobile access unknown";
+"widget.vehicleAccessMobile" = "Mobile Access";
+"widget.vehicleAccessEnabled" = "Enabled";
+"widget.vehicleAccessDisabled" = "Disabled";
+"widget.vehicleAccessUnknown" = "Unknown";
+"widget.vehicleAccessAuthorized" = "Authorized Drivers";
+"widget.vehicleAccessNoDrivers" = "No authorized drivers";
+"widget.vehicleAccessPending" = "Pending Invitations";
+"widget.vehicleAccessNoInvitations" = "No pending invitations";
+"widget.vehicleAccessOwner" = "Owner";
+"widget.vehicleAccessDriver" = "Driver";
+"widget.vehicleAccessPendingStatus" = "Pending";
+"widget.vehicleAccessAccepted" = "Accepted";
+"widget.vehicleAccessExpired" = "Expired";
+"widget.vehicleAccessNoData" = "No access data available";
+
+/* --- Registry metadata (registry/security.ts → "vehicle-access") --- */
+"widget.vehicleAccess.name" = "Vehicle Access";
+"widget.vehicleAccess.description" = "Authorized drivers, pending invitations, mobile access status";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.vehicleAccess.live" = "Live";
+"widget.vehicleAccess.updating" = "Updating";
+"widget.vehicleAccess.stale" = "Stale";
+"widget.vehicleAccess.offline" = "Offline";
+"widget.vehicleAccess.error" = "Error";
+"widget.vehicleAccess.refresh" = "Refresh";
+"widget.vehicleAccess.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.vehicleAccess.loading" = "Loading vehicle access";
+"widget.vehicleAccess.errorTitle" = "Couldn't load vehicle access";
+"widget.vehicleAccess.retry" = "Retry";
+"widget.vehicleAccess.offlineBanner" = "Offline — showing last known access";
+"widget.vehicleAccess.staleBanner" = "Reconnecting — access may be stale";
+
+/* --- Accessibility --- */
+"widget.vehicleAccess.openA11y" = "Open the vehicle access page";
