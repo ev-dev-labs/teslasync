@@ -167,3 +167,4 @@ p2-windows/dashboard-widgets/W-0065-MonthlyMileageWidget.prompt.md
 p2-windows/dashboard-widgets/W-0067-MotorPerformanceWidget.prompt.md
 p2-windows/dashboard-widgets/W-0068-MQTTStatusWidget.prompt.md
 p2-windows/dashboard-widgets/W-0069-NotificationStatsWidget.prompt.md
+p2-windows/dashboard-widgets/W-0074-ProjectedRangeWidget.prompt.md
