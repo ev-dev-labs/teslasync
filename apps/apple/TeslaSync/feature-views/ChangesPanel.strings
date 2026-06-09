@@ -1,0 +1,50 @@
+/*
+  ChangesPanel.strings
+  TeslaSync — P4 feature view · 0030 · ChangesPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ChangesPanel resolves (table "ChangesPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-safe across the concurrent slots).
+
+  Keys are the exact ones extracted from the web source
+  (web/src/features/admin/components/feature-flags/ChangesPanel.tsx). The remaining
+  keys back the native-only chrome (panel title, freshness chip, retry/error/offline
+  copy) and the per-operation token labels the web Badge renders verbatim.
+*/
+
+/* --- Column headers (web `DataTable` columns) --- */
+"admin.flags.audit.cols.changedAt" = "Changed at";
+"admin.flags.audit.cols.actor" = "Actor";
+"admin.flags.audit.cols.flagKey" = "Key";
+"admin.flags.audit.cols.operation" = "Op";
+"admin.flags.audit.cols.oldValue" = "Old";
+"admin.flags.audit.cols.newValue" = "New";
+"admin.flags.audit.cols.reason" = "Reason";
+
+/* --- Empty state (web `EmptyState`, scoped vs global message) --- */
+"admin.flags.audit.empty.title" = "No flag changes yet";
+"admin.flags.audit.empty.scopedMessage" = "No audit rows for \"%@\" — edit the value above to start the trail.";
+"admin.flags.audit.empty.globalMessage" = "Flag changes will appear here once an operator edits a value.";
+
+/* --- Loading (web `DataTable` emptyMessage while fetching) --- */
+"admin.flags.audit.loading" = "Loading audit log…";
+
+/* --- Operation tokens (web Badge body `{row.operation}`) --- */
+"admin.flags.audit.op.set" = "set";
+"admin.flags.audit.op.delete" = "delete";
+"admin.flags.audit.op.unknown" = "—";
+
+/* --- Native chrome: title + freshness + actions --- */
+"admin.flags.audit.title" = "Flag change log";
+"admin.flags.audit.live" = "Live";
+"admin.flags.audit.stale" = "Stale";
+"admin.flags.audit.offline" = "Offline";
+"admin.flags.audit.refresh" = "Refresh";
+"admin.flags.audit.retry" = "Retry";
+
+/* --- Native chrome: error + offline copy --- */
+"admin.flags.audit.errorTitle" = "Couldn't load flag change log";
+"admin.flags.audit.offlineMessage" = "Offline — showing last known change log";
