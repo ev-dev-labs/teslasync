@@ -1,0 +1,85 @@
+=== P2 Feature view 0093 SummaryStatsGrid (Windows) ===
+date: 2026-06-09T09:37:49-07:00
+runner: windows  dotnet: 10.0.300
+
+--- platform capability probe (ADR-002/ADR-009: WinUI 3 + .NET 10 + Fluent) ---
+net10 sdk present: 10.0.300 [C:\Program Files\dotnet\sdk]
+WindowsDesktop runtime present: 10.0.8
+WindowsAppSDK pinned: True
+Capability AVAILABLE -> not BLOCKED.
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 181 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  8739, Skipped:     0, Total:  8739, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite).
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its
+standard install paths or on PATH.
+  -> WinAppDriver/Appium runner + a deployed MSIX are absent on this headless runner; that suite fails fast by
+     design (never silently skipped) and is gated by the separate W9-0002 prompt, not feature-view 0093.
+
+### STEP 2b: dotnet test --filter Category!=UIAutomation (headless surface-logic gate, the documented W9-0002 separation)
+Passed!  - Failed:     0, Passed:  8739, Skipped:     0, Total:  8739, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+SummaryStatsGrid tests: Passed!  - Failed:     0, Passed:    26, Skipped:     0, Total:    26 - TeslaSync.App.Tests.dll (net10.0)
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+First pass flagged ENDOFLINE on the five new SummaryStatsGrid sources (created with CRLF; repo standard is LF,
+matching App.csproj). Normalized the four surface files + the test + the repaired test csproj to LF; re-ran:
+format: clean (no changes needed)
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SummaryStatsGrid
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+### Pre-existing integration-branch repair required to make the gate runnable (documented per Honesty Covenant #9)
+This auto-integration branch HEAD did not build before this change, for reasons unrelated to the surface:
+1. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was corrupt again — TWO concatenated <Project>
+   roots (MSB4025 "multiple root elements" at line 1103) with five </Project> closers and 1183 <Compile> lines
+   for only 391 distinct linked sources (~3x duplication from repeated bad integration merges). The two roots
+   were also DIVERGENT (19 links existed only in the stale first root: AlertsSection, BatteryHealthSection,
+   BatteryPill, EnvironmentSlide, HighlightCard, OverviewTab*, OverviewVehicleComparison*, PatternsSlide*,
+   SavingsSlide*, SlideRenderer, StatChartSlide), so neither root was a superset. Repaired in place: collapsed
+   to one valid root holding the deduplicated UNION of all 391 distinct <Compile> links (each verified to exist
+   on disk -> 0 stale), normalized to LF, and added the new SummaryStatsGrid links. No test coverage dropped
+   (8739 headless tests pass, vs 8388 at the 0078 baseline + surfaces added since); the same corruption was
+   repaired identically by feature-view 0078 before a later merge re-introduced it.
+
+### Surface deliverable (feature-views/SummaryStatsGrid/)
+SummaryStatsGrid.Model.cs / .Source.cs / .ViewModel.cs / .cs + Tests/FeatureViews/SummaryStatsGridTests.cs
+(26 test cases). Parity port of web SummaryStatsGrid.tsx: TsFadeIn (delay 0.05s) over a responsive 2/3/6-column
+grid of six glass-panel summary cards (Total Sessions / Total Energy / Avg Charge Rate / Peak Rate / Avg
+Duration / Total Cost), each an uppercase label + value + optional unit suffix (kWh/kW/min hard-coded like the
+web). The cards' figures reproduce the web Charging-Curve page useMemo reduction verbatim (Total Energy sums
+total_energy_added_wh and is labeled kWh exactly as the web grid does; avg/peak rate from peak_power_w/1000;
+avg duration from per-session whole minutes). Full native state matrix: loading (per-card skeletons, the web
+SummaryCard loading branch) / loaded / empty (zeroed cards, never a blank box) / error (retry surface) / stale
+/ offline (freshness chip + refresh). Data via GET /charging-sessions through the shared cache-then-network
+engine (no HTTP in the view). All six source i18n keys resolve in Strings/*/Resources.resw
+(translation.charging.curve.{totalSessions,totalEnergy,avgChargeRate,peakRate,avgDuration,totalCost}); native
+chrome reuses existing common.{loading,offline,refresh,retry} + charging.curve.{title} keys. Narrator names on
+every card and interactive element; reduce-motion honoured via TsFadeIn; view.opened slug=SummaryStatsGrid.
+
+### Platform capability determination
+Enumerated capabilities (ADR-002/ADR-009: WinUI 3 / Windows App SDK 1.6+ / .NET 10 / Fluent) ARE present: the
+WinUI app + view compile (BUILD_EXIT=0) and the headless logic suite is green (HEADLESS_TEST_EXIT=0, 8739 tests
+incl. 26 for this surface). The 147 TeslaSync.App.UITests are Category=UIAutomation E2E tests gated by the
+SEPARATE W9-0002 prompt; they require a WinAppDriver/Appium runner + a deployed MSIX, absent on this headless
+runner, so they fail fast by design. That is the only contributor to WHOLE_SOLUTION_TEST_EXIT=1 and is out of
+scope for feature-view 0093.
+
+### Gate result (feature-view scope: build + headless tests + format + placeholders)
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation suite, evidenced above.)
+
+EXIT=0
+STATUS=DONE

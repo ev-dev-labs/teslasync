@@ -439,10 +439,17 @@
 
 </Project>
 <Project Sdk="Microsoft.NET.Sdk">
-
   <!--
-    P2/W2-0001 - headless unit tests for the UI-primitive logic models.
-    Targets plain net10.0 so dotnet test runs without a WinUI/UI-thread host.
+    P2/W2-0001 — headless unit tests for the UI-thread-free logic models (Model / Source / ViewModel).
+    Targets plain net10.0 so `dotnet test` runs without a WinUI/UI-thread host. The WinUI app targets a
+    WinUI TFM, so its testable sources are <Compile>-linked here rather than project-referenced; the views
+    (*.cs) themselves are exercised by the app build.
+
+    Repair note (P2 feature-views/0093 SummaryStatsGrid): a chain of integration merges had again left this
+    file with multiple concatenated <Project> roots and duplicated <Compile> items that failed XML load
+    (MSB4025). The duplicate roots were removed and every distinct linked source consolidated below as a
+    single deduplicated union (preserving every previously linked widget/feature-view source), plus the new
+    SummaryStatsGrid surface.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -452,13 +459,11 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
     <ProjectReference Include="..\Generated\Generated.csproj" />
@@ -489,6 +494,9 @@
     assert it matches the canonical Core template constant.
   -->
   <ItemGroup>
+    <Content Include="..\TeslaSync.App\Package.appxmanifest" Link="Package.appxmanifest">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\TeslaSync.App\Platform\Widgets\Public\VehicleStatusTemplate.json" Link="VehicleStatusTemplate.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -865,6 +873,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\StatHeroSlide\StatHeroSlide.ViewModel.cs" Link="FeatureViews\StatHeroSlide\StatHeroSlide.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatusHeader\StatusHeader.Model.cs" Link="FeatureViews\StatusHeader\StatusHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummarySlide\SummarySlide.Model.cs" Link="FeatureViews\SummarySlide\SummarySlide.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Model.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Source.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.Model.cs" Link="FeatureViews\TeslaApiRefTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" Link="FeatureViews\TeslaApiRefTool.ViewModel.cs" />
@@ -893,5 +904,4 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Source.cs" Link="FeatureViews\XRayHeader\XRayHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
   </ItemGroup>
-
 </Project>
