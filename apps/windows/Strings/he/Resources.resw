@@ -2700,6 +2700,9 @@
   <data name="translation.analytics.weeklyDigest.nextWeek" xml:space="preserve">
     <value>Next</value>
   </data>
+  <data name="translation.analytics.weeklyDigest.noAlerts" xml:space="preserve">
+    <value>No alerts this week — everything looks great!</value>
+  </data>
   <data name="translation.analytics.weeklyDigest.noDailyDistance" xml:space="preserve">
     <value>No driving distance data is available for this week.</value>
   </data>
