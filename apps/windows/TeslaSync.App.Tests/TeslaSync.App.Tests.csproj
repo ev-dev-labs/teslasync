@@ -207,6 +207,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.Model.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.ViewModel.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.Source.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Model.cs" Link="Widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.ViewModel.cs" Link="Widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Source.cs" Link="Widgets\SafetyFeaturesWidget\SafetyFeaturesWidget.Source.cs" />
   </ItemGroup>
 
   <!--
