@@ -23334,6 +23334,42 @@
   <data name="translation.widget.warranty.active" xml:space="preserve">
     <value>Active</value>
   </data>
+  <data name="translation.widget.warranty.basic" xml:space="preserve">
+    <value>Basic</value>
+  </data>
+  <data name="translation.widget.warranty.batteryDrive" xml:space="preserve">
+    <value>Battery/Drive Unit</value>
+  </data>
+  <data name="translation.widget.warranty.body" xml:space="preserve">
+    <value>Body</value>
+  </data>
+  <data name="translation.widget.warranty.corrosion" xml:space="preserve">
+    <value>Corrosion</value>
+  </data>
+  <data name="translation.widget.warranty.description" xml:space="preserve">
+    <value>Warranty countdown: time remaining, mileage remaining, coverage types</value>
+  </data>
+  <data name="translation.widget.warranty.emissions" xml:space="preserve">
+    <value>Emissions</value>
+  </data>
+  <data name="translation.widget.warranty.error" xml:space="preserve">
+    <value>Couldn't load warranty details</value>
+  </data>
+  <data name="translation.widget.warranty.error.auth" xml:space="preserve">
+    <value>Sign in to view warranty details</value>
+  </data>
+  <data name="translation.widget.warranty.error.offline" xml:space="preserve">
+    <value>You're offline — showing the last cached warranty</value>
+  </data>
+  <data name="translation.widget.warranty.loading" xml:space="preserve">
+    <value>Loading warranty details</value>
+  </data>
+  <data name="translation.widget.warranty.refresh" xml:space="preserve">
+    <value>Refresh warranty details</value>
+  </data>
+  <data name="translation.widget.warranty.retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
   <data name="translation.widget.warranty.covered" xml:space="preserve">
     <value>Covered</value>
   </data>
