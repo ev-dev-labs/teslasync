@@ -1,0 +1,145 @@
+=== P4 Dashboard widget 0011 BatteryDegradationForecastWidget (Apple) ===
+Date            : 2026-06-09
+Host toolchain  : Xcode 26.5 (Build 17F42) · Apple Swift 6.3.2 · swiftlint · swiftformat · xcodegen 2.45.4
+Capability      : SwiftUI + Swift Charts + MapKit available, iOS 18+/macOS 15+ SDKs present (Xcode 26.5).
+                  → NOT BLOCKED. Native surface implemented and verified.
+Web source      : web/src/features/dashboard/widgets/BatteryDegradationForecastWidget.tsx
+Native output   : apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.*
+Registry        : id=battery-degradation-forecast · category=battery · default 2x4 · min 1x2 · max 4x40
+                  surfaceSlug=BatteryDegradationForecastWidget
+
+Shipped files (allowed scope only):
+  BatteryDegradationForecastWidget.swift          (surface: shell, header, freshness chip, 4 phases)
+  BatteryDegradationForecastWidget.Content.swift  (loaded content: compact summary / standard hero+lists)
+  BatteryDegradationForecastWidget.Views.swift    (badge, hero, stat card, risk row, tip card, empty state)
+  BatteryDegradationForecastWidget.Models.swift   (domain value types + projection)
+  BatteryDegradationForecastWidget.Builder.swift  (pure adapter: tiers, impact, icon, formatters, a11y)
+  BatteryDegradationForecastWidget.Model.swift    (P1/S8 source seam, P1/S11 telemetry, P1/S10 i18n, @Observable model)
+  BatteryDegradationForecastWidget.Previews.swift (DEBUG previews: every state)
+  BatteryDegradationForecastWidget.Tests.swift    (adapter + format + a11y unit tests)
+  BatteryDegradationForecastWidget.ModelTests.swift (state-holder + registry unit tests)
+  BatteryDegradationForecastWidget.strings        (P1/S10 i18n catalog contribution)
+
+Parity notes (web -> native):
+  - Data sources bound via P1/S8 state-holder seam (BatteryDegradationForecastSource); NO HTTP in the view.
+      web useBatteryDegradation + useVehicles -> BatteryDegradationForecastUpdate{snapshot, vehicle, status, connection}
+  - healthTier()   -> BatteryDegradationForecastBuilder.tier(forRate:)   (<=0.05 healthy, <=0.12 normal, else accelerated)
+  - scoreToImpact()-> BatteryDegradationForecastBuilder.impact(forScore:) (>=7 high, >=4 medium, else low)
+  - riskIcon()     -> riskSymbol(forName:) (thermometer / bolt / battery / warning-triangle SF Symbols)
+  - hasData        -> projection.hasData = (resolvedHealth != nil || projected80Date != nil)
+  - isCompact      -> size.cols <= 1
+  - fmtNumber()    -> BatteryDegradationForecastFormat.number() (grouped, half-up, em-dash on non-finite)
+  - Intl.DateTimeFormat({year:'numeric',month:'short'}) -> Format.projectedDate() (localized "MMM yyyy")
+  - U+2212 minus sign + U+2014 em dash glyphs reproduced exactly.
+  - Every state rendered: loading (skeleton) / empty / error+retry / content, plus freshness chip
+    (live/stale/offline), connectivity banner, and stale auto-refresh (.task) per ADR-013.
+  - i18n: every string resolves through BatteryDegradationForecastStrings (NSLocalizedString table) with
+    the web English fallback; zero hardcoded English literals in view code.
+  - Accessibility: VoiceOver labels on hero/stat/risk/tip/empty/chips; Dynamic Type fonts; reduce-motion
+    honoured by TSSkeleton.
+  - Telemetry: model.start() emits view.opened surface=BatteryDegradationForecastWidget (P1/S11), once.
+  - No charts/maps in this surface (per registry spec) -> Swift Charts / MapKit not required here.
+
+NAMESPACE NOTE: the module already contains a ForecastDetails.* feature surface that squats the bare
+  "Forecast*" type namespace (ForecastVehicle, ForecastHealthTier, ForecastImpact, ForecastRiskFactor,
+  ForecastStatCard, ForecastRiskFactorRow, ForecastTipCard, ForecastEmptyState, ...). All of this surface's
+  generic types were therefore prefixed BatteryDegradationForecast* to avoid single-module redeclarations.
+  Verified unique against the rest of the module.
+
+-------------------------------------------------------------------------------
+[1/6] iOS BUILD
+  $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+      -derivedDataPath /tmp/dd-fc-ios CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+  (Gradle assembled Shared.xcframework, then compiled the full TeslaSync app target incl. this surface.)
+  ** BUILD SUCCEEDED **
+  IOS_EXIT=0
+
+[2/6] macOS BUILD
+  $ xcodebuild -scheme TeslaSync-macOS \
+      -derivedDataPath /tmp/dd-fc-mac CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+  ** BUILD SUCCEEDED **
+  MAC_EXIT=0
+
+[3/6] IN-SCOPE UNIT TESTS  (adapter + per-state + a11y + registry)
+  The full-scheme `build test` TEST action does NOT compile in this snapshot because of PRE-EXISTING
+  defects in UNRELATED sibling test files (outside this prompt's allowed-file scope). Representative,
+  reproduced verbatim from the TeslaSyncTests bundle compile:
+    SafetyHistoryWidget.ModelTests.swift  : invalid redeclaration of 'SafetyModelTests'/'SafetyRegistryTests'/'SafetyAccessibilityTests'
+                                            (duplicated with SafetyFeaturesWidget.ModelTests.swift)
+    ChargeStatusLiveWidget.Tests.swift    : invalid redeclaration of 'ChargeStatus*Tests' (duplicated with ChargeStatusWidget.Tests.swift)
+    DrivingCoachSection.ModelTests.swift  : invalid redeclaration of 'DrivingCoachAccessibilityTests'
+    MonthlyCostChart.Tests.swift          : invalid redeclaration of 'MonthlyCostAccessibilityTests'
+    PresetGallery.ModelTests.swift:17     : let 'passthroughLocalize' is not concurrency-safe because non-'Sendable'
+    PresetGallery.Tests.swift:22          : let 'passthroughLocalize' is not concurrency-safe because non-'Sendable'
+  These are pre-existing (git status confirms the working tree change is confined to this surface's files
+  only) and are not this surface's responsibility to fix (Honesty rule 7, allowed-file scope).
+
+  This surface's tests are therefore EXECUTED GREEN against the REAL production sources via a standalone
+  SwiftPM harness (Sources/TeslaSync = this surface's 6 production files + DashboardWidgetInfra + design
+  Tokens + TSSkeleton; Tests/TeslaSyncTests = this surface's UNMODIFIED *.Tests.swift + *.ModelTests.swift
+  with `@testable import TeslaSync`). Target Platform: arm64-apple-macos14.0.
+  $ (cd /tmp/bdfharness && swift test)
+    Test Suite 'BatteryDegradationForecastFormatTests'        Executed 6  tests, 0 failures
+    Test Suite 'BatteryDegradationForecastBuilderTests'       Executed 10 tests, 0 failures
+    Test Suite 'BatteryDegradationForecastAccessibilityTests' Executed 4  tests, 0 failures
+    Test Suite 'BatteryDegradationForecastModelTests'         Executed 13 tests, 0 failures
+    Test Suite 'BatteryDegradationForecastRegistryTests'      Executed 2  tests, 0 failures
+    Test Suite 'All tests' passed -> Executed 35 tests, with 0 failures (0 unexpected)
+  IN_SCOPE_TEST_EXIT=0   (35/35 green; real sources, real test files)
+
+[4/6] swiftlint --strict
+  $ swiftlint lint --strict --no-cache <9 surface files>
+  Done linting! Found 0 violations, 0 serious in 9 files.
+  LINT_EXIT=0
+
+[5/6] swiftformat --lint
+  $ swiftformat --lint <9 surface files>
+  0/9 files require formatting.
+  FORMAT_EXIT=0
+
+[6/6] check-placeholders (this surface's files)
+  $ pwsh apps/tools/check-placeholders.ps1 -Path <this surface's files>
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  (No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented/stub/mock in shipped code.)
+
+-------------------------------------------------------------------------------
+File sizes (all < swiftlint 400-line file_length limit):
+  Views 271 · Tests 271 · swift 259 · Model 242 · ModelTests 238 · Models 229 · Builder 212 · Previews 182 · Content 181
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : every reported result is the real command's output; the pre-existing TEST-action
+                         breakage in UNRELATED sibling files is reported plainly, not painted green.
+  2  No scope narrowing: all web states + sections + i18n keys reproduced (loading/empty/error/stale/offline/
+                         content; hero, current-health stat, risk-factor list, recommendation tip cards).
+  3  No skip-and-assume: read the web source end-to-end; every conditional branch and t() call ported.
+  4  No stubs as final : no placeholder/stub/coming-soon; complete implementations only.
+  5  No parity shortcuts: data via P1/S8 seam, i18n via P1/S10, telemetry via P1/S11, tokens via P1/S9.
+  6  No delegation      : implemented directly (delegation forbidden for this prompt).
+  7  No predecessor bypass: pre-existing unrelated bundle defects documented, not silently worked around in
+                         shipped files; permanent project.yml/grid registration remains the P4 gate's scope.
+  8  No commit on red   : committing on GREEN iOS BUILD + GREEN macOS BUILD + GREEN in-scope tests (35/35) +
+                         GREEN swiftlint/swiftformat/placeholder gates.
+  9  No silent drift    : `git status` working-tree change confined to this surface's BatteryDegradationForecastWidget.*
+                         files + this log; sidelined-for-verification sibling files were restored via `git checkout`.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native BatteryDegradationForecastWidget shipped at parity with the web source:
+  pure-Swift cached->projection adapter (executed GREEN), P1/S8 state-holder seam (no view HTTP), every
+  web state + section + i18n key + accessibility label, P1/S11 view.opened telemetry, registry-correct
+  (battery-degradation-forecast, battery, 2x4 / 1x2 / 4x40 with clamping). The full Xcode BUILD action ran
+  GREEN on BOTH iOS Simulator (iPhone 16) and macOS, and this surface's unit tests ran GREEN (35/35) against
+  the real production sources. The only non-green signal is the full-scheme TEST-action compile, blocked by
+  PRE-EXISTING duplicate-XCTestCase-class and Swift6 non-Sendable defects in UNRELATED sibling widget/feature
+  test files (evidence above) that are outside this prompt's allowed-file scope. Code signing disabled
+  (no identities) does not affect compile/test correctness.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0011-BatteryDegradationForecastWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add BatteryDegradationForecastWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
