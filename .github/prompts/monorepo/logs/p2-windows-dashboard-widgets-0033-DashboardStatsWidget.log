@@ -1,0 +1,70 @@
+=== P2 Dashboard widget 0033 DashboardStatsWidget (Windows) ===
+date: 2026-06-08T17:27:01.3525370-07:00
+web source: web/src/features/dashboard/widgets/DashboardStatsWidget.tsx
+native output: apps/windows/TeslaSync.App/dashboard-widgets/DashboardStatsWidget/*
+
+=== GATE: build ===
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+=== GATE: test ===
+Passed!  - Failed:     0, Passed:  3211, Skipped:     0, Total:  3211, Duration: 1 s - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 227 ms - TeslaSync.App.UITests.dll (net10.0)
+TEST_EXIT=1
+UITEST failures referencing DashboardStats surface: 0
+
+=== GATE: format ===
+format: no changes required (clean)
+FORMAT_EXIT=0
+
+=== GATE: placeholders ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== TEST_EXIT=1 BREAKDOWN (Honesty Covenant #1/#10 — no red-as-green) ===
+  * TeslaSync.App.Tests.dll  (headless net10.0): Passed: 3211, Failed: 0, Skipped: 0.
+      This INCLUDES the 59 new DashboardStatsWidgetTests cases: the dashboard-stats parse adapter
+      (camelCase + snake_case fallback + numeric strings + non-object empty), the FSM-state /
+      state-timeline parse, the four-stat projection (Vehicles / Trips / Charge Sessions / FSM State),
+      the compact active-trips hero, the capitalized current-state badge + semantic tone map, the
+      wide recent-transitions list (relative-time tiers, slice(0,5) cap, em-dash fallbacks), the
+      multi-source combine mapper (dashboard-stats load-bearing; FSM + timeline enriching with the
+      freshness union; loaded / empty / error / stale / offline; degrade-on-failure), the full
+      view-model state matrix, registry metadata + bounds/clamp, PII-safe diagnostics view.opened
+      slug=DashboardStatsWidget, and a11y automation-name coverage. The surface logic is fully green.
+  * TeslaSync.App.UITests.dll (WinAppDriver/Appium UI automation): Passed: 0, Failed: 147. Root cause:
+      TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+      WinAppDriver/Appium runner is absent; nothing is listening on http://127.0.0.1:4723/ and
+      WinAppDriver.exe was not found at its standard install paths or on PATH.
+      Environmental / repo-wide: WinAppDriverSession.EnsureReady() is intentionally designed to
+      HARD-FAIL (never silently skip) when the runner is absent (see TeslaSync.App.UITests/README.md).
+      All 147 failing cases are the identical probe exception and NONE references this surface
+      (grep DashboardStats over TeslaSync.App.UITests/ = 0 hits; over the captured test output = 0
+      hits). This is the identical block recorded for committed siblings 0001-0032.
+
+Platform-capability probe (this run):
+  - WinAppDriver.exe on PATH: NOT FOUND
+  - C:\Program Files (x86)\Windows Application Driver\WinAppDriver.exe : present=False
+  - TCP 127.0.0.1:4723 : TcpTestSucceeded=False
+  - WinUI 3 / Windows App SDK 2.1.3 + .NET 10 build capability: PRESENT (BUILD_EXIT=0 above).
+
+CONCLUSION: DashboardStatsWidget is complete and at web-source parity
+(web/src/features/dashboard/widgets/DashboardStatsWidget.tsx): registry id "dashboard-stats",
+category "system", default 2x2 / min 1x2 / max 4x40; four stat tiles (Vehicles, Trips, Charge
+Sessions, FSM State), the 1-col compact big active-trips number + "active", the "Current State"
+status badge, and the wide "Recent Transitions" list — with every loading / empty / error / stale /
+offline state rendered. Data binds via the shared P1/S8 cache-then-network state-holder
+(IDashboardStatsSource -> DashboardStatsSource composing IWidgetVehicleSource + generated operations
+get_api_v1_dashboard_stats, get_api_v1_vehicles_vehicleID_state, get_api_v1_vehicle_states_timeline);
+the view performs no HTTP. All nine source i18n keys (widget.dashboardStats.*) resolve through the
+P1/S10 localizer facade with English fallbacks. Build, headless surface tests, format and placeholder
+gates are all GREEN. The single red gate step (TEST) is blocked solely by the absent WinAppDriver/
+Appium UI-automation runner — a platform-capability gap recorded with evidence rather than reported
+as green. Committed "-- deferred" per the convention established by committed siblings 0001-0032.
+
+EXIT=1
+STATUS=BLOCKED

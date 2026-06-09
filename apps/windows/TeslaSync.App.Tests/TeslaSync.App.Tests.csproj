@@ -126,6 +126,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\CostForecastWidget\CostForecastWidget.Model.cs" Link="Widgets\CostForecastWidget\CostForecastWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\CostForecastWidget\CostForecastWidget.ViewModel.cs" Link="Widgets\CostForecastWidget\CostForecastWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\CostForecastWidget\CostForecastWidget.Source.cs" Link="Widgets\CostForecastWidget\CostForecastWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DashboardStatsWidget\DashboardStatsWidget.Model.cs" Link="Widgets\DashboardStatsWidget\DashboardStatsWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DashboardStatsWidget\DashboardStatsWidget.ViewModel.cs" Link="Widgets\DashboardStatsWidget\DashboardStatsWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DashboardStatsWidget\DashboardStatsWidget.Source.cs" Link="Widgets\DashboardStatsWidget\DashboardStatsWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DestinationETAWidget\DestinationETAWidget.Model.cs" Link="Widgets\DestinationETAWidget\DestinationETAWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DestinationETAWidget\DestinationETAWidget.ViewModel.cs" Link="Widgets\DestinationETAWidget\DestinationETAWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DestinationETAWidget\DestinationETAWidget.Source.cs" Link="Widgets\DestinationETAWidget\DestinationETAWidget.Source.cs" />
