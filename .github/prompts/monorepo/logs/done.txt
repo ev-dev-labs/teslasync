@@ -328,3 +328,4 @@ p2-windows/feature-views/W-0145-MoreDetailsPanel.prompt.md
 p2-windows/feature-views/W-0143-HeroGauges.prompt.md
 p2-windows/feature-views/W-0144-JourneyDetailsPanel.prompt.md
 p2-windows/feature-views/W-0142-EnergySummaryPanel.prompt.md
+p2-windows/feature-views/W-0146-PowerProfileChart.prompt.md
