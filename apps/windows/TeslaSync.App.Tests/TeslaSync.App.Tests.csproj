@@ -57,6 +57,9 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.Model.cs" Link="FeatureViews\RegexTester\RegexTester.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.ViewModel.cs" Link="FeatureViews\RegexTester\RegexTester.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0018 JwtDecoder: the surface's UI-thread-free logic (the pure decode adapter, the state
     enum + decode-result model, the display projection, the diagnostics, and the state-holder view-model)
     lives in the WinUI app project under feature-views/ but is WinUI-free by construction. It reuses the
@@ -324,14 +327,18 @@
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
     <!--
       P2 dashboard-widgets (TirePressureVisualWidget): its headless logic + state-holder view-model are
-      exercised by TirePressureVisualWidgetTests; the three WinUI-free source files are linked in once above
-      (NETSDK1022: this block previously duplicated those identical Compile items, breaking the test build).
+      exercised by TirePressureVisualWidgetTests. Link the three WinUI-free source files in so the headless
+      (net10.0) test project verifies the adapter + per-state transitions without a UI host. The WinUI view
+      itself (TirePressureVisualWidget.cs) is exercised by the app build.
     -->
     <!-- TirePressureVisualWidget's three WinUI-free sources are linked once in the dashboard-widgets group above. -->
       TirePressureVisualWidget's three WinUI-free sources are linked exactly once (in the widget ItemGroup
       above). Two further duplicate triples here were a pre-existing merge artifact that made the build fail
       with NETSDK1022 "Duplicate 'Compile' items"; removed so the gate can build.
     -->
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Model.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Source.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Source.cs" />
@@ -429,6 +436,17 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.Model.cs" Link="FeatureViews\TeslaApiRefTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" Link="FeatureViews\TeslaApiRefTool.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0028 StatusHeader: the DLQ-inspector header's UI-thread-free logic (the DLQ list
+    snapshot model, the two-branch projection, the localized labels + glyph mapping, the accessible names
+    and the diagnostics) lives in the WinUI app project but is WinUI-free by construction. Link the Model in
+    so the headless (net10.0) test project verifies the adapter + per-state projection row-for-row without a
+    UI host. The WinUI view itself (StatusHeader.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\StatusHeader\StatusHeader.Model.cs" Link="FeatureViews\StatusHeader\StatusHeader.Model.cs" />
   </ItemGroup>
 
   <!--
