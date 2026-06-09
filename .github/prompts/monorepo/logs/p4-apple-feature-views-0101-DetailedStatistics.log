@@ -1,0 +1,124 @@
+=== P4 Feature view 0101 DetailedStatistics (Apple) ===
+date: Tue Jun  9 01:55:24 PDT 2026
+host: macOS 26.5.1 | Xcode 26.5 Build version 17F42 
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+Web source (THE spec): web/src/features/charging/components/charging-list/DetailedStatistics.tsx
+Native output: apps/apple/TeslaSync/feature-views/DetailedStatistics.{swift,Adapter,Accessibility,Model,Views,Previews,Tests}.swift + DetailedStatistics.strings
+
+------------------------------------------------------------------------
+[1/8] swiftformat --lint (surface files)
+------------------------------------------------------------------------
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------
+[2/8] swiftlint --strict (surface files)
+------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------
+[3/8] placeholder gate — check-placeholders.ps1 (ADR-011)
+------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+------------------------------------------------------------------------
+[4/8] swiftc -typecheck — real iOS 18 SDK, Swift 6 language mode, strict concurrency = complete
+  (surface + previews; real apps/design/generated/apple/Tokens.swift;
+   signature-exact shims for TSGlassPanel/TSSkeleton verified vs Sources/Components/UI/Cards.swift
+   + Sources/Components/Feedback/Skeletons.swift)
+------------------------------------------------------------------------
+TYPECHECK_IOS_EXIT=0
+
+[5/8] swiftc -typecheck — real macOS 15 SDK, Swift 6 language mode, strict concurrency = complete
+TYPECHECK_MAC_EXIT=0
+
+------------------------------------------------------------------------
+[6/8] swift test — isolated SwiftPM (@testable import TeslaSync), Swift 6 language mode
+  adapter (format/projection web-parity) + model (phase/telemetry/stale/offline) + a11y
+------------------------------------------------------------------------
+Test Suite 'All tests' passed at 2026-06-09 01:56:39.326.
+	 Executed 31 tests, with 0 failures (0 unexpected) in 0.010 (0.015) seconds
+SWIFT_TEST_EXIT=0
+
+------------------------------------------------------------------------
+[7/8] xcodegen generate — project enumerates all 8 surface files
+------------------------------------------------------------------------
+GEN_EXIT=0 (Created project at apps/apple/TeslaSync.xcodeproj)
+  enumerated: DetailedStatistics.Accessibility.swift
+  enumerated: DetailedStatistics.Adapter.swift
+  enumerated: DetailedStatistics.Model.swift
+  enumerated: DetailedStatistics.Previews.swift
+  enumerated: DetailedStatistics.strings
+  enumerated: DetailedStatistics.swift
+  enumerated: DetailedStatistics.Tests.swift
+  enumerated: DetailedStatistics.Views.swift
+
+------------------------------------------------------------------------
+[8/8] FULL-APP xcodebuild — iOS Simulator (iPhone 16) — ATTEMPTED on this host (not deferred)
+------------------------------------------------------------------------
+Pre-actions executed successfully on THIS host:
+  - KMP Shared.xcframework assembled via Gradle :core:assembleSharedXCFramework -> BUILD SUCCESSFUL (9m35s)
+  - staged -> apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64)
+  - xcodegen project generated; iPhone 16 simulator booted
+
+xcodebuild ... build  ->  ** BUILD FAILED ** (exit 65)
+  Total compiler 'error:' lines: 350 across 27 files.
+  DetailedStatistics 'error:' lines: 0   <-- THIS SURFACE IS CLEAN
+
+  ALL failures are pre-existing, unrelated parallel-merge collisions in OTHER surfaces (other P4
+  prompts own them; same class documented in apps/macos-pending-verifications.md). Failing files:
+      40 ChargeStatusLiveWidget.Adapter.swift
+      31 ChargeStatusLiveWidget.Model.swift
+      24 ChargeStatusWidget.Adapter.swift
+      23 ChargeStatusWidget.Model.swift
+      20 ChargeStatusLiveWidget.Previews.swift
+      18 ChargeStatusWidget.Previews.swift
+      17 SafetyFeaturesWidget.Previews.swift
+      15 ChargeSessionChartWidget.Previews.swift
+      14 SafetyHistoryWidget.Previews.swift
+      13 ChargeStatusWidget.swift
+      13 ChargeStatusLiveWidget.swift
+       5 ChargeStatusLiveWidget.Content.swift
+       4 ChargeStatusWidget.Components.swift
+       3 ChargeSessionChartWidget.Model.swift
+       2 SafetyHistoryWidget.Model.swift
+       2 SafetyFeaturesWidget.Model.swift
+       1 SafetyHistoryWidget.swift
+       1 SafetyFeaturesWidget.swift
+       1 FleetStatsBarWidget.swift
+       1 FleetStatsBarWidget.Previews.swift
+       1 ChargeSessionChartWidget.Models.swift
+       1 ChargeSessionChartWidget.Builder.swift
+
+  Representative root causes (duplicate type decls / ambiguous lookups across sibling surfaces):
+      63 'ChargeStatusProjection' is ambiguous for type lookup
+      56 'ChargeConnection' is ambiguous for type lookup
+      18 'ChargeMetric' is ambiguous for type lookup
+      14 'ChargeStatusUpdate' is ambiguous for type lookup
+      10 'ChargeStateDTO' is ambiguous for type lookup
+       9 'ChargeUnitPrefs' is ambiguous for type lookup
+       9 'ChargeSessionDTO' is ambiguous for type lookup
+       8 does not conform to protocol 'Equatable'
+
+========================================================================
+DISPOSITION
+========================================================================
+SURFACE (DetailedStatistics) — VERIFIED GREEN, every in-scope gate:
+  FORMAT_EXIT=0   LINT_EXIT=0 (--strict)   PLACEHOLDER_COUNT=0
+  TYPECHECK_IOS_EXIT=0   TYPECHECK_MAC_EXIT=0   (real iOS18 + macOS15 SDK, Swift6 strict concurrency=complete)
+  swift test: 31/31 PASS (adapter web-parity + model lifecycle + accessibility)
+  xcodegen: 8/8 files enumerated;   full-app iOS compile: 0 DetailedStatistics errors
+
+FULL-APP 'build test' AGGREGATE is blocked ONLY by pre-existing, unrelated collisions in 27 other-surface
+files (ChargeStatusWidget / ChargeStatusLiveWidget / ChargeSessionChartWidget / SafetyFeaturesWidget /
+SafetyHistoryWidget / FleetStatsBarWidget). Out of scope (other prompts own them; fixing would collide with
+parallel slots). Deferred to the P4 acceptance gate (P99) on a clean integration tree — the same
+user-approved disposition recorded for peers 0105-QuickMetrics / 0096-AcDcStatsPanel, here strengthened by
+actually assembling+staging the KMP framework and running the real xcodebuild to prove this surface clean.
+
+EXIT=0
+STATUS=DONE
