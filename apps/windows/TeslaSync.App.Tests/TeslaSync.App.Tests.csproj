@@ -70,6 +70,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SpeedProfileWidget\SpeedProfileWidget.Model.cs" Link="Widgets\SpeedProfileWidget\SpeedProfileWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SpeedProfileWidget\SpeedProfileWidget.ViewModel.cs" Link="Widgets\SpeedProfileWidget\SpeedProfileWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SpeedProfileWidget\SpeedProfileWidget.Source.cs" Link="Widgets\SpeedProfileWidget\SpeedProfileWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VampireDrainWidget\VampireDrainWidget.Model.cs" Link="Widgets\VampireDrainWidget\VampireDrainWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VampireDrainWidget\VampireDrainWidget.ViewModel.cs" Link="Widgets\VampireDrainWidget\VampireDrainWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\VampireDrainWidget\VampireDrainWidget.Source.cs" Link="Widgets\VampireDrainWidget\VampireDrainWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AutomationHistoryWidget\AutomationHistoryWidget.Model.cs" Link="Widgets\AutomationHistoryWidget\AutomationHistoryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AutomationHistoryWidget\AutomationHistoryWidget.ViewModel.cs" Link="Widgets\AutomationHistoryWidget\AutomationHistoryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AutomationStatusWidget\AutomationStatusWidget.Model.cs" Link="Widgets\AutomationStatusWidget\AutomationStatusWidget.Model.cs" />

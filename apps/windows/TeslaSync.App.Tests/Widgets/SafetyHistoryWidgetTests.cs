@@ -31,22 +31,22 @@ public sealed class SafetyHistoryWidgetTests
 
     private static string DaysAgo(double days) => Now.AddDays(-days).ToString("O", CultureInfo.InvariantCulture);
 
-    private static SafetySnapshot Snap(
+    private static SafetyHistorySnapshot Snap(
         string? createdAt = null,
         bool? aeb = null,
         bool? bsw = null,
         bool? elda = null,
         bool? pin = null,
-        SafetyValue fcw = default,
-        SafetyValue lane = default,
-        SafetyValue speed = default,
-        SafetyValue follow = default,
+        SafetyHistoryValue fcw = default,
+        SafetyHistoryValue lane = default,
+        SafetyHistoryValue speed = default,
+        SafetyHistoryValue follow = default,
         long? id = null)
         => new(id, aeb, bsw, elda, pin, fcw, lane, speed, follow, createdAt);
 
-    private static IReadOnlyList<SafetySnapshot> Snaps(params SafetySnapshot[] rows) => rows;
+    private static IReadOnlyList<SafetyHistorySnapshot> Snaps(params SafetyHistorySnapshot[] rows) => rows;
 
-    private static SafetyHistoryDisplay Project(IReadOnlyList<SafetySnapshot> snapshots, int cols = 2, int rows = 4) =>
+    private static SafetyHistoryDisplay Project(IReadOnlyList<SafetyHistorySnapshot> snapshots, int cols = 2, int rows = 4) =>
         SafetyHistoryProjection.Project(snapshots, new SafetyHistorySize(cols, rows), Localizer, Now);
 
     // ---- Parse adapter (web useSafetyHistory read) ---------------------------------
@@ -67,14 +67,14 @@ public sealed class SafetyHistoryWidgetTests
             }
             """);
 
-        var snap = SafetySnapshot.FromJson(doc.RootElement);
+        var snap = SafetyHistorySnapshot.FromJson(doc.RootElement);
 
         Assert.Equal(7, snap.Id);
         Assert.True(snap.AutomaticEmergencyBrakingOff);
         Assert.False(snap.BlindSpotCollisionWarning);
-        Assert.Equal(SafetyValueKind.Str, snap.ForwardCollisionWarning.Kind);
+        Assert.Equal(SafetyHistoryValueKind.Str, snap.ForwardCollisionWarning.Kind);
         Assert.Equal("ForwardCollisionSensitivityHigh", snap.ForwardCollisionWarning.StringValue);
-        Assert.Equal(SafetyValueKind.Number, snap.CruiseFollowDistance.Kind);
+        Assert.Equal(SafetyHistoryValueKind.Number, snap.CruiseFollowDistance.Kind);
         Assert.Equal(3, snap.CruiseFollowDistance.NumberValue);
         Assert.True(snap.PinToDriveEnabled);
         Assert.NotNull(snap.CreatedAtTime);
@@ -85,11 +85,11 @@ public sealed class SafetyHistoryWidgetTests
     {
         using var doc = JsonDocument.Parse("""{"forward_collision_warning":null}""");
 
-        var snap = SafetySnapshot.FromJson(doc.RootElement);
+        var snap = SafetyHistorySnapshot.FromJson(doc.RootElement);
 
         Assert.Null(snap.Id);
         Assert.Null(snap.AutomaticEmergencyBrakingOff);
-        Assert.Equal(SafetyValueKind.None, snap.ForwardCollisionWarning.Kind);
+        Assert.Equal(SafetyHistoryValueKind.None, snap.ForwardCollisionWarning.Kind);
         Assert.False(snap.ForwardCollisionWarning.IsPresent);
         Assert.Null(snap.CreatedAt);
         Assert.Null(snap.CreatedAtTime);
@@ -100,7 +100,7 @@ public sealed class SafetyHistoryWidgetTests
     {
         using var doc = JsonDocument.Parse("""[{"id":1}, 7, {"id":2}]""");
 
-        var list = SafetySnapshot.ParseList(doc.RootElement);
+        var list = SafetyHistorySnapshot.ParseList(doc.RootElement);
 
         Assert.Equal(2, list.Count);
         Assert.Equal(1, list[0].Id);
@@ -111,19 +111,19 @@ public sealed class SafetyHistoryWidgetTests
     public void ParseList_returns_empty_for_non_array()
     {
         using var doc = JsonDocument.Parse("""{"id":1}""");
-        Assert.Empty(SafetySnapshot.ParseList(doc.RootElement));
+        Assert.Empty(SafetyHistorySnapshot.ParseList(doc.RootElement));
     }
 
-    // ---- SafetyValue raw stringification (web String()) ----------------------------
+    // ---- SafetyHistoryValue raw stringification (web String()) ----------------------------
 
     [Fact]
     public void SafetyValue_raw_string_mirrors_js_String_coercion()
     {
-        Assert.Equal("true", SafetyValue.OfBool(true).AsRawString());
-        Assert.Equal("false", SafetyValue.OfBool(false).AsRawString());
-        Assert.Equal("3", SafetyValue.OfNumber(3).AsRawString());
-        Assert.Equal("2.5", SafetyValue.OfNumber(2.5).AsRawString());
-        Assert.Equal("FollowDistance2", SafetyValue.OfString("FollowDistance2").AsRawString());
+        Assert.Equal("true", SafetyHistoryValue.OfBool(true).AsRawString());
+        Assert.Equal("false", SafetyHistoryValue.OfBool(false).AsRawString());
+        Assert.Equal("3", SafetyHistoryValue.OfNumber(3).AsRawString());
+        Assert.Equal("2.5", SafetyHistoryValue.OfNumber(2.5).AsRawString());
+        Assert.Equal("FollowDistance2", SafetyHistoryValue.OfString("FollowDistance2").AsRawString());
     }
 
     // ---- safetyEnum.ts port: Clean -------------------------------------------------
@@ -131,8 +131,8 @@ public sealed class SafetyHistoryWidgetTests
     [Fact]
     public void Clean_renders_booleans_as_on_off()
     {
-        Assert.Equal("On", SafetyEnums.Clean(SafetyValue.OfBool(true), SafetyEnumField.ForwardCollisionWarning, "On", "Off", "—"));
-        Assert.Equal("Off", SafetyEnums.Clean(SafetyValue.OfBool(false), SafetyEnumField.ForwardCollisionWarning, "On", "Off", "—"));
+        Assert.Equal("On", SafetyEnums.Clean(SafetyHistoryValue.OfBool(true), SafetyHistoryEnumField.ForwardCollisionWarning, "On", "Off", "—"));
+        Assert.Equal("Off", SafetyEnums.Clean(SafetyHistoryValue.OfBool(false), SafetyHistoryEnumField.ForwardCollisionWarning, "On", "Off", "—"));
     }
 
     [Fact]
@@ -140,10 +140,10 @@ public sealed class SafetyHistoryWidgetTests
     {
         Assert.Equal(
             "High",
-            SafetyEnums.Clean(SafetyValue.OfString("ForwardCollisionSensitivityHigh"), SafetyEnumField.ForwardCollisionWarning, "On", "Off", "—"));
+            SafetyEnums.Clean(SafetyHistoryValue.OfString("ForwardCollisionSensitivityHigh"), SafetyHistoryEnumField.ForwardCollisionWarning, "On", "Off", "—"));
         Assert.Equal(
             "2",
-            SafetyEnums.Clean(SafetyValue.OfString("LaneAssistLevel2"), SafetyEnumField.LaneDepartureAvoidance, "On", "Off", "—"));
+            SafetyEnums.Clean(SafetyHistoryValue.OfString("LaneAssistLevel2"), SafetyHistoryEnumField.LaneDepartureAvoidance, "On", "Off", "—"));
     }
 
     [Fact]
@@ -151,14 +151,14 @@ public sealed class SafetyHistoryWidgetTests
     {
         Assert.Equal(
             "Off",
-            SafetyEnums.Clean(SafetyValue.OfString("SpeedAssistLevelNone"), SafetyEnumField.SpeedLimitWarning, "On", "Off", "—"));
+            SafetyEnums.Clean(SafetyHistoryValue.OfString("SpeedAssistLevelNone"), SafetyHistoryEnumField.SpeedLimitWarning, "On", "Off", "—"));
     }
 
     [Fact]
     public void Clean_passes_numbers_and_falls_back_for_absent()
     {
-        Assert.Equal("3", SafetyEnums.Clean(SafetyValue.OfNumber(3), SafetyEnumField.CruiseFollowDistance, "On", "Off", "—"));
-        Assert.Equal("—", SafetyEnums.Clean(SafetyValue.None, SafetyEnumField.ForwardCollisionWarning, "On", "Off", "—"));
+        Assert.Equal("3", SafetyEnums.Clean(SafetyHistoryValue.OfNumber(3), SafetyHistoryEnumField.CruiseFollowDistance, "On", "Off", "—"));
+        Assert.Equal("—", SafetyEnums.Clean(SafetyHistoryValue.None, SafetyHistoryEnumField.ForwardCollisionWarning, "On", "Off", "—"));
     }
 
     // ---- safetyEnum.ts port: IsActive ----------------------------------------------
@@ -169,16 +169,16 @@ public sealed class SafetyHistoryWidgetTests
     [InlineData("None", false)]
     [InlineData("Disabled", false)]
     public void IsActive_classifies_strings(string raw, bool expected) =>
-        Assert.Equal(expected, SafetyEnums.IsActive(SafetyValue.OfString(raw), SafetyEnumField.ForwardCollisionWarning));
+        Assert.Equal(expected, SafetyEnums.IsActive(SafetyHistoryValue.OfString(raw), SafetyHistoryEnumField.ForwardCollisionWarning));
 
     [Fact]
     public void IsActive_classifies_bools_and_numbers_and_absent()
     {
-        Assert.True(SafetyEnums.IsActive(SafetyValue.OfBool(true), SafetyEnumField.ForwardCollisionWarning));
-        Assert.False(SafetyEnums.IsActive(SafetyValue.OfBool(false), SafetyEnumField.ForwardCollisionWarning));
-        Assert.True(SafetyEnums.IsActive(SafetyValue.OfNumber(3), SafetyEnumField.CruiseFollowDistance));
-        Assert.False(SafetyEnums.IsActive(SafetyValue.OfNumber(0), SafetyEnumField.CruiseFollowDistance));
-        Assert.False(SafetyEnums.IsActive(SafetyValue.None, SafetyEnumField.ForwardCollisionWarning));
+        Assert.True(SafetyEnums.IsActive(SafetyHistoryValue.OfBool(true), SafetyHistoryEnumField.ForwardCollisionWarning));
+        Assert.False(SafetyEnums.IsActive(SafetyHistoryValue.OfBool(false), SafetyHistoryEnumField.ForwardCollisionWarning));
+        Assert.True(SafetyEnums.IsActive(SafetyHistoryValue.OfNumber(3), SafetyHistoryEnumField.CruiseFollowDistance));
+        Assert.False(SafetyEnums.IsActive(SafetyHistoryValue.OfNumber(0), SafetyHistoryEnumField.CruiseFollowDistance));
+        Assert.False(SafetyEnums.IsActive(SafetyHistoryValue.None, SafetyHistoryEnumField.ForwardCollisionWarning));
     }
 
     // ---- Classification (web classifySnapshot, first match wins) -------------------
@@ -186,7 +186,7 @@ public sealed class SafetyHistoryWidgetTests
     [Fact]
     public void Classify_prefers_aeb_over_every_other_signal()
     {
-        var snap = Snap(aeb: true, fcw: SafetyValue.OfString("ForwardCollisionSensitivityHigh"), bsw: true);
+        var snap = Snap(aeb: true, fcw: SafetyHistoryValue.OfString("ForwardCollisionSensitivityHigh"), bsw: true);
         Assert.Equal(SafetyEventKind.Aeb, SafetyHistoryProjection.Classify(snap));
     }
 
@@ -194,9 +194,9 @@ public sealed class SafetyHistoryWidgetTests
     public void Classify_resolves_each_branch_in_order()
     {
         Assert.Equal(SafetyEventKind.Fcw, SafetyHistoryProjection.Classify(
-            Snap(fcw: SafetyValue.OfString("ForwardCollisionSensitivityHigh"))));
+            Snap(fcw: SafetyHistoryValue.OfString("ForwardCollisionSensitivityHigh"))));
         Assert.Equal(SafetyEventKind.Lane, SafetyHistoryProjection.Classify(
-            Snap(lane: SafetyValue.OfString("LaneAssistLevel2"))));
+            Snap(lane: SafetyHistoryValue.OfString("LaneAssistLevel2"))));
         Assert.Equal(SafetyEventKind.Bsw, SafetyHistoryProjection.Classify(Snap(bsw: true)));
         Assert.Equal(SafetyEventKind.Elda, SafetyHistoryProjection.Classify(Snap(elda: true)));
         Assert.Equal(SafetyEventKind.General, SafetyHistoryProjection.Classify(Snap()));
@@ -207,7 +207,7 @@ public sealed class SafetyHistoryWidgetTests
     {
         // A disabled FCW (string "...Off") falls through to General, never FCW.
         Assert.Equal(SafetyEventKind.General, SafetyHistoryProjection.Classify(
-            Snap(fcw: SafetyValue.OfString("ForwardCollisionSensitivityOff"))));
+            Snap(fcw: SafetyHistoryValue.OfString("ForwardCollisionSensitivityOff"))));
     }
 
     [Fact]
@@ -229,8 +229,8 @@ public sealed class SafetyHistoryWidgetTests
     public void Subtitle_joins_present_parts_with_a_middle_dot()
     {
         var snap = Snap(
-            speed: SafetyValue.OfNumber(3),
-            follow: SafetyValue.OfString("FollowDistance2"),
+            speed: SafetyHistoryValue.OfNumber(3),
+            follow: SafetyHistoryValue.OfString("FollowDistance2"),
             pin: true);
 
         Assert.Equal("Speed Limit: 3 \u00B7 Follow: FollowDistance2 \u00B7 PIN to Drive",
@@ -240,7 +240,7 @@ public sealed class SafetyHistoryWidgetTests
     [Fact]
     public void Subtitle_omits_pin_when_false_and_em_dashes_when_empty()
     {
-        Assert.Equal("Speed Limit: 5", SafetyHistoryProjection.Subtitle(Snap(speed: SafetyValue.OfNumber(5), pin: false), Localizer));
+        Assert.Equal("Speed Limit: 5", SafetyHistoryProjection.Subtitle(Snap(speed: SafetyHistoryValue.OfNumber(5), pin: false), Localizer));
         Assert.Equal("\u2014", SafetyHistoryProjection.Subtitle(Snap(), Localizer));
     }
 
@@ -248,7 +248,7 @@ public sealed class SafetyHistoryWidgetTests
     public void Subtitle_stringifies_raw_values_without_cleaning()
     {
         // Web parity: buildSubtitle uses String(value), so a boolean speed-limit renders "false".
-        Assert.Equal("Speed Limit: false", SafetyHistoryProjection.Subtitle(Snap(speed: SafetyValue.OfBool(false)), Localizer));
+        Assert.Equal("Speed Limit: false", SafetyHistoryProjection.Subtitle(Snap(speed: SafetyHistoryValue.OfBool(false)), Localizer));
     }
 
     // ---- Projection: 30-day total + trend ------------------------------------------
@@ -307,9 +307,9 @@ public sealed class SafetyHistoryWidgetTests
     public void Project_most_common_breaks_ties_by_first_appearance()
     {
         var laneFirst = Project(Snaps(
-            Snap(createdAt: DaysAgo(1), lane: SafetyValue.OfString("LaneAssistLevel2")),
+            Snap(createdAt: DaysAgo(1), lane: SafetyHistoryValue.OfString("LaneAssistLevel2")),
             Snap(createdAt: DaysAgo(2), bsw: true),
-            Snap(createdAt: DaysAgo(3), lane: SafetyValue.OfString("LaneAssistLevel2")),
+            Snap(createdAt: DaysAgo(3), lane: SafetyHistoryValue.OfString("LaneAssistLevel2")),
             Snap(createdAt: DaysAgo(4), bsw: true)));
 
         // Lane and Blind-spot both occur twice; Lane appears first, so it wins.
@@ -414,7 +414,7 @@ public sealed class SafetyHistoryWidgetTests
     [Fact]
     public void Project_feed_caps_at_ten_rows()
     {
-        var rows = new SafetySnapshot[15];
+        var rows = new SafetyHistorySnapshot[15];
         for (int i = 0; i < rows.Length; i++)
         {
             rows[i] = Snap(createdAt: DaysAgo(i + 1), bsw: true);
@@ -428,8 +428,8 @@ public sealed class SafetyHistoryWidgetTests
     {
         var view = Project(Snaps(Snap(
             createdAt: DaysAgo(1),
-            fcw: SafetyValue.OfString("ForwardCollisionSensitivityHigh"),
-            speed: SafetyValue.OfNumber(2))));
+            fcw: SafetyHistoryValue.OfString("ForwardCollisionSensitivityHigh"),
+            speed: SafetyHistoryValue.OfNumber(2))));
 
         var row = Assert.Single(view.Rows);
         Assert.Equal("FCW: High", row.Title);
@@ -489,7 +489,7 @@ public sealed class SafetyHistoryWidgetTests
     [Fact]
     public async Task ViewModel_loading_only_stays_loading()
     {
-        using var vm = NewViewModel(RepositoryResult<IReadOnlyList<SafetySnapshot>>.Loading());
+        using var vm = NewViewModel(RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Loading());
         await vm.LoadAsync();
 
         Assert.Equal(SafetyHistoryState.Loading, vm.State);
@@ -527,7 +527,7 @@ public sealed class SafetyHistoryWidgetTests
     [Fact]
     public async Task ViewModel_empty_status_renders_empty()
     {
-        using var vm = NewViewModel(RepositoryResult<IReadOnlyList<SafetySnapshot>>.Empty(Now));
+        using var vm = NewViewModel(RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Empty(Now));
         await vm.LoadAsync();
 
         Assert.Equal(SafetyHistoryState.Empty, vm.State);
@@ -548,7 +548,7 @@ public sealed class SafetyHistoryWidgetTests
     public async Task ViewModel_failure_renders_error_with_retry_context()
     {
         using var vm = NewViewModel(
-            RepositoryResult<IReadOnlyList<SafetySnapshot>>.Failure(new RepositoryError(RepositoryErrorKind.Server, "boom")));
+            RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Failure(new RepositoryError(RepositoryErrorKind.Server, "boom")));
         await vm.LoadAsync();
 
         Assert.Equal(SafetyHistoryState.Error, vm.State);
@@ -561,7 +561,7 @@ public sealed class SafetyHistoryWidgetTests
     public async Task ViewModel_stale_cache_renders_stale_with_data()
     {
         using var vm = NewViewModel(
-            RepositoryResult<IReadOnlyList<SafetySnapshot>>.Cached(Snaps(Snap(createdAt: DaysAgo(1), bsw: true)), Now, stale: true));
+            RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Cached(Snaps(Snap(createdAt: DaysAgo(1), bsw: true)), Now, stale: true));
         await vm.LoadAsync();
 
         Assert.Equal(SafetyHistoryState.Stale, vm.State);
@@ -572,7 +572,7 @@ public sealed class SafetyHistoryWidgetTests
     [Fact]
     public async Task ViewModel_offline_renders_offline_with_data()
     {
-        using var vm = NewViewModel(RepositoryResult<IReadOnlyList<SafetySnapshot>>.OfflineCached(
+        using var vm = NewViewModel(RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.OfflineCached(
             Snaps(Snap(createdAt: DaysAgo(1), bsw: true)), Now, new RepositoryError(RepositoryErrorKind.Network, "offline")));
         await vm.LoadAsync();
 
@@ -585,9 +585,9 @@ public sealed class SafetyHistoryWidgetTests
     public async Task ViewModel_folds_loading_cached_loaded_to_loaded()
     {
         using var vm = NewViewModel(
-            RepositoryResult<IReadOnlyList<SafetySnapshot>>.Loading(),
-            RepositoryResult<IReadOnlyList<SafetySnapshot>>.Cached(Snaps(Snap(createdAt: DaysAgo(2), bsw: true)), Now, stale: false),
-            RepositoryResult<IReadOnlyList<SafetySnapshot>>.Loaded(Snaps(Snap(createdAt: DaysAgo(1), bsw: true), Snap(createdAt: DaysAgo(2), bsw: true)), Now));
+            RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Loading(),
+            RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Cached(Snaps(Snap(createdAt: DaysAgo(2), bsw: true)), Now, stale: false),
+            RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Loaded(Snaps(Snap(createdAt: DaysAgo(1), bsw: true), Snap(createdAt: DaysAgo(2), bsw: true)), Now));
         await vm.LoadAsync();
 
         Assert.Equal(SafetyHistoryState.Loaded, vm.State);
@@ -609,7 +609,7 @@ public sealed class SafetyHistoryWidgetTests
     [Fact]
     public async Task ViewModel_title_and_empty_resolve_through_i18n()
     {
-        using var vm = NewViewModel(RepositoryResult<IReadOnlyList<SafetySnapshot>>.Empty(Now));
+        using var vm = NewViewModel(RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Empty(Now));
         await vm.LoadAsync();
 
         Assert.Equal("Safety History", vm.Title);
@@ -754,9 +754,9 @@ public sealed class SafetyHistoryWidgetTests
 
     private static CacheThenNetworkEngine NewEngine() => new(new InMemoryCacheStore(), () => Now);
 
-    private static async Task<List<RepositoryResult<IReadOnlyList<SafetySnapshot>>>> Drain(ISafetyHistorySource source)
+    private static async Task<List<RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>>> Drain(ISafetyHistorySource source)
     {
-        var list = new List<RepositoryResult<IReadOnlyList<SafetySnapshot>>>();
+        var list = new List<RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>>();
         await foreach (var result in source.StreamAsync())
         {
             list.Add(result);
@@ -765,20 +765,20 @@ public sealed class SafetyHistoryWidgetTests
         return list;
     }
 
-    private static RepositoryResult<IReadOnlyList<SafetySnapshot>> Loaded(IReadOnlyList<SafetySnapshot> snapshots) =>
-        RepositoryResult<IReadOnlyList<SafetySnapshot>>.Loaded(snapshots, Now);
+    private static RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>> Loaded(IReadOnlyList<SafetyHistorySnapshot> snapshots) =>
+        RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Loaded(snapshots, Now);
 
-    private static SafetyHistoryViewModel NewViewModel(params RepositoryResult<IReadOnlyList<SafetySnapshot>>[] emissions) =>
+    private static SafetyHistoryViewModel NewViewModel(params RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>[] emissions) =>
         NewViewModel(SafetyHistorySize.Default, emissions);
 
     private static SafetyHistoryViewModel NewViewModel(
         SafetyHistorySize size,
-        params RepositoryResult<IReadOnlyList<SafetySnapshot>>[] emissions) =>
+        params RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>[] emissions) =>
         new(new FakeSafetyHistorySource(emissions), Localizer, size, () => Now);
 
-    private sealed class FakeSafetyHistorySource(params RepositoryResult<IReadOnlyList<SafetySnapshot>>[] emissions) : ISafetyHistorySource
+    private sealed class FakeSafetyHistorySource(params RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>[] emissions) : ISafetyHistorySource
     {
-        public async IAsyncEnumerable<RepositoryResult<IReadOnlyList<SafetySnapshot>>> StreamAsync(
+        public async IAsyncEnumerable<RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>> StreamAsync(
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             foreach (var emission in emissions)
