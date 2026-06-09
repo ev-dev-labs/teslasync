@@ -1,0 +1,41 @@
+/*
+  AlertDetailTimeline.strings
+  TeslaSync — P4 feature view · 0001 · AlertDetailTimeline (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "AlertDetailTimeline").
+  Every key the native AlertDetailTimeline resolves lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its strings without
+  editing the shared catalog.
+
+  The first group is the EXACT set of keys extracted from the web source
+  (web/src/features/admin/components/AlertDetailTimeline.tsx — the title, the
+  empty message, and the kind / kindAnonymous titles). The web i18next
+  `{{actor}}` interpolation is expressed natively as `%@`. Per the web catalog,
+  `kindAnonymous.created` is intentionally absent — the anonymous `created`
+  title falls back to the same "Alert created" default the web `t()` uses. The
+  second group backs the native-only chrome (connectivity banner / loading /
+  error / retry / accessibility) the Apple HIG states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"alerts.timeline.title" = "Audit timeline";
+"alerts.timeline.empty" = "No events yet";
+"alerts.timeline.anonymous" = "Unknown";
+"alerts.timeline.kind.created" = "Alert created";
+"alerts.timeline.kind.acknowledged" = "Acknowledged by %@";
+"alerts.timeline.kind.reopened" = "Reopened by %@";
+"alerts.timeline.kind.commented" = "Comment by %@";
+"alerts.timeline.kindAnonymous.acknowledged" = "Acknowledged";
+"alerts.timeline.kindAnonymous.reopened" = "Reopened";
+"alerts.timeline.kindAnonymous.commented" = "Comment added";
+
+/* --- Native chrome: connectivity banner (stale / offline) --- */
+"alerts.timeline.staleBanner" = "Reconnecting — the audit timeline may be stale";
+"alerts.timeline.offlineBanner" = "Offline — showing the last loaded audit timeline";
+
+/* --- Native chrome: states + accessibility --- */
+"alerts.timeline.loadingA11y" = "Loading audit timeline";
+"alerts.timeline.errorTitle" = "Couldn’t load the audit timeline";
+"alerts.timeline.retry" = "Retry";
