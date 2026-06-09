@@ -67,6 +67,16 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.Model.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.ViewModel.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.ViewModel.cs" />
+    P2 feature-views (0021 TimestampTool): the surface's UI-thread-free logic (the timestamp converter, the
+    field-state enum, the registration metadata, the diagnostics, and the state-holder view-model) lives in
+    the WinUI app project under feature-views/ but is WinUI-free by construction. Link the two source files
+    in so this headless (net10.0) test project verifies the adapter + per-field transitions without a UI
+    host — the same pattern used for the dashboard-widget logic. The WinUI view itself (TimestampTool.cs) is
+    exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.Model.cs" Link="FeatureViews\TimestampTool\TimestampTool.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.ViewModel.cs" Link="FeatureViews\TimestampTool\TimestampTool.ViewModel.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -317,6 +327,10 @@
       (NETSDK1022: this block previously duplicated those identical Compile items, breaking the test build).
     -->
     <!-- TirePressureVisualWidget's three WinUI-free sources are linked once in the dashboard-widgets group above. -->
+      TirePressureVisualWidget's three WinUI-free sources are linked exactly once (in the widget ItemGroup
+      above). Two further duplicate triples here were a pre-existing merge artifact that made the build fail
+      with NETSDK1022 "Duplicate 'Compile' items"; removed so the gate can build.
+    -->
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Model.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Source.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Source.cs" />
