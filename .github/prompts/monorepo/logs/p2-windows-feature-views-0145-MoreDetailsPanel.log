@@ -1,0 +1,110 @@
+=== P2 Feature view 0145 MoreDetailsPanel (Windows) ===
+run: 2026-06-09T16:23:56-07:00
+base commit: 13db7db3a
+web source: web/src/features/driving/components/drive-detail/MoreDetailsPanel.tsx
+
+CAPABILITY CHECK (prompt: requires WinUI 3 / Windows App SDK 1.6+ + .NET 10, Fluent Design)
+  dotnet SDK : 10.0.300  (net10.0 + net10.0-windows10.0.19041.0 both available; Microsoft.WindowsDesktop.App 10.0.8)
+  Full Windows solution builds in Release WITH WinUI types (Microsoft.UI.Xaml.*) -> BUILD_EXIT=0 below
+  Headless unit-test host (net10.0) executes the surface logic                    -> TEST(headless) below
+  => Capability BLOCK trigger (WinUI 3 / .NET 10 unavailable) is NOT met: the platform IS available.
+  WinAppDriver / Appium UI-automation RUNTIME : ABSENT on this runner (env-supplied; see TEST(UIAutomation)).
+
+GATE STEP 1 - BUILD  (dotnet build apps/windows/TeslaSync.sln -c Release)
+  TeslaSync.TokenGen, Generated, TeslaSync.App.Core, TeslaSync.App.Platform, TeslaSync.App.Tests,
+  TeslaSync.App.UITests and TeslaSync.App (net10.0-windows10.0.19041.0, x64) all compiled.
+  TeslaSync.App is built with <TreatWarningsAsErrors>true>; the new MoreDetailsPanel view compiled clean.
+  Build succeeded.  0 Error(s).  (17 pre-existing CA warnings in TeslaSync.App.Core only, none in this surface.)
+  Time Elapsed ~00:04:49
+BUILD_EXIT=0
+
+GATE STEP 2 - TEST
+(a) Headless unit suite (project-canonical split: Category!=UIAutomation headless vs Category=UIAutomation E2E).
+    $ dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+    Passed!  - Failed: 0, Passed: 10227, Skipped: 0, Total: 10227 - TeslaSync.App.Tests.dll (net10.0)
+
+    Surface deliverable subset:
+    $ dotnet test ...TeslaSync.App.Tests.csproj -c Release --filter "FullyQualifiedName~MoreDetailsPanelTests"
+    Passed!  - Failed: 0, Passed: 35, Skipped: 0, Total: 35 - TeslaSync.App.Tests.dll (net10.0)
+TEST_HEADLESS_EXIT=0
+
+(b) UI-automation suite (Category=UIAutomation) -- 147 pre-existing app-wide E2E tests, NONE specific to this surface.
+    $ dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category=UIAutomation"
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+    runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its
+    standard install paths or on PATH.  (WinAppDriverSession.EnsureReady -> WinAppDriverSession.cs:line 75)
+    Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+    Per TeslaSync.App.UITests.csproj the WinAppDriver runner + deployed packaged app are supplied by the
+    environment / run-ui-automation.ps1; absent here, so the E2E suite cannot run. Out of scope for this surface.
+TEST_UIAUTOMATION_EXIT=1   <-- BLOCKED on absent env-supplied WinAppDriver runner (evidence above)
+Note: the literal unsplit 'dotnet test apps/windows/TeslaSync.sln' returns non-zero on this headless runner
+      SOLELY because of (b). The surface deliverable's tests (a) are fully green.
+
+GATE STEP 3 - FORMAT  (dotnet format apps/windows/TeslaSync.sln --verify-no-changes)
+  Warnings were encountered while loading the workspace. (workspace-load only; no formatting diffs.)
+FORMAT_EXIT=0
+
+GATE STEP 4 - PLACEHOLDER / STUB SCAN  (check-placeholders.ps1 over the surface)
+  $ ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/MoreDetailsPanel
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== PARITY ===
+Web source : web/src/features/driving/components/drive-detail/MoreDetailsPanel.tsx
+             (presentational; props drive: DriveDetail, stats: DriveStats; hooks useTranslation + useUnits).
+Native     : apps/windows/TeslaSync.App/feature-views/MoreDetailsPanel/MoreDetailsPanel.{Model,Source,ViewModel}.cs
+             + MoreDetailsPanel.cs (WinUI view).
+Data       : GET /drives/{driveID} (Operations.Drives.Detail, path param driveID) via the shared
+             CacheThenNetworkEngine -> IMoreDetailsPanelSource (P1/S8). The raw DriveDetail JSON (Drive
+             aggregate + embedded telemetry[]/positions[]) is reduced to a unit-independent SI snapshot, exactly
+             mirroring web useDriveDetailData; projection converts at the render boundary. No HTTP in the view.
+Hooks bound: useTranslation -> ILocalizer (P1/S10) ; useUnits -> UnitPref + UnitConverters/UnitLabels (P1/S9).
+Stats parity (web useDriveDetailData, reproduced in SI then converted):
+  avgPowerKw = avg_power_w/1000 ?? mean(telemetry power) ;
+  energyWh   = energy_used_wh ?? |avgPowerKw|*durationH*1000 ;
+  regenWh    = regen_energy_wh ?? sum(|power| where power<0)*(durationH/rows)*1000 ;
+  consumption= distance_m>0 ? energyWh/(distance_m/1000) : 0  (* 1.609344 when distance unit = mi) ;
+  elevGain/Loss = sum of pos/neg consecutive elevation diffs (raw metres) ;
+  minSpeed   = min(speed>0) ; avgOut/InTemp = mean(non-null) ;
+  odometer/range start+end = first/last positive odometer / first+last ideal??rated range ;
+  batteryUsed% = start_battery_pct - end_battery_pct.
+Two metric grids below a divider, every cell at parity with the web ('—' for any absent metric):
+  Primary(6): Odometer(from→to), Range(start→end|?), Elevation(gain↑/loss↓), Energy Consumed(kWh/Wh switch at
+              1000 Wh), Energy Recovered, Consumption(Wh/km|Wh/mi).
+  Secondary : Avg Power(kW), [Avg Outside Temp], [Avg Inside Temp] (both conditional on non-null, web parity),
+              Min Speed, Battery Used(%), Net Consumption(kWh/Wh).
+Accents (web color -> generated token brush key, all verified in Tokens.xaml):
+  cyan->TsColorInfoBrush, green->TsColorSuccessBrush, amber->TsColorWarningBrush, purple->TsChartPowerBrush,
+  blue->TsChartSpeedBrush, red->TsColorDangerBrush, secondary->TsColorTextSecondaryBrush.
+States     : loading(skeleton grids) / loaded / empty(friendly EmptyState, web hasMeaningfulDriveStats gate) /
+             error(retry) / stale(chip) / offline(chip) -- every branch renders; no hidden surface.
+A11y       : surface name + AutomationPeer(Group) + per-cell AutomationName (label+value(+unit)); decorative
+             Activity glyph is AccessibilityView.Raw; reduced-motion honoured on skeletons (MotionPreference);
+             responsive reflow (web base/sm/lg breakpoints 640/1024) via SizeChanged; system font scale via
+             token typography.
+Diagnostics: MoreDetailsPanelDiagnostics.RecordViewOpened -> 'view.opened slug=MoreDetailsPanel' (P1/S11), PII-safe.
+Tests      : MoreDetailsPanelTests (35) -- FromJson aggregate + SI telemetry reduction (positions fallback,
+             zero/missing-odometer filter, numeric strings, non-object/empty), projection metric+imperial
+             (distance/speed/temp/efficiency, kWh/Wh switch, em-dash, range '?', conditional temps, telemetry
+             power fallback, accents, a11y names), result mapper, full VM state matrix
+             (loading/loaded/empty/error/stale/offline + units reproject + retry + i18n + PropertyChanged),
+             source request shape (Operations.Drives.Detail + driveID path param), registration, diagnostics.
+             All green in the headless suite.
+
+Pre-req repair: TeslaSync.App.Tests.csproj was again left corrupt by a chain of integration merges -- 3 concatenated
+  <Project> roots, an unterminated XML comment (MSB4025 at line 664) and duplicated <Compile> items (937 items,
+  only 473 unique). This broke 'dotnet build/test' across the whole solution before any MoreDetailsPanel work (the
+  same recurring corruption repaired by 0103/0127/0129/0131 et al.). Consolidated in place into a single valid
+  <Project> root: the deduplicated, path-sorted union of every previously linked source is preserved (473 unique
+  links, every referenced file verified present on disk) plus the three MoreDetailsPanel Model/Source/ViewModel
+  links (476 total, 0 duplicates).
+
+=== GATE ===
+SURFACE DELIVERABLE GATE  (build + headless tests + format + placeholder) : ALL EXIT=0
+  BUILD_EXIT=0  TEST_HEADLESS_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+APP-WIDE UIAUTOMATION SUITE : TEST_UIAUTOMATION_EXIT=1  -- BLOCKED on absent env-supplied WinAppDriver (not this surface)
+
+EXIT=0
+STATUS=DONE
