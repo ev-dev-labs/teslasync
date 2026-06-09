@@ -1,0 +1,43 @@
+/*
+  ChargingBreakdownSlide.strings
+  TeslaSync — P4 feature view · 0061 · ChargingBreakdownSlide (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ChargingBreakdownSlide resolves (table "ChargingBreakdownSlide") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-safe across the concurrent slots).
+
+  Keys are the exact ones extracted from the web source
+  (web/src/features/analytics/components/review/ChargingBreakdownSlide.tsx). The
+  remaining keys back the native-only chrome (loading / empty / error / offline /
+  freshness copy + the donut accessibility label) the P4 surface contract requires.
+*/
+
+/* --- Web source keys (from ChargingBreakdownSlide.tsx `t(...)`) --- */
+"yearReview.supercharger" = "Supercharger";
+"yearReview.dcFast" = "DC Fast";
+"yearReview.acOther" = "AC / Other";
+"yearReview.chargeSessions" = "charge sessions";
+"yearReview.avgStartSOC" = "Average plug-in at {{soc}}% battery";
+
+/* --- Donut accessibility (web Recharts PieChart) --- */
+"yearReview.chargingBreakdown.chartA11y" = "Charging mix";
+
+/* --- Loading (web initial fetch skeleton) --- */
+"yearReview.chargingBreakdown.loading" = "Loading your charging breakdown…";
+
+/* --- Empty state (no charging yet) --- */
+"yearReview.chargingBreakdown.empty.title" = "No charging recorded yet";
+"yearReview.chargingBreakdown.empty.message" = "Your charging breakdown will appear here once you've plugged in a few times.";
+
+/* --- Error state (web `QueryError`) --- */
+"yearReview.chargingBreakdown.error" = "Couldn't load your charging breakdown";
+"yearReview.chargingBreakdown.retry" = "Retry";
+
+/* --- Freshness chrome (live / stale / offline) --- */
+"yearReview.chargingBreakdown.live" = "Live";
+"yearReview.chargingBreakdown.stale" = "Stale";
+"yearReview.chargingBreakdown.offline" = "Offline";
+"yearReview.chargingBreakdown.offlineMessage" = "Offline — showing your last saved charging breakdown";
