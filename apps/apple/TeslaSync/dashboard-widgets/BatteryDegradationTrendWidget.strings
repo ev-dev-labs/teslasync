@@ -1,0 +1,51 @@
+/*
+  BatteryDegradationTrendWidget.strings
+  TeslaSync — P4 dashboard widget · 0012 · BatteryDegradationTrendWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  BatteryDegradationTrendWidget resolves (table "BatteryDegradationTrendWidget")
+  lives here with its web t(key, default) English value. These entries fold into
+  the app Localizable.xcstrings master catalog at integration time; they are kept
+  in a per-surface table so each parallel surface prompt owns its own strings
+  without editing the shared catalog.
+
+  The first block holds the exact strings extracted from the web source
+  (features/dashboard/widgets/BatteryDegradationTrendWidget.tsx + registry/battery.ts).
+  The remaining keys back the native-only chrome (freshness chip, refresh/retry,
+  empty/error/banner copy, chart axis + accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.batteryDegradationTrend.title" = "Battery Degradation";
+"widget.batteryDegradationTrend.description" = "Line chart showing max range capacity over months";
+"widget.batteryDegradationTrend.soh" = "SoH";
+"widget.batteryDegradationTrend.degradation" = "Degradation";
+"widget.batteryDegradationTrend.mo" = "mo";
+"widget.batteryDegradationTrend.cycles" = "Cycles";
+"widget.batteryDegradationTrend.healthPct" = "Health %";
+"widget.batteryDegradationTrend.needMoreData" = "More data needed for trend";
+"widget.batteryDegradationTrend.noDegradation" = "No degradation data";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.batteryDegradationTrend.live" = "Live";
+"widget.batteryDegradationTrend.stale" = "Stale";
+"widget.batteryDegradationTrend.offline" = "Offline";
+"widget.batteryDegradationTrend.refresh" = "Refresh";
+"widget.batteryDegradationTrend.retry" = "Retry";
+"widget.batteryDegradationTrend.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.batteryDegradationTrend.loading" = "Loading battery degradation";
+"widget.batteryDegradationTrend.emptyHint" = "Battery health history will appear here as snapshots accumulate.";
+"widget.batteryDegradationTrend.errorTitle" = "Couldn't load battery degradation";
+"widget.batteryDegradationTrend.staleBanner" = "Updating — values may be stale";
+"widget.batteryDegradationTrend.offlineBanner" = "Offline — showing last saved health";
+
+/* --- Chart axis + accessibility --- */
+"widget.batteryDegradationTrend.month" = "Month";
+"widget.batteryDegradationTrend.threshold" = "Threshold";
+"widget.batteryDegradationTrend.chartA11y" = "Battery state-of-health trend over recent months";
+"widget.batteryDegradationTrend.openA11y" = "Open the battery health page";
+"widget.batteryDegradationTrend.sohA11y" = "State of health";
+"widget.batteryDegradationTrend.degradationA11y" = "Degradation";
+"widget.batteryDegradationTrend.perMonthA11y" = "per month";
