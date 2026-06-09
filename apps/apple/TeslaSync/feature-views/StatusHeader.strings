@@ -1,0 +1,40 @@
+/*
+  StatusHeader.strings
+  TeslaSync — P4 feature view · 0028 · StatusHeader (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `StatusHeader`
+  resolves (table "StatusHeader") lives here with its web English value. These entries fold into
+  the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/admin/components/dlq-inspector/StatusHeader.tsx) — the canonical `admin.dlq.*`
+  namespace. The remaining keys back the native-only chrome (freshness chip, stale/offline
+  banner, loading + error + retry copy, resolved-but-empty hint).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.dlq.stats.total" = "Total entries";
+"admin.dlq.stats.totalSub" = "in dead-letter queue";
+"admin.dlq.stats.replayable" = "Replayable";
+"admin.dlq.stats.replayableSub" = "parsed with source topic";
+"admin.dlq.stats.replayMode" = "Replay mode";
+"admin.dlq.stats.enabled" = "Enabled";
+"admin.dlq.stats.disabled" = "Disabled";
+"admin.dlq.stats.replayModeSub" = "DLQ_REPLAY_ENABLED env";
+"admin.dlq.banners.disabledTitle" = "DLQ replay is disabled";
+"admin.dlq.banners.disabledMessage" = "The DLQ_REPLAY_ENABLED env flag is not set on this server. Replay attempts will return HTTP 403 and be logged as result=\"disabled\".";
+
+/* --- Native chrome: freshness + connectivity --- */
+"admin.dlq.status.live" = "Live";
+"admin.dlq.status.stale" = "Stale";
+"admin.dlq.status.offline" = "Offline";
+"admin.dlq.status.staleBanner" = "Reconnecting — the DLQ summary may be stale";
+"admin.dlq.status.offlineBanner" = "Offline — showing the last known DLQ summary";
+
+/* --- Native chrome: states --- */
+"admin.dlq.status.loading" = "Loading DLQ summary";
+"admin.dlq.status.errorTitle" = "Couldn't load the DLQ summary";
+"admin.dlq.status.retry" = "Retry";
+"admin.dlq.status.empty" = "Dead-letter queue is empty — no failed ingests";
