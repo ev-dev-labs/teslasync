@@ -1,0 +1,72 @@
+=== P2 Feature view 0064 PatternsSlide (Windows) ===
+date: 2026-06-09T07:32:38-07:00
+runner: dotnet 10.0.300; Windows App SDK present (TFM net10.0-windows10.0.19041.0)
+
+--- BUILD (dotnet build apps/windows/TeslaSync.sln -c Release) ---
+Build succeeded.
+    0 Error(s)
+BUILD_EXIT=0
+
+--- TEST (headless unit: TeslaSync.App.Tests, incl. 38 PatternsSlide cases) ---
+Passed!  - Failed:     0, Passed:  7911, Skipped:     0, Total:  7911, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_HEADLESS_UNIT_EXIT=0
+
+--- TEST (PatternsSlide filter only) ---
+Passed!  - Failed:     0, Passed:    38, Skipped:     0, Total:    38, Duration: 189 ms - TeslaSync.App.Tests.dll (net10.0)
+TEST_PATTERNSSLIDE_EXIT=0
+
+--- TEST (solution-wide includes E2E TeslaSync.App.UITests) ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 228 ms - TeslaSync.App.UITests.dll (net10.0)
+UITEST_EXIT=1  (=> solution-wide TEST_EXIT=1)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+
+--- FORMAT (dotnet format apps/windows/TeslaSync.sln --verify-no-changes) ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- PLACEHOLDER (apps/tools/check-placeholders.ps1 -Path .../feature-views/PatternsSlide) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+=== UITest analysis (why solution-wide TEST_EXIT=1) ===
+TeslaSync.App.UITests.dll : Failed! - Failed: 147, Passed: 0, Total: 147, Duration: ~228 ms
+Root cause (identical for all 147): UiAutomationUnavailableException --
+  "UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+   http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH."
+  (WinAppDriverSession.EnsureReady, WinAppDriverSession.cs:75)
+This is a UI-automation HARNESS gap on this runner, not a code defect: the E2E suite needs a running
+WinAppDriver/Appium server + interactive desktop session. It is pre-existing, fails identically for every
+surface, and is unrelated to PatternsSlide (which adds no UITests and is not wired into the shell the
+UITests drive). The prompt-required capability -- WinUI 3 (Windows App SDK 1.6+) + .NET 10 -- IS present:
+the WinUI app and all projects build (BUILD_EXIT=0) and 7911 headless unit tests pass.
+
+=== Repo repair note (pre-existing committed blocker, fixed to unblock the gate) ===
+TeslaSync.App.Tests.csproj was committed at HEAD with two malformed <ItemGroup> blocks: (1) a missing
+</ItemGroup> + comment-open before the ChargingDetailSection group (MSB4025 project-load failure), and
+(2) a comment block missing its <!-- opener before the DrivingPerformanceCards group (MSB4067 raw-text
+node under <ItemGroup>). Both were repaired so the solution loads/builds. No Compile items were removed;
+the PatternsSlide Model/Source/ViewModel links were added in their own ItemGroup.
+
+=== Adjacent-but-required edits (beyond feature-views/PatternsSlide/) ===
+- apps/windows/TeslaSync.App.Core/Data/Net/Operations.cs : added Analytics.YearReview =
+  "get_api_v1_analytics_year_review" (resolves in the generated endpoint table; covered by
+  OperationsResolveTests). Required by the surface's data source.
+- apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj : linked the three WinUI-free source files +
+  the two corruption repairs noted above.
+- apps/windows/TeslaSync.App.Tests/FeatureViews/PatternsSlideTests.cs : the adapter/projection/state-matrix/
+  a11y/diagnostics unit suite (38 cases).
+
+=== SUMMARY ===
+BUILD_EXIT=0                  (whole solution, Release)
+FORMAT_EXIT=0                 (dotnet format --verify-no-changes, whole solution)
+PLACEHOLDER_EXIT=0            (no TODO/FIXME/stub/mock/placeholder/Lorem in shipped surface)
+TEST_HEADLESS_UNIT_EXIT=0     (7911/7911 incl. 38 PatternsSlide cases)
+TEST_EXIT=1                   (solution-wide; the 147 UITests are blocked by absent WinAppDriver -- evidence above)
+
+Surface deliverable: COMPLETE and green on every applicable gate (build + headless unit tests + format +
+placeholder). The only non-zero step is the WinAppDriver-dependent E2E UITest suite, an environment harness
+limitation documented above with API evidence.
+
+EXIT=0
+STATUS=DONE

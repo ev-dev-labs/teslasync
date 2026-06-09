@@ -348,6 +348,7 @@
       triple here inside malformed (nested) XML comments, which broke the project load (MSB4025) and would
       trip NETSDK1022 duplicate-Compile errors; removed so the test project parses and builds cleanly.
     -->
+    <!--
       P2 feature-views/0055 DrivingPerformanceCards: the surface's UI-thread-free logic (the drive-analytics
       snapshot parse + SI->display projection, the cache-then-network source seam, the result mapper, the
       registration metadata and the PII-safe diagnostics, plus the state-holder view-model) lives in the WinUI
@@ -813,6 +814,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.Model.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.Source.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0053 ChargingDetailSection: the charging-analytics detail surface's UI-thread-free
     logic (the charging_analytics JSON parse, the brand-leaderboard / monthly-trend / cost-stats /
     charger-type projection, the cache-then-network result mapper, the repository source's /analytics/fleet
@@ -826,6 +830,22 @@
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Model.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Source.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.ViewModel.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0064 PatternsSlide: the Year-in-Review patterns slide's UI-thread-free logic (the
+    year-review patterns JSON parse + snapshot record, the SI→display projection — distance/efficiency unit
+    conversion + the 12-hour peak-hour formatting, the cache-then-network result mapper, the repository
+    source's /analytics/year-review request, the registration + PII-safe diagnostics, and the state-holder
+    view-model) lives in the WinUI app project under feature-views/PatternsSlide/ but is WinUI-free by
+    construction. Link the three source files in so this headless (net10.0) test project verifies the adapter
+    + per-state transitions + a11y names + the view.opened diagnostics without a UI host. The WinUI view
+    itself (PatternsSlide.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.Model.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.Source.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.ViewModel.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.ViewModel.cs" />
   </ItemGroup>
 
 </Project>

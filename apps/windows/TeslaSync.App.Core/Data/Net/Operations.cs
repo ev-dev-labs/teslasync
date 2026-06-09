@@ -68,6 +68,7 @@ public static class Operations
         public const string TemperatureImpact = "get_api_v1_analytics_temperature_impact";
         public const string RouteEfficiency = "get_api_v1_analytics_route_efficiency";
         public const string Lifetime = "get_api_v1_analytics_lifetime";
+        public const string YearReview = "get_api_v1_analytics_year_review";
     }
 
     /// <summary>Saved locations, geofences and the latest per-vehicle location snapshot.</summary>
