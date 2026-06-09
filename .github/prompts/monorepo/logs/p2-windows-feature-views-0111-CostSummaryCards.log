@@ -1,0 +1,80 @@
+=== P2 Feature view 0111 CostSummaryCards (Windows) ===
+Surface: apps/windows/TeslaSync.App/feature-views/CostSummaryCards/
+Web source (specification): web/src/features/charging/components/cost-analysis/CostSummaryCards.tsx
+Capability: WinUI 3 (Microsoft.WindowsAppSDK 2.1.3, >= 1.6) + .NET 10 (SDK 10.0.300). PRESENT on this runner.
+
+### PRE-EXISTING BLOCKER REPAIRED (transparency)
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed at HEAD in a corrupted
+state: several concatenated <Project> roots + orphaned ItemGroups + a nested <!-- comment, so the WHOLE
+solution failed XML load (MSB4025) and nothing — app or tests — could build. This is a recurring
+corruption every prior surface prompt had to repair (see the file's embedded repair notes:
+SessionDetailPanel/0091, SummaryStatsGrid/0093, TimeToChargeSection/0094, ChargerSpecsPanel/0098, ...).
+Consolidated into ONE valid <Project> root preserving the deduplicated, path-sorted union of all 418
+previously-linked <Compile> sources (no test loses its source) + the 3 new CostSummaryCards links.
+Verified: [xml] load OK, single root, 421 Compile links. Whole headless suite (9225 tests) stays green,
+proving no linked source was dropped.
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded. 0 Error(s). (17 warnings, all pre-existing in TeslaSync.App.Core — that project does
+not set TreatWarningsAsErrors; the WinUI app, which DOES, compiles the new view clean.)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release   (whole solution)
+Failed!  - Failed: 147, Passed:    0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:   0, Passed: 9225, Skipped: 0, Total: 9225 - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1 -- the ONLY failures are the environment-gated TeslaSync.App.UITests
+(Category=UIAutomation) E2E suite. Captured failure reason (API evidence):
+  TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+  WinAppDriver.exe was not found at its standard install paths or on PATH.
+That E2E suite requires a WinAppDriver/Appium runner + a deployed MSIX (an interactive desktop session);
+it is owned by the SEPARATE W9-0002 UI-automation prompt and is out of scope for feature-view 0111. It
+fails identically for every shipped surface on this headless runner.
+
+### STEP 2b: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation
+No test matches the given testcase filter 'Category!=UIAutomation' in ...\TeslaSync.App.UITests.dll
+Passed!  - Failed: 0, Passed: 9225, Skipped: 0, Total: 9225 - TeslaSync.App.Tests.dll (net10.0)
+  (includes the 39 CostSummaryCardsTests: parse adapter, coreStats aggregation incl. the reproduced
+   miles-as-metres cost-per-distance quirk, six-tile projection metric+imperial, currency/gas-unit,
+   palette/a11y names, result mapper, full per-state view-model matrix loading/loaded/empty/error/
+   stale/offline, the per-vehicle repository source request shape, registration + diagnostics.)
+HEADLESS_TEST_EXIT=0
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+no formatting changes required (CostSummaryCards.Model/Source/ViewModel/view + tests: LF, final newline,
+sorted usings — editorconfig-canonical).
+FORMAT_EXIT=0
+
+### STEP 4: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/CostSummaryCards
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(Note: an earlier run false-positived on the identifier "StartOdometerM" — the substring "tOdo" matches
+the common "TODO" pattern. Resolved cleanly by renaming the record fields to OdometerStartM/OdometerEndM;
+JSON parsing of start_odometer_m/end_odometer_m is unchanged. No // parity:allow opt-out was needed.)
+
+### SUMMARY
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+WHOLE_SOLUTION_TEST_EXIT=1 -- environment-gated WinAppDriver UITests only (out of scope, separate W9-0002).
+Capability evidence: WinUI 3 (Windows App SDK 2.1.3) + .NET 10 toolchain IS present -- the app + the new
+WinUI view compile (BUILD_EXIT=0, under TreatWarningsAsErrors) and the headless surface-logic suite is
+green (HEADLESS_TEST_EXIT=0).
+
+### SURFACE NOTES
+Native WinUI 3 parity port of CostSummaryCards.tsx: a responsive 2/3/6-column grid of six cost-economics
+tiles (Total Cost, Avg $/kWh, Cost Per Mile/km, Total Energy, Gas Savings $, Savings %), each a bordered
+StatBox with a palette-tinted icon chip. The web component is presentational (receives coreStats as a
+prop); the native feature-view owns the per-vehicle charging-sessions read (Operations.Charging.Sessions
+?vehicle_id, via IWidgetVehicleSource) and aggregates coreStats itself (port of useCostAnalysisData), so it
+renders the full mandated state matrix: loading skeleton, loaded grid (TsFadeIn entrance = native mapping
+of the web StaggerContainer/StaggerItem), empty (no sessions), error+retry (TsQueryError), and stale /
+offline freshness chips. SI energy/distance is converted to the user's units only at the projection
+boundary (useUnits); currency symbol + gas price/unit come from settings (useFormatting/useSettings). Every
+t() i18n key from the source is reproduced through the ILocalizer facade -- including costAnalysis.stats.
+costPerDist ("Cost Per {{unit}}"), which the prompt's auto-extracted key list omitted but the web source
+(THE specification) renders. The web miles-as-metres cost-per-distance double-conversion
+(convertDistanceFromSI(totalDistanceM / 1609.344, unit)) and the cost_decimal cost field are reproduced
+verbatim -- never silently "fixed". Per-tile Narrator names; loading announced via a polite live region.
+
+EXIT=0
+STATUS=DONE
