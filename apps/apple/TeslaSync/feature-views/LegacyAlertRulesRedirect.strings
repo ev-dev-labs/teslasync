@@ -1,0 +1,52 @@
+/*
+  LegacyAlertRulesRedirect.strings
+  TeslaSync — P4 feature view · 0184 · LegacyAlertRulesRedirect (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native LegacyAlertRulesRedirect
+  resolves (table "LegacyAlertRulesRedirect") lives here with its English value. These entries fold into
+  the app `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table
+  so each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The web source (features/notifications/components/LegacyAlertRulesRedirect.tsx) is anonymous: it renders
+  nothing and extracts no `t()` keys — its whole body is `<Navigate to={`/notifications/rules${search}`}
+  replace />`. Every key below therefore backs the native redirect chrome (title, the redirecting / resolved
+  / empty / error states, the freshness chip, the connectivity banner, the forwarded-params note) and the
+  accessibility summaries — none of which exist as English literals in the Swift sources.
+*/
+
+/* --- Surface title + destination identity --- */
+"legacyAlertRulesRedirect.title" = "Alert Rules";
+"legacyAlertRulesRedirect.destination" = "Alert Rules";
+"legacyAlertRulesRedirect.parent" = "Notifications";
+
+/* --- Redirecting (the web pre-navigation render) --- */
+"legacyAlertRulesRedirect.redirecting" = "Redirecting to Alert Rules…";
+
+/* --- Resolved (the dispatched redirect) --- */
+"legacyAlertRulesRedirect.resolvedTitle" = "Opening Alert Rules";
+"legacyAlertRulesRedirect.continue" = "Continue";
+"legacyAlertRulesRedirect.forwarding" = "Carrying over %d link parameter(s)";
+
+/* --- Empty (no inbound location — safe parent fallback) --- */
+"legacyAlertRulesRedirect.emptyTitle" = "Alert Rules is unavailable";
+"legacyAlertRulesRedirect.emptyMessage" = "We couldn't read where to send you. Open Notifications to continue.";
+"legacyAlertRulesRedirect.goToParent" = "Go to Notifications";
+
+/* --- Error (resolve failure — web QueryError) --- */
+"legacyAlertRulesRedirect.errorTitle" = "Couldn't open Alert Rules";
+"legacyAlertRulesRedirect.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"legacyAlertRulesRedirect.live" = "Live";
+"legacyAlertRulesRedirect.stale" = "Stale";
+"legacyAlertRulesRedirect.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"legacyAlertRulesRedirect.staleBanner" = "Reconnecting — the redirect still works";
+"legacyAlertRulesRedirect.offlineBanner" = "Offline — the redirect still works; it's a local route change";
+
+/* --- Accessibility summaries --- */
+"legacyAlertRulesRedirect.a11y.redirecting" = "Redirecting to %@";
+"legacyAlertRulesRedirect.a11y.resolved" = "Opening %@";
+"legacyAlertRulesRedirect.a11y.empty" = "Alert Rules is unavailable";
+"legacyAlertRulesRedirect.a11y.error" = "Couldn't open Alert Rules";
