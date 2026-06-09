@@ -1,0 +1,31 @@
+/*
+  SpeedGearPanel.strings
+  TeslaSync — P4 feature view · 0174 · SpeedGearPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `SpeedGearPanel`
+  resolves (table "SpeedGearPanel") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/driving/components/driving-dynamics/SpeedGearPanel.tsx). The second group backs the
+  native chrome — the freshness chip, the loading-grid a11y label, the empty state, and the failure
+  copy — so the Swift sources hold no English prose literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"dynamics.speedGear" = "Speed & Gear";
+"dynamics.shiftState" = "Shift State";
+"dynamics.power" = "Motor Power";
+"dynamics.avgDriveSpeed" = "Avg Drive Speed";
+"dynamics.topDriveSpeed" = "Top Drive Speed";
+
+/* --- Native chrome: freshness chip + loading a11y + empty + failure copy --- */
+"dynamics.speedGear.stale" = "Stale";
+"dynamics.speedGear.offline" = "Offline";
+"dynamics.speedGear.updating" = "Updating";
+"dynamics.speedGear.loading" = "Loading speed and gear";
+"dynamics.speedGear.empty" = "No speed or gear data yet";
+"dynamics.speedGear.errorTitle" = "Couldn't load speed & gear";
+"dynamics.speedGear.retry" = "Retry";
