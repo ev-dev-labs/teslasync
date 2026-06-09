@@ -252,3 +252,4 @@ p2-windows/feature-views/W-0043-EventTimeline.prompt.md
 p2-windows/feature-views/W-0045-SecurityStatistics.prompt.md
 p2-windows/feature-views/W-0050-UserImpersonateButton.prompt.md
 p2-windows/feature-views/W-0052-BatteryTab.prompt.md
+p2-windows/feature-views/W-0053-ChargingDetailSection.prompt.md
