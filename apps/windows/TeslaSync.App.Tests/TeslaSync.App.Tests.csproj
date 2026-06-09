@@ -138,6 +138,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.Model.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.ViewModel.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.Source.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\GeofenceWidget\GeofenceWidget.Model.cs" Link="Widgets\GeofenceWidget\GeofenceWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\GeofenceWidget\GeofenceWidget.ViewModel.cs" Link="Widgets\GeofenceWidget\GeofenceWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\GeofenceWidget\GeofenceWidget.Source.cs" Link="Widgets\GeofenceWidget\GeofenceWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreWidget\DriveScoreWidget.Model.cs" Link="Widgets\DriveScoreWidget\DriveScoreWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreWidget\DriveScoreWidget.ViewModel.cs" Link="Widgets\DriveScoreWidget\DriveScoreWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveScoreWidget\DriveScoreWidget.Source.cs" Link="Widgets\DriveScoreWidget\DriveScoreWidget.Source.cs" />
