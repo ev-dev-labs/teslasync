@@ -1,0 +1,76 @@
+=== P2 Dashboard widget 0109 VehicleSpecsWidget (Windows) ===
+env : .NET 10.0.300 ; WinUI 3 (Microsoft.WindowsAppSDK) ; target net10.0-windows10.0.19041.0 ; maui-windows workload present
+web source: web/src/features/dashboard/widgets/VehicleSpecsWidget.tsx
+registry: id=vehicle-specs category=vehicle default=2x4 min=1x2 max=4x40 (web/src/features/dashboard/widgets/registry/vehicle.ts)
+native output: apps/windows/TeslaSync.App/dashboard-widgets/VehicleSpecsWidget/VehicleSpecsWidget.{Model,Source,ViewModel}.cs + VehicleSpecsWidget.cs
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+BUILD_EXIT=0
+
+--- TEST: dotnet test apps/windows/TeslaSync.App.Tests (headless; csproj links VehicleSpecsWidget Model/ViewModel/Source) ---
+Passed!  - Failed:     0, Passed:  5701, Skipped:     0, Total:  5701, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+VehicleSpecsWidgetTests: 56 tests, all pass. Coverage:
+  - asString JS-parity (non-empty string / number-stringify / bool|null|empty|object|array -> null)
+  - specs + config + options parse adapters: snake_case fields, null / absent / non-object / sparse bodies,
+    options document-order decode with asString(value) ?? code, empty-object (truthy, no rows) vs null data
+  - VehicleSpecsSnapshot.HasAnyData + lossless System.Text.Json cache round-trip
+  - projection: the 7 fixed rows (Model, Trim, Paint Color, Wheels, Interior, Aux Battery, Car Version[mono]) with
+    the verbatim specs->config fallback chains, em-dash + Narrator accessibility names, badged "Option" rows
+    capped at 8 / dropped in compact, and the compact Model + "Trim: ..." readouts
+  - footprint flags (IsCompact at cols<=1, MaxOptions=8)
+  - full view-model state matrix: loading / loaded / empty / error+retry / stale / offline, size re-projection,
+    fold loading->cached->loaded, PropertyChanged(State,Display), i18n title/empty message
+  - three-call concurrent source: no-vehicle short-circuit (Empty, 0 requests), primary resolution then
+    specs/options vehicleID path-param + config vehicle_id query-param, explicit-id wins over primary,
+    single-endpoint failure tolerated (its part stays null), all-endpoints-fail surfaces Error,
+    all-empty bodies collapse to Empty
+  - registration vs web registry (id/category/slug/sizes/name/description) + bounds/clamp + generated op-id
+    resolution against ApiEndpoints.All; diagnostics emit "view.opened slug=VehicleSpecsWidget" (PII-safe)
+TEST_EXIT=0
+
+--- TEST (full-solution disclosure): dotnet test apps/windows/TeslaSync.sln ---
+Passed!  - Failed:     0, Passed:  5701, Skipped:     0, Total:  5701, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 248 ms - TeslaSync.App.UITests.dll (net10.0)
+evidence: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+  was not found on PATH (thrown by WinAppDriverSession.EnsureReady() before any test body runs).
+  - WinAppDriver.exe on PATH ................................. NOT FOUND
+  - C:\Program Files (x86)\Windows Application Driver\WinAppDriver.exe ... not present
+  - 127.0.0.1:4723 TcpTestSucceeded ......................... False
+  - VehicleSpecs references in TeslaSync.App.UITests/ ....... 0 (grep = 0 hits)
+NOTE: the 147 TeslaSync.App.UITests failures are the generic WinAppDriver UI-automation harness (auth/shell/
+      platform-polish E2E flows). They are environment-gated (require a WinAppDriver/Appium runner on
+      127.0.0.1:4723 + a deployed MSIX + an interactive desktop), pre-existing (identical at baseline; this
+      widget adds 0 UITests), and 0 relate to VehicleSpecsWidget — every one throws UiAutomationUnavailableException
+      before any test logic runs. WinUI 3 + .NET 10 ARE present (BUILD and the headless suite pass); only the
+      UI-automation RUNNER is absent on this host. This matches the disclosed handling of sibling P2 widget prompts.
+FULL_SLN_TEST_EXIT=1 (solely from the absent WinAppDriver runner; TeslaSync.App.Tests = 5701/5701 pass)
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/dashboard-widgets/VehicleSpecsWidget ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- SUMMARY ---
+VehicleSpecsWidget deliverable COMPLETE and verified on every gate it controls:
+  BUILD_EXIT=0       (0 warnings / 0 errors under TreatWarningsAsErrors + .NET analyzers)
+  TEST_EXIT=0        (headless 5701/5701, incl. 56 new VehicleSpecsWidget tests covering all states)
+  FORMAT_EXIT=0      PLACEHOLDER_EXIT=0
+Native output : apps/windows/TeslaSync.App/dashboard-widgets/VehicleSpecsWidget/{VehicleSpecsWidget.Model.cs,
+                VehicleSpecsWidget.Source.cs, VehicleSpecsWidget.ViewModel.cs, VehicleSpecsWidget.cs}
+Tests         : apps/windows/TeslaSync.App.Tests/Widgets/VehicleSpecsWidgetTests.cs
+                (+ 3 linked <Compile> entries for Model/ViewModel/Source in TeslaSync.App.Tests.csproj, per the
+                 established sibling-widget convention; the WinUI view .cs is intentionally not linked headlessly)
+i18n          : every web-source key resolves from the P1/S10 catalog (widget.specs.{model,trim,paint,wheels,
+                interior,auxBattery,carVersion,option,noData}, widget.vehicleSpecs) — all already present.
+Out-of-scope/environment: the full-solution dotnet test also runs the WinAppDriver UI-automation harness, which is
+  unavailable on this runner (see evidence above); 0 of those failures relate to this widget.
+
+EXIT=0
+STATUS=DONE
