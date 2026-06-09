@@ -300,6 +300,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Model.cs" Link="Widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.ViewModel.cs" Link="Widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Source.cs" Link="Widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\WatchSummaryWidget\WatchSummaryWidget.Model.cs" Link="Widgets\WatchSummaryWidget\WatchSummaryWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\WatchSummaryWidget\WatchSummaryWidget.ViewModel.cs" Link="Widgets\WatchSummaryWidget\WatchSummaryWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\WatchSummaryWidget\WatchSummaryWidget.Source.cs" Link="Widgets\WatchSummaryWidget\WatchSummaryWidget.Source.cs" />
   </ItemGroup>
 
   <!--
