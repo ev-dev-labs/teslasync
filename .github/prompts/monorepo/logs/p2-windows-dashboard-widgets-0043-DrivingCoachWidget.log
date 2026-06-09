@@ -1,0 +1,77 @@
+=== P2 Dashboard widget 0043 DrivingCoachWidget (Windows) ===
+date: 2026-06-08T17:29:40.9411025-07:00
+toolchain: .NET 10.0.300; WinUI 3 via maui-windows workload; WinAppSDK present
+web source: web/src/features/dashboard/widgets/DrivingCoachWidget.tsx
+native output: apps/windows/TeslaSync.App/dashboard-widgets/DrivingCoachWidget/*
+prereq: generated OpenAPI C# client materialized via apps/tools/codegen/gen-clients.ts (git-ignored apps/windows/Generated)
+  endpoint present: get_api_v1_analytics_driving_coach (Generated/Api/ApiEndpoints.cs)
+
+=== STEP 1: BUILD (dotnet build apps/windows/TeslaSync.sln -c Release) ===
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-06\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:01:49.26
+BUILD_EXIT=0
+
+=== STEP 2: TEST — widget acceptance suite (headless unit/projection/state/a11y tests) ===
+target: TeslaSync.App.Tests (contains DrivingCoachWidgetTests + the linked widget Model/ViewModel/Source)
+D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Core\Data\State\LoadState.cs(37,26): warning CA1716: Rename type LoadState<T>.Error so that it no longer conflicts with the reserved language keyword 'Error'. Using a reserved keyword as the name of a type makes it harder for consumers in other languages to use the type. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1716) [D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+Passed!  - Failed:     0, Passed:  3213, Skipped:     0, Total:  3213, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+  DrivingCoach-only filter:
+    Passed!  - Failed:     0, Passed:    61, Skipped:     0, Total:    61, Duration: 392 ms - TeslaSync.App.Tests.dll (net10.0)
+
+=== STEP 2b: PLATFORM-CAPABILITY NOTE — WinAppDriver E2E UITests (not part of this widget's acceptance) ===
+dotnet test apps/windows/TeslaSync.sln additionally runs TeslaSync.App.UITests (Appium/WinAppDriver E2E).
+These require WinAppDriver + an interactive desktop session + a deployed MSIX; unavailable on this runner.
+All such tests throw UiAutomationUnavailableException at WinAppDriverSession.EnsureReady (RunnerAvailability.Probe -> unavailable).
+They are pre-existing and widget-independent (grep 'DrivingCoach' in apps/windows/TeslaSync.App.UITests -> no matches).
+Evidence (full-solution run summary):
+     TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+     TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+     TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+     TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+     TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+     TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  => TeslaSync.App.Tests GREEN (3213); TeslaSync.App.UITests BLOCKED on WinAppDriver infra (147).
+
+=== STEP 3: FORMAT (dotnet format apps/windows/TeslaSync.sln --verify-no-changes) ===
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+=== STEP 4: PLACEHOLDER (check-placeholders.ps1 -Path .../DrivingCoachWidget) ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+BUILD_EXIT=0            (full solution, Release; 0 warnings, 0 errors)
+TEST_EXIT=0            (TeslaSync.App.Tests: 3213 passed incl. 61 DrivingCoachWidgetTests; 0 failed)
+FORMAT_EXIT=0          (dotnet format --verify-no-changes, full solution)
+PLACEHOLDER_EXIT=0     (DrivingCoachWidget dir: PLACEHOLDER_COUNT=0)
+UITESTS=BLOCKED-INFRA  (147 WinAppDriver E2E tests; runner has no WinAppDriver/Appium at :4723; pre-existing, widget-independent)
+
+Deliverable: native WinUI 3 parity port of features/dashboard/widgets/DrivingCoachWidget.tsx
+  files: DrivingCoachWidget.{cs,Model.cs,ViewModel.cs,Source.cs} under apps/windows/TeslaSync.App/dashboard-widgets/DrivingCoachWidget/
+  registry: id=driving-coach, category=driving, default 2x4, min 1x2, max 4x40 (matches web registry/driving.ts)
+  data: useDriving(useDrivingCoach) + useVehicles via IWidgetVehicleSource + IDrivingCoachSource (cache-then-network, GET /analytics/driving-coach?vehicle_id&days=30); no HTTP in the view
+  states: loading / loaded / empty / error / stale / offline all render; compact (score + savings chip) and standard (score header + WidgetTipCards) layouts
+  i18n keys: widget.drivingCoach.{title,scoreLabel,potentialSavings,noTips} resolve in en/he/ar catalogs; impact labels fall back to raw value
+  a11y: Narrator names on score, savings chip, tips, refresh; raw-view on decorative glyphs; live-region loading
+  telemetry: DrivingCoachDiagnostics emits 'view.opened slug=DrivingCoachWidget' (PII-safe)
+
+EXIT=0
+STATUS=DONE

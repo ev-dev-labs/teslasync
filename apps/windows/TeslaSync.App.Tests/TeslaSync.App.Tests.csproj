@@ -156,6 +156,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyFlowWidget\EnergyFlowWidget.Model.cs" Link="Widgets\EnergyFlowWidget\EnergyFlowWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyFlowWidget\EnergyFlowWidget.ViewModel.cs" Link="Widgets\EnergyFlowWidget\EnergyFlowWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyFlowWidget\EnergyFlowWidget.Source.cs" Link="Widgets\EnergyFlowWidget\EnergyFlowWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DrivingCoachWidget\DrivingCoachWidget.Model.cs" Link="Widgets\DrivingCoachWidget\DrivingCoachWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DrivingCoachWidget\DrivingCoachWidget.ViewModel.cs" Link="Widgets\DrivingCoachWidget\DrivingCoachWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\DrivingCoachWidget\DrivingCoachWidget.Source.cs" Link="Widgets\DrivingCoachWidget\DrivingCoachWidget.Source.cs" />
   </ItemGroup>
 
   <!--
