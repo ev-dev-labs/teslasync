@@ -1,0 +1,176 @@
+=== P4 Dashboard widget 0103 TripSummaryWidget (Apple) ===
+host: Darwin Atuls-Mac-Studio.local 25.5.0 arm64 (Apple Silicon)
+xcode: Xcode 26.5 (Build 17F42)   swift: 6.3.2   swiftlint + swiftformat: present
+date: 2026-06-09 (America/Los_Angeles)
+Shared.xcframework: built from apps/shared (KMP) + staged → apps/apple/Frameworks/Shared.xcframework
+  ▸ "BUILD SUCCESSFUL in 10m 13s" ; "✓ Shared.xcframework staged"
+
+--------------------------------------------------------------------------------
+SCOPE
+--------------------------------------------------------------------------------
+Allowed files (per prompt): apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.* + this log.
+Shipped (8 files, all under the allowed prefix):
+  TripSummaryWidget.swift            — SwiftUI surface (header, freshness chip, all states)
+  TripSummaryWidget.Model.swift      — P1/S8 state-holder seam + P1/S11 telemetry + registry + i18n facade
+  TripSummaryWidget.Adapter.swift    — pure projection (distance convert, fmtNumber/fmtInt, durationRange,
+                                       shortDate), accessibility, layout — ported 1:1 from the web source
+  TripSummaryWidget.Views.swift      — last-trip stat card, stat tile, recent row, chip
+  TripSummaryWidget.Previews.swift   — per-state Xcode previews (standard/wide/compact/loading/empty/error/
+                                       stale/offline)
+  TripSummaryWidget.strings          — P1/S10 i18n catalog (parity keys + native chrome + a11y)
+  TripSummaryWidget.Tests.swift      — adapter + format + layout + phase tests
+  TripSummaryWidget.ModelTests.swift — model + telemetry + registry + accessibility tests
+
+Parity target: web/src/features/dashboard/widgets/TripSummaryWidget.tsx
+Registry: id "trip-summary", category "driving", default 2x4, min 1x2, max 4x40 (registry/driving.ts).
+
+--------------------------------------------------------------------------------
+GATE RESULTS
+--------------------------------------------------------------------------------
+NOTE ON METHOD: the verbatim gate builds the whole `TeslaSync`/`TeslaSync-macOS`
+app scheme. That target now globs in ALL 74 co-located surfaces under
+TeslaSync/dashboard-widgets. This is the first time the generated project
+compiles that whole batch together, and it FAILS with 148 errors that are
+100% pre-existing cross-surface type-name collisions in SIBLING widgets that
+share a prefix (e.g. ChargeSessionChartWidget / ChargeStatusWidget /
+ChargeStatusLiveWidget all redeclare ChargeSessionDTO / ChargeConnection /
+ChargeLoadStatus / ChargeStateDTO / ChargeUnitPrefs …). ZERO of those errors
+are in TripSummaryWidget.* — my surface is uniquely namespaced (TripSummary*)
+and contributes 0 diagnostics. Those sibling files are OUTSIDE my allowed
+file scope, so I cannot (and per the prompt must not) edit them.
+
+  Evidence — full-target iOS build (xcodebuild -scheme TeslaSync … build):
+    ** BUILD FAILED **   total "error:" lines = 148
+    distinct files with errors (ALL siblings, NONE mine):
+       ChargeSessionChartWidget.{Model,Previews}
+       ChargeStatusLiveWidget.{Adapter,Model,Previews}
+       ChargeStatusWidget.{Adapter,Model,Previews}
+    grep -i TripSummary <build-log> | grep -iE 'error|warning'  →  (no output)
+
+To verify MY surface against the REAL Apple toolchain without the pre-existing
+sibling breakage, an isolated XcodeGen project (TSIso) was generated that links
+the SAME shared module sources (apps/apple/Sources + DesignTokens +
+Localization + Shared.xcframework) plus ONLY the TripSummaryWidget.* files, with
+co-located test targets containing the surface's two *Tests.swift files
+(@testable import TeslaSync). This is a verification-only artifact (NOT
+committed; removed after the run). apps/apple/Sources references no co-located
+widget, so the isolation is faithful.
+
+  [iOS]  xcodebuild -project TSIso.xcodeproj -scheme TSIso \
+           -destination 'platform=iOS Simulator,name=iPhone 16' build test
+         ** BUILD SUCCEEDED **
+         ** TEST SUCCEEDED **
+         Test Suite 'All tests' passed
+           TripSummaryAccessibilityTests  passed
+           TripSummaryAdapterTests        passed
+           TripSummaryFormatTests         passed
+           TripSummaryLayoutTests         passed
+           TripSummaryModelTests          passed
+           TripSummaryPhaseTests          passed
+           TripSummaryRegistryTests       passed
+         Executed 28 tests, with 0 failures (0 unexpected)
+         IOS_EXIT=0
+
+  [macOS] xcodebuild -project TSIso.xcodeproj -scheme TSIso-macOS \
+           -destination 'platform=macOS' build test
+         ** BUILD SUCCEEDED **
+         ** TEST SUCCEEDED **
+         Test Suite 'All tests' passed
+         Executed 28 tests, with 0 failures (0 unexpected)
+         MAC_EXIT=0
+
+  [swiftformat] swiftformat --lint apps/apple
+         0/2047 files require formatting, 3 files skipped
+         FORMAT_EXIT=0   (includes all 7 TripSummaryWidget*.swift files)
+
+  [swiftlint] swiftlint --strict  (my files, scoped)
+         Done linting! Found 0 violations, 0 serious in 7 files.
+         MYFILES_LINT_EXIT=0
+  [swiftlint] swiftlint --strict  (full tree, as the verbatim gate runs it)
+         total violations = 1, and it is PRE-EXISTING + in a SIBLING, not mine:
+           TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9:
+             error: Opening Brace Spacing Violation (opening_brace)
+         grep -i TripSummary <lint-out>  →  NONE (0 violations in my files)
+         git status on that sibling file = clean (committed/unmodified = pre-existing)
+         GATE_LINT_EXIT=2 (sibling, out of scope)   MYFILES_LINT_EXIT=0
+
+  [placeholders] check-placeholders.ps1 over copies of the 8 TripSummaryWidget.* files
+         PLACEHOLDER_ALLOWED=0
+         PLACEHOLDER_COUNT=0
+         PLACEHOLDER_EXIT=0
+         (direct grep for TODO/FIXME/XXX/coming soon/placeholder/lorem ipsum/not
+          implemented over my files → NONE FOUND)
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders on Apple with every web state reproduced — loading (stat-grid
+    skeleton), empty (ContentUnavailableView "No trips recorded yet"), error (retry
+    affordance), content, stale + offline (cached rows + connectivity banner + chip).
+[x] Hooks bind through the shared P1/S8 state-holder seam (TripSummarySource →
+    TripSummaryModel); the view performs NO HTTP. useTrips/useUnits/useDateFormat are
+    modelled by the pushed TripSummaryUpdate snapshot (status/connection/trips/units).
+[x] Every web i18n key is present in the P1/S10 catalog table "TripSummaryWidget"
+    (widget.tripSummary / recentTrips / noTrips / lastTrip / tripUnnamed / distance /
+    duration / drives / chargeStops / drivesShort) + native chrome + a11y keys.
+[x] Accessibility labels on every interactive element (refresh button, retry button)
+    + grouped VoiceOver labels for the last-trip block and each recent row + list
+    summary; a11y content unit-tested.
+[x] Tests: adapter unit test (cached→projection, exact web value parity) + per-state
+    model/registry/layout/phase tests + a11y label tests = 28 tests, executed GREEN on
+    iOS AND macOS.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate COUNT=0).
+[x] view.opened telemetry emitted once with surface slug "TripSummaryWidget"
+    (TripSummaryModel.start → telemetry.viewOpened; asserted by
+    testStartEmitsViewOpenedTelemetryOnce).
+[x] Parity pipeline ported VERBATIM: convertDistanceFromSI (÷ metres/unit),
+    fmtNumber(_,1)/fmtInt (Intl half-expand → NumberFormatter .halfUp), formatDurationRange
+    (whole-minute delta → Hh Mm / Mm, em-dash for missing/≤0), formatDateShort (MMMd),
+    "Unnamed trip" fallback, recentTrips = slice(0,3) and rows = slice(1) (cap 2),
+    isCompact = cols ≤ 1 (4-up vs 2-up stat grid; row drops duration/drv when compact).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+ 1 No red-as-green     : the full-target build + full `swiftlint --strict` are
+                         explicitly reported RED above; I claim GREEN ONLY for the
+                         isolated real Xcode build+test of THIS surface (iOS+macOS,
+                         28/28) and the scoped format/lint/placeholder of my files.
+ 2 No scope narrowing  : implemented ALL states + responsive compact/wide layout +
+                         last-trip stat block + recent list + i18n + a11y + telemetry
+                         + registry + the full per-field projection.
+ 3 No skip-and-assume  : every result above is real executed host output, captured.
+ 4 No stubs as final   : complete implementation; placeholder COUNT=0; tests execute
+                         real projection/format/model logic.
+ 5 No parity shortcuts : numeric + date + duration pipeline ported VERBATIM and pinned
+                         by executed assertions to the exact web display strings
+                         (e.g. 12000 m → "12.0" km / "7.5" mi; 1860 s range → "31m";
+                         7320 s → "2h 2m"; missing end → "—"; counts "4"/"2"/"1"/"3").
+ 6 No delegation       : authored directly (no sub-agent delegation of the surface).
+ 7 No predecessor bypass: shipped strings as the per-surface table and did NOT edit
+                         project.yml / the shared Localizable.xcstrings (both out of
+                         allowed scope) — matching predecessors 0036/0054/0055/0078;
+                         went further by executing a REAL isolated Xcode build+test.
+ 8 No commit on red    : committing only my GREEN surface; the full-target reds are
+                         pre-existing, sibling-only, and outside my allowed file scope
+                         (cannot be fixed here without violating the scope rule).
+ 9 No silent drift     : changes confined to the allowed TripSummaryWidget.* files +
+                         this log; the verification-only TSIso project artifact was
+                         removed and was never committed.
+ 10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native TripSummaryWidget shipped at parity with the web source:
+  a SwiftUI surface (glass shell + header + freshness chip + responsive compact/wide
+  last-trip stat block and recent-trips list) over a P1/S8 state-holder seam (no view
+  HTTP), P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens; every state, every i18n key,
+  every interactive a11y label; registry-correct (trip-summary, 2x4 / 1x2 / 4x40).
+  The surface BUILDS + its 28 tests RUN GREEN on a real iOS (iPhone 16) and macOS
+  Xcode toolchain in an isolated project that excludes ONLY the pre-existing,
+  out-of-scope sibling surfaces whose mutual type-name collisions break the whole-batch
+  app target. My files contribute 0 compile errors, 0 lint violations, 0 placeholders.
+
+EXIT=0
+STATUS=DONE
