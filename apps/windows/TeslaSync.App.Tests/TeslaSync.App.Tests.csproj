@@ -899,6 +899,20 @@
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Model.cs" Link="FeatureViews\OverviewTab\OverviewTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Source.cs" Link="FeatureViews\OverviewTab\OverviewTab.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.ViewModel.cs" Link="FeatureViews\OverviewTab\OverviewTab.ViewModel.cs" />
+    P2 feature-views/0060 OverviewVehicleComparison: the analytics vehicle-comparison surface's
+    UI-thread-free logic (the vehicle_comparison parse, the four-panel projection — Fleet Usage pie /
+    Efficiency Leaderboard / Vehicle Comparison radar / Energy & Activity bar, with SI→display unit
+    conversion, the cache-then-network result mapper, the repository source seam, the registration +
+    PII-safe diagnostics and the state-holder view-model) lives in the WinUI app project under
+    feature-views/ but is WinUI-free by construction. Link those three source files in so this headless
+    (net10.0) test project verifies the adapter + per-state transitions + a11y names + the view.opened
+    diagnostics row-for-row without a UI host. The WinUI view itself
+    (feature-views\OverviewVehicleComparison\OverviewVehicleComparison.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.Model.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.Source.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.ViewModel.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
