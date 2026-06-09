@@ -1,0 +1,48 @@
+/*
+  AnalyticsSummaryWidget.strings
+  TeslaSync — P4 dashboard widget · 0002 · AnalyticsSummaryWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `AnalyticsSummaryWidget` resolves (table "AnalyticsSummaryWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/AnalyticsSummaryWidget.tsx + registry/analytics.ts).
+  The remaining keys back the native-only chrome (freshness chip, retry/empty/error
+  copy, accessibility).
+
+  Note: the web `costPerDist` key uses an i18next `{{unit}}` interpolation; the iOS
+  catalog uses a `%@` positional placeholder for the same single argument.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.analyticsSummary" = "Analytics Summary";
+"widget.analyticsSummary.description" = "Fleet-wide snapshot: distance, efficiency, energy, cost per mile";
+"widget.analyticsSummary.title" = "Analytics Summary";
+"widget.analyticsSummary.totalDistance" = "Total Distance";
+"widget.analyticsSummary.avgEfficiency" = "Avg Efficiency";
+"widget.analyticsSummary.energyConsumed" = "Energy Consumed";
+"widget.analyticsSummary.costPerDist" = "Cost / %@";
+"widget.analyticsSummary.noData" = "No analytics data";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.analyticsSummary.live" = "Live";
+"widget.analyticsSummary.updating" = "Updating";
+"widget.analyticsSummary.stale" = "Stale";
+"widget.analyticsSummary.offline" = "Offline";
+"widget.analyticsSummary.refresh" = "Refresh";
+"widget.analyticsSummary.retry" = "Retry";
+"widget.analyticsSummary.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.analyticsSummary.loading" = "Loading analytics summary";
+"widget.analyticsSummary.emptyHint" = "Drive and charge to build a fleet-wide snapshot.";
+"widget.analyticsSummary.errorTitle" = "Couldn't load analytics";
+"widget.analyticsSummary.offlineBanner" = "Offline — showing last known snapshot";
+"widget.analyticsSummary.staleBanner" = "Reconnecting — snapshot may be stale";
+
+/* --- Accessibility --- */
+"widget.analyticsSummary.openA11y" = "Open the Analytics page";
