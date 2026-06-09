@@ -1,0 +1,70 @@
+/*
+  AIProviderSection.strings
+  TeslaSync — P4 feature view · 0200 · AIProviderSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `AIProviderSection` resolves (table "AIProviderSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/settings/components/AIProviderSection.tsx). The second group promotes the
+  two Azure-flavor descriptive option labels (hardcoded inline in the web `<Select>`)
+  to facade keys so the Swift sources hold no English literals. The third group backs
+  the native chrome (the P4 leaf freshness / loading / empty / error / a11y copy).
+
+  Parity note on the validate banners: the web values are i18next templates
+  `OK — pinned to {{ip}}` / `OK — {{model}} reachable`; the native catalog uses the
+  equivalent positional `String(format:)` `%@` specifier so the interpolation matches.
+  Provider brand titles (OpenAI / Anthropic / Azure AI / Google / Ollama / LM Studio /
+  llama.cpp) are proper nouns rendered verbatim, exactly as the web hardcodes them.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"ai.settings.provider.label" = "Provider configuration";
+"ai.settings.provider.providerLabel" = "Provider";
+"ai.settings.provider.model" = "Model";
+"ai.settings.provider.azureModelLabel" = "Model identifier (e.g. gpt-4o-mini)";
+"ai.settings.provider.azureModelHint" = "Used for cost tracking. Leave Deployment blank if your Azure deployment is named the same.";
+"ai.settings.provider.azureFlavor" = "Azure surface";
+"ai.settings.provider.azureApiVersion" = "API version";
+"ai.settings.provider.azureApiVersionHint" = "Leave blank to use the adapter default.";
+"ai.settings.provider.azureDeployment" = "Chat deployment name";
+"ai.settings.provider.azureDeploymentHint" = "Leave blank to reuse the Model field.";
+"ai.settings.provider.azureEmbeddingDeployment" = "Embedding deployment name (optional)";
+"ai.settings.provider.baseUrl" = "Base URL";
+"ai.settings.provider.baseUrlHint" = "Must resolve to a private network address (loopback, RFC1918, link-local, or ULA).";
+"ai.settings.provider.azureBaseUrl" = "Resource endpoint URL";
+"ai.settings.provider.azureBaseUrlHint" = "The Azure OpenAI resource endpoint or Azure AI Foundry endpoint.";
+"ai.settings.provider.apiKey" = "API key";
+"ai.settings.provider.apiKeyPlaceholder" = "sk-…  (leave blank to keep current)";
+"ai.settings.provider.apiKeyHint" = "Stored encrypted. Never displayed once saved.";
+"ai.settings.provider.costCap" = "Daily cost cap (USD)";
+"ai.settings.provider.costCapHint" = "Daily cap on cloud spending. 0 disables the cap.";
+"ai.settings.provider.localExplainer" = "Local-only mode never sends data outside your network. The validator pins the resolved IP at save time to defend against later DNS rebinding.";
+"ai.settings.provider.validateOptional" = "Validation is optional but recommended — it catches mis-typed URLs and confirms the model is reachable.";
+"ai.settings.validate.running" = "Validating…";
+"ai.settings.validate.button" = "Validate";
+"ai.settings.validate.cloudButton" = "Validate connection";
+"ai.settings.validate.success" = "OK — provider reachable";
+"ai.settings.validate.successPinned" = "OK — pinned to %@";
+"ai.settings.validate.successProbed" = "OK — %@ reachable";
+
+/* --- Promoted Azure-flavor option labels (web hardcoded inline) --- */
+"ai.settings.provider.azureFlavor.openai" = "Azure OpenAI Service (gpt-4o, gpt-4-turbo, …)";
+"ai.settings.provider.azureFlavor.foundry" = "Azure AI Foundry / Inference (multi-vendor)";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error / a11y --- */
+"ai.settings.provider.live" = "Live";
+"ai.settings.provider.stale" = "Stale";
+"ai.settings.provider.offline" = "Offline";
+"ai.settings.provider.staleBanner" = "Reconnecting — settings may be stale";
+"ai.settings.provider.offlineBanner" = "Offline — showing last known settings";
+"ai.settings.provider.refresh" = "Refresh";
+"ai.settings.provider.loadingA11y" = "Loading provider configuration";
+"ai.settings.provider.empty" = "Provider configuration is unavailable right now.";
+"ai.settings.provider.errorTitle" = "Couldn't load provider configuration";
+"ai.settings.provider.retry" = "Retry";
+"ai.settings.provider.validateStatusA11y" = "Validation status: %@";
