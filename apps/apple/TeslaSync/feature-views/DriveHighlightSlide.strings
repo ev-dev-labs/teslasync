@@ -1,0 +1,40 @@
+/*
+  DriveHighlightSlide.strings
+  TeslaSync — P4 feature view · 0062 · DriveHighlightSlide (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DriveHighlightSlide` resolves (table "DriveHighlightSlide") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/analytics/components/review/DriveHighlightSlide.tsx). Both already
+  exist in apps/shared/i18n/catalog/en.json under the "yearReview" namespace
+  (noDriveData, duration). The remaining keys back the native-only chrome (the
+  Wh/mi vs Wh/km efficiency unit the web computes inline, the freshness banners,
+  the loading / empty / error copy, the spoken route connector, and accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"yearReview.noDriveData" = "No drive data for this year";
+"yearReview.duration" = "duration";
+
+/* --- Native chrome: units (web `efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km'`) --- */
+"driveHighlight.efficiencyUnitMi" = "Wh/mi";
+"driveHighlight.efficiencyUnitKm" = "Wh/km";
+
+/* --- Native chrome: accessibility route connector --- */
+"driveHighlight.routeTo" = "to";
+
+/* --- Native chrome: freshness --- */
+"driveHighlight.liveBanner" = "Live";
+"driveHighlight.staleBanner" = "Reconnecting — highlight may be stale";
+"driveHighlight.updatingBanner" = "Refreshing this highlight…";
+"driveHighlight.offlineBanner" = "Offline — showing last known highlight";
+
+/* --- Native chrome: states --- */
+"driveHighlight.loadingA11y" = "Loading drive highlight";
+"driveHighlight.errorTitle" = "Couldn't load this drive highlight";
+"driveHighlight.retry" = "Retry";
