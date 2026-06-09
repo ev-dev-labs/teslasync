@@ -853,6 +853,19 @@
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Model.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Source.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.ViewModel.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.ViewModel.cs" />
+    P2 feature-views/0057 DrivingTemperatureStats: the surface's UI-thread-free logic (the
+    drive_analytics.temperature JSON parse + safe() coercion, the SI→display unit projection of the six
+    inside/outside min/avg/max cells, the cache-then-network result mapper, the repository source's request
+    shape, the registration + PII-safe diagnostics, and the state-holder view-model) lives in the WinUI app
+    project under feature-views/ but is WinUI-free by construction. Link those three source files in so this
+    headless (net10.0) test project verifies the adapter + per-state transitions + a11y names + the
+    view.opened diagnostics without a UI host. The WinUI view itself (DrivingTemperatureStats.cs) is
+    exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
