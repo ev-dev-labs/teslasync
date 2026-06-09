@@ -1,0 +1,264 @@
+================================================================================
+P4 · Dashboard widget · 0111 — VersionInfoWidget (Apple)
+Run: 2026-06-09T00:35-0700   Host: Darwin arm64   Repo: ev-dev-labs/teslasync
+Prompt: P4/dashboard-widgets/0111 — VersionInfoWidget
+Web source (spec): web/src/features/dashboard/widgets/VersionInfoWidget.tsx
+Mode: code-complete + host-validated + EXECUTED Xcode app build
+      (0036 DigitalTwinWidget / 0068 MQTTStatusWidget / 0099 SystemHealthWidget
+      precedent — the in-Xcode build RED is pre-existing predecessor/integration
+      breakage, proven by a baseline build, and deferred to the P4 integration
+      prompt + a release Shared.xcframework CI runner).
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift (full Xcode) ......... Apple Swift 6.3.2, iPhoneSimulator + macOS 26.5 SDK  OK
+  xcodebuild / Xcode.app ..... /Applications/Xcode.app — Xcode 26.5 (17F42)         OK
+                               (xcode-select -p already points at the full Xcode)
+  iOS Simulator .............. iPhone 17 family available (the prompt's iPhone 16
+                               is not installed on this host; the gate destination
+                               was adapted to an installed simulator/SDK)          OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                          OK
+
+  Capability note: this surface uses NEITHER Swift Charts NOR MapKit (web
+  "Charts/maps used: (none)"). The core requirement is SwiftUI, which IS available
+  and proven by REAL iPhoneSimulator-SDK + macOS-SDK Swift-6 strict-concurrency
+  compiles below. The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit
+  unavailable") therefore does NOT apply — the surface is authored and
+  host-validated for real, and the full Xcode app build was EXECUTED (not assumed).
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/VersionInfoWidget.*) ===
+  VersionInfoWidget.Projection.swift  331  Foundation-only adapter: DTOs (web version.data /
+                                            capture.data, defensive optional reads) + `vitals`
+                                            projection (chart_version/go_version/build_date/git_commit/
+                                            uptime/os/arch ?? '—', truncatedSha = gitSha?.slice(0,7),
+                                            capture counters ?? 0) + kvItems/statItems builders +
+                                            fmtNumber/fmtInt/formatBytes formatters + P1/S10 i18n facade
+                                            + testable a11y summary.
+  VersionInfoWidget.Model.swift       228  P1/S11 telemetry seam + P1/S8 state-holder seam
+                                            (load/connection enums, VersionInfoUpdate, source proto +
+                                            InMemory) + VersionInfoModel (@Observable phase + freshness
+                                            + vitals + isCompact/isWide) + VersionInfoStrings.text.
+                                            References (does NOT redefine) the shared
+                                            DashboardWidgetSize/Registration from the P4 core.
+  VersionInfoWidget.Components.swift  139  VersionInfoKVRow (web KVList row, font-bold/font-mono accents)
+                                            + VersionInfoBadge (web Badge variant="neutral") +
+                                            VersionInfoStatTile (web StatCard via WidgetStatGrid) +
+                                            VersionInfoFreshnessChip — over the shared design tokens.
+  VersionInfoWidget.swift             296  VersionInfoWidget surface: glass shell + header (info.circle
+                                            icon + title [hidden when compact] + freshness chip +
+                                            refresh + optional open) + every state + responsive
+                                            compact(1×2)/standard(2×2)/wide(≥4) layouts.
+  VersionInfoWidget.Previews.swift    151  #if DEBUG previews (9) — content standard/wide/sparse/compact
+                                            + loading/empty/error/stale/offline.
+  VersionInfoWidget.Tests.swift       336  XCTest: projection adapter + formatters + model phases/
+                                            freshness/telemetry + registry + a11y (95 assertions,
+                                            25 methods, 5 suites).
+  VersionInfoWidget.strings            53  P1/S10 catalog contribution (13 source keys + registry desc +
+                                            native chrome + a11y = 24 keys).
+  Every file ≤400 lines (house file_length, enforced by swiftlint --strict, below); largest 336.
+  One exported View (VersionInfoWidget).
+
+=== PARITY (vs web VersionInfoWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (VersionInfoSource → VersionInfoModel):
+    useVersionInfo (/system/version), useCaptureStats, useTranslation. The web component reads its
+    fields DEFENSIVELY off a loosely-typed record — chart_version/go_version/os/arch are strict in the
+    DTO, while build_date/git_commit/uptime + the capture counters (signals_per_sec/messages_today/
+    bytes_processed/avg_processing_latency_ms) are read with `(data as { … }).field` and fall back to
+    '—' / 0. The native DTOs mirror this exactly (optional fields, em-dash / zero fallback). The view
+    performs NO HTTP.
+  Projection → VersionInfoProjection.vitals is a 1:1 port of the web body: chartVersion/goVersion/
+    buildDate/uptime/os/arch = field ?? '—' (blank/whitespace treated as absent), truncatedSha =
+    gitSha?.slice(0,7) ?? '—', capture counters ?? 0. kvItems = the five web rows (Version[bold] /
+    Build Date / Git SHA[mono] / Go Version / Uptime). statItems = two tiles always (Signals/sec,
+    Messages Today) + Bytes Processed + Avg Latency when isWide (web `if (isWide) items.push`).
+    formatBytes ported: B (fmtInt) → KB/MB (1dp) → GB (2dp). Verified by an EXECUTED harness (54/54).
+  Composition → glass shell (info.circle icon + "Version Info" title [hidden when compact] + freshness
+    chip + refresh + optional Open) · compact layout (chartVersion bold + truncatedSha Badge, centered)
+    · standard layout (KVList over the bottom-pinned 2-up stat grid) · wide layout (+ "OS: … • Arch: …"
+    line + 4-up stat grid).
+  Shared components → maps web @/components/data-display + @/components/feedback + @/components/ui to
+    native: KVList→VersionInfoKVRow, Badge→VersionInfoBadge, StatCard(WidgetStatGrid)→
+    VersionInfoStatTile, EmptyState→ContentUnavailableView, DataFreshness→VersionInfoFreshnessChip,
+    Skeleton→TSSkeleton (shared), Info icon→SF Symbol info.circle. The chip/row/tile are authored
+    locally over the SAME tokens as the shared TSStatCard so every label resolves through the
+    per-surface VersionInfoStrings table (the shared components take only a LocalizedStringKey) —
+    identical rationale to siblings SystemHealthWidget / MQTTStatusWidget. Recharts→none / Leaflet→none.
+  States (all render) → loading (skeleton chrome: KV-row + stat-grid skeletons / compact version+badge
+    skeletons) · empty ("No version data available" ContentUnavailableView) · error (icon + retry) ·
+    content · stale (warning freshness chip over cached content) · offline (muted chip + cached
+    content). Model phase resolution keeps cached content visible behind background refresh/errors;
+    a hard failure with no cache → error. "Has data" mirrors the web `version.data != null`.
+  i18n → all 13 source keys (en.json widget.versionInfo.*) resolve through the P1/S10 facade with the
+    web t(key,default) fallback: version, buildDate, gitSha, goVersion, uptime, signalsPerSec,
+    messagesToday, bytesProcessed, avgLatency, title, os, arch, noData. Referenced-vs-defined
+    cross-check (string()/text()/labelKey in code vs the .strings table): 0 referenced keys missing.
+    No English literals in native code (every Text routes through VersionInfoStrings).
+  a11y → rows/tiles/badge carry combined VoiceOver labels; refresh/open have accessibilityLabels; the
+    testable VersionInfoAccessibility.summary composes title + every KV pair + (wide) OS/Arch + each
+    stat; Dynamic Type via Font.TS tokens + minimumScaleFactor; Reduce Motion honored by the shared
+    TSSkeleton shimmer; the header icon is accessibilityHidden.
+  Telemetry → VersionInfoModel.start() emits viewOpened(surface:"VersionInfoWidget") → bridges shared
+    Telemetry.track(.screenView) (P1/S11). Asserted by a spy test + the executed model wiring.
+  Registry → VersionInfoWidget.registration: id "version-info", category "system", default 2×2, min
+    1×2, max 4×40 (+ clamp()), matching registry/system.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the 4 non-preview surface files compiled together with the REAL apps/apple
+    component library (../design/generated/apple/Tokens + Design{TSDesign,TSMaterial} +
+    Components/UI{Typography,Cards} + Feedback/Skeletons + DashboardWidgets/DashboardWidgetInfra),
+    under BOTH SDKs:
+      xcrun --sdk macosx        swiftc -typecheck -target arm64-apple-macos15.0        -swift-version 6 \
+        -strict-concurrency=complete  <real lib> VersionInfoWidget.{Projection,Model,Components,swift}
+        TYPECHECK_EXIT=0                                                              OK
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 \
+        -strict-concurrency=complete  <real lib> VersionInfoWidget.{Projection,Model,Components,swift}
+        IOS_TYPECHECK_EXIT=0                                                          OK
+      (Platform-agnostic SwiftUI — no `#if os(...)` branches — so both compiles cover all code paths.
+       @Observable / ContentUnavailableView / Grid / @MainActor resolve under Swift 6 strict
+       concurrency. The real DashboardWidgetSize/Registration from the P4 core are linked — no shim.)
+
+[2] Adapter EXECUTED test — compiled VersionInfoWidget.Projection.swift + a harness main to a native
+    binary (swift-version 6, strict-concurrency=complete) and RAN it (real "cached → projection", not a
+    typecheck):
+      54/54 checks PASSED — full-snapshot field mapping, empty→em-dash/zero fallback, blank/whitespace
+      fall-through, truncatedSha (7-char / short / nil→'—'), kvItems order+bold/mono accents+values,
+      statItems narrow(2)/wide(4) + value formatting, fmtNumber fixed-precision+grouping+NaN→0, fmtInt
+      half-up, latency " ms" suffix, formatBytes B/KB/MB/GB boundaries (512 B, 1,023 B, 1.0 KB, 1.0 MB,
+      1.00 GB, 4.60 GB) + NaN→"0 B", a11y summary content (narrow omits / wide adds OS·Arch·bytes·latency).
+      ADAPTER_HARNESS_EXIT=0                                                          OK
+
+[3] swiftlint --strict on the 6 surface swift files (repo apps/apple/.swiftlint.yml; the `included:`
+    list already lists TeslaSync/dashboard-widgets):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      SWIFTLINT_EXIT=0                                                                OK
+
+[4] swiftformat --lint on the 6 surface swift files (repo apps/apple/.swiftformat config):
+      0/6 files require formatting.
+      SWIFTFORMAT_EXIT=0                                                              OK
+      (Auto-formatted to the repo rules during authoring: wrapPropertyBodies, trailingCommas,
+       docComments, blankLinesBetweenScopes, wrap.)
+
+[5] check-placeholders (ADR-011 stub gate; pwsh):
+      [literal gate] ./apps/tools/check-placeholders.ps1 -Path …/dashboard-widgets/VersionInfoWidget
+        → -Path resolves to a filename PREFIX (no file/dir) → clean scan: PLACEHOLDER_COUNT=0  EXIT=0
+      [targeted]     scan of the 7 shipped files copied into an isolated dir:
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+      PLACEHOLDER_EXIT=0                                                              OK
+      (Word-scan of all 7 shipped files for TODO/FIXME/stub/mock/placeholder/Lorem/Coming soon/
+       not implemented: NONE FOUND. "No version data available" is the web empty-state copy, not a stub.)
+
+=== GATE — XCODE APP BUILD (EXECUTED on this runner; RED — predecessor/integration-scope; DEFERRED) ===
+    Prep: the scheme stages a RELEASE Shared.xcframework via a Gradle/Kotlin-Native pre-action
+      (Scripts/build-shared-xcframework.sh). That release assembly does NOT complete on this host within
+      240s (SHARED_BUILD_EXIT=124, timeout) — but the Kotlin/Native toolchain DOES work here: it had
+      already produced a DEBUG Shared.xcframework with all three required slices (ios-arm64,
+      ios-arm64-simulator, macos-arm64). To EXECUTE a real in-Xcode build (rather than assume one), the
+      debug xcframework was staged into Frameworks/ and the app target built directly (bypassing the
+      slow release pre-action). [The staged framework + generated .xcodeproj are build artifacts; both
+      were removed afterward — the commit contains only the 7 surface files + this log.]
+    Command (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer):
+      xcodegen generate                                                            (42 VersionInfoWidget refs in the app target)
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator \
+                 -arch arm64 -configuration Debug CODE_SIGNING_ALLOWED=NO build
+    Result: ** BUILD FAILED **    IOS_BUILD = RED    (exit 65, 76 errors)
+
+    ROOT CAUSE — NOT this surface (proven by a baseline build):
+      • All 76 errors are in SIBLING files only — ChargeSessionChartWidget.*, ChargeStatusLiveWidget.*,
+        ChargeStatusWidget.*, FleetStatsBarWidget.* — of the form
+          error: 'ChargeSessionDTO' is ambiguous for type lookup in this context
+          error: 'ChargeStatusProjection' is ambiguous for type lookup in this context
+          error: cannot infer contextual base in reference to member 'loaded'/'live'/… (cascade)
+        i.e. DUPLICATE type declarations across sibling widgets that collide in the single app module
+        (ChargeSessionDTO is declared in BOTH ChargeStatusLiveWidget.Model.swift and
+        ChargeSessionChartWidget.Models.swift; ChargeStatusProjection in BOTH ChargeStatusLiveWidget.
+        Adapter.swift and ChargeStatusWidget.Adapter.swift). De-duping these into one P4-core definition
+        is the dashboard-grid INTEGRATION prompt's scope, not this surface's (Honesty rule 7).
+      • grep of the FULL build log for any error in a VersionInfoWidget file: ZERO. This surface uses
+        unique `VersionInfo*` type prefixes (VersionInfoData / VersionCaptureStats / VersionInfoProjection
+        / …) that collide with nothing — verified: those symbols appear ONLY in VersionInfoWidget.* files.
+      • BASELINE PROOF: the 7 surface files were moved out, `xcodegen generate` re-run, and the SAME
+        xcodebuild command executed WITHOUT this surface present → ** BUILD FAILED ** exit 65 with the
+        IDENTICAL 76 errors (same ChargeSessionDTO / ChargeStatusProjection ambiguity). The surface adds
+        ZERO new failure modes; the RED pre-dates it.
+      • The 4 surface files (Projection/Model/Components/swift) compile clean — independently proven by
+        host step [1] (real iPhoneSimulator + macOS SDK, Swift-6 strict-concurrency typecheck against the
+        real design library). The parallel batch compiler aborts on the early-alphabetical Charge*/Fleet*
+        batches before scheduling the V* batch, which is why no VersionInfoWidget compile line appears.
+    macOS target: the macOS app target consumes the SAME TeslaSync/dashboard-widgets source group, so it
+      hits the identical pre-existing sibling collisions; this surface's macOS compilation is
+      independently proven green by the macOS-SDK typecheck in step [1]. Not separately re-run (same root
+      cause, same sources).
+    Disposition: the in-Xcode app build/test is DEFERRED to the P4 integration prompt (dedup the shared
+      DTO/projection types across sibling widgets + route co-located *.Tests.swift into the XCTest bundle
+      + register the surface into the dashboard grid) and a release Shared.xcframework CI runner —
+      matching the user-approved 0036/0068/0099 "code-complete + DEFERRED Xcode gate" disposition. It is
+      shown RED here, not painted green; the meaningful, surface-specific validation available on this
+      host (steps [1]–[5] + the baseline diff) was EXECUTED and is green.
+    XCTest (VersionInfoWidget.Tests.swift, 95 assertions / 25 methods / 5 suites) runs in the
+      TeslaSync(/-macOS) test target under Xcode once the integration prompt resolves the sibling
+      collisions; the pure adapter/formatter/a11y subset is independently PROVEN GREEN by the executed
+      harness in step [2], and the model/registry/telemetry suites compile against the same public API
+      exercised by the host typecheck in step [1].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/content) + stale/offline freshness —
+      implemented; each has a #if DEBUG preview (9 total); phase/freshness logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (VersionInfoSource); no direct HTTP in the
+      view.
+  [x] Every i18n key from source has a matching catalog key — 13/13 source keys (+ registry desc +
+      native chrome = 24) in VersionInfoWidget.strings; referenced-vs-defined cross-check = 0 missing.
+  [x] Accessibility labels on every interactive element; rows/tiles/badge combined; testable a11y summary.
+  [x] Tests: adapter unit test (EXECUTED, 54/54) + per-state model test + registry + a11y + formatters
+      (95 XCTest assertions shipped for the Xcode test target).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (typecheck ×2 SDKs / executed adapter / swiftlint / swiftformat / placeholder);
+      Xcode app build EXECUTED, shown RED for predecessor/integration-scope reasons (proven by a baseline
+      build to be NOT this surface), DEFERRED per 0036/0068/0099.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the Xcode app build is shown RED with its real `** BUILD FAILED **` exit 65 + the
+                       exact sibling errors; every "OK" above is a command actually run on this host with
+                       its real exit code. EXIT=0 reflects the host-runnable gate + the standing deferral
+                       disposition, NOT a claim that the Xcode build passed.
+  2  No scope narrowing: implemented ALL layouts/states + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; the Xcode build was RUN (twice — with and without the
+                       surface), not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the component body (defensive reads / truncatedSha / kvItems /
+                       statItems wide expansion / formatBytes) + compact/standard/wide layouts + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT redefine the shared DashboardWidgetSize/Registration (referenced the
+                       P4-core types), did NOT edit project.yml / the dashboard grid / the shared
+                       Localizable.xcstrings / any sibling widget file; the pre-existing sibling
+                       duplicate-type collisions are left for the integration prompt, not worked around.
+  8  No commit on red  : the RED is pre-existing predecessor/integration-scope breakage outside the
+                       allowed files (sibling Charge*/Fleet* duplicate DTO/projection types), PROVEN by a
+                       baseline build to be identical without this surface; the surface's own host gates
+                       are all green. Committing the surface + this log only.
+  9  No silent drift   : changes confined to the allowed VersionInfoWidget.* files + this log; build
+                       artifacts (staged debug xcframework, generated .xcodeproj) removed; .gitkeep
+                       restored. Follows the established 0099 disposition rather than inventing a new one.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native VersionInfoWidget shipped at parity with the web source: pure-Swift
+  projection (EXECUTED-green adapter, 54/54), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  every state + all 13 i18n keys + a11y labels, registry-correct (version-info, 2×2 / 1×2 / 4×40). All
+  host-runnable gates pass under Swift 6 strict concurrency on BOTH the iOS-simulator and macOS SDKs.
+  The Xcode app build was EXECUTED on this full-Xcode runner and is RED solely due to pre-existing
+  predecessor/integration-scope breakage (sibling Charge*/Fleet* widgets declaring duplicate
+  DTO/projection types that collide in the single app module) — PROVEN by an identical baseline build
+  without this surface — outside this surface's allowed files and provably not caused by
+  VersionInfoWidget.*. It is DEFERRED to the P4 integration prompt + a release Shared.xcframework CI
+  runner, matching the user-approved 0036/0068/0099 disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/VersionInfoWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0111-VersionInfoWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add VersionInfoWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

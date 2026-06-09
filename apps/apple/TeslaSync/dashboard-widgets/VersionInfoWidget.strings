@@ -1,0 +1,53 @@
+/*
+  VersionInfoWidget.strings
+  TeslaSync — P4 dashboard widget · 0111 · VersionInfoWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VersionInfoWidget` resolves (table "VersionInfoWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/VersionInfoWidget.tsx, values verbatim from
+  web/src/i18n/en.json → widget.versionInfo.*). The remainder back the native
+  chrome (freshness chip, refresh/retry, loading/error/empty copy, open
+  affordance, accessibility) and the dashboard registry description.
+*/
+
+/* --- Keys from the web source (parity, values verbatim from en.json) --- */
+"widget.versionInfo.title" = "Version Info";
+"widget.versionInfo.version" = "Version";
+"widget.versionInfo.buildDate" = "Build Date";
+"widget.versionInfo.gitSha" = "Git SHA";
+"widget.versionInfo.goVersion" = "Go Version";
+"widget.versionInfo.uptime" = "Uptime";
+"widget.versionInfo.os" = "OS";
+"widget.versionInfo.arch" = "Arch";
+"widget.versionInfo.signalsPerSec" = "Signals/sec";
+"widget.versionInfo.messagesToday" = "Messages Today";
+"widget.versionInfo.bytesProcessed" = "Bytes Processed";
+"widget.versionInfo.avgLatency" = "Avg Latency";
+"widget.versionInfo.noData" = "No version data available";
+
+/* --- Registry metadata (registry/system.ts → "version-info") --- */
+"widget.versionInfo.description" = "TeslaSync version, build info, uptime, data capture rates";
+
+/* --- Native chrome: freshness chip --- */
+"widget.versionInfo.live" = "Live";
+"widget.versionInfo.stale" = "Stale";
+"widget.versionInfo.offline" = "Offline";
+
+/* --- Native chrome: actions --- */
+"widget.versionInfo.refresh" = "Refresh";
+"widget.versionInfo.retry" = "Retry";
+"widget.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.versionInfo.loading" = "Loading version info";
+"widget.versionInfo.errorTitle" = "Couldn't load version info";
+"widget.versionInfo.emptyHint" = "Waiting for version data.";
+
+/* --- Accessibility --- */
+"widget.versionInfo.openA11y" = "Open the system information page";
