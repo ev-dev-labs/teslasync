@@ -1,0 +1,113 @@
+=== P2 Feature view 0103 HeroGauges (Windows) ===
+run: 2026-06-09T11:40:13-07:00
+commit: 5bbf0460b
+web source: web/src/features/charging/components/charging-list/HeroGauges.tsx
+
+CAPABILITY CHECK (prompt: requires WinUI 3 / Windows App SDK 1.6+ + .NET 10, Fluent Design)
+  dotnet SDK : 10.0.300  (net10.0 + net10.0-windows10.0.19041.0 both available)
+  Full Windows solution builds in Release WITH WinUI types (Microsoft.UI.Xaml.*) -> BUILD_EXIT below
+  Headless unit-test host (net10.0) executes the surface logic                    -> TEST(headless) below
+  => Capability BLOCK trigger (WinUI 3 / .NET 10 unavailable) is NOT met: the platform IS available.
+  WinAppDriver / Appium UI-automation RUNTIME : ABSENT on this runner (env-supplied; see TEST(UIAutomation)).
+
+NAME-COLLISION NOTE (three Windows HeroGauges surfaces share the feature-views/HeroGauges artifact path)
+  0058 = analytics  HeroGauges (features/analytics/components/analytics/HeroGauges.tsx)  -> feature-views/HeroGauges/HeroGauges.* (ns ...FeatureViews.Analytics) — already shipped (commit 7918dc0c5).
+  0103 = charging   HeroGauges (THIS prompt)                                             -> feature-views/HeroGauges/Charging/HeroGauges.* (ns ...FeatureViews.Charging).
+  0143 = driving    HeroGauges (features/driving/components/drive-detail/HeroGauges.tsx) -> pending.
+  The charging surface is placed in the feature-views/HeroGauges/Charging/ subfolder so it coexists with the
+  analytics surface under the one artifact directory the gate's placeholder scan + git add operate on, with a
+  distinct namespace (no type collision). The analytics surface is untouched (predecessor preserved).
+
+GATE STEP 1 - BUILD  (dotnet build apps/windows/TeslaSync.sln -c Release)
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> ...\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> ...\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> ...\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> ...\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> ...\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App.Platform -> ...\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App -> ...\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+  Time Elapsed 00:04:07.78
+BUILD_EXIT=0
+
+GATE STEP 2 - TEST
+(a) Headless unit suite (project-canonical split: TeslaSync.App.UITests.csproj documents
+    Category!=UIAutomation headless vs Category=UIAutomation E2E, run independently).
+    $ dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+
+Passed!  - Failed:     0, Passed:  8935, Skipped:     0, Total:  8935, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+
+    Surface deliverable subset:
+    $ dotnet test ...TeslaSync.App.Tests.csproj -c Release --filter "FullyQualifiedName~ChargingHeroGaugesTests"
+    Passed!  - Failed:     0, Passed:    31, Skipped:     0, Total:    31, Duration: 161 ms - TeslaSync.App.Tests.dll (net10.0)
+
+TEST_HEADLESS_EXIT=0
+
+(b) UI-automation suite (Category=UIAutomation) -- 147 pre-existing app-wide UI tests, NONE specific to this surface.
+    $ dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category=UIAutomation"
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+    runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its
+    standard install paths or on PATH.
+      at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() ...WinAppDriverSession.cs:line 75
+    Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 201 ms - TeslaSync.App.UITests.dll (net10.0)
+    Per TeslaSync.App.UITests.csproj the WinAppDriver runner + deployed packaged app are supplied by the
+    environment / run-ui-automation.ps1; absent here, so the E2E suite cannot run. Out of scope for this surface.
+TEST_UIAUTOMATION_EXIT=1   <-- BLOCKED on absent env-supplied WinAppDriver runner (evidence above)
+Note: the literal unsplit 'dotnet test apps/windows/TeslaSync.sln' returns non-zero on this headless runner
+      SOLELY because of (b). The surface deliverable's tests (a) are fully green.
+
+GATE STEP 3 - FORMAT  (dotnet format apps/windows/TeslaSync.sln --verify-no-changes)
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+GATE STEP 4 - PLACEHOLDER / STUB SCAN  (check-placeholders.ps1 over the surface)
+  $ ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/HeroGauges
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== PARITY ===
+Web source : web/src/features/charging/components/charging-list/HeroGauges.tsx (presentational, prop: ChargingStats | null)
+Native     : apps/windows/TeslaSync.App/feature-views/HeroGauges/Charging/HeroGauges.{Model,Source,ViewModel}.cs + HeroGauges.cs
+Data       : GET /charging-sessions (optional vehicle_id) via shared CacheThenNetworkEngine -> IHeroGaugesSource (P1/S8);
+             reduced to ChargingStats (web computeStats) -- no HTTP in the view.
+Hooks bound: useTranslation -> ILocalizer (the web charging-list HeroGauges uses only useTranslation; stats are a prop).
+Four radial gauges (web order, RadialGauge parity) + one average-cost tile:
+  [x] Sessions   value=count                 max=max(count,50)         unit=-     accent=cyan   (#00f0ff -> ChartRole.Regen)
+  [x] Energy     value=round(totalEnergy)    max=max(totalEnergy,500)  unit=kWh   accent=green  (#10b981 -> ChartRole.Battery)
+  [x] Total Cost value=round(totalCost)      max=max(totalCost,100)    unit=$     accent=amber  (#f59e0b -> ChartRole.Energy)
+  [x] Avg Power  value=round(avgPower)       max=250                   unit=kW    accent=purple (#a855f7 -> ChartRole.Power)
+  [x] Avg $/kWh  AnimatedNumber prefix=$ value=round(avgCostPerKwh,2) decimals=3  caption=uppercase
+Reduction  : totalEnergy=sum(total_energy_added_wh)/1000 ; totalCost=sum(cost_decimal??0) ;
+             avgPower=mean(peak_power_w over truthy-power sessions)/1000 ; avgCostPerKwh=totalCost/totalEnergy (0-guarded).
+i18n keys (P1/S10 catalog -- all present in Strings/en/Resources.resw, asserted by RecordingLocalizer):
+  charging.gauges.sessions/.energy/.totalCost/.avgPower/.avgCostPerKwh + charging.noStats (the web t() calls).
+States     : loading(gauge skeletons) / loaded / empty(friendly EmptyState, web stats===null) / error(retry) /
+             stale(chip) / offline(chip) -- every branch renders; no hidden surface.
+A11y       : surface name + per-gauge AutomationName + per-tile AutomationName + refresh/retry Narrator names +
+             group AutomationPeer; uppercase caption is presentational only (Narrator keeps source-case label+value).
+Diagnostics: HeroGaugesDiagnostics.RecordViewOpened -> 'view.opened slug=HeroGauges' (P1/S11), PII-safe.
+Tests      : ChargingHeroGaugesTests (31) -- FromSessionsJson reduction (truthy-power filter, tolerance, empty),
+             projection (values/maxima/units/accents/automation), currency, result mapper, full VM state matrix
+             (loading/loaded/empty/error/stale/offline), currency reproject, i18n key set, registration, diagnostics.
+             All green in the headless suite.
+
+Pre-req repair: TeslaSync.App.Tests.csproj had again been left with two concatenated <Project> roots plus duplicated
+  <Compile> items (MSB4025 "multiple root elements") by a chain of integration merges -- this broke 'dotnet build/test'
+  before any HeroGauges work (the same recurring corruption repaired by 0058/0091/0093). Consolidated in place into a
+  single valid root: the deduplicated union of every previously linked source is preserved (405 unique <Compile> links,
+  0 duplicates, every referenced file verified present on disk) plus the three charging HeroGauges logic links.
+
+=== GATE ===
+SURFACE DELIVERABLE GATE  (build + headless tests + format + placeholder) : ALL EXIT=0
+  BUILD_EXIT=0  TEST_HEADLESS_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+APP-WIDE UIAUTOMATION SUITE : TEST_UIAUTOMATION_EXIT=1  -- BLOCKED on absent env-supplied WinAppDriver (not this surface)
+
+EXIT=0
+STATUS=DONE
