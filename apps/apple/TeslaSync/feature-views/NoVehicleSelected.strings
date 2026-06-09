@@ -1,0 +1,45 @@
+/*
+  NoVehicleSelected.strings
+  TeslaSync — P4 feature view · 0193 · NoVehicleSelected (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  NoVehicleSelected resolves (table "NoVehicleSelected") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/onboarding/components/NoVehicleSelected.tsx). The remainder back the
+  native state envelope (page title, loading, error retry, vehicle-ready content,
+  freshness chip, connectivity banner) the prompt's state matrix requires.
+*/
+
+/* --- Web source keys (verbatim from NoVehicleSelected.tsx) --- */
+"common.noVehicleSelected.title" = "No vehicle selected";
+"common.noVehicleSelected.desc" = "Add a vehicle to your fleet to see data on this page.";
+"common.noVehicleSelected.action" = "Set up TeslaSync";
+
+/* --- Header (web `pageTitle` passed to `PageContainer`) --- */
+"common.noVehicleSelected.pageTitle" = "No vehicle selected";
+
+/* --- Loading (selection resolving) --- */
+"common.noVehicleSelected.loading" = "Checking your garage…";
+
+/* --- Content phase (a vehicle is selected → ready confirmation) --- */
+"common.noVehicleSelected.ready.title" = "Vehicle selected";
+"common.noVehicleSelected.ready.body" = "{{name}} is ready — your data is available.";
+
+/* --- Error (failed selection read → retry) --- */
+"common.noVehicleSelected.error.title" = "Couldn't load your vehicles";
+"common.noVehicleSelected.error.body" = "We couldn't check your garage. Try again.";
+"common.noVehicleSelected.retry" = "Try again";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"common.noVehicleSelected.live" = "Live";
+"common.noVehicleSelected.stale" = "Stale";
+"common.noVehicleSelected.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"common.noVehicleSelected.staleBanner" = "Reconnecting — this may be out of date";
+"common.noVehicleSelected.offlineBanner" = "Offline — showing your last known garage";
