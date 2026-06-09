@@ -172,3 +172,4 @@ p2-windows/dashboard-widgets/W-0072-PositionHeatmapWidget.prompt.md
 p2-windows/dashboard-widgets/W-0070-OdometerCounterWidget.prompt.md
 p2-windows/dashboard-widgets/W-0075-QuickNavWidget.prompt.md
 p2-windows/dashboard-widgets/W-0071-OnboardingChecklistWidget.prompt.md
+p2-windows/dashboard-widgets/W-0076-RangeBarWidget.prompt.md
