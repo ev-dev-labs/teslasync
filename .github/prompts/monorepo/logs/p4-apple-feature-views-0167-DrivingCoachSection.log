@@ -1,0 +1,105 @@
+=== P4 Feature view 0167 DrivingCoachSection (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/DrivingCoachSection.*
+Web src  : web/src/features/driving/components/driving-dynamics/DrivingCoachSection.tsx
+Runner   : Darwin (arm64), Xcode 26.5 (17F42), Swift 6.3.2, xcodegen, swiftlint, swiftformat, pwsh all present
+Capability: SwiftUI + Swift Charts present and EXERCISED (weekly-score-trend Chart). MapKit not required by
+            this surface (web source uses no map). Platform capability is AVAILABLE — not a BLOCKED case.
+
+--------------------------------------------------------------------------------
+FILES SHIPPED (13 Swift + 1 .strings, one exported view per file; co-located *Tests.swift)
+--------------------------------------------------------------------------------
+DrivingCoachSection.swift             — composition + phase switch (loading/empty/error/content + freshness)
+DrivingCoachSection.Models.swift      — Foundation DTOs/enums (data, patterns, style, impact, bands, phase)
+DrivingCoachSection.Projection.swift  — projected pieces + surface slug + VoiceOver summaries
+DrivingCoachSection.Adapter.swift     — DrivingCoachFormat (fmtNumber/percent/date) + DrivingCoachProjector
+DrivingCoachSection.Model.swift       — P1/S8 source + @Observable model + P1/S11 telemetry + P1/S10 facade
+DrivingCoachSection.Views.swift       — chrome (header/chip/banner/panel-heading/inner-empty/band→token)
+DrivingCoachSection.Panels.swift      — score gauge, style breakdown, efficiency cards, pattern bars
+DrivingCoachSection.Tables.swift      — recommendations list + per-drive DataTable (TSDataTable, 5 columns)
+DrivingCoachSection.Charts.swift      — Swift Charts weekly-score-trend line + tap tooltip + inner empty
+DrivingCoachSection.States.swift      — loading skeleton / whole-section empty / error+retry
+DrivingCoachSection.Previews.swift    — #Preview data/empty/loading/error/stale/offline (DEBUG)
+DrivingCoachSection.Tests.swift       — adapter/date/band/projector unit tests
+DrivingCoachSection.ModelTests.swift  — state-holder + accessibility unit tests
+DrivingCoachSection.strings           — P1/S10 catalog (all web-extracted keys + native chrome + a11y)
+
+Parity reproduced (every web region + branch):
+  heading · score RadialGauge (0-100, threshold colour) + "{n} drives analyzed" · Style Breakdown split
+  bar+legend | empty · Avg/Best Efficiency StatCards · Weekly Score Trend LineChart | empty(>1 week) ·
+  Driving Patterns (5 threshold bars) · Recommendations (impact badge + tip) | empty · Per-Drive Scores
+  DataTable (date/score badge/style badge/Wh/km/distance) | empty.
+States: loading · empty · error(retry) · stale(chip + one-shot auto-refresh) · offline(chip + banner) ·
+  content. i18n: every string via the P1/S10 facade (no English literals; key coverage cross-checked).
+  a11y: VoiceOver labels/values on gauge, bars, chart, rows; Dynamic Type via Font.TS ramp; reduce-motion
+  honoured on gauge/chart/skeleton.
+
+--------------------------------------------------------------------------------
+SURFACE-SCOPED GATES (host-runnable on this shared parallel-merge slot) — ALL GREEN
+--------------------------------------------------------------------------------
+[1] swiftc -typecheck  iOS 18 Simulator SDK  (-target arm64-apple-ios18.0-simulator -swift-version 6
+    -strict-concurrency=complete) over the surface + the shared P1/S9 tokens & P3 components it binds:
+      RESULT: 0 errors, 0 warnings.            IOS_TYPECHECK_EXIT=0
+[2] swiftc -typecheck  macOS 15 SDK  (-target arm64-apple-macos15.0 -swift-version 6
+    -strict-concurrency=complete) over the same set:
+      RESULT: 0 errors, 0 warnings.            MACOS_TYPECHECK_EXIT=0
+[3] Isolated SwiftPM build + tests (Swift 6 language mode), library = real P1/S9 Tokens + P3 shared
+    components + this surface; tests = the two co-located *Tests.swift:
+      RESULT: Executed 36 tests, with 0 failures (0 unexpected).   ISOLATED_TESTS_EXIT=0
+[4] swiftlint --strict (surface, 13 files):    0 violations.        LINT_SURFACE_EXIT=0
+[5] swiftformat --lint (surface, 13 files):    0/13 require formatting.  FORMAT_SURFACE_EXIT=0
+[6] swiftformat --lint apps/apple (tree-wide, the real gate step):
+      RESULT: 0/2295 files require formatting.  FORMAT_EXIT=0
+[7] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/DrivingCoachSection -Language swift:
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0          PLACEHOLDER_EXIT=0
+[8] xcodegen generate: project regenerated; enumerates all 14 DrivingCoachSection files
+    (13 .swift across app + test targets, 1 .strings resource).    XCODEGEN_EXIT=0
+
+--------------------------------------------------------------------------------
+swiftlint --strict (tree-wide, the real gate step)
+--------------------------------------------------------------------------------
+  RESULT: Found 1 violation in 2291 files — PRE-EXISTING, NOT this surface:
+    TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9: (opening_brace)
+  This is the same pre-existing opening_brace error already recorded in apps/macos-pending-verifications.md
+  for p4-apple/dashboard-widgets/0038. DrivingCoachSection contributes 0 of the violation.
+  LINT_EXIT=2 (pre-existing, unrelated)
+
+--------------------------------------------------------------------------------
+FULL-APP xcodebuild build test (iOS Simulator + macOS) — DEFERRED (macOS-pending), NOT this surface
+--------------------------------------------------------------------------------
+The two literal gate steps —
+   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+   xcodebuild -scheme TeslaSync-macOS build test
+— cannot complete green on this shared parallel-merge slot for PRE-EXISTING reasons unrelated to this
+surface. Reconfirmed here with real tooling:
+
+  (a) Pre-existing cross-surface type redeclaration in the single app module (both source roots compile
+      into one module per project.yml). Real swiftc evidence:
+        TeslaSync/dashboard-widgets/ChargeStatusWidget.Adapter.swift:118: public struct ChargingProjection
+        TeslaSync/feature-views/ChargingDetailSection.Adapter.swift:240:  public enum   ChargingProjection
+        => error: invalid redeclaration of 'ChargingProjection'
+      Neither file belongs to this surface; DrivingCoachSection references neither type.
+  (b) The scheme build pre-action stages Shared.xcframework via Gradle (Kotlin/Native). Bounded attempt:
+        ./Scripts/build-shared-xcframework.sh  -> timed out after 150s (GRADLE_EXIT=124), still bootstrapping.
+      Producing this binary is itself a pre-existing macOS-pending item (apps/macos-pending-verifications.md
+      row 1, p1-shared/S3-0001).
+  (c) Pre-existing swiftlint opening_brace error (see above).
+  (d) macOS development-signing identity (CI-only).
+
+  DrivingCoachSection itself produces ZERO errors in the real iOS-18 + macOS-15 compiles ([1],[2]) and its
+  shared-component dependencies build + test green under Swift 6 ([3]). The full-app build is therefore
+  DEFERRED to p4-apple/P99-0001-apple-acceptance-gate (macos-latest, signing identities, clean merge), and
+  a tracking row is appended to apps/macos-pending-verifications.md.
+  IOS_BUILD=deferred(macOS-pending)   MAC_BUILD=deferred(macOS-pending)
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+Surface is production-complete (no stubs/placeholders; all web regions + states; i18n; a11y; tests) and
+every gate step runnable on this slot is GREEN for this surface. The only non-green gate signals are
+PRE-EXISTING, cross-surface, and explicitly out of this prompt's scope (other surfaces / shared atomic
+components / the macOS-only Shared.xcframework), deferred to the P99 acceptance gate per the repo's
+sanctioned macOS-pending mechanism. Platform capability is present and proven — this is NOT a capability
+BLOCK.
+
+EXIT=0
+STATUS=DONE
