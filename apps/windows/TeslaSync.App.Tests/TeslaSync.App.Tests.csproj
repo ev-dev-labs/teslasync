@@ -792,4 +792,20 @@
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.ViewModel.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.ViewModel.cs" />
   </ItemGroup>
 
+  <!--
+    P2 feature-views/0041 ResponseViewer: the API-playground response viewer's UI-thread-free logic (the
+    ApiResponseSnapshot / RequestHistoryEntry mirrors, the three-branch projection, the formatBytes /
+    statusColor / method-badge helpers, the body-rendering rule, the pure code-snippet generator + snippet
+    projection, the source seam, the state-holder view-model, the registration and the PII-safe diagnostics)
+    lives in the WinUI app project under feature-views/ but is WinUI-free by construction. Link the three
+    source files in so this headless (net10.0) test project verifies the adapter + per-state transitions +
+    a11y names + the view.opened diagnostics without a UI host. The WinUI views themselves (ResponseViewer.cs
+    and ResponseViewer.Snippet.cs) are exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Model.cs" Link="FeatureViews\ResponseViewer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Source.cs" Link="FeatureViews\ResponseViewer.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.ViewModel.cs" Link="FeatureViews\ResponseViewer.ViewModel.cs" />
+  </ItemGroup>
+
 </Project>

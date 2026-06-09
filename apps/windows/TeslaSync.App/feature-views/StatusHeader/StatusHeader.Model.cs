@@ -22,15 +22,6 @@ public enum StatusHeaderState
 }
 
 /// <summary>
-/// One DLQ list entry, reduced to the single field <c>StatusHeader</c> reads — the native mirror of the
-/// <c>replayable</c> flag on the web <c>DLQEntrySummary</c> (web/src/types/admin-diagnostics.ts, sourced
-/// from <c>internal/api/dlq_handler.go</c>). The header counts how many entries are replayable; the other
-/// summary fields are only used by the entry table/drawer, not by this header, so they are intentionally
-/// omitted. Pure data — no WinUI types.
-/// </summary>
-public sealed record DlqEntrySummary(bool Replayable);
-
-/// <summary>
 /// The DLQ list response the header summarises — the native mirror of the web <c>DLQListResponse</c>
 /// (<c>count</c>, <c>replay_enabled</c>, <c>entries</c>). A null model <see cref="StatusHeaderModel.Data"/>
 /// mirrors the web <c>data: DLQListResponse | undefined</c> being <c>undefined</c> (counts fall back to

@@ -22,7 +22,7 @@ public sealed class StatusHeaderTests
         var entries = new List<DlqEntrySummary>(replayable.Length);
         foreach (var flag in replayable)
         {
-            entries.Add(new DlqEntrySummary(flag));
+            entries.Add(new DlqEntrySummary(0, string.Empty, string.Empty, flag, 0));
         }
 
         return new DlqListSnapshot(count, enabled, entries);
