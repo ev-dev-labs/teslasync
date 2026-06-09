@@ -1,0 +1,50 @@
+/*
+  SessionCurveChart.strings
+  TeslaSync — P4 feature view · 0090 · SessionCurveChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SessionCurveChart` resolves (table "SessionCurveChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/charging/components/charging-curve/SessionCurveChart.tsx). The remainder
+  back the native state envelope (freshness chip, connectivity banner, loading /
+  empty / error chrome), the kW unit suffix, and the accessibility summary.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"charging.curve.powerVsSoc" = "Power vs SOC";
+"charging.curve.powerVsSocDesc" = "Charging power curve for selected session";
+"charging.curve.powerVsSoc.aria" = "Charging power versus state-of-charge area chart for the selected session";
+"charging.curve.col.soc" = "SOC %";
+"charging.curve.col.power" = "Power (kW)";
+"charging.curve.socPercent" = "SOC (%)";
+"charging.curve.powerKw" = "Power (kW)";
+"charging.curve.power" = "Power";
+"common.noData" = "No data available";
+
+/* --- Unit suffix (web <Area unit=" kW">) --- */
+"charging.curve.unit.kw" = "kW";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"charging.curve.live" = "Live";
+"charging.curve.stale" = "Stale";
+"charging.curve.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"charging.curve.staleBanner" = "Reconnecting — the charging curve may be stale";
+"charging.curve.offlineBanner" = "Offline — showing the last loaded charging curve";
+
+/* --- Loading / empty / error chrome --- */
+"charging.curve.chart.loading" = "Loading charging curve";
+"charging.curve.chart.emptyHint" = "The power curve will appear here once a charging session is selected.";
+"charging.curve.chart.errorTitle" = "Couldn't load the charging curve";
+"charging.curve.chart.retry" = "Retry";
+
+/* --- Accessibility summary scaffolding --- */
+"charging.curve.a11y.peak" = "peak";
+"charging.curve.a11y.from" = "from";
+"charging.curve.a11y.to" = "to";
