@@ -1,0 +1,63 @@
+/*
+  ChargingSessionDetailWidget.strings
+  TeslaSync — P4 dashboard widget · 0024 · ChargingSessionDetailWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargingSessionDetailWidget` resolves (table "ChargingSessionDetailWidget")
+  lives here with its web `t(key, default)` English value. These entries fold into
+  the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table so each parallel surface prompt owns its own strings
+  without editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/dashboard/widgets/ChargingSessionDetailWidget.tsx) — the title, the four
+  summary stats, the two chart series names, the compact unit caption, and the empty
+  message. The charger group localizes the web `classifyCharger` literals (the web
+  hardcodes them; native must resolve them through i18n). The remaining keys back
+  the native-only chrome (registry description, unit symbols, freshness chip,
+  refresh/retry/open, loading/error/no-telemetry copy, chart axis, a11y).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.chargingSessionDetail.title" = "Charge Session Detail";
+"widget.chargingSessionDetail.energy" = "Energy Added";
+"widget.chargingSessionDetail.duration" = "Duration";
+"widget.chargingSessionDetail.peakPower" = "Peak Power";
+"widget.chargingSessionDetail.charger" = "Charger";
+"widget.chargingSessionDetail.powerKw" = "Power (kW)";
+"widget.chargingSessionDetail.soc" = "SoC %";
+"widget.chargingSessionDetail.unitKwh" = "kWh added";
+"widget.chargingSessionDetail.empty" = "No charge sessions";
+
+/* --- Charger classification (web classifyCharger literals, localized) --- */
+"widget.chargingSessionDetail.chargerSupercharger" = "Supercharger";
+"widget.chargingSessionDetail.chargerDcFast" = "DC Fast";
+"widget.chargingSessionDetail.chargerAcHome" = "AC / Home";
+
+/* --- Registry metadata (registry/charging.ts → "charging-session-detail") --- */
+"widget.chargingSessionDetail.description" = "Last charge session power curve with SoC overlay, kWh added, peak power";
+
+/* --- Native chrome: unit symbols --- */
+"widget.chargingSessionDetail.unitKwhSymbol" = "kWh";
+"widget.chargingSessionDetail.unitKw" = "kW";
+"widget.chargingSessionDetail.unitHour" = "h";
+"widget.chargingSessionDetail.unitMinute" = "m";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.chargingSessionDetail.live" = "Live";
+"widget.chargingSessionDetail.stale" = "Stale";
+"widget.chargingSessionDetail.offline" = "Offline";
+"widget.chargingSessionDetail.refresh" = "Refresh";
+"widget.chargingSessionDetail.retry" = "Retry";
+"widget.chargingSessionDetail.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.chargingSessionDetail.loading" = "Loading charge session";
+"widget.chargingSessionDetail.errorTitle" = "Couldn't load charge session";
+"widget.chargingSessionDetail.noTelemetry" = "No charge telemetry";
+
+/* --- Chart axis (VoiceOver / Swift Charts plot dimension) --- */
+"widget.chargingSessionDetail.axisTime" = "Time";
+
+/* --- Accessibility --- */
+"widget.chargingSessionDetail.openA11y" = "Open the charging page";
