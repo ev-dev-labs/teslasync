@@ -1,0 +1,56 @@
+/*
+  TimeOfUseAnalysis.strings
+  TeslaSync — P4 feature view · 0119 · TimeOfUseAnalysis (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TimeOfUseAnalysis` resolves (table "TimeOfUseAnalysis") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/charging/components/cost-analysis/TimeOfUseAnalysis.tsx), verified
+  against web/src/i18n/en.json. The remainder back the native state envelope
+  (freshness chip, connectivity banner, loading / empty / error chrome) and the
+  chart's accessibility summary.
+*/
+
+/* --- Keys from the web source (parity, verified against en.json) --- */
+"costAnalysis.tou.title" = "Electricity Rate Analysis (Time-of-Use)";
+"costAnalysis.tou.sessions" = "Sessions";
+"costAnalysis.tou.insights" = "Insights";
+"costAnalysis.tou.peak" = "Peak (2–7 PM)";
+"costAnalysis.tou.midPeak" = "Mid-peak";
+"costAnalysis.tou.offPeak" = "Off-peak (10 PM–6 AM)";
+"costAnalysis.tou.cheapestHour" = "Cheapest Hour";
+"costAnalysis.tou.avgCost" = "avg";
+"costAnalysis.tou.perSession" = "/ session";
+"costAnalysis.tou.priciestHour" = "Priciest Hour";
+"costAnalysis.tou.busiestHour" = "Busiest Hour";
+"costAnalysis.tou.offPeakRatio" = "Off-Peak Charging";
+"costAnalysis.tou.offPeakDesc" = "of sessions between 10 PM–6 AM";
+"costAnalysis.tou.noInsights" = "No insights available";
+"costAnalysis.charts.noData" = "Not enough data";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"costAnalysis.tou.live" = "Live";
+"costAnalysis.tou.stale" = "Stale";
+"costAnalysis.tou.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) + retry --- */
+"costAnalysis.tou.staleBanner" = "Reconnecting — time-of-use data may be stale";
+"costAnalysis.tou.offlineBanner" = "Offline — showing last known time-of-use data";
+"costAnalysis.tou.retry" = "Retry";
+
+/* --- Empty-state supporting copy --- */
+"costAnalysis.tou.emptyHint" = "Time-of-use insights appear here once charging sessions are recorded.";
+
+/* --- Accessibility (VoiceOver) --- */
+"costAnalysis.tou.a11y.chart" = "Hourly charging sessions";
+"costAnalysis.tou.a11y.hour" = "Hour";
+"costAnalysis.tou.a11y.loading" = "Loading time-of-use analysis";
+"costAnalysis.tou.a11y.errorTitle" = "Couldn't load time-of-use analysis";
+"costAnalysis.tou.a11y.bandPeak" = "peak";
+"costAnalysis.tou.a11y.bandMid" = "mid-peak";
+"costAnalysis.tou.a11y.bandOff" = "off-peak";
