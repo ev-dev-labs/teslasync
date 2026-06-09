@@ -52,6 +52,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TripSummaryWidget\TripSummaryWidget.Model.cs" Link="Widgets\TripSummaryWidget\TripSummaryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TripSummaryWidget\TripSummaryWidget.ViewModel.cs" Link="Widgets\TripSummaryWidget\TripSummaryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TripSummaryWidget\TripSummaryWidget.Source.cs" Link="Widgets\TripSummaryWidget\TripSummaryWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\UptimeMonitorWidget\UptimeMonitorWidget.Model.cs" Link="Widgets\UptimeMonitorWidget\UptimeMonitorWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\UptimeMonitorWidget\UptimeMonitorWidget.ViewModel.cs" Link="Widgets\UptimeMonitorWidget\UptimeMonitorWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\UptimeMonitorWidget\UptimeMonitorWidget.Source.cs" Link="Widgets\UptimeMonitorWidget\UptimeMonitorWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\GuardModeWidget\GuardModeWidget.Model.cs" Link="Widgets\GuardModeWidget\GuardModeWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\GuardModeWidget\GuardModeWidget.ViewModel.cs" Link="Widgets\GuardModeWidget\GuardModeWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaHistoryWidget\MediaHistoryWidget.Model.cs" Link="Widgets\MediaHistoryWidget\MediaHistoryWidget.Model.cs" />
