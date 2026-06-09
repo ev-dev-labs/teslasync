@@ -1,0 +1,294 @@
+================================================================================
+P4 · Dashboard widget · 0083 — SafetyFeaturesWidget (Apple)
+Run: 2026-06-09T00:25-0700   Host: Darwin arm64 (macOS 26 / Xcode 26.5 17F42)
+Prompt: P4/dashboard-widgets/0083 — SafetyFeaturesWidget
+Web source (spec): web/src/features/dashboard/widgets/SafetyFeaturesWidget.tsx
+Delegation: FORBIDDEN — authored directly, no sub-agent.
+Mode: surface code-complete + EXECUTED host gates (SwiftPM build+test, dual-SDK
+      typecheck, swiftlint/swiftformat/placeholder, xcodegen). Full Xcode app
+      build/test was RUN on both platforms (Shared.xcframework staged) and is
+      DEFERRED to the P4 acceptance gate — see "XCODE APP BUILD/TEST" below: the
+      surface compiles with ZERO errors inside the full app; the build is blocked
+      ONLY by pre-existing, unrelated duplicate-type collisions in sibling
+      Charge* widgets (outside this prompt's allowed files).
+================================================================================
+
+=== CAPABILITY PROBE (all required tooling present on this runner) ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)          OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42)                                 OK
+  iPhoneSimulator SDK ........ iPhoneSimulator (iOS 18 deploy target)             OK
+  macOS SDK .................. MacOSX (macOS 15 deploy target)                     OK
+  iPhone 16 simulator ........ present (booted)                                   OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint  (0.63.3)              OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat (0.61.1)            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                            OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen (2.45.4)               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Swift 6 lang mode)  OK
+  Shared.xcframework ......... STAGED for real (apps/shared gradlew
+                               :core:assembleSharedXCFramework -> staged into
+                               apps/apple/Frameworks/Shared.xcframework)          OK
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  AVAILABLE and PROVEN by the EXECUTED iOS-18 + macOS-15 SDK typechecks and the
+  EXECUTED 39/39 XCTest run below. The capability-BLOCKED escape hatch does NOT
+  apply — the surface is authored, host-compiled on both SDKs, host-tested for
+  real, AND compiled clean inside the full iOS + macOS app targets.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/SafetyFeaturesWidget.*) ===
+  SafetyFeaturesWidget.swift          269  surface: shell chrome (green
+                                           exclamationmark.shield + "Safety
+                                           Features" title, hidden when compact) +
+                                           freshness chip + refresh + Open; state
+                                           switch; compact active-count hero vs
+                                           2/4-col grid; registry id "safety-features".
+  SafetyFeaturesWidget.Model.swift    218  P1/S8 state-holder seam
+                                           (SafetySource->SafetyModel) + P1/S11
+                                           telemetry seam + P1/S10 strings facade +
+                                           DTOs + in-memory source + phase logic.
+  SafetyFeaturesWidget.Adapter.swift  253  testable projection core: SafetySignalValue
+                                           union, SafetyEnumField+prefixes, SafetyEnum
+                                           (cleanRaw/isActive — port of lib/safetyEnum.ts),
+                                           SafetyCellStatus (tone/tint), SafetyStatusCell,
+                                           SafetyLatestInput, SafetyStatusMapper.
+  SafetyFeaturesWidget.Cells.swift    256  SafetyCellsBuilder (1:1 port of web buildCells:
+                                           8 ordered ADAS cells + activeCount) +
+                                           SafetyAccessibility (cell/grid/hero summaries).
+  SafetyFeaturesWidget.Views.swift    184  presentational subviews: connectivity banner +
+                                           compact active-count hero (web big-number) +
+                                           responsive 2/4-col status grid (web
+                                           WidgetStatusGrid) + status cell + grid empty.
+  SafetyFeaturesWidget.Previews.swift 137  #if DEBUG previews — one per state (content
+                                           2x4 / 4x4 wide / compact 1x2 hero / loading /
+                                           no-data / error / offline / stale).
+  SafetyFeaturesWidget.Tests.swift    295  XCTest — adapter: enum cleanRaw/isActive,
+                                           status mappers, cell builder + activeCount,
+                                           status tone/tint.
+  SafetyFeaturesWidget.ModelTests.swift 177 XCTest — model phases + telemetry + source
+                                           wiring, registry parity + clamp, a11y summaries.
+  SafetyFeaturesWidget.strings         64  P1/S10 catalog contribution (13 web-parity keys
+                                           + On/Off enum words + registry desc + freshness/
+                                           refresh/retry/open/empty/error chrome + a11y).
+  Every .swift file <= 400 lines (house file_length). Total 1789 swift lines + 64
+  strings across 9 files. Shared registry types (DashboardWidgetSize /
+  DashboardWidgetRegistration) are REUSED from Sources/DashboardWidgets/
+  DashboardWidgetInfra.swift — no redeclaration -> no duplicate symbols from this
+  surface (verified: exactly one `struct DashboardWidgetSize` in the app module).
+
+=== PARITY (vs web SafetyFeaturesWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (SafetySource->SafetyModel):
+    useSafety (api/hooks/useVehicleSystems), useVehicles, useTranslation. The
+    production app wires SafetySource over the `safety/latest` query store keyed by
+    the selected vehicle (web `vehicleId ?? vehicles?.[0]?.id`); the view performs
+    NO HTTP.
+  Projection -> SafetyCellsBuilder.build is a 1:1 port of the web `buildCells`, 8
+    ordered cells [fcw, aeb, lda, elda, bsc, bscw, slw, cfd]:
+      [fcw]  safetyEnumStatus(forward_collision_warning) -> cleanSafetyEnum value
+      [aeb]  invertedBoolStatus(automatic_emergency_braking_off) -> Enabled/Disabled
+      [lda]  safetyEnumStatus(lane_departure_avoidance) -> cleanSafetyEnum value
+      [elda] boolStatus(emergency_lane_departure_avoidance) -> Enabled/Disabled
+      [bsc]  boolStatus(automatic_blind_spot_camera) -> Enabled/Disabled
+      [bscw] boolStatus(blind_spot_collision_warning) -> Enabled/Disabled
+      [slw]  safetyEnumStatus(speed_limit_warning) -> cleanSafetyEnum value
+      [cfd]  safetyEnumStatus(cruise_follow_distance) -> cleanSafetyEnum value
+    Returns [] when there is no snapshot (web `data ? buildCells : []`) -> empty state.
+  Safety-enum normalization -> SafetyEnum.{cleanRaw,isActive} is a faithful port of
+    web lib/safetyEnum.ts, ASSERTED by EXECUTED tests: booleans -> "On"/"Off";
+    numbers -> JS String(num) form (3.0 -> "3", 2.5 -> "2.5"); typed enum strings
+    strip their prefix (ForwardCollisionSensitivity/LaneAssistLevel/SpeedAssistLevel/
+    FollowDistance); SpeedAssistLevelNone -> "Off"; off/none/disabled/0 classify
+    inactive (case-insensitive). The string|boolean|number|null union (raw
+    signal.SignalValue) is modeled as SafetySignalValue {boolean|number|text|absent}
+    and type-narrowed exactly like the web `typeof` checks — never String()-coercing
+    a non-string (the bug lib/safetyEnum.ts exists to prevent).
+  activeCount -> cells.filter(status == ok).count (web `activeCount`), surfaced in
+    the compact 1-col hero. ASSERTED (engaged snapshot -> 8, mixed -> 2, empty -> 0).
+  Composition -> shell chrome · compact (size.cols<=1): large emerald active-count +
+    "Active Features" caption (web text-3xl text-emerald-300) with title hidden ·
+    grid (size.cols>=3 ? 4 : 2 columns, web cols mapping) of 8 tinted cells, each a
+    label + value + corner status dot (web Safety cells carry no leading icon) ·
+    grid-level empty state ("No safety data").
+  Shared components -> @/components/feedback (EmptyState) -> native ContentUnavailableView
+    + grid empty; Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton.
+    Cell tinting reproduces the web WidgetStatusGrid statusStyles (ok=emerald,
+    warning=amber, error=red, inactive/unknown=neutral). Recharts -> none /
+    Leaflet -> none (no chart/map on this surface).
+  States (all render) -> loading (skeleton hero or 2/4-col grid) · empty ("No safety
+    data") · error (retry affordance) · stale (chip + banner) · offline (cached value
+    + chip + banner) · content. Model phase resolution keeps cached content visible
+    behind refresh/errors, matching the web WidgetShell.
+  i18n -> ALL 13 web source keys resolve through the P1/S10 facade with the web
+    t(key,default) fallback: widget.safety.{title, fcw, aeb, lda, elda, bsc, bscw,
+    slw, cfd, enabled, disabled, activeFeatures, noData} -> ALL PRESENT in
+    SafetyFeaturesWidget.strings (verified) + On/Off enum words, registry description,
+    freshness/refresh/retry/open chrome, and a11y words. No English literals in native
+    code (verbatim facade; the On/Off enum words from lib/safetyEnum.ts route through
+    the localizer too).
+  a11y -> each cell carries a combined "<label>, <value>, <status>" label; the grid a
+    combined summary; the compact hero a "<n> Active Features" label; every button an
+    accessibilityLabel; status dots accessibilityHidden; Dynamic Type via tokens;
+    Reduce Motion gates the TSSkeleton shimmer.
+  Telemetry -> SafetyModel.start() emits viewOpened(surface:"SafetyFeaturesWidget")
+    (P1/S11 diagnostics). ASSERTED by a spy test (fires exactly once, idempotent start).
+  Registry -> SafetyFeaturesWidget.registration: id "safety-features", category
+    "security", default 2x4, min 1x2, max 4x40 (+ clamp()), matching the prompt's
+    canonical registry/security.ts metadata. ASSERTED.
+
+=== GATE — HOST-RUNNABLE STEPS (EXECUTED on this machine; real output) ===
+[1] swift build — isolated SwiftPM harness (REAL production swift/Model/Adapter/Cells/
+    Views/Previews + REAL design/generated/apple/Tokens.swift + REAL
+    DashboardWidgetInfra.swift + verbatim TSTone/TSSkeleton extracted from their real
+    files), Swift 6 language mode + complete strict concurrency:
+      Build complete! (no errors, no warnings)
+      SWIFT_BUILD_EXIT=0                                                          OK
+[2] swift test — the FULL XCTest suite EXECUTED on the macOS host via that harness:
+      Executed 39 tests, with 0 failures (0 unexpected)
+        SafetyEnumCleanRawTests      7/7   (bool On/Off, number JS-string, prefix strip,
+                                            SpeedAssist None->Off, unprefixed passthrough,
+                                            exact-prefix keep raw, empty/absent fallback)
+        SafetyEnumIsActiveTests      5/5   (absent, bool, number 0/nonzero,
+                                            off/none/disabled/0 case-insensitive, levels)
+        SafetyStatusMapperTests      3/3   (boolStatus, invertedBoolStatus, safetyEnumStatus)
+        SafetyCellsBuilderTests      9/9   (empty when no snapshot, 8 ordered cells, AEB
+                                            inverted flag, plain-bool Enabled/Disabled/—,
+                                            enum clean+classify, activeCount 8/2/0, label
+                                            key resolution, On/Off display via localizer)
+        SafetyCellStatusTests        2/2   (tone mapping, web statusStyles tinting)
+        SafetyModelTests             7/7   (phase loading/empty/error/content, telemetry
+                                            once, refresh delegation, connection+cells+
+                                            activeCount tracking)
+        SafetyRegistryTests          2/2   (canonical safety-features metadata, clamp 1x2..4x40)
+        SafetyAccessibilityTests     4/4   (cell summary, grid summary, empty fallback, hero)
+      SWIFT_TEST_EXIT=0                                                           OK
+[3] swiftc -typecheck — iOS 18 SIMULATOR SDK. The shipping source files compiled
+    together against the real design system + registry infra; none import the staged
+    Shared xcframework:
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6 -strict-concurrency=complete <surface + deps>
+      IOS_TYPECHECK_EXIT=0   (0 errors)                                          OK
+[4] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0
+    -swift-version 6 -strict-concurrency=complete):
+      MAC_TYPECHECK_EXIT=0   (0 errors)                                          OK
+[5] swiftlint --strict on the 8 surface .swift files (repo .swiftlint.yml lists
+    TeslaSync/dashboard-widgets in `included:`):
+      Done linting! Found 0 violations, 0 serious in 8 files.
+      LINT_EXIT=0                                                                OK
+[6] swiftformat --lint on the 8 surface .swift files (config apps/apple/.swiftformat):
+      0/8 files require formatting.
+      FORMAT_EXIT=0                                                              OK
+[7] check-placeholders (ADR-011 stub gate) on every shipped SafetyFeaturesWidget.*
+    file (swift + strings):
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   (per-file EXIT=0, aggregate 0)
+      PLACEHOLDER_EXIT=0                                                         OK
+[8] xcodegen generate — the surface integrates into the generated Xcode project
+    (project.yml globs TeslaSync/dashboard-widgets/); all 9 files enumerated across
+    the app + test targets:
+      Created project at apps/apple/TeslaSync.xcodeproj
+      XCODEGEN_EXIT=0                                                            OK
+
+=== GATE — XCODE APP BUILD/TEST (RUN for real; surface CLEAN; DEFERRED on pre-existing
+    sibling collisions outside this prompt's allowed files) ===
+    Shared.xcframework was STAGED for real first (apps/shared gradlew
+    :core:assembleSharedXCFramework -> Frameworks/Shared.xcframework), removing the
+    framework blocker that the 0085 SecurityStatusWidget predecessor deferred on.
+    Both full-app gate commands were then EXECUTED:
+
+      xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+        CODE_SIGNING_ALLOWED=NO build test
+        ** BUILD FAILED **   IOS_EXIT=65   (222 errors)
+
+      xcodebuild -scheme TeslaSync-macOS CODE_SIGNING_ALLOWED=NO build test
+        ** BUILD FAILED **   MAC_EXIT=65   (149 errors)
+
+    ROOT CAUSE — 100% pre-existing + unrelated to this surface (Honesty rule 1: shown
+    red, NOT faked green; Honesty rule 7: predecessor work NOT bypassed/edited):
+      * EVERY error is "ambiguous for type lookup" / "cannot infer contextual base"
+        in sibling Charge* dashboard widgets authored by OTHER parallel P4 prompts:
+        ChargeSessionChartWidget.*, ChargeStatusLiveWidget.*, ChargeStatusWidget.*.
+        Those siblings redefine the SAME public types in the single app module, e.g.:
+          - enum ChargeLoadStatus  in ChargeStatusLiveWidget.Model.swift
+                                   AND ChargeStatusWidget.Model.swift
+          - struct ChargeSessionDTO in ChargeStatusLiveWidget.Model.swift
+                                   AND ChargeSessionChartWidget.Models.swift
+        (the "parallel-merge collisions" recorded in apps/macos-pending-verifications.md).
+      * grep "error:" over BOTH build logs -> ZERO errors in any SafetyFeaturesWidget.*
+        file. This surface compiles CLEAN inside the full iOS AND macOS app targets.
+      * git status -> the ONLY files this prompt added are the 9 SafetyFeaturesWidget.*
+        files; no sibling/shared file was touched. This surface references NO Charge*
+        type (grep -> none).
+    Fixing the sibling duplicate types is OUTSIDE this prompt's allowed files
+    (SafetyFeaturesWidget.* + this log) and would gate this deliverable on unrelated
+    parallel work. The full-app build/test is therefore DEFERRED to the P4 acceptance
+    gate (p4-apple/P99-0001-apple-acceptance-gate, macos-latest), where all surfaces
+    are reconciled — identical disposition to 0085 SecurityStatusWidget / 0054 /
+    0036, and to the macos-pending entries for ToolCard / AlertMessageEditor /
+    FSMTimelineChart. The TeslaSync(/-macOS) XCTest target will run the SAME tests
+    already EXECUTED green (39/39) by the SwiftPM harness in step [2]; the surface
+    already compiles against BOTH the iOS 18 sim and macOS 15 SDKs (steps [3]/[4])
+    AND inside both full app targets (zero surface errors above).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) +
+      compact hero — implemented; each has a #if DEBUG preview; phase logic
+      unit-tested + EXECUTED green (39/39).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SafetySource->SafetyModel);
+      no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 13 web keys, all present
+      in SafetyFeaturesWidget.strings (verified).
+  [x] Accessibility labels on every interactive element; each cell + grid + hero carry
+      combined values.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 39 methods, EXECUTED
+      39/39, 0 failures.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — all host-runnable gates green; the full Xcode app
+      build/test was RUN and is DEFERRED with captured real evidence proving the
+      surface is clean and the failure is pre-existing/external (0085 precedent).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the full Xcode app build/test is shown FAILED (IOS_EXIT=65,
+                       MAC_EXIT=65) with the real error counts and root cause; every
+                       "OK" above is a command actually run with its real exit code
+                       (incl. an EXECUTED 39/39 XCTest run + both-SDK compiles + both
+                       full-app compiles proving zero surface errors).
+  2  No scope narrowing: implemented ALL 8 cells + compact hero + every state + i18n +
+                       a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; the full app build EXECUTED on both
+                       platforms (not assumed).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (Verbatim
+                       TSTone/TSSkeleton copies + Tokens/registry were used ONLY in the
+                       throwaway SwiftPM compile/test harness, never in shipped files.)
+  5  No parity shortcuts: faithful 1:1 port of web buildCells + lib/safetyEnum.ts
+                       (cleanSafetyEnum/isSafetyEnumActive) + compact branch + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit sibling/shared files to force a green app
+                       build; the Shared.xcframework WAS staged via the real gradle
+                       build; strings shipped as the per-surface table (parallel-safe).
+  8  No commit on red  : committing on all-green host gates with the surface proven to
+                       compile clean inside both full app targets; the app build/test
+                       is explicitly DEFERRED (its red is pre-existing sibling breakage,
+                       not this surface).
+  9  No silent drift   : changes confined to the allowed SafetyFeaturesWidget.* files +
+                       this log. The generated .xcodeproj and staged Frameworks/
+                       Shared.xcframework are git-ignored and NOT committed.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SafetyFeaturesWidget shipped at parity with the web
+  source: pure-Swift projection core (EXECUTED-green XCTest, 39/39) faithfully porting
+  lib/safetyEnum.ts + buildCells, P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every state + the compact active-count hero + all 13 i18n keys + a11y
+  labels, registry-correct (safety-features, 2x4 / 1x2 / 4x40). All host-runnable gates
+  pass; the surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs under
+  Swift 6 strict concurrency AND inside BOTH full app targets with ZERO surface errors.
+  The full Xcode app build/test was RUN for real (Shared.xcframework staged) and is
+  DEFERRED to the P4 acceptance gate — its failure is 100% pre-existing duplicate-type
+  collisions in sibling Charge* widgets (outside this prompt's allowed files), with
+  file-level + git evidence captured above.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/SafetyFeaturesWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0083-SafetyFeaturesWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add SafetyFeaturesWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
