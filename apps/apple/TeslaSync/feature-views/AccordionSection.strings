@@ -1,0 +1,25 @@
+/*
+  AccordionSection.strings
+  TeslaSync — P4 feature view · 0236 · AccordionSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "AccordionSection").
+  These entries fold into the app Localizable.xcstrings master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns its
+  own strings without editing the shared catalog.
+
+  PARITY NOTE: the web source
+  (web/src/features/system/components/status/AccordionSection.tsx) is an anonymous
+  presentational container — its icon / title / description / badges / body are ALL
+  caller-supplied props and it renders no text of its own, so it extracts ZERO i18n
+  keys. Every key below backs the native VoiceOver value/hint that the web gets
+  implicitly from role="button" + aria-expanded on the DOM node — none of which exist
+  as English literals in the Swift sources.
+*/
+
+/* --- Accessibility value (web aria-expanded) --- */
+"accordionSection.a11y.expanded" = "Expanded";
+"accordionSection.a11y.collapsed" = "Collapsed";
+
+/* --- Accessibility hint (next action on activation) --- */
+"accordionSection.a11y.hint.expand" = "Expands this section";
+"accordionSection.a11y.hint.collapse" = "Collapses this section";
