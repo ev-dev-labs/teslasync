@@ -1,0 +1,45 @@
+/*
+  SleepEfficiencyWidget.strings
+  TeslaSync — P4 dashboard widget · 0090 · SleepEfficiencyWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SleepEfficiencyWidget` resolves (table "SleepEfficiencyWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block holds the exact strings extracted from the web source
+  (features/dashboard/widgets/SleepEfficiencyWidget.tsx + registry/energy.ts). The
+  remaining keys back the native-only chrome (freshness chip, refresh/retry/empty/error
+  copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.sleepEfficiency.title" = "Sleep Efficiency";
+"widget.sleepEfficiency.description" = "How well the car sleeps: efficiency %, drain rate, wake events";
+"widget.sleepEfficiency.efficiency" = "Efficiency";
+"widget.sleepEfficiency.avgDrain" = "Avg Drain/Day";
+"widget.sleepEfficiency.totalSleep" = "Total Sleep";
+"widget.sleepEfficiency.hours" = "h";
+"widget.sleepEfficiency.wakeEvents" = "Wake Events";
+"widget.sleepEfficiency.noData" = "No sleep efficiency data";
+"help.sleepEfficiency.body" = "Share of parked time the car spent in true low-power sleep (vs. idle/online). Higher is better — more sleep means less vampire drain and lower battery wear.";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.sleepEfficiency.live" = "Live";
+"widget.sleepEfficiency.stale" = "Stale";
+"widget.sleepEfficiency.offline" = "Offline";
+"widget.sleepEfficiency.updating" = "Updating";
+"widget.sleepEfficiency.refresh" = "Refresh";
+"widget.sleepEfficiency.retry" = "Retry";
+"widget.sleepEfficiency.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.sleepEfficiency.loading" = "Loading sleep data";
+"widget.sleepEfficiency.emptyHint" = "Sleep data will appear here once the vehicle reports parked time.";
+"widget.sleepEfficiency.errorTitle" = "Couldn't load sleep data";
+
+/* --- Accessibility --- */
+"widget.sleepEfficiency.openA11y" = "Open sleep efficiency details";
+"widget.sleepEfficiency.helpA11y" = "More info about Sleep Efficiency";
