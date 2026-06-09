@@ -308,3 +308,4 @@ p2-windows/feature-views/W-0116-MonthlyCostChart.prompt.md
 p2-windows/feature-views/W-0121-AddWidgetButton.prompt.md
 p2-windows/feature-views/W-0120-TeslaChargingSessionsMap.prompt.md
 p2-windows/feature-views/W-0118-SavingsCalculator.prompt.md
+p2-windows/feature-views/W-0119-TimeOfUseAnalysis.prompt.md
