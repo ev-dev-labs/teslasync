@@ -225,3 +225,4 @@ p2-windows/feature-views/W-0009-TelemetryErrorsPanel.prompt.md
 p2-windows/feature-views/W-0012-ByteSizeConverter.prompt.md
 p2-windows/feature-views/W-0013-ColorConverter.prompt.md
 p2-windows/feature-views/W-0014-CronParser.prompt.md
+p2-windows/feature-views/W-0015-HashCalculator.prompt.md
