@@ -1,0 +1,264 @@
+================================================================================
+P4 · Dashboard widget · 0027 — ClimateHistoryWidget (Apple)
+Run: 2026-06-08T22:13-0700   Host: Darwin arm64   Branch: auto/20260608-211853-78201/22
+Base: 0c7763737
+Prompt: P4/dashboard-widgets/0027 — ClimateHistoryWidget
+Web source (spec): web/src/features/dashboard/widgets/ClimateHistoryWidget.tsx
+Mode: code-complete + host-validated (typecheck + EXECUTED XCTest) + REAL xcodebuild
+      attempted after building + staging Shared.xcframework on this host.
+================================================================================
+
+=== CAPABILITY PROBE (every line is a command actually run on this host) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                  OK
+  /usr/bin/xcodebuild ........ Xcode 26.5 (17F42)                                    OK
+  swiftc Charts capability ... `import Charts` + Swift Charts AreaMark/LineMark
+                               typecheck on the macOS SDK (GATE [1]) — AVAILABLE     OK
+  iPhone 16 simulator ........ present (booted), iOS 26.5 runtime                    OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     OK
+  Kotlin/Native toolchain .... ~/.konan/kotlin-native-prebuilt-macos-aarch64-2.4.0  OK
+  Shared.xcframework ......... BUILT on this host (gradle :core:assembleSharedXCFramework,
+                               17m55s) + staged to apps/apple/Frameworks (GATE [7]) OK
+  codesign identities ........ entitlements bypassed for the build evidence with
+                               CODE_SIGNING_ALLOWED=NO                               n/a
+
+  Capability note: this surface requires SwiftUI + Swift Charts (the web source
+  composes a Recharts `AreaChart` with two temperature areas). Swift Charts is
+  PRESENT and PROVEN by a real macOS-SDK compile (GATE [1]) and an EXECUTED XCTest
+  run (GATE [2], 31/31). No MapKit (the web source uses no map). The
+  capability-BLOCKED escape hatch therefore does NOT apply — the surface is authored
+  and host-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/ClimateHistoryWidget.*) ===
+  ClimateHistoryWidget.Projection.swift 299  Foundation-only pure domain: ClimateTemperatureUnit
+                                              (°C/°F), ClimateTempConvert.fromSI (port of
+                                              convertTempFromSI), ClimateSeries (cabin/outside),
+                                              snapshot input, chart datum, projection,
+                                              buildChartData/latestNonNull/yDomain builder, formatter
+  ClimateHistoryWidget.Model.swift      238  P1/S8 source seam + @Observable model + phase
+                                              resolution + P1/S11 telemetry + P1/S10 facade +
+                                              a11y summary + in-memory source
+  ClimateHistoryWidget.Chart.swift      177  Swift Charts: two temperature AreaMarks (gradient fills,
+                                              unstacked) + 2-pt LineMark strokes, time X axis,
+                                              degree Y axis, token-mapped series colors, monotone
+  ClimateHistoryWidget.swift            322  Surface: glass shell + header (ThermometerSun icon +
+                                              title) + freshness chip + refresh/open + all states +
+                                              compact/wide + Cabin/Outside stat row + chart
+  ClimateHistoryWidget.Previews.swift   107  #if DEBUG previews — content (wide/°C), °F, loading,
+                                              empty, error, offline(cached)
+  ClimateHistoryWidget.Tests.swift      315  XCTest: conversion + adapter + format + model +
+                                              registry + a11y (31 tests)
+  ClimateHistoryWidget.strings           44  P1/S10 catalog contribution (4 source keys + registry
+                                              + native chrome + a11y)
+  Every .swift file <= 322 lines (house file_length 400). One exported View per file
+  (ClimateHistoryWidget surface, ClimateHistoryChart). No `any`-typed escape hatch; no #if os branches.
+
+=== PARITY (vs web ClimateHistoryWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (ClimateHistorySource ->
+    ClimateHistoryModel): useClimateHistory, useVehicles, useUnits, useDateFormat,
+    useTranslation. Production wires the source over the KMP VehicleSystemsStore
+    (StateHolderModel<LoadableState<[ClimateState]>>) + the settings UnitStore; the view performs
+    NO HTTP. No direct transport in the view.
+  Projection -> ClimateHistoryProjectionBuilder.build is a faithful port of web `buildChartData`:
+    keep rows with a time (`created_at || timestamp`), convert insideTemp/outsideTemp (SI Celsius ->
+    display via convertTempFromSI), sort ascending by time. Latest-value scan per series (newest-first,
+    skip nils = web `latestInside`/`latestOutside`). y-axis envelope derived. Verified by EXECUTED
+    XCTest (12 adapter + 2 format).
+  Composition -> WidgetShell-equivalent chrome (ThermometerSun icon + "Climate History" title +
+    freshness chip + refresh + optional Open) · stat row (Cabin/Outside latest + unit) · the chart.
+    Recharts AreaChart -> Swift Charts: two AreaMarks (gradient 0.3->0 fill, unstacked so Cabin and
+    Outside overlap rather than sum) + 2-pt LineMark strokes, monotone interpolation, gaps bridged
+    (web `connectNulls`). Compact (cols<=1) renders the stat row only; wide (cols>=3) adds denser
+    ticks + the unit title — matching the web `isCompact`/`isWide` branches.
+  Shared components -> reuses the REAL apps/apple library compiled in GATE [1]/[2]: Color.TS, Font.TS,
+    TSSpacing, TSRadius (tokens), chart-series color tokens, TSSkeleton (loading), ContentUnavailableView
+    (empty). Recharts->Swift Charts; Leaflet->none. Color tokens map the web hex: Cabin #f97316 (orange)
+    -> chartSeriesEnergy (the amber energy token, nearest hue in the palette); Outside #3b82f6 ->
+    chartSeriesSpeed (an EXACT-hex match). The warm/cool contrast of the web source is preserved.
+  States (all render) -> loading (skeleton stat row + chart block) · empty ("No climate history" +
+    ThermometerSun + hint) · error (retry) · stale (chip + banner, cached chart stays) · offline (chip +
+    banner, cached chart) · content. Model phase resolution keeps cached values visible behind
+    refresh/errors, matching the web shell (which never hides the chart on background error).
+  i18n -> all 4 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.climateHistory.title, .cabin, .outside, .noData -> ALL PRESENT in ClimateHistoryWidget.strings
+    (+ registry widget.climateHistory/.description + native chrome + a11y). No English literals in native
+    code (temperature unit symbol °C/°F comes from the ClimateTemperatureUnit enum rawValue).
+  a11y -> the chart is one element with a localized label + a state-summary value
+    (ClimateHistoryAccessibility.summary: latest Cabin/Outside + unit); every button (refresh / retry /
+    open) and stat column has an accessibilityLabel; Dynamic Type via tokens; TSSkeleton shimmer honors
+    Reduce Motion.
+  Telemetry -> ClimateHistoryModel.start() emits viewOpened(surface:"ClimateHistoryWidget") -> bridges
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (EXECUTED).
+  Registry -> ClimateHistoryWidget.registration: id "climate-history", category "climate", default 2x4,
+    min 2x4, max 4x40 (+ clamp()), matching registry/climate.ts. Asserted (EXECUTED).
+
+  PARITY NOTE (y-axis floor — documented, Honesty rule 9): unlike the sibling pressure-history widget,
+    temperature legitimately goes sub-zero (°C below freezing, and °F), so the projection's y-domain is
+    NOT floored at 0 — it pads symmetrically around the real data min/max. A regression test
+    (testYDomainAllowsNegativeTemperatures) pins this so a cold-weather trace is never clipped at 0.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck  (the 5 surface source files compiled together with the REAL apps/apple component
+    library closure — Tokens + Design{TSDesign,TSMaterial} + Components/UI{Typography,Badges,Buttons,
+    Cards} + Feedback/Skeletons + DashboardWidgets/DashboardWidgetInfra, none of which import Shared),
+    Swift 6 strict concurrency:
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 \
+        -strict-concurrency=complete <closure> ClimateHistoryWidget.{Projection,Model,Chart,swift,Previews}.swift
+      TYPECHECK_EXIT=0                                                              OK
+      (Proves `import Charts` + the two-area/two-line AreaChart compile on the macOS SDK. The surface is
+       platform-agnostic SwiftUI — no #if os branches — so the macOS compile fully covers the
+       iOS/iPadOS 18 code paths. @Observable / ContentUnavailableView / Swift Charts all resolve.)
+
+[2] swift test  (a throwaway SwiftPM package, module "TeslaSync", containing the surface + the same real
+    component-library closure, RAN the full XCTest suite — ClimateHistoryWidget.Tests.swift — not a
+    typecheck; this is the suite that runs in the TeslaSync(/-macOS) XCTest target):
+      Executed 31 tests, with 0 failures —
+        ClimateTempConvertTests          5  (°C identity, °F = 9/5+32 incl 0->32/100->212/37->98.6,
+                                             -40 crossover, nil/non-finite, fromLabel default °C)
+        ClimateHistoryAdapterTests      12  (buildChartData parity: empty, drop-no-ts, fallback to
+                                             timestamp, prefer created_at, ascending sort, °F conversion,
+                                             non-finite->nil, latest-skips-nils per series, latest-nil
+                                             when absent, yDomain span, yDomain ALLOWS NEGATIVE, unit)
+        ClimateNumberFormatTests         2  (fmtInt nil->em-dash, rounds to integer)
+        ClimateHistoryModelTests         8  (loading/empty/error/content phase resolution, cached-stays-
+                                             content, view.opened once, refresh delegation, connection+unit)
+        ClimateHistoryRegistryTests      2  (canonical climate-history 2x4/2x4/4x40 + clamp)
+        ClimateHistoryAccessibilityTests 2  (summary names both series + unit + values, empty state)
+      SWIFT_TEST_EXIT=0                                                             OK
+
+[3] swiftlint --strict
+      Surface (the 6 new .swift files, explicit): Found 0 violations, 0 serious in 6 files.
+        SURFACE_SWIFTLINT_EXIT=0                                                    OK
+      Bare gate `swiftlint --strict` (from apps/apple; included: TeslaSync/dashboard-widgets):
+        Found 1 violation, 1 serious in 1923 files.
+        SWIFTLINT_GATE_EXIT=2                                                       NOT-MINE (see note)
+      NOTE (Honesty rule 1 — not claimed green): the lone violation is
+        TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158 (opening_brace), a
+        SIBLING surface. It EXISTS IN HEAD unmodified (`git cat-file -e HEAD:...` OK, `git diff --stat`
+        empty), is OUTSIDE this prompt's Allowed files (ClimateHistoryWidget.*), was NOT introduced by
+        this change. Every ClimateHistoryWidget file is swiftlint-clean (0 violations).
+
+[4] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 6 new .swift files):
+      0/1927 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 OK
+
+[5] check-placeholders (ADR-011 stub gate; pwsh):
+      pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/.../ClimateHistoryWidget -Language swift
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+      pwsh ./apps/tools/check-placeholders.ps1 -Path <temp dir with all 7 surface files> -Language swift
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      (The prompt's literal -Path .../ClimateHistoryWidget is a filename PREFIX that resolves to no
+       directory -> a clean scan; the real per-file scan of all 7 files above is also clean.)
+
+[6] xcodegen generate — PROVES the surface is wired into the app target:
+      Created project at apps/apple/TeslaSync.xcodeproj   XCODEGEN_EXIT=0
+      grep ClimateHistoryWidget project.pbxproj -> 42 references; all 7 files present (Projection/Model/
+      Chart/swift/Previews/Tests/strings) across the TeslaSync app target + the TeslaSyncTests bundle.
+
+[7] Shared.xcframework — BUILT + STAGED on this host (not deferred):
+      apps/apple/Scripts/build-shared-xcframework.sh -> gradlew :core:assembleSharedXCFramework
+      BUILD SUCCESSFUL in 17m55s; "✓ Shared.xcframework staged"   BUILD_SHARED_EXIT=0   OK
+
+=== GATE — XCODE APP BUILD/TEST (REAL run on this host; honest exit captured) ===
+    The prompt gate is:
+      xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      xcodebuild -scheme TeslaSync-macOS build test
+    With Shared.xcframework staged (GATE [7]) the real whole-target build was run (scheme bypassed only
+    to skip a redundant gradle pre-action; CODE_SIGNING_ALLOWED=NO to neutralize the unrelated signing
+    blocker):
+      [iOS]   xcodebuild -project TeslaSync.xcodeproj -target TeslaSync     -sdk iphonesimulator build
+              -> ** BUILD FAILED **   GATE_IOS_EXIT=65
+      [macOS] xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build
+              -> ** BUILD FAILED **   GATE_MAC_EXIT=65
+
+    ROOT CAUSE — pre-existing cross-slot duplicate symbol, NOT this surface (every line verified here):
+      error: invalid redeclaration of 'ChargingProjection'
+        TeslaSync/dashboard-widgets/ChargeStatusWidget.Adapter.swift:118
+        note: 'ChargingProjection' previously declared here
+        TeslaSync/feature-views/ChargingDetailSection.Adapter.swift:240
+      Two SIBLING surfaces (the ChargeStatus dashboard widget and the ChargingDetail feature-view) each
+      define a top-level `ChargingProjection` in the single app module; on the integration branch where
+      all slots are merged they collide and abort whole-module type-checking. Both files are in HEAD
+      unmodified by this change (`git diff --stat HEAD -- … ` empty); both are OUTSIDE this prompt's
+      Allowed files (ClimateHistoryWidget.*). This is the same class of merged-slot collision the
+      predecessor logs record (e.g. 0027 prior run, 0101).
+
+    ClimateHistoryWidget-attributed compiler errors in the whole-target build: NONE (iOS + macOS).
+    Positive evidence this surface IS healthy inside the real app target:
+      • ClimateHistoryWidget.strings COMPILED + VALIDATED in BOTH real builds (CopyStringsFile +
+        "detected encoding … Unicode (UTF-8)") — iOS (binary) and macOS (UTF-16).
+      • The surface is the SUBJECT of GATE [1] (real-SDK typecheck) + GATE [2] (31/31 EXECUTED) using the
+        REAL component-library closure and the REAL Shared-free design tokens.
+    macOS additionally requires a development signing identity (entitlements); bypassed here with
+    CODE_SIGNING_ALLOWED=NO so the build reaches — and fails at — the same pre-existing sibling collision.
+
+    Why this is committed (Honesty rules 1 + 8): the failing exit is REAL and shown (65), attributed to a
+    pre-existing SIBLING duplicate outside the Allowed files, reproduced on iOS AND macOS, and carrying
+    ZERO ClimateHistory errors. It is unfixable from within this surface's Allowed files (it would require
+    renaming `ChargingProjection` in ChargeStatusWidget/ChargingDetailSection — a different prompt's
+    scope / the dashboard-grid integration owner's). The surface's own gates are all green.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has
+      a #if DEBUG preview; phase logic unit-tested (EXECUTED).
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 4/4 present in ClimateHistoryWidget.strings.
+  [x] Accessibility labels on every interactive element; chart carries label + state-summary value.
+  [x] Tests: adapter unit test (EXECUTED 12) + per-state model test + registry + conversion + format +
+      a11y label test — 31/31 EXECUTED green via SwiftPM.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Host gates green (typecheck/XCTest/surface-lint/format/placeholder/xcodegen). Shared.xcframework
+      BUILT + staged; the whole-scheme xcodebuild reaches BUILD FAILED only on a pre-existing SIBLING
+      duplicate (`ChargingProjection`, ChargeStatusWidget ↔ ChargingDetailSection) — zero ClimateHistory
+      errors, real exit 65 captured.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the whole-scheme xcodebuild is shown FAILED with its real exit (65) and the exact
+                       pre-existing sibling cause; the repo-wide swiftlint gate's exit 2 is shown and
+                       attributed to a pre-existing SIBLING file. Every OK is a command actually run here.
+  2  No scope narrowing: implemented ALL sections/states + the full two-area chart + stat row + i18n +
+                       a11y + telemetry + registry. The chart was NOT reduced.
+  3  No skip-and-assume: each host gate executed; the XCTest suite RAN (31/31); Shared.xcframework was
+                       actually BUILT (17m55s) and the real xcodebuild actually RUN (iOS + macOS).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of buildChartData + the AreaChart (two areas + strokes, gradient
+                       fills, connectNulls) + all states; the y-axis no-zero-floor difference for
+                       temperature is documented + regression-tested, not silently dropped.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml / the dashboard grid / the shared
+                       Localizable.xcstrings / any sibling file — strings shipped as the per-surface
+                       table, and the generated .xcodeproj + build/ + staged Shared.xcframework artifacts
+                       were removed. git status shows ONLY the 7 surface files.
+  8  No commit on red  : committing on all-green SURFACE gates (typecheck/XCTest/surface-lint/format/
+                       placeholder/xcodegen); the only non-zero exits are a pre-existing SIBLING swiftlint
+                       violation and the pre-existing SIBLING `ChargingProjection` duplicate that blocks
+                       the merged-slot whole-module build — neither is a defect in this surface, neither
+                       is fixable from within the Allowed files.
+  9  No silent drift   : changes confined to the allowed ClimateHistoryWidget.* files + this log; the
+                       y-domain temperature difference is documented above.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ClimateHistoryWidget shipped at parity with the web source: a Foundation
+  pure-domain adapter (EXECUTED-green) porting buildChartData / latestInside / latestOutside /
+  convertTempFromSI, a Swift Charts composition (two temperature areas with gradient fills + 2-pt strokes,
+  unstacked + monotone, gaps bridged) faithfully reproducing the Recharts AreaChart, the P1/S8
+  state-holder seam (no view HTTP), P1/S11 telemetry, every state + i18n key + a11y label,
+  registry-correct (climate-history, 2x4/2x4/4x40). All host-runnable surface gates pass and the FULL
+  XCTest suite was compiled + EXECUTED (31/31). Unlike the deferred predecessor, Shared.xcframework was
+  BUILT + staged here and the REAL whole-target xcodebuild was run on iOS AND macOS: the surface
+  contributes ZERO errors (and its .strings compiles + validates in the real app), with the build halting
+  only on a pre-existing SIBLING `ChargingProjection` duplicate symbol (ChargeStatusWidget ↔
+  ChargingDetailSection) that lives in HEAD outside this prompt's Allowed files. The temperature y-axis
+  no-zero-floor difference vs the pressure sibling is documented and regression-tested.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/ClimateHistoryWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0027-ClimateHistoryWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add ClimateHistoryWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
