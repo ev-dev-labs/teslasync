@@ -418,6 +418,19 @@
   </ItemGroup>
 
   <!--
+    P2 feature-views: the ByteSizeConverter's UI-thread-free logic (the byte-unit model + diagnostics, the
+    ECMAScript parseFloat port + pure conversion projection, and the state-holder view-model) lives in the
+    WinUI app project but is WinUI-free by construction. Link those three source files in so the headless
+    (net10.0) test project verifies the projection adapter + per-state transitions row-for-row without a UI
+    host. The WinUI view itself is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Model.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Source.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2/W8-0003 — copy the packaged widget Adaptive Card template next to the tests so the drift test can
     assert it matches the canonical Core template constant.
   -->
