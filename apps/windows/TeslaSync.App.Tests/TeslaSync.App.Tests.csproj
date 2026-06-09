@@ -329,12 +329,14 @@
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
     <!--
+  <!--
       P2 dashboard-widgets (TirePressureVisualWidget): its headless logic + state-holder view-model are
       exercised by TirePressureVisualWidgetTests. Link the three WinUI-free source files in so the headless
       (net10.0) test project verifies the adapter + per-state transitions without a UI host. The WinUI view
       itself (TirePressureVisualWidget.cs) is exercised by the app build.
     -->
     <!-- TirePressureVisualWidget's three WinUI-free sources are linked once in the dashboard-widgets group above. -->
+  <!--
       TirePressureVisualWidget's three WinUI-free sources are linked exactly once (in the widget ItemGroup
       above). Two further duplicate triples here were a pre-existing merge artifact that made the build fail
       with NETSDK1022 "Duplicate 'Compile' items"; removed so the gate can build.
@@ -436,6 +438,28 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.Model.cs" Link="FeatureViews\Base64Tool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.ViewModel.cs" Link="FeatureViews\Base64Tool.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views (0032 XRayBucketChart): the surface's UI-thread-free logic (the loading/empty/ready
+    projection, the per-bar height-ratio + formatTime labels, the accessible Bucket/Samples table, the
+    diagnostics and registration) is WinUI-free by construction. Link the Model in so this headless
+    (net10.0) test project verifies the adapter + per-state projection + a11y names + diagnostics without
+    a UI host. The WinUI view itself (XRayBucketChart.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\XRayBucketChart\XRayBucketChart.Model.cs" Link="FeatureViews\XRayBucketChart\XRayBucketChart.Model.cs" />
+  </ItemGroup>
+
+  <!--
+    TirePressureVisualWidget's three WinUI-free sources (linked exactly once) — restored so the headless
+    TirePressureVisualWidgetTests can resolve TirePressureLevel / TirePressureReading / the source +
+    view-model. A prior cleanup removed every triple (not just the NETSDK1022 duplicates), breaking the build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
   </ItemGroup>
 
   <!--

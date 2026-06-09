@@ -1,0 +1,74 @@
+=== P2 Feature view 0032 XRayBucketChart (Windows) ===
+runner: dotnet 10.0.300; OS=Microsoft Windows NT 10.0.26200.0; UTC=2026-06-09T10:57:27.8445893Z
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- TEST: dotnet test apps/windows/TeslaSync.sln -c Release ---
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Passed!  - Failed:     0, Passed:  7189, Skipped:     0, Total:  7189, Duration: 3 s  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "live-stale") [< 1 ms]
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 214 ms - TeslaSync.App.UITests.dll (net10.0)
+TEST_EXIT=1
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+no formatting changes required (clean)
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/XRayBucketChart ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+GATE: BUILD_EXIT=0 TEST_EXIT=1 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0
+
+=== CONCLUSION ===
+
+DELIVERED — native WinUI 3 XRayBucketChart at parity with
+web/src/features/admin/components/ingest-xray/XRayBucketChart.tsx:
+  apps/windows/TeslaSync.App/feature-views/XRayBucketChart/XRayBucketChart.Model.cs  (WinUI-free projection,
+    records, diagnostics, registration — the loading/empty/ready branch selection mirroring the web
+    `loading -> isEmpty -> data` order; formatTime axis labels via DateTimeFormatting.Time; full-timestamp
+    table cells; fmtInt sample counts via NumberFormatting; per-bar + per-row Narrator names).
+  apps/windows/TeslaSync.App/feature-views/XRayBucketChart/XRayBucketChart.cs  (the ContentControl view:
+    TsGlassPanel chrome + PanelTitle/Caption header, a custom accent bar strip — the native analogue of the
+    recharts BarChart — with thinned formatTime tick labels, an accessible Bucket/Samples TsDataTable under
+    an Expander, skeleton loading, TsEmptyState empty; emits view.opened slug=XRayBucketChart).
+  apps/windows/TeslaSync.App.Tests/FeatureViews/XRayBucketChartTests.cs  (25 headless xUnit tests: every
+    state, height ratios, fmtInt grouping, formatTime/em-dash labels, axis-label thinning, the Bucket/Samples
+    table, a11y names, PII-safe diagnostics).
+i18n: the surface owns the 6 admin.xray.chart.* keys (already present in Strings/{en,ar,he}/Resources.resw);
+chrome reuses the shared chart.noData / chart.a11y.fallbackTableLabel / common.loading keys exactly as the
+web ChartContainer does. No English literals outside i18n fallbacks.
+
+GATE: BUILD_EXIT=0  TEST_EXIT=1  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  =>  EXIT=1.
+
+TEST_EXIT=1 — ROOT CAUSE = ABSENT UI-AUTOMATION RUNNER (platform-capability gap, not a defect):
+  TeslaSync.App.Tests (headless): Passed 7189 / Failed 0 — includes the 25 new XRayBucketChart tests.
+  TeslaSync.App.UITests (E2E):    Failed 147 / Passed 0 — EVERY failure is
+    UiAutomationUnavailableException: "WinAppDriver/Appium runner is absent: nothing is listening on
+    http://127.0.0.1:4723/ and WinAppDriver.exe was not found." None of the 147 tests reference
+    XRayBucketChart; they exercise pre-existing shell chrome / navigation / auth / page-state-matrix.
+  This is the same WinAppDriver gap recorded as STATUS=BLOCKED by every predecessor feature-view log
+  (0002 BackendTool, 0003 ClientUtilitiesSection, 0005 FleetTelemetryHealth, 0006 InfrastructureSection, ...).
+  The prompt's capability note ("requires WinUI 3 ... If unavailable on the runner -> STATUS=BLOCKED with
+  API evidence") sanctions BLOCKED for exactly this gap.
+
+PRE-EXISTING BASELINE REPAIRS required to reach a buildable/testable solution (the gate was already RED at
+HEAD, independent of this surface):
+  1. TeslaSync.App.Tests.csproj was malformed XML at HEAD (6 <ItemGroup> elements missing their closing tag
+     and 8 comment-open markers dropped, so comment prose floated inside <ItemGroup>; `dotnet build`/`restore`
+     failed MSB4025 for the whole solution). Restored the 6 </ItemGroup> closings + the 8 <!-- openings
+     (RegexTester, JwtDecoder, CronParser/TirePressureVisual dup-notes, TelemetryErrorsPanel, ByteSizeConverter,
+     HashCalculator, ToolCard seams). Verified well-formed (XmlDocument loads) before writing.
+  2. TirePressureVisualWidget's three WinUI-free sources were linked ZERO times (a prior cleanup removed every
+     triple, not just the NETSDK1022 duplicates), leaving TirePressureVisualWidgetTests unable to resolve
+     TirePressureLevel/TirePressureReading/etc. Re-linked exactly once.
+  After these repairs: BUILD_EXIT=0, FORMAT_EXIT=0, all 7189 headless tests pass.
+
+EXIT=1
+STATUS=BLOCKED
