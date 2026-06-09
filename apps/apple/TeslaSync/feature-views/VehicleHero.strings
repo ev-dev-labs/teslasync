@@ -1,0 +1,71 @@
+/*
+  VehicleHero.strings
+  TeslaSync — P4 feature view · 0133 · VehicleHero (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VehicleHero` resolves (table "VehicleHero") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/dashboard/components/VehicleHero.tsx). The second group backs the
+  native chrome: the stat-card labels the web hardcodes in English (Odometer,
+  Ideal Range, Charge Rate, Firmware), the localized vehicle-state labels for the
+  status badge, and the P4 leaf freshness / loading / error copy, so the Swift
+  sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity: t() calls) --- */
+"hero.battery" = "Battery";
+"hero.range" = "Range";
+"hero.speed" = "Speed";
+"hero.power" = "Power";
+"hero.inside" = "Inside";
+"hero.outside" = "Outside";
+"hero.charging" = "Charging";
+"hero.chargePower" = "Power";
+"hero.chargeRate" = "Rate";
+"hero.timeToFull" = "Time to Full";
+"hero.doneAt" = "Done";
+"hero.details" = "Details";
+"hero.commands" = "Commands";
+"hero.liveMap" = "Live Map";
+"hero.digitalTwin" = "Digital Twin";
+"hero.asleep" = "Vehicle asleep — wake to see live data";
+"hero.wakeUp" = "Wake Up";
+
+/* --- Keys from the web source (common namespace) --- */
+"common.status" = "Status";
+"common.locked" = "Locked";
+"common.unlocked" = "Unlocked";
+"common.sentry" = "Sentry";
+"common.active" = "Active";
+"common.off" = "Off";
+
+/* --- Native chrome: stat-card labels the web hardcodes in English --- */
+"hero.odometer" = "Odometer";
+"hero.idealRange" = "Ideal Range";
+"hero.statChargeRate" = "Charge Rate";
+"hero.firmware" = "Firmware";
+
+/* --- Native chrome: vehicle-state badge labels (web VEHICLE_STATE_LABELS) --- */
+"vehicle.state.online" = "Online";
+"vehicle.state.driving" = "Driving";
+"vehicle.state.charging" = "Charging";
+"vehicle.state.parked" = "Parked";
+"vehicle.state.updating" = "Updating";
+"vehicle.state.asleep" = "Asleep";
+"vehicle.state.offline" = "Offline";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"hero.live" = "Live";
+"hero.stale" = "Stale";
+"hero.offline" = "Offline";
+"hero.staleBanner" = "Reconnecting — data may be stale";
+"hero.offlineBanner" = "Offline — showing last known data";
+"hero.refresh" = "Refresh";
+"hero.loadingA11y" = "Loading vehicle";
+"hero.errorTitle" = "Couldn't load vehicle";
+"hero.retry" = "Retry";
