@@ -290,3 +290,4 @@ p2-windows/feature-views/W-0097-BatteryLevelChart.prompt.md
 p2-windows/feature-views/W-0098-ChargerSpecsPanel.prompt.md
 p2-windows/feature-views/W-0096-AcDcStatsPanel.prompt.md
 p2-windows/feature-views/W-0099-ChartsRow.prompt.md
+p2-windows/feature-views/W-0103-HeroGauges.prompt.md
