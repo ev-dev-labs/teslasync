@@ -1,0 +1,46 @@
+/*
+  RegexTester.strings
+  TeslaSync — P4 feature view · 0019 · RegexTester (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `RegexTester` resolves (table "RegexTester") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/admin/components/devtools/tools/RegexTester.tsx). The remainder back
+  the native-only chrome (flag option labels, example overlay, empty states,
+  accessibility summary).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Regex Tester" = "Regex Tester";
+"Regex Tester Desc" = "Test regular expressions against sample text";
+"Pattern" = "Pattern";
+"Flags" = "Flags";
+"No Flags" = "No Flags";
+"Test String" = "Test String";
+"Test String Placeholder" = "The quick brown fox jumps over 13 lazy dogs";
+"Matches" = "Matches";
+"At Index" = "At Index";
+
+/* --- Native chrome: flag option labels (web `flagOptions`) --- */
+"regex.flag.g" = "g (global)";
+"regex.flag.gi" = "gi (global, case-insensitive)";
+"regex.flag.gm" = "gm (global, multiline)";
+"regex.flag.gim" = "gim (all)";
+
+/* --- Native chrome: field examples --- */
+"regex.pattern.example" = "\\d+";
+"regex.test.example" = "The quick brown fox jumps over 13 lazy dogs";
+
+/* --- Native chrome: idle + no-match states --- */
+"regex.idle.title" = "Ready to match";
+"regex.idle.hint" = "Enter a pattern and a test string to see matches here.";
+"regex.empty.title" = "No matches";
+"regex.empty.hint" = "This pattern did not match the test string. Check the pattern and flags.";
+
+/* --- Accessibility: VoiceOver summary --- */
+"regex.a11y.idle" = "Enter a pattern and a test string to find matches";
