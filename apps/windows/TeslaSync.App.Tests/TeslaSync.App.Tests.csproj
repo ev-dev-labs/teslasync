@@ -111,29 +111,14 @@
     ItemGroup. A chain of integration merges had repeatedly re-concatenated multiple roots and
     duplicate items, which failed XML load (MSB4025); it has been consolidated back into this single
     canonical root so every linked source is preserved and every test compiles.
+    Repair note (P2 feature-views/0130 RecentActivity): a chain of integration merges had again left this
+    file with several concatenated Project roots, nested XML comments and duplicated Compile items that
+    failed XML load (MSB4025). The duplicate roots / comments were removed and every distinct linked source
+    consolidated below as a single deduplicated union (preserving every previously linked widget /
+    feature-view source), plus the new RecentActivity surface. Keep this file as ONE Project root with a
+    single Compile ItemGroup.
   -->
 
-    Repair note (P2 feature-views/0116 MonthlyCostChart): a chain of integration merges had again left this
-    file with multiple concatenated Project roots plus a malformed (nested) comment, so the solution failed
-    to load (MSB4025). The file has been consolidated into a single valid Project root: every previously
-    linked WinUI-free source is preserved as the path-sorted deduplicated union, plus the new
-    MonthlyCostChart.Model.cs link.
-  -->
-    P2/W2-0001 - headless unit tests for the UI-primitive logic models. Targets plain net10.0 so
-    dotnet test runs without a WinUI/UI-thread host. The WinUI-free logic
-    (.Model / .Source / .ViewModel / .Presentation.cs) of each app surface is linked in below so the
-    adapter + per-state projections are verified row-for-row; the WinUI views themselves are exercised
-    by the app build. Keep this file as ONE Project root with a single Compile ItemGroup: a chain of
-    auto-integration merges has repeatedly re-concatenated it into several Project roots plus orphaned
-    ItemGroups that failed XML load with MSB4025. The Compile ItemGroup below is the deduplicated union.
-  -->
-    P2/W2-0001 - headless unit tests for the UI-primitive logic models.
-    Targets plain net10.0 so dotnet test runs without a WinUI/UI-thread host. The WinUI-free
-    logic (.Model / .Source / .ViewModel / .Presentation.cs) of each app surface is linked in
-    below so the adapter and per-state projections are verified row-for-row; the WinUI views
-    themselves are exercised by the app build. Keep this as ONE Project root with a single
-    Compile ItemGroup (the file was previously corrupted into multiple roots).
-  -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -159,6 +144,7 @@
   <!-- Fixtures copied next to the test assembly: SI golden vectors, MSIX manifest, widget template. -->
   <!-- Test fixtures copied next to the test assembly: SI golden vectors (apps/shared/spec/units-golden.json,
        ADR-004), the MSIX package manifest and the packaged widget Adaptive Card template. -->
+  <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget card template). -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -711,6 +697,7 @@
   <!-- Linked WinUI-free Model / Source / ViewModel / Presentation sources from the WinUI app project
        (deduplicated, path-sorted union). The headless net10.0 test project verifies each adapter,
        projection and diagnostics without a UI host; the WinUI views are exercised by the app build. -->
+  <!-- Linked WinUI-free Model / Source / ViewModel sources from the app project (deduplicated union). -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -1097,6 +1084,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Model.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Source.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.ViewModel.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RecentActivity\RecentActivity.Model.cs" Link="FeatureViews\RecentActivity\RecentActivity.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ReferenceLinksSection.Model.cs" Link="FeatureViews\ReferenceLinksSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ReferenceLinksSection.ViewModel.cs" Link="FeatureViews\ReferenceLinksSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.Model.cs" Link="FeatureViews\RegexTester\RegexTester.Model.cs" />
@@ -1107,6 +1095,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.Model.cs" Link="FeatureViews\ResultPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.Source.cs" Link="FeatureViews\ResultPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.ViewModel.cs" Link="FeatureViews\ResultPanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.Model.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.Source.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.ViewModel.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Model.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Source.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.ViewModel.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.ViewModel.cs" />
@@ -1133,6 +1124,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Source.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.ViewModel.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TimeOfUseAnalysis\TimeOfUseAnalysis.Model.cs" Link="FeatureViews\TimeOfUseAnalysis\TimeOfUseAnalysis.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TimeOfUseAnalysis\TimeOfUseAnalysis.Source.cs" Link="FeatureViews\TimeOfUseAnalysis\TimeOfUseAnalysis.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TimeOfUseAnalysis\TimeOfUseAnalysis.ViewModel.cs" Link="FeatureViews\TimeOfUseAnalysis\TimeOfUseAnalysis.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.Model.cs" Link="FeatureViews\TimestampTool\TimestampTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.ViewModel.cs" Link="FeatureViews\TimestampTool\TimestampTool.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.Model.cs" Link="FeatureViews\TimeToChargeSection.Model.cs" />
@@ -1161,6 +1155,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Source.cs" Link="FeatureViews\XRayHeader\XRayHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
+  </ItemGroup>
+
   </ItemGroup>
 
 </Project>
