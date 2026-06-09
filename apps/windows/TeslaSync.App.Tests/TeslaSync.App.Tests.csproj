@@ -342,55 +342,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
-    <!--
-  <!--
-      P2 dashboard-widgets (TirePressureVisualWidget): its headless logic + state-holder view-model are
-      exercised by TirePressureVisualWidgetTests. Link the three WinUI-free source files in so the headless
-      (net10.0) test project verifies the adapter + per-state transitions without a UI host. The WinUI view
-      itself (TirePressureVisualWidget.cs) is exercised by the app build.
-    -->
-    <!-- TirePressureVisualWidget's three WinUI-free sources are linked once in the dashboard-widgets group above. -->
-
-  <!--
-      TirePressureVisualWidget's three WinUI-free sources are linked exactly once (in the widget ItemGroup
-      above). Two further duplicate triples here were a pre-existing merge artifact that made the build fail
-      with NETSDK1022 "Duplicate 'Compile' items"; removed so the gate can build.
-    -->
-      exercised by TirePressureVisualWidgetTests. The three WinUI-free source files are linked in here once
-      (NETSDK1022: do not duplicate these identical Compile items elsewhere — duplicates break the test build).
-    -->
-      exercised by TirePressureVisualWidgetTests; the three WinUI-free source files are linked in here once
-      (a prior edit dropped these Compile items, which the TirePressureVisualWidgetTests build requires).
-    -->
-      P2 dashboard-widgets (TirePressureVisualWidget): its WinUI-free logic (the TirePressureLevel /
-      TirePressureReading model, the ITirePressureVisualSource seam and the TirePressureVisualViewModel
-      state-holder) is exercised by TirePressureVisualWidgetTests. Linked exactly once here in the
-      dashboard-widgets group. (A prior merge's NETSDK1022 duplicate-removal dropped all three copies
-      instead of just the extra duplicates, leaving the test without its types.)
-    -->
-      P2 dashboard-widgets (TirePressureVisualWidget): its UI-thread-free logic (the level/reading model, the
-      projection, the source seam, and the state-holder view-model) is WinUI-free by construction and is
-      exercised by TirePressureVisualWidgetTests. Link those three source files in exactly once so the headless
-      (net10.0) test project verifies the adapter + per-state transitions without a UI host. The WinUI view
-      itself (TirePressureVisualWidget.cs) is exercised by the app build.
-    -->
-      P2 dashboard-widgets (TirePressureVisualWidget): its WinUI-free Model/ViewModel/Source (the parse, the
-      TirePressureLevel/TirePressureReading model, the ITirePressureVisualSource seam and the state-holder
-      view-model) are linked here once so TirePressureVisualWidgetTests builds headlessly without a UI host.
-      The WinUI view (TirePressureVisualWidget.cs) is exercised by the app build.
-    -->
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
-      P2 dashboard-widgets (TirePressureVisualWidget): its three WinUI-free source files (the model, the
-      cache-then-network source, and the state-holder view-model) are linked into this headless (net10.0)
-      test project so TirePressureVisualWidgetTests verifies the adapter + per-state transitions row-for-row
-      without a UI host. The WinUI view itself (TirePressureVisualWidget.cs) is exercised by the app build.
-      Linked exactly once here to avoid NETSDK1022 duplicate-Compile errors.
-    -->
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Model.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Source.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Source.cs" />
@@ -756,6 +707,9 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\FlagsTable\FlagsTable.Model.cs" Link="FeatureViews\FlagsTable\FlagsTable.Model.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0036 LiveSignalsTable: the surface's UI-thread-free logic (the snapshot JSON parse +
     renderValue coercion, the filter/sort projection, the cache-then-network result mapper, the repository
     source's request shape, the registration + PII-safe diagnostics, and the state-holder view-model) lives
@@ -767,6 +721,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.Model.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.Source.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0034 XRayFieldsTable: the ingest X-Ray per-field statistics surface's UI-thread-free
     logic (the loading/empty/data branch projection, the useSortToggle two-state toggle, the four per-key
     comparators with stable ties, the en-US grouped sample count + relative last-seen + value-kind cell
@@ -778,6 +735,9 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\XRayFieldsTable\XRayFieldsTable.Model.cs" Link="FeatureViews\XRayFieldsTable\XRayFieldsTable.Model.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0038 RateLimitStatusPanel: the surface's UI-thread-free logic (the null-tolerant JSON
     parse + ScopeBudget/snapshot records, the severity/usage/window/reset projection + the formatDurationMsLong
     port, the cache-then-network result mapper, the registration metadata, the PII-safe diagnostics and the
@@ -806,6 +766,22 @@
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Model.cs" Link="FeatureViews\ResponseViewer.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Source.cs" Link="FeatureViews\ResponseViewer.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.ViewModel.cs" Link="FeatureViews\ResponseViewer.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0057 DrivingTemperatureStats: the surface's UI-thread-free logic (the
+    drive_analytics.temperature JSON parse + safe() coercion, the SI→display unit projection of the six
+    inside/outside min/avg/max cells, the cache-then-network result mapper, the repository source's request
+    shape, the registration + PII-safe diagnostics, and the state-holder view-model) lives in the WinUI app
+    project under feature-views/ but is WinUI-free by construction. Link those three source files in so this
+    headless (net10.0) test project verifies the adapter + per-state transitions + a11y names + the
+    view.opened diagnostics without a UI host. The WinUI view itself (DrivingTemperatureStats.cs) is
+    exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" />
   </ItemGroup>
 
 </Project>

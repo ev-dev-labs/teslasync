@@ -1,0 +1,120 @@
+=== P2 Feature view 0057 DrivingTemperatureStats (Windows) ===
+Date            : 2026-06-09
+Surface (output): apps/windows/TeslaSync.App/feature-views/DrivingTemperatureStats/
+                    DrivingTemperatureStats.cs         (WinUI 3 view)
+                    DrivingTemperatureStats.Model.cs   (snapshot parse + projection + registration + diagnostics + mapper)
+                    DrivingTemperatureStats.Source.cs  (P1/S8 cache-then-network data port: GET /analytics/fleet, days=30)
+                    DrivingTemperatureStats.ViewModel.cs (state holder: loading/loaded/empty/error/stale/offline)
+Web source      : web/src/features/analytics/components/analytics/DrivingTemperatureStats.tsx  (THE specification)
+Tests           : apps/windows/TeslaSync.App.Tests/FeatureViews/DrivingTemperatureStatsTests.cs  (31 tests)
+ADR refs        : ADR-002, ADR-004, ADR-009
+
+------------------------------------------------------------------------------------------------------
+GATE STEPS  (apps/windows/TeslaSync.sln, -c Release)
+------------------------------------------------------------------------------------------------------
+BUILD_EXIT=0        dotnet build apps/windows/TeslaSync.sln -c Release
+                    -> 0 Error(s). The 17 warnings are pre-existing in TeslaSync.App.Core (CA1716/CA1720/
+                       CA1000/CA1859); that project does not set TreatWarningsAsErrors. The new surface lives
+                       in TeslaSync.App (TreatWarningsAsErrors=true) and compiled warning-clean.
+TEST_EXIT=1         dotnet test  apps/windows/TeslaSync.sln -c Release   (see CAPABILITY EVIDENCE below)
+FORMAT_EXIT=0       dotnet format apps/windows/TeslaSync.sln --verify-no-changes   -> whole solution clean
+PLACEHOLDER_EXIT=0  ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DrivingTemperatureStats
+                    -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+
+------------------------------------------------------------------------------------------------------
+TEST BREAKDOWN  (dotnet test apps/windows/TeslaSync.sln -c Release)
+------------------------------------------------------------------------------------------------------
+TeslaSync.App.Tests.dll   (headless)        : Passed! - Failed: 0, Passed: 7778, Skipped: 0, Total: 7778
+                                              ^ includes the 31 new DrivingTemperatureStats tests.
+TeslaSync.App.UITests.dll (WinAppDriver UI) : Failed! - Failed: 147, Passed: 0, Skipped: 0, Total: 147
+                                              ^ every test fails fast with UiAutomationUnavailableException.
+
+Filtered headless run of the new suite only:
+  dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release \
+    --filter "FullyQualifiedName~DrivingTemperatureStats"
+  Passed! - Failed: 0, Passed: 31, Skipped: 0, Total: 31
+
+------------------------------------------------------------------------------------------------------
+CAPABILITY EVIDENCE  (why TEST_EXIT=1)
+------------------------------------------------------------------------------------------------------
+The prescribed gate command `dotnet test apps/windows/TeslaSync.sln` includes TeslaSync.App.UITests, a
+WinAppDriver/Appium UI-automation suite that drives the packaged app over http://127.0.0.1:4723. This
+runner has no such automation runner:
+    Test-NetConnection 127.0.0.1:4723        => open    : False
+    WinAppDriver.exe (standard paths / PATH) => present : False
+By design (apps/windows/TeslaSync.App.UITests/README.md: "every test fails fast with an explicit reason;
+it is never silently skipped, and the gate ends STATUS=BLOCKED") all 147 UITests raise
+UiAutomationUnavailableException ("WinAppDriver/Appium runner is absent: nothing is listening on
+http://127.0.0.1:4723/ and WinAppDriver.exe was not found ..."), so TEST_EXIT=1.
+
+This is a PRE-EXISTING, surface-independent runner gap that fails the 147 UITests of EVERY surface
+identically — it is not caused by the DrivingTemperatureStats code. The capabilities this surface
+actually requires (WinUI 3 / Windows App SDK 1.6+ / .NET 10 / Fluent) ARE present on the runner: the app
+project builds green and produces TeslaSync.App.dll, and the full headless suite is green. Same finding
+and verdict as sibling 0041 ResponseViewer.
+
+------------------------------------------------------------------------------------------------------
+PRE-EXISTING BASELINE REPAIR  (disclosed for honesty; tightly coupled — the test gate could not run otherwise)
+------------------------------------------------------------------------------------------------------
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed-at-HEAD in a NON-LOADABLE state
+(MSB4025) before any DrivingTemperatureStats work, so build+test were red for every surface:
+  1. A ClientUtilitiesSection -> CronParser -> TirePressureVisualWidget region had collapsed into a tangle
+     of nested/unterminated XML comments (a stray `<!--` inside a comment) plus TWO duplicate
+     TirePressureVisualWidget <Compile> triples (would also trip NETSDK1022). Removed the whole corrupted
+     block; the canonical TirePressureVisualWidget triple remains linked exactly once in its own ItemGroup.
+  2. Three feature-view groups (LiveSignalsTable, XRayFieldsTable, RateLimitStatusPanel) had lost their
+     `</ItemGroup>` close + opening `<!--`, leaving three unbalanced <ItemGroup> tags (the MSB4025 the
+     loader reported at `</Project>`). Restored the three `</ItemGroup>` + `<!--` separators.
+  Result: well-formed XML, balanced 40 `<!--` / 40 `-->` and 37 `<ItemGroup>` / 37 `</ItemGroup>`, zero
+  duplicate Compile items, UTF-8/no-BOM/LF preserved. (Same class of repair disclosed by sibling 0041.)
+
+------------------------------------------------------------------------------------------------------
+SCOPE / WIRING NOTE
+------------------------------------------------------------------------------------------------------
+Beyond the four surface files, the deliverable necessarily includes (required by the Acceptance Criteria
+"adapter unit test + per-state test + a11y test" and the prescribed `dotnet test` gate, and matching every
+sibling feature-view's headless wiring):
+  - apps/windows/TeslaSync.App.Tests/FeatureViews/DrivingTemperatureStatsTests.cs  (the 31 tests)
+  - apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj  (the repair above + the three WinUI-free
+    Compile links: DrivingTemperatureStats.Model.cs / .Source.cs / .ViewModel.cs, so the headless net10.0
+    test project verifies the adapter + state machine without a UI host — the WinUI view is exercised by
+    the app build).
+
+i18n: all EIGHT source-extracted keys already exist in Strings/{en,ar,he}/Resources.resw and their values
+match the code fallbacks exactly, so NO catalog change was needed:
+    analytics.driving.tempStats   = "Temperature Stats"
+    analytics.driving.insideMin   = "Inside Min"      analytics.driving.outsideMin = "Outside Min"
+    analytics.driving.insideAvg   = "Inside Avg"      analytics.driving.outsideAvg = "Outside Avg"
+    analytics.driving.insideMax   = "Inside Max"      analytics.driving.outsideMax = "Outside Max"
+    analytics.driving.noTempStats = "No temperature stats"
+The four native-only state strings (tempStatsLoading/Error/Retry/Offline — the web component has no
+loading/error/retry because it is presentational) resolve through the ILocalizer facade with English
+fallbacks. No English literals appear in the native code; every string flows through ILocalizer.
+
+------------------------------------------------------------------------------------------------------
+PARITY / SURFACE VERIFICATION  (against the web source)
+------------------------------------------------------------------------------------------------------
+- Data: bound via the shared P1/S8 IDrivingTemperatureStatsSource (cache-then-network GET /analytics/fleet,
+  days=30, parsing drive_analytics.temperature.{inside,outside}.{min,avg,max}); the view performs no HTTP.
+- Units: web useUnits -> native UnitPref; SI Celsius is converted to the user's unit ONLY at the display
+  boundary (UnitConverters.TemperatureFromSi), with web safe() (null/NaN/inf -> 0) reproduced at parse.
+- Six MetricCards: Inside/Outside x Min(cyan->Info)/Avg(green->Success)/Max(amber->Warning); value is the
+  formatted number, the unit (°C/°F) is the subtitle, matching the web MetricCard label/value/subtitle.
+- States (ALL render, none hidden): loading (skeleton grid + LiveRegion announce), loaded (six cards),
+  empty (EmptyState "No temperature stats" with the thermometer glyph, web insideTemp||outsideTemp gate),
+  error (QueryError + retry affordance), stale (freshness chip), offline (freshness chip + cached cells).
+- Accessibility: SectionTitle + per-card Narrator names ("Inside Min: 20.0 °C"; em-dash cell "Outside Min: —"),
+  loading live-region announcement, reduced-motion honoured on skeletons.
+- Telemetry: view.opened slug=DrivingTemperatureStats emitted once on open (PII-safe; P1/S11).
+
+------------------------------------------------------------------------------------------------------
+VERDICT
+------------------------------------------------------------------------------------------------------
+Surface = COMPLETE and fully verified within runner capability:
+    BUILD green, FORMAT clean, PLACEHOLDER clean, 7778/7778 headless tests green (incl. the 31 new
+    DrivingTemperatureStats tests). The prescribed `dotnet test apps/windows/TeslaSync.sln` cannot reach
+    EXIT=0 on this runner ONLY because the 147 pre-existing WinAppDriver UITests hard-fail on the absent
+    UI-automation runner (capability evidence above), so the gate is recorded honestly rather than red-as-green.
+
+EXIT=1
+STATUS=BLOCKED
