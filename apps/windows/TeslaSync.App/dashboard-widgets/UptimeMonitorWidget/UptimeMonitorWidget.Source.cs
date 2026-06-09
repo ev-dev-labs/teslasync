@@ -9,14 +9,14 @@ namespace TeslaSync.App.DashboardWidgets;
 
 /// <summary>
 /// The data port the <see cref="UptimeMonitorViewModel"/> binds to (P1/S8 state-holder seam). It yields the
-/// cache-then-network sequence of parsed <see cref="SystemHealthSnapshot"/> values — the native analogue of
+/// cache-then-network sequence of parsed <see cref="UptimeHealthSnapshot"/> values — the native analogue of
 /// the web component's single <c>useSystemHealth</c> hook. The view never performs HTTP itself; the concrete
 /// <see cref="UptimeMonitorSource"/> (or a test fake) drives this.
 /// </summary>
 public interface IUptimeMonitorSource
 {
     /// <summary>Stream the cache-then-network system-health snapshots, newest cache first.</summary>
-    IAsyncEnumerable<RepositoryResult<SystemHealthSnapshot>> StreamAsync(CancellationToken cancellationToken = default);
+    IAsyncEnumerable<RepositoryResult<UptimeHealthSnapshot>> StreamAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -24,11 +24,11 @@ public interface IUptimeMonitorSource
 /// surface. It is the native analogue of the web component's single <c>useSystemHealth</c> hook: one
 /// cache-then-network read of <c>GET /system/health</c> (generated operation
 /// <see cref="UptimeMonitorRegistration.HealthOperationId"/>) through the shared
-/// <see cref="CacheThenNetworkEngine"/>, parsing each emission into a <see cref="SystemHealthSnapshot"/>. The
+/// <see cref="CacheThenNetworkEngine"/>, parsing each emission into a <see cref="UptimeHealthSnapshot"/>. The
 /// snapshot is cached so the whole surface restores instantly, and no HTTP ever touches the view. A non-object
 /// body is a meaningful value (rendered as the "no system health data" empty surface, not the engine's generic
 /// empty), so the read never treats anything as empty — the view-model derives the Empty / Loaded distinction
-/// from the snapshot's <see cref="SystemHealthSnapshot.HasData"/> flag.
+/// from the snapshot's <see cref="UptimeHealthSnapshot.HasData"/> flag.
 /// </summary>
 public sealed class UptimeMonitorSource : IUptimeMonitorSource
 {
@@ -52,7 +52,7 @@ public sealed class UptimeMonitorSource : IUptimeMonitorSource
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<RepositoryResult<SystemHealthSnapshot>> StreamAsync(
+    public async IAsyncEnumerable<RepositoryResult<UptimeHealthSnapshot>> StreamAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var stream = _engine.StreamAsync(
@@ -69,9 +69,9 @@ public sealed class UptimeMonitorSource : IUptimeMonitorSource
         }
     }
 
-    private async Task<SystemHealthSnapshot> FetchAsync(CancellationToken cancellationToken)
+    private async Task<UptimeHealthSnapshot> FetchAsync(CancellationToken cancellationToken)
     {
         var body = await _api.SendAsync<JsonElement>(HealthRequest, cancellationToken).ConfigureAwait(false);
-        return SystemHealthSnapshot.FromJson(body);
+        return UptimeHealthSnapshot.FromJson(body);
     }
 }

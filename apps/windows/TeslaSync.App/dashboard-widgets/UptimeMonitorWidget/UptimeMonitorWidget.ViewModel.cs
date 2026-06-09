@@ -103,7 +103,7 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
 
     private UptimeMonitorSize _size;
     private CancellationTokenSource? _cts;
-    private RepositoryResult<SystemHealthSnapshot>? _last;
+    private RepositoryResult<UptimeHealthSnapshot>? _last;
     private bool _disposed;
 
     private UptimeMonitorState _state = UptimeMonitorState.Loading;
@@ -123,7 +123,7 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
         _source = source;
         _localizer = localizer;
         _size = size;
-        _display = UptimeMonitorProjection.Project(SystemHealthSnapshot.Empty, _size, _localizer);
+        _display = UptimeMonitorProjection.Project(UptimeHealthSnapshot.Empty, _size, _localizer);
     }
 
     /// <inheritdoc />
@@ -276,7 +276,7 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
             or UptimeMonitorState.Stale
             or UptimeMonitorState.Offline;
 
-    private void Apply(RepositoryResult<SystemHealthSnapshot> result)
+    private void Apply(RepositoryResult<UptimeHealthSnapshot> result)
     {
         _last = result;
         switch (result.Status)
@@ -317,7 +317,7 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private void ApplySnapshot(
-        SystemHealthSnapshot snapshot,
+        UptimeHealthSnapshot snapshot,
         DateTimeOffset? fetchedAt,
         bool stale,
         bool fetching,
@@ -352,7 +352,7 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
         }
         else
         {
-            Display = UptimeMonitorProjection.Project(SystemHealthSnapshot.Empty, _size, _localizer);
+            Display = UptimeMonitorProjection.Project(UptimeHealthSnapshot.Empty, _size, _localizer);
         }
     }
 
@@ -367,7 +367,7 @@ public sealed class UptimeMonitorViewModel : INotifyPropertyChanged, IDisposable
     {
         // The source returns a value for every outcome, so the engine's generic Empty is never expected; the
         // contract is honoured defensively by rendering the same "no system health data" empty surface.
-        Display = UptimeMonitorProjection.Project(SystemHealthSnapshot.Empty, _size, _localizer);
+        Display = UptimeMonitorProjection.Project(UptimeHealthSnapshot.Empty, _size, _localizer);
         UpdatedAt = fetchedAt;
         IsFetching = false;
         IsStale = false;
