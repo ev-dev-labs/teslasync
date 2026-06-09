@@ -188,3 +188,4 @@ p2-windows/dashboard-widgets/W-0088-SignalHealthWidget.prompt.md
 p2-windows/dashboard-widgets/W-0084-SafetyHistoryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0090-SleepEfficiencyWidget.prompt.md
 p2-windows/dashboard-widgets/W-0091-SoftwareUpdateHistoryWidget.prompt.md
+p2-windows/dashboard-widgets/W-0092-SoftwareUpdateStatusWidget.prompt.md
