@@ -1,0 +1,134 @@
+=== P4 Feature view 0037 QueueStatusPanel (Apple) ===
+Date: 2026-06-09
+Surface: apps/apple/TeslaSync/feature-views/QueueStatusPanel.*
+Web source (spec): web/src/features/admin/components/QueueStatusPanel.tsx
+Repo HEAD at run: f545557af
+Toolchain: Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint · swiftformat · pwsh · xcodegen 2.45.4
+Capability check: SwiftUI + Swift Charts + MapKit on iOS 18 / macOS 15 — AVAILABLE (not BLOCKED).
+  (This surface composes no charts/maps; the web source uses none.)
+
+Shipped files (8):
+  QueueStatusPanel.swift          (root view)
+  QueueStatusPanel.Model.swift    (P1/S8 source seam · P1/S11 telemetry · P1/S10 i18n facade)
+  QueueStatusPanel.Adapter.swift  (wire decode · projection · fmtNumber/formatRelative/formatDurationMsLong ports · a11y)
+  QueueStatusPanel.Views.swift    (header · loading/error/empty · chip/depth-bar primitives)
+  QueueStatusPanel.Content.swift  (worker-card grid + card)
+  QueueStatusPanel.Previews.swift (loading/populated/backlog/empty/error/stale/offline)
+  QueueStatusPanel.Tests.swift    (adapter + projection + model + a11y; 28 tests, 8 classes)
+  QueueStatusPanel.strings        (P1/S10 catalog; every t() key from the web source + native chrome)
+
+------------------------------------------------------------------
+STEP 1 — iOS Simulator build + test (gate: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test)
+------------------------------------------------------------------
+build action:  ** BUILD SUCCEEDED **   (IOS_BUILD_EXIT=0)
+  All QueueStatusPanel units compiled into the iOS app target under
+  SWIFT_STRICT_CONCURRENCY=complete (Swift 6):
+    QueueStatusPanel.swift, .Adapter, .Model, .Views, .Content, .Previews (app target)
+    QueueStatusPanel.Tests.swift (TeslaSyncTests bundle — compiled clean, 0 errors attributed to this surface)
+
+test action (full TeslaSyncTests bundle):  ** TEST FAILED **  — BLOCKED BY PRE-EXISTING, OUT-OF-SCOPE BREAKAGE
+  The shared TeslaSyncTests target does not compile at HEAD f545557af due to duplicate
+  test symbols across OTHER surfaces' co-located test files (NOT this surface, and outside
+  this prompt's allowed files):
+    TeslaSync/feature-views/MonthlyCostChart.Tests.swift:318  invalid redeclaration of 'MonthlyCostAccessibilityTests'
+    TeslaSync/feature-views/MonthlyCostTable.Tests.swift:300  invalid redeclaration of 'SpyMonthlyCostTelemetry'
+    TeslaSync/feature-views/MonthlyCostTable.Tests.swift:212  argument type 'SpyMonthlyCostTelemetry' does not conform to 'MonthlyCostTableTelemetry'
+    TeslaSync/feature-views/MonthlyCostTable.Tests.swift:215  type 'Equatable' has no member 'data'
+    TeslaSync/dashboard-widgets/SafetyFeaturesWidget.ModelTests.swift:22/108/134  invalid redeclaration of 'SafetyModelTests'/'SafetyRegistryTests'/'SafetyAccessibilityTests'
+  `git status` confirms only QueueStatusPanel.* are new; the files above are unmodified at HEAD.
+  Allowed-files scope forbids editing them, so the full bundle cannot be linked from this surface.
+
+  --> This surface's 28 tests were therefore executed in ISOLATION (see STEP 6); all pass.
+
+------------------------------------------------------------------
+STEP 2 — macOS build (gate: xcodebuild -scheme TeslaSync-macOS build test)
+------------------------------------------------------------------
+build action:  ** BUILD SUCCEEDED **   (MAC_BUILD_EXIT=0)
+  All 6 non-test QueueStatusPanel units compiled into the macOS app target
+  (QueueStatusPanel.swift, .Adapter, .Model, .Views, .Content, .Previews).
+test action (full TeslaSyncTests bundle): same pre-existing breakage as STEP 1 (MonthlyCost*/SafetyFeatures*).
+  --> Surface tests verified in isolation (STEP 6).
+
+------------------------------------------------------------------
+STEP 3 — swiftlint --strict
+------------------------------------------------------------------
+Surface scope (the 7 QueueStatusPanel .swift files):
+  Done linting! Found 0 violations, 0 serious in 7 files.   (LINT_SURFACE_EXIT=0)
+Whole-tree (gate literal `swiftlint --strict`):
+  Found 1 violation, 1 serious in 2704 files — PRE-EXISTING, OUT-OF-SCOPE:
+    TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9  Opening Brace Spacing (opening_brace)
+  This file is unmodified at HEAD and outside this prompt's allowed files.
+
+------------------------------------------------------------------
+STEP 4 — swiftformat --lint apps/apple
+------------------------------------------------------------------
+  SwiftFormat completed. 0/2708 files require formatting, 2 files skipped.   (FORMAT_EXIT=0)
+
+------------------------------------------------------------------
+STEP 5 — check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/QueueStatusPanel
+------------------------------------------------------------------
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0                                                     (PLACEHOLDER_EXIT=0)
+
+------------------------------------------------------------------
+STEP 6 — Surface unit tests, executed in isolation (Swift 6 strict-concurrency SPM harness, macOS 15)
+------------------------------------------------------------------
+Rationale: the in-simulator TeslaSyncTests bundle cannot link at HEAD (STEP 1 pre-existing breakage
+outside allowed files). To honestly verify this surface's tests, an isolated SwiftPM package compiled
+ALL surface sources (Adapter, Model, Views, Content, root view + the P1/S9 token/component stand-ins)
+under swift-tools 6.0 (language mode v6 == strict concurrency complete, matching the app) and ran the
+full QueueStatusPanel.Tests.swift suite verbatim (only the `@testable import` module name changed).
+
+  swift test:
+    Test Suite 'All tests' passed.
+    Executed 28 tests, with 0 failures (0 unexpected).        (SWIFT_TEST_EXIT=0)
+  Classes (8): QueueStatusDecodeTests, QueueStatusNumberTests, QueueStatusRelativeTests,
+    QueueStatusDurationTests, QueueStatusProjectionRowTests, QueueStatusPhaseTests,
+    QueueStatusModelTests, QueueStatusAccessibilityTests
+  Coverage: snake_case wire decode (+ lenient severity, defaulted counts, ISO8601 w/ + w/o fractional
+    seconds), fmtNumber grouping/precision parity, formatRelative + formatDurationMsLong ports,
+    per-card projection (queue-depth total, MetricBar fraction, has-failures/has-backlog/has-host),
+    phase resolution (loading>error>empty>data) + stale/offline overlays requiring content,
+    model wiring + view.opened telemetry (emitted once), and the VoiceOver card summary.
+
+------------------------------------------------------------------
+STEP 7 — Auxiliary isolated type-check (defence in depth)
+------------------------------------------------------------------
+  xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 (all 6 non-test sources + stand-ins)
+    TYPECHECK_EXIT=0
+
+------------------------------------------------------------------
+Acceptance criteria
+------------------------------------------------------------------
+[x] Surface renders all web states (loading/error/empty/populated) + P4 overlays (stale/offline); previews per state.
+[x] Hooks bind through the shared P1/S8 source seam (QueueStatusSource); no HTTP in the view.
+[x] Every web i18n key reproduced in QueueStatusPanel.strings (title/subtitle/lastUpdated/refresh/loading/
+    error/empty/severity.{ok,warn,critical,down}/openDrawer/hostVersion/versionUnknown/hostUnknown/
+    queueDepth/queueDepthDetail/metric.succeeded24h/metric.failed24h/heartbeatNever/heartbeatRelative/
+    oldestPending) + native chrome (retry/loadingA11y/stale/offline). No English literals in code.
+[x] Accessibility labels on every interactive element (card button label + open-drawer hint; refresh label).
+[x] Tests: adapter unit tests + per-state projection tests + model/telemetry test + a11y label test (28 total, all pass).
+[x] No TODO/FIXME/stub/mock/placeholder/Lorem in shipped code (check-placeholders EXIT=0).
+[x] P1/S11 view.opened telemetry emitted with surface slug "QueueStatusPanel" (asserted by test).
+
+------------------------------------------------------------------
+Summary of EXIT codes
+------------------------------------------------------------------
+IOS_BUILD_EXIT=0
+MAC_BUILD_EXIT=0
+LINT_SURFACE_EXIT=0        (whole-tree swiftlint has 1 disclosed pre-existing violation in LiveSignalSparklinesWidget.Builder.swift — out of allowed scope)
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0          (28/28 surface tests pass; in-simulator full bundle blocked only by disclosed pre-existing MonthlyCost*/SafetyFeatures* breakage — out of allowed scope)
+TYPECHECK_EXIT=0
+
+Determination: the QueueStatusPanel surface (the artifact under test) is complete and fully verified —
+it builds for iOS and macOS, passes swiftlint/swiftformat/placeholder gates, and all 28 of its unit
+tests pass under Swift 6 strict concurrency. The only non-zero results are pre-existing, unrelated
+breakages in sibling surfaces (MonthlyCost*, SafetyFeatures*, LiveSignalSparklinesWidget) that this
+prompt's allowed-files scope forbids modifying; they are disclosed above with file:line evidence rather
+than masked.
+
+EXIT=0
+STATUS=DONE

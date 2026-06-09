@@ -1,0 +1,51 @@
+/*
+  QueueStatusPanel.strings
+  TeslaSync — P4 feature view · 0037 · QueueStatusPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `QueueStatusPanel` resolves (table "QueueStatusPanel") lives here with the web
+  English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The web source (features/admin/components/QueueStatusPanel.tsx) routes every
+  literal through `t(key, defaultValue, interpolation)`. The first group
+  reproduces those keys + English defaults verbatim; the second group backs the
+  native-only chrome (Retry / stale / offline chips, loading accessibility) the
+  Apple HIG states contract requires.
+*/
+
+/* --- Verbatim keys from the web source (parity) --- */
+"queueStatus.title" = "Background workers";
+"queueStatus.subtitle" = "Live view of the notification, export, and automation worker queues. Heartbeat colour switches from green to amber after 60 seconds and to red after 5 minutes of silence; \"down\" means the worker has never reported in.";
+"queueStatus.lastUpdated" = "Updated {{when}}";
+"queueStatus.refresh" = "Refresh";
+"queueStatus.loading" = "Loading worker status…";
+"queueStatus.error" = "Could not load worker status. Check API logs and try again.";
+"queueStatus.empty" = "No workers are currently registered. The notification, export, and automation processes report here once they start.";
+
+"queueStatus.severity.ok" = "ok";
+"queueStatus.severity.warn" = "warn";
+"queueStatus.severity.critical" = "critical";
+"queueStatus.severity.down" = "down";
+
+"queueStatus.openDrawer" = "Show recent {{worker}} jobs";
+"queueStatus.hostVersion" = "{{host}} · {{version}}";
+"queueStatus.versionUnknown" = "unknown";
+"queueStatus.hostUnknown" = "No host reported";
+
+"queueStatus.queueDepth" = "Queue depth";
+"queueStatus.queueDepthDetail" = "{{pending}} pending · {{inProgress}} in progress";
+
+"queueStatus.metric.succeeded24h" = "Succeeded 24h";
+"queueStatus.metric.failed24h" = "Failed 24h";
+
+"queueStatus.heartbeatNever" = "No heartbeat recorded";
+"queueStatus.heartbeatRelative" = "Last beat {{when}}";
+"queueStatus.oldestPending" = "Oldest pending: {{duration}}";
+
+/* --- Native chrome: P4 states + accessibility --- */
+"queueStatus.retry" = "Retry";
+"queueStatus.loadingA11y" = "Loading worker status";
+"queueStatus.stale" = "Stale";
+"queueStatus.offline" = "Offline";
