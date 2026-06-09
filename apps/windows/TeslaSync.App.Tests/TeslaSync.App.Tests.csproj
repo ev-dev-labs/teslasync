@@ -110,6 +110,18 @@
     root (deduplicated to avoid NETSDK1022), preserving every link from all discarded roots and adding
     the new EnvironmentalImpact surface (Model / Source / ViewModel). Keep this file as ONE Project root
     with a single Compile ItemGroup.
+    P2/W2-0001 headless unit tests for the UI-thread-free logic models (Model / Source / ViewModel).
+    Targets plain net10.0 so `dotnet test` runs without a WinUI/UI-thread host. The WinUI app targets a
+    WinUI TFM, so its UI-thread-free sources are Compile-linked here rather than project-referenced; the
+    views (*.cs) themselves are exercised by the app build. The test classes live under this project and
+    are picked up by the SDK default-compile glob.
+
+    Repair note (P2 feature-views/0113 ForecastDetails): a chain of integration merges had again left this
+    file with multiple concatenated Project roots plus stray closing tags and orphaned comment text, so the
+    solution failed XML load (MSB4025). The duplicate roots were removed and every distinct linked source
+    consolidated below as a single deduplicated, sorted union (preserving every previously linked
+    widget/feature-view source), plus the new ForecastDetails surface. Keep this as ONE Project root with a
+    single Compile ItemGroup.
   -->
 
   <PropertyGroup>
@@ -146,6 +158,7 @@
     (apps/shared/spec/units-golden.json) verify the C# behaviour port row-for-row against the web
     truth (ADR-004); the app manifest + widget template back the packaging/widget model tests.
   -->
+  <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -180,6 +193,7 @@
     without a UI host; the WinUI views themselves are exercised by the app build. Single
     deduplicated, path-sorted union of the test surface.
   -->
+  <!-- Linked WinUI-free Model / Source / ViewModel sources, deduplicated and sorted by path. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -527,6 +541,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Model.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Source.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.ViewModel.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ForecastDetails.Model.cs" Link="FeatureViews\ForecastDetails\ForecastDetails.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ForecastDetails.Source.cs" Link="FeatureViews\ForecastDetails\ForecastDetails.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ForecastDetails.ViewModel.cs" Link="FeatureViews\ForecastDetails\ForecastDetails.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Model.cs" Link="FeatureViews\HashCalculator\HashCalculator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Source.cs" Link="FeatureViews\HashCalculator\HashCalculator.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.ViewModel.cs" Link="FeatureViews\HashCalculator\HashCalculator.ViewModel.cs" />

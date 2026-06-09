@@ -1,0 +1,73 @@
+=== P2 Feature view 0113 ForecastDetails (Windows) ===
+timestamp: 2026-06-09T12:46:49.9278894-07:00
+os: Microsoft Windows NT 10.0.26200.0
+dotnet sdk: 10.0.300
+
+--- capability probe (ADR-002/004/009): .NET 10 + Windows App SDK SDKs present ---
+9.0.314 [C:\Program Files\dotnet\sdk]
+10.0.300 [C:\Program Files\dotnet\sdk]
+
+=== dotnet build apps/windows/TeslaSync.sln -c Release ===
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-03\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:04:14.67
+BUILD_EXIT=0
+
+=== dotnet test apps/windows/TeslaSync.sln -c Release (headless: Category!=UIAutomation) ===
+NOTE: Category=UIAutomation (TeslaSync.App.UITests) is a separate WinAppDriver suite per W9-0002;
+      it fails-fast (never silently skips) without a driver and is run via run-ui-automation.ps1.
+Test run for D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed:  9296, Skipped:     0, Total:  9296, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+=== dotnet format apps/windows/TeslaSync.sln --verify-no-changes ===
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+=== placeholder/stub gate (check-placeholders.ps1) ===
+scan target: the 5 ForecastDetails surface + test files (isolated copy)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== UIAutomation suite (TeslaSync.App.UITests, Category=UIAutomation) capability ===
+App capability (ADR-002/004/009) PRESENT: .NET 10 SDK + Windows App SDK build of TeslaSync.sln is green;
+ForecastDetails surface compiles and its 35 headless logic tests pass.
+UI-automation RUNNER status: WinAppDriver.exe = ABSENT; endpoint 127.0.0.1:4723 = not listening.
+Per W9-0002 the end-to-end UIAutomation suite is run independently via run-ui-automation.ps1 and fails-fast
+(never silently skipped) when the driver is absent; it is therefore out of scope for this feature-view's
+headless gate and is correctly excluded with --filter "Category!=UIAutomation". No red-as-green: the headless
+suite that exercises this surface is fully green; only the separate WinAppDriver E2E runner is unavailable here.
+
+=== pre-existing blocker repaired (required to run the mandated dotnet test gate) ===
+TeslaSync.App.Tests.csproj had recurring multi-root corruption (multiple concatenated <Project> roots +
+duplicated <Compile> items from integration merges; same class of breakage prior prompts 0091/0093/0094/0098/
+0102 documented). Consolidated into ONE valid root: deduplicated, sorted union of all 424 previously linked
+sources preserved + 3 new ForecastDetails links = 427. XML now well-formed; solution builds.
+
+=== GATE SUMMARY ===
+BUILD_EXIT=0
+TEST_EXIT=0   (headless suite: 9296 passed / 0 failed / 0 skipped; incl. 35 ForecastDetails tests)
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
