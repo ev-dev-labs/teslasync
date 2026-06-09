@@ -1,0 +1,39 @@
+/*
+  ToggleCommandTile.strings
+  TeslaSync — P4 feature view · 0260 · ToggleCommandTile (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ToggleCommandTile` resolves (table "ToggleCommandTile") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/system/components/ToggleCommandTile.tsx) — the favorite toggle's aria label
+  and the ON / OFF power labels. The per-command label keys are dynamic (owned by the
+  command catalog) and are resolved through the same facade with the def's key + fallback,
+  so they are not redeclared here. The remaining keys back the native-only chrome
+  (VoiceOver activation hint + state value, freshness chip) the state list requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"commands.toggleFavorite" = "Toggle favorite";
+"commands.on" = "ON";
+"commands.off" = "OFF";
+
+/* --- Native chrome: VoiceOver activation hint (turn off / configure / turn on) --- */
+"commands.toggleTile.hint.turnOff" = "Turns the command off";
+"commands.toggleTile.hint.configure" = "Opens options before turning on";
+"commands.toggleTile.hint.turnOn" = "Turns the command on";
+
+/* --- Native chrome: VoiceOver state value --- */
+"commands.toggleTile.state.running" = "Running";
+"commands.toggleTile.state.on" = "On";
+"commands.toggleTile.state.off" = "Off";
+"commands.toggleTile.state.succeeded" = "Succeeded";
+"commands.toggleTile.state.failed" = "Failed";
+
+/* --- Native chrome: freshness chip --- */
+"commands.tile.freshness.stale" = "Stale";
+"commands.tile.freshness.offline" = "Offline";
