@@ -1,0 +1,19 @@
+/*
+  StatusPageSkeleton.strings
+  TeslaSync — P4 feature view · StatusPageSkeleton (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table
+  "StatusPageSkeleton"). The web source
+  (features/system/components/status/StatusPageSkeleton.tsx) is a pure,
+  anonymous loading skeleton with no t() calls; its only human-facing string is
+  the root `aria-label="Loading system status"` busy-state announcement. The
+  native surface routes that through the i18n facade so the view holds no
+  hardcoded literal: the whole skeleton is exposed to VoiceOver as one busy
+  element rather than reading every decorative shimmer block. The key folds into
+  the app Localizable.xcstrings master catalog at integration time; kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+*/
+
+/* VoiceOver label announcing the system-status loading skeleton as one busy element. */
+"status.loading.accessibilityLabel" = "Loading system status";
