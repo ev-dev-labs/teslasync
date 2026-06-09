@@ -1,0 +1,48 @@
+/*
+  DriveEfficiencyChartWidget.strings
+  TeslaSync — P4 dashboard widget · 0038 · DriveEfficiencyChartWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `DriveEfficiencyChartWidget` resolves (table "DriveEfficiencyChartWidget")
+  lives here with its web `t(key, default)` English value. These entries fold
+  into the app `Localizable.xcstrings` master catalog at integration time; they
+  are kept in a per-surface table so each parallel surface prompt owns its own
+  strings without editing the shared catalog.
+
+  The parity keys are the exact keys extracted from the web source
+  (features/dashboard/widgets/DriveEfficiencyChartWidget.tsx + registry/driving.ts).
+  The remaining keys back the native-only chrome (freshness chip, refresh/retry,
+  empty/error/banner copy, chart + accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.driveEfficiencyChart.title" = "Drive Efficiency";
+"widget.driveEfficiencyChart.avg" = "Avg";
+"widget.driveEfficiencyChart.best" = "Best day";
+"widget.driveEfficiencyChart.trend" = "Trend";
+"widget.driveEfficiencyChart.daily" = "Daily";
+"widget.driveEfficiencyChart.rolling" = "7-day avg";
+"widget.driveEfficiencyChart.empty" = "No efficiency data yet";
+
+/* --- Registry parity (registry/driving.ts → "drive-efficiency-chart") --- */
+"widget.driveEfficiencyChart.name" = "Drive Efficiency Chart";
+"widget.driveEfficiencyChart.description" = "Area chart of Wh/mi over last 30 days with rolling average overlay";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.driveEfficiencyChart.live" = "Live";
+"widget.driveEfficiencyChart.stale" = "Stale";
+"widget.driveEfficiencyChart.offline" = "Offline";
+"widget.driveEfficiencyChart.refresh" = "Refresh";
+"widget.driveEfficiencyChart.retry" = "Retry";
+"widget.driveEfficiencyChart.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.driveEfficiencyChart.loading" = "Loading drive efficiency";
+"widget.driveEfficiencyChart.emptyHint" = "Efficiency trends appear here once drives with energy data are recorded.";
+"widget.driveEfficiencyChart.errorTitle" = "Couldn't load drive efficiency";
+"widget.driveEfficiencyChart.staleBanner" = "Updating — values may be stale";
+"widget.driveEfficiencyChart.offlineBanner" = "Offline — showing last saved efficiency";
+
+/* --- Chart + accessibility --- */
+"widget.driveEfficiencyChart.chartA11y" = "Drive efficiency over the last 30 days with a 7-day rolling average";
+"widget.driveEfficiencyChart.openA11y" = "Open the driving analytics page";
