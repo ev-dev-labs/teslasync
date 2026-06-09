@@ -1,6 +1,6 @@
 //
 //  LoadingSkeleton.Telemetry.swift
-//  TeslaSync — P4 feature view · 0088 · LoadingSkeleton (Apple)
+//  TeslaSync — P4 feature view · LoadingSkeleton (Apple)
 //
 //  The P1/S11 `view.opened` diagnostics seam for the LoadingSkeleton surface.
 //  The view reports its appearance through this protocol so production wiring,

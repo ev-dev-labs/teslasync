@@ -1,37 +1,39 @@
 //
 //  LoadingSkeleton.swift
-//  TeslaSync — P4 feature view · 0088 · LoadingSkeleton (Apple)
+//  TeslaSync — P4 feature view · LoadingSkeleton (Apple)
 //
-//  Native, Apple-idiomatic parity of the web charging-curve LoadingSkeleton
-//  (features/charging/components/charging-curve/LoadingSkeleton.tsx). The main
-//  SwiftUI surface: it composes the seven web regions from the
-//  ``LoadingSkeletonLayout`` projection, resolves grid columns from the
-//  horizontal size class (web base / lg / xl breakpoints), exposes the whole
-//  surface to VoiceOver as one "busy" element, and emits the P1/S11
-//  `view.opened` diagnostics event on appear.
+//  The shared, Apple-idiomatic charging `LoadingSkeleton`. One parameterized
+//  SwiftUI surface reproduces both web sources that map to this native filename:
+//
+//    • `charging-curve/LoadingSkeleton.tsx`  → `LoadingSkeleton(layout: .chargingCurve)` (P4·0088)
+//    • `cost-analysis/LoadingSkeleton.tsx`   → `LoadingSkeleton(layout: .costAnalysis)`  (P4·0115)
+//
+//  It walks the chosen ``LoadingSkeletonLayout`` region projection block-for-block
+//  (mapped to platform tokens, no Tailwind ported), resolves grid columns from
+//  the horizontal size class (web base / lg / xl breakpoints), exposes the whole
+//  surface to VoiceOver as one "busy" element (the shimmer blocks are
+//  decorative), respects Reduce Motion through `TSSkeleton`, and emits the
+//  P1/S11 `view.opened` diagnostics event on appear.
 //
 
 import SwiftUI
 
-/// Native, Apple-idiomatic parity of the web charging-curve `LoadingSkeleton`
-/// (`features/charging/components/charging-curve/LoadingSkeleton.tsx`).
+/// Native, Apple-idiomatic parity of the web charging `LoadingSkeleton` family.
 ///
 /// A pure presentational surface: it owns no data — exactly like the web
-/// component — so the empty / error / stale / offline states belong to the
-/// parent charging-curve surface that swaps this skeleton out once its query
-/// resolves. It reproduces the web source's seven stacked regions block-for-block
-/// via the ``LoadingSkeletonLayout`` projection, mapped to platform tokens (no
-/// Tailwind ported). The whole surface is exposed to VoiceOver as a single
-/// "busy" element (the individual shimmer blocks are decorative) and the shimmer
-/// respects Reduce Motion through `TSSkeleton`. On appear it emits the P1/S11
-/// `view.opened` diagnostics event with the ``LoadingSkeletonSurface/slug``.
+/// components — so the empty / error / stale / offline states belong to the
+/// parent page that swaps this skeleton out once its query resolves. The surface
+/// it draws is selected by ``LoadingSkeletonLayout``; the whole thing is exposed
+/// to VoiceOver as a single "busy" element and the shimmer respects Reduce
+/// Motion. On appear it emits the P1/S11 `view.opened` diagnostics event with the
+/// ``LoadingSkeletonSurface/slug``.
 public struct LoadingSkeleton: View {
     private let layout: LoadingSkeletonLayout
     private let telemetry: any LoadingSkeletonTelemetry
 
     /// - Parameters:
     ///   - layout: the structural projection to render; defaults to the
-    ///     charging-curve layout extracted from the web source.
+    ///     charging-curve layout.
     ///   - telemetry: diagnostics sink; defaults to the redaction-safe `os_log`
     ///     sink.
     public init(
@@ -58,13 +60,9 @@ public struct LoadingSkeleton: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: TSSpacing.xl) {
-            header
-            filters
-            summaryGrid
-            LoadingSkeletonChartPanelView(panel: layout.primaryChart)
-            LoadingSkeletonChartPanelView(panel: layout.secondaryChart)
-            comparisonGrid
-            footerGrid
+            ForEach(Array(layout.regions.enumerated()), id: \.offset) { _, region in
+                LoadingSkeletonRegionView(region: region, isRegularWidth: isRegularWidth)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
@@ -74,57 +72,6 @@ public struct LoadingSkeleton: View {
     }
 
     private var accessibilityLabel: String {
-        LoadingSkeletonLSStrings.string(
-            LoadingSkeletonStringsKey.accessibilityLabel,
-            LoadingSkeletonStringsKey.accessibilityLabelFallback
-        )
-    }
-
-    // MARK: Regions
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: TSSpacing.sm) {
-            SkeletonBlockView(block: layout.headerTitle)
-            SkeletonBlockView(block: layout.headerSubtitle)
-        }
-    }
-
-    private var filters: some View {
-        HStack(spacing: TSSpacing.lg) {
-            ForEach(Array(layout.filters.indices), id: \.self) { index in
-                SkeletonBlockView(block: layout.filters[index])
-            }
-            Spacer(minLength: 0)
-        }
-    }
-
-    private var summaryGrid: some View {
-        LoadingSkeletonGrid(
-            count: layout.summaryStats.count,
-            columns: layout.summaryColumns.count(isRegularWidth: isRegularWidth),
-            spacing: TSSpacing.lg
-        ) { index in
-            LoadingSkeletonStatCellView(cell: layout.summaryStats[index])
-        }
-    }
-
-    private var comparisonGrid: some View {
-        LoadingSkeletonGrid(
-            count: layout.comparisonCharts.count,
-            columns: layout.comparisonColumns.count(isRegularWidth: isRegularWidth),
-            spacing: TSSpacing.xl
-        ) { index in
-            LoadingSkeletonChartPanelView(panel: layout.comparisonCharts[index])
-        }
-    }
-
-    private var footerGrid: some View {
-        LoadingSkeletonGrid(
-            count: layout.footerStats.count,
-            columns: layout.footerColumns.count(isRegularWidth: isRegularWidth),
-            spacing: TSSpacing.lg
-        ) { index in
-            LoadingSkeletonStatCellView(cell: layout.footerStats[index])
-        }
+        LoadingSkeletonLSStrings.string(layout.accessibilityLabelKey, layout.accessibilityLabelFallback)
     }
 }
