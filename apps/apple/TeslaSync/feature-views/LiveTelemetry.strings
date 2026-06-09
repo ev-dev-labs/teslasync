@@ -1,0 +1,70 @@
+/*
+  LiveTelemetry.strings
+  TeslaSync — P4 feature view · 0127 · LiveTelemetry (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `LiveTelemetry` resolves (table "LiveTelemetry") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/dashboard/components/LiveTelemetry.tsx, namespace "dashboard"). The
+  second group backs the native chrome: the P4 leaf freshness / loading / empty /
+  error copy, so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"telemetry.title" = "Live Telemetry";
+"telemetry.drivetrain" = "Drivetrain";
+"telemetry.climate" = "Climate";
+"telemetry.security" = "Security";
+"telemetry.tirePressure" = "Tire Pressure";
+"telemetry.media" = "Media";
+"telemetry.navigation" = "Navigation";
+"telemetry.torque" = "Torque";
+"telemetry.motorTemp" = "Motor Temp";
+"telemetry.gear" = "Gear";
+"telemetry.gforce" = "G-Force";
+"telemetry.cabin" = "Cabin";
+"telemetry.outside" = "Outside";
+"telemetry.hvac" = "HVAC Power";
+"telemetry.fan" = "Fan";
+"telemetry.defrost" = "Defrost";
+"telemetry.batHeater" = "Bat Heater";
+"telemetry.noModes" = "No active modes";
+"telemetry.lock" = "Lock";
+"telemetry.locked" = "Locked";
+"telemetry.unlocked" = "Unlocked";
+"telemetry.sentry" = "Sentry";
+"telemetry.active" = "Active";
+"telemetry.off" = "Off";
+"telemetry.doors" = "Doors";
+"telemetry.allClosed" = "All Closed";
+"telemetry.open" = "Open";
+"telemetry.windows" = "Windows";
+"telemetry.allNormal" = "All Normal";
+"telemetry.warning" = "Warning";
+"telemetry.unknownArtist" = "Unknown artist";
+"telemetry.status" = "Status";
+"telemetry.volume" = "Volume";
+"telemetry.destination" = "Destination";
+"telemetry.distance" = "Distance";
+"telemetry.eta" = "ETA";
+"telemetry.home" = "Home";
+"telemetry.work" = "Work";
+"telemetry.favorite" = "Favorite";
+"telemetry.noSavedLocation" = "No saved location";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error --- */
+"liveTelemetry.live" = "Live";
+"liveTelemetry.stale" = "Stale";
+"liveTelemetry.offline" = "Offline";
+"liveTelemetry.staleBanner" = "Reconnecting — data may be stale";
+"liveTelemetry.offlineBanner" = "Offline — showing last known data";
+"liveTelemetry.refresh" = "Refresh";
+"liveTelemetry.loadingA11y" = "Loading live telemetry";
+"liveTelemetry.empty" = "No live telemetry yet.";
+"liveTelemetry.errorTitle" = "Couldn't load live telemetry";
+"liveTelemetry.retry" = "Retry";
