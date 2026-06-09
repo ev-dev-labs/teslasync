@@ -298,3 +298,4 @@ p2-windows/feature-views/W-0108-ChargerTypeBreakdown.prompt.md
 p2-windows/feature-views/W-0106-SessionListSection.prompt.md
 p2-windows/feature-views/W-0110-CostPerKwhChart.prompt.md
 p2-windows/feature-views/W-0107-ChargingSessionCard.prompt.md
+p2-windows/feature-views/W-0114-LifetimeSummary.prompt.md
