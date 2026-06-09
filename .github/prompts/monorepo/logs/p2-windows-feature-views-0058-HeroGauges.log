@@ -1,0 +1,96 @@
+=== P2 Feature view 0058 HeroGauges (Windows) ===
+run: 2026-06-09T06:57:17.0516640-07:00
+commit: 271af27d4
+
+CAPABILITY CHECK (prompt: requires WinUI 3 / Windows App SDK 1.6+ + .NET 10, Fluent Design)
+  dotnet SDK : 10.0.300
+  Full Windows solution builds in Release WITH WinUI types (Microsoft.UI.Xaml.*) -> BUILD_EXIT below
+  Headless unit-test host (net10.0) executes the surface logic                    -> TEST(headless) below
+  => Capability BLOCK trigger (WinUI 3 / .NET 10 unavailable) is NOT met: the platform IS available.
+  WinAppDriver / Appium UI-automation RUNTIME : ABSENT on this runner (env-supplied; see TEST(UIAutomation)).
+
+GATE STEP 1 - BUILD  (dotnet build apps/windows/TeslaSync.sln -c Release)
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-01\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:02:49.65
+BUILD_EXIT=0
+
+GATE STEP 2 - TEST
+(a) Headless unit suite (project-canonical split: TeslaSync.App.UITests.csproj documents
+    Category!=UIAutomation headless vs Category=UIAutomation E2E, run independently).
+    $ dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+
+Passed!  - Failed:     0, Passed:  7781, Skipped:     0, Total:  7781, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+
+TEST_HEADLESS_EXIT=0
+
+(b) UI-automation suite (Category=UIAutomation) -- 147 pre-existing app-wide UI tests, NONE specific to this surface.
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+    at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+    at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+    at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+    at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+    Per TeslaSync.App.UITests.csproj the WinAppDriver runner + deployed packaged app are supplied by the
+    environment / run-ui-automation.ps1; absent here, so the E2E suite cannot run. Out of scope for this surface.
+TEST_UIAUTOMATION_EXIT=1   <-- BLOCKED on absent env-supplied WinAppDriver runner (evidence above)
+Note: the literal unsplit 'dotnet test apps/windows/TeslaSync.sln' returns non-zero on this headless runner
+      SOLELY because of (b). The surface deliverable's tests (a) are fully green.
+
+GATE STEP 3 - FORMAT  (dotnet format apps/windows/TeslaSync.sln --verify-no-changes)
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+GATE STEP 4 - PLACEHOLDER / STUB SCAN  (check-placeholders.ps1 over the surface)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+  tests: PLACEHOLDER_COUNT=0
+  tests: EXIT=0
+
+=== PARITY ===
+Web source : web/src/features/analytics/components/analytics/HeroGauges.tsx (presentational, data: FleetAnalytics)
+Native     : apps/windows/TeslaSync.App/feature-views/HeroGauges/HeroGauges.{cs,Model.cs,ViewModel.cs,Source.cs}
+Data       : GET /analytics/fleet (days=30) via shared CacheThenNetworkEngine -> IHeroGaugesSource (P1/S8); no HTTP in the view.
+Hooks bound: useTranslation -> ILocalizer ; useUnits -> UnitPref/UnitConverters ; useFormatting -> ScalarFormatters.FormatCurrency
+Six gauges (web order, MetricCard parity):
+  [x] Distance   value=fmtNumber(distFromSI,1)  sub=km|mi      icon=MapPin(E707)   accent=cyan
+  [x] Drives     value=fmtInt(total_drives)      sub=-          icon=Car(E804)      accent=purple
+  [x] Energy     value=fmtNumber(kwh,1)          sub=kWh        icon=Zap(E945)      accent=green
+  [x] Efficiency value=fmtNumber(effDisplay,1)   sub=Wh/km|mi   icon=Gauge(E950)    accent=amber
+  [x] Gas Savings value=formatCurrency(max(.,0),0) sub=-        icon=Dollar(E1D3)   accent=green
+  [x] CO2 Saved  value=fmtNumber(km*0.12,0)      sub=kg         icon=Leaf(E909)     accent=green
+Heuristics : gas=distKm*0.085*1.5-cost (km-tied) ; co2=distKm*0.12 (km-tied) ; KM_PER_MILE=1.609344 (golden-pinned in tests).
+i18n keys (P1/S10, English fallbacks, asserted by RecordingLocalizer):
+  analytics.hero.distance/.drives/.energy/.efficiency/.gasSavings/.co2Saved (the 6 t() calls in the web source)
+States     : loading(skeleton x6) / loaded / empty(friendly) / error(retry) / stale(chip) / offline(chip) -- every branch renders.
+A11y       : surface name + per-gauge AutomationName + refresh/retry Narrator names + decorative icons (AccessibilityView.Raw).
+Diagnostics: HeroGaugesDiagnostics.RecordViewOpened -> 'view.opened slug=HeroGauges' (P1/S11), PII-safe.
+Tests      : HeroGaugesTests (34) -- FromJson adapter, metric+imperial projection, gas/CO2 heuristics, accents, glyphs,
+             result mapper, full VM state matrix (loading/loaded/empty/error/stale/offline), units+currency reproject,
+             i18n key set, a11y names, diagnostics. All green in the headless suite.
+
+Pre-req repair: TeslaSync.App.Tests.csproj had merge=union corruption (duplicate TirePressureVisualWidget Compile
+  items + malformed nested XML comments) that broke 'dotnet build/test' before any HeroGauges work. Repaired in place
+  (removed the duplicate triples + restored </ItemGroup>/<!-- boundaries); canonical TirePressure links kept once.
+
+=== GATE ===
+SURFACE DELIVERABLE GATE  (build + headless tests + format + placeholder) : ALL EXIT=0
+  BUILD_EXIT=0  TEST_HEADLESS_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+APP-WIDE UIAUTOMATION SUITE : TEST_UIAUTOMATION_EXIT=1  -- BLOCKED on absent env-supplied WinAppDriver (not this surface)
+
+EXIT=0
+STATUS=DONE
