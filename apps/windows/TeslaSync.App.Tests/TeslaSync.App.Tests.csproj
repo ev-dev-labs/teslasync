@@ -382,6 +382,15 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
+      P2 dashboard-widgets (TirePressureVisualWidget): its three WinUI-free source files (the model, the
+      cache-then-network source, and the state-holder view-model) are linked into this headless (net10.0)
+      test project so TirePressureVisualWidgetTests verifies the adapter + per-state transitions row-for-row
+      without a UI host. The WinUI view itself (TirePressureVisualWidget.cs) is exercised by the app build.
+      Linked exactly once here to avoid NETSDK1022 duplicate-Compile errors.
+    -->
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Model.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Source.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Source.cs" />
@@ -758,6 +767,17 @@
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.Model.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.Source.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" />
+    P2 feature-views/0034 XRayFieldsTable: the ingest X-Ray per-field statistics surface's UI-thread-free
+    logic (the loading/empty/data branch projection, the useSortToggle two-state toggle, the four per-key
+    comparators with stable ties, the en-US grouped sample count + relative last-seen + value-kind cell
+    formatting, the localized columns + empty/loading copy, the accessible names and the view.opened
+    diagnostics) lives in the WinUI app project but is WinUI-free by construction. Link the Model in so this
+    headless (net10.0) test project verifies the adapter + per-state projection row-for-row without a UI
+    host. The WinUI view itself (feature-views\XRayFieldsTable\XRayFieldsTable.cs) is exercised by the app
+    build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\XRayFieldsTable\XRayFieldsTable.Model.cs" Link="FeatureViews\XRayFieldsTable\XRayFieldsTable.Model.cs" />
   </ItemGroup>
 
 </Project>
