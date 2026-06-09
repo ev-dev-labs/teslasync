@@ -1,0 +1,125 @@
+=== P2 Feature view 0056 DrivingTab (Windows) ===
+Surface : apps/windows/TeslaSync.App/feature-views/DrivingTab/{DrivingTab.Model.cs, DrivingTab.cs}
+Tests   : apps/windows/TeslaSync.App.Tests/FeatureViews/DrivingTabTests.cs (linked Model into the headless project)
+Web src : web/src/features/analytics/components/analytics/DrivingTab.tsx
+          (+ DrivingPerformanceCards.tsx, DrivingTemperatureStats.tsx, helpers.tsx)
+Runner  : .NET 10.0.300 SDK present; Microsoft.WindowsDesktop.App 10.0.8 present; WinUI 3 (Windows App SDK) builds.
+
+--- GATE COMMANDS ------------------------------------------------------------------
+dotnet build  apps/windows/TeslaSync.sln -c Release
+BUILD_EXIT=0        -> 0 errors. 17 pre-existing CA warnings, ALL in TeslaSync.App.Core
+                       (CA1000/CA1716/CA1720/CA1859), unrelated to this surface. The
+                       TeslaSync.App project (TreatWarningsAsErrors=true) compiled the new
+                       DrivingTab.cs + DrivingTab.Model.cs clean (0 warnings/errors).
+
+dotnet test   apps/windows/TeslaSync.sln -c Release
+TEST_EXIT=1
+  - TeslaSync.App.Tests.dll  : Passed! 7784, Failed 0, Skipped 0   (headless unit suite,
+                               INCLUDES the new DrivingTab suite — 37 tests, all green)
+  - TeslaSync.App.UITests.dll: Failed! 147, Passed 0, Skipped 0    (ALL UiAutomationUnavailableException)
+  TEST_EXIT=1 is caused EXCLUSIVELY by the 147 WinAppDriver E2E shell tests (see CAPABILITY BLOCK).
+
+  Focused re-run for this surface:
+  dotnet test ...TeslaSync.App.Tests.csproj --filter "FullyQualifiedName~DrivingTab"
+    Passed!  - Failed: 0, Passed: 37, Skipped: 0, Total: 37
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+FORMAT_EXIT=0       -> whole-solution format clean (DrivingTab.* + DrivingTabTests.cs normalised to LF).
+
+./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DrivingTab
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0  -> no TODO/FIXME/stub/placeholder/Lorem/NotImplemented in the shipped surface.
+                       (also ran over DrivingTabTests.cs -> PLACEHOLDER_COUNT=0)
+
+--- SURFACE SUMMARY (parity with the web source) -----------------------------------
+DrivingTab is the analytics Driving tab. The web component is PRESENTATIONAL: it takes
+`data: FleetAnalytics | undefined` as a prop and binds only useTranslation + useUnits (no
+fetch). The native port mirrors that exactly (the XRayBucketChart presentational precedent):
+the WinUI-free DrivingTabProjection turns a DrivingTabModel (parent-owned load phase +
+drive_analytics payload) + UnitPref + ILocalizer into a render-ready DrivingTabDisplay; the
+DrivingTab ContentControl is a thin renderer. The view performs no HTTP.
+
+States (every state renders — no hidden surfaces):
+  Loading  -> skeleton chrome (reduce-motion aware)
+  Error    -> TsQueryError + retry (raises RetryRequested; the parent owns the refetch)
+  Stale    -> section scaffold + a "Stale" TsStatusPill (mqtt.stale)
+  Offline  -> section scaffold + an "Offline" TsStatusPill (common.offline)
+  Empty    -> the full section scaffold with every section showing its own empty state
+              (web parity for data === undefined)
+  Ready    -> the populated section scaffold
+
+Sections reproduced (all of them):
+  1. DrivingPerformanceCards  : 6 TsMetricCard (Top/Avg Speed km/h->display, Peak Power/Regen kW,
+                                Avg/Longest Drive km->display); each card em-dashes when its stat is absent.
+  2. Speed Distribution       : bar (range/count) | "No speed data"
+  3. Trip Distance Distribution: bar             | "No distance distribution data"
+  4. Hourly Driving Pattern   : composed bar(drives)+line(distance, raw km per web) | "No hourly data"
+  5. Temperature vs Efficiency: scatter (temp C->display, eff Wh/km->Wh/mi when miles, dist converted) | "No temperature data"
+  6. Daily Driving Trend      : composed area(distance, raw km)+line(drives) | "No daily trend data"
+  7. Drive Duration Distribution: bar           | "Not enough drive data for distribution chart"
+  8. Efficiency Trend         : area over daily_trend filtered efficiency>0 | "No efficiency trend data"
+  9. DrivingTemperatureStats  : 6 TsMetricCard (inside/outside min/avg/max C->display) | "No temperature stats"
+
+Boundary unit conversion (display boundary only, SI/derived-SI in): UnitConverters.SpeedFromSi/
+DistanceFromSi/TemperatureFromSi via useUnits()-equivalent UnitPref. Charts use the shared
+native chart library (TsComposedChart, each series rendered by its ChartSeriesKind) — never a
+direct charting-lib import. i18n: every string flows through the ILocalizer facade; all 33
+analytics.driving.* keys + the reused chrome keys (analytics.tabs.driving, error.loadFailed,
+error.retry, common.loading/offline, mqtt.stale) exist in Strings/{en,ar,he}/Resources.resw
+(no new keys required). Accessibility: AutomationProperties.SetName on the root, every panel,
+chart, metric card and chip; reduce-motion honoured by the skeletons + TsFadeIn. Diagnostics:
+DrivingTabDiagnostics.RecordViewOpened() emits "view.opened slug=DrivingTab" (PII-safe — never a
+drive metric).
+
+Tests (DrivingTabTests.cs, 37 headless cases): state projection (loading/empty/error/stale/
+offline/ready), the seven sections' data+empty branches and series shapes (kinds, palette
+indices, range/date/hour labels, efficiency>0 filter), the performance + temperature grids'
+unit conversions (metric vs imperial, em-dash gating), the temp-vs-efficiency boundary
+conversion (10C->50F, 150 Wh/km->241.4016 Wh/mi), a11y names on every state/section/card, and
+the diagnostics (slug + PII-safety).
+
+--- CAPABILITY BLOCK (the ONLY red) ------------------------------------------------
+TEST_EXIT=1 is caused exclusively by the 147 pre-existing E2E shell tests in
+TeslaSync.App.UITests, every one failing with:
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+Runner probe (this machine): WinAppDriver.exe NOT present on PATH or the standard install paths;
+TCP 127.0.0.1:4723 CLOSED. By design (UiAutomationUnavailableException / W9-0002 "never report an
+absent runner as green") these tests HARD-FAIL rather than skip. This is the prompt capability
+clause's "If unavailable on the runner -> STATUS=BLOCKED with API evidence" condition and matches
+every sibling feature-view gate log (e.g. 0041-ResponseViewer): surface complete, only the
+WinAppDriver E2E suite red. WinUI 3 (Windows App SDK) + .NET 10 themselves ARE available — the
+solution builds (BUILD_EXIT=0) and all 7784 headless tests (incl. the 37 new DrivingTab tests) pass.
+
+--- PRE-EXISTING BASELINE REPAIR (disclosed for honesty) ---------------------------
+At HEAD, apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj would not load — the gate
+could not build at all before any DrivingTab work (tightly coupled: the test-project wiring and
+the test gate cannot run otherwise). A prior botched merge had left:
+  1. A self-nested XML comment ("<!--" immediately re-opened inside an open comment) ->
+     MSB4025 "An XML comment cannot contain '--'", plus two duplicate TirePressureVisualWidget
+     Compile triples (already linked once later in the file) that would have raised NETSDK1022.
+     Removed the dead block.
+  2. Three feature-view ItemGroups (FlagsTable -> LiveSignalsTable -> XRayFieldsTable ->
+     RateLimitStatusPanel) whose "</ItemGroup> + <!--" separators had collapsed, leaving raw
+     comment text inside <ItemGroup> and three unclosed groups ("ItemGroup start tag does not
+     match end tag of Project"). Restored the three "</ItemGroup>" closers + "<!--" openers.
+After repair: well-formed XML, 0 duplicate Compile items, 342 Compile items (incl. the new
+DrivingTab.Model.cs link). No source/test of any sibling surface was altered.
+
+--- VERDICT -----------------------------------------------------------------------
+Surface = DONE and fully verified within runner capability (build green; 7784 headless tests
+green incl. the new 37-test DrivingTab suite; format clean; placeholder clean). The prescribed
+gate command `dotnet test TeslaSync.sln` cannot reach EXIT=0 on this runner because the
+WinAppDriver/Appium UI-automation runner is absent (147 pre-existing UITests hard-fail by
+design). Per the capability clause and sibling convention, the gate verdict is recorded honestly
+as BLOCKED.
+
+BUILD_EXIT=0
+TEST_EXIT=1
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED
