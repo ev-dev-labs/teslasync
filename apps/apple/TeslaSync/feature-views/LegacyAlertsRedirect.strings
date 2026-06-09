@@ -1,0 +1,39 @@
+/*
+  LegacyAlertsRedirect.strings
+  TeslaSync — P4 feature view · 0185 · LegacyAlertsRedirect (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table
+  "LegacyAlertsRedirect"). These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  NOTE ON PARITY: the web source
+  (web/src/features/notifications/components/LegacyAlertsRedirect.tsx) is an
+  anonymous redirect — it returns a bare <Navigate to replace /> and renders NO text,
+  so it extracts ZERO i18n keys. Every key below backs the native redirect affordance
+  (which the web's invisible/instant redirect does not need) and the accessibility
+  summaries — none of which exist as English literals in the Swift sources.
+*/
+
+/* --- Card chrome --- */
+"legacyAlertsRedirect.title" = "Redirecting";
+"legacyAlertsRedirect.subtitle" = "Sending you to the Notifications you asked for";
+"legacyAlertsRedirect.resolving" = "Taking you to Notifications…";
+"legacyAlertsRedirect.openingPrefix" = "Opening";
+
+/* --- Destination names (web TAB_TO_ROUTE targets) --- */
+"legacyAlertsRedirect.destination.alerts" = "Alerts";
+"legacyAlertsRedirect.destination.history" = "Inbox";
+"legacyAlertsRedirect.destination.preferences" = "Quiet Hours";
+
+/* --- Notes (alerts default + preserved filters) --- */
+"legacyAlertsRedirect.fallbackNote" = "Showing your alerts";
+"legacyAlertsRedirect.forwardedNote" = "Keeping your current filters";
+
+/* --- Manual continue affordance --- */
+"legacyAlertsRedirect.continue" = "Continue to %@";
+
+/* --- Accessibility summaries --- */
+"legacyAlertsRedirect.a11y.resolving" = "Redirecting to Notifications";
+"legacyAlertsRedirect.a11y.redirecting" = "Redirecting to %@";
