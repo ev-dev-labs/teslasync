@@ -180,6 +180,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\LifetimeStatsWidget\LifetimeStatsWidget.Source.cs" Link="Widgets\LifetimeStatsWidget\LifetimeStatsWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsWidget\FleetStatsWidget.Model.cs" Link="Widgets\FleetStatsWidget\FleetStatsWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\FleetStatsWidget\FleetStatsWidget.ViewModel.cs" Link="Widgets\FleetStatsWidget\FleetStatsWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\MotorPerformanceWidget\MotorPerformanceWidget.Model.cs" Link="Widgets\MotorPerformanceWidget\MotorPerformanceWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\MotorPerformanceWidget\MotorPerformanceWidget.ViewModel.cs" Link="Widgets\MotorPerformanceWidget\MotorPerformanceWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\MotorPerformanceWidget\MotorPerformanceWidget.Source.cs" Link="Widgets\MotorPerformanceWidget\MotorPerformanceWidget.Source.cs" />
   </ItemGroup>
 
   <!--
