@@ -1,0 +1,49 @@
+=== P2 Feature view 0129 QuickNav (Windows) ===
+
+Capability AVAILABLE -> not BLOCKED. WinUI 3 (Windows App SDK 2.1.3) + .NET 10 (dotnet 10.0.300,
+maui-windows workload) are installed; the new QuickNav surface compiles into the WinUI app and its
+UI-thread-free logic is verified by the headless net10.0 test suite below. The web source
+(web/src/features/dashboard/components/QuickNav.tsx) is a presentational nav grid (4 Link/GlassPanel
+tiles) with no data fetch, so the surface reproduces Ready + a defensive Empty branch (no
+loading/error/stale/offline state exists in the web source).
+
+PRE-EXISTING REPAIR (in scope, precedent 0091/0093): TeslaSync.App.Tests.csproj had again been left by
+merge concatenation with 5 <Project> roots + an unterminated XML comment (MSB4025), which blocked the
+entire solution build/test. Consolidated to a single valid project: deduplicated, path-sorted union of
+all 451 existing <Compile> links preserved + the new QuickNav.Model.cs link (452 total).
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 423 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  9716, Skipped:     0, Total:  9716, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite) which
+fail fast because WinAppDriver/Appium is not present on this runner. They are out of scope for this
+surface and are run separately via apps/windows/run-ui-automation.ps1.
+
+### STEP 2b: dotnet test --filter Category!=UIAutomation (headless surface-logic gate, W9-0002 separation)
+Passed!  - Failed:     0, Passed:  9716, Skipped:     0, Total:  9716, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+QuickNav tests: Passed!  - Failed:     0, Passed:    24, Skipped:     0, Total:    24, Duration: 75 ms - TeslaSync.App.Tests.dll (net10.0)
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/QuickNav
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite, evidenced above.)
+EXIT=0
+STATUS=DONE
