@@ -1,0 +1,56 @@
+/*
+  ChargePlansWidget.strings
+  TeslaSync — P4 dashboard widget · 0018 · ChargePlansWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargePlansWidget` resolves (table "ChargePlansWidget") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The keys below are the exact keys extracted from the web source
+  (features/dashboard/widgets/ChargePlansWidget.tsx, table "dashboard"). The
+  remaining keys back the registry metadata + native-only chrome (freshness chip,
+  refresh / retry / loading / error / banner copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.chargePlans.title" = "Charge Plans";
+"widget.chargePlans.targetSoc" = "Target SOC";
+"widget.chargePlans.departure" = "Departure";
+"widget.chargePlans.schedStart" = "Scheduled Start";
+"widget.chargePlans.schedEnd" = "Scheduled End";
+"widget.chargePlans.estEnergy" = "Est. Energy";
+"widget.chargePlans.estCost" = "Est. Cost";
+"widget.chargePlans.savings" = "Savings";
+"widget.chargePlans.saved" = "saved";
+"widget.chargePlans.ratePlan" = "Rate Plan";
+"widget.chargePlans.ratePlans" = "Rate Plans";
+"widget.chargePlans.noPlans" = "No charge plans";
+"widget.chargePlans.noDetails" = "No plan details";
+"widget.chargePlans.noRates" = "No rate plans";
+"widget.chargePlans.noData" = "No charge plans or rate data";
+
+/* --- Registry metadata (canonical: registry/charging.ts → "charge-plans") --- */
+"widget.chargePlans.description" = "Active charge plan, rate schedule: peak/off-peak hours with rates";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.chargePlans.live" = "Live";
+"widget.chargePlans.stale" = "Stale";
+"widget.chargePlans.offline" = "Offline";
+"widget.chargePlans.refresh" = "Refresh";
+"widget.chargePlans.retry" = "Retry";
+"widget.chargePlans.open" = "Open";
+"widget.chargePlans.openA11y" = "Open the Charging page";
+
+/* --- Native chrome: states --- */
+"widget.chargePlans.loading" = "Loading charge plans";
+"widget.chargePlans.errorTitle" = "Couldn't load charge plans";
+"widget.chargePlans.offlineBanner" = "Offline — showing last known data";
+"widget.chargePlans.staleBanner" = "Reconnecting — data may be stale";
+
+/* --- Accessibility --- */
+"widget.chargePlans.status" = "Status";
+"widget.chargePlans.rateCount" = "%lld rate plans";
+"widget.chargePlans.a11yLabel" = "Charge Plans widget showing the active plan and rate schedule";
