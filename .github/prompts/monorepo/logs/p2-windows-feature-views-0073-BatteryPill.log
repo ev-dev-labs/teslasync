@@ -1,0 +1,46 @@
+=== P2 Feature view 0073 BatteryPill (Windows) ===
+timestamp: 2026-06-09T08:16:25.1306391-07:00
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-03\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:01:11.68
+BUILD_EXIT=0
+
+NOTE: The Category=UIAutomation suite (TeslaSync.App.UITests) drives the packaged app over WinAppDriver + a
+deployed MSIX that this headless build host lacks (nothing listening on 127.0.0.1:4723, no WinAppDriver.exe).
+Per its own csproj design it is excluded from the headless gate (Category!=UIAutomation) and run separately
+via apps/windows/run-ui-automation.ps1 on a UIA-capable runner. The BatteryPill adapter/projection/a11y/
+diagnostics tests live in the headless TeslaSync.App.Tests suite below.
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generated -> D:\repos\teslasync-wt2\wt-03\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+Test run for D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+Test run for D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed:  8192, Skipped:     0, Total:  8192, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+Gate: BUILD_EXIT=0  TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
