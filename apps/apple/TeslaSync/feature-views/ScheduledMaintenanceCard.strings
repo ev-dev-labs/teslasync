@@ -1,0 +1,70 @@
+/*
+  ScheduledMaintenanceCard.strings
+  TeslaSync — P4 feature view · 0251 · ScheduledMaintenanceCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ScheduledMaintenanceCard` resolves (table "ScheduledMaintenanceCard") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface prompt owns its
+  own strings without editing the shared catalog.
+
+  The web source (features/system/components/status/ScheduledMaintenanceCard.tsx) uses hardcoded
+  English literals. Per the native no-English-literals rule, every one of those literals is promoted
+  to a key here. The first group is the parity set extracted from the web source; the second group
+  backs the native chrome (the P4 leaf freshness / loading / error copy) and the VoiceOver hints
+  that replace the web `useId` `htmlFor` label associations.
+*/
+
+/* --- Parity: header + status (web title row) --- */
+"scheduled.title" = "Scheduled maintenance";
+"scheduled.badge.active" = "Maintenance active";
+"scheduled.within24h" = "Within 24h";
+
+/* --- Parity: active-now body (web `isActive` block) --- */
+"scheduled.activeUntil" = "Active until %@ (%@ min remaining)";
+"scheduled.until" = "Until %@";
+
+/* --- Parity: scheduler idle (web `!isActive` block) --- */
+"scheduled.explainer" = "Schedule a window for upgrades or hardware moves. The status banner will switch to blue “Maintenance” instead of red “Down”.";
+"scheduled.scheduleWindow" = "Schedule a window";
+
+/* --- Parity: schedule form fields (web inputs) --- */
+"scheduled.field.start" = "Start (local)";
+"scheduled.field.duration" = "Duration (minutes)";
+"scheduled.field.message" = "What's happening (optional)";
+
+/* --- Parity: form + clear actions --- */
+"scheduled.action.cancel" = "Cancel";
+"scheduled.action.schedule" = "Schedule";
+"scheduled.action.scheduling" = "Scheduling…";
+"scheduled.action.clear" = "Clear maintenance";
+"scheduled.action.clearing" = "Clearing…";
+
+/* --- Parity: handleSchedule default message --- */
+"scheduled.defaultMessage" = "Scheduled maintenance · ends %@";
+
+/* --- Parity: toast outcomes (web useToast) --- */
+"scheduled.toast.scheduled" = "Maintenance window scheduled.";
+"scheduled.toast.cleared" = "Maintenance cleared.";
+"scheduled.toast.pickStart" = "Pick a start time.";
+"scheduled.toast.invalidStart" = "Invalid start time.";
+"scheduled.toast.failSchedule" = "Failed to schedule";
+"scheduled.toast.failClear" = "Failed to clear maintenance";
+
+/* --- Native chrome: freshness / connectivity (P4 leaf) --- */
+"scheduled.live" = "Live";
+"scheduled.stale" = "Stale";
+"scheduled.offline" = "Offline";
+"scheduled.staleBanner" = "Reconnecting — maintenance state may be stale";
+"scheduled.offlineBanner" = "Offline — showing last known maintenance state";
+"scheduled.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error states --- */
+"scheduled.loadingA11y" = "Loading maintenance state";
+"scheduled.errorTitle" = "Couldn't load maintenance state";
+"scheduled.retry" = "Retry";
+
+/* --- Accessibility hints (replace web useId htmlFor associations) --- */
+"scheduled.a11y.startHint" = "Choose when the maintenance window begins";
+"scheduled.a11y.durationHint" = "How long the maintenance window lasts, in minutes";
+"scheduled.a11y.messageHint" = "Optional note shown to users during maintenance";
