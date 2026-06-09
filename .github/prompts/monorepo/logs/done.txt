@@ -205,3 +205,4 @@ p2-windows/dashboard-widgets/W-0104-UptimeMonitorWidget.prompt.md
 p2-windows/dashboard-widgets/W-0105-VampireDrainWidget.prompt.md
 p2-windows/dashboard-widgets/W-0107-VehicleHeroCardWidget.prompt.md
 p2-windows/dashboard-widgets/W-0109-VehicleSpecsWidget.prompt.md
+p2-windows/dashboard-widgets/W-0112-WallConnectorWidget.prompt.md
