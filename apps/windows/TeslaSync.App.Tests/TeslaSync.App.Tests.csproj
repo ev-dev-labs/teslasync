@@ -99,6 +99,13 @@
     this consolidation removes the duplicate roots and keeps the deduplicated, path-sorted union of every
     linked source (so every existing test still compiles), plus the P2 feature-views/0121 AddWidgetButton
     surface.
+    P2/W2-0001 headless unit tests for the WinUI-free UI-thread-free logic models (Model / Source / ViewModel).
+    Targets plain net10.0 so dotnet test runs without a WinUI / UI-thread host. The WinUI-free logic
+    (.Model / .Source / .ViewModel / .Presentation.cs) of each app surface is Compile-linked below so the
+    adapter, per-state projection and diagnostics are verified row for row; the WinUI views themselves are
+    exercised by the app build. Keep this file as ONE Project root with a single deduplicated, path-sorted
+    Compile ItemGroup: a chain of integration merges has repeatedly re-concatenated multiple roots plus
+    duplicate Compile items, failing XML load (MSB4025).
   -->
 
     Keep this file as ONE <Project> root with a single Compile ItemGroup: the deduplicated,
@@ -180,6 +187,7 @@
   -->
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
   <!-- Test fixtures / manifests copied next to the test assembly (SI golden vectors, MSIX manifest, widget template). -->
+  <!-- Test fixtures copied next to the assembly: SI golden vectors, MSIX manifest, widget template. -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -518,6 +526,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Model.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Source.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.ViewModel.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Model.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Source.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.ViewModel.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostPerKwhChart\CostPerKwhChart.Model.cs" Link="FeatureViews\CostPerKwhChart\CostPerKwhChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
@@ -624,6 +635,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.Model.cs" Link="FeatureViews\TeslaApiRefTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" Link="FeatureViews\TeslaApiRefTool.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Source.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.ViewModel.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.Model.cs" Link="FeatureViews\TimestampTool\TimestampTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.ViewModel.cs" Link="FeatureViews\TimestampTool\TimestampTool.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.Model.cs" Link="FeatureViews\TimeToChargeSection.Model.cs" />
