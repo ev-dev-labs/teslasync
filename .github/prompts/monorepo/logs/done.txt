@@ -221,3 +221,4 @@ p2-windows/feature-views/W-0010-ToolCard.prompt.md
 p2-windows/feature-views/W-0008-ResultPanel.prompt.md
 p2-windows/feature-views/W-0006-InfrastructureSection.prompt.md
 p2-windows/feature-views/W-0011-Base64Tool.prompt.md
+p2-windows/feature-views/W-0009-TelemetryErrorsPanel.prompt.md
