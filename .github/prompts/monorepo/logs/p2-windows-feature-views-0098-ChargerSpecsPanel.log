@@ -1,0 +1,55 @@
+=== P2 Feature view 0098 ChargerSpecsPanel (Windows) ===
+run_utc=2026-06-09T18:05:39Z
+dotnet=10.0.300
+artifact=apps/windows/TeslaSync.App/feature-views/ChargerSpecsPanel/{ChargerSpecsPanel.cs,ChargerSpecsPanel.Model.cs}
+test=apps/windows/TeslaSync.App.Tests/FeatureViews/ChargerSpecsPanelTests.cs
+csproj-repair=apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj (pre-existing multiple-root MSB4025 corruption consolidated into one valid <Project>; union of all 391 linked sources preserved; +ChargerSpecsPanel.Model.cs link)
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release   (whole solution)
+# NOTE: TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite) require a WinAppDriver/Appium
+# runner + a deployed MSIX. Both are absent on this headless runner, so that suite fails fast by design
+# (never silently skipped). It is gated by the SEPARATE W9-0002 prompt, not feature-view 0098.
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.  (x147, all of TeslaSync.App.UITests)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  8747, Skipped:     0, Total:  8747 - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+
+### STEP 2b: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation   (headless surface-logic gate, the documented W9-0002 separation)
+No test matches the given testcase filter 'Category!=UIAutomation' in ...\TeslaSync.App.UITests.dll
+Passed!  - Failed:     0, Passed:  8747, Skipped:     0, Total:  8747, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+no formatting changes required in ChargerSpecsPanel.* (Model.cs + view + tests all LF + canonical)
+FORMAT_EXIT=0
+
+### STEP 4: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ChargerSpecsPanel
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+### SUMMARY
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+WHOLE_SOLUTION_TEST_EXIT=1 -- the ONLY failures are the environment-gated TeslaSync.App.UITests
+(Category=UIAutomation) E2E suite: no WinAppDriver/Appium runner + no deployed MSIX on this headless
+runner. That suite is owned by the SEPARATE W9-0002 prompt and is out of scope for feature-view 0098.
+Capability evidence: the WinUI 3 (Windows App SDK) + .NET 10 toolchain IS present -- the app + view
+compile (BUILD_EXIT=0) and the headless surface-logic suite is green (HEADLESS_TEST_EXIT=0, incl. the 34
+ChargerSpecsPanel adapter/per-state/a11y/diagnostics tests).
+
+Surface notes: native parity port of
+web/src/features/charging/components/charging-list/ChargerSpecsPanel.tsx -- a GlassPanel with a persistent
+gauge-titled header over loading (skeleton) / empty (no charger-spec data) / ready (responsive 1-2-4 column
+By Voltage / By Phase / By Cable / By Brand grid, each column either listing rows or its own empty state).
+Reproduces the web hasData expression bug-for-bug (phase excluded), the raw ungrouped session count, the
+per-row kWh energy / kW-avg power formatting at the SI->display boundary, and every t() i18n key. error /
+stale / offline are owned by the parent query lifecycle (pure-presentational web source).
+
+EXIT=0
+STATUS=DONE
