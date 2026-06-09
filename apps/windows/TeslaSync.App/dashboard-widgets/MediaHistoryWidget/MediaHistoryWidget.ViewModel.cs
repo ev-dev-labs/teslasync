@@ -2,124 +2,108 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Notifications;
-using TeslaSync.App.Core.Units;
 
-namespace TeslaSync.App.DashboardWidgets.FleetStatsBar;
-
-/// <summary>
-/// The data port the <see cref="FleetStatsBarViewModel"/> binds to (P1/S8 state-holder seam). It yields
-/// the cache-then-network sequence of merged fleet snapshots — the combination of <c>GET /vehicles</c>
-/// and <c>GET /analytics/fleet?days=30</c> — the native analogue of the web component's
-/// <c>useVehicles</c> + <c>useFleetAnalytics(30)</c> hook composition. The view never performs HTTP
-/// itself; the concrete <see cref="FleetStatsBarSource"/> (or a test fake) drives this.
-/// </summary>
-public interface IFleetStatsBarSource
-{
-    /// <summary>Stream the merged cache-then-network fleet snapshots, newest cache first.</summary>
-    IAsyncEnumerable<RepositoryResult<FleetStats>> StreamAsync(CancellationToken cancellationToken = default);
-}
+namespace TeslaSync.App.DashboardWidgets;
 
 /// <summary>
-/// Canonical registry metadata for the Fleet Stats Bar surface — the native mirror of the web registry
-/// entry in web/src/features/dashboard/widgets/registry/analytics.ts. The dashboard grid system binds
-/// this surface with the same <see cref="Id"/> and honours the same size constraints.
+/// Canonical registry metadata for the Media History surface — the native mirror of the web registry
+/// entry in web/src/features/dashboard/widgets/registry/media.ts (<c>media-history</c>). The dashboard
+/// grid system binds this surface with the same <see cref="Id"/> and honours the same size constraints.
 /// </summary>
-public static class FleetStatsBarRegistration
+public static class MediaHistoryRegistration
 {
     /// <summary>Stable registry id (matches the web registry).</summary>
-    public const string Id = "fleet-stats-bar";
+    public const string Id = "media-history";
 
     /// <summary>Widget category (matches the web registry).</summary>
-    public const string Category = "analytics";
+    public const string Category = "media";
 
     /// <summary>Diagnostics surface slug emitted with the <c>view.opened</c> event.</summary>
-    public const string Slug = "FleetStatsBarWidget";
+    public const string Slug = "MediaHistoryWidget";
 
-    /// <summary>The trailing window the surface requests, mirroring the web <c>useFleetAnalytics(30)</c>.</summary>
-    public const int DefaultDays = 30;
+    /// <summary>Default footprint: 2 columns × 4 rows (web registry <c>defaultSize</c>).</summary>
+    public static MediaHistorySize DefaultSize => new(2, 4);
 
-    /// <summary>Default footprint: 4 columns × 2 rows (web registry <c>defaultSize</c>).</summary>
-    public static FleetStatsBarSize DefaultSize => new(4, 2);
-
-    /// <summary>Minimum footprint: 3 columns × 2 rows (web registry <c>minSize</c>).</summary>
-    public static FleetStatsBarSize MinSize => new(3, 2);
+    /// <summary>Minimum footprint: 1 column × 2 rows (web registry <c>minSize</c> — enables the compact layout).</summary>
+    public static MediaHistorySize MinSize => new(1, 2);
 
     /// <summary>Maximum footprint: 4 columns × 40 rows (web registry <c>maxSize</c>).</summary>
-    public static FleetStatsBarSize MaxSize => new(4, 40);
+    public static MediaHistorySize MaxSize => new(4, 40);
 
-    /// <summary>Localized registry display name (web registry "Fleet Stats Bar").</summary>
+    /// <summary>Localized registry display name (web registry "Media History").</summary>
     public static string Name(ILocalizer localizer)
     {
         ArgumentNullException.ThrowIfNull(localizer);
-        return localizer.GetString("widget.fleetStatsBar.name", "Fleet Stats Bar");
+        return localizer.GetString("widget.mediaHistory", "Media History");
     }
 
-    /// <summary>Localized registry description (web registry copy).</summary>
+    /// <summary>Localized description (web registry copy).</summary>
     public static string Description(ILocalizer localizer)
     {
         ArgumentNullException.ThrowIfNull(localizer);
         return localizer.GetString(
-            "widget.fleetStatsBar.description",
-            "Fleet-wide: total vehicles, online count, total miles today, total energy");
+            "widget.mediaHistory.description",
+            "Recently played tracks: title, artist, source, playback history");
     }
 
     /// <summary>True when <paramref name="size"/> falls within the min/max footprint constraints.</summary>
-    public static bool IsWithinBounds(FleetStatsBarSize size) =>
+    public static bool IsWithinBounds(MediaHistorySize size) =>
         size.Cols >= MinSize.Cols && size.Cols <= MaxSize.Cols &&
         size.Rows >= MinSize.Rows && size.Rows <= MaxSize.Rows;
 
     /// <summary>Clamp <paramref name="size"/> into the supported min/max footprint.</summary>
-    public static FleetStatsBarSize Clamp(FleetStatsBarSize size) => new(
+    public static MediaHistorySize Clamp(MediaHistorySize size) => new(
         Math.Clamp(size.Cols, MinSize.Cols, MaxSize.Cols),
         Math.Clamp(size.Rows, MinSize.Rows, MaxSize.Rows));
 }
 
 /// <summary>
-/// PII-safe diagnostics for the Fleet Stats Bar surface (P1/S11 diagnostics contract). Records only the
-/// operational <c>view.opened</c> event with the surface slug — never a fleet metric, VIN or location —
-/// so a diagnostics line can never leak fleet data. Thread-safe.
+/// PII-safe diagnostics for the Media History surface (P1/S11 diagnostics contract). Records only the
+/// operational <c>view.opened</c> event with the surface slug — never a track title, artist, source, VIN
+/// or vehicle id — so a diagnostics line can never leak what a user listened to. Thread-safe.
 /// </summary>
-public sealed class FleetStatsBarDiagnostics
+public sealed class MediaHistoryDiagnostics
 {
     private readonly Action<string>? _sink;
     private long _viewsOpened;
 
     /// <summary>Creates the collector over an optional PII-safe diagnostics sink.</summary>
-    public FleetStatsBarDiagnostics(Action<string>? sink = null) => _sink = sink;
+    public MediaHistoryDiagnostics(Action<string>? sink = null) => _sink = sink;
 
     /// <summary>Number of times the surface has been opened.</summary>
     public long ViewsOpened => Interlocked.Read(ref _viewsOpened);
 
-    /// <summary>Record that the surface was opened, emitting <c>view.opened slug=FleetStatsBarWidget</c>.</summary>
+    /// <summary>Record that the surface was opened, emitting <c>view.opened slug=MediaHistoryWidget</c>.</summary>
     public void RecordViewOpened()
     {
         Interlocked.Increment(ref _viewsOpened);
-        _sink?.Invoke($"view.opened slug={FleetStatsBarRegistration.Slug}");
+        _sink?.Invoke($"view.opened slug={MediaHistoryRegistration.Slug}");
     }
 }
 
 /// <summary>
-/// UI-thread-free state holder backing the WinUI <see cref="FleetStatsBarWidget"/> view — the native port
-/// of the web <c>FleetStatsBarWidget</c>'s hook composition
-/// (web/src/features/dashboard/widgets/FleetStatsBarWidget.tsx). It consumes the merged
-/// cache-then-network <see cref="IFleetStatsBarSource"/>, projects each snapshot through
-/// <see cref="FleetStatsBarProjection"/> with the active units, and exposes the mutually-exclusive
-/// <see cref="State"/> plus the header freshness flags so the view is a thin renderer. Drive it from one
-/// confinement (the UI thread); it is not internally synchronised.
+/// UI-thread-free state holder backing the WinUI <see cref="MediaHistoryWidget"/> view — the native port
+/// of the web <c>MediaHistoryWidget</c>'s hook composition
+/// (web/src/features/dashboard/widgets/MediaHistoryWidget.tsx). It consumes the cache-then-network
+/// <see cref="IMediaHistorySource"/>, applies the web <c>list.length === 0</c> gate (an empty list renders
+/// the friendly "No tracks played" state), projects the rest through <see cref="MediaHistoryProjection"/>
+/// for the active footprint, and exposes the mutually-exclusive <see cref="State"/> plus the header
+/// freshness flags so the view is a thin renderer. Drive it from one confinement (the UI thread); it is
+/// not internally synchronised.
 /// </summary>
-public sealed class FleetStatsBarViewModel : INotifyPropertyChanged, IDisposable
+public sealed class MediaHistoryViewModel : INotifyPropertyChanged, IDisposable
 {
-    private readonly IFleetStatsBarSource _source;
+    private readonly IMediaHistorySource _source;
     private readonly ILocalizer _localizer;
+    private readonly Func<DateTimeOffset> _clock;
 
-    private FleetStatsBarSize _size;
-    private UnitPref _units;
+    private MediaHistorySize _size;
     private CancellationTokenSource? _cts;
-    private RepositoryResult<FleetStats>? _last;
+    private RepositoryResult<IReadOnlyList<MediaHistorySample>>? _last;
     private bool _disposed;
 
-    private FleetStatsBarState _state = FleetStatsBarState.Loading;
-    private FleetStatsBarDisplay _display;
+    private MediaHistoryState _state = MediaHistoryState.Loading;
+    private MediaHistoryDisplay _display;
     private DateTimeOffset? _updatedAt;
     private bool _isFetching;
     private bool _isError;
@@ -127,41 +111,44 @@ public sealed class FleetStatsBarViewModel : INotifyPropertyChanged, IDisposable
     private string? _errorMessage;
     private int _attempts;
 
-    /// <summary>Creates the holder over its data source, localizer, footprint and units.</summary>
-    public FleetStatsBarViewModel(
-        IFleetStatsBarSource source,
+    /// <summary>Creates the holder over its data source, localizer, footprint and (optional) clock.</summary>
+    /// <param name="source">The cache-then-network media-history source.</param>
+    /// <param name="localizer">The i18n facade resolving every label.</param>
+    /// <param name="size">The widget footprint (drives the compact / standard layout).</param>
+    /// <param name="clock">Injectable now-source for deterministic relative times; defaults to <see cref="DateTimeOffset.Now"/>.</param>
+    public MediaHistoryViewModel(
+        IMediaHistorySource source,
         ILocalizer localizer,
-        FleetStatsBarSize size,
-        UnitPref? units = null)
+        MediaHistorySize size,
+        Func<DateTimeOffset>? clock = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
-        _display = FleetStatsBarProjection.Project(FleetStats.Empty, _size, _units, _localizer);
+        _clock = clock ?? (() => DateTimeOffset.Now);
+        _display = MediaHistoryProjection.Project(Array.Empty<MediaHistorySample>(), _size, _localizer, _clock());
     }
 
     /// <inheritdoc />
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>The current mutually-exclusive surface state.</summary>
-    public FleetStatsBarState State
+    public MediaHistoryState State
     {
         get => _state;
         private set => Set(ref _state, value);
     }
 
-    /// <summary>The projected, render-ready display model (the four stat tiles).</summary>
-    public FleetStatsBarDisplay Display
+    /// <summary>The projected, render-ready display model (feed rows + compact line).</summary>
+    public MediaHistoryDisplay Display
     {
         get => _display;
         private set
         {
             _display = value;
             Raise(nameof(Display));
-            Raise(nameof(HasData));
         }
     }
 
@@ -193,7 +180,7 @@ public sealed class FleetStatsBarViewModel : INotifyPropertyChanged, IDisposable
         private set => Set(ref _isStale, value);
     }
 
-    /// <summary>Localized error message shown in the error surface.</summary>
+    /// <summary>Localized error message shown in the error / offline surface.</summary>
     public string? ErrorMessage
     {
         get => _errorMessage;
@@ -207,17 +194,14 @@ public sealed class FleetStatsBarViewModel : INotifyPropertyChanged, IDisposable
         private set => Set(ref _attempts, value);
     }
 
-    /// <summary>True when the snapshot has data to render (web <c>hasData</c>).</summary>
-    public bool HasData => _display.HasData;
+    /// <summary>Localized widget title shown in the header (web <c>widget.mediaHistory</c>).</summary>
+    public string Title => MediaHistoryRegistration.Name(_localizer);
 
-    /// <summary>Localized widget title (web <c>widget.fleetStatsBar.title</c>).</summary>
-    public string Title => _localizer.GetString("widget.fleetStatsBar.title", "Fleet Stats");
+    /// <summary>Localized empty-state message (web <c>widget.noMediaPlayed</c>).</summary>
+    public string EmptyMessage => _localizer.GetString("widget.noMediaPlayed", "No tracks played");
 
-    /// <summary>Localized empty-state message (web <c>widget.fleetStatsBar.noData</c>).</summary>
-    public string EmptyMessage => _localizer.GetString("widget.fleetStatsBar.noData", "No fleet data available");
-
-    /// <summary>The widget footprint; reassigning re-projects the current snapshot for the new layout.</summary>
-    public FleetStatsBarSize Size
+    /// <summary>The widget footprint; reassigning re-projects the current list for the new layout.</summary>
+    public MediaHistorySize Size
     {
         get => _size;
         set
@@ -233,28 +217,10 @@ public sealed class FleetStatsBarViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    /// <summary>The user's unit preference; reassigning re-projects the current snapshot in the new units.</summary>
-    public UnitPref Units
-    {
-        get => _units;
-        set
-        {
-            ArgumentNullException.ThrowIfNull(value);
-            if (_units == value)
-            {
-                return;
-            }
-
-            _units = value;
-            Raise(nameof(Units));
-            Reproject();
-        }
-    }
-
     /// <summary>
     /// Run a cache-then-network load: counts the attempt, shows the skeleton only when nothing is already
-    /// visible (otherwise keeps content while refreshing), and folds every merged emission into
-    /// <see cref="State"/> + <see cref="Display"/>. A superseding load cancels the prior one.
+    /// visible (otherwise keeps content while refreshing), and folds every emission into <see cref="State"/>
+    /// + <see cref="Display"/>. A superseding load cancels the prior one.
     /// </summary>
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -305,9 +271,9 @@ public sealed class FleetStatsBarViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private bool HasContent() =>
-        _state is FleetStatsBarState.Loaded or FleetStatsBarState.Stale or FleetStatsBarState.Offline;
+        _state is MediaHistoryState.Loaded or MediaHistoryState.Stale or MediaHistoryState.Offline;
 
-    private void Apply(RepositoryResult<FleetStats> result)
+    private void Apply(RepositoryResult<IReadOnlyList<MediaHistorySample>> result)
     {
         _last = result;
         switch (result.Status)
@@ -348,38 +314,42 @@ public sealed class FleetStatsBarViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private void ApplySnapshot(
-        FleetStats stats,
+        IReadOnlyList<MediaHistorySample> samples,
         DateTimeOffset? fetchedAt,
         bool stale,
         bool fetching,
         RepositoryError? error,
         bool offline = false)
     {
-        Display = FleetStatsBarProjection.Project(stats, _size, _units, _localizer);
+        var display = MediaHistoryProjection.Project(samples, _size, _localizer, _clock());
 
-        if (!stats.HasData)
+        // Web parity: an empty played-track list renders the friendly empty state regardless of freshness.
+        if (!display.HasData)
         {
-            SetEmpty(fetchedAt, keepDisplay: true);
+            SetEmpty(fetchedAt);
             return;
         }
 
+        Display = display;
         UpdatedAt = fetchedAt;
         IsFetching = fetching;
         IsStale = stale;
         IsError = false;
         ErrorMessage = offline ? ErrorTextFor(error) : null;
-        State = offline ? FleetStatsBarState.Offline : stale ? FleetStatsBarState.Stale : FleetStatsBarState.Loaded;
+        State = offline
+            ? MediaHistoryState.Offline
+            : stale ? MediaHistoryState.Stale : MediaHistoryState.Loaded;
     }
 
     private void Reproject()
     {
-        if (_last is { HasValue: true } last)
+        if (_last is { } last)
         {
             Apply(last);
         }
         else
         {
-            Display = FleetStatsBarProjection.Project(FleetStats.Empty, _size, _units, _localizer);
+            Display = MediaHistoryProjection.Project(Array.Empty<MediaHistorySample>(), _size, _localizer, _clock());
         }
     }
 
@@ -387,22 +357,18 @@ public sealed class FleetStatsBarViewModel : INotifyPropertyChanged, IDisposable
     {
         IsError = false;
         ErrorMessage = null;
-        State = FleetStatsBarState.Loading;
+        State = MediaHistoryState.Loading;
     }
 
-    private void SetEmpty(DateTimeOffset? fetchedAt, bool keepDisplay = false)
+    private void SetEmpty(DateTimeOffset? fetchedAt)
     {
-        if (!keepDisplay)
-        {
-            Display = FleetStatsBarProjection.Project(FleetStats.Empty, _size, _units, _localizer);
-        }
-
+        Display = MediaHistoryProjection.Project(Array.Empty<MediaHistorySample>(), _size, _localizer, _clock());
         UpdatedAt = fetchedAt;
         IsFetching = false;
         IsStale = false;
         IsError = false;
         ErrorMessage = null;
-        State = FleetStatsBarState.Empty;
+        State = MediaHistoryState.Empty;
     }
 
     private void SetError(RepositoryError? error)
@@ -411,23 +377,23 @@ public sealed class FleetStatsBarViewModel : INotifyPropertyChanged, IDisposable
         IsStale = false;
         IsError = true;
         ErrorMessage = ErrorTextFor(error);
-        State = FleetStatsBarState.Error;
+        State = MediaHistoryState.Error;
     }
 
     private string ErrorTextFor(RepositoryError? error)
     {
         string key = error?.Kind switch
         {
-            RepositoryErrorKind.Unauthorized => "widget.fleetStatsBar.error.auth",
-            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "widget.fleetStatsBar.error.offline",
-            _ => "widget.fleetStatsBar.error",
+            RepositoryErrorKind.Unauthorized => "widget.mediaHistory.error.auth",
+            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "widget.mediaHistory.error.offline",
+            _ => "widget.mediaHistory.error",
         };
 
         string fallback = error?.Kind switch
         {
-            RepositoryErrorKind.Unauthorized => "Sign in to view fleet stats",
-            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "You're offline — showing the last cached fleet stats",
-            _ => "Couldn't load fleet stats",
+            RepositoryErrorKind.Unauthorized => "Sign in to view media history",
+            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "You're offline — showing the last cached media history",
+            _ => "Couldn't load media history",
         };
 
         return _localizer.GetString(key, fallback);

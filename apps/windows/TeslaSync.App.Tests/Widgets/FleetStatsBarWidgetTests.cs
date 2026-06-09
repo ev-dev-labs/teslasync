@@ -3,7 +3,7 @@ using System.Text.Json;
 using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Notifications;
 using TeslaSync.App.Core.Units;
-using TeslaSync.App.DashboardWidgets;
+using TeslaSync.App.DashboardWidgets.FleetStatsBar;
 using Xunit;
 
 namespace TeslaSync.App.Tests.Widgets;
