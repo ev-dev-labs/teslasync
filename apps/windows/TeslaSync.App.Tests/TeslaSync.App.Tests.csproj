@@ -154,6 +154,14 @@
     linked WinUI-free source is preserved as the path-sorted deduplicated union, plus the new
     MonthlyCostChart.Model.cs link.
   -->
+    P2/W2-0001 - headless unit tests for the UI-primitive logic models. Targets plain net10.0 so
+    dotnet test runs without a WinUI/UI-thread host. The WinUI-free logic
+    (.Model / .Source / .ViewModel / .Presentation.cs) of each app surface is linked in below so the
+    adapter + per-state projections are verified row-for-row; the WinUI views themselves are exercised
+    by the app build. Keep this file as ONE Project root with a single Compile ItemGroup: a chain of
+    auto-integration merges has repeatedly re-concatenated it into several Project roots plus orphaned
+    ItemGroups that failed XML load with MSB4025. The Compile ItemGroup below is the deduplicated union.
+  -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -211,6 +219,7 @@
   <!-- Linked WinUI-free Model / Source / ViewModel sources, deduplicated and sorted by path. -->
   <!-- Linked WinUI-free sources from the app project (deduplicated union). -->
   <!-- Linked UI-thread-free sources from the WinUI app project (path-sorted deduplicated union). -->
+  <!-- Linked WinUI-free feature-view / dashboard-widget / shared logic (deduplicated union). -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -612,6 +621,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.Model.cs" Link="FeatureViews\ResultPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.Source.cs" Link="FeatureViews\ResultPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.ViewModel.cs" Link="FeatureViews\ResultPanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.Model.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.Source.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.ViewModel.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Model.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Source.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.ViewModel.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.ViewModel.cs" />
