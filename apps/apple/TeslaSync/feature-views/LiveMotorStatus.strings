@@ -1,36 +1,40 @@
 /*
   LiveMotorStatus.strings
-  TeslaSync — P4 feature view · 0170 · LiveMotorStatus (Apple)
+  TeslaSync — P4 feature view · 0157 · LiveMotorStatus (Apple)
 
   The P1/S10 i18n catalog contribution for this surface. Every key the native `LiveMotorStatus`
-  resolves (table "LiveMotorStatus") lives here with its web English value. These entries fold
-  into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
-  per-surface table so each parallel surface prompt owns its own strings without editing the
+  resolves (table "LiveMotorStatus") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table so each parallel surface prompt owns its own strings without editing the
   shared catalog.
 
-  The first group holds the keys extracted verbatim from the web source
-  (features/driving/components/driving-dynamics/LiveMotorStatus.tsx) — the `dynamics.*` gauge
-  labels, the shift-state copy, and the empty message. The remaining keys back the native-only
-  chrome (freshness chip, loading + error + retry copy).
+  The first group is the exact set of keys extracted from the web source
+  (features/driving/components/drivetrain-health/LiveMotorStatus.tsx). The second group backs the
+  native chrome — the freshness chip, the loading-grid a11y label, and the failure copy — so the
+  Swift sources hold no English prose literals.
 */
 
 /* --- Keys from the web source (parity) --- */
-"dynamics.liveMotor" = "Live Motor Status";
-"dynamics.torque" = "Torque";
-"dynamics.rpmFront" = "Front RPM";
-"dynamics.motorTemp" = "Motor";
-"dynamics.awaiting" = "Awaiting data";
-"dynamics.unknown" = "Unknown";
-"dynamics.shiftState" = "Shift State";
-"dynamics.noLiveMotor" = "Awaiting live motor data";
+"drivetrain.liveMotor" = "Live Motor Status";
+"drivetrain.shiftState" = "Shift State";
+"drivetrain.power" = "Power";
+"drivetrain.regen" = "Regen";
+"drivetrain.source" = "Source";
+"drivetrain.rpmFront" = "Front Motor RPM";
+"drivetrain.rpmRear" = "Rear Motor RPM";
+"drivetrain.torqueFront" = "Front Torque";
+"drivetrain.torqueRear" = "Rear Torque";
+"drivetrain.motorTempFront" = "Front Motor Temp";
+"drivetrain.motorTempRear" = "Rear Motor Temp";
+"drivetrain.inverterTemp" = "Inverter Temp";
+"drivetrain.batteryTemp" = "Battery Temp";
+"drivetrain.isolationResistance" = "HV Isolation";
+"drivetrain.noLiveMotor" = "No live motor telemetry yet";
 
-/* --- Native chrome: freshness chip --- */
-"dynamics.motor.live" = "Live";
-"dynamics.motor.stale" = "Stale";
-"dynamics.motor.offline" = "Offline";
-"dynamics.motor.updating" = "Updating";
-
-/* --- Native chrome: states --- */
-"dynamics.motor.loading" = "Loading live motor data";
-"dynamics.motor.errorTitle" = "Couldn't load motor status";
-"dynamics.motor.retry" = "Retry";
+/* --- Native chrome: freshness chip + loading a11y + failure copy --- */
+"drivetrain.motor.stale" = "Stale";
+"drivetrain.motor.offline" = "Offline";
+"drivetrain.motor.updating" = "Updating";
+"drivetrain.motor.loading" = "Loading live motor status";
+"drivetrain.motor.errorTitle" = "Couldn't load motor status";
+"drivetrain.motor.retry" = "Retry";

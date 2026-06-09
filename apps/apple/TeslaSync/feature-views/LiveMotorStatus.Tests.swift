@@ -1,201 +1,189 @@
 //
 //  LiveMotorStatus.Tests.swift
-//  TeslaSync — P4 feature view · 0170 · LiveMotorStatus (Apple)
+//  TeslaSync — P4 feature view · 0157 · LiveMotorStatus (Apple)
 //
-//  Unit + UI coverage for the LiveMotorStatus surface: the adapter projection (web-parity
-//  formatting, Celsius→Fahrenheit, gauge clamp/fill/decimals, captions, the "Awaiting data"
-//  branch, shift-badge tone/text), the state-holder phase/refresh/telemetry seam, the VoiceOver
-//  summary, and a per-state view render smoke. Pure-logic tests use `InMemoryLiveMotorSource`;
-//  the view tests render via `ImageRenderer`.
+//  Unit coverage for the drivetrain-health LiveMotorStatus surface:
+//    • Adapter — the number / int / unit / temperature formatters (ports of numberFormat.ts
+//      `fmtNumber` / `fmtInt`), the four status cards + nine inline metrics (order / ids / labels /
+//      values / icons / accents incl. nil → em-dash), and the HV-isolation value guard + 4-band
+//      colour ladder.
+//    • State holder — `LiveMotorStatusModel.resolvePhase` across loading / empty / loaded / failed,
+//      the model wiring, the P1/S11 `view.opened` telemetry, and the stale auto-refresh transition.
+//    • Accessibility — the VoiceOver tile-label + combined-summary content.
+//    • View — an `ImageRenderer` render smoke for every state (content / partial / empty / loading /
+//      error / stale / offline).
+//
+//  These run in the TeslaSync(/-macOS) XCTest targets. They have no network and no real store: the
+//  model is driven by `InMemoryLiveMotorSource`, and the locale is injected for determinism.
 //
 
 import SwiftUI
 import XCTest
 @testable import TeslaSync
 
-// MARK: - Adapter: formatting + temperature conversion (web parity)
+private let enUS = Locale(identifier: "en_US")
 
-@MainActor final class LiveMotorFormatTests: XCTestCase {
-    func testNumberGroupsAndFixesFractionDigits() {
-        XCTAssertEqual(LiveMotorFormat.number(1234.0, decimals: 1), "1,234.0")
-        XCTAssertEqual(LiveMotorFormat.number(1234.567, decimals: 2), "1,234.57")
-        XCTAssertEqual(LiveMotorFormat.number(5230, decimals: 0), "5,230")
+private func sampleUnits(_ temperature: LiveMotorTemperatureUnit = .celsius) -> LiveMotorUnitPrefs {
+    LiveMotorUnitPrefs(temperature: temperature, localeIdentifier: "en_US", precision: 2)
+}
+
+private func sampleReading() -> LiveMotorReading {
+    LiveMotorReading(
+        shiftState: "D",
+        source: "telemetry",
+        powerKW: 142.6,
+        regenKW: 12.4,
+        rpmFront: 5230,
+        rpmRear: 5280,
+        torqueFrontNm: 210.5,
+        torqueRearNm: 198,
+        motorTempCFront: 49,
+        motorTempCRear: 52,
+        inverterTempC: 41,
+        batteryTempC: 28,
+        isolationResistanceKOhm: 650
+    )
+}
+
+// MARK: - Number / unit formatting (port of numberFormat.ts fmtNumber / fmtInt)
+
+final class LiveMotorFormatTests: XCTestCase {
+    func testNumberGroupsAndFixesPrecision() {
+        XCTAssertEqual(LiveMotorFormat.number(1234.5, decimals: 2, locale: enUS), "1,234.50")
+        XCTAssertEqual(LiveMotorFormat.number(142.6, decimals: 2, locale: enUS), "142.60")
+        XCTAssertEqual(LiveMotorFormat.number(0, decimals: 2, locale: enUS), "0.00")
     }
 
-    func testNumberRoundsHalfAwayFromZero() {
-        XCTAssertEqual(LiveMotorFormat.number(0.5, decimals: 0), "1")
-        XCTAssertEqual(LiveMotorFormat.number(124.16, decimals: 1), "124.2")
+    func testNumberCoercesNonFiniteToZero() {
+        XCTAssertEqual(LiveMotorFormat.number(.nan, decimals: 2, locale: enUS), "0.00")
+        XCTAssertEqual(LiveMotorFormat.number(.infinity, decimals: 2, locale: enUS), "0.00")
+        XCTAssertEqual(LiveMotorFormat.number(-.infinity, decimals: 2, locale: enUS), "0.00")
     }
 
-    func testSafeNumberCollapsesNonFinite() {
-        XCTAssertEqual(LiveMotorFormat.safeNumber(.nan), 0)
-        XCTAssertEqual(LiveMotorFormat.safeNumber(.infinity), 0)
-        XCTAssertEqual(LiveMotorFormat.safeNumber(42.5), 42.5)
+    func testIntIsGroupedZeroPrecision() {
+        XCTAssertEqual(LiveMotorFormat.int(5230, locale: enUS), "5,230")
+        XCTAssertEqual(LiveMotorFormat.withUnit(142.6, "kW", decimals: 2, locale: enUS), "142.60 kW")
     }
 
-    func testTemperatureConversionMatchesWeb() {
-        XCTAssertEqual(convertLiveMotorTempFromSI(51.2, to: .celsius), 51.2, accuracy: 1e-9)
-        XCTAssertEqual(convertLiveMotorTempFromSI(0, to: .fahrenheit), 32, accuracy: 1e-9)
-        XCTAssertEqual(convertLiveMotorTempFromSI(51.2, to: .fahrenheit), 124.16, accuracy: 1e-9)
+    func testTemperatureCelsiusIdentityAndFahrenheitConvert() {
+        XCTAssertEqual(LiveMotorFormat.temperature(celsius: 49, unit: .celsius, decimals: 2, locale: enUS), "49.00 °C")
+        // 49°C → 120.2°F (c * 9 / 5 + 32).
+        XCTAssertEqual(
+            LiveMotorFormat.temperature(celsius: 49, unit: .fahrenheit, decimals: 2, locale: enUS),
+            "120.20 °F"
+        )
     }
 
-    func testTemperatureUnitResolvesFromSymbol() {
-        XCTAssertEqual(LiveMotorTemperatureUnit.from(symbol: "°F"), .fahrenheit)
-        XCTAssertEqual(LiveMotorTemperatureUnit.from(symbol: "°C"), .celsius)
-        XCTAssertEqual(LiveMotorTemperatureUnit.from(symbol: "K"), .celsius)
+    func testTemperatureNeverDoublesDegreeSymbol() {
+        let value = LiveMotorFormat.temperature(celsius: 52, unit: .celsius, decimals: 2, locale: enUS)
+        XCTAssertEqual(value, "52.00 °C")
+        XCTAssertFalse(value.contains("°°"))
     }
 }
 
-// MARK: - Adapter: projector gauge math (web parity)
+// MARK: - Projector: status cards (web Grid 2/sm:4)
 
-@MainActor final class LiveMotorProjectorTests: XCTestCase {
-    private func gauge(_ id: String, in projection: LiveMotorProjection) -> MotorGaugeTile? {
-        projection.gauges.first { $0.id == id }
+final class LiveMotorProjectorCardTests: XCTestCase {
+    func testCardOrderIdsLabelsAndAccents() {
+        let cards = LiveMotorProjector.project(reading: sampleReading(), units: sampleUnits()).cards
+        XCTAssertEqual(cards.map(\.id), ["shiftState", "power", "regen", "source"])
+        XCTAssertEqual(cards.map(\.label), ["Shift State", "Power", "Regen", "Source"])
+        XCTAssertEqual(cards.map(\.accent), [.cyan, .power, .success, .primary])
     }
 
-    private func sample() -> MotorSnapshotInput {
-        MotorSnapshotInput(
-            torqueFrontNm: 184.5,
-            torqueRearNm: 312.0,
-            rpmFront: 5230,
-            motorTempCFront: 48.4,
-            motorTempCRear: 51.2,
-            shiftState: "D"
-        )
+    func testCardValuesFormatWebPipeline() {
+        let cards = LiveMotorProjector.project(reading: sampleReading(), units: sampleUnits()).cards
+        XCTAssertEqual(cards.map(\.value), ["D", "142.60 kW", "12.40 kW", "telemetry"])
     }
 
-    func testGaugeOrderAccentsAndUnits() {
-        let projection = LiveMotorProjector.project(motor: sample(), units: LiveMotorUnitPrefs())
-        XCTAssertEqual(projection.gauges.map(\.id), ["torque", "rpm-front", "motor-temp"])
-        XCTAssertEqual(projection.gauges.map(\.accent), [.torqueBlue, .rpmPurple, .tempAmber])
-        XCTAssertEqual(gauge("torque", in: projection)?.unit, "Nm")
-        XCTAssertEqual(gauge("rpm-front", in: projection)?.unit, "RPM")
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.unit, "°C")
+    func testNilFieldsRenderEmDash() {
+        let cards = LiveMotorProjector.project(reading: LiveMotorReading(), units: sampleUnits()).cards
+        XCTAssertEqual(cards.map(\.value), ["—", "—", "—", "—"])
     }
 
-    func testTorqueSumsBothAxlesAndFormatsCenterAndCaption() {
-        // torqueTotal = 184.5 + 312.0 = 496.5 (non-integer → global precision 2)
-        let projection = LiveMotorProjector.project(motor: sample(), units: LiveMotorUnitPrefs())
-        XCTAssertEqual(gauge("torque", in: projection)?.centerValue, "496.50")
-        XCTAssertEqual(gauge("torque", in: projection)?.caption, "496.50 Nm")
-        XCTAssertEqual(gauge("torque", in: projection)?.fraction ?? -1, 496.5 / 1000.0, accuracy: 1e-9)
-    }
-
-    func testRpmCenterIsIntegerAndCaptionHasNoDecimals() {
-        let projection = LiveMotorProjector.project(motor: sample(), units: LiveMotorUnitPrefs())
-        XCTAssertEqual(gauge("rpm-front", in: projection)?.centerValue, "5,230")
-        XCTAssertEqual(gauge("rpm-front", in: projection)?.caption, "5,230 RPM")
-        XCTAssertEqual(gauge("rpm-front", in: projection)?.fraction ?? -1, 5230.0 / 18000.0, accuracy: 1e-9)
-    }
-
-    func testMotorTempTakesAxleMaxInCelsius() {
-        // max(48.4, 51.2) = 51.2 °C; caption is 1-decimal, center uses global precision
-        let projection = LiveMotorProjector.project(motor: sample(), units: LiveMotorUnitPrefs())
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.centerValue, "51.20")
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.caption, "51.2°C")
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.fraction ?? -1, 51.2 / 200.0, accuracy: 1e-9)
-    }
-
-    func testMotorTempConvertsToFahrenheit() {
-        let units = LiveMotorUnitPrefs(temperature: .fahrenheit)
-        let projection = LiveMotorProjector.project(motor: sample(), units: units)
-        // 51.2 °C → 124.16 °F
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.unit, "°F")
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.centerValue, "124.16")
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.caption, "124.2°F")
-    }
-
-    func testMissingTemperatureRendersAwaitingCaption() {
-        let parked = MotorSnapshotInput(
-            torqueFrontNm: 0,
-            torqueRearNm: 0,
-            rpmFront: 0,
-            motorTempCFront: nil,
-            motorTempCRear: nil,
-            shiftState: "P"
-        )
-        let projection = LiveMotorProjector.project(motor: parked, units: LiveMotorUnitPrefs())
-        // motorTempC nil → display 0 → ring centre "0°C", caption the localized awaiting fallback
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.centerValue, "0")
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.caption, "Awaiting data")
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.fraction ?? -1, 0, accuracy: 1e-9)
-    }
-
-    func testSingleAxleTorqueAndTemperatureUseNilCoalescing() {
-        let oneAxle = MotorSnapshotInput(
-            torqueFrontNm: 120,
-            torqueRearNm: nil,
-            rpmFront: nil,
-            motorTempCFront: nil,
-            motorTempCRear: 40,
-            shiftState: nil
-        )
-        let projection = LiveMotorProjector.project(motor: oneAxle, units: LiveMotorUnitPrefs())
-        // torque = 120 + 0; rpm = 0; temp = max(-inf, 40) = 40
-        XCTAssertEqual(gauge("torque", in: projection)?.centerValue, "120")
-        XCTAssertEqual(gauge("rpm-front", in: projection)?.caption, "0 RPM")
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.caption, "40.0°C")
-    }
-
-    func testValuesClampToGaugeMax() {
-        let over = MotorSnapshotInput(
-            torqueFrontNm: 900,
-            torqueRearNm: 900,
-            rpmFront: 25000,
-            motorTempCFront: 260,
-            motorTempCRear: nil,
-            shiftState: "D"
-        )
-        let projection = LiveMotorProjector.project(motor: over, units: LiveMotorUnitPrefs())
-        // torque 1800 → clamp 1000 (full ring); caption keeps the raw total
-        XCTAssertEqual(gauge("torque", in: projection)?.centerValue, "1,000")
-        XCTAssertEqual(gauge("torque", in: projection)?.caption, "1,800.00 Nm")
-        XCTAssertEqual(gauge("torque", in: projection)?.fraction ?? -1, 1, accuracy: 1e-9)
-        // rpm 25000 → clamp 18000 (full ring)
-        XCTAssertEqual(gauge("rpm-front", in: projection)?.fraction ?? -1, 1, accuracy: 1e-9)
-        // temp 260 → clamp 200 (full ring)
-        XCTAssertEqual(gauge("motor-temp", in: projection)?.fraction ?? -1, 1, accuracy: 1e-9)
-    }
-
-    func testNonFiniteTorqueCollapsesToZero() {
-        let bad = MotorSnapshotInput(
-            torqueFrontNm: .nan,
-            torqueRearNm: .infinity,
-            rpmFront: .nan,
-            motorTempCFront: nil,
-            motorTempCRear: nil,
-            shiftState: nil
-        )
-        let projection = LiveMotorProjector.project(motor: bad, units: LiveMotorUnitPrefs())
-        XCTAssertEqual(gauge("torque", in: projection)?.centerValue, "0")
-        XCTAssertEqual(gauge("torque", in: projection)?.caption, "0.00 Nm")
-        XCTAssertEqual(gauge("torque", in: projection)?.fraction ?? -1, 0, accuracy: 1e-9)
-        XCTAssertEqual(gauge("rpm-front", in: projection)?.centerValue, "0")
-    }
-
-    func testPrecisionPreferenceFlowsIntoCaptions() {
-        let units = LiveMotorUnitPrefs(localeIdentifier: "en_US", precision: 0)
-        let projection = LiveMotorProjector.project(motor: sample(), units: units)
-        // torque caption uses the configured precision (0 → "497 Nm")
-        XCTAssertEqual(gauge("torque", in: projection)?.caption, "497 Nm")
-    }
-
-    func testShiftBadgeToneAndText() {
-        let drive = LiveMotorProjector.project(motor: sample(), units: LiveMotorUnitPrefs()).shift
-        XCTAssertTrue(drive.isDrive)
-        XCTAssertEqual(drive.displayText, "D")
-        let park = MotorShiftBadge(state: "P")
-        XCTAssertFalse(park.isDrive)
-        XCTAssertEqual(park.displayText, "P")
-        let unknown = MotorShiftBadge(state: nil)
-        XCTAssertFalse(unknown.isDrive)
-        XCTAssertEqual(unknown.displayText, "Unknown")
+    func testRegenZeroIsFormattedNotEmDash() {
+        // Web: regen_kw != null ? `${fmtNumber} kW` : '—' — a real 0 stays "0.00 kW".
+        let reading = LiveMotorReading(regenKW: 0)
+        let regen = LiveMotorProjector.project(reading: reading, units: sampleUnits()).cards[2]
+        XCTAssertEqual(regen.value, "0.00 kW")
     }
 }
 
-// MARK: - State holder: phases + refresh + telemetry
+// MARK: - Projector: inline metrics (web grid 2/sm:3/lg:4 of InlineMetric)
 
-@MainActor final class LiveMotorStatusModelTests: XCTestCase {
+final class LiveMotorProjectorMetricTests: XCTestCase {
+    func testMetricOrderAndIds() {
+        let metrics = LiveMotorProjector.project(reading: sampleReading(), units: sampleUnits()).metrics
+        XCTAssertEqual(metrics.map(\.id), [
+            "rpmFront", "rpmRear", "torqueFront", "torqueRear",
+            "motorTempFront", "motorTempRear", "inverterTemp", "batteryTemp", "isolation"
+        ])
+    }
+
+    func testMetricIconsAndAccents() {
+        let metrics = LiveMotorProjector.project(reading: sampleReading(), units: sampleUnits()).metrics
+        XCTAssertEqual(metrics.map(\.systemImage), [
+            "waveform.path.ecg", "waveform.path.ecg", "bolt.fill", "bolt.fill",
+            "thermometer.medium", "thermometer.medium", "thermometer.medium", "thermometer.medium", "shield.fill"
+        ])
+        XCTAssertEqual(metrics.map(\.accent), [
+            .cyan, .power, .cyan, .power, .temperature, .temperature, .warning, .success, .success
+        ])
+    }
+
+    func testRpmGroupedInteger() {
+        let metrics = LiveMotorProjector.project(reading: sampleReading(), units: sampleUnits()).metrics
+        XCTAssertEqual(metrics[0].value, "5,230 RPM")
+        XCTAssertEqual(metrics[1].value, "5,280 RPM")
+    }
+
+    func testTorqueAndTemperaturePrecision() {
+        let metrics = LiveMotorProjector.project(reading: sampleReading(), units: sampleUnits()).metrics
+        XCTAssertEqual(metrics[2].value, "210.50 Nm")
+        XCTAssertEqual(metrics[4].value, "49.00 °C")
+        XCTAssertEqual(metrics[6].value, "41.00 °C")
+        XCTAssertEqual(metrics[7].value, "28.00 °C")
+    }
+
+    func testFahrenheitConversionAppliesToEveryTemperature() {
+        let metrics = LiveMotorProjector.project(reading: sampleReading(), units: sampleUnits(.fahrenheit)).metrics
+        XCTAssertEqual(metrics[4].value, "120.20 °F")
+        XCTAssertEqual(metrics[5].value, "125.60 °F")
+    }
+
+    func testNilMetricsRenderEmDash() {
+        let metrics = LiveMotorProjector.project(reading: LiveMotorReading(), units: sampleUnits()).metrics
+        XCTAssertEqual(Set(metrics.map(\.value)), ["—"])
+    }
+}
+
+// MARK: - HV isolation value guard + 4-band ladder (web Shield)
+
+final class LiveMotorIsolationTests: XCTestCase {
+    func testValueGuard() {
+        XCTAssertEqual(LiveMotorIsolation.value(forKOhm: nil, decimals: 2, locale: enUS), "—")
+        XCTAssertEqual(LiveMotorIsolation.value(forKOhm: 0, decimals: 2, locale: enUS), "—")
+        XCTAssertEqual(LiveMotorIsolation.value(forKOhm: -5, decimals: 2, locale: enUS), "—")
+        XCTAssertEqual(LiveMotorIsolation.value(forKOhm: 650, decimals: 2, locale: enUS), "650.00 kΩ")
+    }
+
+    func testColourLadder() {
+        XCTAssertEqual(LiveMotorIsolation.accent(forKOhm: nil), .muted)
+        XCTAssertEqual(LiveMotorIsolation.accent(forKOhm: 0), .muted)
+        XCTAssertEqual(LiveMotorIsolation.accent(forKOhm: -5), .muted)
+        XCTAssertEqual(LiveMotorIsolation.accent(forKOhm: 80), .temperature)
+        XCTAssertEqual(LiveMotorIsolation.accent(forKOhm: 99.9), .temperature)
+        XCTAssertEqual(LiveMotorIsolation.accent(forKOhm: 100), .warning)
+        XCTAssertEqual(LiveMotorIsolation.accent(forKOhm: 499.9), .warning)
+        XCTAssertEqual(LiveMotorIsolation.accent(forKOhm: 500), .success)
+        XCTAssertEqual(LiveMotorIsolation.accent(forKOhm: 650), .success)
+    }
+}
+
+// MARK: - State holder: phase, wiring, telemetry, freshness
+
+@MainActor
+final class LiveMotorStatusModelTests: XCTestCase {
     private func makeModel(
         _ update: LiveMotorUpdate,
         telemetry: LiveMotorTelemetry = OSLogLiveMotorTelemetry()
@@ -205,187 +193,169 @@ import XCTest
         return (model, source)
     }
 
-    private func sample() -> MotorSnapshotInput {
-        MotorSnapshotInput(torqueFrontNm: 100, torqueRearNm: 120, rpmFront: 4000, motorTempCFront: 40, shiftState: "D")
+    private var dataUpdate: LiveMotorUpdate {
+        LiveMotorUpdate(status: .loaded, reading: sampleReading())
     }
 
     func testResolvePhaseMatrix() {
         XCTAssertEqual(LiveMotorStatusModel.resolvePhase(status: .loading, hasData: false), .loading)
         XCTAssertEqual(LiveMotorStatusModel.resolvePhase(status: .loading, hasData: true), .content)
         XCTAssertEqual(LiveMotorStatusModel.resolvePhase(status: .empty, hasData: false), .empty)
-        XCTAssertEqual(LiveMotorStatusModel.resolvePhase(status: .loaded, hasData: false), .empty)
         XCTAssertEqual(LiveMotorStatusModel.resolvePhase(status: .loaded, hasData: true), .content)
-        XCTAssertEqual(LiveMotorStatusModel.resolvePhase(status: .failed("e"), hasData: false), .error("e"))
-        XCTAssertEqual(LiveMotorStatusModel.resolvePhase(status: .failed("e"), hasData: true), .content)
+        XCTAssertEqual(LiveMotorStatusModel.resolvePhase(status: .loaded, hasData: false), .empty)
+        XCTAssertEqual(LiveMotorStatusModel.resolvePhase(status: .failed("x"), hasData: false), .error("x"))
+        XCTAssertEqual(LiveMotorStatusModel.resolvePhase(status: .failed("x"), hasData: true), .content)
     }
 
-    func testInitialContentProjectsGaugesAndShift() {
-        let (model, _) = makeModel(LiveMotorUpdate(status: .loaded, motor: sample()))
-        model.start()
-        XCTAssertEqual(model.phase, .content)
-        XCTAssertEqual(model.projection?.gauges.count, 3)
-        XCTAssertEqual(model.projection?.shift.displayText, "D")
-    }
-
-    func testEmptyAndLoadingAndErrorPhases() {
-        let (empty, _) = makeModel(LiveMotorUpdate(status: .empty, motor: nil))
-        empty.start()
-        XCTAssertEqual(empty.phase, .empty)
-        let (loading, _) = makeModel(LiveMotorUpdate(status: .loading))
-        loading.start()
-        XCTAssertEqual(loading.phase, .loading)
-        let (failed, _) = makeModel(LiveMotorUpdate(status: .failed("boom")))
-        failed.start()
-        XCTAssertEqual(failed.phase, .error("boom"))
-    }
-
-    func testCachedReadingsStayContentWhileFailing() {
-        let (model, source) = makeModel(LiveMotorUpdate(status: .loaded, motor: sample()))
-        model.start()
-        source.push(LiveMotorUpdate(status: .failed("net"), connection: .offline, motor: sample()))
-        XCTAssertEqual(model.phase, .content)
-        XCTAssertEqual(model.connection, .offline)
-    }
-
-    func testUnitsAndFreshnessTrackUpdates() {
-        let (model, source) = makeModel(LiveMotorUpdate(status: .loading))
-        model.start()
-        source.push(
-            LiveMotorUpdate(
-                status: .loaded,
-                connection: .stale,
-                isFetching: true,
-                motor: sample(),
-                units: LiveMotorUnitPrefs(temperature: .fahrenheit),
-                updatedAt: Date()
-            )
-        )
-        XCTAssertEqual(model.units.temperature, .fahrenheit)
-        XCTAssertEqual(model.connection, .stale)
-        XCTAssertTrue(model.isFetching)
-        XCTAssertNotNil(model.updatedAt)
-    }
-
-    func testRefreshDelegates() {
-        let (model, source) = makeModel(LiveMotorUpdate(status: .loaded, motor: sample()))
-        model.start()
-        model.refresh()
-        model.refresh()
-        XCTAssertEqual(source.refreshCount, 2)
-    }
-
-    func testStaleAutoRefreshesOnceUntilLiveAgain() {
-        let (model, source) = makeModel(LiveMotorUpdate(status: .loaded, motor: sample()))
-        model.start()
-        XCTAssertEqual(source.refreshCount, 0)
-        // first stale snapshot → exactly one auto-refresh
-        source.push(LiveMotorUpdate(status: .loaded, connection: .stale, motor: sample()))
-        XCTAssertEqual(source.refreshCount, 1)
-        // still stale → guarded, no repeat
-        source.push(LiveMotorUpdate(status: .loaded, connection: .stale, motor: sample()))
-        XCTAssertEqual(source.refreshCount, 1)
-        // back to live resets the guard, next stale fires once more
-        source.push(LiveMotorUpdate(status: .loaded, connection: .live, motor: sample()))
-        source.push(LiveMotorUpdate(status: .loaded, connection: .stale, motor: sample()))
-        XCTAssertEqual(source.refreshCount, 2)
-    }
-
-    func testAutoRefreshIfStaleGuardsFetching() {
-        let (model, source) = makeModel(LiveMotorUpdate(status: .loaded, motor: sample()))
-        model.start()
-        // live → no refresh
-        model.autoRefreshIfStale()
-        XCTAssertEqual(source.refreshCount, 0)
-        // stale + fetching → guarded
-        source.push(LiveMotorUpdate(status: .loaded, connection: .stale, isFetching: true, motor: sample()))
-        let countAfterStaleFetching = source.refreshCount
-        model.autoRefreshIfStale()
-        XCTAssertEqual(source.refreshCount, countAfterStaleFetching)
-    }
-
-    func testStartEmitsViewOpenedOnce() {
+    func testStartAppliesInitialAndEmitsTelemetryOnce() {
         let spy = SpyLiveMotorTelemetry()
-        let (model, source) = makeModel(LiveMotorUpdate(status: .loading), telemetry: spy)
+        let (model, source) = makeModel(dataUpdate, telemetry: spy)
         model.start()
         model.start()
+        XCTAssertEqual(model.phase, .content)
+        XCTAssertEqual(model.projection?.cards.count, 4)
         XCTAssertEqual(spy.surfaces, [LiveMotorStatusSurface.slug])
         XCTAssertEqual(source.startCount, 1)
     }
+
+    func testInitialLoadingProjectsLoading() {
+        let (model, _) = makeModel(LiveMotorUpdate(status: .loading))
+        model.start()
+        XCTAssertEqual(model.phase, .loading)
+        XCTAssertNil(model.projection)
+    }
+
+    func testPushUpdatesProjection() {
+        let (model, source) = makeModel(LiveMotorUpdate(status: .loading))
+        model.start()
+        XCTAssertEqual(model.phase, .loading)
+        source.push(dataUpdate)
+        XCTAssertEqual(model.phase, .content)
+        XCTAssertEqual(model.projection?.metrics.count, 9)
+    }
+
+    func testEmptyPushProjectsEmpty() {
+        let (model, source) = makeModel(LiveMotorUpdate(status: .loading))
+        model.start()
+        source.push(LiveMotorUpdate(status: .empty))
+        XCTAssertEqual(model.phase, .empty)
+    }
+
+    func testFailedWithCachedReadingStaysContent() {
+        let (model, source) = makeModel(dataUpdate)
+        model.start()
+        source.push(LiveMotorUpdate(status: .failed("boom"), reading: sampleReading()))
+        XCTAssertEqual(model.phase, .content)
+    }
+
+    func testStaleTransitionAutoRefreshesOnce() {
+        let (model, source) = makeModel(dataUpdate)
+        model.start()
+        XCTAssertEqual(model.connection, .live)
+        XCTAssertEqual(source.refreshCount, 0)
+        source.push(LiveMotorUpdate(status: .loaded, connection: .stale, reading: sampleReading()))
+        XCTAssertEqual(model.connection, .stale)
+        XCTAssertEqual(source.refreshCount, 1)
+        source.push(LiveMotorUpdate(status: .loaded, connection: .stale, reading: sampleReading()))
+        XCTAssertEqual(source.refreshCount, 1)
+    }
+
+    func testLiveThenStaleReArmsAutoRefresh() {
+        let (model, source) = makeModel(dataUpdate)
+        model.start()
+        source.push(LiveMotorUpdate(status: .loaded, connection: .stale, reading: sampleReading()))
+        XCTAssertEqual(source.refreshCount, 1)
+        source.push(LiveMotorUpdate(status: .loaded, connection: .live, reading: sampleReading()))
+        XCTAssertEqual(model.connection, .live)
+        source.push(LiveMotorUpdate(status: .loaded, connection: .stale, reading: sampleReading()))
+        XCTAssertEqual(source.refreshCount, 2)
+    }
+
+    func testOfflineKeepsCachedReadingWithoutAutoRefresh() {
+        let (model, source) = makeModel(dataUpdate)
+        model.start()
+        source.push(LiveMotorUpdate(status: .loaded, connection: .offline, reading: sampleReading()))
+        XCTAssertEqual(model.connection, .offline)
+        XCTAssertEqual(model.phase, .content)
+        XCTAssertEqual(source.refreshCount, 0)
+    }
+
+    func testManualRefreshAndStopReArm() {
+        let (model, source) = makeModel(dataUpdate)
+        model.start()
+        model.refresh()
+        XCTAssertEqual(source.refreshCount, 1)
+        model.stop()
+        XCTAssertEqual(source.stopCount, 1)
+        model.start()
+        XCTAssertEqual(source.startCount, 2)
+    }
+
+    func testSurfaceSlug() {
+        XCTAssertEqual(LiveMotorStatus.surfaceSlug, "LiveMotorStatus")
+    }
 }
 
-// MARK: - Accessibility summary
+// MARK: - Accessibility summary content
 
-@MainActor final class LiveMotorAccessibilityTests: XCTestCase {
-    func testSummaryIncludesEveryGaugeAndShift() {
-        let motor = MotorSnapshotInput(
-            torqueFrontNm: 184.5,
-            torqueRearNm: 312.0,
-            rpmFront: 5230,
-            motorTempCFront: 48.4,
-            motorTempCRear: 51.2,
-            shiftState: "D"
-        )
-        let projection = LiveMotorProjector.project(motor: motor, units: LiveMotorUnitPrefs())
-        let summary = LiveMotorAccessibility.summary(for: projection)
-        XCTAssertTrue(summary.contains("Torque 496.50 Nm"))
-        XCTAssertTrue(summary.contains("Front RPM 5,230 RPM"))
-        XCTAssertTrue(summary.contains("Motor 51.2°C"))
+final class LiveMotorAccessibilityTests: XCTestCase {
+    func testJoinFiltersEmptyAndTileJoinsLabelValue() {
+        XCTAssertEqual(LiveMotorAccessibility.join(["Power", "", "142.60 kW"]), "Power, 142.60 kW")
+        XCTAssertEqual(LiveMotorAccessibility.tile("HV Isolation", "650.00 kΩ"), "HV Isolation, 650.00 kΩ")
+    }
+
+    func testProjectionSummaryListsCardsAndMetrics() {
+        let summary = LiveMotorProjector.project(reading: sampleReading(), units: sampleUnits()).accessibilitySummary
         XCTAssertTrue(summary.contains("Shift State D"))
+        XCTAssertTrue(summary.contains("Power 142.60 kW"))
+        XCTAssertTrue(summary.contains("Front Motor RPM 5,230 RPM"))
+        XCTAssertTrue(summary.contains("HV Isolation 650.00 kΩ"))
     }
 }
 
-// MARK: - View: per-state render smoke (every state materializes)
+// MARK: - View render smoke (every state builds + renders)
 
-#if canImport(UIKit) || canImport(AppKit)
-    @MainActor final class LiveMotorStatusViewStateTests: XCTestCase {
-        private func renders(_ update: LiveMotorUpdate) -> Bool {
-            let source = InMemoryLiveMotorSource(initial: update)
-            let model = LiveMotorStatusModel(source: source)
-            model.start()
-            let renderer = ImageRenderer(content: LiveMotorStatus(model: model).frame(width: 390, height: 320))
-            #if canImport(UIKit)
-                return renderer.uiImage != nil
-            #else
-                return renderer.nsImage != nil
-            #endif
-        }
-
-        private func sample() -> MotorSnapshotInput {
-            MotorSnapshotInput(
-                torqueFrontNm: 184.5,
-                torqueRearNm: 312.0,
-                rpmFront: 5230,
-                motorTempCFront: 48.4,
-                motorTempCRear: 51.2,
-                shiftState: "D"
-            )
-        }
-
-        func testContentRenders() {
-            XCTAssertTrue(renders(LiveMotorUpdate(status: .loaded, motor: sample())))
-        }
-
-        func testEmptyRenders() {
-            XCTAssertTrue(renders(LiveMotorUpdate(status: .empty, motor: nil)))
-        }
-
-        func testLoadingRenders() {
-            XCTAssertTrue(renders(LiveMotorUpdate(status: .loading)))
-        }
-
-        func testErrorRenders() {
-            XCTAssertTrue(renders(LiveMotorUpdate(status: .failed("offline"))))
-        }
-
-        func testStaleRenders() {
-            XCTAssertTrue(renders(LiveMotorUpdate(status: .loaded, connection: .stale, motor: sample())))
-        }
-
-        func testOfflineRenders() {
-            XCTAssertTrue(renders(LiveMotorUpdate(status: .loaded, connection: .offline, motor: sample())))
-        }
+@MainActor
+final class LiveMotorStatusViewStateTests: XCTestCase {
+    private func renderSmoke(_ update: LiveMotorUpdate, file: StaticString = #filePath, line: UInt = #line) {
+        let source = InMemoryLiveMotorSource(initial: update)
+        let model = LiveMotorStatusModel(source: source)
+        model.start()
+        let renderer = ImageRenderer(content: LiveMotorStatus(model: model).frame(width: 360, height: 720))
+        XCTAssertNotNil(renderer.cgImage, file: file, line: line)
     }
-#endif
+
+    func testContentRenders() {
+        renderSmoke(LiveMotorUpdate(status: .loaded, reading: sampleReading()))
+    }
+
+    func testPartialRenders() {
+        renderSmoke(LiveMotorUpdate(
+            status: .loaded,
+            reading: LiveMotorReading(shiftState: "P", powerKW: 0, rpmFront: 0, isolationResistanceKOhm: 80)
+        ))
+    }
+
+    func testEmptyRenders() {
+        renderSmoke(LiveMotorUpdate(status: .empty))
+    }
+
+    func testLoadingRenders() {
+        renderSmoke(LiveMotorUpdate(status: .loading))
+    }
+
+    func testErrorRenders() {
+        renderSmoke(LiveMotorUpdate(status: .failed("Network request timed out")))
+    }
+
+    func testStaleRenders() {
+        renderSmoke(LiveMotorUpdate(status: .loaded, connection: .stale, reading: sampleReading()))
+    }
+
+    func testOfflineRenders() {
+        renderSmoke(LiveMotorUpdate(status: .loaded, connection: .offline, reading: sampleReading()))
+    }
+}
 
 // MARK: - Test doubles
 
