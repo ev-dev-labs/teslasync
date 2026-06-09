@@ -1,0 +1,75 @@
+/*
+  DrivingCoachSection.strings
+  TeslaSync — P4 feature view · 0167 · DrivingCoachSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `DrivingCoachSection`
+  resolves (table "DrivingCoachSection") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/driving/components/driving-dynamics/DrivingCoachSection.tsx). The remainder back the native
+  state envelope (freshness chip, connectivity banner, loading / error chrome), the dynamic enum labels, the
+  unit glyphs the web embeds inline, and the accessibility summaries, so the Swift sources hold no English
+  literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"dynamics.coach.title" = "Driving Coach";
+"dynamics.coach.overallScore" = "Driving Score";
+"dynamics.coach.drivesAnalyzed" = "%lld drives analyzed";
+"dynamics.coach.styleBreakdown" = "Style Breakdown";
+"dynamics.coach.noData" = "Drive more to see your style breakdown.";
+"dynamics.coach.style.efficient" = "efficient";
+"dynamics.coach.style.moderate" = "moderate";
+"dynamics.coach.style.aggressive" = "aggressive";
+"dynamics.coach.avgEfficiency" = "Avg Efficiency";
+"dynamics.coach.bestEfficiency" = "Best Efficiency";
+"dynamics.coach.weeklyTrend" = "Weekly Score Trend";
+"dynamics.coach.needWeeks" = "Need at least 2 weeks of data for trend analysis.";
+"dynamics.coach.patterns" = "Driving Patterns";
+"dynamics.coach.hardAccel" = "Hard Acceleration";
+"dynamics.coach.hardBrake" = "Hard Braking";
+"dynamics.coach.highway" = "Highway Driving";
+"dynamics.coach.shortTrips" = "Short Trips (<5 km)";
+"dynamics.coach.coldStarts" = "Cold Starts";
+"dynamics.coach.recommendations" = "Recommendations";
+"dynamics.coach.noRecs" = "Recommendations will appear after more drives.";
+"dynamics.coach.perDriveScores" = "Per-Drive Scores";
+"dynamics.coach.noDrives" = "No drives found.";
+"dynamics.coach.emptyHint" = "Drive data will appear after your first trip.";
+
+/* --- Per-drive table column headers (web `t('Date')` … bare-English keys) --- */
+"dynamics.coach.col.date" = "Date";
+"dynamics.coach.col.score" = "Score";
+"dynamics.coach.col.style" = "Style";
+"dynamics.coach.col.efficiency" = "Wh/km";
+"dynamics.coach.col.distance" = "Distance";
+
+/* --- Recommendation impact labels (web renders the raw `rec.impact`) --- */
+"dynamics.coach.impact.high" = "high";
+"dynamics.coach.impact.medium" = "medium";
+"dynamics.coach.impact.low" = "low";
+
+/* --- Embedded unit glyphs the web writes inline (template literals) --- */
+"dynamics.coach.kmUnit" = "km";
+"dynamics.coach.whKmUnit" = "Wh/km";
+"dynamics.coach.emDash" = "—";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"dynamics.coach.live" = "Live";
+"dynamics.coach.stale" = "Stale";
+"dynamics.coach.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"dynamics.coach.staleBanner" = "Reconnecting — coaching may be stale";
+"dynamics.coach.offlineBanner" = "Offline — showing the last loaded coaching";
+
+/* --- Loading / error chrome --- */
+"dynamics.coach.loading" = "Loading driving coach";
+"dynamics.coach.errorTitle" = "Couldn't load driving coach";
+"dynamics.coach.retry" = "Retry";
+
+/* --- Accessibility summaries --- */
+"dynamics.coach.weeklyTrend.aria" = "Weekly driving-score trend line chart";
+"dynamics.coach.weeks" = "weeks";
