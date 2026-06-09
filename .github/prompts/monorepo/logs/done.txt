@@ -281,3 +281,4 @@ p2-windows/feature-views/W-0078-WeekOverWeekSummary.prompt.md
 p2-windows/feature-views/W-0088-LoadingSkeleton.prompt.md
 p2-windows/feature-views/W-0089-SessionComparisonChart.prompt.md
 p2-windows/feature-views/W-0090-SessionCurveChart.prompt.md
+p2-windows/feature-views/W-0093-SummaryStatsGrid.prompt.md
