@@ -44,6 +44,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RecentDrivesListWidget\RecentDrivesListWidget.Model.cs" Link="Widgets\RecentDrivesListWidget\RecentDrivesListWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RecentDrivesListWidget\RecentDrivesListWidget.ViewModel.cs" Link="Widgets\RecentDrivesListWidget\RecentDrivesListWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RecentDrivesListWidget\RecentDrivesListWidget.Source.cs" Link="Widgets\RecentDrivesListWidget\RecentDrivesListWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SpeedHeatmapWidget\SpeedHeatmapWidget.Model.cs" Link="Widgets\SpeedHeatmapWidget\SpeedHeatmapWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SpeedHeatmapWidget\SpeedHeatmapWidget.ViewModel.cs" Link="Widgets\SpeedHeatmapWidget\SpeedHeatmapWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SpeedHeatmapWidget\SpeedHeatmapWidget.Source.cs" Link="Widgets\SpeedHeatmapWidget\SpeedHeatmapWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\GuardModeWidget\GuardModeWidget.Model.cs" Link="Widgets\GuardModeWidget\GuardModeWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\GuardModeWidget\GuardModeWidget.ViewModel.cs" Link="Widgets\GuardModeWidget\GuardModeWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\MediaHistoryWidget\MediaHistoryWidget.Model.cs" Link="Widgets\MediaHistoryWidget\MediaHistoryWidget.Model.cs" />
