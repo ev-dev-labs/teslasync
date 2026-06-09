@@ -1,0 +1,57 @@
+/*
+  ChargingScheduleWidget.strings
+  TeslaSync — P4 dashboard widget · 0023 · ChargingScheduleWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ChargingScheduleWidget resolves (table "ChargingScheduleWidget") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact key set extracted from the web source
+  (features/dashboard/widgets/ChargingScheduleWidget.tsx). The remaining keys back
+  the native-only chrome (freshness chip, refresh/retry/empty/error copy,
+  accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.chargingSchedule.title" = "Charging Schedule";
+"widget.chargingSchedule.modeStartAt" = "Start At";
+"widget.chargingSchedule.modeDepartBy" = "Depart By";
+"widget.chargingSchedule.modeOff" = "Off";
+"widget.chargingSchedule.modeUnknown" = "Unknown";
+"widget.chargingSchedule.startCharging" = "Start Charging";
+"widget.chargingSchedule.pending" = "Pending";
+"widget.chargingSchedule.departure" = "Departure";
+"widget.chargingSchedule.targetLimit" = "Target Limit";
+"widget.chargingSchedule.limit" = "Charge Limit";
+"widget.chargingSchedule.noData" = "No schedule data";
+"widget.chargingSchedule.noTimes" = "No scheduled times set";
+"widget.chargingSchedule.currentLevel" = "Current Level";
+"widget.chargingSchedule.status" = "Status";
+"widget.charging" = "Charging";
+"widget.notCharging" = "Not Charging";
+
+/* --- Registry metadata (registry/charging.ts) --- */
+"widget.chargingSchedule.description" = "Shows scheduled charge time, departure time, charge limit";
+
+/* --- Native chrome: freshness --- */
+"widget.chargingSchedule.live" = "Live";
+"widget.chargingSchedule.stale" = "Stale";
+"widget.chargingSchedule.offline" = "Offline";
+
+/* --- Native chrome: actions --- */
+"widget.chargingSchedule.refresh" = "Refresh";
+"widget.chargingSchedule.retry" = "Retry";
+"widget.chargingSchedule.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.chargingSchedule.loading" = "Loading charging schedule";
+"widget.chargingSchedule.errorTitle" = "Couldn't load schedule";
+"widget.chargingSchedule.emptyHint" = "Set a scheduled charge or departure time in your Tesla to see it here.";
+"widget.chargingSchedule.offlineBanner" = "Offline — showing last synced schedule";
+"widget.chargingSchedule.staleBanner" = "Reconnecting — schedule may be stale";
+
+/* --- Accessibility --- */
+"widget.chargingSchedule.openA11y" = "Open the charging page";
