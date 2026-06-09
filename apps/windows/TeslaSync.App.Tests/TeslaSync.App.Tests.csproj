@@ -66,6 +66,30 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Model.cs" Link="FeatureViews\XRayHeader\XRayHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Source.cs" Link="FeatureViews\XRayHeader\XRayHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
+  </ItemGroup>  <!--
+    P2 feature-views (0054 ChargingTab): the surface's UI-thread-free logic (the fleet-analytics charging
+    DTO/parse, the projection, the cache-then-network result mapper, the source seam, the registration copy,
+    the diagnostics, and the state-holder view-model) lives in the WinUI app project under
+    feature-views/ChargingTab/ but is WinUI-free by construction. Link those three source files in so this
+    headless (net10.0) test project verifies the adapter + per-state transitions without a UI host — the same
+    pattern used for the sibling feature-views above. The WinUI view itself (ChargingTab.cs) is exercised by the
+    app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Model.cs" Link="FeatureViews\ChargingTab\ChargingTab.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Source.cs" Link="FeatureViews\ChargingTab\ChargingTab.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.ViewModel.cs" Link="FeatureViews\ChargingTab\ChargingTab.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views (0019 RegexTester): the surface's UI-thread-free logic (the pure RegexEvaluator, the
+    registration + flag-option metadata, the diagnostics, and the state-holder view-model) lives in the WinUI
+    app project under feature-views/RegexTester/ but is WinUI-free by construction. Link the two source files
+    in so this headless (net10.0) test project verifies the adapter + per-state transitions without a UI host —
+    the same pattern used for the dashboard-widget logic. The WinUI view itself (RegexTester.cs) is exercised by
+    the app build.
+  -->
+  <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.Model.cs" Link="FeatureViews\RegexTester\RegexTester.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.ViewModel.cs" Link="FeatureViews\RegexTester\RegexTester.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.Model.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.Model.cs" />
@@ -324,6 +348,9 @@
       Source) are linked exactly once below in the dedicated ItemGroup so the headless test project builds
       without a UI host. A prior merge left a self-nested XML comment plus two duplicate Compile triples here
       (MSB4025 and NETSDK1022); the dead block was removed so the gate can build.
+      TirePressureVisualWidget's three WinUI-free sources are linked exactly once below (in their own
+      ItemGroup) so TirePressureVisualWidgetTests resolves its types. A prior merge left malformed XML
+      comments and duplicate Compile triples here; removed to restore a valid project and avoid NETSDK1022.
     -->
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" />
@@ -394,6 +421,11 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\DrivingTab\DrivingTab.Model.cs" Link="FeatureViews\DrivingTab\DrivingTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingBreakdownSlide.Model.cs" Link="FeatureViews\ChargingBreakdownSlide.Model.cs" />
+    TirePressureVisualWidget's three WinUI-free sources (linked exactly once) — restored so the headless
+    TirePressureVisualWidgetTests can resolve TirePressureLevel / TirePressureReading / the source +
+    view-model. A prior cleanup removed every triple (not just the NETSDK1022 duplicates), breaking the build.
+  -->
+  <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
@@ -729,6 +761,16 @@
     <Compile Include="..\TeslaSync.App\feature-views\UrlEncoder\UrlEncoder.ViewModel.cs" Link="FeatureViews\UrlEncoder\UrlEncoder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AuditPanel\AuditPanel.Model.cs" Link="FeatureViews\AuditPanel\AuditPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveHighlightSlide\DriveHighlightSlide.Model.cs" Link="FeatureViews\DriveHighlightSlide\DriveHighlightSlide.Model.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views (W-0025 VinDecoder): the VinDecoder surface's UI-thread-free logic (the pure VIN decode
+    + reference tables + field catalog model and the state-holder view-model) lives in the WinUI app project
+    but is WinUI-free by construction. Link those two source files in so the headless (net10.0) test project
+    verifies the decode adapter + per-state transitions row-for-row without a UI host. The WinUI view itself
+    (VinDecoder.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\VinDecoder\VinDecoder.Model.cs" Link="FeatureViews\VinDecoder\VinDecoder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VinDecoder\VinDecoder.ViewModel.cs" Link="FeatureViews\VinDecoder\VinDecoder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.Model.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.Model.cs" />
@@ -746,6 +788,37 @@
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Model.cs" Link="FeatureViews\ResponseViewer.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Source.cs" Link="FeatureViews\ResponseViewer.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.ViewModel.cs" Link="FeatureViews\ResponseViewer.ViewModel.cs" />
+  </ItemGroup>
+
+
+  <!--
+    P2 feature-views (0072 BatteryHealthSection): the weekly-digest Battery-Health surface's UI-thread-free
+    logic (the loading/empty/error/stale/offline/ready projection, the two battery pills + three mini-stats
+    formatting, the registration and the PII-safe diagnostics) is WinUI-free by construction. Link the Model
+    in so this headless (net10.0) test project verifies the adapter + per-state projection + a11y names +
+    diagnostics without a UI host. The WinUI view itself (BatteryHealthSection.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryHealthSection.Model.cs" Link="FeatureViews\BatteryHealthSection\BatteryHealthSection.Model.cs" />
+  </ItemGroup>
+
+  <!--
+    Recovered feature-view model links. A prior automated merge prepended a second, malformed <Project> root
+    to this file (two concatenated project documents — invalid XML — with lost comment wrappers and an
+    unescaped ampersand, failing project load with MSB4025). That corrupt duplicate is removed; the canonical
+    project is preserved, and the linked WinUI-free sources it uniquely carried (whose headless tests live in
+    this project) are relinked here exactly once so the suite still compiles.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryTab\BatteryTab.Model.cs" Link="FeatureViews\BatteryTab\BatteryTab.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingTab\DrivingTab.Model.cs" Link="FeatureViews\DrivingTab\DrivingTab.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingBreakdownSlide.Model.cs" Link="FeatureViews\ChargingBreakdownSlide.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\HeroGauges.Model.cs" Link="FeatureViews\HeroGauges\HeroGauges.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\HeroGauges.ViewModel.cs" Link="FeatureViews\HeroGauges\HeroGauges.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveHighlightSlide\DriveHighlightSlide.Model.cs" Link="FeatureViews\DriveHighlightSlide\DriveHighlightSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.Model.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.Source.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" />
@@ -984,7 +1057,6 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\SlideRenderer\SlideRenderer.Model.cs" Link="FeatureViews\SlideRenderer\SlideRenderer.Model.cs" />
   </ItemGroup>
-
 </Project>
 <Project Sdk="Microsoft.NET.Sdk">
 
