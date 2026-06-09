@@ -1,0 +1,46 @@
+/*
+  CommandHistoryWidget.strings
+  TeslaSync — P4 dashboard widget · 0029 · CommandHistoryWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `CommandHistoryWidget` resolves (table "CommandHistoryWidget") lives here with its
+  web English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/dashboard/widgets/CommandHistoryWidget.tsx): the widget title, the
+  compact status labels (Success / Failed / Pending), and the empty-feed message.
+  The remaining keys back the native-only chrome (registry description, freshness
+  chip, refresh/retry/empty/error copy, accessibility). The per-row status subtitle
+  echoes the raw backend `status` token verbatim (web `cmd.status`), so it is data —
+  not a localizable literal — exactly as on the web.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.commandHistory" = "Command History";
+"widget.commandSuccess" = "Success";
+"widget.commandFailed" = "Failed";
+"widget.commandPending" = "Pending";
+"widget.noCommands" = "No commands sent";
+
+/* --- Registry catalog (registry/commands.ts → "command-history") --- */
+"widget.commandHistory.description" = "Recent vehicle commands: lock, unlock, climate — with success/fail status";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.open" = "Open";
+"widget.commandLive" = "Live";
+"widget.commandStale" = "Stale";
+"widget.commandOffline" = "Offline";
+"widget.commandRefresh" = "Refresh";
+"widget.commandRetry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.commandLoading" = "Loading command history";
+"widget.commandEmptyHint" = "Commands you send to your vehicle will appear here.";
+"widget.commandErrorTitle" = "Couldn't load command history";
+"widget.commandOfflineBanner" = "Offline — showing last known commands";
+"widget.commandStaleBanner" = "Reconnecting — commands may be stale";
+
+/* --- Accessibility --- */
+"widget.commandOpenA11y" = "Open the commands page";
