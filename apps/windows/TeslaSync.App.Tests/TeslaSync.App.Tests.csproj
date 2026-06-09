@@ -348,6 +348,19 @@
       triple here inside malformed (nested) XML comments, which broke the project load (MSB4025) and would
       trip NETSDK1022 duplicate-Compile errors; removed so the test project parses and builds cleanly.
     -->
+      P2 feature-views/0055 DrivingPerformanceCards: the surface's UI-thread-free logic (the drive-analytics
+      snapshot parse + SI->display projection, the cache-then-network source seam, the result mapper, the
+      registration metadata and the PII-safe diagnostics, plus the state-holder view-model) lives in the WinUI
+      app project under feature-views/ but is WinUI-free by construction. Link those three source files in so
+      this headless (net10.0) test project verifies the adapter + per-state transitions + a11y names + the
+      view.opened diagnostics without a UI host. The WinUI view itself (DrivingPerformanceCards.cs) is
+      exercised by the app build. (This block also repaired a pre-existing committed merge artifact here: a
+      malformed nested comment that failed XML load with MSB4025, plus duplicate TirePressureVisualWidget
+      Compile triples; the canonical TirePressureVisualWidget triple stays linked once in its ItemGroup below.)
+    -->
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Model.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\RangeBarWidget\RangeBarWidget.Source.cs" Link="Widgets\RangeBarWidget\RangeBarWidget.Source.cs" />
