@@ -659,6 +659,20 @@
     Compile-linked below rather than project-referenced (the views themselves are exercised by the app
     build). Keep this as ONE project root with a single Compile ItemGroup: a chain of integration merges
     has repeatedly re-concatenated multiple roots plus duplicate items, failing XML load (MSB4025).
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    P2/W2-0001 - headless unit tests for the WinUI-free UI-thread-free logic models
+    (Model / Source / ViewModel / Presentation). Targets plain net10.0 so `dotnet test` runs
+    without a WinUI / UI-thread host; the WinUI app targets a WinUI TFM, so its UI-thread-free
+    sources are Compile-linked here rather than project-referenced (the views themselves are
+    exercised by the app build). The matching test classes live under this project and are
+    picked up by the SDK default-compile glob.
+
+    Keep this file as ONE Project root with a single Compile ItemGroup: a chain of integration
+    merges has repeatedly re-concatenated multiple Project roots plus duplicate Compile items,
+    failing XML load with MSB4025. The links below are the deduplicated, path-sorted union of
+    every previously linked source, plus the P2 feature-views/0133 VehicleHero surface.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -682,6 +696,7 @@
 
   <!-- Test fixtures copied next to the test assembly: SI golden vectors (units-golden.json), the MSIX
        package manifest, and the packaged widget Adaptive Card template. -->
+  <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -698,6 +713,7 @@
        (deduplicated, path-sorted union). The headless net10.0 test project verifies each adapter,
        projection and diagnostics without a UI host; the WinUI views are exercised by the app build. -->
   <!-- Linked WinUI-free Model / Source / ViewModel sources from the app project (deduplicated union). -->
+  <!-- Linked WinUI-free Model / Source / ViewModel sources (deduplicated, path-sorted union). -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -1011,6 +1027,10 @@
     <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.Source.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.ViewModel.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostPerKwhChart\CostPerKwhChart.Model.cs" Link="FeatureViews\CostPerKwhChart\CostPerKwhChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostPerKwhChart\CostPerKwhChart.Model.cs" Link="FeatureViews\CostPerKwhChart\CostPerKwhChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.Model.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.Source.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.ViewModel.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
@@ -1037,6 +1057,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentalImpact.ViewModel.cs" Link="FeatureViews\EnvironmentalImpact.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentSlide\EnvironmentSlide.Model.cs" Link="FeatureViews\EnvironmentSlide\EnvironmentSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FlagsTable\FlagsTable.Model.cs" Link="FeatureViews\FlagsTable\FlagsTable.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetStatsBar\FleetStatsBar.Model.cs" Link="FeatureViews\FleetStatsBar\FleetStatsBar.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetStatsBar\FleetStatsBar.Source.cs" Link="FeatureViews\FleetStatsBar\FleetStatsBar.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetStatsBar\FleetStatsBar.ViewModel.cs" Link="FeatureViews\FleetStatsBar\FleetStatsBar.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Model.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Source.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.ViewModel.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.ViewModel.cs" />
@@ -1063,6 +1086,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\JsonFormatter\JsonFormatter.ViewModel.cs" Link="FeatureViews\JsonFormatter\JsonFormatter.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.Model.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.ViewModel.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\KioskOverlay\KioskOverlay.Model.cs" Link="FeatureViews\KioskOverlay\KioskOverlay.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\KioskOverlay\KioskOverlay.ViewModel.cs" Link="FeatureViews\KioskOverlay\KioskOverlay.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Model.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Source.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.ViewModel.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.ViewModel.cs" />
@@ -1144,6 +1169,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.Model.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.ViewModel.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.Model.cs" Link="FeatureViews\VehicleHero\VehicleHero.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.Source.cs" Link="FeatureViews\VehicleHero\VehicleHero.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.ViewModel.cs" Link="FeatureViews\VehicleHero\VehicleHero.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VinDecoder\VinDecoder.Model.cs" Link="FeatureViews\VinDecoder\VinDecoder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VinDecoder\VinDecoder.ViewModel.cs" Link="FeatureViews\VinDecoder\VinDecoder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WeekOverWeekSummary\WeekOverWeekSummary.Model.cs" Link="FeatureViews\WeekOverWeekSummary\WeekOverWeekSummary.Model.cs" />
