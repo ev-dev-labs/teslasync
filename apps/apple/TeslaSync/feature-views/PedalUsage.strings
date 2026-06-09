@@ -1,0 +1,39 @@
+/*
+  PedalUsage.strings
+  TeslaSync — P4 feature view · 0173 · PedalUsage (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `PedalUsage` resolves
+  (table "PedalUsage") lives here with its web English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table so
+  each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/driving/components/driving-dynamics/PedalUsage.tsx) — the `dynamics.*` gauge labels +
+  captions, the brake-active copy, and the empty message. The remaining keys back the native-only
+  chrome (gauge "no reading" voice-over phrase, freshness chip, loading + error + retry copy).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"dynamics.pedalUsage" = "Pedal Usage";
+"dynamics.throttle" = "Throttle";
+"dynamics.throttlePosition" = "Throttle Position";
+"dynamics.brake" = "Brake";
+"dynamics.brakePedalPosition" = "Brake Pedal Position";
+"dynamics.brakeActive" = "Brake Active";
+"dynamics.brakeInactive" = "Brake Inactive";
+"dynamics.brakePedal" = "Brake Pedal Status";
+"dynamics.pedalNoData" = "No pedal telemetry received yet";
+
+/* --- Native chrome: gauge accessibility --- */
+"dynamics.pedal.noReading" = "No reading";
+
+/* --- Native chrome: freshness chip --- */
+"dynamics.pedal.live" = "Live";
+"dynamics.pedal.stale" = "Stale";
+"dynamics.pedal.offline" = "Offline";
+"dynamics.pedal.updating" = "Updating";
+
+/* --- Native chrome: states --- */
+"dynamics.pedal.loading" = "Loading pedal telemetry";
+"dynamics.pedal.errorTitle" = "Couldn't load pedal telemetry";
+"dynamics.pedal.retry" = "Retry";
