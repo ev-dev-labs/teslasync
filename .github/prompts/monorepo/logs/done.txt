@@ -202,3 +202,4 @@ p2-windows/dashboard-widgets/W-0103-TripSummaryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0102-TirePressureVisualWidget.prompt.md
 p2-windows/dashboard-widgets/W-0106-VehicleAccessWidget.prompt.md
 p2-windows/dashboard-widgets/W-0104-UptimeMonitorWidget.prompt.md
+p2-windows/dashboard-widgets/W-0105-VampireDrainWidget.prompt.md
