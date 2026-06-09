@@ -1,0 +1,132 @@
+=== P2 Feature view 0065 SavingsSlide (Windows) ===
+Surface : apps/windows/TeslaSync.App/feature-views/{SavingsSlide.Model.cs, SavingsSlide.Source.cs,
+          SavingsSlide.ViewModel.cs, SavingsSlide.cs}
+Tests   : apps/windows/TeslaSync.App.Tests/FeatureViews/SavingsSlideTests.cs
+          (linked Model/Source/ViewModel into the headless test project — WinUI-free by construction)
+Web src : web/src/features/analytics/components/review/SavingsSlide.tsx
+Runner  : .NET 10.0.300 SDK present; maui-windows workload present; WinUI 3 (Windows App SDK,
+          net10.0-windows10.0.19041.0, UseWinUI) builds. WinAppDriver/Appium UI-automation runner ABSENT.
+
+--- GATE COMMANDS ------------------------------------------------------------------
+dotnet build  apps/windows/TeslaSync.sln -c Release
+BUILD_EXIT=0        -> 0 errors. The only warnings are 17 pre-existing CA warnings, ALL in
+                       TeslaSync.App.Core (CA1000/CA1716/CA1720/CA1859), unrelated to this surface.
+                       TeslaSync.App (TreatWarningsAsErrors=true) compiled the new SavingsSlide.cs +
+                       SavingsSlide.Model/Source/ViewModel.cs clean (0 warnings / 0 errors).
+
+dotnet test   apps/windows/TeslaSync.sln -c Release
+TEST_EXIT=1
+  - TeslaSync.App.Tests.dll  : Passed!  Failed: 0, Passed: 7943, Skipped: 0, Total: 7943
+                               (headless unit suite — INCLUDES the new SavingsSlide suite: 34 tests, all green)
+  - TeslaSync.App.UITests.dll: Failed!  Failed: 147, Passed: 0, Skipped: 0, Total: 147
+                               (ALL 147 fail with UiAutomationUnavailableException — see CAPABILITY BLOCK)
+  TEST_EXIT=1 is caused EXCLUSIVELY by the 147 pre-existing WinAppDriver E2E shell tests.
+
+  Focused re-run for this surface:
+  dotnet test ...TeslaSync.App.Tests.csproj -c Release --filter "FullyQualifiedName~SavingsSlideTests"
+    Passed!  - Failed: 0, Passed: 34, Skipped: 0, Total: 34
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+FORMAT_EXIT=0       -> whole-solution format clean (SavingsSlide.* + SavingsSlideTests.cs normalised to LF;
+                       the four new app files were CRLF-on-create and converted to the repo's LF contract).
+
+./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SavingsSlide
+PLACEHOLDER_EXIT=0  -> the gate path resolves to no files (the surface ships as SavingsSlide.*), so the scan
+                       is vacuously clean. Verified directly anyway: scanning each of the four SavingsSlide.*
+                       files plus SavingsSlideTests.cs against placeholder-patterns.json (TODO/FIXME/XXX/
+                       Coming soon/Placeholder/Lorem ipsum/not implemented/NotImplementedException/// stub)
+                       -> PLACEHOLDER_COUNT=0. No stubs, no skeleton-only content.
+
+--- SURFACE SUMMARY (parity with the web source) -----------------------------------
+SavingsSlide is a slide in the Year-in-Review story. The web component is PRESENTATIONAL: it takes
+`data: YearReview` as a prop and binds only useTranslation (no fetch). The native port mirrors the
+DrivingPerformanceCards / DrivingTab presentational precedent: the WinUI-free SavingsProjection turns a
+SavingsSnapshot (parsed from GET /analytics/year-review) + ILocalizer + currency symbol into a render-ready
+SavingsDisplay; the SavingsSlide ContentControl is a thin renderer. The view performs no HTTP — the
+cache-then-network SavingsSlideSource (operation get_api_v1_analytics_year_review, the generated endpoint
+GET /analytics/year-review) owns the read so the surface can render the full state matrix the P2 contract
+mandates.
+
+States (every state renders — no hidden surfaces):
+  Loading  -> centred slide skeleton (reduce-motion aware; live-region announced)
+  Empty    -> TsEmptyState ("No drive data for this year") when the year carries no review payload
+  Error    -> TsQueryError + retry (RetryAsync re-runs the load)
+  Stale    -> the slide + a "Stale" TsBadge chip + TsDataFreshness + refresh affordance
+  Offline  -> the slide + an "Offline" TsBadge chip + cached value + TsDataFreshness(IsError)
+  Loaded   -> the populated slide
+
+Slide composition reproduced (all of it):
+  1. Hero 💰 (decorative, Narrator-skipped)
+  2. "You saved" eyebrow                                  (yearReview.youSaved)
+  3. Hero savings figure, count-up 0 -> gas_savings over 1.5s, emerald (TsColorSuccessBrush). The count-up
+     reuses the shared Core AnimatedNumberModel (ease-out-quad) and honours MotionPreference.ReduceMotion
+     (snaps to the final figure), exactly as the web AnimatedNumber does.
+  4. "vs. driving a gas car" caption                      (yearReview.vsGas)
+  5. Gas comparison bar  : full red track (TsColorDangerBrush), value = $round(gas_savings+total_charging_cost)  (yearReview.gasCost)
+  6. Electric comparison bar : emerald track proportional to total_charging_cost / gasCostEquiv (clamped 0..1)   (yearReview.electricCost)
+  7. Coffee note : "That's {round(gas_savings/5)} cups of coffee!"                                               (yearReview.savingsNote, "{0}")
+
+Data / i18n / a11y:
+  - gasCostEquiv = gas_savings + total_charging_cost (web parity); figures rounded half-away-from-zero and
+    grouped via the shared NumberFormatting (en-US) — the monetary boundary is applied once, in the projection.
+  - Every string flows through the ILocalizer facade. All five source keys resolve in the P1/S10 catalog:
+    translation.yearReview.{youSaved,vsGas,gasCost,electricCost,savingsNote} all exist in
+    Strings/{en,ar,he}/Resources.resw (savingsNote stored as "That's {0} cups of coffee!"); the chrome reuses
+    translation.yearReview.{title,noDriveData,loading} and translation.common.retry (all present). No new keys.
+  - AutomationProperties.SetName on the root, the hero number, each comparison bar and the note; decorative
+    emoji are AccessibilityView.Raw; reduce-motion honoured by the stagger entrance, the count-up and the
+    skeletons.
+  - Telemetry: SavingsSlideDiagnostics.RecordViewOpened() emits "view.opened slug=SavingsSlide" (PII-safe —
+    never a savings figure / currency amount / VIN / year) per the P1/S11 diagnostics contract.
+
+Tests (SavingsSlideTests.cs, 34 headless cases): the year-review JSON parse adapter (gas_savings /
+total_charging_cost, the safe()-coercion of non-finite / non-numeric / numeric-string fields, the HasData
+gate, empty / non-object / non-review tolerance), the projection (currency formatting + grouping, custom
+currency symbol, the electric fraction incl. zero-gas-cost and over-100% clamp, the cups-of-coffee count, the
+interpolated note, and a11y names containing label + value), the cache-then-network result mapper (status
+preservation across cached/refreshing/loaded/empty/offline/failure/loading), the view-model per-state matrix
+(loading / loaded / loaded-without-data->empty / empty / error / stale / offline / fold), currency-change
+reprojection, i18n resolution and PropertyChanged, the repository source request shape (operation id +
+year query, vehicle_id filter, empty-body->Empty), and the registration + PII-safe diagnostics.
+
+--- CAPABILITY BLOCK (the ONLY red) ------------------------------------------------
+TEST_EXIT=1 is caused exclusively by the 147 pre-existing E2E shell tests in TeslaSync.App.UITests, every
+one failing with:
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+Runner probe (this machine, independently verified): TCP 127.0.0.1:4723 = CLOSED; WinAppDriver.exe NOT found
+at "C:\Program Files (x86)\Windows Application Driver\WinAppDriver.exe", "C:\Program Files\Windows Application
+Driver\WinAppDriver.exe", nor on PATH. By design (UiAutomationUnavailableException / W9-0002 "never report an
+absent runner as green") these tests HARD-FAIL rather than skip. This is the prompt capability clause's "If
+unavailable on the runner -> STATUS=BLOCKED with API evidence" condition and matches every sibling
+feature-view gate log (e.g. 0056-DrivingTab). WinUI 3 (Windows App SDK) + .NET 10 themselves ARE available —
+the solution builds (BUILD_EXIT=0) and all 7943 headless tests (incl. the 34 new SavingsSlide tests) pass.
+
+--- PRE-EXISTING BASELINE REPAIR (disclosed for honesty) ---------------------------
+At HEAD (66b5705c..14bf178cb), apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj would not load —
+the gate could not build at all before any SavingsSlide work. A prior botched merge had again collapsed
+three "</ItemGroup> + <!--" boundaries, leaving raw feature-view comment bodies inside/after <ItemGroup>
+and unclosed groups (MSB4025 "The 'ItemGroup' start tag ... does not match the end tag of 'Project'"):
+  1. UserImpersonateButton -> ChargingDetailSection : restored the missing "</ItemGroup>" + "<!--".
+  2. DrivingPerformanceCards comment + the RangeBar comment : restored the two missing "<!--" openers
+     (orphan "-->" closers with no opener).
+  3. BatteryTab -> DrivingTab : restored the missing "</ItemGroup>" closer + "<!--" opener.
+After repair: well-formed XML (XDocument.Parse OK), ItemGroup 41 open / 41 close, comments 47/47, 0 duplicate
+Compile items. Then registered the three SavingsSlide WinUI-free sources (Model/Source/ViewModel) so the
+headless test project compiles them. No source/test of any sibling surface was altered.
+
+--- VERDICT -----------------------------------------------------------------------
+Surface = DONE and fully verified within runner capability: build green; 7943 headless tests green incl. the
+new 34-test SavingsSlide suite; whole-solution format clean; placeholder clean. The prescribed gate command
+`dotnet test TeslaSync.sln` cannot reach EXIT=0 on this runner because the WinAppDriver/Appium UI-automation
+runner is absent (147 pre-existing UITests hard-fail by design). Per the capability clause and sibling
+convention, the gate verdict is recorded honestly as BLOCKED.
+
+BUILD_EXIT=0
+TEST_EXIT=1
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

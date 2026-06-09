@@ -361,6 +361,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" />
+    <!--
       Source) are linked exactly once below in the dedicated ItemGroup so the headless test project builds
       without a UI host. A prior merge left a self-nested XML comment plus two duplicate Compile triples here
       (MSB4025 and NETSDK1022); the dead block was removed so the gate can build.
@@ -464,6 +465,9 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\BatteryTab\BatteryTab.Model.cs" Link="FeatureViews\BatteryTab\BatteryTab.Model.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0056 DrivingTab): the analytics Driving tab surface's UI-thread-free logic (the
     drive_analytics records, the loading/empty/error/stale/offline/ready projection, the seven chart-section
     series + the performance/temperature metric grids with their boundary unit conversions, the registration
@@ -1159,6 +1163,21 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Model.cs" Link="FeatureViews\XRayHeader\XRayHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Source.cs" Link="FeatureViews\XRayHeader\XRayHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0065 SavingsSlide: the Year-in-Review savings slide's UI-thread-free logic (the
+    year-review JSON parse + savings snapshot, the currency / electric-fraction / cups-of-coffee projection,
+    the cache-then-network result mapper, the repository source's /analytics/year-review request, the
+    registration + PII-safe diagnostics, and the state-holder view-model) lives in the WinUI app project under
+    feature-views/ but is WinUI-free by construction. Link the three source files in so this headless (net10.0)
+    test project verifies the adapter + per-state transitions + a11y names + the view.opened diagnostics
+    without a UI host. The WinUI view itself (SavingsSlide.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Model.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Source.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.ViewModel.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
