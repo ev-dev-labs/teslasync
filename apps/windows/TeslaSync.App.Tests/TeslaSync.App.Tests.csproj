@@ -7,6 +7,12 @@
     NOTE: this project links the WinUI-free *.Model.cs / *.Source.cs / *.ViewModel.cs files
     from TeslaSync.App so their logic is verified headlessly. Keep it as ONE <Project> root
     with a single Compile ItemGroup (the file was previously corrupted into multiple roots).
+  <!--
+    P2/W2-0001 - headless unit tests for the UI-primitive logic models.
+    Targets plain net10.0 so dotnet test runs without a WinUI/UI-thread host. The WinUI-free
+    logic (.Model/.Source/.ViewModel/.Presentation.cs) of each app surface is linked in below so
+    the adapter + per-state projections are verified row-for-row; the WinUI views themselves are
+    exercised by the app build.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -433,6 +439,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\SpeedTrendChart\SpeedTrendChart.Model.cs" Link="FeatureViews\SpeedTrendChart\SpeedTrendChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SpeedTrendChart\SpeedTrendChart.Source.cs" Link="FeatureViews\SpeedTrendChart\SpeedTrendChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SpeedTrendChart\SpeedTrendChart.ViewModel.cs" Link="FeatureViews\SpeedTrendChart\SpeedTrendChart.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SlideRenderer\SlideRenderer.Model.cs" Link="FeatureViews\SlideRenderer\SlideRenderer.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatChartSlide\StatChartSlide.Model.cs" Link="FeatureViews\StatChartSlide\StatChartSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatHeroSlide\StatHeroSlide.Model.cs" Link="FeatureViews\StatHeroSlide\StatHeroSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatHeroSlide\StatHeroSlide.ViewModel.cs" Link="FeatureViews\StatHeroSlide\StatHeroSlide.ViewModel.cs" />
@@ -966,5 +973,19 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Model.cs" Link="FeatureViews\XRayHeader\XRayHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Source.cs" Link="FeatureViews\XRayHeader\XRayHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
+  </ItemGroup>
+</Project>
+    <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\TeslaSync.App\Package.appxmanifest" Link="Package.appxmanifest">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\TeslaSync.App\Platform\Widgets\Public\VehicleStatusTemplate.json" Link="VehicleStatusTemplate.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>
