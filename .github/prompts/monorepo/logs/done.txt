@@ -191,3 +191,4 @@ p2-windows/dashboard-widgets/W-0091-SoftwareUpdateHistoryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0092-SoftwareUpdateStatusWidget.prompt.md
 p2-windows/dashboard-widgets/W-0093-SolarProductionWidget.prompt.md
 p2-windows/dashboard-widgets/W-0094-SpeedHeatmapWidget.prompt.md
+p2-windows/dashboard-widgets/W-0095-SpeedProfileWidget.prompt.md
