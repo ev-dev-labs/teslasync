@@ -273,3 +273,4 @@ p2-windows/feature-views/W-0070-TitleSlide.prompt.md
 p2-windows/feature-views/W-0073-BatteryPill.prompt.md
 p2-windows/feature-views/W-0071-AlertsSection.prompt.md
 p2-windows/feature-views/W-0072-BatteryHealthSection.prompt.md
+p2-windows/feature-views/W-0074-ChargingSection.prompt.md
