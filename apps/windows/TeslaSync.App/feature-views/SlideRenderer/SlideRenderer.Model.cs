@@ -83,11 +83,13 @@ public readonly record struct SlideGradient(SlideColor From, SlideColor Via, Sli
 /// <summary>
 /// One highlighted drive — the native mirror of the web <c>YearReviewDriveHighlight</c>
 /// (<c>drive_id</c>, <c>date</c>, <c>distance_km</c> SI km, <c>duration_min</c>, <c>start_address</c>,
-/// <c>end_address</c>, <c>efficiency_wh_km</c> SI Wh/km). Pure data; the detailed stat card + its unit
+/// <c>end_address</c>, <c>efficiency_wh_km</c> SI Wh/km). Named <c>SlideDriveHighlight</c> here (not
+/// <c>YearReviewDriveHighlight</c>) so it does not clash with the sibling <c>DriveHighlightSlide</c>
+/// surface's own same-named model in this namespace. Pure data; the detailed stat card + its unit
 /// conversion are the sibling <c>DriveHighlightSlide</c> surface's job — SlideRenderer only forwards the
 /// drive plus the route/date its own caption shows.
 /// </summary>
-public sealed record YearReviewDriveHighlight(
+public sealed record SlideDriveHighlight(
     long DriveId,
     string Date,
     double DistanceKm,
@@ -97,14 +99,14 @@ public sealed record YearReviewDriveHighlight(
     double EfficiencyWhKm)
 {
     /// <summary>Project a year-review drive-highlight JSON object (null-tolerant).</summary>
-    public static YearReviewDriveHighlight FromJson(JsonElement element)
+    public static SlideDriveHighlight FromJson(JsonElement element)
     {
         if (element.ValueKind != JsonValueKind.Object)
         {
-            return new YearReviewDriveHighlight(0, string.Empty, 0, 0, string.Empty, string.Empty, 0);
+            return new SlideDriveHighlight(0, string.Empty, 0, 0, string.Empty, string.Empty, 0);
         }
 
-        return new YearReviewDriveHighlight(
+        return new SlideDriveHighlight(
             DriveId: JsonScalars.GetLong(element, "drive_id"),
             Date: JsonScalars.GetString(element, "date"),
             DistanceKm: JsonScalars.GetDouble(element, "distance_km"),
@@ -144,8 +146,8 @@ public sealed record YearReviewComparison(string Label, string Value, string Emo
 /// </summary>
 public sealed record YearReviewSnapshot(
     int Year,
-    YearReviewDriveHighlight? LongestDrive,
-    YearReviewDriveHighlight? MostEfficientDrive,
+    SlideDriveHighlight? LongestDrive,
+    SlideDriveHighlight? MostEfficientDrive,
     IReadOnlyList<YearReviewComparison> Comparisons,
     JsonElement Raw)
 {
@@ -169,9 +171,9 @@ public sealed record YearReviewSnapshot(
             Raw: element.Clone());
     }
 
-    private static YearReviewDriveHighlight? ReadDrive(JsonElement parent, string name) =>
+    private static SlideDriveHighlight? ReadDrive(JsonElement parent, string name) =>
         parent.TryGetProperty(name, out var drive) && drive.ValueKind == JsonValueKind.Object
-            ? YearReviewDriveHighlight.FromJson(drive)
+            ? SlideDriveHighlight.FromJson(drive)
             : null;
 
     private static IReadOnlyList<YearReviewComparison> ReadComparisons(JsonElement parent)
@@ -215,7 +217,7 @@ public sealed record DriveHighlightSelection(
     DriveHighlightKind Kind,
     string Label,
     string Emoji,
-    YearReviewDriveHighlight? Drive);
+    SlideDriveHighlight? Drive);
 
 /// <summary>
 /// The fully projected, render-ready view of a single slide — everything the WinUI view needs to paint the
@@ -416,7 +418,7 @@ public static class SlideRendererProjection
         TailwindPalette.TryGetValue(colorName, out var color) ? color : FallbackColor;
 
     /// <summary>A short "start → end" route summary for the drive-highlight caption / Narrator name.</summary>
-    public static string RouteSummary(YearReviewDriveHighlight? drive)
+    public static string RouteSummary(SlideDriveHighlight? drive)
     {
         if (drive is null)
         {

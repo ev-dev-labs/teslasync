@@ -93,7 +93,7 @@ public sealed class SlideRendererTests
     [Fact]
     public void Adapter_coerces_non_finite_and_typed_scalars()
     {
-        var drive = YearReviewDriveHighlight.FromJson(Json("""
+        var drive = SlideDriveHighlight.FromJson(Json("""
         { "drive_id": "99", "distance_km": "Infinity", "duration_min": 12.7, "date": 5 }
         """));
 
@@ -245,7 +245,7 @@ public sealed class SlideRendererTests
     [Fact]
     public void RouteSummary_is_empty_when_both_addresses_are_blank()
     {
-        var drive = new YearReviewDriveHighlight(1, "2024-01-01", 0, 0, "", "", 0);
+        var drive = new SlideDriveHighlight(1, "2024-01-01", 0, 0, "", "", 0);
         Assert.Equal(string.Empty, SlideRendererProjection.RouteSummary(drive));
         Assert.Equal(string.Empty, SlideRendererProjection.RouteSummary(null));
     }

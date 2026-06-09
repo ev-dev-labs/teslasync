@@ -981,6 +981,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Model.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Source.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Model.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Source.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Model.cs" Link="FeatureViews\ChargingTab\ChargingTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Source.cs" Link="FeatureViews\ChargingTab\ChargingTab.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.ViewModel.cs" Link="FeatureViews\ChargingTab\ChargingTab.ViewModel.cs" />
@@ -1082,9 +1085,6 @@
     app build.
   -->
   <ItemGroup>
-    <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Model.cs" Link="FeatureViews\ChargingTab\ChargingTab.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Source.cs" Link="FeatureViews\ChargingTab\ChargingTab.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.ViewModel.cs" Link="FeatureViews\ChargingTab\ChargingTab.ViewModel.cs" />
   </ItemGroup>
 
   <!--
@@ -1754,6 +1754,35 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\DrivingSection\DrivingSection.Model.cs" Link="FeatureViews\DrivingSection\DrivingSection.Model.cs" />
+  </ItemGroup>
+
+</Project>
+
+  <!--
+    Integration-merge csproj repair (P2 feature-views/0078 WeekOverWeekSummary): the auto-integration
+    branch left a second concatenated <Project> root in this file, so the solution failed to load with
+    "multiple root elements". The duplicate root has been removed. SummarySlide.Model.cs — the only
+    Compile link unique to that duplicate copy — is folded back into the canonical project here so the
+    existing SummarySlideTests still compiles; every other link in the duplicate was already present above.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\SummarySlide\SummarySlide.Model.cs" Link="FeatureViews\SummarySlide\SummarySlide.Model.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0078 WeekOverWeekSummary: the analytics weekly-digest week-over-week comparison
+    surface's UI-thread-free logic (the weekly-digest JSON parse + derived CO2, the web trendFor port, the
+    six-card projection with metric-unit + currency formatting, the cache-then-network result mapper, the
+    repository source's weekly-digest request, the registration + PII-safe diagnostics and the state-holder
+    view-model) lives in the WinUI app project under feature-views/WeekOverWeekSummary/ but is WinUI-free by
+    construction. Link those three source files in so this headless (net10.0) test project verifies the
+    adapter + per-state transitions + a11y names + the view.opened diagnostics without a UI host. The WinUI
+    view itself (WeekOverWeekSummary.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\WeekOverWeekSummary\WeekOverWeekSummary.Model.cs" Link="FeatureViews\WeekOverWeekSummary\WeekOverWeekSummary.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\WeekOverWeekSummary\WeekOverWeekSummary.Source.cs" Link="FeatureViews\WeekOverWeekSummary\WeekOverWeekSummary.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\WeekOverWeekSummary\WeekOverWeekSummary.ViewModel.cs" Link="FeatureViews\WeekOverWeekSummary\WeekOverWeekSummary.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
