@@ -1,0 +1,64 @@
+/*
+  SafetyFeaturesWidget.strings
+  TeslaSync — P4 dashboard widget · 0083 · SafetyFeaturesWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SafetyFeaturesWidget` resolves (table "SafetyFeaturesWidget") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/SafetyFeaturesWidget.tsx) — the shell title, the
+  eight ADAS status-cell labels, the Enabled/Disabled values, the compact
+  active-feature caption, and the empty message. The remaining keys back the
+  native chrome (registry description, the On/Off enum words from
+  lib/safetyEnum.ts, freshness chip, refresh/retry/open/empty/error copy, and
+  accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.safety.title" = "Safety Features";
+"widget.safety.fcw" = "Forward Collision Warning";
+"widget.safety.aeb" = "Auto Emergency Braking";
+"widget.safety.lda" = "Lane Departure Avoidance";
+"widget.safety.elda" = "Emergency Lane Departure";
+"widget.safety.bsc" = "Blind Spot Camera";
+"widget.safety.bscw" = "Blind Spot Collision Warning";
+"widget.safety.slw" = "Speed Limit Warning";
+"widget.safety.cfd" = "Cruise Follow Distance";
+"widget.safety.enabled" = "Enabled";
+"widget.safety.disabled" = "Disabled";
+"widget.safety.activeFeatures" = "Active Features";
+"widget.safety.noData" = "No safety data";
+
+/* --- Enum words from lib/safetyEnum.ts cleanSafetyEnum (boolean / SpeedAssist None) --- */
+"widget.safety.on" = "On";
+"widget.safety.off" = "Off";
+
+/* --- Registry metadata (registry/security.ts description) --- */
+"widget.safety.description" = "ADAS status: autopilot, collision warning, lane departure, blind spot";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.safety.live" = "Live";
+"widget.safety.stale" = "Stale";
+"widget.safety.offline" = "Offline";
+"widget.safety.refresh" = "Refresh";
+"widget.safety.retry" = "Retry";
+"widget.safety.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.safety.loading" = "Loading safety features";
+"widget.safety.emptyHint" = "Safety feature status will appear once your vehicle reports in.";
+"widget.safety.errorTitle" = "Couldn't load safety features";
+"widget.safety.offlineBanner" = "Offline — showing last known status";
+"widget.safety.staleBanner" = "Reconnecting — status may be stale";
+
+/* --- Accessibility --- */
+"widget.safety.openA11y" = "Open the Safety page";
+"widget.safety.stateOk" = "Active";
+"widget.safety.stateWarning" = "Warning";
+"widget.safety.stateAlert" = "Alert";
+"widget.safety.stateInactive" = "Inactive";
+"widget.safety.stateUnknown" = "Unknown";
