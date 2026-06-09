@@ -14,7 +14,7 @@ namespace TeslaSync.App.DashboardWidgets;
 /// (<c>GET /vehicles</c>, generated operation <c>get_api_v1_vehicles</c>) and the fleet analytics rollup
 /// (<c>GET /analytics/fleet?days=30</c>, <c>get_api_v1_analytics_fleet</c>) — the native analogue of the
 /// web component's <c>useVehicles</c> + <c>useFleetAnalytics(30)</c> queries. Their raw JSON emissions are
-/// combine-latest merged through <see cref="FleetStatsResultMapper.Combine"/> as each settles, so cached
+/// combine-latest merged through <see cref="FleetStatsBarResultMapper.Combine"/> as each settles, so cached
 /// content surfaces fast and the header freshness tracks the analytics read. No HTTP touches the view.
 /// </summary>
 public sealed class FleetStatsBarSource : IFleetStatsBarSource
@@ -86,7 +86,7 @@ public sealed class FleetStatsBarSource : IFleetStatsBarSource
                 fleet = item.Result;
             }
 
-            yield return FleetStatsResultMapper.Combine(vehicles, fleet);
+            yield return FleetStatsBarResultMapper.Combine(vehicles, fleet);
         }
     }
 
