@@ -231,3 +231,4 @@ p2-windows/feature-views/W-0019-RegexTester.prompt.md
 p2-windows/feature-views/W-0018-JwtDecoder.prompt.md
 p2-windows/feature-views/W-0017-JsonFormatter.prompt.md
 p2-windows/feature-views/W-0021-TimestampTool.prompt.md
+p2-windows/feature-views/W-0020-TeslaApiRefTool.prompt.md
