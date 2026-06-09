@@ -1,0 +1,51 @@
+/*
+  WeekOverWeekSummary.strings
+  TeslaSync — P4 feature view · 0078 · WeekOverWeekSummary (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  WeekOverWeekSummary resolves (table "WeekOverWeekSummary") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys + English defaults extracted from the web source
+  (features/analytics/components/weekly-digest/WeekOverWeekSummary.tsx). The second
+  group carries the tile unit suffixes the web passes as literal `unit="…"` props,
+  routed through the facade so no English/literal text is hardcoded in Swift. The
+  third group is the digest empty-state copy its page owner renders
+  (WeeklyDigestPage.tsx). The remaining keys back the native-only chrome
+  (freshness / offline / error / refresh + accessibility composition).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"analytics.weeklyDigest.weekOverWeek" = "Week-over-Week Comparison";
+"analytics.weeklyDigest.distance" = "Distance";
+"analytics.weeklyDigest.drives" = "Drives";
+"analytics.weeklyDigest.energy" = "Energy";
+"analytics.weeklyDigest.cost" = "Cost";
+"analytics.weeklyDigest.efficiency" = "Efficiency";
+"analytics.weeklyDigest.co2" = "CO₂ Saved";
+
+/* --- Tile unit suffixes (web `StatCard unit="…"`) --- */
+"analytics.weeklyDigest.unit.km" = "km";
+"analytics.weeklyDigest.unit.kwh" = "kWh";
+"analytics.weeklyDigest.unit.whPerKm" = "Wh/km";
+"analytics.weeklyDigest.unit.kg" = "kg";
+
+/* --- Digest empty-state copy (web page owner) --- */
+"analytics.weeklyDigest.noData" = "No Data";
+"analytics.weeklyDigest.noDataMessage" = "No driving or charging data found for this week.";
+
+/* --- Native chrome: connectivity / freshness / refresh --- */
+"analytics.weeklyDigest.live" = "Live";
+"analytics.weeklyDigest.stale" = "Stale";
+"analytics.weeklyDigest.offline" = "Offline";
+"analytics.weeklyDigest.offlineMessage" = "You're offline. Showing the last saved comparison.";
+"analytics.weeklyDigest.refresh" = "Refresh";
+"analytics.weeklyDigest.refreshHint" = "Re-pull the weekly digest";
+"analytics.weeklyDigest.errorTitle" = "Couldn't refresh";
+"analytics.weeklyDigest.errorMessage" = "Showing the last saved comparison.";
+
+/* --- Native chrome: VoiceOver composition --- */
+"analytics.weeklyDigest.a11y.change" = "change {{value}}";
