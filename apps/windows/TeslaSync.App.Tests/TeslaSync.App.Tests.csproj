@@ -461,6 +461,16 @@
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Model.cs" Link="FeatureViews\HashCalculator\HashCalculator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Source.cs" Link="FeatureViews\HashCalculator\HashCalculator.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.ViewModel.cs" Link="FeatureViews\HashCalculator\HashCalculator.ViewModel.cs" />
+    P2 feature-views (0017 JsonFormatter): the tool's UI-thread-free logic (the parse/format projection, the
+    input/display records, the source seam, and the state-holder view-model) lives in the WinUI app project but
+    is WinUI-free by construction. Link those three source files in so the headless (net10.0) test project
+    verifies the transform adapter + per-state transitions row-for-row without a UI host. The WinUI view itself
+    (JsonFormatter.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\JsonFormatter\JsonFormatter.Model.cs" Link="FeatureViews\JsonFormatter\JsonFormatter.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\JsonFormatter\JsonFormatter.Source.cs" Link="FeatureViews\JsonFormatter\JsonFormatter.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\JsonFormatter\JsonFormatter.ViewModel.cs" Link="FeatureViews\JsonFormatter\JsonFormatter.ViewModel.cs" />
   </ItemGroup>
 
   <!--
