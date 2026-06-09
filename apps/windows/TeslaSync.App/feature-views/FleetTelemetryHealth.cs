@@ -228,7 +228,7 @@ public sealed partial class FleetTelemetryHealth : ContentControl, IDisposable
             body);
     }
 
-    private FrameworkElement BuildFilterChip()
+    private TsBadge BuildFilterChip()
     {
         var row = new StackPanel
         {
@@ -419,7 +419,7 @@ public sealed partial class FleetTelemetryHealth : ContentControl, IDisposable
                 row.ReportedAtTooltip,
                 row.ReportedAtIsRecent ? DisplayTokens.Brush("TsColorDangerBrush") : DisplayTokens.TextSecondary);
 
-            table.Children.Add(BuildRow(columns, new[] { vin, code, message, reported }, row.AutomationName));
+            table.Children.Add(BuildRow(columns, new UIElement[] { vin, code, message, reported }, row.AutomationName));
         }
 
         return table;
@@ -491,7 +491,7 @@ public sealed partial class FleetTelemetryHealth : ContentControl, IDisposable
         };
     }
 
-    private TsButton BuildRefreshButton(bool isRefreshing, string label, RoutedEventHandler handler)
+    private static TsButton BuildRefreshButton(bool isRefreshing, string label, RoutedEventHandler handler)
     {
         var button = new TsButton
         {
@@ -507,7 +507,7 @@ public sealed partial class FleetTelemetryHealth : ContentControl, IDisposable
         return button;
     }
 
-    private StackPanel BuildLoading(string announce, int rows)
+    private static StackPanel BuildLoading(string announce, int rows)
     {
         var column = new StackPanel { Spacing = 8, Padding = new Thickness(0, 4, 0, 4) };
         for (int i = 0; i < rows; i++)
@@ -575,12 +575,12 @@ public sealed partial class FleetTelemetryHealth : ContentControl, IDisposable
         return table;
     }
 
-    private static Border BuildRow(IReadOnlyList<ColumnSpec> columns, IReadOnlyList<UIElement> cells, string automationName)
+    private static Border BuildRow(IReadOnlyList<ColumnSpec> columns, UIElement[] cells, string automationName)
     {
         var grid = NewColumnGrid(columns);
         grid.Padding = new Thickness(8, 6, 8, 6);
         grid.MinHeight = 40;
-        for (int i = 0; i < cells.Count && i < columns.Count; i++)
+        for (int i = 0; i < cells.Length && i < columns.Count; i++)
         {
             var cell = cells[i];
             Grid.SetColumn((FrameworkElement)cell, i);
