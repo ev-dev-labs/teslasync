@@ -1,0 +1,140 @@
+=== P4 Feature view 0013 ColorConverter (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/ColorConverter.*
+Web src : web/src/features/admin/components/devtools/tools/ColorConverter.tsx
+Host    : Darwin (Apple) — Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat (homebrew),
+          iPhone 16 simulator present (booted), iOS 18 / macOS 15 SDKs.
+ADR refs: ADR-002 (single SwiftUI source for iOS+macOS), ADR-004 (KMP Shared.xcframework),
+          ADR-009 (per-surface state holder + i18n + telemetry seams).
+
+------------------------------------------------------------------------------
+FILES SHIPPED (allowed scope: ColorConverter.* + this log)
+------------------------------------------------------------------------------
+  ColorConverter.swift           — SwiftUI view: ToolCard chrome + hex Input + live swatch
+                                    + RGB/HSL/HEX result cards (TSCopyButton); content/empty states.
+  ColorConverter.Model.swift     — P1/S8 state holder (@Observable @MainActor), P1/S11 telemetry
+                                    seam (view.opened), P1/S10 i18n facade (table "ColorConverter").
+  ColorConverter.Adapter.swift   — Foundation-only parity logic: first-'#' strip, 6-char guard,
+                                    parseInt(_,16) parity, rgbToHsl (JS Math.round), projection,
+                                    a11y summary. SwiftUI-free (host/test compilable).
+  ColorConverter.Previews.swift  — DEBUG previews (blue / emerald / white / invalid-hex).
+  ColorConverter.Tests.swift     — XCTest: parse parity, rgbToHsl, projector, model phases,
+                                    telemetry-once, a11y summary.
+  ColorConverter.strings         — i18n catalog contribution (web keys + native chrome keys).
+
+------------------------------------------------------------------------------
+PARITY NOTES (web source is THE spec)
+------------------------------------------------------------------------------
+  Data source     : useTranslation only — purely local, synchronous tool, NO network. Like the
+                    sibling local tools (0012 ByteSizeConverter, 0024 UuidGenerator), there is no
+                    Loadable/remote phase, so the loading/error/stale/offline template states do
+                    not apply; the web source's single conditional `parsed && (...)` maps to the
+                    two states actually present: CONTENT (valid 6-digit hex) and EMPTY (invalid).
+  States rendered : content (RGB/HSL/HEX cards + filled swatch) and empty (friendly hint + neutral
+                    ringed swatch — never a blank box). Both reproduced + tested.
+  i18n keys (P1/S10, table "ColorConverter"):
+      "Color Converter"       (title)        — web t('Color Converter'); no en.json entry → key text
+      "Color Converter Desc"  (description)  — web t('Color Converter Desc'); ditto → key text
+      "Hex Color"             (input label)  — web t('Hex Color')
+      "Color Converter Empty Hint"           — native-only empty-state guidance
+      "Color Swatch"                         — native-only swatch a11y label
+    RGB / HSL / HEX card labels are literal (untranslated) in the web source, so they travel as
+    data (verbatim), exactly like the byte-unit symbols on sibling 0012. No hardcoded English in code.
+  Icon            : web ToolCard color="purple" (ICON_COLOR_MAP.purple = neon-purple) → the design
+                    system's purple token Color.TS.chartSeriesPower (same mapping as siblings
+                    0024 UuidGenerator + JwtDecoder). SF Symbol "paintpalette(.fill)" for lucide Palette.
+  Copy            : web CopyButton → shared TSCopyButton (Sources/Components/UI/Utility.swift).
+  Value parity    : rgbToHsl + parseInt(_,16) + Math.round half-toward-+inf reproduced and unit-pinned.
+  Accessibility   : VoiceOver labels/values on field, swatch, every card; combined summary on the grid;
+                    Dynamic Type via tokens; reduce-motion safe (no animation introduced).
+  Telemetry       : start() emits P1/S11 "view.opened" once with surface slug "ColorConverter".
+
+------------------------------------------------------------------------------
+GATE RESULTS
+------------------------------------------------------------------------------
+[GREEN]    xcodegen generate                                              : project written (GEN_EXIT=0)
+[GREEN]    KMP Shared.xcframework — Gradle :core:assembleSharedXCFramework : BUILD SUCCESSFUL 17m48s,
+           staged → apps/apple/Frameworks/Shared.xcframework (release; ios-arm64 + ios-sim-arm64 + macos-arm64)
+
+[GREEN]    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+                                                                           : ** BUILD SUCCEEDED **  (IOS_BUILD_EXIT=0)
+           -> the ENTIRE iOS app compiles WITH the ColorConverter surface, against the real
+              Shared.xcframework, under SWIFT_VERSION=6.0 / SWIFT_STRICT_CONCURRENCY=complete.
+[GREEN]    xcodebuild -scheme TeslaSync-macOS build  (CODE_SIGNING_ALLOWED=NO)
+                                                                           : ** BUILD SUCCEEDED **  (MAC_BUILD2_EXIT=0)
+           -> the ENTIRE macOS app compiles WITH the surface; ColorConverter.{Adapter,Model,Previews,swift}
+              compiled for target TeslaSync-macOS and ColorConverter.strings validated + bundled (UTF-8 ok).
+
+[GREEN]    ColorConverter unit tests — isolated SwiftPM harness, swift-tools 6.0, macOS 15,
+           Swift 6 strict concurrency (Adapter+Model+Tests; import retargeted to the isolated module)
+                                                                           : Executed 13 tests, 0 failures (ISOLATED_TEST_EXIT=0)
+             ColorHexParserPrimitiveTests       2/2  (parseInt(_,16) parity, first-'#' strip)
+             ColorRgbToHslTests                 1/1  (5 known RGB->HSL triples, JS Math.round)
+             ColorHexParseTests                 3/3  (default blue, no-hash, invalid -> nil)
+             ColorConverterProjectorTests       3/3  (rgb()/hsl()/raw-hex cards, nil on bad input)
+             ColorConverterModelTests           3/3  (content/empty phases, recompute, view.opened once)
+             ColorConverterAccessibilityTests   1/1  (summary content)
+           Value parity independently cross-checked: #3b82f6 -> rgb(59,130,246) / hsl(217,91%,60%);
+           #10b981 -> hsl(160,84%,39%); pure red -> hsl(0,100%,50%); white -> hsl(0,0%,100%); black -> 0,0,0.
+
+[GREEN]    swiftformat --lint  (ColorConverter.* swift)                    : 0/5 require formatting   (FORMAT_EXIT=0)
+[GREEN]    swiftformat --lint  apps/apple  (tree-wide)                     : 0/2699 require formatting (FORMAT_EXIT=0)
+[GREEN]    swiftlint --strict  (ColorConverter.* swift)                    : 0 violations, 0 serious   (LINT_EXIT=0)
+[GREEN]    check-placeholders.ps1 (swift, ColorConverter.*)                : PLACEHOLDER_COUNT=0, ALLOWED=0 (PLACEHOLDER_EXIT=0)
+
+------------------------------------------------------------------------------
+[DEFERRED] FULL-APP `build test` + macOS-with-signing — pre-existing/unrelated, OUTSIDE allowed files
+------------------------------------------------------------------------------
+[DEFERRED] xcodebuild -scheme TeslaSync ... build TEST                     : ** TEST FAILED **  (IOS_TEST_EXIT=65)
+           Root cause is NOT this surface. The TeslaSyncTests bundle globs every co-located *Tests.swift,
+           and two PRE-EXISTING sibling files collide (committed baseline, outside my ColorConverter.* scope):
+             MonthlyCostTable.Tests.swift:282  &  MonthlyCostChart.Tests.swift:318
+                 -> invalid redeclaration of 'MonthlyCostAccessibilityTests'
+             MonthlyCostTable.Tests.swift:300  &  MonthlyCostChart.Tests.swift:365
+                 -> invalid redeclaration of 'SpyMonthlyCostTelemetry' (+ knock-on type errors)
+           This blocks compilation of the WHOLE test bundle, so no test (incl. mine) can run in-repo.
+           ZERO ColorConverter/feature-views errors. My tests are instead proven via the isolated
+           SwiftPM harness above (13/13, real XCTest, Swift 6 strict concurrency).
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS build test  (with signing)   : ** BUILD FAILED **  (MAC_EXIT=65)
+           Environment capability: "TeslaSyncWidgets-macOS has entitlements that require signing with a
+           development certificate" (project DEVELOPMENT_TEAM=""). A macOS widget-extension SIGNING limit,
+           not a compile defect — the same app compiles cleanly with CODE_SIGNING_ALLOWED=NO (GREEN above).
+[NOTE]     swiftlint --strict tree-wide reports exactly 1 PRE-EXISTING violation, not mine:
+             TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9 opening_brace
+           (the same baseline violation recorded in apps/macos-pending-verifications.md for siblings).
+
+  These deferrals are the SAME class of pre-existing parallel-merge / KMP / macOS-signing blockers
+  documented in apps/macos-pending-verifications.md for predecessors (0010 ToolCard, 0262
+  ScheduledExportsPanel, 0168 DrivingTips, ...), and are deferred to p4-apple/P99-0001 (the Apple
+  acceptance gate, run on macos-latest with signing identities). They are outside this prompt's
+  allowed files (ColorConverter.* only) and outside its Out-of-Scope boundary (other surfaces).
+
+------------------------------------------------------------------------------
+HONESTY COVENANT RECONCILIATION
+------------------------------------------------------------------------------
+  1  No red-as-green     : the full-app TEST + macOS-with-signing steps are reported RED/DEFERRED above
+                           (IOS_TEST_EXIT=65, MAC_EXIT=65) with named pre-existing root causes — never
+                           relabeled green. Every GREEN line is a real command that returned 0.
+  2  No scope narrowing  : all web data, composition, states (content+empty), copy buttons, i18n keys,
+                           and a11y reproduced. The non-applicable remote states are justified, not skipped.
+  3  No skip-and-assume  : rgbToHsl + parseInt(_,16) value parity executed and pinned, not assumed.
+  4  No stubs as final   : zero TODO/stub/placeholder (PLACEHOLDER_COUNT=0); full implementation.
+  5  No parity shortcuts : RGB/HSL/HEX literal labels + "Color Converter Desc" key-as-text faithfully
+                           mirror i18next behavior; default hex "#3b82f6" matches web useState.
+  6  No delegation       : authored directly (delegation forbidden for this artifact).
+  7  No predecessor bypass: built on the real Shared.xcframework (ADR-004) + shared P1/S8-S11 seams +
+                           P1/S9 tokens + shared components; followed the sibling-surface conventions.
+  8  No commit on red    : the SURFACE is green on every gate that exercises its own code (full-app
+                           compile on BOTH SDKs, 13/13 isolated tests, lint/format/placeholder). The
+                           RED steps are pre-existing/unrelated and outside the allowed files.
+  9  No silent drift     : SI/units N/A; tokens + components used per guidelines; deviations (iPhone 16
+                           used per gate; signing-disabled macOS compile) are stated explicitly here.
+  10 Log ends with EXIT/STATUS below.
+
+  Determination: the deliverable this prompt owns — the ColorConverter Apple surface — is fully
+  verified: it compiles inside the real iOS AND macOS app targets under Swift 6 strict concurrency,
+  its 13 tests pass, and swiftlint/swiftformat/placeholder are clean. Matching the predecessor
+  protocol (0010/0168/0262), the unrelated full-app `build test` + macOS-signing blockers are
+  DEFERRED to the macOS acceptance gate.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,28 @@
+/*
+  ColorConverter.strings
+  TeslaSync — P4 feature view · 0013 · ColorConverter (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ColorConverter resolves (table "ColorConverter") lives here with its web
+  t(key, default) English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/admin/components/devtools/tools/ColorConverter.tsx). The web en.json
+  has no entry for "Color Converter" / "Color Converter Desc" / "Hex Color", so
+  i18next renders those keys as-is — the native fallbacks reproduce that exactly.
+  The RGB/HSL/HEX card labels are literal (untranslated) in the web source, so
+  they travel as data, not as i18n keys. The remaining keys back native-only
+  chrome (the unparseable-input hint, the swatch accessibility label).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Color Converter" = "Color Converter";
+"Color Converter Desc" = "Color Converter Desc";
+"Hex Color" = "Hex Color";
+
+/* --- Native chrome: empty hint + swatch accessibility --- */
+"Color Converter Empty Hint" = "Enter a 6-digit hex color (for example, #3b82f6) to see its RGB and HSL values.";
+"Color Swatch" = "Color swatch";
