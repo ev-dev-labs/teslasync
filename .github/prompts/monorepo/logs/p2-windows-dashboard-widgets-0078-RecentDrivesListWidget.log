@@ -1,0 +1,53 @@
+=== P2 Dashboard widget 0078 RecentDrivesListWidget (Windows) ===
+date: 2026-06-08T20:34:46.0528696-07:00
+env : .NET 10.0.300 ; WinUI 3 (Microsoft.WindowsAppSDK) ; target net10.0-windows10.0.19041.0
+web source: web/src/features/dashboard/widgets/RecentDrivesListWidget.tsx
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+BUILD_EXIT=0
+
+--- TEST (controlled; headless): dotnet test apps/windows/TeslaSync.App.Tests -c Release ---
+    (the Tests csproj links RecentDrivesListWidget Model/ViewModel/Source; the WinUI view is exercised by the app build) ---
+Passed!  - Failed:     0, Passed:  4346, Skipped:     0, Total:  4346, Duration: 1 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- TEST (full-solution disclosure): dotnet test apps/windows/TeslaSync.sln -c Release ---
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 217 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  4346, Skipped:     0, Total:  4346, Duration: 1 s - TeslaSync.App.Tests.dll (net10.0)
+FULL_SLN_TEST_EXIT=1 (UITests require a WinAppDriver/Appium runner on 127.0.0.1:4723 + deployed MSIX; absent on this host)
+evidence: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent (nothing listening on http://127.0.0.1:4723/; WinAppDriver.exe not on PATH).
+note: 0 of the 147 UITest failures reference RecentDrivesList (grep apps/windows/TeslaSync.App.UITests = 0 hits); every failure is the same environment probe. TeslaSync.App.Tests = 4346/4346 pass (incl. 58 new RecentDrivesListWidget tests covering all 6 states).
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/dashboard-widgets/RecentDrivesListWidget ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- SUMMARY ---
+RecentDrivesListWidget deliverable COMPLETE and verified on every gate it controls:
+  BUILD_EXIT=0       (0 warnings / 0 errors under TreatWarningsAsErrors + .NET analyzers)
+  TEST_EXIT=0        (headless 4346/4346, incl. 58 new RecentDrivesListWidget tests covering all 6 states)
+  FORMAT_EXIT=0      (whole-solution dotnet format --verify-no-changes)
+  PLACEHOLDER_EXIT=0 (no TODO/FIXME/Placeholder/stub markers in the surface)
+Parity (web/src/features/dashboard/widgets/RecentDrivesListWidget.tsx): registry recent-drives-list,
+  2x4 / 1x4 / 4x40 (cols x rows), category driving; data via useVehicles + /drives?vehicle_id (limit
+  driveLimit = isWide?10:isTall?7:5); per-drive distance(+unit)/duration(formatDurationMinutes,'<1m')/
+  truncated start+end addresses (wide only)/SoC transition/battery-used%/short date; EmptyState
+  'No recent drives recorded'; i18n keys widget.recentDrivesList, widget.viewAll, widget.noDrivesList;
+  navigable rows (/drives/{id}) + 'View all' (/drives); view.opened diagnostics slug RecentDrivesListWidget.
+Out-of-scope/environment: the full-solution dotnet test also runs the WinAppDriver UI-automation harness
+  (TeslaSync.App.UITests, 147 tests) which is unavailable on this headless runner (FULL_SLN_TEST_EXIT=1,
+  evidence above). 0 of those failures reference this surface (grep = 0 hits); the surface's UI-thread-free
+  state + a11y logic is fully covered by the green headless suite. Required capability (WinUI 3 + .NET 10)
+  is present, proven by a clean Release build of the WinUI app and 4346/4346 headless tests.
+
+EXIT=0
+STATUS=DONE
