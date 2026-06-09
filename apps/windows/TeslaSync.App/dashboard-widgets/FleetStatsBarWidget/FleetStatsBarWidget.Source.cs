@@ -6,7 +6,7 @@ using TeslaSync.App.Core.Data.Behavior;
 using TeslaSync.App.Core.Data.Net;
 using TeslaSync.App.Core.Data.State;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.FleetStatsBar;
 
 /// <summary>
 /// The repository-backed <see cref="IFleetStatsBarSource"/> — the native data adapter for the Fleet Stats

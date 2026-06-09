@@ -4,7 +4,7 @@ using TeslaSync.App.Core.Data.State;
 using TeslaSync.App.Core.Notifications;
 using TeslaSync.App.Core.Units;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.FleetStatsBar;
 
 /// <summary>
 /// The data port the <see cref="FleetStatsBarViewModel"/> binds to (P1/S8 state-holder seam). It yields

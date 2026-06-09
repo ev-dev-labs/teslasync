@@ -11,7 +11,7 @@ using TeslaSync.App.Core.Data.Net;
 using TeslaSync.App.Core.Notifications;
 using TeslaSync.App.Core.Units;
 
-namespace TeslaSync.App.DashboardWidgets;
+namespace TeslaSync.App.DashboardWidgets.FleetStatsBar;
 
 /// <summary>
 /// The native WinUI 3 Fleet Stats Bar dashboard surface — a parity port of
