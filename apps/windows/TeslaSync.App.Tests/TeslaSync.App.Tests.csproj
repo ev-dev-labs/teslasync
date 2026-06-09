@@ -119,6 +119,18 @@
     single Compile ItemGroup.
   -->
 
+    P2/W2-0001 headless unit tests for the WinUI-free UI-thread-free logic models (Model / Source /
+    ViewModel / Presentation). Targets plain net10.0 so `dotnet test` runs without a WinUI / UI-thread host;
+    the WinUI app targets a WinUI TFM, so its UI-thread-free sources are Compile-linked here rather than
+    project-referenced (the view *.cs files themselves are exercised by the app build).
+
+    Repair note (P2 feature-views/0136 CostSavingsPanel): a chain of integration merges had again left
+    this file with multiple concatenated Project roots and an unterminated comment that failed XML load
+    (MSB4025). The duplicate roots were removed and every distinct linked source consolidated below as a
+    single deduplicated union (preserving every previously linked widget / feature-view source), plus the
+    new CostSavingsPanel surface (Model / Source / ViewModel).
+  -->
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -134,8 +146,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Generated\Generated.csproj" />
     <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
+    <ProjectReference Include="..\Generated\Generated.csproj" />
   </ItemGroup>
 
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
@@ -487,6 +499,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.Source.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostHeatmap.ViewModel.cs" Link="FeatureViews\CostHeatmap\CostHeatmap.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostPerKwhChart\CostPerKwhChart.Model.cs" Link="FeatureViews\CostPerKwhChart\CostPerKwhChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostSavingsPanel\CostSavingsPanel.Model.cs" Link="FeatureViews\CostSavingsPanel\CostSavingsPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostSavingsPanel\CostSavingsPanel.Source.cs" Link="FeatureViews\CostSavingsPanel\CostSavingsPanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostSavingsPanel\CostSavingsPanel.ViewModel.cs" Link="FeatureViews\CostSavingsPanel\CostSavingsPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.Model.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.Source.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostSummaryCards\CostSummaryCards.ViewModel.cs" Link="FeatureViews\CostSummaryCards\CostSummaryCards.ViewModel.cs" />
