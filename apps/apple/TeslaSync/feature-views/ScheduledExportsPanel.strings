@@ -1,0 +1,89 @@
+/*
+  ScheduledExportsPanel.strings
+  TeslaSync — P4 feature view · 0262 · ScheduledExportsPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ScheduledExportsPanel` resolves (table "ScheduledExportsPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app `Localizable.xcstrings`
+  master catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/system/pages/ScheduledExportsPanel.tsx). The second group is the form option
+  catalog the web `<Select>` renders from the raw enum tokens (kept translatable here so the
+  Swift sources hold no English literals). The third group backs the native chrome (the P4
+  leaf freshness / loading / error copy + the VoiceOver-only labels).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"dataExport.scheduled.title" = "Scheduled exports";
+"dataExport.scheduled.subtitle" = "Cron-driven recurring exports.";
+"dataExport.scheduled.newSchedule" = "New schedule";
+"dataExport.scheduled.empty" = "No schedules yet";
+"dataExport.scheduled.emptyMessage" = "Create a schedule to receive recurring exports automatically.";
+
+"dataExport.scheduled.form.name" = "Name";
+"dataExport.scheduled.form.namePlaceholder" = "Drives weekly";
+"dataExport.scheduled.form.scheduleCron" = "Cron expression";
+"dataExport.scheduled.form.scheduleCronHelp" = "Standard 5-field cron, e.g. '0 9 * * 0'.";
+"dataExport.scheduled.form.exportType" = "Export type";
+"dataExport.scheduled.form.format" = "Format";
+"dataExport.scheduled.form.rangeWindow" = "Range window";
+"dataExport.scheduled.form.rangeWindowHelp" = "Format: number + m/h/d.";
+"dataExport.scheduled.form.deliveryKind" = "Delivery kind";
+"dataExport.scheduled.form.deliveryTarget" = "Delivery target";
+"dataExport.scheduled.form.deliveryTargetHelp" = "Email address or HTTPS URL.";
+"dataExport.scheduled.form.cancel" = "Cancel";
+"dataExport.scheduled.form.submit" = "Save schedule";
+
+"dataExport.scheduled.table.name" = "Name";
+"dataExport.scheduled.table.type" = "Type";
+"dataExport.scheduled.table.cron" = "Cron";
+"dataExport.scheduled.table.delivery" = "Delivery";
+"dataExport.scheduled.table.nextRun" = "Next run";
+"dataExport.scheduled.table.lastRun" = "Last run";
+"dataExport.scheduled.table.status" = "Status";
+"dataExport.scheduled.table.actions" = "Actions";
+
+"dataExport.scheduled.status.never" = "Never";
+"dataExport.scheduled.status.ok" = "OK";
+"dataExport.scheduled.status.failed" = "Failed";
+
+"dataExport.scheduled.actions.runNow" = "Run now";
+"dataExport.scheduled.actions.disable" = "Disable";
+"dataExport.scheduled.actions.enable" = "Enable";
+"dataExport.scheduled.actions.edit" = "Edit";
+"dataExport.scheduled.actions.delete" = "Delete";
+
+"dataExport.scheduled.deleteConfirmTitle" = "Delete schedule?";
+"dataExport.scheduled.deleteConfirmBody" = "This will stop future runs of {{name}}.";
+
+/* --- Form option catalog (web `<Select>` raw enum tokens) --- */
+"dataExport.scheduled.exportType.drives" = "drives";
+"dataExport.scheduled.exportType.charging" = "charging";
+"dataExport.scheduled.exportType.trips" = "trips";
+"dataExport.scheduled.exportType.positions" = "positions";
+"dataExport.scheduled.exportType.signals" = "signals";
+"dataExport.scheduled.format.csv" = "csv";
+"dataExport.scheduled.format.json" = "json";
+"dataExport.scheduled.deliveryKind.download" = "download";
+"dataExport.scheduled.deliveryKind.email" = "email";
+"dataExport.scheduled.deliveryKind.webhook" = "webhook";
+
+/* --- Form example prompts the web hardcodes inline (kept translatable) --- */
+"dataExport.scheduled.form.scheduleCronExample" = "0 9 * * 0";
+"dataExport.scheduled.form.rangeWindowExample" = "7d";
+"dataExport.scheduled.form.deliveryTargetEmailExample" = "you@example.com";
+"dataExport.scheduled.form.deliveryTargetWebhookExample" = "https://example.com/hook";
+
+/* --- Native chrome: P4 leaf freshness / loading / error + a11y-only labels --- */
+"dataExport.scheduled.live" = "Live";
+"dataExport.scheduled.stale" = "Stale";
+"dataExport.scheduled.offline" = "Offline";
+"dataExport.scheduled.staleBanner" = "Reconnecting — this list may be out of date";
+"dataExport.scheduled.offlineBanner" = "Offline — showing the last loaded schedules";
+"dataExport.scheduled.loadingA11y" = "Loading scheduled exports";
+"dataExport.scheduled.errorTitle" = "Couldn't load scheduled exports";
+"dataExport.scheduled.retry" = "Retry";
+"dataExport.scheduled.deleteConfirmCancel" = "Cancel";
+"dataExport.scheduled.actions.deleteAria" = "Delete {{name}}";

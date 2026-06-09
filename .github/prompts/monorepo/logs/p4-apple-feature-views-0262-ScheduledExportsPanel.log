@@ -1,0 +1,125 @@
+=== P4 Feature view 0262 ScheduledExportsPanel (Apple) ===
+date: 2026-06-09T11:18:11Z
+host: macOS 26.5.1 | Xcode 26.5 Build version 17F42 
+web source: web/src/features/system/pages/ScheduledExportsPanel.tsx
+native output: apps/apple/TeslaSync/feature-views/ScheduledExportsPanel.*
+
+Honesty note: the full-app iOS/macOS 'xcodebuild build test' is BLOCKED in this
+environment by pre-existing, surface-independent causes (an unstaged KMP
+Shared.xcframework whose Gradle/Kotlin-Native build is the long-pole, plus a
+pre-existing ChargingProjection redeclaration in OTHER surfaces). Per ADR-012 +
+apps/macos-pending-verifications.md, that full-app verification is deferred to the
+p4-apple/P99-0001 acceptance gate on a macos-latest runner. This surface is verified
+GREEN here by the same isolated methodology the prior pending surfaces used.
+
+########## Surface files ##########
+  ScheduledExportsPanel.Actions.swift
+  ScheduledExportsPanel.Adapter.swift
+  ScheduledExportsPanel.Form.swift
+  ScheduledExportsPanel.Model.swift
+  ScheduledExportsPanel.ModelTests.swift
+  ScheduledExportsPanel.Previews.swift
+  ScheduledExportsPanel.RowActions.swift
+  ScheduledExportsPanel.Seams.swift
+  ScheduledExportsPanel.States.swift
+  ScheduledExportsPanel.strings
+  ScheduledExportsPanel.swift
+  ScheduledExportsPanel.Table.swift
+  ScheduledExportsPanel.Tests.swift
+  total swift LOC: 2543
+
+########## [1/7] swiftformat --lint (surface) ##########
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-211853-78201/slot-143/apps/apple/.swiftformat
+SwiftFormat completed in 4.95s.
+0/12 files require formatting.
+FORMAT_EXIT=0
+
+########## [2/7] swiftlint --strict (surface) ##########
+Linting 'ScheduledExportsPanel.Table.swift' (11/12)
+Linting 'ScheduledExportsPanel.Tests.swift' (12/12)
+Done linting! Found 0 violations, 0 serious in 12 files.
+LINT_EXIT=0
+
+########## [3/7] swiftc -typecheck - iOS 18 simulator SDK (Swift 6 strict concurrency) ##########
+target: arm64-apple-ios18.0-simulator ; sdk: iPhoneSimulator26.5.sdk
+IOS_TYPECHECK_EXIT=0 (0 errors, 0 warnings)
+
+########## [4/7] swiftc -typecheck - macOS 15 SDK (Swift 6 strict concurrency) ##########
+target: arm64-apple-macos15.0 ; sdk: MacOSX26.5.sdk
+MAC_TYPECHECK_EXIT=0 (0 errors, 0 warnings)
+
+########## [5/7] isolated SwiftPM build + test (Swift 6, macOS 15) ##########
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+	 Executed 22 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+	 Executed 39 tests, with 0 failures (0 unexpected) in 0.009 (0.012) seconds
+Test Suite 'All tests' passed at 2026-06-09 04:18:54.563.
+	 Executed 39 tests, with 0 failures (0 unexpected) in 0.009 (0.013) seconds
+SWIFT_TEST_EXIT=0
+
+########## [6/7] placeholder / stub gate (ADR-011) ##########
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+(the single PLACEHOLDER_ALLOWED is the verbatim web i18n key 'namePlaceholder',
+ annotated with the sanctioned // parity:allow marker - the same convention used by
+ ActionBuilder/AIProviderSection/ComputedMetricEditor.)
+
+########## [7/7] xcodegen generate - file enumeration ##########
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-211853-78201/slot-143/apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0 ; distinct ScheduledExportsPanel.* files enumerated into project: 13
+
+########## Full-app xcodebuild build test - DEFERRED (macOS-pending) ##########
+iOS:   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+macOS: xcodebuild -scheme TeslaSync-macOS build test
+
+-- Root cause 1: KMP Shared.xcframework (app-target dependency, ADR-004) not staged --
+Frameworks/Shared.xcframework contents:
+    total 8
+    drwxr-xr-x@  3 atulgupta  staff   96 Jun  9 03:34 .
+    drwxr-xr-x@ 19 atulgupta  staff  608 Jun  9 04:18 ..
+    -rw-r--r--@  1 atulgupta  staff  159 Jun  9 03:34 .gitkeep
+Standalone Gradle assemble (bounded 150s): GRADLE_EXIT=124 (timeout - Kotlin/Native long-pole).
+Via xcodebuild scheme pre-action (bounded 120s) the build reached, then was interrupted on,
+the Kotlin/Native link step (tail of captured /tmp/ios-xcb.log):
+    > Task :core:assembleDebugTvosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+    > Task :core:assembleDebugWatchosFatFrameworkForSharedXCFramework SKIPPED
+    > Task :core:assembleDebugWatchosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+    > Task :core:assembleSharedDebugXCFramework UP-TO-DATE
+    > Task :core:linkReleaseFrameworkIosArm64 UP-TO-DATE
+    > Task :core:assembleReleaseIosFatFrameworkForSharedXCFramework SKIPPED
+    > Task :core:linkReleaseFrameworkIosSimulatorArm64
+    ** BUILD INTERRUPTED **
+    -> iOS xcodebuild: BUILD INTERRUPTED at 120s (IOS_EXIT=124, timeout). The macOS app consumes
+       the identical Frameworks/Shared.xcframework (project.yml) and is blocked by the same cause.
+
+-- Root cause 2: pre-existing, surface-independent app-target redeclaration --
+    apps/apple/TeslaSync/dashboard-widgets/ChargeStatusWidget.Adapter.swift:118:public struct ChargingProjection: Equatable {
+    apps/apple/TeslaSync/feature-views/ChargingDetailSection.Adapter.swift:240:public enum ChargingProjection {
+    -> 'ChargingProjection' is declared as BOTH a struct and an enum across two OTHER surfaces;
+       a hard app-target compile error unrelated to ScheduledExportsPanel.
+
+-- This surface is collision-free (introduces no symbol that exists elsewhere) --
+    ScheduledExportsModel -> 0 external definition file(s)
+    ScheduledExportItem -> 0 external definition file(s)
+    ScheduledExportsProjection -> 0 external definition file(s)
+    ScheduledExportFormState -> 0 external definition file(s)
+    ScheduledExportsSource -> 0 external definition file(s)
+    ScheduledExportsPanel -> 0 external definition file(s)
+IOS_EXIT=124   # deferred: KMP framework long-pole (timeout), not a surface defect
+MAC_EXIT=124   # deferred: same unstaged Frameworks/Shared.xcframework dependency
+
+########## Summary ##########
+Surface-acceptance gates (host-runnable, surface-scoped):
+  FORMAT_EXIT=0  LINT_EXIT=0  IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0  SWIFT_TEST_EXIT=0  PLACEHOLDER_EXIT=0  XCODEGEN_EXIT=0
+Full-app xcodebuild (iOS+macOS): DEFERRED to p4-apple/P99-0001 on macos-latest (macOS-pending);
+  blocked by unstaged KMP Shared.xcframework + pre-existing ChargingProjection redeclaration,
+  both surface-independent. Recorded in apps/macos-pending-verifications.md.
+
+All surface-acceptance gates GREEN. Surface complete; full-app build deferred per protocol.
+EXIT=0
+STATUS=DONE
