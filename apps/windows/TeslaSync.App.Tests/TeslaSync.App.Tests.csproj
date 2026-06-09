@@ -162,6 +162,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\LiveSignalsWidget\LiveSignalsWidget.Model.cs" Link="Widgets\LiveSignalsWidget\LiveSignalsWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\LiveSignalsWidget\LiveSignalsWidget.ViewModel.cs" Link="Widgets\LiveSignalsWidget\LiveSignalsWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\LiveSignalsWidget\LiveSignalsWidget.Source.cs" Link="Widgets\LiveSignalsWidget\LiveSignalsWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SignalHealthWidget\SignalHealthWidget.Model.cs" Link="Widgets\SignalHealthWidget\SignalHealthWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SignalHealthWidget\SignalHealthWidget.ViewModel.cs" Link="Widgets\SignalHealthWidget\SignalHealthWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SignalHealthWidget\SignalHealthWidget.Source.cs" Link="Widgets\SignalHealthWidget\SignalHealthWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.Model.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.ViewModel.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DigitalTwinWidget\DigitalTwinWidget.Source.cs" Link="Widgets\DigitalTwinWidget\DigitalTwinWidget.Source.cs" />
