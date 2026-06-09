@@ -419,7 +419,7 @@ public sealed partial class FleetTelemetryHealth : ContentControl, IDisposable
                 row.ReportedAtTooltip,
                 row.ReportedAtIsRecent ? DisplayTokens.Brush("TsColorDangerBrush") : DisplayTokens.TextSecondary);
 
-            table.Children.Add(BuildRow(columns, new[] { vin, code, message, reported }, row.AutomationName));
+            table.Children.Add(BuildRow(columns, new UIElement[] { vin, code, message, reported }, row.AutomationName));
         }
 
         return table;
