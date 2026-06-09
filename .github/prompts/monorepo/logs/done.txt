@@ -212,3 +212,4 @@ p2-windows/dashboard-widgets/W-0116-WeeklyDigestWidget.prompt.md
 p2-windows/dashboard-widgets/W-0113-WarrantyStatusWidget.prompt.md
 p2-windows/feature-views/W-0001-AlertDetailTimeline.prompt.md
 p2-windows/dashboard-widgets/W-0117-WeeklySummaryCardWidget.prompt.md
+p2-windows/dashboard-widgets/W-0114-WatchSummaryWidget.prompt.md
