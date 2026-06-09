@@ -271,3 +271,4 @@ p2-windows/feature-views/W-0066-SlideRenderer.prompt.md
 p2-windows/feature-views/W-0068-StatHeroSlide.prompt.md
 p2-windows/feature-views/W-0070-TitleSlide.prompt.md
 p2-windows/feature-views/W-0073-BatteryPill.prompt.md
+p2-windows/feature-views/W-0071-AlertsSection.prompt.md
