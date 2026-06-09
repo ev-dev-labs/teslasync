@@ -1,0 +1,44 @@
+/*
+  RouteMapSection.strings
+  TeslaSync — P4 feature view · 0147 · RouteMapSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `RouteMapSection`
+  resolves (table "RouteMapSection") lives here with its web English value. These entries fold into the
+  app `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table
+  so each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/driving/components/drive-detail/RouteMapSection.tsx). The remaining keys back the
+  native-only chrome (map-style switcher, legend/canvas a11y, loading + error + retry + freshness copy).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.route" = "Route";
+"driveDetail.start" = "Start";
+"driveDetail.end" = "End";
+"driveDetail.inProgress" = "In progress";
+"driveDetail.lastKnown" = "Last known location";
+"driveDetail.stationaryRouteTitle" = "Route can't be plotted";
+"driveDetail.stationaryRouteBody" = "Only one GPS coordinate was recorded for this drive, so the route can't be drawn. The drive's distance, duration, and other stats below are unaffected.";
+"driveDetail.noRouteData" = "No route data available for this drive";
+
+/* --- Native chrome: map canvas + style switcher --- */
+"routeMap.mapLabel" = "Drive route map";
+"routeMap.styleLabel" = "Map style";
+"routeMap.style.standard" = "Standard";
+"routeMap.style.hybrid" = "Hybrid";
+"routeMap.style.satellite" = "Satellite";
+
+/* --- Native chrome: legend --- */
+"routeMap.legendLabel" = "Speed legend";
+
+/* --- Native chrome: states --- */
+"routeMap.loading" = "Loading route map";
+"routeMap.errorTitle" = "Couldn't load route map";
+"routeMap.retry" = "Retry";
+
+/* --- Native chrome: freshness chip --- */
+"routeMap.live" = "Live";
+"routeMap.stale" = "Stale";
+"routeMap.offline" = "Offline";
+"routeMap.updating" = "Updating";
