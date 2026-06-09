@@ -248,3 +248,4 @@ p2-windows/feature-views/W-0036-LiveSignalsTable.prompt.md
 p2-windows/feature-views/W-0034-XRayFieldsTable.prompt.md
 p2-windows/feature-views/W-0038-RateLimitStatusPanel.prompt.md
 p2-windows/feature-views/W-0041-ResponseViewer.prompt.md
+p2-windows/feature-views/W-0043-EventTimeline.prompt.md
