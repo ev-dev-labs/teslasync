@@ -2,116 +2,15 @@
 
   <!--
     Headless unit tests for the WinUI-free, UI-thread-free logic models (Model / Source / ViewModel /
-    Presentation). Targets plain net10.0 so `dotnet test` runs without a WinUI / UI-thread host; the WinUI
-    app targets a WinUI TFM, so its UI-thread-free sources are Compile-linked here rather than
-    project-referenced (the views themselves are exercised by the app build). The matching test classes live
-    under this project and are picked up by the SDK default-compile glob.
+    Presentation). Targets plain net10.0 so dotnet test runs without a WinUI / UI-thread host; the WinUI app
+    targets a WinUI TFM, so its UI-thread-free sources are Compile-linked here rather than project-referenced
+    (the views themselves are exercised by the app build). The matching test classes live under this project
+    and are picked up by the SDK default-compile glob.
 
-    Repair note (P2 feature-views/0129 QuickNav): a chain of integration merges had again left this file with
-    multiple concatenated <Project> roots and an unterminated XML comment that failed XML load (MSB4025). The
-    file has been consolidated into a single valid project root: the duplicate roots were removed and every
-    distinct linked source preserved as one deduplicated, path-sorted union, plus the new QuickNav surface.
-  -->
-    P2/W2-0001 headless unit tests for the UI-thread-free logic models (feature-view +
-    dashboard-widget + shared Model / Source / ViewModel sources). Targets plain net10.0 so
-    `dotnet test` runs without a WinUI/UI-thread host; the WinUI app targets a WinUI TFM, so its
-    UI-thread-free sources are Compile-linked here rather than project-referenced (the views are
-    exercised by the app build). The matching test classes live under this project and are picked
-    up by the SDK default-compile glob.
-
-    Keep this file as ONE Project root with a single Compile ItemGroup: the deduplicated,
-    path-sorted union of every linked source. A chain of integration merges had repeatedly
-    re-concatenated multiple <Project> roots plus duplicate <Compile> items, failing XML load
-    with MSB4025; consolidated here into a single valid root (no linked source dropped) plus the
-    CostSummaryCards (charging cost-analysis) feature-view surface logic links.
-    P2/W2-0001 - headless unit tests for the UI-thread-free logic models (feature-view + dashboard-widget
-    + shared Model / Source / ViewModel sources). Targets plain net10.0 so `dotnet test` runs without a
-    WinUI/UI-thread host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources are
-    Compile-linked here rather than project-referenced. The link set below is the deduplicated union of
-    every previously linked source.
-
-    Repair note (P2 feature-views/0112 EnvironmentalImpact): a chain of integration merges had again left
-    this file with several concatenated Project roots plus stray closing tags and orphaned comment text,
-    so the solution failed XML load (MSB4025: multiple root elements). The duplicate roots and broken
-    boundaries were removed and every previously linked source consolidated into this single canonical
-    root (deduplicated to avoid NETSDK1022), preserving every link from all discarded roots and adding
-    the new EnvironmentalImpact surface (Model / Source / ViewModel). Keep this file as ONE Project root
-    with a single Compile ItemGroup.
-    P2/W2-0001 headless unit tests for the UI-thread-free logic models (Model / Source / ViewModel).
-    Targets plain net10.0 so `dotnet test` runs without a WinUI/UI-thread host. The WinUI app targets a
-    WinUI TFM, so its UI-thread-free sources are Compile-linked here rather than project-referenced; the
-    views (*.cs) themselves are exercised by the app build. The test classes live under this project and
-    are picked up by the SDK default-compile glob.
-    re-concatenated multiple Project roots plus duplicate Compile items and stray closing tags,
-    failing XML load (MSB4025); consolidated here into a single valid root (no linked source
-    dropped) plus the FleetStatsBar feature-view surface logic links.
-  -->
-
-    Repair note (P2 feature-views/0113 ForecastDetails): a chain of integration merges had again left this
-    file with multiple concatenated Project roots plus stray closing tags and orphaned comment text, so the
-    solution failed XML load (MSB4025). The duplicate roots were removed and every distinct linked source
-    consolidated below as a single deduplicated, sorted union (preserving every previously linked
-    widget/feature-view source), plus the new ForecastDetails surface. Keep this as ONE Project root with a
-    single Compile ItemGroup.
-    Headless (net10.0) unit tests for the WinUI app's UI-thread-free logic. The project runs without a
-    WinUI / UI-thread host and links each surface's WinUI-free sources (Model / Source / ViewModel /
-    Presentation) from TeslaSync.App so the adapters, per-state projections and diagnostics are verified
-    row for row; the WinUI views themselves are exercised by the app build. Keep this as ONE Project root
-    with a single, deduplicated Compile ItemGroup.
-    P2/W2-0001 headless unit tests for the UI thread free logic models (Model / Source / ViewModel).
-    Targets plain net10.0 so `dotnet test` runs without a WinUI/UI thread host. The WinUI app targets a
-    WinUI TFM, so its testable sources are Compile linked here rather than project referenced; the bare
-    view *.cs files are exercised by the app build itself.
-    Headless (net10.0) unit tests for the WinUI app's UI-thread-free logic. The project runs without a
-    WinUI / UI-thread host and links each surface's WinUI-free sources (Model / Source / ViewModel /
-    Presentation) from TeslaSync.App so the adapters, per-state projections and diagnostics are verified
-    row for row; the WinUI views themselves are exercised by the app build.
-
-    Keep this as ONE <Project> root with a single, deduplicated, path-sorted Compile ItemGroup. A chain of
-    integration merges had repeatedly re-concatenated multiple <Project> roots plus nested/unclosed comments
-    and duplicate <Compile> items, failing XML load (MSB4025) and source-file-specified-twice (CS2002). The
-    file was consolidated back into this single canonical root: the deduplicated union of every previously
-    linked source is preserved.
-  -->
-
-    Repair note (P2 feature-views/0124 KioskOverlay): a chain of integration merges had again left this
-    file with several concatenated Project roots plus unterminated comment blocks, so the solution failed
-    XML load (MSB4025). It is consolidated back into ONE valid Project root: a single PropertyGroup, the
-    package / project / content groups, and a single Compile ItemGroup holding the deduplicated, sorted
-    union of every previously linked source (so every existing test still compiles) plus the new
-    KioskOverlay surface logic. Keep this file as ONE Project root with a single Compile ItemGroup.
-    P2/W2-0001 — headless unit tests for the UI-thread-free logic models (the feature-view and
-    dashboard-widget Model / Source / ViewModel sources plus shared Core logic). Targets plain net10.0
-    so `dotnet test` runs without a WinUI / UI-thread host; the WinUI app (TeslaSync.App) targets a
-    WinUI TFM, so its testable, UI-thread-free sources are Compile-linked here rather than
-    project-referenced. The view files (the *.cs surfaces) themselves are exercised by the app build.
-
-    Invariant: keep this file as ONE <Project> root with a single, path-sorted, deduplicated Compile
-    ItemGroup. A chain of integration merges had repeatedly re-concatenated multiple roots and
-    duplicate items, which failed XML load (MSB4025); it has been consolidated back into this single
-    canonical root so every linked source is preserved and every test compiles.
-  -->
-
-    Repair note (P2 feature-views/0116 MonthlyCostChart): a chain of integration merges had again left this
-    file with multiple concatenated Project roots plus a malformed (nested) comment, so the solution failed
-    to load (MSB4025). The file has been consolidated into a single valid Project root: every previously
-    linked WinUI-free source is preserved as the path-sorted deduplicated union, plus the new
-    MonthlyCostChart.Model.cs link.
-  -->
-    P2/W2-0001 - headless unit tests for the UI-primitive logic models. Targets plain net10.0 so
-    dotnet test runs without a WinUI/UI-thread host. The WinUI-free logic
-    (.Model / .Source / .ViewModel / .Presentation.cs) of each app surface is linked in below so the
-    adapter + per-state projections are verified row-for-row; the WinUI views themselves are exercised
-    by the app build. Keep this file as ONE Project root with a single Compile ItemGroup: a chain of
-    auto-integration merges has repeatedly re-concatenated it into several Project roots plus orphaned
-    ItemGroups that failed XML load with MSB4025. The Compile ItemGroup below is the deduplicated union.
-  -->
-    P2/W2-0001 - headless unit tests for the UI-primitive logic models.
-    Targets plain net10.0 so dotnet test runs without a WinUI/UI-thread host. The WinUI-free
-    logic (.Model / .Source / .ViewModel / .Presentation.cs) of each app surface is linked in
-    below so the adapter and per-state projections are verified row-for-row; the WinUI views
-    themselves are exercised by the app build. Keep this as ONE Project root with a single
-    Compile ItemGroup (the file was previously corrupted into multiple roots).
+    Invariant: keep this file as ONE Project root with a single, deduplicated, path-sorted Compile ItemGroup.
+    A chain of integration merges has repeatedly re-concatenated multiple roots plus orphaned comment text,
+    failing XML load (MSB4025); it has been consolidated here (no linked source dropped) plus the
+    DriveDetailHeader feature-view surface logic link.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -133,9 +32,6 @@
   </ItemGroup>
 
   <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget template). -->
-  <!-- Test fixtures / manifests copied next to the test assembly (SI golden vectors, MSIX manifest, widget template). -->
-  <!-- Test fixtures copied next to the assembly: SI golden vectors, MSIX manifest, widget template. -->
-  <!-- Fixtures copied next to the test assembly: SI golden vectors, MSIX manifest, widget template. -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -148,21 +44,6 @@
     </Content>
   </ItemGroup>
 
-  <!-- Linked WinUI-free sources from the WinUI app project (deduplicated, path-sorted union). -->
-    Linked WinUI-free feature-view, dashboard-widget and shared logic sources (deduplicated union).
-  -->
-    Linked WinUI-free feature-view, dashboard-widget and shared logic sources (Model / Source /
-    ViewModel). The headless (net10.0) test project verifies each adapter + projection + diagnostics
-    without a UI host; the WinUI views themselves are exercised by the app build. Single
-    deduplicated, path-sorted union of the test surface.
-  -->
-  <!-- Linked WinUI-free Model / Source / ViewModel sources, deduplicated and sorted by path. -->
-  <!-- Linked WinUI-free sources from the app project (deduplicated union). -->
-  <!-- Linked UI-thread-free sources from the WinUI app project (path-sorted deduplicated union). -->
-  <!-- Linked WinUI-free feature-view / dashboard-widget / shared logic (deduplicated union). -->
-  <!-- Linked WinUI-free logic from TeslaSync.App (compiled + verified headlessly). -->
-  <!-- UI thread free feature-view, dashboard-widget and shared logic sources, deduplicated and sorted. -->
-  <!-- Linked WinUI-free Model / Source / ViewModel / Presentation sources (deduplicated, path-sorted union). -->
   <!-- Linked WinUI-free Model / Source / ViewModel sources from the app project (deduplicated, path-sorted union). -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
@@ -483,6 +364,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\DetailedStatistics.Model.cs" Link="FeatureViews\DetailedStatistics.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailedStatistics.Source.cs" Link="FeatureViews\DetailedStatistics.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailedStatistics.ViewModel.cs" Link="FeatureViews\DetailedStatistics.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveDetailHeader\DriveDetailHeader.Model.cs" Link="FeatureViews\DriveDetailHeader\DriveDetailHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveHighlightSlide\DriveHighlightSlide.Model.cs" Link="FeatureViews\DriveHighlightSlide\DriveHighlightSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" />
