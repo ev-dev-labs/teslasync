@@ -288,6 +288,15 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Model.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.ViewModel.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Source.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Source.cs" />
+    <!--
+      P2 feature-views/0005 — the FleetTelemetryHealth surface's UI-thread-free logic (the JSON parse
+      adapters, the cache-then-network result mappers, the projection + 24h "recent" boundary, the
+      repository source's ?vin= filter + refresh POSTs, and the per-section state-holder view-model). The
+      WinUI view (FleetTelemetryHealth.cs) is excluded — it is exercised by the UI test project.
+    -->
+    <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Model.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Source.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.ViewModel.cs" Link="FeatureViews\FleetTelemetryHealth\FleetTelemetryHealth.ViewModel.cs" />
   </ItemGroup>
 
   <!--
