@@ -1,0 +1,145 @@
+=== P4 Feature view 0117 MonthlyCostTable (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon — Mac Studio)
+  Xcode              : 26.5 (Build 17F42) — DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  Toolchain          : swift 6.3.2 · swiftlint · swiftformat · xcodegen 2.45.4 · pwsh · Java 17 (OpenJDK 17.0.19)
+  Destinations       : iOS Simulator "iPhone 16" present · macOS 15 SDK present (built against SDK 26.5,
+                       deployment targets iOS 18.0 / macOS 15.0 per project.yml)
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 3m49s;
+                       release + debug XCFrameworks staged to apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators + KMP toolchain all present
+                       → NOT capability-BLOCKED. (This surface uses SwiftUI + the shared TSDataTable; no
+                       Swift Charts / MapKit are required by the web source — "Charts/maps used: (none)".)
+
+WEB SOURCE (the specification)
+  web/src/features/charging/components/cost-analysis/MonthlyCostTable.tsx — a PURE presentational leaf
+  fed a computed `data: MonthlyBucket[]` prop by the cost-analysis page:
+    GlassPanel(p-4) → <h3><BarChart3 text-cyan-400/> {t('costAnalysis.table.title','Monthly Cost Breakdown')}>
+                    → sortedData.length > 0
+                        ? DataTable<MonthlyBucket> (compact, pagination, columnVisibility, columnReorder;
+                            7 cols: Month · Sessions · Energy · Cost · Avg $/kWh · Gas Equiv · Savings;
+                            default sort key 'month', dir 'desc')
+                        : <div text-[var(--text-muted)]>{t('costAnalysis.table.noData','No monthly data available')}>
+    Column renderers: month → font-medium text-white · sessions → fmtInt · energy → fmtWithUnit(…,'kWh',1)
+      · cost → <Currency text-cyan-400> · avgCostPerKwh → <Currency precision=3> · gasEquiv → <Currency text-red-400>
+      · savings → (savings>=0?'+':'') + <Currency>, text-green-400 when >=0 else text-red-400.
+    Data sources (hooks): useTranslation only. Shared components: @/components/ui (GlassPanel, DataTable),
+      @/components/data-display (Currency).
+
+ARTIFACTS SHIPPED  (Allowed files: apps/apple/TeslaSync/feature-views/MonthlyCostTable.* + this log)
+  feature-views/MonthlyCostTable.Adapter.swift   — MonthlyCostBucket (web MonthlyBucket, id=month);
+                                                   MonthlyCostFormat (ports of fmtNumber/fmtInt/fmtWithUnit +
+                                                   the Currency renderer incl. precision-3 + signed-savings,
+                                                   em-dash fallback); MonthlyCostSortKey + MonthlyCostSort
+                                                   (default month/desc via shared TSTableSort + per-column
+                                                   comparators); MonthlyCostAccessibility (row label).
+  feature-views/MonthlyCostTable.Model.swift     — MonthlyCostTableTelemetry seam + OSLog default (P1/S11
+                                                   "view.opened"); MonthlyCostTableConnection (live/stale/offline);
+                                                   MonthlyCostTableInput; MonthlyCostTableResolved + Projection
+                                                   (loading/empty/error/data); @Observable MonthlyCostTableModel +
+                                                   MonthlyCostTableSource (P1/S8) + InMemory source; MonthlyCostStrings
+                                                   i18n facade (P1/S10).
+  feature-views/MonthlyCostTable.swift           — MonthlyCostTable view (slug "MonthlyCostTable"): glass panel +
+                                                   BarChart3 header + freshness chip + refresh + connectivity banner +
+                                                   state switch (+ a11y).
+  feature-views/MonthlyCostTable.Views.swift     — MonthlyCostTableView (TSDataTable, 7 columns) + loading /
+                                                   empty / error chrome.
+  feature-views/MonthlyCostTable.Previews.swift  — data / empty / loading / error / stale / offline (#if DEBUG).
+  feature-views/MonthlyCostTable.strings         — P1/S10 catalog contribution (the 9 web keys + native chrome).
+  feature-views/MonthlyCostTable.Tests.swift     — 27 XCTest (co-located; runs in TeslaSync(/-macOS) test bundles).
+  NO shared wiring touched: feature-views is already enumerated by project.yml + .swiftlint.yml (this is 0117,
+  not the directory's first surface), so unlike 0010-ToolCard this commit edits ONLY MonthlyCostTable.* + this log.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel                 → TSGlassPanel (Sources/Components/UI/Cards.swift)
+  DataTable<MonthlyBucket>   → TSDataTable<MonthlyCostBucket> (Sources/Components/UI/DataTable.swift): compact
+                               density; sortable header menu (= web column controls); adaptive columnar(macOS/iPad)
+                               / card(iPhone) layout. Rows arrive pre-sorted month/desc (web default) via the shared
+                               stable TSTableSort; each column re-sortable via per-column comparator.
+  Currency                   → TSCurrency (data-display) for the two plain precision-2 cells (cost → accent,
+                               gasEquiv → statusDanger). The avg-rate (precision 3) + savings (signed '+') cells
+                               need behaviour TSCurrency does not express, so they reuse the ported
+                               MonthlyCostFormat.currency(precision:3) / .signedCurrency — the exact web
+                               `precision={3}` / `{savings>=0?'+':''}` arithmetic.
+  BarChart3 (lucide)         → SF Symbol "chart.bar.fill", tinted Color.TS.accent (web text-cyan-400).
+  colours (ADR-006 semantic) : cyan→accent · red→statusDanger · green→statusSuccess · month→textPrimary
+                               (web font-medium text-white). Toned to tokens; no raw hex, no neon body text.
+  i18n      : every string via MonthlyCostStrings (NSLocalizedString table "MonthlyCostTable") with the web
+              t(key,default) English fallback → zero English literals in code; keys staged in the .strings file.
+  states    : loading (skeleton rows) · empty (ContentUnavailableView = web noData) · error (retry, web QueryError
+              peer) · data (table) · stale/offline (header chip + banner + one-shot auto-refresh) — every state renders.
+  a11y      : panel is one .contain element labelled by the title; header icon decorative (.accessibilityHidden);
+              each row exposes a combined VoiceOver label (month, sessions, energy, cost, savings); refresh + retry
+              buttons labelled; Dynamic Type via tokens; Reduce-Motion honoured by TSFadeIn/TSSkeleton.
+  telemetry : view.opened surface="MonthlyCostTable" via MonthlyCostTableModel.start() (P1/S11), default OSLog sink.
+
+GATES
+  [GREEN]    swiftformat --lint apps/apple                          : 0/2205 files require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (MonthlyCostTable.* — 6 files)     : 0 violations, 0 serious            (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                   : 1 PRE-EXISTING violation — opening_brace in
+                                                                       TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158
+                                                                       (NOT a MonthlyCostTable file; owned by another prompt; not introduced here).
+  [GREEN]    check-placeholders.ps1 -Path …/feature-views/MonthlyCostTable : PLACEHOLDER_COUNT=0          (PLACEHOLDER_EXIT=0)
+  [GREEN]    MonthlyCostTable build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             strict-concurrency complete, same as the app), compiling the EXACT shipped MonthlyCostTable.* sources
+             against the REAL repo design-system (Tokens + Sources/Design + Sources/Components):
+                 Build complete!  ·  Executed 27 tests, with 0 failures                                 (SWIFT_TEST_EXIT=0)
+  [GREEN]    swiftc -typecheck — REAL iOS 18 simulator SDK (arm64-apple-ios18.0-simulator, -swift-version 6 -D DEBUG,
+             46 surface + design-system files)                                                          (IOS_TYPECHECK_EXIT=0)
+  [GREEN]    swiftc -typecheck — REAL macOS 15 SDK (arm64-apple-macos15.0, -swift-version 6 -D DEBUG)    (MAC_TYPECHECK_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO MonthlyCostTable errors; all blockers pre-exist this change):
+    The Shared.xcframework assembled + staged cleanly (Gradle BUILD SUCCESSFUL 3m49s), then the app-target Swift
+    compile failed with 226 errors — ALL "ambiguous for type lookup" from parallel-merge DUPLICATE TYPE definitions
+    across unrelated sibling widget/feature-view files, e.g. (count × name):
+        16× SafetyModel  16× ChargeUnitPrefs  16× ChargeStatusProjection  16× ChargeStateDTO  16× ChargeSessionDTO
+         8× SafetyUpdate  8× SafetyLoadStatus  8× SafetyConnection  8× FleetStatsBarModel  8× ChargeStatusUpdate
+         8× ChargeLoadStatus  8× ChargeDistanceUnit  8× ChargeConnection …
+      (statically confirmed peer: `ChargingProjection` is declared as a struct in
+       TeslaSync/dashboard-widgets/ChargeStatusWidget.Adapter.swift:118 AND as an enum in
+       TeslaSync/feature-views/ChargingDetailSection.Adapter.swift:240 — same module, invalid redeclaration.)
+    macOS additionally requires a development SIGNING certificate ("TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have
+    entitlements that require signing with a development certificate), which this runner does not provision.
+    grep of both build logs for "MonthlyCost… error:" = 0 hits (MONTHLYCOST_ERROR_COUNT=0 on iOS AND macOS).
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI
+    runner with signing identities + a widget/feature-view duplicate-type de-duplication pass — NOT owned by a
+    single feature-view prompt (task rule: do not fix pre-existing unrelated breakage; allowed files = MonthlyCostTable.*).
+    (A macos-pending row is not appended because macos-pending-verifications.md is outside this prompt's allowed
+    files; the deferral evidence is recorded here in full, matching the existing rows for 0010/0180/0231.)
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and
+                          explicitly DEFERRED with raw exits + error evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced (header, 7 columns + their renderers/colours,
+                          default month/desc sort + re-sort, empty branch) plus the P4 leaf states.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; the Shared.xcframework was actually
+                          assembled and both full builds actually run to their real failure (not assumed).
+  4  No stubs as final  : complete production view + adapter + model + 27 real tests; placeholder scanner = 0.
+  5  No parity shortcut : currency precision/sign, fmtInt/fmtWithUnit rounding, colours, typography, a11y, telemetry,
+                          and the freshness states all mapped to platform tokens + unit-verified.
+  6  No delegation      : implemented directly; no agents (delegation FORBIDDEN per prompt).
+  7  No predecessor bypass: binds through P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry.
+  8  No commit on red   : the COMMITTED artifact (MonthlyCostTable.*) is GREEN on every host gate AND on a real
+                          isolated Swift 6 build+test AND on both real-SDK typechecks; the deferred full-app gate is
+                          RED only on pre-existing, unrelated duplicate-type collisions + macOS signing, which this
+                          commit neither introduces nor touches (0 MonthlyCost errors).
+  9  No silent drift    : changes are confined to feature-views/MonthlyCostTable.* (7 files) + this log — enumerated above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic MonthlyCostTable shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 27 tests pass under the app's own Swift 6 strict-concurrency rules against the real
+  design-system, it typechecks against the real iOS 18 + macOS 15 SDKs, and lint/format/placeholder are all green.
+  The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked
+  by 226 pre-existing parallel-merge duplicate-type collisions across unrelated widget/feature-view files and by
+  macOS development-signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date (0010-ToolCard, 0180-AlertMessageEditor, 0231-FSMTimelineChart).
+
+EXIT=0
+STATUS=DONE
