@@ -1,0 +1,51 @@
+=== P2 Dashboard widget 0090 SleepEfficiencyWidget (Windows) ===
+Surface: apps/windows/TeslaSync.App/dashboard-widgets/SleepEfficiencyWidget/
+Web source (spec): web/src/features/dashboard/widgets/SleepEfficiencyWidget.tsx
+Registry parity: id=sleep-efficiency, category=energy, default 1x2, min 1x2, max 3x40 (web/src/features/dashboard/widgets/registry/energy.ts)
+Runner: Windows_NT, .NET SDK 10.0.300 (runtimes: Microsoft.WindowsDesktop.App 10.0.8), Windows App SDK present.
+
+--- Files shipped ---
+apps/windows/TeslaSync.App/dashboard-widgets/SleepEfficiencyWidget/SleepEfficiencyWidget.Model.cs      (state enum, SleepStateSlice + SleepEfficiencyData parse adapter, size struct, stat record w/ unit, display record, efficiencyColor projection, result mapper)
+apps/windows/TeslaSync.App/dashboard-widgets/SleepEfficiencyWidget/SleepEfficiencyWidget.ViewModel.cs  (ISleepEfficiencySource port, registry metadata, PII-safe diagnostics, state-holder view-model)
+apps/windows/TeslaSync.App/dashboard-widgets/SleepEfficiencyWidget/SleepEfficiencyWidget.Source.cs     (repository-backed cache-then-network source; GET /analytics/sleep?vehicle_id={id}&days=30)
+apps/windows/TeslaSync.App/dashboard-widgets/SleepEfficiencyWidget/SleepEfficiencyWidget.cs            (WinUI 3 view: WidgetShell chrome + WidgetGaugeHero radial gauge + stat row + loading/error/empty surfaces)
+apps/windows/TeslaSync.App.Tests/Widgets/SleepEfficiencyWidgetTests.cs                                 (72 headless tests; mandated by acceptance criteria)
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                                            (+3 <Compile Include> links for the widget logic files — same mechanism the sibling RegenEfficiencyWidget uses; the net10.0 test host links the Model/ViewModel/Source logic, not the windows-only WinUI view)
+
+--- Gate results (raw) ---
+BUILD_EXIT=0            (dotnet build apps/windows/TeslaSync.sln -c Release; 0 errors, 17 pre-existing TeslaSync.App.Core CA warnings unrelated to this change. The WinUI 3 view compiles under .NET 10 / Windows App SDK — capability PRESENT. Time ~54s.)
+full-sln dotnet test=1  (dotnet test apps/windows/TeslaSync.sln -c Release. ONLY TeslaSync.App.UITests fails: 147 fail / 0 pass, EVERY failure is UiAutomationUnavailableException — "nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found ... on PATH". The WinAppDriver/Appium GUI-automation runner is absent on this runner. Pre-existing environment gap, identical for every widget surface (see 0081 RegenEfficiency), unaffected by this change.)
+SURFACE_TEST_EXIT=0     (dotnet test apps/windows/TeslaSync.App.Tests -c Release: 4834 passed / 0 failed, incl. 72 new SleepEfficiencyWidgetTests.)
+SLEEP_TEST_EXIT=0       (72 SleepEfficiencyWidget tests: parse adapter (snake_case fields, missing-field tolerance, empty-object zero summary, non-object null, malformed distribution rows), totalSleepHours = sum(asleep|offline minutes)/60, IsSleepState case-sensitive set, efficiencyColor thresholds >95/>85 strict, gauge integer/fraction decimals + clamp + "%" suffix + "Efficiency" caption, avgDrain = rate*24 to 2dp, wakeEvents count, stat unit suffixes %/h/none, compact gate (blank caption, hidden stats, 70px), result mapper status preservation + non-object collapse, view-model state matrix loading/loaded/empty/error/stale/offline + size reprojection, registration metadata, diagnostics view.opened, per-vehicle source primary/explicit/empty + vehicle_id&days=30 query, a11y gauge + stat measure names.)
+FORMAT_EXIT=0           (dotnet format apps/windows/TeslaSync.sln --verify-no-changes; whole-solution clean. New files initially had CRLF; normalized to LF via dotnet format, re-verified clean.)
+PLACEHOLDER_EXIT=0      (apps/tools/check-placeholders.ps1 on the widget dir; PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0.)
+
+--- Capability assessment ---
+The REQUIRED capability — WinUI 3 (Windows App SDK) + .NET 10 + Fluent Design System — is PRESENT: BUILD_EXIT=0 proves
+the native ContentControl view (FontIcon/Canvas radial gauge, TsHelpTooltip, TsDataFreshness, TsSkeleton, TsQueryError,
+TsEmptyState, AutomationProperties, LiveRegion) compiles and links against Microsoft.WindowsAppSDK on .NET 10, and 4834
+headless surface tests execute. STATUS is therefore DONE, not BLOCKED. The sole red (full-sln test=1) is the
+WinAppDriver/Appium out-of-process E2E GUI-automation RUNNER (a separate, optional test-execution dependency), absent on
+this runner — UiAutomationUnavailableException x147 with explicit API evidence above. Per the predecessor convention
+(0081-RegenEfficiencyWidget, identical 147-failure profile), this environment-only gap is non-blocking: the surface is
+complete and every web state is verified headlessly in TeslaSync.App.Tests.
+
+--- Acceptance criteria ---
+[x] Surface renders all web states (loading / loaded / empty / error / stale / offline) via SleepEfficiencyViewModel + view.
+[x] Hooks bind to the shared P1/S8 state-holder layer (ISleepEfficiencySource -> CacheThenNetworkEngine, IWidgetVehicleSource for primary-vehicle resolution); no HTTP in the view.
+[x] Every i18n key from the web source resolves through the P1/S10 facade and exists in the apps/windows/Strings catalog:
+    widget.sleepEfficiency.{title,efficiency,avgDrain,totalSleep,hours,wakeEvents,noData} + help.sleepEfficiency.body (verified present in Strings/{en,ar,he}/Resources.resw). Native-only convenience keys (refresh/loading/error/retry/description) carry English fallbacks per the established sibling pattern.
+[x] Accessibility labels on the gauge (value+unit+caption measure name), each stat tile, the refresh button, the help tooltip and the loading skeleton (AutomationProperties / LiveRegion).
+[x] Tests: parse-adapter unit tests + per-state view-model tests + registration/diagnostics/source + a11y label tests (72 total).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_EXIT=0).
+
+--- Parity notes (web SleepEfficiencyWidget.tsx -> native) ---
+* Gauge value = sleep_efficiency_pct (clamped 0..100); integer -> 0 dp, fractional -> 2 dp (web RadialGauge Number.isInteger / global precision), small inline "%" suffix, "Efficiency" caption beneath the ring (blanked when compact).
+* efficiencyColor: >95 Success(#10B981) / >85 Warning(#F59E0B) / else Danger(#EF4444), strict comparisons, via themed status brushes.
+* Stats (only when !compact): Avg Drain/Day = fmtNumber(sentry_off_drain_rate*24, 2) "%"; Total Sleep = fmtNumber(sum(asleep|offline total_minutes)/60, 0) "h"; Wake Events = recent_events.length (no unit).
+* Empty surface (Moon glyph + "No sleep efficiency data") when the response body is not an object (web data == null). An object body — even {} — renders the gauge at 0%.
+* No useUnits dependency: the web widget formats with plain fmtNumber only (percentage / %-per-day / hours / count are dimensionless), so no unit-preference plumbing is carried (faithful parity).
+* Diagnostics emits "view.opened slug=SleepEfficiencyWidget" (P1/S11), PII-safe (no efficiency value / VIN / vehicle id).
+
+EXIT=0
+STATUS=DONE

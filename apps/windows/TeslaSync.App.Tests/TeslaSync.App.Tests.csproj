@@ -241,6 +241,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SecurityStatusWidget\SecurityStatusWidget.Model.cs" Link="Widgets\SecurityStatusWidget\SecurityStatusWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SecurityStatusWidget\SecurityStatusWidget.ViewModel.cs" Link="Widgets\SecurityStatusWidget\SecurityStatusWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\SecurityStatusWidget\SecurityStatusWidget.Source.cs" Link="Widgets\SecurityStatusWidget\SecurityStatusWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SleepEfficiencyWidget\SleepEfficiencyWidget.Model.cs" Link="Widgets\SleepEfficiencyWidget\SleepEfficiencyWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SleepEfficiencyWidget\SleepEfficiencyWidget.ViewModel.cs" Link="Widgets\SleepEfficiencyWidget\SleepEfficiencyWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\SleepEfficiencyWidget\SleepEfficiencyWidget.Source.cs" Link="Widgets\SleepEfficiencyWidget\SleepEfficiencyWidget.Source.cs" />
   </ItemGroup>
 
   <!--
