@@ -1,0 +1,188 @@
+=== P4 Feature view 0243 FrontendErrorsCard (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon).
+  Xcode              : 26.5 (Build 17F42) — active developer dir already /Applications/Xcode.app
+                       (xcode-select -p). macOS SDK 26.5, iOS Simulator SDK 26.5.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Simulator          : iPhone 16 (booted) present.
+  Capability         : SwiftUI present; iOS 18 / macOS 15 HIG primitives available. This surface uses
+                       NO Swift Charts and NO MapKit (the web source has none either — prompt "Charts /
+                       maps used: (none)"), so every primitive it needs is available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/features/system/components/status/FrontendErrorsCard.tsx — the last-hour rolling summary of
+  browser-reported frontend errors (the data that backed the deleted /admin "Frontend Errors" panel).
+  Hook: useWebErrorsSummary() → GET /admin/web-errors/summary → WebErrorsSummary { total, top:
+  [{ name, route, count }], window_seconds, as_of } (types/admin.ts). Render branches:
+    isLoading                 → two <Skeleton h-6/> bars.
+    !data                     → "Unable to load frontend error summary." (muted).
+    data                      → panel: Bug glyph + "Frontend errors (last hour)" (uppercase, muted);
+                                fmtInt(total ?? 0) [2xl tabular] + "reported by browser sessions";
+                                top.length > 0 ? <ul> rows [ <Badge neutral>{name || '—'}</Badge> ·
+                                  mono cyan route {route || '—'} · right fmtInt(count ?? 0) ]
+                                : "No frontend errors reported in the last hour."
+  Helpers (reproduced verbatim — arithmetic is the contract):
+    fmtInt(v) = fmtNumber(v, 0) = safeNumber(v).toLocaleString(locale, { min:0, max:0 }); safeNumber
+    coerces non-finite ⇒ 0. name/route `|| '—'` falls back to the em dash on an empty string.
+  i18n  : the web source is "anonymous" — hardcoded English literals (no t() calls). Per the native
+          no-English-literals rule every literal is promoted to a P1/S10 key (table "FrontendErrorsCard").
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/FrontendErrorsCard.* + this log)
+  FrontendErrorsCard.Adapter.swift     — pure Foundation core: FrontendErrorsNumber.integer (port of
+                                          numberFormat.ts fmtInt + safeNumber non-finite⇒0 guard, half-up),
+                                          the FrontendErrorEntry / FrontendErrorsSummary DTOs, the
+                                          FrontendErrorsText.orDash fallback (`value || '—'`), and the
+                                          FrontendErrorsAccessibility VoiceOver builders.
+  FrontendErrorsCard.Projection.swift  — pure FrontendErrorsProjection: loading → error → empty → data
+                                          (web branch order), the `total ?? 0` headline, the offender
+                                          name/route/count mapping with stable `${name}|${route}|${idx}` ids.
+  FrontendErrorsCard.Model.swift       — P1/S8 state-holder seam (FrontendErrorsSource + @Observable
+                                          FrontendErrorsModel + InMemory source), P1/S11 telemetry seam
+                                          (FrontendErrorsTelemetry + OSLog sink, view.opened
+                                          surface="FrontendErrorsCard"), FrontendErrorsConnection axis, the
+                                          FrontendErrorsInput snapshot, the FrontendErrorsResolved view-state
+                                          + FrontendErrorsOffender value type, the P1/S10 FrontendErrorsStrings
+                                          facade (string + %@ format).
+  FrontendErrorsCard.Views.swift       — the web body regions as scoped subviews: header (ladybug glyph +
+                                          uppercase muted title), headline (2xl tabular total + caption),
+                                          offender list (hairline dividers), offender row (neutral name chip
+                                          + mono accent route + right count), healthy "no errors" body.
+  FrontendErrorsCard.Chrome.swift      — P4 leaf chrome: freshness chip, refresh button, stale/offline
+                                          banner, two-bar loading skeleton, retryable error view (TSButton).
+  FrontendErrorsCard.swift             — the surface: card chrome (header title + chip + refresh, banner,
+                                          phase switch, TSFadeIn summary body shared by empty + data);
+                                          static surfaceSlug = "FrontendErrorsCard"; onAppear start /
+                                          onDisappear stop.
+  FrontendErrorsCard.Previews.swift    — #if DEBUG #Preview for data / empty / loading / error / stale / offline.
+  FrontendErrorsCard.strings           — P1/S10 catalog (table "FrontendErrorsCard"): the literals extracted
+                                          from the web source + the native chrome (freshness / loading / error).
+  FrontendErrorsCard.Tests.swift       — projection (loading/error/empty/data, offender mapping, stable ids,
+                                          grouping) + model (wiring, view.opened once, stale one-shot
+                                          auto-refresh + re-arm, offline no-refresh, manual refresh, stop) + a11y.
+  FrontendErrorsCard.AdapterTests.swift— integer formatting (grouping, non-finite⇒0, half-up), orDash
+                                          fallback, accessibility label composition.
+  (10 files, 1233 swift lines + 1 strings table; the surface is split across .Adapter/.Projection/.Model
+   and .Views/.Chrome and .Tests/.AdapterTests — the same multi-file decomposition the prior feature-views
+   use, e.g. 0237 AiUsageCard — to keep each file well within the 400-line SwiftLint budget.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  panel ring + glass tile      → RoundedRectangle(TSRadius.md) surfaceGlass + border stroke
+  lucide Bug                   → SF Symbol "ladybug"
+  Badge variant="neutral"      → scoped FrontendErrorsNameChip styled from the shared TSTone.neutral token,
+                                 rendering the dynamic component name verbatim (the shared atomic TSBadge is
+                                 keyed for localized prose, not data — same precedent as 0237's scoped regions)
+  route text-cyan-300 (mono)   → Text(verbatim:) Font.TS.caption.monospaced() foreground Color.TS.accent, truncated
+  fmtInt(total) / fmtInt(count)→ FrontendErrorsNumber.integer (NumberFormatter .decimal, grouping, halfUp, safe)
+  name || '—' / route || '—'   → FrontendErrorsText.orDash (empty/whitespace ⇒ em dash)
+  divide-y rows                → VStack with a 1pt Color.TS.border.opacity(0.6) rule between rows
+  i18n                         → every string via FrontendErrorsStrings (NSLocalizedString table
+                                 "FrontendErrorsCard", web literal as the value: fallback)
+  a11y                         → header isHeader; headline combined ("{total} {subtitle}"); each offender row
+                                 combined into one element ("{name}, {route}: {count}"); chip / refresh / retry
+                                 labelled; Dynamic Type via tokens; Reduce Motion via TSFadeIn / TSSkeleton
+  telemetry                    → view.opened surface="FrontendErrorsCard" emitted once on first applied snapshot
+
+STATES (every one renders — no hidden surface)
+  loading  → header over two skeleton bars (web `isLoading`).
+  error    → retryable "Unable to load frontend error summary." (web `!data`, upgraded with a Retry per the
+             P4 leaf contract); an explicit query errorMessage takes precedence.
+  empty    → data resolved with top.length === 0 → header + headline total + "No frontend errors reported in
+             the last hour." (web inner empty branch). The surrounding header+headline keep it from ever
+             being a blank box.
+  data     → header + headline total + the top-offender list (web `top.length > 0`).
+  stale    → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline  → header chip + banner over last-known content; no auto-refresh.
+
+GATES  (raw exits below; per-surface scope)
+  [GREEN] swiftformat --lint  (.swiftformat, 9 swift files)        : 0/9 files require formatting   FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 9 swift files)      : 0 violations, 0 serious        LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (-Language swift, scoped to the 10 shipped files) :
+                                                                      PLACEHOLDER_ALLOWED=0
+                                                                      PLACEHOLDER_COUNT=0            PLACEHOLDER_EXIT=0
+          (the gate's literal `-Path …/FrontendErrorsCard` prefix is a non-existent path → trivially clean;
+           re-run here against a temp dir holding exactly the 10 shipped files for a genuine count. A direct
+           grep of all 10 files for TODO/FIXME/XXX/Coming-soon/Placeholder/Lorem/not-implemented/stub/mock = NONE.)
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency
+          complete, same as the app), compiling the EXACT shipped FrontendErrorsCard.* sources (incl. the
+          #Preview macro file) against the REAL repo design system (generated apps/design/.../Tokens.swift +
+          Sources/Design TSDesign/TSMaterial + Sources/Components UI/Typography,Badges,Buttons,Cards +
+          Motion/Motion + Feedback/Skeletons) under the Xcode 26.5 toolchain (so the real #Preview macro +
+          XCTest are available):
+              Build complete!  ·  Executed 24 tests, with 0 failures (0 unexpected)                 SWIFT_TEST_EXIT=0
+  [GREEN] DUAL-SDK typecheck — the EXACT shipped sources (incl. #Preview under -D DEBUG) parsed in Swift 6
+          language mode against BOTH SDKs:
+              xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator  IOS_TYPECHECK_EXIT=0
+              xcrun --sdk macosx          swiftc -typecheck -target arm64-apple-macos15.0           MAC_TYPECHECK_EXIT=0
+  [GREEN] REAL IN-APP iOS BUILD (evidence for the deferral, NOT assumed) — staged the already-built KMP
+          debug Shared.xcframework (apps/shared/core/build/XCFrameworks/debug) into Frameworks/, regenerated
+          the project (xcodegen generate, GEN_EXIT=0; the surface is wired into both app targets + both test
+          bundles, 60 pbxproj refs), and built the iOS app TARGET on the iphonesimulator SDK
+          (CODE_SIGNING_ALLOWED=NO, bypassing the scheme's Gradle pre-action):
+              FrontendErrorsCard.strings copied + validated (UTF-8) into TeslaSync.app.
+              Errors attributable to FrontendErrorsCard.* ............................. 0
+              Total target errors .................................................... 285, ALL pre-existing
+                "'…' is ambiguous for type lookup" / "cannot infer contextual base" duplicate-type collisions in
+                UNRELATED surfaces (dashboard-widgets/ChargeSessionChartWidget, ChargeStatusLiveWidget,
+                ChargeStatusWidget, FSMDistributionWidget, ProjectedRangeWidget, SafetyFeaturesWidget,
+                SecurityStatusWidget, SentryEventLogWidget, …; feature-views/DrivingCoachSection, TimestampTool).
+          → my surface compiles cleanly inside the real app against the real KMP framework; zero errors are mine.
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app scheme is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch (each VERIFIED here, not assumed):
+            • The scheme build pre-action stages Frameworks/Shared.xcframework via Gradle
+              `:core:assembleSharedXCFramework` — a multi-target Kotlin/Native RELEASE link (verified live: the
+              run reaches `:core:linkReleaseFrameworkIosArm64` and keeps going) that does not complete in a
+              bounded window here (timed out at 240s, EXIT=124). Frameworks/ ships only .gitkeep.
+            • 285 pre-existing duplicate-type ambiguities across ~20 dashboard-widget + 2 unrelated feature-view
+              surfaces (parallel-merge collisions), captured above — these fail the target build independently.
+            • macOS development-signing (DEVELOPMENT_TEAM is empty in project.yml).
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by
+          every prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log / -0203-AIUsageCard.log) and
+          is owned by p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner. ZERO
+          FrontendErrorsCard / feature-views-of-this-prompt errors are attributable to this change.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild scheme gate is reported DEFERRED with raw, verified
+                           pre-existing-blocker evidence (Gradle release-link long-pole reached live; 285
+                           pre-existing duplicate-type errors enumerated; macOS signing) — never as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the uppercase Bug header, the headline
+                           `total ?? 0` + caption, the offender list (name `|| '—'` chip, mono `route || '—'`,
+                           fmtInt count) AND the inner "no errors" message; all six P4 states render.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted. The deferred
+                           blockers were each re-confirmed by a REAL build (not assumed): the in-app iOS build
+                           shows 0 FrontendErrorsCard errors and 285 pre-existing ambiguities in other surfaces.
+  4  No stubs as final   : complete production surface + 24 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/mock/Coming-soon/Placeholder/Lorem anywhere (grep-verified).
+  5  No parity shortcut  : the fmtInt grouping + safeNumber non-finite⇒0 guard, the `total ?? 0` headline, the
+                           `value || '—'` fallback, and the offender id scheme are each unit-asserted against the
+                           web expressions (en_US golden values verified empirically).
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 "isolated-build + DEFERRED full-app" disposition all
+                           honoured.
+  8  No commit on red    : the committed artifact (10 FrontendErrorsCard.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 24/24
+                           XCTest + both-SDK typecheck + a real in-app iOS compile (0 surface errors); the
+                           deferred full-app gate is blocked only by pre-existing, unrelated surfaces.
+  9  No silent drift     : changes are confined to feature-views/FrontendErrorsCard.{swift,Model,Adapter,
+                           Projection,Views,Chrome,Previews,Tests,AdapterTests}.swift + FrontendErrorsCard.strings
+                           and this log. (Generated TeslaSync.xcodeproj, build/, Frameworks/Shared.xcframework and
+                           apps/shared/core/build are git-ignored and NOT committed; two pre-existing modified web
+                           files in the slot were left untouched.)
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic FrontendErrorsCard shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 24 tests pass under the app's own Swift 6 strict-concurrency rules against the
+  REAL design system; it typechecks against BOTH the iOS 18 and macOS 15 SDKs; and it compiles cleanly INSIDE the
+  real iOS app target against the real KMP Shared.xcframework (0 FrontendErrorsCard errors), with swiftformat /
+  swiftlint / placeholder all green on the 9 surface files and the #Preview macro compiling. The full-app
+  iOS-Simulator + macOS xcodebuild scheme build/test gate is DEFERRED (not failed by this code) on pre-existing,
+  unrelated, out-of-allowed-files blockers (the Gradle KMP release-link that stages Shared.xcframework, 285
+  pre-existing duplicate-type ambiguities in dashboard-widget + unrelated feature-view surfaces, macOS signing),
+  owned by the P99 acceptance gate on a signed macos-latest runner.
+
+EXIT=0
+STATUS=DONE
