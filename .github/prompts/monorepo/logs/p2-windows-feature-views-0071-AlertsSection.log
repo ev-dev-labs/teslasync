@@ -1,0 +1,123 @@
+=== P2 Feature view 0071 AlertsSection (Windows) ===
+Run: 2026-06-09T08:19:32.0019240-07:00
+
+--- STEP 1/4: dotnet build apps/windows/TeslaSync.sln -c Release ---
+D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Core\Data\State\LoadState.cs(37,26): warning CA1716: Rename type LoadState<T>.Error so that it no longer conflicts with the reserved language keyword 'Error'. Using a reserved keyword as the name of a type makes it harder for consumers in other languages to use the type. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1716) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+Build succeeded.
+D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Core\Data\State\LoadState.cs(37,26): warning CA1716: Rename type LoadState<T>.Error so that it no longer conflicts with the reserved language keyword 'Error'. Using a reserved keyword as the name of a type makes it harder for consumers in other languages to use the type. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1716) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+17 Warning(s)
+0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2/4: dotnet test apps/windows/TeslaSync.sln -c Release ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 208 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  8133, Skipped:     0, Total:  8133, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+
+UITests failure reason (representative):
+  TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TEST_EXIT=1
+
+--- STEP 3/4: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+format error lines: 0
+FORMAT_EXIT=0
+
+--- STEP 4/4: check-placeholders.ps1 -Path .../feature-views/AlertsSection ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+================================================================================
+SUMMARY — P2 / feature-views / 0071 AlertsSection (Windows, WinUI 3 / .NET 10)
+================================================================================
+
+GATE RESULT:  BUILD_EXIT=0   TEST_EXIT=1   FORMAT_EXIT=0   PLACEHOLDER_EXIT=0
+
+DELIVERABLE (complete — no stub / placeholder / skeleton):
+  Native WinUI 3 parity port of
+  web/src/features/analytics/components/weekly-digest/AlertsSection.tsx.
+  Files (allowed cone):
+    apps/windows/TeslaSync.App/feature-views/AlertsSection/AlertsSection.cs        (WinUI view)
+    apps/windows/TeslaSync.App/feature-views/AlertsSection/AlertsSection.Model.cs  (UI-free model + projection + diagnostics + registration)
+    apps/windows/TeslaSync.App.Tests/FeatureViews/AlertsSectionTests.cs            (38 headless tests)
+    apps/windows/Strings/{en,ar,he}/Resources.resw                                 (added translation.analytics.weeklyDigest.noAlerts)
+
+  States reproduced (every state renders — none hidden): Loading (skeleton chrome,
+  live region), Empty (header + "No alerts this week — everything looks great!"),
+  Content (header + warning total Badge + "Alerts by Severity" glass cards +
+  "Alert Distribution" donut + colour-keyed legend). error/stale/offline are owned
+  by the parent Weekly-Digest query lifecycle (the web source is pure presentational
+  and never fetches), documented in the Model exactly as the sibling
+  ChargingBreakdownSlide / DriveHighlightSlide surfaces do.
+
+  Parity details:
+    - Data bound from the projection's narrowed prop model (metrics.alertTotal +
+      metrics.alertsByType, insertion-ordered); alertPieData is rebuilt from
+      alertsByType, exactly as the web useWeeklyDigest does. No HTTP in the view.
+    - Severity colours are SEMANTIC (web ALERT_SEVERITY_COLORS + STATUS_COLORS):
+      critical -> danger, warning -> warning, info -> chart-brush-0, other ->
+      chart-brush-4. TsPieChart only colours by palette index, so the donut is drawn
+      from the shared ChartGeometry + ChartBrushes primitives (the same toolkit
+      TsPieChart is built on) to preserve those per-severity colours; a single-
+      severity ring is drawn as a disc to avoid a degenerate full-turn arc.
+    - Badge variant follows the web ternary (critical->danger, warning->warning,
+      else->info); counts via NumberFormatting (the web fmtInt grouping); severity
+      labels title-cased like the web pie name.
+    - i18n: every string resolves through the P1/S10 facade with the full
+      translation.* keys (alertsSection / alertsBySeverity / alertDistribution
+      already in catalog; noAlerts added to en/ar/he). No English literals in native
+      control code beyond the keyed fallbacks the web t() also passes.
+    - Accessibility: surface Narrator name in every state; each severity card and
+      legend entry carry a spoken "{label}, {count}"; the donut exposes a spoken
+      distribution summary; decorative icons/dots are AccessibilityView.Raw; the
+      loading skeleton is a polite live region; TextBlocks honour the system font
+      scale; the content panel honours OS reduce-motion via TsFadeIn.
+    - Telemetry: AlertsSectionDiagnostics emits "view.opened slug=AlertsSection"
+      (PII-safe; never an alert count or severity) on first load.
+
+VERIFICATION (executed on this runner):
+  BUILD_EXIT=0     dotnet build TeslaSync.sln -c Release — Build succeeded, 0 errors.
+                   TeslaSync.App compiles under TreatWarningsAsErrors with 0 new
+                   warnings; the 17 warnings are pre-existing in TeslaSync.App.Core.
+  TEST  (headless) TeslaSync.App.Tests.dll: Passed 8133 / Failed 0 — includes the 38
+                   new AlertsSection adapter + per-state + a11y-label + diagnostics
+                   tests (and all model links re-wired by the csproj repair below).
+  FORMAT_EXIT=0    dotnet format --verify-no-changes — 0 changes (LF / UTF-8 per .editorconfig).
+  PLACEHOLDER_EXIT=0  check-placeholders.ps1 — PLACEHOLDER_COUNT=0 (no TODO/stub/mock/placeholder/Lorem).
+
+CSPROJ MERGE-REPAIR (pre-existing, directly coupled):
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed at HEAD
+  in a corrupted state (clean working tree): a duplicated second <Project> root plus a
+  mangled ItemGroup boundary (lost </ItemGroup> + <!-- around the OverviewTab links)
+  and mixed CRLF/LF — i.e. MSB4025, the file could not be loaded, so `dotnet build`/
+  `dotnet test` of the solution failed for ALL Windows prompts at HEAD. This is the
+  same class of corruption predecessor 0059 OverviewTab already repaired once and that
+  later parallel-branch merges re-introduced. Because the 0071 test must link its
+  AlertsSection.Model.cs into this very project, the repair is directly coupled: the
+  file was consolidated into ONE valid <Project> preserving the full deduplicated
+  union of all 366 Compile links (verified all exist on disk), restoring the
+  ChargingTab.* triple that only survived in the deleted duplicate block, and adding
+  the AlertsSection.Model.cs link (367 total). Result: BUILD_EXIT=0 and the 8133-test
+  headless suite runs green.
+
+TEST_EXIT=1 — ROOT CAUSE = ABSENT UI-AUTOMATION RUNNER (platform-capability gap, not a defect):
+  TeslaSync.App.UITests.dll: Failed 147 / Passed 0 — EVERY failure is
+  UiAutomationUnavailableException: "WinAppDriver/Appium runner is absent: nothing is
+  listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found ...". None of
+  the 147 reference AlertsSection; they drive the packaged app's pre-existing shell /
+  navigation / auth / page-state-matrix chrome over WinAppDriver and fail identically
+  at HEAD, independent of this surface. The harness deliberately FAILS (not skips) when
+  the runner is absent (RunnerAvailability: "tests fail with that reason rather than
+  being silently skipped"). This is the same WinAppDriver gap recorded as STATUS=BLOCKED
+  by the predecessor feature-view logs (0002 BackendTool ... 0061 ChargingBreakdownSlide,
+  0059 OverviewTab). The prompt's Capability clause ("requires WinUI 3 (Windows App SDK
+  1.6+) + .NET 10 ... If unavailable on the runner -> STATUS=BLOCKED with API evidence")
+  sanctions BLOCKED for exactly this gap. WinUI 3 + .NET 10 BUILD capability IS present
+  (BUILD_EXIT=0); only the WinAppDriver UI-AUTOMATION runtime is not.
+
+Per Honesty Covenant #1 (no red-as-green): the literal full-solution gate's
+dotnet test returns TEST_EXIT=1, so this run is reported BLOCKED — the AlertsSection
+deliverable itself is complete and green on every check the runner can execute.
+
+EXIT=1
+STATUS=BLOCKED
