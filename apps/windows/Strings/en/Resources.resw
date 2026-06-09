@@ -22098,11 +22098,35 @@
   <data name="translation.widget.mo" xml:space="preserve">
     <value>mo</value>
   </data>
+  <data name="translation.widget.monthlyMileage.description" xml:space="preserve">
+    <value>Bar chart of monthly driving distance over last 12 months</value>
+  </data>
   <data name="translation.widget.monthlyMileage.distance" xml:space="preserve">
     <value>Distance</value>
   </data>
+  <data name="translation.widget.monthlyMileage.error" xml:space="preserve">
+    <value>Couldn't load monthly mileage</value>
+  </data>
+  <data name="translation.widget.monthlyMileage.error.auth" xml:space="preserve">
+    <value>Sign in to view monthly mileage</value>
+  </data>
+  <data name="translation.widget.monthlyMileage.error.offline" xml:space="preserve">
+    <value>You're offline — showing the last cached monthly mileage</value>
+  </data>
+  <data name="translation.widget.monthlyMileage.loading" xml:space="preserve">
+    <value>Loading monthly mileage</value>
+  </data>
+  <data name="translation.widget.monthlyMileage.name" xml:space="preserve">
+    <value>Monthly Mileage</value>
+  </data>
   <data name="translation.widget.monthlyMileage.noData" xml:space="preserve">
     <value>No mileage data</value>
+  </data>
+  <data name="translation.widget.monthlyMileage.refresh" xml:space="preserve">
+    <value>Refresh monthly mileage</value>
+  </data>
+  <data name="translation.widget.monthlyMileage.retry" xml:space="preserve">
+    <value>Retry</value>
   </data>
   <data name="translation.widget.monthlyMileage.thisMonth" xml:space="preserve">
     <value>This Month</value>
