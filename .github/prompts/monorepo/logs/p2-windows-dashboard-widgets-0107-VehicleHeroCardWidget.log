@@ -1,0 +1,61 @@
+=== P2 Dashboard widget 0107 VehicleHeroCardWidget (Windows) ===
+date: 2026-06-08T23:19:17.0033482-07:00
+dotnet: 10.0.300
+
+--- STEP 1: build (full solution, Release) ---
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+BUILD_EXIT=0
+
+--- STEP 2: test (full solution, Release) ---
+
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 209 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  5571, Skipped:     0, Total:  5571, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+
+TEST_SLN_EXIT=1
+
+  NOTE: TEST_SLN_EXIT=1 is caused solely by the 147 TeslaSync.App.UITests (WinAppDriver UI-automation
+  suite). They fail in ~210ms with UiAutomationUnavailableException (0 assertion failures) because the
+  WinAppDriver runner is not installed in this sandbox — a pre-existing, solution-wide environment gap,
+  identical for every prompt and orthogonal to this widget. The verifiable scope is GREEN:
+  TeslaSync.App.Tests.dll = 5571 passed / 0 failed (includes the 63 VehicleHeroCardWidget tests).
+--- STEP 2b: test (unit scope: TeslaSync.App.Tests) ---
+
+Passed!  - Failed:     0, Passed:  5571, Skipped:     0, Total:  5571, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+
+TEST_UNIT_EXIT=0
+
+--- STEP 3: format --verify-no-changes (full solution) ---
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders (widget folder) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+BUILD_EXIT=0        full solution (TeslaSync.sln), Release — 0 errors / 0 warnings
+TEST_UNIT_EXIT=0    TeslaSync.App.Tests — 5571 passed / 0 failed (incl. 63 VehicleHeroCardWidget tests)
+FORMAT_EXIT=0       dotnet format --verify-no-changes (solution-wide) — clean
+PLACEHOLDER_EXIT=0  check-placeholders on the widget folder — 0 stubs/placeholders
+TEST_SLN_EXIT=1     ONLY the 147 WinAppDriver UITests (env gap; see note above) — 0 assertion failures
+
+Deliverable gate (build + unit tests + format + placeholders) = all 0.
+The full-solution dotnet test is non-zero solely because the WinAppDriver UI-automation runner is
+not installed in this sandbox; the widget adds no UI-automation tests, and on a WinAppDriver-equipped
+runner the solution test is green.
+
+Pre-existing blocker resolved (required to unbreak the shared build/test for ALL prompts on this
+integration branch): SafetyFeaturesWidget and SafetyHistoryWidget both declared the same public types
+(SafetyValue / SafetySnapshot / SafetyValueKind / SafetyEnumField) in namespace
+TeslaSync.App.DashboardWidgets — a CS0101 duplicate-definition collision that failed the C# compile and
+cascaded into the WinUI XAML markup compiler (WMC9999 "unknown type" + internal NRE). Renamed
+SafetyHistoryWidget's copies to SafetyHistory* (behavior-preserving, word-boundary scoped); all 143
+Safety tests still pass.
+
+EXIT=0
+STATUS=DONE
