@@ -1,0 +1,83 @@
+=== P2 Feature view 0097 BatteryLevelChart (Windows) ===
+date: 2026-06-09T10:52:41-07:00
+runner: ATUL-THINK-I9  dotnet: 10.0.300
+
+--- platform capability probe (ADR-002/ADR-009: WinUI 3 + .NET 10 + Fluent) ---
+net10 sdk present: 10.0.300 [C:\Program Files\dotnet\sdk]
+WindowsAppSDK pinned: True (Microsoft.WindowsAppSDK 2.1.3, >= 1.6 required)
+WinUI 3 app TeslaSync.App (net10.0-windows10.0.19041.0, UseWinUI=true, MSIX) compiles in Release.
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  8738, Skipped:     0, Total:  8738 - TeslaSync.App.Tests.dll  (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite).
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+  WinAppDriver.exe was not found at its standard install paths or on PATH.
+  -> WinAppDriver/Appium runner + a deployed MSIX are absent on this headless runner; that suite
+     fails fast by design (never silently skipped) and is gated by the SEPARATE W9-0002 prompt,
+     not feature-view 0097. grep BatteryLevelChart over TeslaSync.App.UITests/ = 0 hits.
+
+### STEP 2b: dotnet test --filter Category!=UIAutomation (headless surface-logic gate, the documented W9-0002 separation)
+No test matches the given testcase filter `Category!=UIAutomation` in TeslaSync.App.UITests.dll
+Passed!  - Failed:     0, Passed:  8738, Skipped:     0, Total:  8738 - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+BatteryLevelChart tests: Passed 25 / Failed 0 (TeslaSync.App.Tests.FeatureViews.BatteryLevelChartTests)
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+format: clean (no changes needed; new sources normalized to LF)
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/BatteryLevelChart
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(also verified directly against the two shipped files: no TODO/FIXME/XXX/Placeholder/Lorem/stub/NotImplementedException.)
+
+### Pre-existing integration-branch repair required to make the gate runnable (Honesty Covenant #9)
+This auto-integration branch HEAD did not build before this change, for a reason unrelated to the surface:
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was corrupt. The file carries the git
+attribute `merge=union`, so successive integration merges concatenated whole copies of it: at HEAD it held
+multiple <Project>/</Project> roots (MSB4025 "The project file could not be loaded. There are multiple root
+elements." at line 1103), 1183 <Compile> lines collapsing to 391 unique, and several dangling </Project>
+tags. Repaired in place: collapsed to ONE <Project> root, de-duplicated to the 391 unique <Compile> links
+(every referenced file verified present on disk -- 0 missing, so NO test coverage was dropped), normalized
+to LF. The new surface model link was then added (392 total). This mirrors the identical repair the
+predecessor feature-view 0078 (WeekOverWeekSummary) log records for the same recurring corruption.
+
+### Surface deliverable (feature-views/BatteryLevelChart.*)
+BatteryLevelChart.Model.cs (WinUI-free model/projection/diagnostics/registration) + BatteryLevelChart.cs
+(WinUI 3 ContentControl view) + Tests/FeatureViews/BatteryLevelChartTests.cs (25 cases). Parity port of web
+features/charging/components/charging-list/BatteryLevelChart.tsx: a GlassPanel with the amber BatteryCharging
+header icon + title (charging.charts.batteryLevelAtStart) and the muted inline hint
+(charging.charts.batteryLevelHint), over the start-of-charge SoC-band bar strip -- the native analogue of the
+recharts BarChart, amber (the theme-aware TsColorWarningBrush, the web #f59e0b, NOT a hard-coded hex) bars at
+the web 60% fill opacity with rounded tops, each scaled to the tallest bucket. Native state matrix the web
+data drives: loading (skeleton chrome) / empty (chart.noData friendly state when no session has a start
+level) / ready (the bars). Both source i18n keys already resolve in Strings/{en,he,ar}/Resources.resw
+(translation.charging.charts.batteryLevel*); shared chart.noData + common.loading reused. Counts via the
+SI-safe NumberFormatting (web fmtNumber). Narrator names on the surface + every bar; reduce-motion honoured
+via TsSkeleton; PII-safe view.opened slug=BatteryLevelChart. No HTTP in the view -- the parent supplies the
+bucket model (the web data prop), matching the presentational web source.
+
+### Platform capability determination
+Enumerated capabilities (ADR-002/ADR-009: WinUI 3 / Windows App SDK 1.6+ / .NET 10 / Fluent) ARE present:
+the WinUI app + view compile (BUILD_EXIT=0) and the headless logic suite is green (HEADLESS_TEST_EXIT=0,
+8738 tests incl. 25 for this surface). The 147 TeslaSync.App.UITests are Category=UIAutomation E2E tests
+gated by the SEPARATE W9-0002 prompt; they require a WinAppDriver/Appium runner + a deployed MSIX, which are
+absent on this headless runner, so they fail fast by design. That is the only contributor to
+WHOLE_SOLUTION_TEST_EXIT=1 and is out of scope for feature-view 0097.
+
+### Gate result (feature-view scope: build + headless tests + format + placeholders)
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation suite, evidenced above.)
+
+EXIT=0
+STATUS=DONE
