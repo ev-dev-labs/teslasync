@@ -138,6 +138,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveTelemetryWidget\DriveTelemetryWidget.Model.cs" Link="Widgets\DriveTelemetryWidget\DriveTelemetryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveTelemetryWidget\DriveTelemetryWidget.ViewModel.cs" Link="Widgets\DriveTelemetryWidget\DriveTelemetryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\DriveTelemetryWidget\DriveTelemetryWidget.Source.cs" Link="Widgets\DriveTelemetryWidget\DriveTelemetryWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyStatsWidget\EnergyStatsWidget.Model.cs" Link="Widgets\EnergyStatsWidget\EnergyStatsWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyStatsWidget\EnergyStatsWidget.ViewModel.cs" Link="Widgets\EnergyStatsWidget\EnergyStatsWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergyStatsWidget\EnergyStatsWidget.Source.cs" Link="Widgets\EnergyStatsWidget\EnergyStatsWidget.Source.cs" />
   </ItemGroup>
 
   <!--
