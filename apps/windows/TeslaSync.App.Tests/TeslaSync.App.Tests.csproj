@@ -411,6 +411,18 @@
   </ItemGroup>
 
   <!--
+    P2 feature-views (0052 BatteryTab): the analytics Battery tab's UI-thread-free logic (the loading/empty/
+    ready branch projection, the five hero-metric formatters — fmtNumber/fmtInt, formatEnergy and the
+    convertDistanceFromSI range conversion — the four chart series + CHART_COLORS indices, the accessible
+    names, the registration and the PII-safe diagnostics) is WinUI-free by construction. Link the Model in so
+    this headless (net10.0) test project verifies the adapter + per-state projection + a11y names +
+    diagnostics without a UI host. The WinUI view itself (BatteryTab.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryTab\BatteryTab.Model.cs" Link="FeatureViews\BatteryTab\BatteryTab.Model.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0056 DrivingTab): the analytics Driving tab surface's UI-thread-free logic (the
     drive_analytics records, the loading/empty/error/stale/offline/ready projection, the seven chart-section
     series + the performance/temperature metric grids with their boundary unit conversions, the registration
@@ -420,6 +432,17 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\DrivingTab\DrivingTab.Model.cs" Link="FeatureViews\DrivingTab\DrivingTab.Model.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views (0061 ChargingBreakdownSlide): the surface's UI-thread-free logic (the loading/empty/ready
+    projection, the web zero-share segment filter + palette-by-filtered-position colouring, the Math.round
+    percentage + grouped session-count formatting, the yearReview.avgStartSOC token interpolation, the
+    diagnostics and registration) is WinUI-free by construction. Link the Model in so this headless (net10.0)
+    test project verifies the adapter + per-state projection + a11y names + diagnostics without a UI host.
+    The WinUI view itself (ChargingBreakdownSlide.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\ChargingBreakdownSlide.Model.cs" Link="FeatureViews\ChargingBreakdownSlide.Model.cs" />
     TirePressureVisualWidget's three WinUI-free sources (linked exactly once) — restored so the headless
     TirePressureVisualWidgetTests can resolve TirePressureLevel / TirePressureReading / the source +
@@ -831,6 +854,50 @@
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Model.cs" Link="FeatureViews\OverviewTab\OverviewTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Source.cs" Link="FeatureViews\OverviewTab\OverviewTab.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.ViewModel.cs" Link="FeatureViews\OverviewTab\OverviewTab.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0057 DrivingTemperatureStats: the surface's UI-thread-free logic (the
+    drive_analytics.temperature JSON parse + safe() coercion, the SI→display unit projection of the six
+    inside/outside min/avg/max cells, the cache-then-network result mapper, the repository source's request
+    shape, the registration + PII-safe diagnostics, and the state-holder view-model) lives in the WinUI app
+    project under feature-views/ but is WinUI-free by construction. Link those three source files in so this
+    headless (net10.0) test project verifies the adapter + per-state transitions + a11y names + the
+    view.opened diagnostics without a UI host. The WinUI view itself (DrivingTemperatureStats.cs) is
+    exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0059 OverviewTab: the analytics-overview surface's UI-thread-free logic (the
+    FleetAnalytics subset parse, the SI→display projection for the three charts + the Quick Links, the
+    cache-then-network result mapper, the source seam, the PII-safe diagnostics and the state-holder
+    view-model) is WinUI-free by construction. Link those three source files in so this headless (net10.0)
+    test project verifies the adapter + per-state transitions + a11y names without a UI host. The WinUI view
+    itself (OverviewTab.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Model.cs" Link="FeatureViews\OverviewTab\OverviewTab.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Source.cs" Link="FeatureViews\OverviewTab\OverviewTab.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.ViewModel.cs" Link="FeatureViews\OverviewTab\OverviewTab.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0060 OverviewVehicleComparison: the analytics vehicle-comparison surface's
+    UI-thread-free logic (the vehicle_comparison parse, the four-panel projection — Fleet Usage pie /
+    Efficiency Leaderboard / Vehicle Comparison radar / Energy & Activity bar, with SI→display unit
+    conversion, the cache-then-network result mapper, the repository source seam, the registration +
+    PII-safe diagnostics and the state-holder view-model) lives in the WinUI app project under
+    feature-views/ but is WinUI-free by construction. Link those three source files in so this headless
+    (net10.0) test project verifies the adapter + per-state transitions + a11y names + the view.opened
+    diagnostics row-for-row without a UI host. The WinUI view itself
+    (feature-views\OverviewVehicleComparison\OverviewVehicleComparison.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.Model.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.Source.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.ViewModel.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.ViewModel.cs" />
@@ -1038,6 +1105,16 @@
     view itself (ChargingTab.cs) is exercised by the app build. (Deduplicated here: a prior merge artifact
     appended a second full <Project> copy to this file; the duplicate root was removed and ChargingTab — the
     only link unique to that copy — folded back into the canonical project so the solution loads.)
+    Reconciled from a duplicate <Project> copy that a bad auto-merge concatenated onto this file: the entire
+    second project root (with 342 repeated Compile items) was removed to restore a single valid project, and
+    ChargingTab — the only block unique to that copy — is preserved here verbatim.
+    P2 feature-views (0054 ChargingTab): the surface's UI-thread-free logic (the fleet-analytics charging
+    DTO/parse, the projection, the cache-then-network result mapper, the source seam, the registration copy,
+    the diagnostics, and the state-holder view-model) lives in the WinUI app project under
+    feature-views/ChargingTab/ but is WinUI-free by construction. Link those three source files in so this
+    headless (net10.0) test project verifies the adapter + per-state transitions without a UI host — the same
+    pattern used for the sibling feature-views above. The WinUI view itself (ChargingTab.cs) is exercised by the
+    app build.
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Model.cs" Link="FeatureViews\ChargingTab\ChargingTab.Model.cs" />
@@ -1689,6 +1766,19 @@
   </ItemGroup>
 
 </Project>
+  </ItemGroup>
+
+</Project>
+    P2 feature-views/0074 ChargingSection: the surface's UI-thread-free logic (the loading/empty/ready branch
+    projection, the four mini-stat formatters — fmtInt sessions, the "{n} kWh" / "{n} kW" energy + rate and the
+    currency-prefixed cost — the success/warning week-over-week badge with its pctChange percentage / em-dash,
+    the daily-energy chart buckets + spoken summary, the accessible names and the PII-safe diagnostics) is
+    WinUI-free by construction. Link the Model in so this headless (net10.0) test project verifies the adapter +
+    per-state projection + a11y names + diagnostics without a UI host. The WinUI view itself (ChargingSection.cs)
+    is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingSection.Model.cs" Link="FeatureViews\ChargingSection.Model.cs" />
   </ItemGroup>
 
 </Project>
