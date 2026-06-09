@@ -1,0 +1,60 @@
+=== P2 Feature view 0138 DriveOverviewChart (Windows) ===
+
+Capability AVAILABLE -> not BLOCKED. WinUI 3 (Windows App SDK, Microsoft.WindowsAppSDK) + .NET 10
+(dotnet 10.0.300, maui-windows workload) are installed; the new DriveOverviewChart surface compiles
+into the WinUI app (TeslaSync.App, net10.0-windows10.0.19041.0) and its UI-thread-free logic is
+verified by the headless net10.0 test suite below. The web source
+(web/src/features/driving/components/drive-detail/DriveOverviewChart.tsx) is a drive-detail composed
+chart (speed Area + ideal/est range dashed Lines + SOC + usable-SOC Lines on a hidden left axis, power
+Line on a right axis) with a rich Mean/Max/Min legend, plus a "No telemetry data available" empty
+placeholder when chartData.length <= 1. The native feature-view owns its cache-then-network drive
+telemetry read (primary/explicit vehicle -> latest/explicit drive -> /drives/{driveID}/telemetry) and
+therefore reproduces the full P2 state matrix: loading / loaded / empty / error / stale / offline. The
+web's two recharts Y axes are reproduced on the single native cartesian surface by pre-normalizing each
+metric to a 0..1 ratio (left axis = speed/range/SOC/usable-SOC joint max; right axis = power, spanning
+zero) -- the same idiom as the shipped DriveTelemetryWidget. All i18n keys (driveDetail.driveChart[.aria],
+driveDetail.speed, driveDetail.rangeIdeal, driveDetail.rangeEst, driveDetail.soc, driveDetail.usableSoc,
+driveDetail.power, driveDetail.noChartData + common.* + driveDetail.stat.*) resolve through the P1/S10
+ILocalizer facade. Telemetry: view.opened slug=DriveOverviewChart (P1/S11).
+
+PRE-EXISTING REPAIR (in scope, precedent 0127 LiveTelemetry / 0129 QuickNav): TeslaSync.App.Tests.csproj
+had again been left by merge concatenation with multiple <Project> roots + prose containing literal
+<Project>/<Compile> substrings outside the comments (MSB4025: "Unexpected end of file"), which blocked
+the entire solution build/test. Consolidated to a single valid project root: the deduplicated,
+path-sorted union of all 465 existing <Compile> links preserved (1 duplicate CostPerKwhChart.Model.cs
+dropped) + the 3 new DriveOverviewChart.{Model,Source,ViewModel}.cs links (468 total).
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 778 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 10032, Skipped:     0, Total: 10032, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite) which
+fail fast because WinAppDriver/Appium is not present on this runner. They are out of scope for this
+surface (run separately via apps/windows/run-ui-automation.ps1) and do not exercise DriveOverviewChart.
+
+### STEP 2b: dotnet test --filter Category!=UIAutomation (headless surface-logic gate, W9-0002 separation)
+Passed!  - Failed:     0, Passed: 10032, Skipped:     0, Total: 10032, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+DriveOverviewChart tests: Passed!  - Failed:     0, Passed:    41, Skipped:     0, Total:    41, Duration: 238 ms - TeslaSync.App.Tests.dll (net10.0)
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DriveOverviewChart
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite, evidenced above.)
+EXIT=0
+STATUS=DONE
