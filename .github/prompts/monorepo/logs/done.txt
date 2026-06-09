@@ -257,3 +257,4 @@ p2-windows/feature-views/W-0055-DrivingPerformanceCards.prompt.md
 p2-windows/feature-views/W-0056-DrivingTab.prompt.md
 p2-windows/feature-views/W-0054-ChargingTab.prompt.md
 p2-windows/feature-views/W-0058-HeroGauges.prompt.md
+p2-windows/feature-views/W-0057-DrivingTemperatureStats.prompt.md
