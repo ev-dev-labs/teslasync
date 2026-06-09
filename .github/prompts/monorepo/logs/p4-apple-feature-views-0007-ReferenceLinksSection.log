@@ -1,0 +1,159 @@
+=== P4 Feature view 0007 ReferenceLinksSection (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.x (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — full Xcode present and active (xcodebuild + iOS/macOS simulators usable).
+  Toolchain          : swift 6.3.2 · swiftlint · swiftformat · xcodegen · pwsh · Java 17 (KMP/Gradle).
+  Destinations       : iOS Simulator "iPhone 16" (present, booted) · macOS 15 SDK present (SDK 26.5).
+  Shared.xcframework : assembled + staged by the scheme pre-action Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" → "xcframework successfully written out").
+  Capability         : SwiftUI present; this surface uses NO Swift Charts / NO MapKit (web source has none) →
+                       NOT capability-BLOCKED. iOS-18 + macOS-15 SDKs both present and exercised below.
+
+WEB SOURCE (the specification)
+  web/src/features/admin/components/devtools/ReferenceLinksSection.tsx (36 L) — an anonymous, PURE presentational
+  leaf. It maps the static `REFERENCE_LINKS` constant (features/admin/components/devtools/constants.ts) into a
+  responsive grid (grid gap-4 sm:grid-cols-2 lg:grid-cols-4) of cards. Each card:
+    GlassPanel(hover, p-4) → <a href={link.url} target="_blank" rel="noopener noreferrer"> with
+      • a 36×36 (h-9 w-9) rounded-lg icon box tinted by ICON_COLOR_MAP.cyan
+        (bg-neon-cyan/10 text-neon-cyan ring-1 ring-neon-cyan/20), holding the lucide glyph resolved via
+        ICON_MAP[link.icon] ?? BookOpen (BookOpen / Globe / ExternalLink / Radio);
+      • the localized title `t(link.title)` (text-sm font-medium text-white);
+      • the href, truncated (text-xs text-[var(--text-muted)]).
+  Data sources: `useTranslation` only. No data hooks → the web leaf has exactly ONE render branch (the grid).
+  i18n keys it consumes (the 4 REFERENCE_LINKS `title` keys; absent from the web en catalog, so the web renders
+  the raw key text): devtools.ref.fleetOverview / devtools.ref.partnerEndpoints / devtools.ref.devPortal /
+  devtools.ref.telemetryGuide.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/ReferenceLinksSection.*, the only allowed files + this log)
+  ReferenceLinksSection.Adapter.swift  (142 L) — pure, dependency-free core: ReferenceLinkIcon (lucide→SF-Symbol
+                                                 map + the BookOpen fallback, port of ICON_MAP), ReferenceLink
+                                                 model (titleKey/titleFallback/urlString/icon; url parse),
+                                                 ReferenceLinkCatalog.defaultLinks (verbatim port of the 4
+                                                 REFERENCE_LINKS entries), ReferenceLinkAccessibility (host + label).
+  ReferenceLinksSection.Model.swift     (245 L) — P1/S8 state holder (ReferenceLinksModel + ReferenceLinksSource +
+                                                 InMemoryReferenceLinksSource), P1/S11 telemetry seam
+                                                 (ReferenceLinksTelemetry + OSLog default emitting view.opened),
+                                                 P1/S10 facade (ReferenceLinksStrings), ReferenceLinksInput, the
+                                                 ReferenceLinksConnection (live/stale/offline) axis, and the pure
+                                                 ReferenceLinksProjection (loading/empty/error/data) + the one-shot
+                                                 stale auto-refresh.
+  ReferenceLinksSection.swift           ( 91 L) — the surface view: freshness chip + connectivity banner (shown
+                                                 only when not live, faithful to the anonymous web grid) + the
+                                                 content-state switch. view.opened on appear; a11y container label.
+  ReferenceLinksSection.Views.swift     (273 L) — the responsive LazyVGrid (adaptive 1–4 columns ← web
+                                                 sm:2/lg:4), the link card (TSGlassPanel + SwiftUI Link + the cyan
+                                                 icon box + title + truncated href), the freshness chip, the
+                                                 connectivity banner, and the loading / empty / error chrome.
+  ReferenceLinksSection.Previews.swift  ( 67 L) — data / empty / loading / error / stale / offline previews (DEBUG).
+  ReferenceLinksSection.Tests.swift     (236 L) — 22 XCTest cases (icon map incl. fallback, catalog parity, URL
+                                                 parsing, accessibility, projection across all phases, model wiring
+                                                 + view.opened telemetry once + stale auto-refresh / offline no-refresh).
+  ReferenceLinksSection.strings         ( 45 L) — per-surface i18n table (the 4 web title keys + the native chrome).
+  NOT touched: project.yml / .swiftlint.yml already carry "TeslaSync/feature-views"; the shared
+  Localizable.xcstrings is NOT edited (strings ship per-surface); apps/macos-pending-verifications.md NOT edited
+  (out of the allowed-files set — this log documents the deferral fully, matching AcDcStatsPanel/0096 + FlagsTable/0031).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel(hover,p-4)      → TSGlassPanel (Sources/Components/UI/Cards.swift; native tap = the hover affordance)
+  <a target="_blank">        → SwiftUI Link(destination:) — opens the system browser (a11y trait .isLink)
+  ICON_COLOR_MAP.cyan        → Color.TS.accent (the brand neon-cyan #00f0ff, theme-adaptive): box = 10% fill +
+    (bg/ring/text neon-cyan)   20% ring, glyph = accent tint — the semantic parity of bg/10 + ring/20 + text.
+  ICON_MAP (lucide)          → SF Symbols: BookOpen→book.fill · Globe→globe · ExternalLink→arrow.up.right.square ·
+                               Radio→antenna.radiowaves.left.and.right (BookOpen is the unknown-key fallback).
+  grid sm:2 lg:4 / gap-4     → LazyVGrid(GridItem(.adaptive(minimum: 220), spacing: TSSpacing.lg))
+  title text-sm/medium/white → Font.TS.body + .medium + Color.TS.textPrimary
+  href text-xs/text-muted    → Font.TS.caption + Color.TS.textMuted, lineLimit(1) truncationMode(.tail)
+  FadeIn → TSFadeIn ; Skeleton → TSSkeleton ; empty → ContentUnavailableView ; retry → TSButton(.secondary,.small)
+  i18n      : every string via the P1/S10 facade (ReferenceLinksStrings, table "ReferenceLinksSection"); zero
+              English literals in code. The 4 web title keys are present verbatim with humanised English fallbacks
+              (the web keys are catalog-absent → web renders the raw key; native parity precedent = ClientUtilitiesSection/0003).
+  a11y      : each card is one .isLink element labelled "{title}, link, {host}"; icon box decorative/hidden;
+              Dynamic Type + Reduce Motion respected via the shared tokens/components.
+  telemetry : view.opened surface="ReferenceLinksSection" via ReferenceLinksModel.start (P1/S11), OSLog default sink.
+  states    : loading (skeleton card grid) / empty (catalog resolved with no entries → ContentUnavailableView) /
+              error (fetch failure → retry, the web QueryError peer) / data (the grid), PLUS the P4 leaf freshness
+              axis live / stale (chip+banner+one-shot auto-refresh) / offline (chip+banner). Every state renders —
+              no hidden surface. (The web leaf itself has only the data branch; the rest are the P4 leaf contract,
+              for a remote-gated link catalog via feature flags/entitlements.)
+
+GATES
+  [GREEN]    swiftformat --lint apps/apple                                   : 0/2080 files require formatting     (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (ReferenceLinksSection.* — 6 swift files)   : 0 violations, 0 serious             (LINT_EXIT=0)
+             swiftlint --strict  (whole apps/apple tree, FYI)                : 1 PRE-EXISTING violation, 1 serious —
+                                                                               opening_brace in
+                                                                               TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158
+                                                                               (NOT a ReferenceLinksSection file; already logged in
+                                                                               apps/macos-pending-verifications.md; not introduced here).
+  [GREEN]    check-placeholders.ps1 (real scan of ReferenceLinksSection.*)   : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 -Path …/feature-views/ReferenceLinksSection (literal gate path = a name PREFIX,
+                                                                               not a dir → "nothing to scan" clean result)  (EXIT=0)
+  [GREEN]    ReferenceLinksSection build + test — ISOLATED SwiftPM harness, swift-tools 6.0, Swift 6 LANGUAGE MODE
+             (.swiftLanguageMode(.v6) = the app's strict-concurrency bar), macOS 15 platform, compiling the EXACT
+             shipped ReferenceLinksSection.{swift,Model,Adapter,Views,Previews} sources against the REAL generated
+             design tokens (apps/design/generated/apple/Tokens.swift) + signature-exact shims for the shared
+             TSGlassPanel/TSFadeIn/TSButton/TSSkeleton:
+                 Build complete!  ·  Executed 22 tests, with 0 failures                                          (SWIFT_TEST_EXIT=0)
+  [GREEN]    swiftc -typecheck  iOS 18 simulator  (-target arm64-apple-ios18.0-simulator -swift-version 6)        (IOS_TYPECHECK_EXIT=0)
+  [GREEN]    swiftc -typecheck  macOS 15           (-target arm64-apple-macos15.0          -swift-version 6)        (MAC_TYPECHECK_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build         : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build                                                              : MAC_EXIT=65
+             (`build test` necessarily fails at the same `build` phase below; the test action is never reached.)
+
+  WHY DEFERRED (full-app Xcode gate — ZERO ReferenceLinksSection surface-compile errors; all blockers pre-exist this change):
+    iOS   : the Gradle Shared.xcframework pre-action SUCCEEDED and the iOS app target then compiled. It fails on
+            PRE-EXISTING duplicate-symbol collisions in OTHER surfaces under TeslaSync/dashboard-widgets/ —
+            `'ChargeStatusProjection' / 'ChargeSessionDTO' / 'ChargeUnitPrefs' / 'ChargeStatusUpdate' /
+            'ChargeStateDTO' / 'ChargeConnection' / 'ChargeLoadStatus' / 'ChargeDistanceUnit' is ambiguous for
+            type lookup` (each declared in 2 files: ChargeStatusLiveWidget.* + ChargeStatusWidget.* /
+            ChargeSessionChartWidget.Models.swift). These files are committed at HEAD and are UNTOUCHED by this
+            change (clean `git status` for dashboard-widgets/). grep of the full iOS build log for a
+            ReferenceLinksSection "error:" = 0 hits → the SURFACE compiles cleanly in the real iOS app target.
+    macOS : the macOS app + widgets targets fail the entitlements/dev-signing check ("has entitlements that
+            require signing with a development certificate") — the macOS dev-signing condition this runner does
+            not provision. Re-run with CODE_SIGNING_ALLOWED=NO compiles the macOS sources and fails on the SAME
+            pre-existing dashboard-widgets `Charge*` ambiguous-type collisions — again with ZERO
+            ReferenceLinksSection errors, proving the surface compiles cleanly in the real macOS app target too.
+    Both blockers are owned by the P4/P99 Apple acceptance gate (cross-surface symbol de-duplication + macOS
+    signing) on a signed macos-latest CI runner per apps/macos-pending-verifications.md — NOT by a single
+    feature-view prompt (task rule: do not fix pre-existing, unrelated breakage; allowed files = this surface only).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with raw evidence + root cause — never reported as passing.
+  2  No scope narrowing  : the web region + every P4 leaf state reproduced — the responsive 1–4-column grid, the
+                           cyan-tinted icon box with the lucide→SF-Symbol map + BookOpen fallback, the localized
+                           title, the truncated href opening in-browser, plus loading/empty/error/stale/offline.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; both iOS + macOS failures
+                           reproduced and root-caused (pre-existing Charge* dup symbols + macOS signing), not assumed.
+  4  No stubs as final   : complete production surface + 22 real, executed tests; placeholder scanner = 0.
+  5  No parity shortcut  : tint/opacity/typography/icons/URL-open/a11y/telemetry/states all mapped to platform
+                           tokens + verified in a real Swift 6 build+test and on both the iOS-18 + macOS-15 SDKs.
+  6  No delegation       : implemented directly; no agents/subtasks.
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4 core all
+                           present + consumed; did NOT self-register project.yml/.swiftlint.yml (already carry
+                           feature-views) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe).
+  8  No commit on red    : the COMMITTED artifact (ReferenceLinksSection.* + this log) is GREEN on every host gate
+                           AND on a real isolated Swift 6 build+test (22/22) + both-SDK typechecks; the deferred
+                           full-app gate is RED only on pre-existing, unrelated conditions this commit neither
+                           introduces nor touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/feature-views/ReferenceLinksSection.* + this
+                           log. (Pre-existing unrelated dirty files web/.../FleetApiSection.tsx +
+                           web/.../BackupRestorePage.tsx are NOT touched and NOT committed.)
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ReferenceLinksSection shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 22 tests pass under the app's own Swift 6 strict-concurrency rules,
+  against the real design tokens, with swiftformat / swiftlint / placeholder all green and clean iOS-18 + macOS-15
+  typechecks; and the SURFACE compiles cleanly in the real iOS + macOS app targets (zero ReferenceLinksSection
+  errors). The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code):
+  it is blocked by pre-existing, unrelated dashboard-widgets `Charge*` duplicate-symbol collisions and by macOS
+  development-signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 feature-view surface to date (0003 ClientUtilitiesSection, 0010 ToolCard,
+  0031 FlagsTable, 0096 AcDcStatsPanel).
+
+EXIT=0
+STATUS=DONE
