@@ -1,0 +1,55 @@
+/*
+  SoftwareUpdateStatusWidget.strings
+  TeslaSync — P4 dashboard widget · 0092 · SoftwareUpdateStatusWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SoftwareUpdateStatusWidget` resolves (table "SoftwareUpdateStatusWidget") lives
+  here with its web `t(key, default)` English value. These entries fold into the
+  app `Localizable.xcstrings` master catalog at integration time; they are kept in
+  a per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact keys extracted from the web source
+  (features/dashboard/widgets/SoftwareUpdateStatusWidget.tsx, table "dashboard").
+  The remaining keys back the registry metadata + native-only chrome (freshness
+  chip, refresh / retry / open / empty / error copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.softwareUpdate" = "Software Update";
+"widget.noSoftwareData" = "No software data";
+"widget.currentVersion" = "Current Version";
+"widget.updateAvailable" = "Update";
+"widget.downloading" = "Downloading";
+"widget.installing" = "Installing";
+"widget.readyToInstall" = "Ready to install";
+"widget.estimatedTime" = "Est. time";
+"widget.minutes" = "min";
+"widget.scheduledStart" = "Scheduled";
+"widget.upToDate" = "Up to date";
+
+/* --- Status chip labels (web StatusBadgeSmall config) --- */
+"widget.statusUpToDate" = "Up to date";
+"widget.statusAvailable" = "Available";
+"widget.statusDownloading" = "Downloading";
+"widget.statusReady" = "Ready";
+"widget.statusInstalling" = "Installing";
+"widget.statusInstalled" = "Installed";
+
+/* --- Registry metadata (canonical: registry/vehicle.ts → "software-update-status") --- */
+"widget.softwareUpdate.description" = "Current firmware version, update availability, download/install progress bar";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.softwareUpdate.live" = "Live";
+"widget.softwareUpdate.stale" = "Stale";
+"widget.softwareUpdate.offline" = "Offline";
+"widget.softwareUpdate.refresh" = "Refresh";
+"widget.softwareUpdate.retry" = "Retry";
+"widget.softwareUpdate.open" = "Open";
+"widget.softwareUpdate.openA11y" = "Open the Software Update page";
+
+/* --- Native chrome: states --- */
+"widget.softwareUpdate.loading" = "Loading software status";
+"widget.softwareUpdate.errorTitle" = "Couldn't load software status";
+"widget.softwareUpdate.offlineBanner" = "Offline — showing last known data";
+"widget.softwareUpdate.staleBanner" = "Reconnecting — data may be stale";
