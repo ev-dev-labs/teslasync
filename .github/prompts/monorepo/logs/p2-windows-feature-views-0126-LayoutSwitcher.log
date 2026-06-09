@@ -1,0 +1,87 @@
+=== P2 Feature view 0126 LayoutSwitcher (Windows) ===
+timestamp: 2026-06-09T14:15:49.4121889-07:00
+branch: auto/p/p2-windows__feature-views__W-0126-LayoutSwitcher.prompt.md
+
+--- Capability probe (WinUI 3 / .NET 10 vs WinAppDriver E2E runner) ---
+dotnet SDK: 10.0.300
+WinAppDriver.exe present: False
+WinAppDriver/Appium endpoint 127.0.0.1:4723 listening: False
+=> WinUI 3 + .NET 10 ARE available (app compiles); the SEPARATE W9-0002 UIAutomation E2E runner is ABSENT.
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2: dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" (headless surface gate) ---
+Passed!  - Failed:     0, Passed:  9648, Skipped:     0, Total:  9648, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+  LayoutSwitcherTests result (subset run): exit=0
+  Passed!  - Failed:     0, Passed:    51, Skipped:     0, Total:    51, Duration: 59 ms - TeslaSync.App.Tests.dll (net10.0)
+
+--- STEP 2b: env-gated W9-0002 UIAutomation E2E suite (evidence the only solution-test red is WinAppDriver-absent) ---
+  TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 112 ms - TeslaSync.App.UITests.dll (net10.0)
+UIAUTOMATION_EXIT=1  (environment-gated: requires WinAppDriver/Appium + deployed MSIX; out of scope for this feature-view, gated by the SEPARATE W9-0002 prompt)
+
+--- STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+  Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/LayoutSwitcher ---
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- Surface notes ---
+Artifact: apps/windows/TeslaSync.App/feature-views/LayoutSwitcher/{LayoutSwitcher.cs, LayoutSwitcher.Model.cs, LayoutSwitcher.ViewModel.cs}
+Headless tests: apps/windows/TeslaSync.App.Tests/FeatureViews/LayoutSwitcherTests.cs (51 tests, all green).
+
+Architecture (mirrors sibling feature-views JwtDecoder / UserImpersonateButton):
+  * LayoutSwitcher.Model.cs    - WinUI-free: LayoutSummary / LayoutSwitcherVehicle / LayoutSwitcherModel inputs,
+                                 LayoutMenuEntry, LayoutSwitcherDisplay, LayoutSwitcherProjection (pure render port),
+                                 LayoutSwitcherRegistration (slug), LayoutSwitcherDiagnostics (PII-safe view.opened).
+  * LayoutSwitcher.ViewModel.cs- WinUI-free INotifyPropertyChanged state holder: controlled inputs + menu-open +
+                                 prompt/confirm phases, commands (switch/saveAs/reset/pin/edit) raising the web
+                                 callbacks as events (onSwitch/onCreate/onDuplicate/onReset/onToggleEdit/onPinToVehicle).
+  * LayoutSwitcher.cs          - WinUI 3 view: bordered trigger Button + Flyout menu, inline edit/save-as/reset,
+                                 TsConfirmDialog reset (useConfirm) + ContentDialog/TsInput name prompt (window.prompt).
+  Hooks bound via P1/S8 state-holders (ILocalizer i18n facade + the selected-vehicle inputs); NO direct HTTP in the view.
+
+States reproduced (every branch the web source actually has):
+  * populated menu (visible layouts), per-row active check + "default" badge + pin glyph
+  * empty ("No layouts available for this vehicle." when no layout is visible for the selected vehicle)
+  * dirty ("modified" badge), edit-mode (Done/Edit), pinned-vehicle badge, pin-toggle enabled/disabled, open/closed menu
+  NOTE: the web LayoutSwitcher is a CONTROLLED component with no async read, so it has no loading/stale/error/offline
+  branch (same precedent as JwtDecoder). Reproducing fabricated async chrome would be scope drift, not parity.
+
+i18n: every string resolves through the i18n facade with the web dashboard-namespaced keys
+  (dashboard.layout.* + common.cancel); all keys exist in apps/shared/i18n/catalog (P1/S10) and the WinUI .resw.
+A11y: trigger + menu + every menu row / inline action carry a Narrator name; decorative icons are AccessibilityView.Raw.
+Telemetry: LayoutSwitcherDiagnostics emits view.opened slug=LayoutSwitcher (+ PII-safe action counters) per P1/S11.
+
+Prerequisite repair (tightly coupled, required for any test to run):
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed CORRUPT at HEAD (6 <Project> roots /
+  5 closings; XML load failed MSB4025), which broke the WHOLE solution build/test - the identical corruption that
+  put sibling 0115-LoadingSkeleton into STATUS=BLOCKED. Consolidated back into ONE <Project> root with a single
+  path-sorted, deduplicated Compile ItemGroup (444 prior links preserved verbatim + the 2 new LayoutSwitcher links).
+
+=== GATE SUMMARY ===
+BUILD_EXIT=0            (dotnet build apps/windows/TeslaSync.sln -c Release : Build succeeded, 0 warnings, 0 errors)
+HEADLESS_TEST_EXIT=0    (dotnet test --filter "Category!=UIAutomation" : 9648 passed / 0 failed, incl. 51 LayoutSwitcher)
+FORMAT_EXIT=0           (dotnet format apps/windows/TeslaSync.sln --verify-no-changes : clean)
+PLACEHOLDER_EXIT=0      (check-placeholders LayoutSwitcher/ : PLACEHOLDER_COUNT=0)
+UIAUTOMATION_EXIT=1     (env-gated W9-0002 E2E: 147 fail-fast via UiAutomationUnavailableException - WinAppDriver ABSENT)
+
+No red-as-green: the feature-view surface gate (build + headless logic suite that exercises THIS surface + format +
+placeholder) is fully green. The only solution-test red is the SEPARATE W9-0002 UIAutomation E2E suite, which by its
+own README "fails fast ... never silently skipped" when the WinAppDriver/Appium runner is absent (it is, on this
+headless host) - the same environment carve-out accepted for siblings 0113/0114/0116. WinUI 3 + .NET 10 themselves
+are present (the app compiles), so the surface itself is NOT capability-blocked.
+
+EXIT=0
+STATUS=DONE
