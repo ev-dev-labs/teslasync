@@ -1,0 +1,44 @@
+/*
+  SpeedHistogramChart.strings
+  TeslaSync — P4 feature view · 0149 · SpeedHistogramChart (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SpeedHistogramChart` resolves (table "SpeedHistogramChart") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/drive-detail/SpeedHistogramChart.tsx, plus the
+  drive-detail page's section-error-boundary title). The remainder back the native
+  state envelope (freshness chip, connectivity banner, loading / empty / error chrome)
+  and the chart's accessibility summary.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"driveDetail.speedHistogram" = "Speed Histogram";
+"driveDetail.speedHistogram.aria" = "Speed-bucket distribution histogram";
+"driveDetail.col.range" = "Speed range";
+"driveDetail.col.pct" = "% of drive";
+"driveDetail.ofDrive" = "of drive";
+"driveDetail.noChartData" = "No telemetry data available";
+"driveDetail.section.speedHistogramFailed" = "Speed histogram failed to load";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"driveDetail.live" = "Live";
+"driveDetail.stale" = "Stale";
+"driveDetail.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"driveDetail.staleBanner" = "Reconnecting — speed distribution may be stale";
+"driveDetail.offlineBanner" = "Offline — showing the last recorded speed distribution";
+
+/* --- Loading / empty / error chrome --- */
+"driveDetail.speedHistogram.loading" = "Loading speed distribution";
+"driveDetail.speedHistogram.emptyHint" = "The speed distribution will appear here once this drive has telemetry samples.";
+"driveDetail.retry" = "Retry";
+
+/* --- Accessibility summary scaffolding --- */
+"driveDetail.speedHistogram.buckets" = "speed buckets";
+"driveDetail.speedHistogram.peak" = "most in";
