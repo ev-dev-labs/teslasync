@@ -99,7 +99,7 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
 
     private SafetyHistorySize _size;
     private CancellationTokenSource? _cts;
-    private RepositoryResult<IReadOnlyList<SafetySnapshot>>? _last;
+    private RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>? _last;
     private bool _disposed;
 
     private SafetyHistoryState _state = SafetyHistoryState.Loading;
@@ -128,7 +128,7 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
         _localizer = localizer;
         _size = size;
         _clock = clock ?? (() => DateTimeOffset.Now);
-        _display = SafetyHistoryProjection.Project(Array.Empty<SafetySnapshot>(), _size, _localizer, _clock());
+        _display = SafetyHistoryProjection.Project(Array.Empty<SafetyHistorySnapshot>(), _size, _localizer, _clock());
     }
 
     /// <inheritdoc />
@@ -273,7 +273,7 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
     private bool HasContent() =>
         _state is SafetyHistoryState.Loaded or SafetyHistoryState.Stale or SafetyHistoryState.Offline;
 
-    private void Apply(RepositoryResult<IReadOnlyList<SafetySnapshot>> result)
+    private void Apply(RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>> result)
     {
         _last = result;
         switch (result.Status)
@@ -314,7 +314,7 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
     }
 
     private void ApplySnapshot(
-        IReadOnlyList<SafetySnapshot> snapshots,
+        IReadOnlyList<SafetyHistorySnapshot> snapshots,
         DateTimeOffset? fetchedAt,
         bool stale,
         bool fetching,
@@ -349,7 +349,7 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
         }
         else
         {
-            Display = SafetyHistoryProjection.Project(Array.Empty<SafetySnapshot>(), _size, _localizer, _clock());
+            Display = SafetyHistoryProjection.Project(Array.Empty<SafetyHistorySnapshot>(), _size, _localizer, _clock());
         }
     }
 
@@ -362,7 +362,7 @@ public sealed class SafetyHistoryViewModel : INotifyPropertyChanged, IDisposable
 
     private void SetEmpty(DateTimeOffset? fetchedAt)
     {
-        Display = SafetyHistoryProjection.Project(Array.Empty<SafetySnapshot>(), _size, _localizer, _clock());
+        Display = SafetyHistoryProjection.Project(Array.Empty<SafetyHistorySnapshot>(), _size, _localizer, _clock());
         UpdatedAt = fetchedAt;
         IsFetching = false;
         IsStale = false;

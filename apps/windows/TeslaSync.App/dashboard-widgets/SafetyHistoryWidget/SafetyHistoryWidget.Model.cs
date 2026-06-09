@@ -43,7 +43,7 @@ public enum SafetyHistoryState
 /// discriminator lets <see cref="SafetyEnums"/> branch on the real runtime kind exactly as the web
 /// <c>lib/safetyEnum.ts</c> does, instead of coercing a non-string to a string.
 /// </summary>
-public enum SafetyValueKind
+public enum SafetyHistoryValueKind
 {
     /// <summary>The field was absent or JSON null/undefined (web <c>value == null</c>).</summary>
     None,
@@ -60,34 +60,34 @@ public enum SafetyValueKind
 
 /// <summary>
 /// A single polymorphic safety-enum value read from a <c>/safety</c> snapshot — the native analogue of
-/// the <c>string | boolean | number | null</c> union the web <c>SafetySnapshot</c> declares for ADAS
+/// the <c>string | boolean | number | null</c> union the web <c>SafetyHistorySnapshot</c> declares for ADAS
 /// fields. Carries the runtime <see cref="Kind"/> plus the kind-specific payload so callers can
 /// reproduce the web's type-aware classification without ever calling a string method on a value whose
 /// shape they don't control.
 /// </summary>
 /// <param name="Kind">The runtime discriminator.</param>
-/// <param name="BoolValue">The boolean payload (valid only when <see cref="Kind"/> is <see cref="SafetyValueKind.Bool"/>).</param>
-/// <param name="NumberValue">The numeric payload (valid only when <see cref="Kind"/> is <see cref="SafetyValueKind.Number"/>).</param>
-/// <param name="StringValue">The string payload (valid only when <see cref="Kind"/> is <see cref="SafetyValueKind.Str"/>).</param>
-public readonly record struct SafetyValue(SafetyValueKind Kind, bool BoolValue, double NumberValue, string? StringValue)
+/// <param name="BoolValue">The boolean payload (valid only when <see cref="Kind"/> is <see cref="SafetyHistoryValueKind.Bool"/>).</param>
+/// <param name="NumberValue">The numeric payload (valid only when <see cref="Kind"/> is <see cref="SafetyHistoryValueKind.Number"/>).</param>
+/// <param name="StringValue">The string payload (valid only when <see cref="Kind"/> is <see cref="SafetyHistoryValueKind.Str"/>).</param>
+public readonly record struct SafetyHistoryValue(SafetyHistoryValueKind Kind, bool BoolValue, double NumberValue, string? StringValue)
 {
     /// <summary>The absent value (web null/undefined).</summary>
-    public static SafetyValue None => new(SafetyValueKind.None, false, 0, null);
+    public static SafetyHistoryValue None => new(SafetyHistoryValueKind.None, false, 0, null);
 
     /// <summary>A boolean value.</summary>
-    public static SafetyValue OfBool(bool value) => new(SafetyValueKind.Bool, value, 0, null);
+    public static SafetyHistoryValue OfBool(bool value) => new(SafetyHistoryValueKind.Bool, value, 0, null);
 
     /// <summary>A finite numeric value.</summary>
-    public static SafetyValue OfNumber(double value) => new(SafetyValueKind.Number, false, value, null);
+    public static SafetyHistoryValue OfNumber(double value) => new(SafetyHistoryValueKind.Number, false, value, null);
 
     /// <summary>A string value.</summary>
-    public static SafetyValue OfString(string value) => new(SafetyValueKind.Str, false, 0, value);
+    public static SafetyHistoryValue OfString(string value) => new(SafetyHistoryValueKind.Str, false, 0, value);
 
     /// <summary>True when the field carried a value (web <c>value != null</c>).</summary>
-    public bool IsPresent => Kind != SafetyValueKind.None;
+    public bool IsPresent => Kind != SafetyHistoryValueKind.None;
 
     /// <summary>Read property <paramref name="name"/> from <paramref name="obj"/> as a tolerant polymorphic value.</summary>
-    public static SafetyValue FromJson(JsonElement obj, string name)
+    public static SafetyHistoryValue FromJson(JsonElement obj, string name)
     {
         if (!obj.TryGetProperty(name, out var v))
         {
@@ -112,9 +112,9 @@ public readonly record struct SafetyValue(SafetyValueKind Kind, bool BoolValue, 
     /// </summary>
     public string AsRawString() => Kind switch
     {
-        SafetyValueKind.Bool => BoolValue ? "true" : "false",
-        SafetyValueKind.Number => NumberValue.ToString(CultureInfo.InvariantCulture),
-        SafetyValueKind.Str => StringValue ?? string.Empty,
+        SafetyHistoryValueKind.Bool => BoolValue ? "true" : "false",
+        SafetyHistoryValueKind.Number => NumberValue.ToString(CultureInfo.InvariantCulture),
+        SafetyHistoryValueKind.Str => StringValue ?? string.Empty,
         _ => string.Empty,
     };
 }
@@ -123,7 +123,7 @@ public readonly record struct SafetyValue(SafetyValueKind Kind, bool BoolValue, 
 /// The ADAS field whose enum prefix needs stripping — the native port of the keys of
 /// <c>SAFETY_ENUM_PREFIXES</c> in web/src/lib/safetyEnum.ts.
 /// </summary>
-public enum SafetyEnumField
+public enum SafetyHistoryEnumField
 {
     /// <summary>Forward collision warning (prefix <c>ForwardCollisionSensitivity</c>).</summary>
     ForwardCollisionWarning,
@@ -149,12 +149,12 @@ public enum SafetyEnumField
 public static class SafetyEnums
 {
     /// <summary>The Tesla raw-enum prefix to strip for a field, or null when none applies.</summary>
-    public static string? Prefix(SafetyEnumField field) => field switch
+    public static string? Prefix(SafetyHistoryEnumField field) => field switch
     {
-        SafetyEnumField.ForwardCollisionWarning => "ForwardCollisionSensitivity",
-        SafetyEnumField.LaneDepartureAvoidance => "LaneAssistLevel",
-        SafetyEnumField.SpeedLimitWarning => "SpeedAssistLevel",
-        SafetyEnumField.CruiseFollowDistance => "FollowDistance",
+        SafetyHistoryEnumField.ForwardCollisionWarning => "ForwardCollisionSensitivity",
+        SafetyHistoryEnumField.LaneDepartureAvoidance => "LaneAssistLevel",
+        SafetyHistoryEnumField.SpeedLimitWarning => "SpeedAssistLevel",
+        SafetyHistoryEnumField.CruiseFollowDistance => "FollowDistance",
         _ => null,
     };
 
@@ -164,19 +164,19 @@ public static class SafetyEnums
     /// numbers render in decimal; numeric strings and enum suffixes pass through after prefix stripping;
     /// an absent/empty value returns <paramref name="fallback"/>.
     /// </summary>
-    public static string Clean(SafetyValue value, SafetyEnumField field, string on, string off, string fallback)
+    public static string Clean(SafetyHistoryValue value, SafetyHistoryEnumField field, string on, string off, string fallback)
     {
-        if (value.Kind == SafetyValueKind.Bool)
+        if (value.Kind == SafetyHistoryValueKind.Bool)
         {
             return value.BoolValue ? on : off;
         }
 
-        if (value.Kind == SafetyValueKind.Number)
+        if (value.Kind == SafetyHistoryValueKind.Number)
         {
             return value.NumberValue.ToString(CultureInfo.InvariantCulture);
         }
 
-        if (value.Kind != SafetyValueKind.Str || string.IsNullOrEmpty(value.StringValue))
+        if (value.Kind != SafetyHistoryValueKind.Str || string.IsNullOrEmpty(value.StringValue))
         {
             return fallback;
         }
@@ -186,7 +186,7 @@ public static class SafetyEnums
         if (prefix is not null && raw.StartsWith(prefix, StringComparison.Ordinal))
         {
             string stripped = raw[prefix.Length..];
-            if (field == SafetyEnumField.SpeedLimitWarning && string.Equals(stripped, "None", StringComparison.Ordinal))
+            if (field == SafetyHistoryEnumField.SpeedLimitWarning && string.Equals(stripped, "None", StringComparison.Ordinal))
             {
                 return off;
             }
@@ -202,14 +202,14 @@ public static class SafetyEnums
     /// the off / none / disabled / 0 classification against the canonical English tokens so the result is
     /// independent of the display language.
     /// </summary>
-    public static bool IsActive(SafetyValue value, SafetyEnumField field)
+    public static bool IsActive(SafetyHistoryValue value, SafetyHistoryEnumField field)
     {
-        if (value.Kind == SafetyValueKind.None)
+        if (value.Kind == SafetyHistoryValueKind.None)
         {
             return false;
         }
 
-        if (value.Kind == SafetyValueKind.Bool)
+        if (value.Kind == SafetyHistoryValueKind.Bool)
         {
             return value.BoolValue;
         }
@@ -267,10 +267,10 @@ public enum SafetyEventKind
 public readonly record struct SafetyEventPresentation(string Glyph, string AccentBrushKey, SeverityLevel Severity);
 
 /// <summary>
-/// One ADAS snapshot row from the <c>GET /safety</c> change feed (web <c>SafetySnapshot</c> in
+/// One ADAS snapshot row from the <c>GET /safety</c> change feed (web <c>SafetyHistorySnapshot</c> in
 /// web/src/types/vehicle-systems.ts). Strict boolean fields are read as nullable bools (the web
 /// <c>=== true</c> checks only fire for a real JSON <c>true</c>); the enum-typed fields are read as
-/// polymorphic <see cref="SafetyValue"/>s. Parsing is null-tolerant so a partial row never throws, and
+/// polymorphic <see cref="SafetyHistoryValue"/>s. Parsing is null-tolerant so a partial row never throws, and
 /// the raw <see cref="CreatedAt"/> wire string is parsed on demand via <see cref="CreatedAtTime"/>.
 /// </summary>
 /// <param name="Id">The snapshot id (web <c>snap.id</c>), or null.</param>
@@ -283,30 +283,30 @@ public readonly record struct SafetyEventPresentation(string Glyph, string Accen
 /// <param name="SpeedLimitWarning">Speed-limit enum (polymorphic, subtitle only).</param>
 /// <param name="CruiseFollowDistance">Cruise follow-distance enum (polymorphic, subtitle only).</param>
 /// <param name="CreatedAt">The raw creation timestamp string (web <c>snap.created_at</c>), or null.</param>
-public sealed record SafetySnapshot(
+public sealed record SafetyHistorySnapshot(
     long? Id,
     bool? AutomaticEmergencyBrakingOff,
     bool? BlindSpotCollisionWarning,
     bool? EmergencyLaneDepartureAvoidance,
     bool? PinToDriveEnabled,
-    SafetyValue ForwardCollisionWarning,
-    SafetyValue LaneDepartureAvoidance,
-    SafetyValue SpeedLimitWarning,
-    SafetyValue CruiseFollowDistance,
+    SafetyHistoryValue ForwardCollisionWarning,
+    SafetyHistoryValue LaneDepartureAvoidance,
+    SafetyHistoryValue SpeedLimitWarning,
+    SafetyHistoryValue CruiseFollowDistance,
     string? CreatedAt)
 {
     /// <summary>The parsed creation instant, or <see langword="null"/> when absent/unparseable.</summary>
     public DateTimeOffset? CreatedAtTime => TryParseTimestamp(CreatedAt);
 
     /// <summary>Parse a <c>GET /safety</c> JSON array into a tolerant list of snapshots, preserving order.</summary>
-    public static IReadOnlyList<SafetySnapshot> ParseList(JsonElement element)
+    public static IReadOnlyList<SafetyHistorySnapshot> ParseList(JsonElement element)
     {
         if (element.ValueKind != JsonValueKind.Array)
         {
-            return Array.Empty<SafetySnapshot>();
+            return Array.Empty<SafetyHistorySnapshot>();
         }
 
-        var list = new List<SafetySnapshot>(element.GetArrayLength());
+        var list = new List<SafetyHistorySnapshot>(element.GetArrayLength());
         foreach (var item in element.EnumerateArray())
         {
             if (item.ValueKind == JsonValueKind.Object)
@@ -319,16 +319,16 @@ public sealed record SafetySnapshot(
     }
 
     /// <summary>Project a single safety JSON object into a tolerant snapshot.</summary>
-    public static SafetySnapshot FromJson(JsonElement obj) => new(
+    public static SafetyHistorySnapshot FromJson(JsonElement obj) => new(
         Id: GetLong(obj, "id"),
         AutomaticEmergencyBrakingOff: GetStrictBool(obj, "automatic_emergency_braking_off"),
         BlindSpotCollisionWarning: GetStrictBool(obj, "blind_spot_collision_warning"),
         EmergencyLaneDepartureAvoidance: GetStrictBool(obj, "emergency_lane_departure_avoidance"),
         PinToDriveEnabled: GetStrictBool(obj, "pin_to_drive_enabled"),
-        ForwardCollisionWarning: SafetyValue.FromJson(obj, "forward_collision_warning"),
-        LaneDepartureAvoidance: SafetyValue.FromJson(obj, "lane_departure_avoidance"),
-        SpeedLimitWarning: SafetyValue.FromJson(obj, "speed_limit_warning"),
-        CruiseFollowDistance: SafetyValue.FromJson(obj, "cruise_follow_distance"),
+        ForwardCollisionWarning: SafetyHistoryValue.FromJson(obj, "forward_collision_warning"),
+        LaneDepartureAvoidance: SafetyHistoryValue.FromJson(obj, "lane_departure_avoidance"),
+        SpeedLimitWarning: SafetyHistoryValue.FromJson(obj, "speed_limit_warning"),
+        CruiseFollowDistance: SafetyHistoryValue.FromJson(obj, "cruise_follow_distance"),
         CreatedAt: GetString(obj, "created_at"));
 
     private static string? GetString(JsonElement obj, string name) =>
@@ -523,7 +523,7 @@ public static class SafetyHistoryProjection
     private static readonly DateTimeOffset Epoch = DateTimeOffset.UnixEpoch;
 
     /// <summary>Classify a snapshot into its ADAS event kind (web <c>classifySnapshot</c>, first match wins).</summary>
-    public static SafetyEventKind Classify(SafetySnapshot snapshot)
+    public static SafetyEventKind Classify(SafetyHistorySnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
@@ -532,12 +532,12 @@ public static class SafetyHistoryProjection
             return SafetyEventKind.Aeb;
         }
 
-        if (SafetyEnums.IsActive(snapshot.ForwardCollisionWarning, SafetyEnumField.ForwardCollisionWarning))
+        if (SafetyEnums.IsActive(snapshot.ForwardCollisionWarning, SafetyHistoryEnumField.ForwardCollisionWarning))
         {
             return SafetyEventKind.Fcw;
         }
 
-        if (SafetyEnums.IsActive(snapshot.LaneDepartureAvoidance, SafetyEnumField.LaneDepartureAvoidance))
+        if (SafetyEnums.IsActive(snapshot.LaneDepartureAvoidance, SafetyHistoryEnumField.LaneDepartureAvoidance))
         {
             return SafetyEventKind.Lane;
         }
@@ -582,7 +582,7 @@ public static class SafetyHistoryProjection
     }
 
     /// <summary>The localized event title for a snapshot (web <c>classifySnapshot().title</c>).</summary>
-    public static string Title(SafetyEventKind kind, SafetySnapshot snapshot, ILocalizer localizer)
+    public static string Title(SafetyEventKind kind, SafetyHistorySnapshot snapshot, ILocalizer localizer)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(localizer);
@@ -596,11 +596,11 @@ public static class SafetyHistoryProjection
             SafetyEventKind.Fcw => string.Format(
                 CultureInfo.CurrentCulture,
                 localizer.GetString("widget.safetyEvent.fcw", "FCW: {0}"),
-                SafetyEnums.Clean(snapshot.ForwardCollisionWarning, SafetyEnumField.ForwardCollisionWarning, on, off, EmDash)),
+                SafetyEnums.Clean(snapshot.ForwardCollisionWarning, SafetyHistoryEnumField.ForwardCollisionWarning, on, off, EmDash)),
             SafetyEventKind.Lane => string.Format(
                 CultureInfo.CurrentCulture,
                 localizer.GetString("widget.safetyEvent.lane", "Lane Departure: {0}"),
-                SafetyEnums.Clean(snapshot.LaneDepartureAvoidance, SafetyEnumField.LaneDepartureAvoidance, on, off, EmDash)),
+                SafetyEnums.Clean(snapshot.LaneDepartureAvoidance, SafetyHistoryEnumField.LaneDepartureAvoidance, on, off, EmDash)),
             SafetyEventKind.Bsw => localizer.GetString("widget.safetyEvent.bsw", "Blind Spot Warning"),
             SafetyEventKind.Elda => localizer.GetString("widget.safetyEvent.elda", "Emergency Lane Departure Avoidance"),
             _ => localizer.GetString("widget.safetyEvent.general", "Safety State Update"),
@@ -608,7 +608,7 @@ public static class SafetyHistoryProjection
     }
 
     /// <summary>The localized subtitle for a snapshot (web <c>buildSubtitle</c>).</summary>
-    public static string Subtitle(SafetySnapshot snapshot, ILocalizer localizer)
+    public static string Subtitle(SafetyHistorySnapshot snapshot, ILocalizer localizer)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(localizer);
@@ -640,7 +640,7 @@ public static class SafetyHistoryProjection
 
     /// <summary>Project <paramref name="snapshots"/> for <paramref name="size"/> using the localizer + injected <paramref name="now"/>.</summary>
     public static SafetyHistoryDisplay Project(
-        IReadOnlyList<SafetySnapshot> snapshots,
+        IReadOnlyList<SafetyHistorySnapshot> snapshots,
         SafetyHistorySize size,
         ILocalizer localizer,
         DateTimeOffset now)
@@ -692,7 +692,7 @@ public static class SafetyHistoryProjection
     /// the web <c>new Date(...).getTime()</c> NaN comparison drops them.
     /// </summary>
     public static SafetyHistoryStats ComputeStats(
-        IReadOnlyList<SafetySnapshot> snapshots,
+        IReadOnlyList<SafetyHistorySnapshot> snapshots,
         ILocalizer localizer,
         DateTimeOffset now)
     {
@@ -789,7 +789,7 @@ public static class SafetyHistoryProjection
     }
 
     private static List<SafetyHistoryRow> BuildRows(
-        IReadOnlyList<SafetySnapshot> snapshots,
+        IReadOnlyList<SafetyHistorySnapshot> snapshots,
         ILocalizer localizer,
         DateTimeOffset now)
     {
@@ -809,7 +809,7 @@ public static class SafetyHistoryProjection
         return rows;
     }
 
-    private static SafetyHistoryRow BuildRow(SafetySnapshot snapshot, ILocalizer localizer, DateTimeOffset now, int ordinal)
+    private static SafetyHistoryRow BuildRow(SafetyHistorySnapshot snapshot, ILocalizer localizer, DateTimeOffset now, int ordinal)
     {
         var kind = Classify(snapshot);
         var presentation = Presentation(kind);
@@ -837,29 +837,29 @@ public static class SafetyHistoryProjection
 
 /// <summary>
 /// Maps the engine's raw <c>RepositoryResult&lt;JsonElement&gt;</c> emissions onto parsed
-/// <c>RepositoryResult&lt;IReadOnlyList&lt;SafetySnapshot&gt;&gt;</c>, preserving every freshness flag
+/// <c>RepositoryResult&lt;IReadOnlyList&lt;SafetyHistorySnapshot&gt;&gt;</c>, preserving every freshness flag
 /// (cached / refreshing / stale / offline) so the view-model can render the full state matrix. Kept pure
 /// so the parse-and-preserve contract is unit-tested without a network or cache.
 /// </summary>
 public static class SafetyHistoryResultMapper
 {
     /// <summary>Parse <paramref name="raw"/>'s payload (when present) while preserving its status.</summary>
-    public static RepositoryResult<IReadOnlyList<SafetySnapshot>> Map(RepositoryResult<JsonElement> raw)
+    public static RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>> Map(RepositoryResult<JsonElement> raw)
     {
         ArgumentNullException.ThrowIfNull(raw);
 
-        IReadOnlyList<SafetySnapshot> Parse() =>
-            raw.HasValue ? SafetySnapshot.ParseList(raw.Value) : Array.Empty<SafetySnapshot>();
+        IReadOnlyList<SafetyHistorySnapshot> Parse() =>
+            raw.HasValue ? SafetyHistorySnapshot.ParseList(raw.Value) : Array.Empty<SafetyHistorySnapshot>();
 
         return raw.Status switch
         {
-            LoadStatus.Loading => RepositoryResult<IReadOnlyList<SafetySnapshot>>.Loading(),
-            LoadStatus.Cached => RepositoryResult<IReadOnlyList<SafetySnapshot>>.Cached(Parse(), raw.FetchedAt!.Value, raw.IsStale),
-            LoadStatus.Refreshing => RepositoryResult<IReadOnlyList<SafetySnapshot>>.Refreshing(Parse(), raw.FetchedAt!.Value, raw.IsStale),
-            LoadStatus.Loaded => RepositoryResult<IReadOnlyList<SafetySnapshot>>.Loaded(Parse(), raw.FetchedAt ?? DateTimeOffset.UtcNow),
-            LoadStatus.Empty => RepositoryResult<IReadOnlyList<SafetySnapshot>>.Empty(raw.FetchedAt),
-            LoadStatus.Offline => RepositoryResult<IReadOnlyList<SafetySnapshot>>.OfflineCached(Parse(), raw.FetchedAt!.Value, raw.Error!),
-            _ => RepositoryResult<IReadOnlyList<SafetySnapshot>>.Failure(
+            LoadStatus.Loading => RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Loading(),
+            LoadStatus.Cached => RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Cached(Parse(), raw.FetchedAt!.Value, raw.IsStale),
+            LoadStatus.Refreshing => RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Refreshing(Parse(), raw.FetchedAt!.Value, raw.IsStale),
+            LoadStatus.Loaded => RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Loaded(Parse(), raw.FetchedAt ?? DateTimeOffset.UtcNow),
+            LoadStatus.Empty => RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Empty(raw.FetchedAt),
+            LoadStatus.Offline => RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.OfflineCached(Parse(), raw.FetchedAt!.Value, raw.Error!),
+            _ => RepositoryResult<IReadOnlyList<SafetyHistorySnapshot>>.Failure(
                 raw.Error ?? new RepositoryError(RepositoryErrorKind.Unknown, "Unknown error")),
         };
     }
