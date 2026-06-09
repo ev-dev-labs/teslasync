@@ -183,3 +183,4 @@ p2-windows/dashboard-widgets/W-0086-SentryEventLogWidget.prompt.md
 p2-windows/dashboard-widgets/W-0082-RouteEfficiencyWidget.prompt.md
 p2-windows/dashboard-widgets/W-0087-SignalCatalogWidget.prompt.md
 p2-windows/dashboard-widgets/W-0085-SecurityStatusWidget.prompt.md
+p2-windows/dashboard-widgets/W-0089-SignalLogWidget.prompt.md
