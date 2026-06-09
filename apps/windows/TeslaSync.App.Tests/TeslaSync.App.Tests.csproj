@@ -175,10 +175,17 @@
     package / project / content groups, and a single Compile ItemGroup holding the deduplicated, sorted
     union of every previously linked source (so every existing test still compiles) plus the new
     KioskOverlay surface logic. Keep this file as ONE Project root with a single Compile ItemGroup.
+    P2/W2-0001 — headless unit tests for the UI-thread-free logic models (the feature-view and
+    dashboard-widget Model / Source / ViewModel sources plus shared Core logic). Targets plain net10.0
+    so `dotnet test` runs without a WinUI / UI-thread host; the WinUI app (TeslaSync.App) targets a
+    WinUI TFM, so its testable, UI-thread-free sources are Compile-linked here rather than
+    project-referenced. The view files (the *.cs surfaces) themselves are exercised by the app build.
+
+    Invariant: keep this file as ONE <Project> root with a single, path-sorted, deduplicated Compile
+    ItemGroup. A chain of integration merges had repeatedly re-concatenated multiple roots and
+    duplicate items, which failed XML load (MSB4025); it has been consolidated back into this single
+    canonical root so every linked source is preserved and every test compiles.
   -->
-    + shared Model/Source/ViewModel/Presentation sources). Targets plain net10.0 so `dotnet test` runs
-    without a WinUI/UI-thread host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources are
-    Compile-linked here rather than project-referenced (the views themselves are exercised by the app build).
 
     Repair note (P2 feature-views/0116 MonthlyCostChart): a chain of integration merges had again left this
     file with multiple concatenated Project roots plus a malformed (nested) comment, so the solution failed
@@ -205,9 +212,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
     <IsPackable>false</IsPackable>
-    <IsTestProject>true</IsTestProject>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -642,6 +648,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\KioskOverlay\KioskOverlay.ViewModel.cs" Link="FeatureViews\KioskOverlay\KioskOverlay.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LayoutManager\LayoutManager.Model.cs" Link="FeatureViews\LayoutManager\LayoutManager.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LayoutManager\LayoutManager.ViewModel.cs" Link="FeatureViews\LayoutManager\LayoutManager.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LayoutSwitcher\LayoutSwitcher.Model.cs" Link="FeatureViews\LayoutSwitcher\LayoutSwitcher.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LayoutSwitcher\LayoutSwitcher.ViewModel.cs" Link="FeatureViews\LayoutSwitcher\LayoutSwitcher.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Model.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Source.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.ViewModel.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.ViewModel.cs" />
@@ -731,43 +739,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Model.cs" Link="FeatureViews\XRayHeader\XRayHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Source.cs" Link="FeatureViews\XRayHeader\XRayHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
-  </ItemGroup>
-
-</Project>
-    <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\TeslaSync.App\Package.appxmanifest" Link="Package.appxmanifest">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\TeslaSync.App\Platform\Widgets\Public\VehicleStatusTemplate.json" Link="VehicleStatusTemplate.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-</Project>
-    <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
-  </ItemGroup>
-
-  <!-- Test fixtures copied next to the assembly (SI golden vectors, MSIX manifest, widget card template). -->
-  <ItemGroup>
-    <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\TeslaSync.App\Package.appxmanifest" Link="Package.appxmanifest">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\TeslaSync.App\Platform\Widgets\Public\VehicleStatusTemplate.json" Link="VehicleStatusTemplate.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-</Project>
-    <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
-  </ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
   </ItemGroup>
 
