@@ -244,28 +244,28 @@ public sealed class FleetStatsBarWidgetTests
     public void Combine_both_loading_is_loading() =>
         Assert.Equal(
             LoadStatus.Loading,
-            FleetStatsResultMapper.Combine(
+            FleetStatsBarResultMapper.Combine(
                 RepositoryResult<JsonElement>.Loading(), RepositoryResult<JsonElement>.Loading()).Status);
 
     [Fact]
     public void Combine_stays_loading_until_analytics_resolves()
     {
         // Web: isLoading = vehiclesLoading || analyticsLoading — vehicles loaded but analytics still loading.
-        var result = FleetStatsResultMapper.Combine(RawLoaded(VehiclesJson), RepositoryResult<JsonElement>.Loading());
+        var result = FleetStatsBarResultMapper.Combine(RawLoaded(VehiclesJson), RepositoryResult<JsonElement>.Loading());
         Assert.Equal(LoadStatus.Loading, result.Status);
     }
 
     [Fact]
     public void Combine_stays_loading_until_vehicles_resolves()
     {
-        var result = FleetStatsResultMapper.Combine(RepositoryResult<JsonElement>.Loading(), RawLoaded(FleetJson));
+        var result = FleetStatsBarResultMapper.Combine(RepositoryResult<JsonElement>.Loading(), RawLoaded(FleetJson));
         Assert.Equal(LoadStatus.Loading, result.Status);
     }
 
     [Fact]
     public void Combine_loaded_merges_counts_and_totals()
     {
-        var result = FleetStatsResultMapper.Combine(RawLoaded(VehiclesJson), RawLoaded(FleetJson));
+        var result = FleetStatsBarResultMapper.Combine(RawLoaded(VehiclesJson), RawLoaded(FleetJson));
 
         Assert.Equal(LoadStatus.Loaded, result.Status);
         var stats = result.Value!;
@@ -281,7 +281,7 @@ public sealed class FleetStatsBarWidgetTests
     public void Combine_fleet_hard_error_is_failure_even_with_vehicles()
     {
         // Web: WidgetShell shows <QueryError> whenever the analytics `error` is truthy, regardless of vehicles.
-        var result = FleetStatsResultMapper.Combine(
+        var result = FleetStatsBarResultMapper.Combine(
             RawLoaded(VehiclesJson),
             RepositoryResult<JsonElement>.Failure(new RepositoryError(RepositoryErrorKind.Server, "boom")));
 
@@ -292,7 +292,7 @@ public sealed class FleetStatsBarWidgetTests
     [Fact]
     public void Combine_no_data_is_empty()
     {
-        var result = FleetStatsResultMapper.Combine(
+        var result = FleetStatsBarResultMapper.Combine(
             RepositoryResult<JsonElement>.Empty(Now), RepositoryResult<JsonElement>.Empty(Now));
 
         Assert.Equal(LoadStatus.Empty, result.Status);
@@ -302,7 +302,7 @@ public sealed class FleetStatsBarWidgetTests
     public void Combine_vehicles_only_renders_content()
     {
         // Web: hasData = (vehicles && vehicles.length > 0) || analytics — vehicles alone keep it non-empty.
-        var result = FleetStatsResultMapper.Combine(RawLoaded(VehiclesJson), RepositoryResult<JsonElement>.Empty(Now));
+        var result = FleetStatsBarResultMapper.Combine(RawLoaded(VehiclesJson), RepositoryResult<JsonElement>.Empty(Now));
 
         Assert.Equal(LoadStatus.Loaded, result.Status);
         Assert.Equal(3, result.Value!.VehicleCount);
@@ -313,7 +313,7 @@ public sealed class FleetStatsBarWidgetTests
     [Fact]
     public void Combine_analytics_only_renders_content()
     {
-        var result = FleetStatsResultMapper.Combine(RepositoryResult<JsonElement>.Empty(Now), RawLoaded(FleetJson));
+        var result = FleetStatsBarResultMapper.Combine(RepositoryResult<JsonElement>.Empty(Now), RawLoaded(FleetJson));
 
         Assert.Equal(LoadStatus.Loaded, result.Status);
         Assert.Equal(0, result.Value!.VehicleCount);
@@ -323,7 +323,7 @@ public sealed class FleetStatsBarWidgetTests
     [Fact]
     public void Combine_fleet_offline_is_offline_with_content()
     {
-        var result = FleetStatsResultMapper.Combine(
+        var result = FleetStatsBarResultMapper.Combine(
             RawLoaded(VehiclesJson),
             RepositoryResult<JsonElement>.OfflineCached(El(FleetJson), Now, new RepositoryError(RepositoryErrorKind.Network, "down")));
 
@@ -335,7 +335,7 @@ public sealed class FleetStatsBarWidgetTests
     [Fact]
     public void Combine_fleet_cached_stale_is_cached_stale()
     {
-        var result = FleetStatsResultMapper.Combine(
+        var result = FleetStatsBarResultMapper.Combine(
             RawLoaded(VehiclesJson),
             RepositoryResult<JsonElement>.Cached(El(FleetJson), Now, stale: true));
 
