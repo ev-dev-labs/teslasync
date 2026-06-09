@@ -53,6 +53,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupHistoryWidget\BackupHistoryWidget.Model.cs" Link="Widgets\BackupHistoryWidget\BackupHistoryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupHistoryWidget\BackupHistoryWidget.ViewModel.cs" Link="Widgets\BackupHistoryWidget\BackupHistoryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupHistoryWidget\BackupHistoryWidget.Source.cs" Link="Widgets\BackupHistoryWidget\BackupHistoryWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergySiteInfoWidget\EnergySiteInfoWidget.Model.cs" Link="Widgets\EnergySiteInfoWidget\EnergySiteInfoWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergySiteInfoWidget\EnergySiteInfoWidget.ViewModel.cs" Link="Widgets\EnergySiteInfoWidget\EnergySiteInfoWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\EnergySiteInfoWidget\EnergySiteInfoWidget.Source.cs" Link="Widgets\EnergySiteInfoWidget\EnergySiteInfoWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupMonitorWidget\BackupMonitorWidget.Model.cs" Link="Widgets\BackupMonitorWidget\BackupMonitorWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupMonitorWidget\BackupMonitorWidget.ViewModel.cs" Link="Widgets\BackupMonitorWidget\BackupMonitorWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\BackupMonitorWidget\BackupMonitorWidget.Source.cs" Link="Widgets\BackupMonitorWidget\BackupMonitorWidget.Source.cs" />
