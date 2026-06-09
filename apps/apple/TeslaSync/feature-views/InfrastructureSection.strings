@@ -1,60 +1,59 @@
 /*
   InfrastructureSection.strings
-  TeslaSync — P4 feature view · 0006 · InfrastructureSection (Apple)
+  TeslaSync — P4 feature view · 0248 · InfrastructureSection (Apple)
 
   The P1/S10 i18n catalog contribution for this surface. Every key the native
-  InfrastructureSection resolves (table "InfrastructureSection") lives here with its
-  web `t(key, default)` English value. These entries fold into the app
-  `Localizable.xcstrings` master catalog at integration time; they are kept in a
-  per-surface table so each parallel surface prompt owns its own strings without
-  editing the shared catalog.
+  `InfrastructureSection` resolves (table "InfrastructureSection") lives here with its
+  web English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
 
   The first group is the exact keys extracted from the web source
-  (features/admin/components/devtools/InfrastructureSection.tsx — and its ToolCard /
-  ResultPanel / BackendTool helpers). The web has no i18n entries for these keys, so
-  react-i18next renders the key string itself; the values below reproduce that
-  verbatim so the native copy matches the web exactly. The remaining keys back the
-  native-only chrome (freshness/offline/idle/error copy + accessibility).
+  (features/system/components/status/InfrastructureSection.tsx), where the English
+  label IS the key (web `t('Infrastructure')`-style calls). The remainder back the
+  native state envelope (accordion a11y, freshness chip / banner, loading / empty /
+  error chrome).
 */
 
-/* --- Keys from the web source (parity) --- */
-"Db Stats" = "Db Stats";
-"Db Stats Desc" = "Db Stats Desc";
-"Migrations" = "Migrations";
-"Migrations Desc" = "Migrations Desc";
-"Mqtt" = "Mqtt";
-"Mqtt Desc" = "Mqtt Desc";
-"Env Check" = "Env Check";
-"Env Check Desc" = "Env Check Desc";
-"Runtime" = "Runtime";
-"Runtime Desc" = "Runtime Desc";
-"Topic" = "Topic";
-"Message" = "Message";
-"Send Test" = "Send Test";
-"Run" = "Run";
-"Failed" = "Failed";
-"Success" = "Success";
-
-/* --- Native chrome: connectivity / freshness --- */
+/* --- Keys from the web source (parity — English label is the key) --- */
 "Infrastructure" = "Infrastructure";
-"Online" = "Online";
+"SSE connections and polling engine diagnostics" = "SSE connections and polling engine diagnostics";
+"Connected" = "Connected";
+"Disconnected" = "Disconnected";
+"SSE Connection" = "SSE Connection";
+"Connection State" = "Connection State";
+"Endpoint" = "Endpoint";
+"Protocol" = "Protocol";
+"Fallback Mode" = "Fallback Mode";
+"Yes — Polling" = "Yes — Polling";
+"No" = "No";
+"Polling Engine" = "Polling Engine";
+"Active" = "Active";
+"Standby" = "Standby";
+"Mode" = "Mode";
+"Speed Comparison" = "Speed Comparison";
+"Fleet Telemetry Latency" = "Fleet Telemetry Latency";
+"Fleet API Polling" = "Fleet API Polling";
+"Total Conns" = "Total Conns";
+"Acquired" = "Acquired";
+"Idle" = "Idle";
+
+/* --- Accordion accessibility (expand/collapse) --- */
+"Expanded" = "Expanded";
+"Collapsed" = "Collapsed";
+"Toggle Section" = "Double tap to expand or collapse";
+
+/* --- Freshness chip (Stale / Offline) --- */
 "Stale" = "Stale";
 "Offline" = "Offline";
-"Refresh" = "Refresh";
-"Refresh Hint" = "Re-checks dev-tools connectivity";
-"Offline Title" = "You're offline";
-"Offline Message" = "Dev tools are unavailable. Showing the last results; reconnect to run again.";
 
-/* --- Native chrome: result panel + run affordances --- */
-"No Result Yet" = "No result yet";
-"Running" = "Running…";
-"Request Failed" = "Request failed";
-"Loading" = "Loading dev tools";
-"Mqtt Topic Placeholder" = "test/topic";
-"Run Hint" = "Runs this backend tool";
-"Send Test Hint" = "Publishes a test MQTT message";
+/* --- Connectivity banner (stale / offline) --- */
+"Stale Banner" = "Reconnecting — infrastructure status may be out of date";
+"Offline Banner" = "Offline — showing last known infrastructure status";
 
-/* --- Native chrome: accessibility --- */
-"Result A11y" = "Result";
-"Error A11y" = "Error";
-"Stale Result A11y" = "Result may be out of date";
+/* --- Loading / empty / error chrome --- */
+"Loading" = "Loading infrastructure status";
+"No Infrastructure Title" = "No infrastructure data";
+"No Infrastructure Message" = "No infrastructure data available";
+"Infrastructure Error Title" = "Couldn't load infrastructure status";
+"Retry" = "Retry";

@@ -1,98 +1,117 @@
 //
 //  InfrastructureSection.Previews.swift
-//  TeslaSync — P4 feature view · 0006 · InfrastructureSection (Apple)
+//  TeslaSync — P4 feature view · 0248 · InfrastructureSection (Apple)
 //
-//  Xcode previews for each surface state (loading / empty / success / error / stale
-//  / offline). DEBUG-only; compiled by the app targets and skipped by the
-//  shipped-surface placeholder gate scope.
+//  Xcode previews — one per state the surface produces: content (streaming + pool),
+//  the polling-fallback variant, empty (resolved, nothing to show), loading (skeleton
+//  chrome), error (fetch failed → retry), and the stale / offline freshness variants.
+//  Each preview opens the accordion (`initiallyExpanded: true`) so the state is
+//  visible. Preview-only; excluded from release builds via `#if DEBUG`.
 //
-
-import SwiftUI
 
 #if DEBUG
+    import SwiftUI
+
+    /// A no-op telemetry sink so previews don't emit diagnostics.
+    private struct SilentInfrastructureTelemetry: InfrastructureTelemetry {
+        func viewOpened(surface _: String) {}
+    }
+
+    /// Sample infrastructure snapshots for the previews.
+    private enum InfrastructurePreviewData {
+        static let streaming = InfraTelemetryDTO(
+            enabled: true,
+            mode: "streaming",
+            endpoint: "wss://telemetry.teslasync.io/v1/stream",
+            protocolName: "fleet-telemetry/2",
+            speedComparison: InfraSpeedComparisonDTO(
+                speedup: "11.4× faster",
+                fleetTelemetryLatency: "~250 ms",
+                fleetApiPolling: "~15 s"
+            )
+        )
+
+        static let polling = InfraTelemetryDTO(
+            enabled: false,
+            mode: "polling",
+            endpoint: "https://owner-api.teslamotors.com",
+            protocolName: "fleet-api/rest",
+            speedComparison: InfraSpeedComparisonDTO(
+                speedup: "1× baseline",
+                fleetTelemetryLatency: "n/a",
+                fleetApiPolling: "~15 s"
+            )
+        )
+
+        static let pool = InfraDatabasePoolDTO(totalConns: 25, acquiredConns: 5, idleConns: 20)
+
+        static func loaded(
+            telemetry: InfraTelemetryDTO? = streaming,
+            pool: InfraDatabasePoolDTO? = pool,
+            connection: InfraConnection = .live
+        ) -> InfraStatusUpdate {
+            InfraStatusUpdate(
+                status: .loaded,
+                telemetry: telemetry,
+                pool: pool,
+                connection: connection,
+                updatedAt: Date(timeIntervalSince1970: 1_775_000_000)
+            )
+        }
+    }
+
     @MainActor
-    private enum InfraPreviewData {
-        static let dbStatsJSON = """
-        {
-          "connections": 12,
-          "database": "teslasync",
-          "size_mb": 482,
-          "tables": 64
-        }
-        """
+    private func infraPreview(_ update: InfraStatusUpdate) -> InfrastructureSection {
+        InfrastructureSection(
+            model: InfrastructureModel(
+                source: InMemoryInfrastructureSource(initial: update),
+                telemetry: SilentInfrastructureTelemetry(),
+                locale: Locale(identifier: "en_US")
+            ),
+            initiallyExpanded: true
+        )
+    }
 
-        static let runtimeJSON = """
-        {
-          "go_version": "go1.25",
-          "goroutines": 48,
-          "heap_mb": 96,
-          "uptime_seconds": 86400
-        }
-        """
+    #Preview("Content · Streaming") {
+        ScrollView { infraPreview(InfrastructurePreviewData.loaded()).padding() }
+            .frame(maxWidth: 760)
+    }
 
-        @MainActor
-        static func model(
-            connection: InfraConnection = .online,
-            seedOnline: Bool = true,
-            cached: [String: InfraToolResult] = [:],
-            cachedAt: Date = Date()
-        ) -> InfrastructureModel {
-            let initial = seedOnline
-                ? InfraConnectivityUpdate(connection: connection, updatedAt: Date())
-                : nil
-            let source = InMemoryInfrastructureSource(initial: initial)
-            let model = InfrastructureModel(source: source)
-            model.start()
-            if !cached.isEmpty {
-                model.restore(cached, at: cachedAt)
-            }
-            return model
+    #Preview("Content · Polling fallback") {
+        ScrollView {
+            infraPreview(InfrastructurePreviewData.loaded(telemetry: InfrastructurePreviewData.polling)).padding()
         }
+        .frame(maxWidth: 760)
+    }
+
+    #Preview("Empty") {
+        ScrollView {
+            infraPreview(InfraStatusUpdate(status: .loaded, telemetry: nil, pool: nil)).padding()
+        }
+        .frame(maxWidth: 760)
     }
 
     #Preview("Loading") {
-        InfrastructureSection(model: InfraPreviewData.model(seedOnline: false))
-    }
-
-    #Preview("Empty (no runs)") {
-        InfrastructureSection(model: InfraPreviewData.model())
-    }
-
-    #Preview("Success") {
-        InfrastructureSection(
-            model: InfraPreviewData.model(
-                cached: [
-                    "db-stats": .success(json: InfraPreviewData.dbStatsJSON),
-                    "runtime-info": .success(json: InfraPreviewData.runtimeJSON)
-                ]
-            )
-        )
+        ScrollView {
+            infraPreview(InfraStatusUpdate(status: .loading)).padding()
+        }
+        .frame(maxWidth: 760)
     }
 
     #Preview("Error") {
-        InfrastructureSection(
-            model: InfraPreviewData.model(
-                cached: ["migration-status": .failure(message: "pq: relation \"schema_migrations\" does not exist")]
-            )
-        )
+        ScrollView {
+            infraPreview(InfraStatusUpdate(status: .failed("Request timed out"))).padding()
+        }
+        .frame(maxWidth: 760)
     }
 
     #Preview("Stale") {
-        InfrastructureSection(
-            model: InfraPreviewData.model(
-                cached: ["db-stats": .success(json: InfraPreviewData.dbStatsJSON)],
-                cachedAt: Date().addingTimeInterval(-120)
-            )
-        )
+        ScrollView { infraPreview(InfrastructurePreviewData.loaded(connection: .stale)).padding() }
+            .frame(maxWidth: 760)
     }
 
-    #Preview("Offline (cached)") {
-        InfrastructureSection(
-            model: InfraPreviewData.model(
-                connection: .offline,
-                cached: ["db-stats": .success(json: InfraPreviewData.dbStatsJSON)],
-                cachedAt: Date().addingTimeInterval(-30)
-            )
-        )
+    #Preview("Offline") {
+        ScrollView { infraPreview(InfrastructurePreviewData.loaded(connection: .offline)).padding() }
+            .frame(maxWidth: 760)
     }
 #endif

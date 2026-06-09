@@ -1,239 +1,237 @@
 //
 //  InfrastructureSection.Adapter.swift
-//  TeslaSync — P4 feature view · 0006 · InfrastructureSection (Apple)
+//  TeslaSync — P4 feature view · 0248 · InfrastructureSection (Apple)
 //
-//  The testable projection core for the dev-tools Infrastructure surface. Dev-tools
-//  endpoints return arbitrary JSON (web `Record<string, unknown>` from `apiFetch`),
-//  so the projection works over a structural JSON value rather than a fixed DTO.
+//  The testable projection core for the system-status "Infrastructure" surface —
+//  the faithful port of features/system/components/status/InfrastructureSection.tsx.
+//  Everything here is pure and dependency-free (Foundation only) so it can be unit-
+//  tested without a bundle or a rendered view.
 //
-//  Two pure pieces, both dependency-free so they unit-test without a store, a
-//  bundle, or a rendered view:
-//    • `InfraJSONValue` — a decoded JSON value + a deterministic pretty-printer
-//      that mirrors the web `JSON.stringify(data, null, 2)` result panel body.
-//    • `InfraResultProjection` — the web success/error decision: a response whose
-//      `error` field is JS-truthy becomes a failure (carrying the string message
-//      when present), everything else becomes a success carrying the pretty JSON.
+//  Web parity notes:
+//    • The web component composes TWO interval-refetched reads — `getTelemetryStatus()`
+//      (/telemetry, 2s) and `getExtendedHealth()` (/system/health, 30s). The native
+//      source seam (P1/S8) hands this adapter the same shapes via `InfraTelemetryDTO`
+//      and `InfraDatabasePoolDTO`, and the projections below derive the SSE-connection
+//      key/values, the polling-engine key/values, the database-pool metric tiles, and
+//      the render phase from them.
+//    • `sseConnected = telemetry?.enabled ?? false` and
+//      `connectionMode = telemetry?.mode ?? 'unknown'` become
+//      `InfrastructureProjection.sseConnected` / `connectionMode`, driving the header
+//      Connected/Disconnected badge and the polling Active/Standby badge.
+//    • The web `?? '—'` em-dash fallback for an absent endpoint / protocol / speed
+//      comparison is preserved via `InfrastructureDisplay.emDash`.
+//    • The web always renders the two cards (telemetry fields fall back to the em-dash
+//      when the read is still undefined); the prompt's surface-level `empty` state (no
+//      telemetry AND no pool) and the loading / error envelope are resolved by
+//      `resolvePhase` so no state is ever a blank box.
 //
 
 import Foundation
 
-// MARK: - Structural JSON value (web `Record<string, unknown>`)
+// MARK: - Shared display constants
 
-/// A decoded JSON value from a dev-tools response. Object member order is
-/// normalized (keys sorted) on decode so the pretty-printed body is deterministic
-/// for snapshots/tests — the web relies on JS insertion order, which is not
-/// reconstructable from a parsed payload; sorting is the stable, honest choice.
-public enum InfraJSONValue: Sendable, Equatable {
-    case object([InfraJSONMember])
-    case array([InfraJSONValue])
-    case string(String)
-    case number(Double)
-    case integer(Int64)
-    case bool(Bool)
-    case null
+/// Display helpers shared by the projections.
+public enum InfrastructureDisplay {
+    /// The universal em-dash fallback the web renders for missing values (web `'—'`),
+    /// reused for an absent endpoint, protocol, or speed-comparison string.
+    public static let emDash = "—"
+
+    /// The web fallback for an absent telemetry mode (`telemetry?.mode ?? 'unknown'`).
+    public static let unknownMode = "unknown"
+
+    /// The raw mode value that means the polling fallback is active (web `'polling'`).
+    public static let pollingMode = "polling"
 }
 
-/// One `key: value` member of a JSON object, kept as a named struct so
-/// `InfraJSONValue` can synthesize `Equatable` (a tuple array cannot).
-public struct InfraJSONMember: Sendable, Equatable {
-    public let key: String
-    public let value: InfraJSONValue
+// MARK: - Transport DTOs (the P1/S8 source seam input)
 
-    public init(key: String, value: InfraJSONValue) {
-        self.key = key
+/// The Fleet-Telemetry speed comparison block (web `telemetry.speed_comparison`).
+/// Every field is an already-formatted human string on the wire (web renders them
+/// verbatim), so they stay `String?` here and fall back to the em-dash when absent.
+public struct InfraSpeedComparisonDTO: Sendable, Equatable {
+    /// The polling-vs-streaming speedup factor (web `speed_comparison.speedup`).
+    public var speedup: String?
+    /// The Fleet-Telemetry stream latency (web `speed_comparison.fleet_telemetry_latency`).
+    public var fleetTelemetryLatency: String?
+    /// The Fleet-API polling interval (web `speed_comparison.fleet_api_polling`).
+    public var fleetApiPolling: String?
+
+    public init(
+        speedup: String? = nil,
+        fleetTelemetryLatency: String? = nil,
+        fleetApiPolling: String? = nil
+    ) {
+        self.speedup = speedup
+        self.fleetTelemetryLatency = fleetTelemetryLatency
+        self.fleetApiPolling = fleetApiPolling
+    }
+}
+
+/// The Fleet-Telemetry status envelope (web `getTelemetryStatus()` → `TelemetryStatus`).
+/// Only the fields the surface renders are modeled; the source projects the rest away.
+public struct InfraTelemetryDTO: Sendable, Equatable {
+    /// Whether the SSE / Fleet-Telemetry stream is connected (web `telemetry.enabled`).
+    public var enabled: Bool
+    /// The active connection mode (web `telemetry.mode`), e.g. "streaming" / "polling".
+    public var mode: String
+    /// The stream endpoint URL (web `telemetry.endpoint`); empty / nil → em-dash.
+    public var endpoint: String?
+    /// The wire protocol (web `telemetry.protocol`); empty / nil → em-dash. Named
+    /// `protocolName` because `protocol` is a reserved word in Swift.
+    public var protocolName: String?
+    /// The polling-vs-streaming speed comparison (web `telemetry.speed_comparison`).
+    public var speedComparison: InfraSpeedComparisonDTO?
+
+    public init(
+        enabled: Bool = false,
+        mode: String = "",
+        endpoint: String? = nil,
+        protocolName: String? = nil,
+        speedComparison: InfraSpeedComparisonDTO? = nil
+    ) {
+        self.enabled = enabled
+        self.mode = mode
+        self.endpoint = endpoint
+        self.protocolName = protocolName
+        self.speedComparison = speedComparison
+    }
+}
+
+/// The database connection-pool snapshot (web `extHealth.database_pool` from
+/// `getExtendedHealth()`). Field names mirror the snake_case JSON exactly.
+public struct InfraDatabasePoolDTO: Sendable, Equatable {
+    /// Total pool connections (web `database_pool.total_conns`).
+    public var totalConns: Int
+    /// Currently-acquired connections (web `database_pool.acquired_conns`).
+    public var acquiredConns: Int
+    /// Currently-idle connections (web `database_pool.idle_conns`).
+    public var idleConns: Int
+
+    public init(totalConns: Int = 0, acquiredConns: Int = 0, idleConns: Int = 0) {
+        self.totalConns = totalConns
+        self.acquiredConns = acquiredConns
+        self.idleConns = idleConns
+    }
+}
+
+// MARK: - Projected SSE-connection info (web first `<Card>`)
+
+/// The view-ready projection of the "SSE Connection" card: whether the stream is
+/// connected (drives the header Wifi icon + the Connection-State badge) plus the
+/// endpoint, protocol, and fallback-mode values (web KVList rows).
+public struct InfraSSEInfo: Sendable, Equatable {
+    /// Whether the stream is connected (web `sseConnected`).
+    public var connected: Bool
+    /// The stream endpoint, em-dash when absent (web `telemetry?.endpoint ?? '—'`).
+    public var endpoint: String
+    /// The wire protocol, em-dash when absent (web `telemetry?.protocol ?? '—'`).
+    public var protocolName: String
+    /// Whether the polling fallback is active — drives the "Fallback Mode" row
+    /// ("Yes — Polling" vs "No", web `connectionMode === 'polling'`).
+    public var fallbackActive: Bool
+
+    public init(connected: Bool, endpoint: String, protocolName: String, fallbackActive: Bool) {
+        self.connected = connected
+        self.endpoint = endpoint
+        self.protocolName = protocolName
+        self.fallbackActive = fallbackActive
+    }
+}
+
+// MARK: - Projected polling-engine info (web second `<Card>`)
+
+/// The view-ready projection of the "Polling Engine" card: whether polling is active
+/// (drives the Active/Standby badge) plus the raw mode and the three speed-comparison
+/// values (web KVList rows).
+public struct InfraPollingInfo: Sendable, Equatable {
+    /// Whether the polling engine is active (web `connectionMode === 'polling'`).
+    public var active: Bool
+    /// The raw connection mode, shown verbatim (web `value: connectionMode`).
+    public var mode: String
+    /// The speedup factor, em-dash when absent (web `speed_comparison?.speedup ?? '—'`).
+    public var speedup: String
+    /// The Fleet-Telemetry latency, em-dash when absent.
+    public var fleetTelemetryLatency: String
+    /// The Fleet-API polling interval, em-dash when absent.
+    public var fleetApiPolling: String
+
+    public init(
+        active: Bool,
+        mode: String,
+        speedup: String,
+        fleetTelemetryLatency: String,
+        fleetApiPolling: String
+    ) {
+        self.active = active
+        self.mode = mode
+        self.speedup = speedup
+        self.fleetTelemetryLatency = fleetTelemetryLatency
+        self.fleetApiPolling = fleetApiPolling
+    }
+}
+
+// MARK: - Database-pool metric tile (web `<InlineMetric>` grid)
+
+/// The three database-pool metrics the web renders as a `Grid` of `<InlineMetric>`s.
+/// The raw value carries the metric identity; the label + SF Symbol + tone live here
+/// so the view stays declarative (web `<InlineMetric icon value label>` per metric).
+public enum InfraPoolMetric: String, Sendable, Equatable, CaseIterable, Identifiable {
+    case totalConns
+    case acquired
+    case idle
+
+    public var id: String {
+        rawValue
+    }
+
+    /// The i18n key + English fallback (web `t('Total Conns')` etc.).
+    public var labelKey: String {
+        switch self {
+        case .totalConns: "Total Conns"
+        case .acquired: "Acquired"
+        case .idle: "Idle"
+        }
+    }
+
+    /// The SF Symbol mirroring the web lucide icon (Database / Activity / Clock).
+    public var symbol: String {
+        switch self {
+        case .totalConns: "cylinder.split.1x2"
+        case .acquired: "waveform.path.ecg"
+        case .idle: "clock"
+        }
+    }
+
+    /// The accent tone mirroring the web icon color (cyan / green / amber).
+    public var tone: InfraMetricTone {
+        switch self {
+        case .totalConns: .accent
+        case .acquired: .success
+        case .idle: .warning
+        }
+    }
+}
+
+/// The semantic tone of a database-pool metric icon — the native parity of the web
+/// `text-cyan-400` / `text-green-400` / `text-amber-400` icon colors.
+public enum InfraMetricTone: String, Sendable, Equatable {
+    case accent
+    case success
+    case warning
+}
+
+/// One projected database-pool tile: the metric + its locale-formatted integer value
+/// (web `fmtInt(database_pool.<field>)`).
+public struct InfraPoolStat: Sendable, Equatable, Identifiable {
+    public var metric: InfraPoolMetric
+    public var value: String
+
+    public var id: String {
+        metric.rawValue
+    }
+
+    public init(metric: InfraPoolMetric, value: String) {
+        self.metric = metric
         self.value = value
-    }
-}
-
-public extension InfraJSONValue {
-    /// JS truthiness, used for the web `data.error ? …` decision: `false`, `0`,
-    /// `""`, and `null` are falsy; everything else (incl. objects/arrays) is truthy.
-    var isJSTruthy: Bool {
-        switch self {
-        case .null: false
-        case let .bool(value): value
-        case let .number(value): value != 0 && !value.isNaN
-        case let .integer(value): value != 0
-        case let .string(value): !value.isEmpty
-        case .object, .array: true
-        }
-    }
-
-    /// The string payload when this value is a string, else `nil` (web
-    /// `typeof data.error === 'string' ? data.error : undefined`).
-    var stringValue: String? {
-        if case let .string(value) = self { return value }
-        return nil
-    }
-
-    /// Looks a key up in an object value (returns `nil` for non-objects/missing).
-    func member(_ key: String) -> InfraJSONValue? {
-        guard case let .object(members) = self else { return nil }
-        return members.first { $0.key == key }?.value
-    }
-}
-
-// MARK: - Decoding (Data → InfraJSONValue)
-
-public extension InfraJSONValue {
-    /// Parses raw JSON bytes into a structural value with sorted object keys.
-    /// Throws `InfraJSONError.malformed` when the payload is not valid JSON.
-    static func decode(_ data: Data) throws -> InfraJSONValue {
-        let object = try JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
-        return convert(object)
-    }
-
-    /// Parses a JSON string (UTF-8) into a structural value.
-    static func decode(_ json: String) throws -> InfraJSONValue {
-        guard let data = json.data(using: .utf8) else { throw InfraJSONError.malformed }
-        return try decode(data)
-    }
-
-    /// Bridges a `JSONSerialization` object graph into the structural enum,
-    /// distinguishing integers from doubles and booleans from numbers so the
-    /// pretty body reads like the web `JSON.stringify` output (no `1.0`/`1` drift).
-    private static func convert(_ value: Any) -> InfraJSONValue {
-        switch value {
-        case let dictionary as [String: Any]:
-            let members = dictionary
-                .sorted { $0.key < $1.key }
-                .map { InfraJSONMember(key: $0.key, value: convert($0.value)) }
-            return .object(members)
-        case let array as [Any]:
-            return .array(array.map(convert))
-        case let string as String:
-            return .string(string)
-        case let number as NSNumber:
-            return convert(number: number)
-        default:
-            return .null
-        }
-    }
-
-    private static func convert(number: NSNumber) -> InfraJSONValue {
-        // `NSNumber` from JSON carries no type tag; the Obj-C type encoding tells
-        // booleans ("c") and integers apart from floating-point values.
-        let objCType = String(cString: number.objCType)
-        if number === kCFBooleanTrue || number === kCFBooleanFalse {
-            return .bool(number.boolValue)
-        }
-        if objCType == "c" || objCType == "s" || objCType == "i" || objCType == "l" || objCType == "q" {
-            return .integer(number.int64Value)
-        }
-        let double = number.doubleValue
-        if double.rounded() == double, abs(double) < 9_007_199_254_740_992 {
-            return .integer(number.int64Value)
-        }
-        return .number(double)
-    }
-}
-
-/// Errors surfaced by the structural JSON decoder.
-public enum InfraJSONError: Error, Sendable, Equatable {
-    case malformed
-}
-
-// MARK: - Pretty printer (web `JSON.stringify(data, null, 2)`)
-
-public extension InfraJSONValue {
-    /// A two-space-indented JSON rendering matching the web result-panel body.
-    func prettyPrinted() -> String {
-        render(indent: 0)
-    }
-
-    private func render(indent: Int) -> String {
-        let pad = String(repeating: "  ", count: indent)
-        let childPad = String(repeating: "  ", count: indent + 1)
-        switch self {
-        case let .object(members):
-            guard !members.isEmpty else { return "{}" }
-            let body = members
-                .map { "\(childPad)\(Self.encode(string: $0.key)): \($0.value.render(indent: indent + 1))" }
-                .joined(separator: ",\n")
-            return "{\n\(body)\n\(pad)}"
-        case let .array(items):
-            guard !items.isEmpty else { return "[]" }
-            let body = items
-                .map { "\(childPad)\($0.render(indent: indent + 1))" }
-                .joined(separator: ",\n")
-            return "[\n\(body)\n\(pad)]"
-        case let .string(value):
-            return Self.encode(string: value)
-        case let .number(value):
-            return Self.encode(double: value)
-        case let .integer(value):
-            return String(value)
-        case let .bool(value):
-            return value ? "true" : "false"
-        case .null:
-            return "null"
-        }
-    }
-
-    /// JSON string escaping (quotes, backslashes, control characters).
-    private static func encode(string: String) -> String {
-        var out = "\""
-        for scalar in string.unicodeScalars {
-            switch scalar {
-            case "\"": out += "\\\""
-            case "\\": out += "\\\\"
-            case "\n": out += "\\n"
-            case "\r": out += "\\r"
-            case "\t": out += "\\t"
-            default:
-                if scalar.value < 0x20 {
-                    out += String(format: "\\u%04x", scalar.value)
-                } else {
-                    out.unicodeScalars.append(scalar)
-                }
-            }
-        }
-        out += "\""
-        return out
-    }
-
-    private static func encode(double: Double) -> String {
-        if double == double.rounded(), abs(double) < 1e16 {
-            return String(Int64(double))
-        }
-        return String(double)
-    }
-}
-
-// MARK: - Result projection (web success/error decision)
-
-/// The outcome of running a dev-tools tool, projected from the raw response.
-/// `.success` carries the pretty JSON body; `.failure` carries the optional
-/// string message (web `error` field when it is a string).
-public enum InfraToolResult: Sendable, Equatable {
-    case success(json: String)
-    case failure(message: String?)
-
-    /// Web `mutation.data.error ? 'danger' : 'success'` badge tone.
-    public var didSucceed: Bool {
-        if case .success = self { return true }
-        return false
-    }
-}
-
-/// Pure mapping from a decoded dev-tools response to the view-ready result,
-/// reproducing the web `BackendTool`/`MqttTestTool` branch:
-///   `data.error ? <failure(error if string)> : <success(JSON.stringify(data))>`.
-public enum InfraResultProjection {
-    /// Projects a successfully-decoded response value.
-    public static func project(_ value: InfraJSONValue) -> InfraToolResult {
-        if let error = value.member("error"), error.isJSTruthy {
-            return .failure(message: error.stringValue)
-        }
-        return .success(json: value.prettyPrinted())
-    }
-
-    /// Projects raw response bytes, mapping a decode failure to a failure result
-    /// (web `apiFetch` catch → `{ error: 'Request failed' }`, surfaced as a string).
-    public static func project(data: Data, decodeErrorMessage: String) -> InfraToolResult {
-        guard let value = try? InfraJSONValue.decode(data) else {
-            return .failure(message: decodeErrorMessage)
-        }
-        return project(value)
     }
 }
