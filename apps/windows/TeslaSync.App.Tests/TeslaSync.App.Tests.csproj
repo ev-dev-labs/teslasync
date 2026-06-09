@@ -294,15 +294,25 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Model.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.ViewModel.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Source.cs" Link="Widgets\TirePressureHistoryWidget\TirePressureHistoryWidget.Source.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Model.cs" Link="Widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.ViewModel.cs" Link="Widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Source.cs" Link="Widgets\WeeklySummaryCardWidget\WeeklySummaryCardWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WatchSummaryWidget\WatchSummaryWidget.Model.cs" Link="Widgets\WatchSummaryWidget\WatchSummaryWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WatchSummaryWidget\WatchSummaryWidget.ViewModel.cs" Link="Widgets\WatchSummaryWidget\WatchSummaryWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\WatchSummaryWidget\WatchSummaryWidget.Source.cs" Link="Widgets\WatchSummaryWidget\WatchSummaryWidget.Source.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views: the Base64Tool's UI-thread-free logic (the pure btoa/atob codec, the
+    registration metadata, the PII-safe diagnostics, and the state-holder view-model) lives in the
+    WinUI app project but is WinUI-free by construction. Link those two source files in so the
+    headless (net10.0) test project verifies the adapter + per-state transitions + diagnostics +
+    a11y names row-for-row without a UI host — the same pattern used for the dashboard-widget logic.
+    The WinUI view itself (feature-views\Base64Tool.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.Model.cs" Link="FeatureViews\Base64Tool.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.ViewModel.cs" Link="FeatureViews\Base64Tool.ViewModel.cs" />
   </ItemGroup>
 
   <!--
