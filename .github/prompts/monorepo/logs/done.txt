@@ -142,3 +142,4 @@ p2-windows/dashboard-widgets/W-0041-DriveTelemetryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0025-ChargingTelemetryWidget.prompt.md
 p2-windows/dashboard-widgets/W-0030-CommandQuickActionsWidget.prompt.md
 p2-windows/dashboard-widgets/W-0044-DrivingDynamicsWidget.prompt.md
+p2-windows/dashboard-widgets/W-0046-EnergyFlowWidget.prompt.md
