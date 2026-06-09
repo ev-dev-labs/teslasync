@@ -312,3 +312,4 @@ p2-windows/feature-views/W-0119-TimeOfUseAnalysis.prompt.md
 p2-windows/feature-views/W-0124-KioskOverlay.prompt.md
 p2-windows/feature-views/W-0123-FleetStatsBar.prompt.md
 p2-windows/feature-views/W-0122-DashboardGrid.prompt.md
+p2-windows/feature-views/W-0125-LayoutManager.prompt.md
