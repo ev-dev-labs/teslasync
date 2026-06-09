@@ -147,3 +147,4 @@ p2-windows/dashboard-widgets/W-0032-CostForecastWidget.prompt.md
 p2-windows/dashboard-widgets/W-0047-EnergySiteInfoWidget.prompt.md
 p2-windows/dashboard-widgets/W-0042-DrivetrainHealthWidget.prompt.md
 p2-windows/dashboard-widgets/W-0033-DashboardStatsWidget.prompt.md
+p2-windows/dashboard-widgets/W-0045-EnergyFlowAnimatedWidget.prompt.md
