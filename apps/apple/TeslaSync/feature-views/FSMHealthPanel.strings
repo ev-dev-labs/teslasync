@@ -1,0 +1,42 @@
+/*
+  FSMHealthPanel.strings
+  TeslaSync — P4 feature view · 0228 · FSMHealthPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `FSMHealthPanel` resolves (table "FSMHealthPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/system/components/FSMHealthPanel.tsx) — kept byte-identical to the web
+  defaults, including the i18next `{{count}}` interpolation token (interpolated at
+  the display boundary). The remainder back the native state envelope (freshness
+  chip, connectivity banner, loading / error chrome) plus the accessibility
+  summaries — keyed here so no English literal lives in native code.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"fsm.health.title" = "FSM Health";
+"fsm.health.flapping" = "{{count}} transitions flagged as state flapping (>5 same-FSM transitions/min)";
+"fsm.health.stuck" = "{{count}} session(s) stuck in pending/active for >4 hours";
+"fsm.health.recoveries" = "{{count}} session(s) recovered after pod restart";
+"fsm.health.allClear" = "All FSMs healthy — no flapping, stuck sessions, or recoveries detected";
+"fsm.health.flapTitle" = "State Flapping";
+"fsm.health.stuckTitle" = "Stuck Sessions";
+"fsm.health.recoveryTitle" = "Pod Recoveries";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"fsm.health.live" = "Live";
+"fsm.health.stale" = "Stale";
+"fsm.health.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"fsm.health.staleBanner" = "Reconnecting — FSM health may be stale";
+"fsm.health.offlineBanner" = "Offline — showing the last loaded health";
+
+/* --- Loading / error chrome --- */
+"fsm.health.loadingA11y" = "Loading FSM health";
+"fsm.health.errorTitle" = "Couldn't load FSM health";
+"fsm.health.retry" = "Retry";
