@@ -22488,6 +22488,30 @@
   <data name="translation.widget.rangeBar" xml:space="preserve">
     <value>Range</value>
   </data>
+  <data name="translation.widget.rangeBar.description" xml:space="preserve">
+    <value>Horizontal bar showing rated, ideal, and estimated range with EPA comparison</value>
+  </data>
+  <data name="translation.widget.rangeBar.error" xml:space="preserve">
+    <value>Couldn't load range</value>
+  </data>
+  <data name="translation.widget.rangeBar.error.auth" xml:space="preserve">
+    <value>Sign in to view range</value>
+  </data>
+  <data name="translation.widget.rangeBar.error.offline" xml:space="preserve">
+    <value>You're offline — showing the last cached range</value>
+  </data>
+  <data name="translation.widget.rangeBar.loading" xml:space="preserve">
+    <value>Loading range</value>
+  </data>
+  <data name="translation.widget.rangeBar.name" xml:space="preserve">
+    <value>Range Bar</value>
+  </data>
+  <data name="translation.widget.rangeBar.refresh" xml:space="preserve">
+    <value>Refresh range</value>
+  </data>
+  <data name="translation.widget.rangeBar.retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
   <data name="translation.widget.rate" xml:space="preserve">
     <value>Rate</value>
   </data>
