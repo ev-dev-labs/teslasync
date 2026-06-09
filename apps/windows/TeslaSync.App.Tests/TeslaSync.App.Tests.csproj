@@ -70,6 +70,9 @@
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.Model.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JwtDecoder.ViewModel.cs" Link="FeatureViews\JwtDecoder\JwtDecoder.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0021 TimestampTool): the surface's UI-thread-free logic (the timestamp converter, the
     field-state enum, the registration metadata, the diagnostics, and the state-holder view-model) lives in
     the WinUI app project under feature-views/ but is WinUI-free by construction. Link the two source files
@@ -341,6 +344,12 @@
     -->
       exercised by TirePressureVisualWidgetTests; the three WinUI-free source files are linked in here once
       (a prior edit dropped these Compile items, which the TirePressureVisualWidgetTests build requires).
+    -->
+      P2 dashboard-widgets (TirePressureVisualWidget): its WinUI-free logic (the TirePressureLevel /
+      TirePressureReading model, the ITirePressureVisualSource seam and the TirePressureVisualViewModel
+      state-holder) is exercised by TirePressureVisualWidgetTests. Linked exactly once here in the
+      dashboard-widgets group. (A prior merge's NETSDK1022 duplicate-removal dropped all three copies
+      instead of just the extra duplicates, leaving the test without its types.)
     -->
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" Link="Widgets\TirePressureVisualWidget\TirePressureVisualWidget.ViewModel.cs" />
@@ -653,6 +662,17 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\EntriesTable\EntriesTable.Model.cs" Link="FeatureViews\EntriesTable\EntriesTable.Model.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0030 ChangesPanel: the surface's UI-thread-free logic (its branch projection, row
+    formatting, the compact-JSON value rendering, the operation-variant mapping, accessible names and the
+    view.opened diagnostics) lives in the WinUI app project but is WinUI-free by construction. Link the
+    Model in so the headless (net10.0) test project verifies the adapter + per-state projection row-for-row
+    without a UI host. The WinUI view itself is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\ChangesPanel\ChangesPanel.Model.cs" Link="FeatureViews\ChangesPanel\ChangesPanel.Model.cs" />
   </ItemGroup>
 
 </Project>
