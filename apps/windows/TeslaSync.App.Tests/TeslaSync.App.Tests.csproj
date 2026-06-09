@@ -522,6 +522,20 @@
   </ItemGroup>
 
   <!--
+    P2 feature-views/0058 HeroGauges: the analytics hero gauges' UI-thread-free logic (the FleetAnalytics
+    JSON parse adapter, the SI→display projection with unit conversion + gas/CO₂ heuristics, the
+    cache-then-network result mapper, the registration + PII-safe diagnostics, and the state-holder
+    view-model) lives in the WinUI app project under feature-views/ but is WinUI-free by construction.
+    Link the Model and ViewModel in so the headless (net10.0) test project verifies the adapter +
+    per-state transitions row-for-row without a UI host. The WinUI view itself (HeroGauges.cs) is
+    exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\HeroGauges.Model.cs" Link="FeatureViews\HeroGauges\HeroGauges.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\HeroGauges.ViewModel.cs" Link="FeatureViews\HeroGauges\HeroGauges.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     Language-neutral SI golden vectors (apps/shared/spec/units-golden.json) copied
     next to the test assembly so the C# behavior port is verified row-for-row
     against the web truth (ADR-004), exactly as the shared Kotlin port is.
