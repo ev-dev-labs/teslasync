@@ -215,6 +215,9 @@
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.Model.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.ViewModel.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\ProjectedRangeWidget\ProjectedRangeWidget.Source.cs" Link="Widgets\ProjectedRangeWidget\ProjectedRangeWidget.Source.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\RecentDrivesWidget\RecentDrivesWidget.Model.cs" Link="Widgets\RecentDrivesWidget\RecentDrivesWidget.Model.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\RecentDrivesWidget\RecentDrivesWidget.ViewModel.cs" Link="Widgets\RecentDrivesWidget\RecentDrivesWidget.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\dashboard-widgets\RecentDrivesWidget\RecentDrivesWidget.Source.cs" Link="Widgets\RecentDrivesWidget\RecentDrivesWidget.Source.cs" />
   </ItemGroup>
 
   <!--
