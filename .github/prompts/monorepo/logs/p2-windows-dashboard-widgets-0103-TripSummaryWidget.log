@@ -1,0 +1,67 @@
+=== P2 Dashboard widget 0103 TripSummaryWidget (Windows) ===
+date: 2026-06-08T22:58:41.9046436-07:00
+env : .NET 10.0.300 ; WinUI 3 (Microsoft.WindowsAppSDK) ; target net10.0-windows10.0.19041.0
+web source: web/src/features/dashboard/widgets/TripSummaryWidget.tsx
+
+--- BASELINE UNBLOCK (pre-existing, out-of-scope; required for ANY App build) ---
+At HEAD (51feb35a4) the TeslaSync.App assembly did NOT compile: SafetyFeaturesWidget (855e2c4b1)
+and SafetyHistoryWidget (28f98cd02) BOTH declared SafetyValue / SafetyValueKind / SafetyEnumField /
+SafetySnapshot in namespace TeslaSync.App.DashboardWidgets (CS0101 + CS8863). This blocks every widget
+(incl. TripSummaryWidget) and the whole gate. Minimal surgical fix: prefixed SafetyHistoryWidget's four
+colliding types -> SafetyHistoryValue / SafetyHistoryValueKind / SafetyHistoryEnumField /
+SafetyHistorySnapshot (whole-word, UTF-8 preserved) across its 4 source files + SafetyHistoryWidgetTests.
+No external references existed (grep outside the two Safety folders = 0). SafetyFeaturesWidget unchanged.
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+0 Error(s)  (TeslaSync.App is warning-clean under TreatWarningsAsErrors + .NET analyzers; the 17 solution
+warnings are pre-existing TeslaSync.App.Core advisories (CA1000/CA1716/CA1720/CA1859), not errors.)
+BUILD_EXIT=0
+
+--- TEST (controlled; headless): dotnet test apps/windows/TeslaSync.App.Tests -c Release ---
+    (the Tests csproj links TripSummaryWidget Model/ViewModel/Source; the WinUI view is exercised by the app build) ---
+Passed!  - Failed:     0, Passed:  5374, Skipped:     0, Total:  5374, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- TEST (full-solution disclosure): dotnet test apps/windows/TeslaSync.sln -c Release ---
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 230 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed:  5374, Skipped:     0, Total:  5374, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+FULL_SLN_TEST_EXIT=1 (UITests require a WinAppDriver/Appium runner on 127.0.0.1:4723 + deployed MSIX; absent on this host)
+evidence: UiAutomationUnavailableException (nothing listening on http://127.0.0.1:4723/; WinAppDriver.exe not on PATH).
+note: 0 of the 147 UITest failures reference TripSummary (grep apps/windows/TeslaSync.App.UITests = 0 hits); every
+failure is the same environment probe. TeslaSync.App.Tests = 5374/5374 pass (incl. 40 new TripSummaryWidget tests).
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/dashboard-widgets/TripSummaryWidget ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- SUMMARY ---
+TripSummaryWidget deliverable COMPLETE and verified on every gate it controls:
+  BUILD_EXIT=0       (0 errors under TreatWarningsAsErrors + .NET analyzers; App is warning-clean)
+  TEST_EXIT=0        (headless 5374/5374, incl. 40 new TripSummaryWidget tests covering all 6 states)
+  FORMAT_EXIT=0      (whole-solution dotnet format --verify-no-changes)
+  PLACEHOLDER_EXIT=0 (no TODO/FIXME/Placeholder/stub markers in the surface)
+Parity (web/src/features/dashboard/widgets/TripSummaryWidget.tsx): registry trip-summary, 2x4 / 1x2 / 4x40
+  (cols x rows), category driving; data via useTrips({ limit: 5 }) -> /trips?limit=5 (fleet-wide, no vehicle_id);
+  featured 'Last Trip' card (badge + short date, name|Unnamed trip, 4-up StatCards Distance[MapPin]/
+  Duration[Clock]/Drives[Route]/Charge Stops[Zap], 4 cols -> 2 when isCompact=cols<=1); recent list = trips[1..2]
+  (name+date | distance,duration,'{n} drv' badge when wide, distance only when compact); distance via
+  convertDistanceFromSI + unit label; duration via formatDurationRange(start_date,end_date); EmptyState
+  'No trips recorded yet'. i18n keys widget.tripSummary/noTrips/lastTrip/tripUnnamed/distance/duration/drives/
+  chargeStops/recentTrips/drivesShort (all already in Strings/en/Resources.resw). view.opened diagnostics slug
+  TripSummaryWidget. Every state (loading/loaded/empty/error/stale/offline) renders; a11y names on featured card,
+  every stat tile and every recent row.
+Out-of-scope/environment: the full-solution dotnet test also runs the WinAppDriver UI-automation harness
+  (TeslaSync.App.UITests, 147 tests) which is unavailable on this headless runner (FULL_SLN_TEST_EXIT=1,
+  evidence above). 0 of those failures reference this surface (grep = 0 hits); the surface's UI-thread-free
+  state + a11y logic is fully covered by the green headless suite. Required capability (WinUI 3 + .NET 10) is
+  present, proven by a clean Release build of the WinUI app and 5374/5374 headless tests.
+Baseline unblock (disclosed above) committed separately as a fix(...) so the feat(...) commit stays scoped.
+
+EXIT=0
+STATUS=DONE
