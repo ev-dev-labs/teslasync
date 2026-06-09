@@ -348,6 +348,7 @@
       triple here inside malformed (nested) XML comments, which broke the project load (MSB4025) and would
       trip NETSDK1022 duplicate-Compile errors; removed so the test project parses and builds cleanly.
     -->
+    <!--
       P2 feature-views/0055 DrivingPerformanceCards: the surface's UI-thread-free logic (the drive-analytics
       snapshot parse + SI->display projection, the cache-then-network source seam, the result mapper, the
       registration metadata and the PII-safe diagnostics, plus the state-holder view-model) lives in the WinUI
@@ -361,6 +362,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" />
+    <!--
       Source) are linked exactly once below in the dedicated ItemGroup so the headless test project builds
       without a UI host. A prior merge left a self-nested XML comment plus two duplicate Compile triples here
       (MSB4025 and NETSDK1022); the dead block was removed so the gate can build.
@@ -464,6 +466,9 @@
   -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\feature-views\BatteryTab\BatteryTab.Model.cs" Link="FeatureViews\BatteryTab\BatteryTab.Model.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views (0056 DrivingTab): the analytics Driving tab surface's UI-thread-free logic (the
     drive_analytics records, the loading/empty/error/stale/offline/ready projection, the seven chart-section
     series + the performance/temperature metric grids with their boundary unit conversions, the registration
@@ -826,6 +831,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.Model.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.Source.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
     P2 feature-views/0053 ChargingDetailSection: the charging-analytics detail surface's UI-thread-free
     logic (the charging_analytics JSON parse, the brand-leaderboard / monthly-trend / cost-stats /
     charger-type projection, the cache-then-network result mapper, the repository source's /analytics/fleet
@@ -839,6 +847,21 @@
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Model.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.Source.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailSection.ViewModel.cs" Link="FeatureViews\ChargingDetailSection\ChargingDetailSection.ViewModel.cs" />
+  </ItemGroup>
+
+  <!--
+    P2 feature-views/0065 SavingsSlide: the Year-in-Review savings slide's UI-thread-free logic (the
+    year-review JSON parse + savings snapshot, the currency / electric-fraction / cups-of-coffee projection,
+    the cache-then-network result mapper, the repository source's /analytics/year-review request, the
+    registration + PII-safe diagnostics, and the state-holder view-model) lives in the WinUI app project under
+    feature-views/ but is WinUI-free by construction. Link the three source files in so this headless (net10.0)
+    test project verifies the adapter + per-state transitions + a11y names + the view.opened diagnostics
+    without a UI host. The WinUI view itself (SavingsSlide.cs) is exercised by the app build.
+  -->
+  <ItemGroup>
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Model.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Source.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.ViewModel.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
