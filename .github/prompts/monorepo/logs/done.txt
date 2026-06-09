@@ -178,3 +178,4 @@ p2-windows/dashboard-widgets/W-0078-RecentDrivesListWidget.prompt.md
 p2-windows/dashboard-widgets/W-0079-RecentDrivesWidget.prompt.md
 p2-windows/dashboard-widgets/W-0080-RecentlyUnlockedAchievements.prompt.md
 p2-windows/dashboard-widgets/W-0081-RegenEfficiencyWidget.prompt.md
+p2-windows/dashboard-widgets/W-0083-SafetyFeaturesWidget.prompt.md
