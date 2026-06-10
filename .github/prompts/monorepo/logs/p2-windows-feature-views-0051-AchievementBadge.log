@@ -1,0 +1,161 @@
+================================================================================
+=== P2 Feature view 0051 AchievementBadge (Windows / WinUI 3) ===
+================================================================================
+Web source : web/src/features/analytics/components/AchievementBadge.tsx
+Native out : apps/windows/TeslaSync.App/feature-views/AchievementBadge.{cs,Model.cs}
+Tests      : apps/windows/TeslaSync.App.Tests/FeatureViews/AchievementBadgeTests.cs
+Runner     : Windows_NT, dotnet-sdk 10.0.300 (net10.0)
+
+CAPABILITY PROBE (prompt requires WinUI 3 / Windows App SDK + .NET 10)
+--------------------------------------------------------------------------------
+  [x] .NET 10 SDK present              : 10.0.300
+  [x] Microsoft.WindowsAppSDK present  : the WinUI app project (TeslaSync.App,
+        net10.0-windows10.0.19041.0, UseWinUI=true) compiles cleanly (see BUILD).
+  => Named capability is AVAILABLE. The surface is implementable and IS implemented.
+
+================================================================================
+ACCEPTANCE GATE (commands run verbatim from the prompt)
+================================================================================
+
+STEP 1 — dotnet build apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App -> bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+  Build succeeded. 0 Error(s).
+  (17 warnings, ALL pre-existing in TeslaSync.App.Core — none in AchievementBadge.*;
+   the WinUI app enforces TreatWarningsAsErrors and compiled the surface clean.)
+  BUILD_EXIT=0
+
+STEP 2 — dotnet test apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App.Tests.dll   : Passed!  Failed: 0,  Passed: 12064, Skipped: 0   (headless logic suite)
+  TeslaSync.App.UITests.dll : Failed!  Failed: 147, Passed: 0,    Skipped: 0   (WinAppDriver E2E)
+  TEST_EXIT=1
+
+  EVIDENCE — every one of the 147 UITest failures is the SAME runner-capability gap,
+  not a surface defect (the UITests are whole-app navigation E2E and never reference
+  AchievementBadge):
+
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException :
+      UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is
+      listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its
+      standard install paths or on PATH.
+        at WinAppDriverSession.EnsureReady() WinAppDriverSession.cs:line 75
+
+  By design these tests "fail with that reason rather than being silently skipped"
+  (RunnerAvailability.cs / WinAppDriverSession.cs). WinAppDriver is NOT one of the
+  prompt's named capabilities (WinUI 3 / Windows App SDK / .NET 10 / Fluent), and an
+  interactive WinAppDriver desktop session cannot be provisioned on this runner.
+
+  The headless suite that actually compile-links and exercises THIS surface's logic
+  passes completely, including all 70 AchievementBadge facts:
+    dotnet test TeslaSync.App.Tests --filter FullyQualifiedName~AchievementBadge
+      Passed!  Failed: 0, Passed: 70, Skipped: 0, Total: 70
+
+STEP 3 — dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  FORMAT_EXIT=2
+  EVIDENCE — the ONLY offending file is a PRE-EXISTING surface unrelated to this work:
+    apps/windows/TeslaSync.App/dashboard-widgets/WeatherAtCarWidget/WeatherAtCarWidget.cs
+      error ENDOFLINE: Fix end of line marker (CRLF -> '\n')   [lines 1..N]
+  NONE of the AchievementBadge files are flagged. Scoped re-verify of this surface:
+    dotnet format <sln> --verify-no-changes --include
+        feature-views/AchievementBadge.cs
+        feature-views/AchievementBadge.Model.cs
+        FeatureViews/AchievementBadgeTests.cs
+      => FORMAT_MYFILES_EXIT=0   (no changes needed; LF, style + analyzers clean)
+
+STEP 4 — check-placeholders.ps1 -Path .../feature-views/AchievementBadge
+  PLACEHOLDER_EXIT=0
+  Scoped re-scan of the surface files confirms zero stub/placeholder markers in
+  AchievementBadge.* (the dir-wide COUNT=12 is entirely PRE-EXISTING hits in
+  DriveOverviewChart / FleetTelemetryHealth / SpeedHistogramChart, not this surface):
+      AchievementBadge placeholder hits: 0
+
+================================================================================
+INDEPENDENT SURFACE VERIFICATION (everything in scope, GREEN)
+================================================================================
+  [x] BUILD               : TeslaSync.App.dll compiles the surface clean (0 errors,
+                            TreatWarningsAsErrors honoured).
+  [x] TEST (surface)      : 70 AchievementBadge facts pass; full headless suite 12064/0.
+  [x] FORMAT (surface)    : AchievementBadge.{cs,Model.cs} + tests => 0 changes.
+  [x] PLACEHOLDER (surface): 0 markers in AchievementBadge.*.
+
+================================================================================
+WHAT WAS DELIVERED
+================================================================================
+  feature-views/AchievementBadge.Model.cs   — WinUI-free model / projection /
+      diagnostics / registration (parity port of the web component):
+        * AchievementData (web AchievementData), AchievementBadgeSize (sm|md|lg),
+          AchievementBadgeMetrics.For (the web sizeConfig: 56/3/20.. 72/4/30.. 96/5/36..).
+        * State contract: Loading / Ready / Empty / Error / Stale / Offline (parent-
+          supplied lifecycle, TemperatureGauges precedent); a fresh/stale/offline
+          snapshot with no achievement collapses to Empty (never a blank box).
+        * PercentOf = Math.round(progress*100) (half-away-from-zero == JS Math.round);
+          IsNearComplete = !unlocked && progress>=0.8; ring sweep = clamp(pct,0,100)/100.
+        * Unlocked => amber name/status/border + "✓ Unlocked" (lifetime.unlocked),
+          no ring. Locked => ring + grey/muted + "{pct}%"; near-complete => amber ring.
+  feature-views/AchievementBadge.cs         — WinUI 3 view (ContentControl, no XAML).
+        Renders every state via shared components (TsFadeIn, TsSkeleton, TsEmptyState,
+        TsQueryError, TsBadge) + the shared ChartGeometry/ChartShapes ring; decorative
+        emoji icon (Narrator-hidden), composed AutomationName, reduce-motion-aware
+        near-complete pulse, retry raises RetryRequested. i18n via the ILocalizer facade.
+  TeslaSync.App.Tests/FeatureViews/AchievementBadgeTests.cs — 70 headless facts
+        (branch precedence, percent/near-complete, size metrics, unlocked/locked tints,
+        ring sweep, freshness chip, copy, per-state Narrator names, PII-safe diagnostics,
+        argument validation, culture-invariant diagnostics line).
+
+  Build-infra repair (prerequisite, otherwise the whole test gate cannot run):
+    TeslaSync.App.Tests.csproj had re-concatenated into THREE <Project> roots
+    (MSB4025 "multiple root elements", a recurring corruption documented in its own
+    header). Consolidated back to ONE canonical root = the path-sorted, deduplicated
+    UNION of every compile-linked WinUI-free source (583, which also RESTORED 19 links
+    a prior bad merge had dropped — RangeEstimateWidget / HeroGauges / StatHeroSlide /
+    XRayControls + 12 widget *.Source.cs whose tests were silently un-compilable) PLUS
+    the new AchievementBadge.Model.cs link (584 total). Every linked path verified to
+    exist on disk and to be WinUI-free; result: TeslaSync.App.Tests 12064/0.
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+  [x] Surface renders every state from the web source (unlocked / locked / near-
+      complete) plus the lifecycle contract (loading / empty / error / stale / offline).
+  [x] Hooks bind via the shared P1/S8 state-holder seam (parent-supplied
+      AchievementBadgeModel); the view performs no HTTP.
+  [x] Every i18n key resolves through the ILocalizer facade. The web source's only key
+      (lifetime.unlocked = "✓ Unlocked") has a matching entry in Strings/en; the
+      lifecycle copy reuses existing catalog keys (common.loading, lifetime.noAchievements,
+      error.loadFailed, error.network.message, common.retry, common.offline).
+  [x] Accessibility: decorative icon hidden from Narrator; composed AutomationName in
+      every state; freshness chip + loading/empty/error surfaces announce; retry button
+      label localized; reduce-motion honoured.
+  [x] Tests: projection per-state + percent/near-complete + a11y-name + diagnostics (70).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate clean).
+  [ ] Gate EXIT=0 — NOT achievable on this runner (see below).
+
+================================================================================
+CONCLUSION
+================================================================================
+The AchievementBadge feature-view is implemented to production parity and independently
+verified GREEN on every dimension in scope: it BUILDS clean into the WinUI app, its 70
+unit facts (and the full 12064 headless suite) PASS, and it is FORMAT- and PLACEHOLDER-
+clean. The named platform capability (WinUI 3 / Windows App SDK / .NET 10) is present.
+
+The acceptance gate's solution-wide TEST and FORMAT steps cannot reach 0 on THIS runner
+for reasons entirely outside this surface:
+  * TEST_EXIT=1  — 147 TeslaSync.App.UITests fail with UiAutomationUnavailableException
+                   because no WinAppDriver/Appium UI-automation host is installed
+                   (nothing on 127.0.0.1:4723). These tests are by-design "fail not skip",
+                   are whole-app E2E unrelated to AchievementBadge, and would fail
+                   identically for any surface. WinAppDriver is not a prompt-named
+                   capability and cannot be provisioned on a non-interactive runner.
+  * FORMAT_EXIT=2 — the sole offender is the pre-existing dashboard-widgets/
+                   WeatherAtCarWidget/WeatherAtCarWidget.cs (CRLF line endings); no
+                   AchievementBadge file is flagged.
+Because TEST can never be green here without WinAppDriver, the gate is unavoidably
+BLOCKED on this runner regardless of any further work. Per the prompt's capability
+clause and Honesty Covenant rule 1 (no red-as-green), this is reported as BLOCKED with
+the evidence above rather than a falsely-green DONE — while the surface itself is
+complete, committed, and independently verified.
+
+GATE_EXITS: BUILD_EXIT=0  TEST_EXIT=1  FORMAT_EXIT=2  PLACEHOLDER_EXIT=0
+SURFACE_VERIFY: build=0 test=0(70/70, suite 12064/0) format=0 placeholder=0
+
+EXIT=1
+STATUS=BLOCKED
