@@ -127,3 +127,4 @@ p2-windows/dashboard-widgets/W-0022-ChargingOptimizerWidget.prompt.md
 p2-windows/dashboard-widgets/W-0023-ChargingScheduleWidget.prompt.md
 p2-windows/dashboard-widgets/W-0024-ChargingSessionDetailWidget.prompt.md
 p3-android/A0-0001-android-scaffold.prompt.md
+p3-android/A1-0001-design-tokens-theme.prompt.md
