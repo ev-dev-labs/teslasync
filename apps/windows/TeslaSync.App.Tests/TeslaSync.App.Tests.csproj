@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
-    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
     UI-thread-free logic (Model / Source / ViewModel / Projection / Registry / diagnostics) for each
     feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and
     cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
@@ -80,6 +80,17 @@
     in the single ItemGroup below (the Link mirrors each source's real location under FeatureViews\ or
     Widgets\); the WinUI view files themselves are exercised by the app build. The matching test classes live
     under this project and are picked up by the SDK default-compile glob.
+    Compile-linked into the single ItemGroup below (the Link mirrors each source's real location under
+    FeatureViews\ or Widgets\); the WinUI views themselves are exercised by the app build. The matching
+    test classes live under this project and are picked up by the SDK default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted,
+    Include-deduplicated Compile ItemGroup. A chain of integration merges had repeatedly re-concatenated
+    this file into multiple Project roots, duplicate Compile items and broken XML comments (failing XML
+    load as MSB4025); re-consolidated for P2 feature-views/0243 FrontendErrorsCard into this single
+    canonical root. Do NOT re-concatenate, and never write a literal build-item or project start tag
+    inside this comment.
+  -->
 
     INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted, Include-deduplicated
     Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) source on disk under feature-views/
@@ -154,6 +165,8 @@
        app build. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated
        union); the WinUI views themselves are exercised by the app build. -->
+  <!-- WinUI-free Model / Source / ViewModel logic sources Compile-linked from TeslaSync.App
+       (ordinal-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -593,6 +606,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ForecastDetails.Source.cs" Link="FeatureViews\ForecastDetails.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ForecastDetails.ViewModel.cs" Link="FeatureViews\ForecastDetails.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FSMSubFSMPanel\FSMSubFSMPanel.Model.cs" Link="FeatureViews\FSMSubFSMPanel\FSMSubFSMPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FrontendErrorsCard\FrontendErrorsCard.Model.cs" Link="FeatureViews\FrontendErrorsCard\FrontendErrorsCard.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FrontendErrorsCard\FrontendErrorsCard.Source.cs" Link="FeatureViews\FrontendErrorsCard\FrontendErrorsCard.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FrontendErrorsCard\FrontendErrorsCard.ViewModel.cs" Link="FeatureViews\FrontendErrorsCard\FrontendErrorsCard.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\GeneralSettings.Model.cs" Link="FeatureViews\GeneralSettings.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\GeneralSettings.Source.cs" Link="FeatureViews\GeneralSettings.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\GeneralSettings.ViewModel.cs" Link="FeatureViews\GeneralSettings.ViewModel.cs" />
