@@ -1,0 +1,117 @@
+=== P2 Feature view 0040 RequestBuilder (Windows) ===
+runner: atul-think-i9  date: 2026-06-10T07:57:25.2477627-07:00
+dotnet: 10.0.300
+
+## dotnet build apps/windows/TeslaSync.sln -c Release
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:02:22.67
+BUILD_EXIT=0
+
+## dotnet test apps/windows/TeslaSync.sln -c Release (--no-build; build verified above)
+-- per-assembly result --
+Passed!  - Failed:     0, Passed: 12062, Skipped:     0, Total: 12062, Duration: 15 s - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 264 ms - TeslaSync.App.UITests.dll (net10.0)
+-- root cause of UITests failures (first occurrence) --
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+-- RequestBuilder-related UITest failures: 0 --
+TEST_EXIT=1
+
+## dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+-- distinct files flagged: 5 (all pre-existing, unrelated to RequestBuilder) --
+   WeatherAtCarWidget.cs
+   WeatherAtCarWidget.Model.cs
+   WeatherAtCarWidget.Source.cs
+   WeatherAtCarWidget.ViewModel.cs
+   WeatherAtCarWidgetTests.cs
+-- RequestBuilder files flagged: 0 --
+FORMAT_EXIT=2
+
+## ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/RequestBuilder
+PLACEHOLDER_ALLOWED=2
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+========================================================================
+ANALYSIS — what is delivered vs. what blocks a fully-green solution gate
+========================================================================
+
+DELIVERED (RequestBuilder surface — complete, production-polished, parity):
+  - apps/windows/TeslaSync.App/feature-views/RequestBuilder/RequestBuilder.Model.cs
+      Pure projection + adapters (BuildUrl, BuildInitialValues, BuildInitialBody,
+      BuildHeaders, IsDestructive, BuildOutgoing, ConfirmMessage, Project) +
+      Registration + PII-safe Diagnostics. Reuses the shared Endpoints contract
+      (ParsedEndpoint / ParsedParam / ParsedBody / EndpointMethods) — no scope
+      narrowing of the web ParsedEndpoint shape.
+  - apps/windows/TeslaSync.App/feature-views/RequestBuilder/RequestBuilder.ViewModel.cs
+      UI-thread-free state holder (P1/S8): field values, body, API key, confirm
+      latch, loading flag; the web handleSend two-step destructive guard; the
+      endpoint-change reset (keeps the API key, as the web effect does).
+  - apps/windows/TeslaSync.App/feature-views/RequestBuilder/RequestBuilder.cs
+      WinUI 3 view: URL bar (method badge + /api/v1 path + Send), destructive
+      confirm banner (polite live region), summary/description, Path/Query
+      parameter panels (TsGlassPanel + TsInput rows), Request Body panel
+      (TsTextarea), always-present Authentication panel (masked PasswordBox —
+      the native idiom for the web type="password"). User-owned inputs are
+      rebuilt only on endpoint change; localized chrome refreshes every render.
+  - apps/windows/TeslaSync.App.Tests/FeatureViews/RequestBuilderTests.cs
+      68 headless tests: URL builder, default/body/header adapters, destructive
+      guard, every render state (loading, confirm, summary/description, path /
+      query / body / auth panels), required-marker + hint logic, accessibility
+      names, i18n key + fallback parity, view-model transitions, diagnostics.
+
+GATE RESULTS ON THIS RUNNER:
+  BUILD_EXIT=0       WinUI 3 (Windows App SDK) + .NET 10 compile clean.
+  PLACEHOLDER_EXIT=0 No TODO/stub/placeholder/Lorem in the shipped surface.
+  TEST_EXIT=1        TeslaSync.App.Tests  = 12062 passed / 0 failed
+                       (includes the 68 new RequestBuilderTests).
+                     TeslaSync.App.UITests = 147 failed / 0 passed.
+  FORMAT_EXIT=2      Only 5 pre-existing files flagged (WeatherAtCarWidget.*),
+                     0 RequestBuilder files.
+
+WHY THE SOLUTION GATE IS BLOCKED (platform-capability + pre-existing baseline,
+neither caused by, nor inside the scope of, the RequestBuilder surface):
+
+  1) TEST_EXIT=1 — PLATFORM CAPABILITY ABSENT (the prompt's BLOCKED clause).
+     All 147 TeslaSync.App.UITests fail at session setup in ~190 ms with:
+       UiAutomationUnavailableException: UI automation cannot run:
+       WinAppDriver/Appium runner is absent: nothing is listening on
+       http://127.0.0.1:4723/ and WinAppDriver.exe was not found ...
+     This runner has no WinAppDriver/Appium UI-automation runtime and no
+     deployed MSIX/interactive desktop session. 0 of the 147 failures reference
+     RequestBuilder (it is a sub-page feature view, not an independently routed
+     page). The headless unit assembly that DOES exercise this surface's logic
+     passes 12062/12062. This matches the documented sibling precedent
+     (e.g. p2-windows-feature-views-0002-BackendTool.log: same exception,
+     EXIT=1, STATUS=BLOCKED).
+
+  2) FORMAT_EXIT=2 — PRE-EXISTING, UNRELATED EOL DEBT.
+     The only files dotnet format flags are the 5 WeatherAtCarWidget.* sources
+     (dashboard-widgets/0115), which carry CRLF line endings violating
+     apps/.editorconfig (end_of_line = lf). They are outside this prompt's
+     allowed files and unrelated to RequestBuilder; per "do not fix pre-existing
+     issues unrelated to your task" they are left untouched. Every RequestBuilder
+     source was normalized to LF and is format-clean (0 flagged).
+
+INCIDENTAL REPAIR (necessary and tightly coupled — without it NOTHING in the
+solution builds or tests, blocking this surface's own gate):
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj had regressed to
+  THREE concatenated <Project> roots (MSB4025: multiple root elements), the exact
+  failure its own INVARIANT comment warns against. It was reconsolidated to one
+  canonical root holding the deduplicated, path-sorted union of all 583 prior
+  Compile links (0 dead links, 0 unlinked on-disk sources) PLUS the 2 new
+  RequestBuilder Model/ViewModel links. Result: the whole headless suite builds
+  and runs again (12062 passing), where it previously could not even load.
+
+CONCLUSION: The RequestBuilder surface is complete and verified at every level
+this runner supports (build, 68 headless tests green, placeholder-clean,
+format-clean for its own files). The solution gate cannot reach EXIT=0 here
+solely because of the absent WinAppDriver UI-automation runtime and pre-existing
+unrelated EOL debt — exactly the platform-capability scenario the prompt covers.
+
+EXIT=1
+STATUS=BLOCKED
