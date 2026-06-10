@@ -1,0 +1,54 @@
+/*
+  NotificationRow.strings
+  TeslaSync — P4 feature view · 0191 · NotificationRow (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `NotificationRow` resolves (table "NotificationRow") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the EXACT keys extracted from the web source
+  (features/notifications/components/NotificationRow.tsx). The remainder backs the
+  native state envelope (load/empty/error chrome, freshness chip + connectivity
+  banner), the severity labels, the action-failure toast, and the VoiceOver labels.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"notifications.inbox.row.select" = "Select notification";
+"notifications.inbox.row.markRead" = "Mark as read";
+"notifications.inbox.row.markUnread" = "Mark as unread";
+"notifications.inbox.row.archive" = "Archive";
+"notifications.inbox.row.unarchive" = "Restore";
+"alerts.viewContext" = "View context";
+
+/* --- Severity labels (web `rule?.severity ?? 'info'`) --- */
+"notifications.inbox.row.severity.info" = "Info";
+"notifications.inbox.row.severity.warn" = "Warning";
+"notifications.inbox.row.severity.critical" = "Critical";
+
+/* --- Load / empty / error chrome (native P4 envelope) --- */
+"notifications.inbox.row.loading" = "Loading notification";
+"notifications.inbox.row.empty" = "No notification";
+"notifications.inbox.row.errorTitle" = "Couldn't load notification";
+"notifications.inbox.row.retry" = "Retry";
+
+/* --- Action-failure toast (native error handling) --- */
+"notifications.inbox.row.actionFailed" = "Couldn't update notification";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"notifications.inbox.row.live" = "Live";
+"notifications.inbox.row.stale" = "Stale";
+"notifications.inbox.row.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"notifications.inbox.row.staleBanner" = "Reconnecting — this notification may be stale";
+"notifications.inbox.row.offlineBanner" = "Offline — showing the last known notification";
+
+/* --- Accessibility (VoiceOver) --- */
+"notifications.inbox.row.a11y.read" = "Read";
+"notifications.inbox.row.a11y.unread" = "Unread";
+"notifications.inbox.row.a11y.selected" = "Selected";
+"notifications.inbox.row.a11y.notSelected" = "Not selected";
+"notifications.inbox.row.a11y.row" = "Notification";
