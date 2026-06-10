@@ -1,0 +1,67 @@
+/*
+  WidgetCatalogueDialog.strings
+  TeslaSync — P4 modal / dialog · 0026 · WidgetCatalogueDialog (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `WidgetCatalogueDialog`
+  resolves (table "WidgetCatalogueDialog") lives here with its English value. The web source
+  (features/dashboard/components/WidgetCatalogueDialog.tsx) routes its copy through
+  `t('dashboard.catalogue…')` / `t('dashboard.added')`; the native surface mirrors those keys so no
+  English literal lives in Swift. `{{token}}` placeholders match the web `t(key, fallback, { token })`
+  interpolation. These entries fold into the app `Localizable.xcstrings` master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns its own strings.
+
+  Groups: dialog chrome + states; the freshness chip + banners; the header subtitle + search + result
+  count; the no-matches empty card; the entry add controls; and the 16 category labels (web
+  `CATEGORY_FALLBACK_LABELS`).
+*/
+
+/* --- Dialog chrome + states --- */
+"dashboard.catalogue.title" = "Widget catalogue";
+"dashboard.catalogue.close" = "Close";
+"dashboard.catalogue.loading" = "Loading widget catalogue…";
+"dashboard.catalogue.catalogueEmptyTitle" = "No widgets available";
+"dashboard.catalogue.catalogueEmptyBody" = "There are no widgets to add right now. Check back after the next sync.";
+"dashboard.catalogue.error" = "Couldn't load the widget catalogue";
+"dashboard.catalogue.retry" = "Retry";
+"dashboard.catalogue.reloadError" = "Couldn't refresh the catalogue";
+
+/* --- Freshness chip + banners (ADR-013) --- */
+"dashboard.catalogue.live" = "Live";
+"dashboard.catalogue.stale" = "Stale";
+"dashboard.catalogue.offline" = "Offline";
+"dashboard.catalogue.staleBanner" = "Reconnecting — “Added” badges may be out of date";
+"dashboard.catalogue.offlineBanner" = "Offline — “Added” badges reflect the last loaded layout";
+
+/* --- Header subtitle + search + result count (web header block) --- */
+"dashboard.catalogue.subtitle" = "Pick a widget to add to your dashboard. {{added}} of {{total}} widgets are already on your layout.";
+"dashboard.catalogue.searchPlaceholder" = "Search widgets by name, description, or category…";
+"dashboard.catalogue.searchLabel" = "Search widgets";
+"dashboard.catalogue.resultCount" = "{{count}} of {{total}} widgets match";
+
+/* --- No-matches empty card (web `widget-catalogue-empty`) --- */
+"dashboard.catalogue.emptyTitle" = "No widgets match your search";
+"dashboard.catalogue.emptyBody" = "Try a different keyword, or clear the search to browse all {{total}} widgets.";
+"dashboard.catalogue.clearSearch" = "Clear search";
+
+/* --- Entry add controls (web widget card) --- */
+"dashboard.added" = "Added";
+"dashboard.catalogue.add" = "Add";
+"dashboard.catalogue.addLabel" = "Add {{name}} widget";
+
+/* --- Category labels (web `CATEGORY_FALLBACK_LABELS`) --- */
+"dashboard.catalogue.category.vehicle" = "Vehicle";
+"dashboard.catalogue.category.battery" = "Battery & Range";
+"dashboard.catalogue.category.energy" = "Energy";
+"dashboard.catalogue.category.driving" = "Driving";
+"dashboard.catalogue.category.charging" = "Charging";
+"dashboard.catalogue.category.climate" = "Climate";
+"dashboard.catalogue.category.tires" = "Tires";
+"dashboard.catalogue.category.security" = "Security";
+"dashboard.catalogue.category.commands" = "Commands";
+"dashboard.catalogue.category.media" = "Media";
+"dashboard.catalogue.category.telemetry" = "Telemetry";
+"dashboard.catalogue.category.analytics" = "Analytics";
+"dashboard.catalogue.category.alerts" = "Alerts";
+"dashboard.catalogue.category.automations" = "Automations";
+"dashboard.catalogue.category.system" = "System";
+"dashboard.catalogue.category.maps" = "Maps";
