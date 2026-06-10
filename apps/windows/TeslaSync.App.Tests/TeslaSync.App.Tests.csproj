@@ -138,6 +138,19 @@
     surface logic links.
   -->
 
+    Headless (net10.0) unit tests for the WinUI app's UI-thread-free logic (Model / Source / ViewModel /
+    Projection). Targets plain net10.0 so `dotnet test` runs without a WinUI / UI-thread host; the WinUI app
+    targets a WinUI TFM, so its UI-thread-free sources are Compile-linked here rather than project-referenced
+    (the views themselves are exercised by the app build). The matching test classes live under this project and
+    are picked up by the SDK default-compile glob.
+
+    Keep this file as ONE <Project> root with a single, path-sorted, deduplicated Compile ItemGroup. A chain of
+    integration merges had repeatedly re-concatenated this file into multiple <Project> roots plus duplicate
+    <Compile> items and broken XML comments, failing XML load (MSB4025); consolidated for P2
+    feature-views/0158 PowerOutputChart into this single canonical root - the deduplicated union of every
+    previously linked source is preserved, plus the new PowerOutputChart surface Model link.
+  -->
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -178,6 +191,8 @@
        projection and diagnostics without a UI host; the WinUI views themselves are exercised by the
        app build. -->
   <!-- Linked WinUI-free Model / Source / ViewModel sources from the WinUI app project (deduplicated, path-sorted union). -->
+       (deduplicated, path-sorted union). The headless net10.0 test project verifies each adapter, projection
+       and diagnostics without a UI host; the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -593,6 +608,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.Model.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.Source.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.ViewModel.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PowerOutputChart\PowerOutputChart.Model.cs" Link="FeatureViews\PowerOutputChart\PowerOutputChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PowerProfileChart\PowerProfileChart.Model.cs" Link="FeatureViews\PowerProfileChart\PowerProfileChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\QuickNav\QuickNav.Model.cs" Link="FeatureViews\QuickNav\QuickNav.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Model.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.Model.cs" />
