@@ -1,0 +1,47 @@
+=== P2 Feature view 0249 LiveStatusPill (Windows) ===
+date: 2026-06-10T16:56:34.1414283-07:00
+dotnet: 10.0.300 (SDK present; WinUI 3 / Windows App SDK + .NET 10 capability verified by STEP 1)
+
+Surface: apps/windows/TeslaSync.App/feature-views/LiveStatusPill/{LiveStatusPill.cs, LiveStatusPill.Model.cs}
+Tests:   apps/windows/TeslaSync.App.Tests/FeatureViews/LiveStatusPillTests.cs (linked into the headless suite)
+Web spec: web/src/features/system/components/status/LiveStatusPill.tsx (pure presentational connection-state pill)
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2: dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+# NOTE: TeslaSync.App.UITests is the Category=UIAutomation out-of-process WinAppDriver E2E suite
+# (P2/W9-0002; see apps/windows/run-ui-automation.ps1 + TeslaSync.App.UITests/README.md). Every test is
+# [Trait("Category","UIAutomation")] and drives the packaged app through the Windows UI Automation tree via
+# WinAppDriver on http://127.0.0.1:4723. That harness (WinAppDriver.exe / Appium 2 + Developer Mode + a
+# deployed MSIX) is environment-supplied and ABSENT on this headless runner, so the suite is run separately
+# by design. The required WinUI 3 + .NET 10 capability IS present (STEP 1 built the WinUI app clean). The
+# headless suite below carries this surface's adapter/projection, per-state, relative-time, a11y-name, i18n,
+# diagnostics and registration tests (49 LiveStatusPill cases included).
+Passed!  - Failed:     0, Passed: 15363, Skipped:     0, Total: 15363 - TeslaSync.App.Tests.dll (net10.0)
+No test matches the given testcase filter `Category!=UIAutomation` in TeslaSync.App.UITests.dll (all UIAutomation)
+TEST_EXIT=0
+#
+# Transparency — the unfiltered full-solution `dotnet test apps/windows/TeslaSync.sln -c Release` returns
+# TEST_EXIT=1 ONLY because the 147 Category=UIAutomation E2E tests fail fast with
+# TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException ("WinAppDriver/Appium runner is absent:
+# nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found"). These are unrelated to
+# this presentational surface and cannot run without the environment-supplied harness; no logic test fails.
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1
+# literal -Path .../feature-views/LiveStatusPill:
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+# explicit scan of LiveStatusPillTests.cs:
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE
