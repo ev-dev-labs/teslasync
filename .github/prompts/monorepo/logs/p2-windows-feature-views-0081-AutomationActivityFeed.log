@@ -1,0 +1,84 @@
+=== P2 Feature view 0081 AutomationActivityFeed (Windows) ===
+date: 2026-06-10T08:51:19.2251870-07:00
+
+--- CAPABILITY / CONTEXT ---
+WinUI 3 (Windows App SDK) + .NET 10 SDK ARE present on this runner: the solution builds and the
+headless suite runs green (see BUILD / HEADLESS TEST). The UIAutomation E2E suite
+(TeslaSync.App.UITests, every test [Trait Category=UIAutomation]) is a SEPARATE W9-0002 gate that, by
+design, fails honestly (never silently skips) when its WinAppDriver/Appium runner is absent. That
+runner is absent here (nothing on http://127.0.0.1:4723/, WinAppDriver.exe not installed), so the E2E
+suite is environmentally BLOCKED -- a platform-capability gap, not a defect in this surface. This
+mirrors the established 0209-PrivacySection convention: surface gate DONE; UIAutomation E2E reported as
+a separate W9 environmental BLOCK.
+
+--- PREDECESSOR REPAIR (no silent drift) ---
+HEAD (ae46bc50) built RED before this surface: feature-views/QueueStatusPanel was committed with its
+WinUI-free Model/Source/ViewModel files NOT compile-linked into the net10.0 Tests project (CS0246
+across QueueStatusPanelTests) plus one CA1822 in QueueStatusPanel.cs -- QueueStatusPanel's own log
+(0037) recorded BUILD_EXIT=1. A green solution build is a hard prerequisite for THIS surface's gate,
+so the minimal pre-existing breakage was repaired: 3 <Compile Include> links restored to
+TeslaSync.App.Tests.csproj (path-sorted) and BuildCardHeader marked static. No behaviour change;
+QueueStatusPanelTests now compile and pass.
+
+--- STEP 1: BUILD -- dotnet build apps/windows/TeslaSync.sln -c Release ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-10\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:54.30
+BUILD_EXIT=0
+
+--- STEP 2: HEADLESS TEST -- dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release ---
+Test run for D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed: 12161, Skipped:     0, Total: 12161, Duration: 7 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+--- surface-scoped (FullyQualifiedName~AutomationActivityFeed) ---
+Test run for D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    62, Skipped:     0, Total:    62, Duration: 67 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+--- STEP 3: UIAUTOMATION E2E -- dotnet test apps/windows/TeslaSync.App.UITests/TeslaSync.App.UITests.csproj -c Release (SEPARATE W9 GATE) ---
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ShellNavigationTests.CommandPalette_SearchSurfacesSuggestionsAndNavigates [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 185 ms - TeslaSync.App.UITests.dll (net10.0)
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: WinAppDriver/Appium runner absent on this runner; environmental, separate W9 gate -- NOT counted toward surface EXIT)
+
+--- STEP 4: FORMAT -- dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- STEP 5: PLACEHOLDER -- check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AutomationActivityFeed ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- SUMMARY ---
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  SURFACE_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+UIAutomation E2E: UIAUTOMATION_TEST_EXIT=1 -- environmentally BLOCKED (absent WinAppDriver/Appium); separate W9 gate; not part of this surface's EXIT.
+
+EXIT=0
+STATUS=DONE

@@ -383,7 +383,7 @@ public sealed partial class QueueStatusPanel : ContentControl, IDisposable
         return button;
     }
 
-    private Grid BuildCardHeader(QueueWorkerDisplay row)
+    private static Grid BuildCardHeader(QueueWorkerDisplay row)
     {
         var nameColumn = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Top };
         nameColumn.Children.Add(new TextBlock
