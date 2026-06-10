@@ -1,0 +1,54 @@
+/*
+  VehiclePhotoUpload.strings
+  TeslaSync — P4 feature view · 0307 · VehiclePhotoUpload (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "VehiclePhotoUpload").
+  Every key the native surface resolves lives here with its web `t(key, default)` English
+  value. These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface prompt
+  owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/VehiclePhotoUpload.tsx) — the panel title, the preview
+  alt, the drop prompt, the size/format constraints, the CTA ladder, the remove action,
+  the confirm dialog copy, and the four toast messages — plus the shared `common.remove`.
+  The second group is the native chrome the web hook hardcodes in English (the client-side
+  validation messages) or that the Apple leaf contract adds (the load/error a11y, the
+  retry, the freshness chip + banner, the toast dismiss), so the Swift sources hold no
+  English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"vehicles.photos.upload.title" = "Vehicle photo";
+"vehicles.photos.upload.previewAlt" = "Vehicle photo preview";
+"vehicles.photos.upload.dropPrompt" = "Drag a photo here or click to choose a file";
+"vehicles.photos.upload.constraints" = "JPEG or PNG — up to {{max}} MB";
+"vehicles.photos.upload.uploading" = "Uploading…";
+"vehicles.photos.upload.replace" = "Replace photo";
+"vehicles.photos.upload.choose" = "Choose photo";
+"vehicles.photos.upload.remove" = "Remove photo";
+"vehicles.photos.upload.confirmRemoveTitle" = "Remove vehicle photo?";
+"vehicles.photos.upload.confirmRemoveMessage" = "The hero card will fall back to the stock model render until a new photo is uploaded.";
+"vehicles.photos.uploadSuccess" = "Photo uploaded.";
+"vehicles.photos.uploadFailed" = "Photo upload failed.";
+"vehicles.photos.deleteSuccess" = "Photo removed.";
+"vehicles.photos.deleteFailed" = "Failed to remove photo.";
+"common.remove" = "Remove";
+
+/* --- Client-side validation (web hook hardcodes these in English) --- */
+"vehicles.photos.errors.empty" = "Selected file is empty.";
+"vehicles.photos.errors.tooLarge" = "Photo exceeds {{max}} MB limit.";
+"vehicles.photos.errors.unsupportedType" = "Unsupported image type: {{type}}";
+
+/* --- Native chrome: confirm cancel + a11y + leaf-contract states --- */
+"vehicles.photos.upload.confirmRemoveCancel" = "Cancel";
+"vehicles.photos.upload.loadingA11y" = "Loading photo";
+"vehicles.photos.upload.errorA11y" = "Photo failed to load";
+"vehicles.photos.upload.errorTitle" = "Couldn't load photo";
+"vehicles.photos.upload.retry" = "Retry";
+"vehicles.photos.upload.live" = "Live";
+"vehicles.photos.upload.stale" = "Stale";
+"vehicles.photos.upload.offlineChip" = "Offline";
+"vehicles.photos.upload.staleBanner" = "Reconnecting — this photo may be out of date";
+"vehicles.photos.upload.offlineBanner" = "Offline — showing the last loaded photo";
+"vehicles.photos.upload.toastDismiss" = "Dismiss";
