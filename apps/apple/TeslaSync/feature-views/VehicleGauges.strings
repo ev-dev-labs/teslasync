@@ -1,0 +1,64 @@
+/*
+  VehicleGauges.strings
+  TeslaSync — P4 feature view · 0304 · VehicleGauges (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VehicleGauges` resolves (table "VehicleGauges") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/VehicleGauges.tsx). The second group backs the
+  native chrome (loading / empty / error / freshness), the model silhouette
+  captions, and the car-visualization VoiceOver, so the Swift sources hold no
+  English literals. `common.notAvailable` localizes the web `|| 'N/A'` software
+  fallback (a literal in the source) rather than hardcoding it.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"common.battery" = "Battery";
+"common.range" = "Range";
+"common.speed" = "Speed";
+"common.power" = "Power";
+"common.batteryLevel" = "Battery Level";
+"common.estimatedRange" = "Estimated Range";
+"common.chargeRate" = "Charge Rate";
+"common.locked" = "Locked";
+"common.unlocked" = "Unlocked";
+"common.sentryOn" = "Sentry ON";
+"common.sentryOff" = "Sentry OFF";
+"common.climateOn" = "Climate ON";
+"common.climateOff" = "Climate OFF";
+
+/* --- Shared keys the native chrome reuses --- */
+"common.driving" = "Driving";
+"common.notAvailable" = "N/A";
+
+/* --- Native chrome: structure --- */
+"vehicleGauges.title" = "Vehicle gauges";
+
+/* --- Native chrome: model silhouette captions --- */
+"vehicleGauges.model.model3" = "Model 3";
+"vehicleGauges.model.modelS" = "Model S";
+"vehicleGauges.model.modelY" = "Model Y";
+"vehicleGauges.model.modelX" = "Model X";
+"vehicleGauges.model.cybertruck" = "Cybertruck";
+
+/* --- Native chrome: car-visualization VoiceOver --- */
+"vehicleGauges.charging" = "Charging";
+
+/* --- Native chrome: P4 leaf loading / empty / error --- */
+"vehicleGauges.loadingA11y" = "Loading vehicle gauges";
+"vehicleGauges.emptyTitle" = "No live readings";
+"vehicleGauges.empty" = "Gauges will appear once the vehicle reports in.";
+"vehicleGauges.errorTitle" = "Couldn't load gauges";
+"vehicleGauges.retry" = "Retry";
+
+/* --- Native chrome: P4 leaf freshness --- */
+"vehicleGauges.stale" = "Stale";
+"vehicleGauges.offline" = "Offline";
+"vehicleGauges.staleBanner" = "Reconnecting — data may be stale";
+"vehicleGauges.offlineBanner" = "Offline — showing last known data";
+"vehicleGauges.refresh" = "Refresh";
