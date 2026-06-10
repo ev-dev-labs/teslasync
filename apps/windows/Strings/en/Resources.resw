@@ -9267,6 +9267,9 @@
   <data name="translation.dynamics.autopilot" xml:space="preserve">
     <value>Autopilot &amp; Cruise</value>
   </data>
+  <data name="translation.dynamics.autopilotNoData" xml:space="preserve">
+    <value>No cruise / autopilot telemetry received yet</value>
+  </data>
   <data name="translation.dynamics.avg" xml:space="preserve">
     <value>Avg</value>
   </data>
