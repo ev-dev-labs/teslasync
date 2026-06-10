@@ -1,0 +1,48 @@
+/*
+  SessionExpiredModal.strings
+  TeslaSync — P4 modal/dialog · 0008 · SessionExpiredModal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  SessionExpiredModal resolves (table "SessionExpiredModal") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (components/feedback/SessionExpiredModal.tsx). The remainder backs the native
+  state envelope (loading skeleton, open-mode empty, healthy/dormant, poll-error
+  retry, freshness chip, connectivity banner, and the offline re-auth note).
+*/
+
+/* --- Web source keys (SessionExpiredModal.tsx) --- */
+"session.expired.title" = "Session expired";
+"session.expired.body" = "For your security, your session has timed out. Sign in again to pick up where you left off.";
+"session.expired.signIn" = "Sign in again";
+
+/* --- Loading (skeleton chrome) --- */
+"session.expired.loading" = "Checking your session…";
+
+/* --- Empty (open mode: no session to protect) --- */
+"session.expired.openTitle" = "No sign-in required";
+"session.expired.openBody" = "This deployment has no session to expire.";
+
+/* --- Dormant (session healthy: web hidden-modal branch) --- */
+"session.expired.activeTitle" = "Session active";
+"session.expired.activeBody" = "You're signed in. We'll let you know if your session is about to expire.";
+
+/* --- Error + retry (web QueryError) --- */
+"session.expired.errorTitle" = "Couldn't check your session";
+"session.expired.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"session.expired.live" = "Live";
+"session.expired.stale" = "Stale";
+"session.expired.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"session.expired.staleBanner" = "Reconnecting — re-checking your session";
+"session.expired.offlineBanner" = "Offline — reconnect to verify your session";
+
+/* --- Offline re-auth note (block) --- */
+"session.expired.offlineBlock" = "You're offline. Reconnect to sign in again.";
