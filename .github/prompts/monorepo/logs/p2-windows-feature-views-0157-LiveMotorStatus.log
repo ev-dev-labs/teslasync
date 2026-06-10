@@ -1,0 +1,49 @@
+=== P2 Feature view 0157 LiveMotorStatus (Windows) ===
+run: 2026-06-09T18:19:59.6001076-07:00
+host: ATUL-THINK-I9  dotnet: 10.0.300
+
+Surface: apps/windows/TeslaSync.App/feature-views/LiveMotorStatus/ (Model / Source / ViewModel / view .cs)
+Web source: web/src/features/driving/components/drivetrain-health/LiveMotorStatus.tsx
+
+NOTE: the only whole-solution test failures are TeslaSync.App.UITests (Category=UIAutomation, the
+W9-0002 E2E suite). They fail fast because WinAppDriver/Appium is not present on this runner — an
+environment/infra gap, not a code defect, identical for every Windows surface. They run separately via
+apps/windows/run-ui-automation.ps1 (which itself reports STATUS=BLOCKED when the runner is absent — it
+never reports an absent runner as green). The headless surface-logic gate (Category!=UIAutomation) below
+is the authoritative gate, exactly as the sibling feature-view gates (e.g. 0147 RouteMapSection) record.
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+17 Warning(s)
+0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation  (headless surface-logic gate, W9-0002 separation)
+Passed!  - Failed:     0, Passed: 10552, Skipped:     0, Total: 10552, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+LiveMotorStatus tests (FullyQualifiedName~LiveMotorStatusTests):
+Passed!  - Failed:     0, Passed:    47, Skipped:     0, Total:    47 - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+format error lines: 0
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/LiveMotorStatus
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+### EVIDENCE: whole-solution dotnet test (UIAutomation E2E suite is environment-gated on WinAppDriver)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 257 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 10552, Skipped:     0, Total: 10552, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+WHOLE_SOLUTION_TEST_EXIT=1  (non-zero only via the environment-gated W9-0002 UIAutomation E2E suite)
+
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite, evidenced above.)
+EXIT=0
+STATUS=DONE
