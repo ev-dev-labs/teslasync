@@ -349,3 +349,4 @@ p2-windows/feature-views/W-0178-TripPlannerMap.prompt.md
 p2-windows/feature-views/W-0177-TripLegList.prompt.md
 p2-windows/feature-views/W-0175-SummaryStats.prompt.md
 p2-windows/feature-views/W-0179-AlertCard.prompt.md
+p2-windows/feature-views/W-0180-AlertMessageEditor.prompt.md
