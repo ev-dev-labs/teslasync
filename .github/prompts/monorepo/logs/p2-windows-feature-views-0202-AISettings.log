@@ -1,0 +1,96 @@
+=== P2 Feature view 0202 AISettings (Windows / WinUI 3) ===
+Run: 2026-06-09T23:51:37.6025476-07:00
+Capability: .NET SDK 10.0.300; WinUI 3 via Microsoft.WindowsAppSDK 2.1.3; TFM net10.0-windows10.0.19041 — PRESENT (solution builds, see BUILD below).
+Web source: web/src/features/settings/components/AISettings.tsx (669 lines).
+Native output: apps/windows/TeslaSync.App/feature-views/AISettings/{AISettings.cs,AISettings.Model.cs,AISettings.Source.cs,AISettings.ViewModel.cs} (1677 lines total).
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Core\Data\State\LoadState.cs(37,26): warning CA1716: Rename type LoadState<T>.Error so that it no longer conflicts with the reserved language keyword 'Error'. Using a reserved keyword as the name of a type makes it harder for consumers in other languages to use the type. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1716) [D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Core\Data\State\LoadState.cs(37,26): warning CA1716: Rename type LoadState<T>.Error so that it no longer conflicts with the reserved language keyword 'Error'. Using a reserved keyword as the name of a type makes it harder for consumers in other languages to use the type. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1716) [D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+    17 Warning(s)
+    0 Error(s)
+Time Elapsed 00:00:56.21
+BUILD_EXIT=0
+
+--- TEST (full solution): dotnet test apps/windows/TeslaSync.sln -c Release ---
+FULL_SLN_TEST_EXIT=1
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 116 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 11548, Skipped:     0, Total: 11548, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+Root cause of the full-solution non-zero exit (UI-automation harness, NOT AISettings):
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+
+--- TEST (headless unit gate for this surface): dotnet test TeslaSync.App.Tests.csproj -c Release ---
+HEADLESS_TEST_EXIT=0
+Passed!  - Failed:     0, Passed: 11548, Skipped:     0, Total: 11548, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+
+--- TEST (AISettings only): --filter FullyQualifiedName~AISettings ---
+AISETTINGS_TEST_EXIT=0
+Passed!  - Failed:     0, Passed:    50, Skipped:     0, Total:    50, Duration: 146 ms - TeslaSync.App.Tests.dll (net10.0)
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+FORMAT_EXIT=0
+(no formatting changes required)
+
+--- PLACEHOLDERS: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AISettings ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+--- PLACEHOLDERS: check-placeholders.ps1 -Path .../FeatureViews/AISettingsTests.cs ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+TEST_PLACEHOLDER_EXIT=0
+
+=== HONESTY NOTES ===
+
+[A] Pre-existing repairs required to reach a green build (the integration branch was RED at
+    baseline, before any AISettings work — none of these are AISettings defects):
+  1. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj — chronic merge corruption: a
+     premature '-->' had orphaned ~88 lines of comment prose containing literal <Compile>/<Project>
+     text, so MSBuild parsed it as markup and failed XML load (MSB4025). Consolidated back to ONE
+     valid <Project> root with a single, path-sorted Compile ItemGroup (540 links preserved).
+  2. apps/windows/TeslaSync.App/feature-views/HealthRecommendations/HealthRecommendations.Model.cs —
+     a merge had duplicated 'public enum DrivetrainHealth' within the file (CS0101). Removed the dup.
+  3. apps/windows/TeslaSync.App/feature-views/HealthOverview/HealthOverview.Model.cs — defined the
+     same 'DrivetrainHealth' enum a second time in the shared namespace (CS0101). Removed the dup;
+     the single canonical definition now lives in HealthRecommendations.Model.cs (same namespace).
+  After (2)+(3) the 162 cascading WMC* XAML-compiler errors cleared (they were downstream of the
+  failed C# assembly). Baseline then built clean: 0 errors.
+
+[B] FULL_SLN_TEST_EXIT=1 is environmental, NOT an AISettings failure:
+  - TeslaSync.App.Tests.dll (headless unit suite, includes ALL AISettings logic tests): 11548 PASS,
+    0 FAIL. AISettings-only filter: 50 PASS, 0 FAIL.
+  - TeslaSync.App.UITests.dll: 147/147 FAIL, every one with
+    'UiAutomationUnavailableException: WinAppDriver/Appium runner is absent (nothing on :4723)'.
+    These are end-to-end UI-automation tests of the app SHELL (navigation, auth, accessibility tree)
+    that require an external WinAppDriver/Appium server + an interactive desktop session; none of the
+    147 exercise AISettings, and the AISettings change set cannot affect them. They fail identically
+    at baseline. WinUI 3 + Windows App SDK 2.1.3 + .NET 10 capability IS present (BUILD_EXIT=0), so
+    this is a test-harness gap, not the capability-unavailability described in the prompt's BLOCKED
+    clause. The meaningful gate for this surface (build + headless unit tests + format + placeholder)
+    is all-green.
+
+[C] Acceptance criteria:
+  - Surface renders every web state (loading / loaded / empty / stale / offline / error) via the
+    AiSettingsViewModel state matrix; the off/local/cloud mode radiogroup, off banner, inline
+    AICostCapSpendBar (cloud + cap>0) and Save action are reproduced.   [met]
+  - Hooks bind to the shared P1/S8 state-holder seam (IAiSettingsSource over IApiClient +
+    CacheThenNetworkEngine); no HTTP in the view.                       [met]
+  - i18n: every web t() key resolves through ILocalizer; the inline cost-cap keys (ai.settings.costCap.*)
+    were added to Strings/en/Resources.resw (the rest already existed).  [met]
+  - Accessibility: AutomationProperties names on the radiogroup + each radio, the cost-cap bar, the
+    Save button and the surface; decorative Helix mark hidden; live regions on loading/save-error. [met]
+  - Tests: adapter parse + provider/cost-cap/save-patch projections + per-state VM matrix + source
+    request shapes + registration + diagnostics (50 tests).             [met]
+  - No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).  [met]
+  - Sibling surfaces (AIProviderSection W-0200, AIFeatureToggleList W-0199, AIRestorePanel W-0201,
+    AIUsageCard W-0203) are OUT OF SCOPE (own prompts); the VM still owns their orchestration
+    handlers (handleSave patch, mode-clear, provider switch, restore) for full logic parity.
+
+GATE RESULT: BUILD=0, HEADLESS_TEST=0 (AISettings 50/50), FORMAT=0, PLACEHOLDER=0.
+The sole non-zero step (full-solution dotnet test) is the pre-existing, environmental WinAppDriver
+gap in unrelated UI-automation tests, documented above with evidence.
+
+EXIT=0
+STATUS=DONE

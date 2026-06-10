@@ -1713,6 +1713,36 @@
   <data name="translation.ai.settings.bannerOff" xml:space="preserve">
     <value>Helix is off. Your app works fully without it. Enable a mode above to opt in.</value>
   </data>
+  <data name="translation.ai.settings.costCap.amount" xml:space="preserve">
+    <value>${0} / ${1}</value>
+  </data>
+  <data name="translation.ai.settings.costCap.barLabel" xml:space="preserve">
+    <value>Helix cost cap usage</value>
+  </data>
+  <data name="translation.ai.settings.costCap.criticalHint" xml:space="preserve">
+    <value>Cap reached — new Helix calls will be rejected until the cap resets at UTC midnight or you raise it.</value>
+  </data>
+  <data name="translation.ai.settings.costCap.loading" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
+  <data name="translation.ai.settings.costCap.todayTitle" xml:space="preserve">
+    <value>Today’s Helix spend</value>
+  </data>
+  <data name="translation.ai.settings.costCap.warnHint" xml:space="preserve">
+    <value>You are nearing today’s cap. Calls will pause once you reach it.</value>
+  </data>
+  <data name="translation.ai.settings.error" xml:space="preserve">
+    <value>Could not load Helix settings. Check the API and try again.</value>
+  </data>
+  <data name="translation.ai.settings.loading" xml:space="preserve">
+    <value>Loading Helix settings…</value>
+  </data>
+  <data name="translation.ai.settings.retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
+  <data name="translation.ai.settings.saveError" xml:space="preserve">
+    <value>Could not save Helix settings. Check the API and try again.</value>
+  </data>
   <data name="translation.ai.settings.feature.ai-provider-health.description" xml:space="preserve">
     <value>Diagnostic endpoint that reports the active Helix provider and its capabilities. Off by default; enable only for ops debugging.</value>
   </data>

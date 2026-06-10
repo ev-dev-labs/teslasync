@@ -106,6 +106,14 @@
     FeatureToggles into this single canonical root (the deduplicated, path-sorted union of every
     previously linked source preserved) plus the new FeatureToggles surface Model / Source / ViewModel
     links. Do NOT re-concatenate, and never write a literal build-item or project tag inside this comment.
+    TeslaSync.App.Tests - headless net10.0 unit tests for the WinUI app's UI-thread-free logic
+    (Model / Source / ViewModel / Projection) of each feature-view and dashboard-widget surface.
+    Targets plain net10.0 so dotnet test runs without a WinUI / UI-thread host; the WinUI app targets
+    a WinUI TFM, so its UI-thread-free sources are linked into the single compile group below rather
+    than project-referenced (the views are exercised by the app build). Test classes live under this
+    project and are picked up by the SDK default-compile glob.
+    INVARIANT: keep this file as exactly ONE project root with a single, path-sorted, deduplicated
+    compile group. Add a surface in sorted position; do not re-concatenate.
   -->
 
   <PropertyGroup>
@@ -416,6 +424,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.Source.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AddWidgetButton\AddWidgetButton.Model.cs" Link="FeatureViews\AddWidgetButton\AddWidgetButton.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AISettings\AISettings.Model.cs" Link="FeatureViews\AISettings\AISettings.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AISettings\AISettings.Source.cs" Link="FeatureViews\AISettings\AISettings.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AISettings\AISettings.ViewModel.cs" Link="FeatureViews\AISettings\AISettings.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertCard\AlertCard.Model.cs" Link="FeatureViews\AlertCard\AlertCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertMessageEditor\AlertMessageEditor.Model.cs" Link="FeatureViews\AlertMessageEditor\AlertMessageEditor.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertMessageEditor\AlertMessageEditor.Source.cs" Link="FeatureViews\AlertMessageEditor\AlertMessageEditor.Source.cs" />
