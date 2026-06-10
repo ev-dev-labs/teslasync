@@ -21,6 +21,13 @@
     (MSB4025); re-consolidated for P2 feature-views/0086 TriggerConfigurator into this single canonical
     root - the path-sorted, deduplicated union of every WinUI-free Model/Source/ViewModel logic source
     on disk under dashboard-widgets/ and feature-views/. Do NOT re-concatenate.
+    Compile ItemGroup (deduplicated by the Include path; the Link mirrors each source's real location
+    under FeatureViews\ or Widgets\). A chain of integration merges had repeatedly re-concatenated this
+    file into multiple Project roots plus duplicate Compile items and broken XML comments, failing XML
+    load (MSB4025); re-consolidated for P2 feature-views/0117 MonthlyCostTable into this single
+    canonical root - the path-sorted, Include-deduplicated union of every WinUI-free
+    Model/Source/ViewModel logic source on disk under dashboard-widgets/ and feature-views/, plus the
+    new MonthlyCostTable surface link. Do NOT re-concatenate.
   -->
 
   <PropertyGroup>
@@ -771,6 +778,7 @@
 
   <!-- WinUI-free Model / Source / ViewModel / Projection / Registry sources Compile-linked from
        TeslaSync.App (path-sorted, deduplicated union); the WinUI views are exercised by the app build. -->
+       TeslaSync.App (path-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -1080,6 +1088,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\AppearanceSettings.Source.cs" Link="FeatureViews\AppearanceSettings.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AppearanceSettings.ViewModel.cs" Link="FeatureViews\AppearanceSettings.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AuditPanel\AuditPanel.Model.cs" Link="FeatureViews\AuditPanel\AuditPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AutomationActivityFeed\AutomationActivityFeed.Model.cs" Link="FeatureViews\AutomationActivityFeed\AutomationActivityFeed.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Model.cs" Link="FeatureViews\BackendTool\BackendTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Source.cs" Link="FeatureViews\BackendTool\BackendTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.ViewModel.cs" Link="FeatureViews\BackendTool\BackendTool.ViewModel.cs" />
@@ -1237,6 +1246,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\LoadingSkeleton.Model.cs" Link="FeatureViews\LoadingSkeleton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MiniGridPreview\MiniGridPreview.Model.cs" Link="FeatureViews\MiniGridPreview\MiniGridPreview.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MonthlyCostChart\MonthlyCostChart.Model.cs" Link="FeatureViews\MonthlyCostChart\MonthlyCostChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MonthlyCostTable\MonthlyCostTable.Model.cs" Link="FeatureViews\MonthlyCostTable\MonthlyCostTable.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MoreDetailsPanel\MoreDetailsPanel.Model.cs" Link="FeatureViews\MoreDetailsPanel\MoreDetailsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MoreDetailsPanel\MoreDetailsPanel.Source.cs" Link="FeatureViews\MoreDetailsPanel\MoreDetailsPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MoreDetailsPanel\MoreDetailsPanel.ViewModel.cs" Link="FeatureViews\MoreDetailsPanel\MoreDetailsPanel.ViewModel.cs" />
