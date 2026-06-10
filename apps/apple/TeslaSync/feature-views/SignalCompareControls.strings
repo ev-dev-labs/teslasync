@@ -1,0 +1,74 @@
+/*
+  SignalCompareControls.strings
+  TeslaSync — P4 feature view · 0267 · SignalCompareControls (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SignalCompareControls` resolves (table "SignalCompareControls") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first blocks are the exact set of strings the web source resolves through `t()`
+  (features/telemetry/components/SignalCompareControls.tsx). The web uses the English
+  string itself as the default; the native port assigns the same dotted key carrying
+  that exact English value, so the rendered copy is identical while staying
+  translatable. The remainder backs the native state envelope (freshness chip,
+  connectivity banner, loading / empty / error chrome) and the accessibility summaries.
+*/
+
+/* --- Window labels (web parity) --- */
+"signalDiff.windowA" = "Window A";
+"signalDiff.windowB" = "Window B";
+
+/* --- Presets, filter, clear (web parity) --- */
+"signalDiff.presetsLabel" = "Quick presets:";
+"signalDiff.filterPlaceholder" = "Filter signals…";
+"signalDiff.clearCategory" = "Clear";
+
+/* --- Quick presets (web `DIFF_PRESETS`) --- */
+"signalDiff.preset.nowVs1h" = "Now vs 1h ago";
+"signalDiff.preset.nowVs1d" = "Now vs 1 day ago";
+"signalDiff.preset.beforeAfterCharge" = "Before vs after last charge";
+"signalDiff.preset.lastDrive" = "Last drive start vs end";
+"signalDiff.preset.todayVsYesterday" = "Today vs yesterday (same time)";
+
+/* --- Category prefixes (web `CATEGORY_PREFIXES`) --- */
+"signalDiff.cat.battery" = "Battery";
+"signalDiff.cat.drive" = "Drive";
+"signalDiff.cat.climate" = "Climate";
+"signalDiff.cat.security" = "Security";
+"signalDiff.cat.motor" = "Motor";
+"signalDiff.cat.tire" = "Tire";
+"signalDiff.cat.media" = "Media";
+"signalDiff.cat.safety" = "Safety";
+
+/* --- Help tooltips (web `HelpTooltip` body + aria) --- */
+"help.signal.snapshot" = "A snapshot is a point-in-time view of every signal value at a single timestamp. Falls back to signal_log within the last 30 days when the live layer doesn't have it.";
+"help.signal.snapshot.aria" = "More info about signal snapshots";
+"help.signal.diff" = "Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise.";
+"help.signal.diff.aria" = "More info about signal diffs";
+
+/* --- Surface title + search clear --- */
+"signalDiff.compare.title" = "Compare signals";
+"signalDiff.compare.clearSearch" = "Clear search";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"signalDiff.compare.live" = "Live";
+"signalDiff.compare.stale" = "Stale";
+"signalDiff.compare.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"signalDiff.compare.staleBanner" = "Reconnecting — snapshot windows may be stale";
+"signalDiff.compare.offlineBanner" = "Offline — showing the last loaded snapshots";
+
+/* --- Loading / empty / error chrome --- */
+"signalDiff.compare.loading" = "Loading compare controls";
+"signalDiff.compare.errorTitle" = "Couldn't load signals";
+"signalDiff.compare.retry" = "Retry";
+"signalDiff.compare.emptyTitle" = "No signals to compare yet";
+"signalDiff.compare.emptyDescription" = "Signal snapshots will appear here once this vehicle streams telemetry. Windows and presets stay ready.";
+
+/* --- Accessibility --- */
+"signalDiff.compare.a11y.signals" = "signals available";
+"signalDiff.compare.a11y.filteredBy" = "filtered by";
