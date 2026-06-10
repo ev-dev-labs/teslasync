@@ -446,3 +446,4 @@ p2-windows/feature-views/W-0229-FSMStateDiagram.prompt.md
 p2-windows/feature-views/W-0230-FSMSubFSMPanel.prompt.md
 p2-windows/feature-views/W-0231-FSMTimelineChart.prompt.md
 p2-windows/feature-views/W-0236-AccordionSection.prompt.md
+p2-windows/feature-views/W-0234-SnapshotInspector.prompt.md
