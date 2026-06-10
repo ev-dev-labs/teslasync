@@ -1,0 +1,44 @@
+/*
+  AITripPostcardShareCardImageGeneration.strings
+  TeslaSync — P4 shared surface · 0056 · AITripPostcardShareCardImageGeneration (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The keys mirror the web source
+  (components/ai/AITripPostcardShareCardImageGeneration.tsx) verbatim — `sharing.aiTripPostcard.*` —
+  plus the shared AI-card keys the composed surface reads (`helix.*`, `ai.common.*` from
+  AIFeatureCard / AiOutputPanel / AIThinkingIndicator) and the native P4 leaf chrome (idle / loading /
+  freshness / retry), so the Swift sources hold no English literals. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table
+  ("AITripPostcardShareCardImageGeneration") so each parallel surface prompt owns its own strings.
+*/
+
+/* --- Feature card header (web source keys, verbatim) --- */
+"sharing.aiTripPostcard.title" = "Draft a Helix share-card image";
+"sharing.aiTripPostcard.description" = "Ask Helix to draft a propose-only image prompt and preview spec for the selected trip’s share card. Helix only sees the redacted trip context (distance, duration, drive count, vehicle name) — never raw coordinates or street addresses. The draft is never published automatically; review it here, then use the existing Share button on the trip to publish a static share card.";
+"sharing.aiTripPostcard.button" = "Generate share card";
+"sharing.aiTripPostcard.badge" = "Helix";
+
+/* --- Empty hints (web `noTripHint`, verbatim; offline hint is native, canStart false) --- */
+"sharing.aiTripPostcard.noTripHint" = "Pick a trip from the list above to enable Helix.";
+"sharing.aiTripPostcard.offlineHint" = "Reconnect to draft a share card.";
+
+/* --- Shared AI-card keys (web AIFeatureCard / AiOutputPanel / AIThinkingIndicator) --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.ariaLabel" = "Helix";
+"helix.errorLabel" = "Helix error:";
+"ai.common.thinking" = "Helix is thinking";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Output panel chrome (native P4 leaf states) --- */
+"aiTripPostcard.idle" = "Tap Ask Helix to draft a share-card image prompt for this trip.";
+"aiTripPostcard.loadingA11y" = "Loading";
+"aiTripPostcard.draftRole" = "Share-card draft";
+"aiTripPostcard.proposeOnly" = "Propose-only — review, then use the trip’s Share button to publish.";
+"aiTripPostcard.retry" = "Retry";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"aiTripPostcard.live" = "Live";
+"aiTripPostcard.stale" = "Stale";
+"aiTripPostcard.offline" = "Offline";
+"aiTripPostcard.staleA11y" = "Stale — tap to refresh";
+"aiTripPostcard.offlineA11y" = "Offline — showing the last known draft";
