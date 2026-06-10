@@ -1,0 +1,74 @@
+/*
+  TeslaApiUsageCard.strings
+  TeslaSync — P4 feature view · 0257 · TeslaApiUsageCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `TeslaApiUsageCard`
+  resolves (table "TeslaApiUsageCard") lives here with its web English value. These entries fold
+  into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the shared
+  catalog.
+
+  The web source (features/system/components/status/TeslaApiUsageCard.tsx feeding
+  components/data-display/UsageCard.tsx) uses hardcoded English literals (no t() calls — the surface
+  is "anonymous"). Per the native no-English-literals rule, every one of those literals is promoted
+  to a key here. The first group is the parity set extracted from the web source; the second group
+  backs the native chrome (the P4 leaf freshness / loading / error copy + the card title) so the
+  Swift sources hold no English prose literals.
+*/
+
+/* --- Parity: strings extracted from the web source --- */
+
+/* Empty state — web `<UsageCard emptyMessage=…>` when `!apiUsage`. */
+"teslaApiUsage.emptyMessage" = "Tesla API usage data is not available yet.";
+
+/* Budget bar — web `budget` prop. */
+"teslaApiUsage.budget.headline" = "%@ of %@";
+"teslaApiUsage.budget.rightLabel" = "%@ of monthly credit";
+"teslaApiUsage.budget.caption" = "Day %@ of %@ · %@";
+"teslaApiUsage.budget.ariaLabel" = "Tesla API budget used";
+"teslaApiUsage.resetsTomorrow" = "resets tomorrow";
+"teslaApiUsage.resetsInOneDay" = "resets in 1 day";
+"teslaApiUsage.resetsInDays" = "resets in %@ days";
+
+/* Bands — web `bands` array. */
+"teslaApiUsage.band.thisMonth" = "This month";
+"teslaApiUsage.band.last24h" = "Last 24h";
+"teslaApiUsage.band.forecastEom" = "Forecast EOM";
+"teslaApiUsage.unit.requests" = "requests";
+"teslaApiUsage.perDayAvg" = "%@/day avg";
+"teslaApiUsage.perDayBurn" = "%@/day burn";
+"teslaApiUsage.recentRate" = "recent rate: %@";
+
+/* Details — web `details` array. */
+"teslaApiUsage.detail.useful" = "Useful";
+"teslaApiUsage.detail.skipped" = "Skipped (asleep)";
+"teslaApiUsage.detail.avgLatency" = "Avg latency";
+"teslaApiUsage.detail.errorRate" = "Error rate";
+"teslaApiUsage.msValue" = "%@ ms";
+"teslaApiUsage.errorCountParen" = "(%@)";
+
+/* Top-lists — web `topLists` array. */
+"teslaApiUsage.topServices" = "Top services";
+"teslaApiUsage.byMethod" = "By method";
+
+/* Over-budget banner — web `banner` prop. */
+"teslaApiUsage.banner.title" = "Over monthly credit";
+"teslaApiUsage.banner.description" = "Spend has exceeded the %@ monthly credit by %@. Review polling cadence or vehicle subscriptions.";
+
+/* Footer links — web `footer` prop. */
+"teslaApiUsage.footer.apiLogs" = "Open API Logs";
+"teslaApiUsage.footer.teslaAccount" = "Tesla account";
+
+/* --- Native chrome: card title + P4 leaf freshness / connectivity --- */
+"teslaApiUsage.title" = "Tesla API usage";
+"teslaApiUsage.live" = "Live";
+"teslaApiUsage.stale" = "Stale";
+"teslaApiUsage.offline" = "Offline";
+"teslaApiUsage.staleBanner" = "Reconnecting — usage may be stale";
+"teslaApiUsage.offlineBanner" = "Offline — showing last known usage";
+"teslaApiUsage.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error states --- */
+"teslaApiUsage.loadingA11y" = "Loading Tesla API usage";
+"teslaApiUsage.errorTitle" = "Couldn't load Tesla API usage";
+"teslaApiUsage.retry" = "Retry";
