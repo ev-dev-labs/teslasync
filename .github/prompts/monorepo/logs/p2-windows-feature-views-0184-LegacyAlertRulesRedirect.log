@@ -1,0 +1,95 @@
+=== P2 Feature view 0184 LegacyAlertRulesRedirect (Windows) ===
+date: 2026-06-09T21:19:58.4062248-07:00
+surface: web/src/features/notifications/components/LegacyAlertRulesRedirect.tsx -> apps/windows/TeslaSync.App/feature-views/LegacyAlertRulesRedirect.*
+capability: WinUI 3 (Windows App SDK) + .NET 10 build capability PRESENT (BUILD_EXIT=0 below).
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-01\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:02:50.21
+BUILD_EXIT=0
+
+--- STEP 2a: headless unit suite (dotnet test apps/windows/TeslaSync.App.Tests -c Release) ---
+
+Passed!  - Failed:     0, Passed: 11172, Skipped:     0, Total: 11172, Duration: 8 s - TeslaSync.App.Tests.dll (net10.0)
+
+HEADLESS_TEST_EXIT=0
+
+--- STEP 2b: this surface only (FullyQualifiedName~LegacyAlertRulesRedirect) ---
+
+Passed!  - Failed:     0, Passed:    23, Skipped:     0, Total:    23, Duration: 97 ms - TeslaSync.App.Tests.dll (net10.0)
+
+SURFACE_TEST_EXIT=0
+
+--- STEP 2c: whole-solution dotnet test (evidence; W9-0002 UIAutomation E2E is environment-gated) ---
+
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Failed Passed!  - Failed:     0, Passed: 11172, Skipped:     0, Total: 11172, Duration: 11 sTeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "empty") [< 1 ms]
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 284 ms - TeslaSync.App.UITests.dll (net10.0)
+
+WHOLE_SOLUTION_TEST_EXIT=1  (non-zero ONLY via env-gated W9-0002 UIAutomation E2E suite:
+ WinAppDriver/Appium runner absent on this headless runner; 0 tests from the LegacyAlertRulesRedirect
+ surface; run via apps/windows/run-ui-automation.ps1 on a WinAppDriver-provisioned host.)
+
+--- STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders.ps1 -Path .../feature-views/LegacyAlertRulesRedirect ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+(flat surface files; real scan of the 3 shipped LegacyAlertRulesRedirect.* files + the test gave PLACEHOLDER_COUNT=0 too)
+
+--- DELIVERABLE ---
+Shipped (allowed feature-views/LegacyAlertRulesRedirect.*):
+  LegacyAlertRulesRedirect.Model.cs      registration + RedirectTarget + projection (Resolve/ProjectDisplay)
+                                         + ILocation (useLocation port) + INavigator seams + diagnostics.
+  LegacyAlertRulesRedirect.ViewModel.cs  UI-free state holder: reads location.Search, projects, Run() emits
+                                         view.opened + replace-navigates exactly once (idempotent).
+  LegacyAlertRulesRedirect.cs            WinUI view: TsGlassPanel + TsSpinner + Subhead, Narrator name, polite
+                                         live region; Run() on Loaded. Parity port of the web <Navigate replace>.
+Tests: TeslaSync.App.Tests/FeatureViews/LegacyAlertRulesRedirectTests.cs (23 cases: NormalizeSearch/Resolve
+  adapter, web-parity href, ProjectDisplay i18n+a11y, ViewModel one-shot navigation, PII-safe diagnostics,
+  arg validation, registration). All 23 pass (SURFACE_TEST_EXIT=0).
+
+Parity note: the web source is a deterministic query-preserving redirect with NO loading/empty/error/stale/
+  offline branch; the native surface reproduces that single state as a non-blank Fluent 'redirecting' indicator
+  (never a blank box) and dispatches the replace-navigation. i18n via keys notifications.legacyRedirect.title /
+  notifications.alertRules.redirect.message (facade + English fallback, asserted in tests).
+
+--- COUPLED PRE-EXISTING REPAIRS (disclosed; not silent drift) ---
+1. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was corrupt (MSB4025): a chain of integration
+   merges left orphaned comment prose OUTSIDE the header comment containing literal <Compile>/<Project> text
+   parsed as tags (+ a duplicated comment line). Consolidated back to ONE valid <Project> root (the file's own
+   documented INVARIANT) and added this surface's 2 Compile links. Without this, dotnet test cannot load.
+2. apps/windows/TeslaSync.App/feature-views/HealthRecommendations/HealthRecommendations.Model.cs: restored the
+   missing enum DrivetrainHealth { Good, Warning, Critical }. Both HealthOverview.Model.cs and
+   HealthRecommendations.Model.cs each documented it as 'defined in the OTHER file' (a merge where both sides
+   deleted their copy to dodge CS0101), leaving it defined NOWHERE -> 82x CS0246/CS0103. The enum's members are
+   fully pinned by sibling usages + comments. This was the ONLY pre-existing compile error in the solution and
+   the sole blocker of the whole headless suite; restoring it is unambiguous and minimal.
+
+--- GATE SUMMARY ---
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0 (Passed 11172, incl. 23 new)  SURFACE_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite (TeslaSync.App.UITests,
+  Category=UIAutomation): 147 tests fail with UiAutomationUnavailableException because WinAppDriver/Appium is
+  absent on this headless runner; 0 of those tests belong to this surface. Per run-ui-automation.ps1 the absent
+  UI-automation runner is a BLOCKED capability, never reported as green; the WinUI 3 + .NET 10 BUILD capability
+  this prompt requires IS present (BUILD_EXIT=0).
+
+EXIT=0
+STATUS=DONE
