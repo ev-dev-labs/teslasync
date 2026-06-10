@@ -86,6 +86,27 @@ public sealed record HealthRecommendation(
     string AutomationName);
 
 /// <summary>
+/// The drivetrain health level both drivetrain-health surfaces render (web <c>HealthStatus =
+/// 'good' | 'warning' | 'critical'</c>). This is the single canonical definition in the
+/// <c>TeslaSync.App.FeatureViews</c> namespace — co-located with its <see cref="DrivetrainHealthSnapshot"/>
+/// JSON parser and reused by <c>HealthOverview</c> (a duplicate definition there previously collided with
+/// CS0101, so it is defined once here). Good drives the green glow / success accent / check icon, Warning the
+/// cyan glow / warning accent, Critical the purple glow / danger accent, exactly as the web keys those off
+/// <c>overallHealth</c>. UI-free so the classification is unit-tested without a XAML runtime.
+/// </summary>
+public enum DrivetrainHealth
+{
+    /// <summary>Healthy (web <c>'good'</c>) — green glow, success accent, check icon, no alert.</summary>
+    Good,
+
+    /// <summary>Running warm (web <c>'warning'</c>) — cyan glow, warning accent, triangle icon, warning alert.</summary>
+    Warning,
+
+    /// <summary>Overheating (web <c>'critical'</c>) — purple glow, danger accent, triangle icon, danger alert.</summary>
+    Critical,
+}
+
+/// <summary>
 /// The drivetrain-health slice of <c>GET /drivetrain/health</c> the surface needs — just the
 /// <c>overall_health</c> level the web <c>DrivetrainHealthPage</c> reads
 /// (<c>health?.overallHealth ?? 'good'</c>) and feeds to <c>HealthRecommendations</c> as a prop. The level is

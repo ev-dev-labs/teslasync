@@ -225,6 +225,15 @@
     LegacyAlertsRedirect into this single canonical root (the deduplicated, path-sorted union of every
     previously linked source preserved) plus the new LegacyAlertsRedirect surface Model / Source / ViewModel
     links. Do NOT re-concatenate, and never write a literal project or compile tag inside this comment.
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free sources (Model / Source / ViewModel / Projection). The WinUI app targets a WinUI TFM
+    and cannot be project-referenced, so each surface's WinUI-free sources are Compile-linked below; the
+    view *.cs surfaces themselves are exercised by the app build. Test classes are picked up by the SDK
+    default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, path-sorted, deduplicated Compile
+    ItemGroup. A chain of integration merges has repeatedly re-concatenated this file into multiple roots
+    plus duplicate Compile items and broken XML comments, failing XML load (MSB4025); keep it consolidated.
   -->
 
   <PropertyGroup>
@@ -643,6 +652,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Model.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Source.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.ViewModel.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InboxBody\InboxBody.Model.cs" Link="FeatureViews\InboxBody\InboxBody.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InboxBody\InboxBody.Source.cs" Link="FeatureViews\InboxBody\InboxBody.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InboxBody\InboxBody.ViewModel.cs" Link="FeatureViews\InboxBody\InboxBody.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Model.cs" Link="FeatureViews\InfrastructureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Source.cs" Link="FeatureViews\InfrastructureSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.ViewModel.cs" Link="FeatureViews\InfrastructureSection.ViewModel.cs" />
