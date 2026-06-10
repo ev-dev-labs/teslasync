@@ -370,3 +370,4 @@ p2-windows/feature-views/W-0211-RegionSettings.prompt.md
 p2-windows/dashboard-widgets/W-0115-WeatherAtCarWidget.prompt.md
 p2-windows/feature-views/W-0033-XRayControls.prompt.md
 p2-windows/dashboard-widgets/W-0077-RangeEstimateWidget.prompt.md
+p2-windows/dashboard-widgets/W-0118-YearReviewWidget.prompt.md
