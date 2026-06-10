@@ -1,0 +1,46 @@
+/*
+  SecurityPanel.strings
+  TeslaSync — P4 feature view · 0284 · SecurityPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SecurityPanel` resolves (table "SecurityPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/telemetry-panels/SecurityPanel.tsx). The second group
+  backs the native-only chrome (loading / error / retry / freshness) the Apple HIG
+  states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"common.security" = "Security";
+"common.locked" = "Locked";
+"common.unlocked" = "Unlocked";
+"telemetry.lockStatus" = "Vehicle lock status";
+"telemetry.sentryMode" = "Sentry Mode";
+"common.active" = "Active";
+"common.inactive" = "Inactive";
+"telemetry.doors" = "Doors";
+"common.closed" = "Closed";
+"telemetry.windows" = "Windows";
+"telemetry.userPresent" = "User Present";
+"common.yes" = "Yes";
+"common.no" = "No";
+"telemetry.remoteStart" = "Remote Start";
+"common.enabled" = "Enabled";
+"common.disabled" = "Disabled";
+"telemetry.noSecurityData" = "No security data available";
+
+/* --- Native chrome: states + freshness + accessibility --- */
+"telemetry.security.loadingA11y" = "Loading security status";
+"telemetry.security.errorTitle" = "Couldn't load security data";
+"telemetry.security.retry" = "Retry";
+"telemetry.security.refresh" = "Refresh";
+"telemetry.security.live" = "Live";
+"telemetry.security.stale" = "Stale";
+"telemetry.security.offline" = "Offline";
+"telemetry.security.staleBanner" = "Reconnecting — security status may be stale";
+"telemetry.security.offlineBanner" = "Offline — showing last known security status";

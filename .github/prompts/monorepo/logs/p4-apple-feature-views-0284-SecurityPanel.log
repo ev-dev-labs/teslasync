@@ -1,0 +1,177 @@
+================================================================================
+=== P4 Feature view 0284 SecurityPanel (Apple) ===
+================================================================================
+Artifact : apps/apple/TeslaSync/feature-views/SecurityPanel.*
+Web src  : web/src/features/vehicles/components/telemetry-panels/SecurityPanel.tsx
+Runner   : Darwin (arm64) · Xcode 26.5 (17F42) · Swift 6.3.2 · SwiftLint + SwiftFormat
+           (Homebrew) · pwsh 7 · iPhone 16 simulator (Booted) · KMP/Gradle 8.14.5
+ADRs     : ADR-002 (shared iOS/macOS source group) · ADR-004 (KMP Shared.xcframework)
+           ADR-009 · ADR-012 (code-complete + DEFERRED whole-app Xcode gate)
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (git status --porcelain — exactly the allowed files + this log)
+--------------------------------------------------------------------------------
+?? apps/apple/TeslaSync/feature-views/SecurityPanel.swift            (View; phase switch)
+?? apps/apple/TeslaSync/feature-views/SecurityPanel.Adapter.swift    (pure projection)
+?? apps/apple/TeslaSync/feature-views/SecurityPanel.Model.swift      (P1/S8 seam + P1/S11 + P1/S10)
+?? apps/apple/TeslaSync/feature-views/SecurityPanel.Views.swift      (subviews)
+?? apps/apple/TeslaSync/feature-views/SecurityPanel.Previews.swift   (7 state previews; DEBUG)
+?? apps/apple/TeslaSync/feature-views/SecurityPanel.strings          (P1/S10 table)
+?? apps/apple/TeslaSync/feature-views/SecurityPanel.Tests.swift      (26 XCTest cases)
+The generated TeslaSync.xcodeproj + staged Frameworks/Shared.xcframework are
+git-ignored local build artifacts (removed/ignored — absent from git status).
+
+================================================================================
+GATE COMMANDS (as specified, adapted to this runner) + REAL RESULTS
+================================================================================
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build  → RAN
+    IOS_EXIT=65  ** BUILD FAILED **
+    Root cause (NOT this surface): pre-existing duplicate public type definitions
+    collide in two sibling surfaces I am FORBIDDEN to edit (allowed files =
+    SecurityPanel.* only):
+      TeslaSync/feature-views/StateTimeline.Source.swift:44   public struct StateTimelineUpdate
+      TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:61 public struct StateTimelineUpdate
+      TeslaSync/feature-views/StateTimeline.Adapter.swift:125 public enum StateTimelineConnection
+      TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:52 public enum StateTimelineConnection
+      TeslaSync/feature-views/StateTimeline.Model.swift:64    public final class StateTimelineModel
+      TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:104 public final class StateTimelineModel
+    → "'StateTimelineUpdate'/'StateTimelineConnection'/'StateTimelineLoadStatus'/
+       'StateTimelineModel' is ambiguous for type lookup in this context" (3 failed
+       SwiftCompile batches; full error list in build log).
+    SecurityPanel errors in the whole-app build: 0  (grep -c 'error:.*SecurityPanel' = 0).
+    SecurityPanel.* appears in NONE of the 3 failed compile batches.
+    NOTE: the KMP Shared.xcframework staged successfully here (Gradle cache warm —
+    "xcframework successfully written out to …/debug/Shared.xcframework"), so the
+    build reached the app Swift compile before failing on the sibling collision.
+    DISPOSITION: DEFERRED (blocked solely by out-of-allowed-files sibling breakage),
+    per ADR-012 — matches the 117 sibling P4 feature-view surfaces (e.g. 0046
+    SecurityStatusCards, 0201 AIRestorePanel).
+
+[2] xcodebuild -scheme TeslaSync-macOS build  → RAN
+    MAC_EXIT=65  ** BUILD FAILED **
+    Root cause (NOT this surface): macOS dev-certificate signing is unavailable on
+    this runner —
+      error: "TeslaSync-macOS" has entitlements that require signing with a
+             development certificate. (target 'TeslaSync-macOS')
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+             development certificate. (target 'TeslaSyncWidgets-macOS')
+    (and the same StateTimeline* collision underneath the app target's sources).
+    SecurityPanel errors: 0.  DISPOSITION: DEFERRED (runner signing + out-of-scope
+    sibling breakage), per ADR-012.
+
+[3] swiftlint --strict  → RAN  (whole tree, .swiftlint.yml included: dirs)
+    LINT_EXIT=0   "Done linting! Found 0 violations, 0 serious in 3077 files."
+    Scoped re-run over the 6 SecurityPanel .swift files: 0 violations. GREEN.
+
+[4] swiftformat --lint apps/apple  → RAN  (whole tree)
+    FORMAT_EXIT=0  "0/3081 files require formatting, 2 files skipped."
+    Scoped re-run over the 6 SecurityPanel .swift files: 0/6 require formatting. GREEN.
+
+[5] check-placeholders.ps1 -Path …/SecurityPanel  → RAN
+    PLACEHOLDER_COUNT=0  PLACEHOLDER_ALLOWED=0  EXIT=0  (case-insensitive scan of the
+    real SecurityPanel.* swift files: no TODO/FIXME/stub/mock/placeholder/Lorem/
+    "not implemented"/fatalError-unimpl). GREEN.
+
+================================================================================
+HOST-RUNNABLE SURFACE VERIFICATION (the in-scope definition-of-done — all EXECUTED)
+================================================================================
+
+[A] Dual-SDK type-check of the FULL surface (incl. #Preview, -D DEBUG, -swift-version 6
+    = complete strict concurrency) against the REAL shared component library
+    (Sources/Components ∪ Sources/Design = 41 files, only system imports; the single
+    KMP-dependent unused file UnitFormatters.swift excluded exactly as 0046 did) +
+    generated DesignTokens:
+      • macOS 15  (arm64-apple-macos15.0)            → EXIT 0  (no errors, no warnings)
+      • iOS 18 sim (arm64-apple-ios18.0-simulator)   → EXIT 0  (no errors, no warnings)
+    Proves SecurityPanel.{swift,Adapter,Model,Views,Previews} compile clean on BOTH
+    target platforms against TSGlassPanel/TSFadeIn/TSSkeleton/TSButton/Color.TS/
+    Font.TS/TSSpacing/TSRadius under Swift 6.
+
+[B] EXECUTED logic harness — SwiftPM package compiling the REAL SecurityPanel.Adapter
+    + SecurityPanel.Model as module "TeslaSync" and running the REAL
+    SecurityPanel.Tests via `swift test` (macOS):
+      Executed 26 tests, with 0 failures (0 unexpected).
+      Suites: SecurityPanelDataTests(2) · SecurityPanelProjectionTests(10) ·
+              SecurityPanelPhaseTests(7) · SecurityPanelModelTests(7).
+    Covers: hasContent guard · lock/sentry/doors/windows/user-present/remote-start
+    projection · web nullish(??) vs truthiness(&&) distinction (doors empty-string
+    passthrough; detail empty-string omission) · the `remoteStartEnabled == null ? '—'`
+    ternary · phase resolution across loading/empty/loaded/failed (with/without cache)
+    · P1/S11 view.opened emitted exactly once · stale one-shot auto-refresh · offline
+    no-auto-refresh · freshness flag · VoiceOver label composition (a11y).
+
+================================================================================
+PARITY + STATES + i18n + a11y + telemetry (web source reproduced)
+================================================================================
+States (all render — no hidden surfaces):
+  loading → skeleton chrome (lock-badge block + 5 row blocks)
+  empty   → ContentUnavailableView "No security data available"  (web <EmptyState/>)
+  error   → danger glyph + title + message + TSButton Retry       (web QueryError eq.)
+  content → lock badge + sentry chip + doors + windows + user present + detail +
+            Remote Start (web hasData branch, faithfully composed)
+  stale   → content + amber freshness chip + reconnecting banner (+ manual Refresh) +
+            one-shot auto-refresh
+  offline → content (cached) + muted freshness chip + offline banner
+Shared components mapped: @/components/ui GlassPanel → TSGlassPanel;
+  @/components/feedback EmptyState → ContentUnavailableView idiom.  Charts/maps: none.
+i18n (P1/S10, table "SecurityPanel"): ALL 17 web t(key,default) keys present
+  (common.security/locked/unlocked/active/inactive/closed/yes/no/enabled/disabled,
+   telemetry.lockStatus/sentryMode/doors/windows/userPresent/remoteStart/noSecurityData)
+  + 9 native-chrome keys. No English literals in code (every string via the facade).
+a11y: header isHeader; lock badge + each row = single VoiceOver element with composed
+  label; Retry + Refresh buttons carry accessibilityLabel; decorative glyphs hidden;
+  Dynamic Type via Font.TS tokens; Reduce Motion honored by TSFadeIn/TSSkeleton.
+Telemetry: P1/S11 `view.opened` surface="SecurityPanel" emitted once on first start().
+Data seam: bound via SecurityPanelSource (P1/S8); the view performs NO networking.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green : the two whole-app xcodebuild steps are shown FAILED (EXIT=65)
+                     with their real, quoted root-cause errors, and proven to be
+                     out-of-allowed-files sibling breakage (StateTimeline* duplicate
+                     defs) / runner signing — 0 SecurityPanel errors. Every "GREEN"
+                     above is a command actually run with its real exit code.
+ 2 No scope narrowing: implemented ALL states (loading/empty/error/content/stale/
+                     offline) + lock badge + sentry + doors + windows + user present +
+                     detail + remote start + i18n + a11y + telemetry.
+ 3 No skip-and-assume: every gate command executed (incl. both whole-app builds run to
+                     completion); dual-SDK compile + 26 tests EXECUTED, not assumed.
+ 4 No stubs as final : complete implementations; placeholder gate COUNT=0.
+ 5 No parity shortcuts: faithful port incl. the web nullish(??) vs truthiness(&&)
+                     split and the remote-start em-dash ternary.
+ 6 No delegation     : authored directly (no sub-agent delegation of the surface).
+ 7 No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat /
+                     sibling files / the shared Localizable.xcstrings; strings ship as
+                     the per-surface table; xcodeproj + Shared.xcframework are
+                     git-ignored local artifacts (absent from git status).
+ 8 No commit on red  : committing on GREEN in-scope gates (swiftlint, swiftformat,
+                     placeholder) + dual-SDK full-surface compiles + 26/26 EXECUTED
+                     tests. The 2 xcodebuild steps are DEFERRED — each blocked SOLELY
+                     by pre-existing, out-of-allowed-files sibling breakage / runner
+                     signing, never by SecurityPanel code (git-proven, error-proven).
+ 9 No silent drift   : `git status` lists ONLY the 7 SecurityPanel.* files (+ this log).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED> below.
+
+================================================================================
+DISPOSITION
+================================================================================
+Production-polished native SecurityPanel shipped at parity with the web source and
+verified by every in-scope, host-runnable means: a Foundation-only projection core +
+P1/S8 state-holder seam (no view I/O) + P1/S11 telemetry + P1/S10 i18n facade; all
+six states + full i18n + per-element a11y on the shared TSGlassPanel/TSFadeIn/
+TSSkeleton/TSButton components; EXECUTED-green XCTest (26/26) over the REAL
+Adapter+Model; and clean iOS-18-sim AND macOS-15 SDK compiles of the full surface
+(incl. #Preview) under Swift 6 strict concurrency. The whole-app `xcodebuild build`
+(iOS + macOS) is DEFERRED to the integration/signed runner: iOS is blocked by a
+pre-existing duplicate-definition collision between the sibling StateTimeline feature-
+view and StateTimelineWidget dashboard-widget, and macOS additionally by dev-
+certificate signing — both outside this prompt's allowed files (SecurityPanel.* only)
+and neither a defect in this surface (0 SecurityPanel errors in either build). This
+surface deliberately uses SecurityPanel*-prefixed seam types, so it introduces no such
+collision. Matches the established "code-complete + DEFERRED Xcode gate" precedent
+(ADR-012) of the sibling P4 feature-view surfaces.
+
+EXIT=0
+STATUS=DONE
