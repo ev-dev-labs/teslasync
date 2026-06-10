@@ -1,0 +1,19 @@
+/*
+  Popover.strings
+  TeslaSync — P4 modal / dialog · 0015 · Popover (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/ui/Popover.tsx) is an anonymous positioning primitive with no visible text — it only
+  exposes an optional `ariaLabel` and the implicit `role="dialog"`. The only copy the native surface
+  needs is therefore the accessibility fallbacks: the default region label used when no `ariaLabel`
+  is supplied, the dismiss-affordance label, and an empty-children fallback so the surface is never
+  an unlabeled blank box.
+
+  Entries live in the per-surface "Popover" table and fold into the app `Localizable.xcstrings`
+  master catalog at integration time, so the Swift sources hold no hardcoded English literals.
+*/
+
+/* --- Accessibility (anonymous primitive — web `ariaLabel` / role) --- */
+"popover.region.defaultLabel" = "Popover";
+"popover.dismiss" = "Dismiss";
+"popover.empty" = "Nothing to show";
