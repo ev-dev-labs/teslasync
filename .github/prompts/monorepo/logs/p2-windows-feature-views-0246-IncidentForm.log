@@ -1,0 +1,112 @@
+=== P2 Feature view 0246 IncidentForm (Windows) ===
+date: 2026-06-10T16:37:05.6602144-07:00
+runner: .NET 10.0.300; WinUI=Microsoft.WindowsAppSDK; OS=Microsoft Windows NT 10.0.26200.0
+
+---- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ----
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+BUILD_EXIT=0
+
+---- STEP 2: dotnet test apps/windows/TeslaSync.sln -c Release (full solution) ----
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 243 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 15248, Skipped:     0, Total: 15248, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+
+representative UIAutomation failure (1 of 147 — all identical environment cause):
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TEST_EXIT=1   (full solution; non-zero is wholly from TeslaSync.App.UITests / Category=UIAutomation — see UI-AUTOMATION RUNNER note below)
+
+---- STEP 2b: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation (headless unit suite — W9-0002 split) ----
+Passed!  - Failed:     0, Passed: 15248, Skipped:     0, Total: 15248, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+---- STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ----
+IncidentForm formatting errors: 0
+FORMAT_EXIT=0
+
+---- STEP 4: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/IncidentForm ----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+BASELINE REPAIR (pre-existing, blocking, now fixed)
+--------------------------------------------------------------------------------
+TeslaSync.App.Tests.csproj was committed corrupted at HEAD: a chain of integration
+merges had concatenated TWO complete <Project> roots (plus stray </Project> /
+</ItemGroup> tags at lines ~987-994) with duplicate + divergent Compile items and
+mixed CRLF/LF. MSBuild rejected it with `MSB4025: Unexpected end tag. Line 989`,
+which made `dotnet build apps/windows/TeslaSync.sln` (and therefore every gate step)
+fail before this surface was even considered. Re-consolidated to exactly ONE
+Project root with a single ordinal path-sorted, Include-deduplicated Compile
+ItemGroup, honouring the file's own stated INVARIANT comment. 722 distinct App
+source-links preserved (union of both former copies; all 722 target files verified
+to exist) + the 3 new IncidentForm logic source-links. The solution now builds 0/0.
+
+INDEPENDENT VERIFICATION
+--------------------------------------------------------------------------------
+  [PASS] WinUI View - IncidentForm.cs compiles 0 Error(s) / 0 Warning(s) under the
+         App project's STRICT settings (EnableNETAnalyzers + AnalysisMode=Recommended
+         + TreatWarningsAsErrors=true) against the REAL shared Components
+         (TsModal/TsInput/TsSelect/TsTextarea/Label/Caption/ErrorText/DisplayTokens/
+         LiveRegion/InfoBar). (CS0103 LiveRegion using, CS0649 dead field, and CA1822
+         on two const-returning props were found and fixed; re-build => 0/0.)
+  [PASS] dotnet build apps/windows/TeslaSync.sln -c Release => 0 Error(s).
+  [PASS] Headless unit suite (Category!=UIAutomation): 15248 passed / 0 failed,
+         including 44 new IncidentForm facts (wire maps, projection, adapter request
+         shape + error classification, per-state view-model flows, diagnostics, i18n).
+  [PASS] dotnet format --verify-no-changes => FORMAT_EXIT=0 (IncidentForm errors: 0).
+  [PASS] check-placeholders.ps1 -Path .../feature-views/IncidentForm =>
+         PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0.
+
+ACCEPTANCE CRITERIA MAPPING
+--------------------------------------------------------------------------------
+  [x] All web states reproduced. IncidentForm.tsx is a WRITE-ONLY modal (useCreateIncident
+      + useToast + useId; NO read query) - so loading/empty/error/stale/offline READ
+      states are ABSENT in the source and are faithfully not fabricated (no silent drift).
+      The reproduced states are: idle (form ready), title-validation error (inline field
+      error + toast), submitting (busy "Logging..." + disabled actions), submit-failure
+      (error toast, modal stays open), submit-success (success toast + onClose). Each is a
+      view-model state asserted by tests.
+  [x] Hooks bind via the shared P1/S8 state-holder layer (IIncidentCreateSource +
+      IncidentFormViewModel); the view performs no HTTP. Operation id
+      post_api_v1_status_incidents matches internal/api/router.go.
+  [x] Every i18n key from source resolves through the ILocalizer facade (keys
+      status.incidents.form.* + status.incidents.severity/status.*); no English literal
+      reaches the view tree. Fallbacks match the web literals verbatim.
+  [x] Accessibility labels on every interactive element (title/components/message inputs,
+      severity/status selects, primary+cancel buttons) + assertive live-region announce of
+      the title validation error.
+  [x] Tests: adapter unit (request shape + 400/network classification) + per-state
+      view-model + a11y/label (key + fallback) + diagnostics (44 facts).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate clean; the
+      web `placeholder` input attribute is rendered via TsInput.Hint and named "Prompt"
+      to keep the surface literal-free).
+
+UI-AUTOMATION RUNNER (the sole non-zero gate step - platform-capability gap)
+--------------------------------------------------------------------------------
+`dotnet test apps/windows/TeslaSync.sln` is non-zero ONLY because all 147 tests in
+TeslaSync.App.UITests (every one tagged [Trait("Category","UIAutomation")]) fail with
+`UiAutomationUnavailableException: WinAppDriver/Appium runner is absent` - nothing is
+listening on http://127.0.0.1:4723 and WinAppDriver.exe is not installed on this runner,
+and no packaged MSIX is deployed. That suite is the cross-cutting W9-0002 shell/nav/
+a11y-tree harness (NOT specific to IncidentForm); by design it fails-fast with an explicit
+reason and is never silently skipped, and W9-0002 splits it from the headless unit suite
+via the Category trait precisely so a runner without the harness runs the unit suite alone
+(HEADLESS_TEST_EXIT=0 above). Provisioning WinAppDriver + a deployed app is outside this
+surface's code and its allowed-files scope; it cannot be satisfied on this runner.
+
+CONCLUSION
+--------------------------------------------------------------------------------
+The IncidentForm feature-view is implemented to production parity and independently
+verified (strict App-settings compile 0/0 + 44 headless tests within a fully green
+15248-test unit suite + format 0 + placeholder 0), and a pre-existing solution-wide
+build blocker (the corrupted test .csproj) was repaired as a prerequisite. The acceptance
+gate's `dotnet test <sln>` step cannot reach 0 on this runner solely because the
+Category=UIAutomation suite requires a WinAppDriver runner that is absent here - a
+platform-capability gap outside this surface. Per the prompt's capability clause and the
+Honesty Covenant rule 1 (no red-as-green), this is reported as BLOCKED with the API
+evidence above rather than a falsely-green DONE; the surface deliverable itself is complete.
+
+EXIT=1
+STATUS=BLOCKED
