@@ -1,0 +1,45 @@
+/*
+  AITirePressureTrendReasoning.strings
+  TeslaSync — P4 shared surface · 0054 · AITirePressureTrendReasoning (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `AITirePressureTrendReasoning` resolves (table "AITirePressureTrendReasoning") lives here with its
+  web English value. These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface prompt owns its
+  own strings without editing the shared catalog.
+
+  The first group is the parity set extracted from the web source
+  (web/src/components/ai/AITirePressureTrendReasoning.tsx + the shared AIFeatureCard / AiOutputPanel /
+  AIThinkingIndicator literals it composes). The second group backs the native P4 leaf chrome (the
+  freshness / connectivity / loading / error copy) so the Swift sources hold no English prose.
+*/
+
+/* --- Parity: the web source's t(key, default) calls --- */
+"tirePressure.aiTrendReasoning.title" = "Narrate the 30-day tire-pressure trend";
+"tirePressure.aiTrendReasoning.description" = "Ask Helix to explain the recent 30-day trend in this vehicle’s four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.";
+"tirePressure.aiTrendReasoning.generateButton" = "Narrate trend";
+"tirePressure.aiTrendReasoning.badge" = "Helix";
+
+/* --- Parity: shared AIFeatureCard / AiOutputPanel / AIThinkingIndicator literals --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Output panel: friendly empty hints (P4 "never a blank box") --- */
+"tirePressure.aiTrendReasoning.output.a11yTitle" = "Tire-pressure trend narration";
+"tirePressure.aiTrendReasoning.output.emptyHint" = "No narration yet — ask Helix to narrate the 30-day tire-pressure trend.";
+"tirePressure.aiTrendReasoning.output.noVehicleHint" = "Select a vehicle to ask Helix to narrate the tire-pressure trend.";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"tirePressure.aiTrendReasoning.live" = "Live";
+"tirePressure.aiTrendReasoning.stale" = "Stale";
+"tirePressure.aiTrendReasoning.offline" = "Offline";
+"tirePressure.aiTrendReasoning.staleBanner" = "Reconnecting — Helix may be stale";
+"tirePressure.aiTrendReasoning.offlineBanner" = "Offline — showing the last known narration";
+"tirePressure.aiTrendReasoning.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error states --- */
+"tirePressure.aiTrendReasoning.loadingA11y" = "Loading tire-pressure trend narration";
+"tirePressure.aiTrendReasoning.errorTitle" = "Couldn't load Helix";
+"tirePressure.aiTrendReasoning.retry" = "Retry";
