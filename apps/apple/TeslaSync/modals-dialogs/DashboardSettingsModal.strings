@@ -1,0 +1,66 @@
+/*
+  DashboardSettingsModal.strings
+  TeslaSync — P4 modal / dialog · 0022 · DashboardSettingsModal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `DashboardSettingsModal`
+  resolves (table "DashboardSettingsModal") lives here with its English value. The web source
+  (features/dashboard/components/DashboardSettingsModal.tsx) routes its copy through
+  `t('dashSettings…')` / `t('common…')`; the native surface mirrors those keys so no English literal
+  lives in Swift. These entries fold into the app `Localizable.xcstrings` master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns its own strings
+  without editing the shared catalog.
+
+  Groups: dialog chrome + states; the freshness chip + banners; the Identity section; the Vehicle
+  Filter section; the Auto-Refresh section + the 6 cadence labels (web `REFRESH_OPTIONS`); the Display
+  section; and the shared footer actions.
+*/
+
+/* --- Dialog chrome + states --- */
+"dashSettings.title" = "Dashboard Settings";
+"dashSettings.close" = "Close";
+"dashSettings.loading" = "Loading dashboard settings…";
+"dashSettings.emptyTitle" = "Dashboard unavailable";
+"dashSettings.emptyMessage" = "This dashboard couldn't be found. It may have been deleted.";
+"dashSettings.error" = "Couldn't load dashboard settings";
+"dashSettings.retry" = "Retry";
+
+/* --- Freshness chip + banners (ADR-013) --- */
+"dashSettings.live" = "Live";
+"dashSettings.stale" = "Stale";
+"dashSettings.offline" = "Offline";
+"dashSettings.staleBanner" = "Reconnecting — the vehicle list may be out of date";
+"dashSettings.offlineBanner" = "Offline — showing the last loaded vehicle list";
+"dashSettings.reloadError" = "Couldn't refresh the vehicle list";
+
+/* --- Identity section (web name + icon block) --- */
+"dashSettings.identity" = "Identity";
+"dashSettings.nameLabel" = "Name";
+"dashSettings.name" = "Dashboard name";
+"dashSettings.iconLabel" = "Icon";
+"dashSettings.iconPicker" = "Dashboard icon";
+"dashSettings.iconSelected" = "Selected";
+
+/* --- Vehicle Filter section (web scope select) --- */
+"dashSettings.vehicleFilter" = "Vehicle Filter";
+"dashSettings.vehicleFilterDesc" = "Show data for a specific vehicle in all widgets. Widget-level filters take precedence.";
+"dashSettings.allVehicles" = "All Vehicles";
+"dashSettings.vehicleFilterA11y" = "Vehicle filter";
+
+/* --- Auto-Refresh section (web cadence select + `REFRESH_OPTIONS`) --- */
+"dashSettings.refresh" = "Auto-Refresh";
+"dashSettings.refreshA11y" = "Auto-refresh interval";
+"dashSettings.refresh0" = "Default (per widget)";
+"dashSettings.refresh5" = "Every 5 seconds";
+"dashSettings.refresh10" = "Every 10 seconds";
+"dashSettings.refresh30" = "Every 30 seconds";
+"dashSettings.refresh60" = "Every minute";
+"dashSettings.refresh300" = "Every 5 minutes";
+
+/* --- Display section (web two toggles) --- */
+"dashSettings.display" = "Display";
+"dashSettings.showBorders" = "Show widget borders";
+"dashSettings.compactMode" = "Compact mode (smaller gaps)";
+
+/* --- Footer actions (web shared `common.*`) --- */
+"common.cancel" = "Cancel";
+"common.save" = "Save";
