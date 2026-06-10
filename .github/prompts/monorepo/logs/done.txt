@@ -452,3 +452,4 @@ p2-windows/feature-views/W-0237-AiUsageCard.prompt.md
 p2-windows/feature-views/W-0239-BackendStatusSection.prompt.md
 p2-windows/feature-views/W-0241-BackupActionsCard.prompt.md
 p2-windows/feature-views/W-0243-FrontendErrorsCard.prompt.md
+p2-windows/feature-views/W-0245-helpers.prompt.md
