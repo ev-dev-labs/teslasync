@@ -479,6 +479,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.Model.cs" Link="FeatureViews\DriveOverviewChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.Source.cs" Link="FeatureViews\DriveOverviewChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.ViewModel.cs" Link="FeatureViews\DriveOverviewChart.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveStatCards.Model.cs" Link="FeatureViews\DriveStatCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveTimeline\DriveTimeline.Model.cs" Link="FeatureViews\DriveTimeline\DriveTimeline.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" />
@@ -750,7 +751,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
   </ItemGroup>
-
 </Project>
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
