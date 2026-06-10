@@ -942,6 +942,21 @@
     roots plus duplicate Compile items, failing XML load (MSB4025); re-consolidated for P2 feature-views/0219
     ChatMessageItem into this single canonical root. Do NOT re-concatenate, and never write a literal build-item
     or project start tag inside this comment.
+    UI-thread-free logic (Model / Source / ViewModel / Projection / Registry / Catalog / diagnostics)
+    for each feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI
+    TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free
+    sources are Compile-linked in the single ItemGroup below (the Link mirrors each source's real
+    location under FeatureViews\ or Widgets\); the WinUI views themselves are exercised by the app
+    build. The matching test classes live under this project and are picked up by the SDK default
+    compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted,
+    Include-deduplicated Compile ItemGroup (NETSDK1022 fires when one Include path appears twice, and
+    MSB4025 when a chain of merges re-concatenates the file into multiple Project roots). The list is
+    the union of every WinUI-free Model/Source/ViewModel logic source on disk under feature-views/ and
+    dashboard-widgets/, regenerated for P2 feature-views/0223 SuggestedPrompts (plus its new surface
+    links). Do NOT re-concatenate, and never write a literal build-item or project start tag in a
+    comment.
   -->
 
   <PropertyGroup>
@@ -978,6 +993,9 @@
   </ItemGroup>
 
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated). -->
+  <!-- WinUI-free Model / Source / ViewModel / Projection / Registry / Catalog logic sources
+       Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union); the WinUI views
+       themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -1439,6 +1457,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\GForcePanel\GForcePanel.Model.cs" Link="FeatureViews\GForcePanel\GForcePanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\GForcePanel\GForcePanel.Source.cs" Link="FeatureViews\GForcePanel\GForcePanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\GForcePanel\GForcePanel.ViewModel.cs" Link="FeatureViews\GForcePanel\GForcePanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\GeneralSettings.Model.cs" Link="FeatureViews\GeneralSettings.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\GeneralSettings.Source.cs" Link="FeatureViews\GeneralSettings.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\GeneralSettings.ViewModel.cs" Link="FeatureViews\GeneralSettings.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Model.cs" Link="FeatureViews\HashCalculator\HashCalculator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Source.cs" Link="FeatureViews\HashCalculator\HashCalculator.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.ViewModel.cs" Link="FeatureViews\HashCalculator\HashCalculator.ViewModel.cs" />
@@ -1560,6 +1581,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\QuickMetrics\QuickMetrics.Source.cs" Link="FeatureViews\QuickMetrics\QuickMetrics.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\QuickMetrics\QuickMetrics.ViewModel.cs" Link="FeatureViews\QuickMetrics\QuickMetrics.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\QuickNav\QuickNav.Model.cs" Link="FeatureViews\QuickNav\QuickNav.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\QuietHoursPanel\QuietHoursPanel.Model.cs" Link="FeatureViews\QuietHoursPanel\QuietHoursPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\QuietHoursPanel\QuietHoursPanel.Source.cs" Link="FeatureViews\QuietHoursPanel\QuietHoursPanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\QuietHoursPanel\QuietHoursPanel.ViewModel.cs" Link="FeatureViews\QuietHoursPanel\QuietHoursPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Model.cs" Link="FeatureViews\RateLimitStatusPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Source.cs" Link="FeatureViews\RateLimitStatusPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.ViewModel.cs" Link="FeatureViews\RateLimitStatusPanel.ViewModel.cs" />
@@ -1576,6 +1600,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\RegionSettings\RegionSettings.ViewModel.cs" Link="FeatureViews\RegionSettings\RegionSettings.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RequestBuilder\RequestBuilder.Model.cs" Link="FeatureViews\RequestBuilder\RequestBuilder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RequestBuilder\RequestBuilder.ViewModel.cs" Link="FeatureViews\RequestBuilder\RequestBuilder.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ResetSection\ResetSection.Model.cs" Link="FeatureViews\ResetSection\ResetSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ResetSection\ResetSection.Source.cs" Link="FeatureViews\ResetSection\ResetSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ResetSection\ResetSection.ViewModel.cs" Link="FeatureViews\ResetSection\ResetSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Model.cs" Link="FeatureViews\ResponseViewer.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Source.cs" Link="FeatureViews\ResponseViewer.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.ViewModel.cs" Link="FeatureViews\ResponseViewer.ViewModel.cs" />
@@ -1628,6 +1655,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\StatHeroSlide\StatHeroSlide.ViewModel.cs" Link="FeatureViews\StatHeroSlide\StatHeroSlide.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatorTempChart.Model.cs" Link="FeatureViews\StatorTempChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatusHeader\StatusHeader.Model.cs" Link="FeatureViews\StatusHeader\StatusHeader.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SuggestedPrompts.Model.cs" Link="FeatureViews\SuggestedPrompts.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SuggestedPrompts.ViewModel.cs" Link="FeatureViews\SuggestedPrompts.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummarySlide\SummarySlide.Model.cs" Link="FeatureViews\SummarySlide\SummarySlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Model.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Source.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Source.cs" />
@@ -1704,6 +1733,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
   </ItemGroup>
+
 </Project>
 
 </Project>
