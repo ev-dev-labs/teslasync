@@ -1,0 +1,94 @@
+=== P2 Feature view 0048 SummaryStatsRow (Windows) ===
+Artifact : apps/windows/TeslaSync.App/feature-views/SummaryStatsRow.{cs,Model.cs}
+Tests    : apps/windows/TeslaSync.App.Tests/FeatureViews/SummaryStatsRowTests.cs (39 tests)
+Web src  : web/src/features/admin/components/security-access/SummaryStatsRow.tsx (THE spec)
+Toolchain: dotnet 10.0.300, win-x64; WinUI 3 / Windows App SDK present via maui-windows workload.
+Build prerequisite: apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj consolidated to ONE
+  <Project> root. It was committed corrupt (3 concatenated <Project> roots -> MSB4025 "multiple root
+  elements"), which blocked the WHOLE solution build/test before any surface work. Same remedy the prior
+  siblings recorded as a "necessary build prerequisite".
+
+----------------------------------------------------------------------------------------------------
+GATE RESULTS
+----------------------------------------------------------------------------------------------------
+BUILD_EXIT=0   dotnet build apps/windows/TeslaSync.sln -c Release
+               Build succeeded.  0 Warning(s)  0 Error(s).
+
+TEST_EXIT=1    dotnet test apps/windows/TeslaSync.sln -c Release
+   TeslaSync.App.Tests.dll  (headless logic): Passed!  Failed: 0, Passed: 12033, Skipped: 0
+       -> this surface: dotnet test --filter FullyQualifiedName~SummaryStatsRow  =>  39/39 PASS
+   TeslaSync.App.UITests.dll (E2E UIAutomation): Failed!  Failed: 147, Passed: 0
+       Reason for ALL 147 (verbatim):
+         TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+         WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+         WinAppDriver.exe was not found at its standard install paths or on PATH.
+       => Platform-capability gap: the UIAutomation E2E runner (WinAppDriver/Appium) and a deployed MSIX
+          app are not provisioned on THIS runner. By design the suite FAILS (never skips) when the runner
+          is absent (RunnerAvailability.Probe + WinAppDriverSession.EnsureReady). 0 of the 147 failing
+          tests belong to this surface (they are the shell / nav / auth / component-matrix E2E suite).
+
+FORMAT_EXIT=2  dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+   This surface: CLEAN (0 findings). Verified scoped:
+       dotnet format <App.csproj>      --include SummaryStatsRow.cs SummaryStatsRow.Model.cs --verify-no-changes => 0
+       dotnet format <App.Tests.csproj> --include SummaryStatsRowTests.cs                    --verify-no-changes => 0
+   The 1975 findings are 100% PRE-EXISTING in ANOTHER surface's files (WeatherAtCarWidget*, committed with
+   CRLF; .gitattributes ships no *.cs eol rule, .editorconfig mandates end_of_line=lf):
+       669 WeatherAtCarWidgetTests.cs   446 WeatherAtCarWidget.ViewModel.cs   400 WeatherAtCarWidget.cs
+       351 WeatherAtCarWidget.Model.cs  109 WeatherAtCarWidget.Source.cs
+   Fixing them is outside this prompt's allowed files (SummaryStatsRow.* + this log) -> declined per Covenant #2/#6/#7.
+
+PLACEHOLDER_EXIT=0  ./apps/tools/check-placeholders.ps1 -Path .../SummaryStatsRow.Model.cs  => PLACEHOLDER_COUNT=0
+                    ./apps/tools/check-placeholders.ps1 -Path .../SummaryStatsRow.cs        => PLACEHOLDER_COUNT=0
+
+----------------------------------------------------------------------------------------------------
+PARITY NOTES (vs web SummaryStatsRow.tsx)
+----------------------------------------------------------------------------------------------------
+* Presentational row (props + useTranslation; NO data hooks) -> error/stale/offline are owned by the parent
+  Security-Access page, exactly like the sibling ChartsRow/HighlightCard ports. The two states the web
+  component itself renders are reproduced: Loading (4x Skeleton height=88, grid-cols-1/sm:2/lg:4) and Ready
+  (FadeIn over 4 MetricCards). Documented in SummaryStatsRow.Model.cs.
+* MetricCard -> TsMetricCard, Skeleton -> TsSkeleton, FadeIn -> TsFadeIn (the shared native counterparts).
+  Web `icon`+`color` map to TsMetricCard's accent rail (it carries no glyph slot) -> the same mapping the
+  sibling TemperatureMetricCards port uses. color tokens:
+    secure=TsColorSuccessBrush(#10B981)  unsecure=TsColorDangerBrush(#EF4444)
+    cyan=TsColorInfoBrush(#00F0FF, exact neon-cyan)  blue=TsChartSpeedBrush(#3B82F6)
+    purple=TsChartPowerBrush(#A855F7, exact neon-purple)
+* Values reproduce the web exactly: status secure/unsecure word; lastLock via helpers.ts timeSince
+  (null/future -> em dash, <60s "just now", <60m "{n}m ago", <24h "{n}h ago", else "{n}d ago");
+  sentryUptime via fmtInt (NumberFormatting.Format(_,null,0)) + "%"; totalEvents the verbatim integer.
+* i18n: every source t() key used with the web fallback
+  (admin.security.stat.status/secure/unsecure/stat.lastLock/stat.sentryUptime/stat.totalEvents,
+  common.loading); timeSince's untranslated web literals routed through the facade
+  (time.justNow/minutesAgo/hoursAgo/daysAgo, web literal as fallback) so no bare English sits in native code.
+* Telemetry: SummaryStatsRowDiagnostics emits `view.opened slug=SummaryStatsRow`, PII-safe.
+
+----------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+----------------------------------------------------------------------------------------------------
+[x] Surface renders every web-source state (Loading, Ready); every branch asserted headlessly.
+[x] No direct HTTP from the view; data flows via the model/projection (controlled component, web parity).
+[x] Every source i18n key resolves through the localizer facade with the web fallback.
+[x] Accessibility names on each tile + the surface; loading grid is a polite live region.
+[x] Tests: adapter/projection + per-state + timeSince boundaries + colour tokens + a11y names + diagnostics
+    + null-guards = 39 tests, all green.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[~] EXIT/STATUS: build + headless tests (incl. this surface) + this surface's format + placeholders ALL GREEN.
+    Whole-solution dotnet test is RED only from the absent WinAppDriver E2E runner; whole-solution dotnet
+    format is RED only from pre-existing CRLF in the unrelated WeatherAtCarWidget* files.
+
+----------------------------------------------------------------------------------------------------
+HONESTY COVENANT VERDICT
+----------------------------------------------------------------------------------------------------
+Rule 1 (No red-as-green): the whole-solution test + format are RED, so this is NOT reported DONE.
+Required platform capability (build WinUI 3 / Windows App SDK 1.6+ + .NET 10, Fluent Design) IS present:
+the full solution builds 0/0 and 12033/12033 headless tests pass.
+The reds are pre-existing / environmental and OUTSIDE this artifact's allowed files:
+  * 147 UITests  -> absent WinAppDriver/Appium runner (+ undeployed MSIX). Same gap that BLOCKED siblings
+                    0033 XRayControls / 0077 RangeEstimateWidget / 0115 WeatherAtCarWidget.
+  * 1975 format  -> WeatherAtCarWidget* committed with CRLF (a different surface's files).
+Only necessary build prerequisite retained: TeslaSync.App.Tests.csproj consolidated from 3 concatenated
+roots (MSB4025) to one canonical root = the dedup'd, path-sorted union of every previously-linked source
+that still exists on disk + the new SummaryStatsRow.Model.cs link.
+
+EXIT=1
+STATUS=BLOCKED
