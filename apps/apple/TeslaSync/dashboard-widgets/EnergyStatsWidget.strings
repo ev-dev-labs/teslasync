@@ -1,0 +1,51 @@
+/*
+  EnergyStatsWidget.strings
+  TeslaSync — P4 dashboard widget · 0048 · EnergyStatsWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `EnergyStatsWidget` resolves (table "EnergyStatsWidget") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  Keys under "Web source (parity)" are the exact keys extracted from
+  features/dashboard/widgets/EnergyStatsWidget.tsx (namespace "dashboard").
+  The remaining keys back the native-only chrome (freshness chip, refresh/retry,
+  empty/error copy, banners, accessibility).
+*/
+
+/* --- Web source (parity) --- */
+"widget.energyStats.title" = "Energy Stats";
+"widget.energyStats.totalUsed" = "Total Used";
+"widget.energyStats.totalCharged" = "Total Charged";
+"widget.energyStats.avgEfficiency" = "Avg Efficiency";
+"widget.energyStats.co2Saved" = "CO₂ Saved";
+"widget.energyStats.totalCost" = "Total Cost";
+"widget.energyStats.netBalance" = "Net Energy";
+"widget.energyStats.noData" = "No energy data available";
+"widget.energyStats.dailyUsage" = "Daily Usage";
+"widget.energyStats.energyKwh" = "Energy (kWh)";
+
+/* --- Registry metadata (registry/energy.ts → "energy-stats") --- */
+"widget.energyStats.description" = "Energy overview: daily usage chart, total used/charged, efficiency, CO₂ saved";
+
+/* --- Native chrome: units + accessibility --- */
+"widget.energyStats.unitKg" = "kg";
+"widget.energyStats.chartA11y" = "Daily energy usage chart";
+"widget.energyStats.openA11y" = "Open the Energy page";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.energyStats.fresh" = "Updated";
+"widget.energyStats.stale" = "Stale";
+"widget.energyStats.offline" = "Offline";
+"widget.energyStats.refresh" = "Refresh";
+"widget.energyStats.retry" = "Retry";
+"widget.energyStats.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.energyStats.loading" = "Loading energy stats";
+"widget.energyStats.errorTitle" = "Couldn't load energy stats";
+"widget.energyStats.noDataHint" = "Energy usage will appear here once your vehicle reports drive and charge data.";
+"widget.energyStats.staleBanner" = "Data may be stale — refreshing";
+"widget.energyStats.offlineBanner" = "Offline — showing last known stats";
