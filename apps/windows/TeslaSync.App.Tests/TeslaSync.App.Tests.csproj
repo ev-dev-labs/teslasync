@@ -1298,6 +1298,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Model.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Source.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.ViewModel.cs" Link="FeatureViews\SavingsSlide\SavingsSlide.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.Model.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.Source.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.ViewModel.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Model.cs" Link="FeatureViews\SessionComparisonChart\SessionComparisonChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Source.cs" Link="FeatureViews\SessionComparisonChart\SessionComparisonChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.ViewModel.cs" Link="FeatureViews\SessionComparisonChart\SessionComparisonChart.ViewModel.cs" />
