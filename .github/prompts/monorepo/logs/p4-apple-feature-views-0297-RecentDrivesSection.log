@@ -1,0 +1,131 @@
+=== P4 Feature view 0297 RecentDrivesSection (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/RecentDrivesSection.*  (10 .swift + 1 .strings)
+Web src  : web/src/features/vehicles/components/vehicle-detail/RecentDrivesSection.tsx
+Host     : Darwin arm64 (Mac Studio) · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint + swiftformat + pwsh + xcodegen present
+Date     : 2026-06-10
+
+PLATFORM CAPABILITY — AVAILABLE (surface is NOT blocked on capability)
+  xcodebuild -version  -> Xcode 26.5 / Build 17F42
+  swift --version      -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+  swiftlint / swiftformat / pwsh / xcodegen -> all present
+  iOS 18 + macOS 15 SDKs present (deploymentTarget iOS 18.0 / macOS 15.0).
+
+----------------------------------------------------------------------------------------
+SCOPE — what shipped (parity with the web source)
+----------------------------------------------------------------------------------------
+  Header        : route glyph + "Recent Drives" + freshness chip + "View all" link (web Route + Heading + <Link to="/drives">).
+  Table columns : Date (formatDateTime), Distance (fmtNumber(convertDistanceFromSI(distance_m,unit))+unit, SORTABLE),
+                  Duration (durationStr(duration_s/60)), Battery (start% -> end% | em-dash).  web DataTable, compact, pagination.
+  Pagination    : client slice at the web DataTable default page size of 25 (prev/next + "Page X of Y").
+  States        : loading / empty ("No drives recorded yet") / error (retry) / content  + stale chip+banner / offline chip+banner
+                  + inline reload-error when cached rows survive a failed refresh.  Every state renders real chrome.
+  Bindings      : P1/S8 RecentDrivesSource state-holder seam (no HTTP in the view); P1/S9 tokens (Color.TS/Font.TS/TSSpacing/
+                  TSRadius) + TSGlassPanel + TSFadeIn; P1/S10 NSLocalizedString facade (table "RecentDrivesSection");
+                  P1/S11 view.opened telemetry (slug "RecentDrivesSection", once + idempotent).
+  i18n          : 7/7 web keys reproduced (common.date/distance/duration/battery/recentDrives/viewAll/noDrives) + native envelope.
+  a11y          : VoiceOver row labels (column:value pairs), sortable-header label+value, pagination + retry + view-all labels,
+                  section summary; reduce-motion honored via TSFadeIn.
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+----------------------------------------------------------------------------------------
+[1] swiftformat --lint  (RecentDrivesSection.* , 10 files)
+      0/10 files require formatting.
+      FORMAT_EXIT=0
+
+[2] swiftlint --strict  (RecentDrivesSection.* , 10 files)
+      Done linting! Found 0 violations, 0 serious in 10 files.
+      LINT_EXIT=0
+
+[3] placeholder gate  (apps/tools/check-placeholders.ps1, run per real surface file)
+      NOTE: the prompt's literal `-Path …/RecentDrivesSection` has no extension and matches no on-disk
+      path (the files are `RecentDrivesSection.*`); the script treats a non-existent path as a clean
+      no-op scan. To make the 0 MEANINGFUL it was run against each of the 10 real surface .swift files:
+      RecentDrivesSection.Adapter/Format/Model/ModelTests/Previews/Seams/States/.swift/Tests/Views ->
+      each PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0
+      PLACEHOLDER_COUNT_TOTAL=0
+      PLACEHOLDER_EXIT=0
+
+[4] isolated SwiftPM build + test  (pure+model+seams layer: Adapter/Format/Seams/Model + both test files,
+    Package swift-tools 6.0, .swiftLanguageMode(.v6) = Swift 6 strict concurrency)
+      swift build -> Build complete! (Foundation/Observation/OSLog only; 0 errors)
+      swift test  -> Executed 34 tests, with 0 failures (0 unexpected)
+      Suites: RecentDrivesUnitMathTests(8) RecentDrivesPhaseTests(3) RecentDrivesSortTests(4)
+              RecentDrivesPaginationTests(3) RecentDrivesDisplayTests(2) RecentDrivesAccessibilityTests(2)
+              RecentDrivesModelTests(12)
+      SPM_BUILD_EXIT=0  SPM_TEST_EXIT=0  (34/34)
+
+[5] dual-SDK swiftc -typecheck  (FULL surface incl. SwiftUI views, compiled against the REAL design system:
+    ../design/generated/apple/Tokens.swift + Sources/Components + Sources/Design, minus the SharedFacade-
+    coupled UnitFormatters.swift which the surface does not use; -swift-version 6)
+      macOS 15  (-target arm64-apple-macos15.0,           --sdk macosx)          -> 0 errors  MAC_TYPECHECK_EXIT=0
+      iOS 18    (-target arm64-apple-ios18.0-simulator,   --sdk iphonesimulator) -> 0 errors  IOS_TYPECHECK_EXIT=0
+
+[6] xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj
+      XCODEGEN_EXIT=0
+      project.pbxproj enumerates all 11 files (9 refs each = file-ref + build-files across iOS/macOS app +
+      iOS/macOS test bundles): RecentDrivesSection.{Adapter,Format,Model,ModelTests,Previews,Seams,States,
+      swift,Tests,Views}.swift + RecentDrivesSection.strings  (99 refs total).
+
+----------------------------------------------------------------------------------------
+[8] FULL-APP xcodebuild build test  (the prompt gate) — RED, DEFERRED (NOT a RecentDrivesSection failure)
+----------------------------------------------------------------------------------------
+  Attempted real build of the macOS app target (directly, to skip the Gradle scheme pre-action):
+    xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -configuration Debug CODE_SIGNING_ALLOWED=NO build
+    => ** BUILD FAILED **  XCODEBUILD_EXIT=65
+    The build fails at the FRAMEWORK-RESOLUTION phase, BEFORE any Swift source is compiled, with exactly ONE error:
+      error: There is no XCFramework found at
+             '…/apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync-macOS')
+    grep "error:" => 1 total ; grep "error:" | grep RecentDrivesSection => 0  (zero surface errors)
+
+  Concrete deferral causes on THIS host (pre-existing, unrelated to this surface):
+    • KMP Shared.xcframework NOT staged — apps/apple/Frameworks/ holds only `.gitkeep`. The iOS/macOS app
+      targets + test bundles depend on Frameworks/Shared.xcframework (project.yml) and Units+Facade.swift
+      `import Shared`; staging it requires the Kotlin/Native toolchain via Scripts/build-shared-xcframework.sh
+      (Gradle :core:assembleSharedXCFramework — the long-pole that times out under parallel-slot contention).
+    • macOS development-signing — `security find-identity -p codesigning` => 0 valid identities found.
+
+  Per apps/macos-pending-verifications.md this full-app gate is owned by
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner with the framework staged.
+    IOS_EXIT=DEFERRED (unstaged KMP Shared.xcframework + absent signing — pre-build, zero surface errors)
+    MAC_EXIT=DEFERRED (same; reproduced live this run, single error = missing Shared.xcframework)
+
+========================================================================================
+HONESTY COVENANT (binding)
+========================================================================================
+  1  No red-as-green     : the full-app xcodebuild gate [8] is reported RED and explicitly DEFERRED with the
+                           real one-line failure pasted above — never as passing.
+  2  No scope narrowing  : every web region (header, 4 columns + renderers, View-all link, empty state),
+                           all 7 source i18n keys, and loading/empty/error/content + stale/offline all render.
+  3  No skip-and-assume  : steps [1]-[6] AND the real xcodebuild attempt [8] executed on THIS runner; raw
+                           results pasted. The placeholder 0 was made meaningful by scanning the real files.
+  4  No stubs as final   : complete production surface + 34 real passing tests; placeholder scan = 0.
+  5  No parity shortcut  : SI distance math (km/mi/ft), durationStr split, Battery start%->end%/em-dash,
+                           sortable Distance, client pagination@25, freshness chip + banner, a11y labels,
+                           view.opened telemetry — all mapped + verified.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens + TSGlassPanel/TSFadeIn, P1/S10 i18n facade,
+                           P1/S11 telemetry consumed (no re-implementation).
+  8  No commit on red    : the COMMITTED artifact is GREEN on every host-runnable gate AND on a real isolated
+                           Swift 6 build + 34/34 tests + dual-SDK (iOS18 + macOS15) typecheck against the real
+                           design system; the deferred full-app gate is RED only on the pre-existing unstaged
+                           KMP framework + signing, with zero surface errors.
+  9  No silent drift     : changes confined to feature-views/RecentDrivesSection.* (11 files) + this log +
+                           one deferred row in apps/macos-pending-verifications.md.
+  10 EXIT / STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic RecentDrivesSection shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED on this host: it typechecks clean on both shipped SDKs (iOS 18 + macOS 15) against
+  the real generated design tokens + Sources/Components + Sources/Design, its 34 real tests pass under Swift 6
+  strict concurrency, and swiftlint --strict / swiftformat --lint / placeholder gate are all green with
+  xcodegen enumerating all 11 files. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED
+  (not failed by this code): a live run failed pre-compile with the single error "no XCFramework found at
+  Frameworks/Shared.xcframework" (the KMP Kotlin/Native artifact is unstaged) plus 0 macOS codesigning
+  identities — both owned by the P4/P99 acceptance gate on a signed macos-latest runner per
+  apps/macos-pending-verifications.md. This is the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE
