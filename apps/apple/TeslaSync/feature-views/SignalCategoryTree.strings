@@ -1,0 +1,66 @@
+/*
+  SignalCategoryTree.strings
+  TeslaSync — P4 feature view · 0265 · SignalCategoryTree (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SignalCategoryTree` resolves (table "SignalCategoryTree") lives here with its
+  web English value. These entries fold into the app `Localizable.xcstrings`
+  master catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The web `SignalCategoryTree` is an anonymous sub-component that passes raw string
+  props into the generic `TreeSelect` primitive (web/src/components/forms). The
+  first two blocks reproduce those user-facing strings (the search prompt, empty /
+  error messages, friendly category labels, and the TreeSelect chrome); the rest
+  backs the native-only states (error/retry, stale/offline banners, accessibility)
+  the web delegates to its host page.
+*/
+
+/* --- Web source strings (parity) --- */
+"telemetry.signalTree.aria.catalog" = "Signal catalog";
+"telemetry.signalTree.search.prompt" = "Search signals…";
+"telemetry.signalTree.empty.message" = "No signals available for this vehicle.";
+"telemetry.signalTree.error.catalogPrefix" = "Failed to load catalog";
+
+/* --- Friendly category labels (web CATEGORY_LABELS) --- */
+"telemetry.signalTree.category.charging" = "Charging";
+"telemetry.signalTree.category.driving" = "Driving";
+"telemetry.signalTree.category.climate" = "Climate";
+"telemetry.signalTree.category.location" = "Location";
+"telemetry.signalTree.category.powertrain" = "Powertrain";
+"telemetry.signalTree.category.vehicle_state" = "Vehicle State";
+"telemetry.signalTree.category.safety_security" = "Safety & Security";
+"telemetry.signalTree.category.media" = "Media";
+"telemetry.signalTree.category.config" = "Config";
+"telemetry.signalTree.category.prefs" = "Preferences";
+"telemetry.signalTree.category.setting_unit" = "Setting Units";
+"telemetry.signalTree.category.metadata" = "Metadata";
+
+/* --- TreeSelect chrome (web shared primitive) --- */
+"telemetry.signalTree.search.aria" = "Filter tree";
+"telemetry.signalTree.search.clear" = "Clear search";
+"telemetry.signalTree.selectAll" = "Select all";
+"telemetry.signalTree.clearAll" = "Clear all";
+"telemetry.signalTree.selectVisible" = "Select %lld visible";
+"telemetry.signalTree.clearVisible" = "Clear %lld visible";
+"telemetry.signalTree.selected" = "%lld selected";
+"telemetry.signalTree.selectedOfTotal" = "%1$lld selected of %2$lld";
+"telemetry.signalTree.clearAllSelected" = "Clear all selected";
+"telemetry.signalTree.noResults" = "No matches for “%@”.";
+"telemetry.signalTree.loading" = "Loading…";
+"telemetry.signalTree.group.aria" = "%1$@, %2$lld of %3$lld selected";
+"telemetry.signalTree.group.toggle" = "Toggle %@";
+
+/* --- Native chrome: error + actions --- */
+"telemetry.signalTree.error.title" = "Couldn't load signal catalog";
+"telemetry.signalTree.action.retry" = "Retry";
+
+/* --- Native chrome: connectivity banners --- */
+"telemetry.signalTree.banner.stale" = "Refreshing — catalog may be out of date";
+"telemetry.signalTree.banner.offline" = "Offline — showing cached catalog";
+
+/* --- Accessibility --- */
+"telemetry.signalTree.a11y.selected" = "selected";
+"telemetry.signalTree.a11y.notSelected" = "not selected";
+"telemetry.signalTree.a11y.kind" = "%@ value";
+"telemetry.signalTree.a11y.summary" = "%1$lld of %2$lld signals selected";
