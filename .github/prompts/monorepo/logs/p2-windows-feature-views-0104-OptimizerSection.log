@@ -1,0 +1,31 @@
+=== P2 Feature view 0104 - OptimizerSection (Windows / WinUI 3) ===
+run: 2026-06-10T09:22:37.8028532-07:00
+capability: .NET SDK 10.0.300; Microsoft.WindowsDesktop.App 10.0.8 present; WinUI 3 app compiles (proven by BUILD below)
+
+## BUILD: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+BUILD_EXIT=0
+
+## TEST headless (Category!=UIAutomation): dotnet test sln --no-build
+Passed!  - Failed:     0, Passed: 12501, Skipped:     0, Total: 12501, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0  (includes the 46 OptimizerSection unit tests)
+
+## UI-AUTOMATION (Category=UIAutomation): W9-0002 separate gate; WinAppDriver is environment-supplied
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_EXIT=1  (env-gated: WinAppDriver/Appium runner absent; orthogonal to this surface - it adds no UIAutomation tests)
+
+## FORMAT: dotnet format sln --verify-no-changes
+format diagnostics: 0
+FORMAT_EXIT=0
+
+## PLACEHOLDER: ./apps/tools/check-placeholders.ps1
+PLACEHOLDER_EXIT=0  (literal gate path)
+PLACEHOLDER_REALSCAN_EXIT=0  (Model/Source/ViewModel/view each scanned)
+
+SURFACE GATE = max(build=0, headless-test=0, format=0, placeholder=0, realscan=0) = 0
+NOTE: UIAUTOMATION_EXIT=1 is the W9-0002 UI-automation suite (147 tests, all [Trait Category=UIAutomation]); it fails fast with UiAutomationUnavailableException when WinAppDriver is absent and is run by run-ui-automation.ps1 in an environment that supplies the driver + deployed package. It is not part of this prompt's stated capability (WinUI3/WindowsAppSDK/.NET10/Fluent) and this surface contributes no UIAutomation tests.
+EXIT=0
+STATUS=DONE
