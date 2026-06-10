@@ -1,0 +1,54 @@
+/*
+  Drawer.strings
+  TeslaSync — P4 modal / dialog · 0013 · Drawer (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  Drawer resolves (table "Drawer") lives here with its English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the keys that back the two web literals from the source
+  (components/ui/Drawer.tsx): the `aria-label={title || 'Panel'}` fallback and
+  the close `aria-label="Close"`. The remainder backs the native state envelope
+  (loading / empty / error retry / freshness chip / connectivity banner), the
+  footer, and the VoiceOver builders. `{{count}}` is the interpolation marker the
+  projection substitutes with the row count.
+*/
+
+/* --- Web source literals (Drawer.tsx) --- */
+"drawer.panel" = "Panel";
+"drawer.close" = "Close";
+
+/* --- Dismiss affordance (scrim / VoiceOver escape) --- */
+"drawer.dismiss" = "Dismiss";
+
+/* --- Footer (row-count summary + Done) --- */
+"drawer.summary.countOne" = "{{count}} item";
+"drawer.summary.countOther" = "{{count}} items";
+"drawer.done" = "Done";
+
+/* --- Loading (skeleton) --- */
+"drawer.loading" = "Loading…";
+
+/* --- Empty (no rows) --- */
+"drawer.empty.default" = "Nothing to show here yet";
+
+/* --- Error + retry (web QueryError) --- */
+"drawer.error.title" = "Couldn't load this panel.";
+"drawer.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"drawer.live" = "Live";
+"drawer.stale" = "Stale";
+"drawer.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"drawer.staleBanner" = "Reconnecting — showing the last loaded data";
+"drawer.offlineBanner" = "Offline — showing cached data";
+
+/* --- VoiceOver summaries --- */
+"drawer.a11y.loading" = "Loading content";
+"drawer.a11y.empty" = "No content";
+"drawer.a11y.error" = "Failed to load content";
+"drawer.a11y.content" = "Content loaded";
