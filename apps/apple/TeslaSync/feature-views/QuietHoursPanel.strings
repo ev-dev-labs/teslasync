@@ -1,0 +1,98 @@
+/*
+  QuietHoursPanel.strings
+  TeslaSync — P4 feature view · 0210 · QuietHoursPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  QuietHoursPanel resolves (table "QuietHoursPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first groups are the exact keys extracted from the web source
+  (features/settings/components/QuietHoursPanel.tsx, including the `toast.quietHours.*`
+  and `quietHours.error.*` keys). The remainder back the native state envelope
+  (freshness chip, connectivity banner, error retry, toast dismiss) and the localized
+  next-change schedule labels (the web hard-coded those literals; the native port routes
+  them through the catalog).
+*/
+
+/* --- Header (web IconBox + Heading + HelperText) --- */
+"quietHours.title" = "Quiet hours / Do-Not-Disturb";
+"quietHours.subtitle" = "Defer non-critical notifications during sleep, meetings, or other time-of-day windows.";
+"quietHours.addWindow" = "Add window";
+
+/* --- Loading + empty (web Spinner row / `<EmptyState>`) --- */
+"quietHours.loading" = "Loading quiet-hours windows…";
+"quietHours.empty" = "No quiet-hours windows yet. Add one to defer non-critical notifications during sleep or meetings.";
+
+/* --- Row (web `<li>`: badge, actions, bypass label) --- */
+"quietHours.enabled" = "Enabled";
+"quietHours.disabled" = "Disabled";
+"quietHours.edit" = "Edit";
+"quietHours.delete" = "Delete";
+"quietHours.bypassLabel" = "Always allow:";
+
+/* --- Severity choices (web `SEVERITY_CHOICES`) --- */
+"quietHours.severity.critical" = "Critical";
+"quietHours.severity.warn" = "Warning";
+"quietHours.severity.info" = "Info";
+
+/* --- Weekdays (web `WEEKDAYS`) --- */
+"quietHours.weekday.sun" = "Sun";
+"quietHours.weekday.mon" = "Mon";
+"quietHours.weekday.tue" = "Tue";
+"quietHours.weekday.wed" = "Wed";
+"quietHours.weekday.thu" = "Thu";
+"quietHours.weekday.fri" = "Fri";
+"quietHours.weekday.sat" = "Sat";
+
+/* --- Form (web `{draft && (...)}` block) --- */
+"quietHours.form.editTitle" = "Edit window";
+"quietHours.form.addTitle" = "New quiet-hours window";
+"quietHours.form.enabled" = "Enabled";
+"quietHours.form.start" = "Start";
+"quietHours.form.end" = "End";
+"quietHours.form.timezone" = "Timezone (IANA)";
+"quietHours.form.weekdays" = "Weekdays";
+"quietHours.form.bypass" = "Always allow these severities through";
+"quietHours.form.cancel" = "Cancel";
+"quietHours.form.update" = "Update";
+"quietHours.form.create" = "Create";
+
+/* --- Validation errors (web `validateDraft` message map) --- */
+"quietHours.error.startInvalid" = "Start must be HH:MM (24-hour).";
+"quietHours.error.endEqual" = "End must differ from start.";
+"quietHours.error.endInvalid" = "End must be HH:MM (24-hour).";
+"quietHours.error.timezoneRequired" = "Timezone is required.";
+"quietHours.error.weekdaysRequired" = "Pick at least one weekday.";
+"quietHours.error.bypassRequired" = "Pick at least one severity.";
+
+/* --- Toasts (web `useToast` after save / delete) --- */
+"toast.quietHours.updated" = "Quiet hours window updated";
+"toast.quietHours.created" = "Quiet hours window created";
+"toast.quietHours.saveError" = "Failed to save quiet hours window";
+"toast.quietHours.deleted" = "Quiet hours window removed";
+"toast.quietHours.deleteError" = "Failed to delete quiet hours window";
+
+/* --- Next-change schedule labels (web exported `nextWindowChangeLabel`) --- */
+"quietHours.next.endsAt" = "ends at %@";
+"quietHours.next.endsTomorrow" = "ends tomorrow at %@";
+"quietHours.next.startsAt" = "starts at %@";
+"quietHours.next.startsTomorrow" = "starts tomorrow at %@";
+
+/* --- Error-state retry + inline error (prompt-required error envelope) --- */
+"quietHours.errors.load" = "Failed to load quiet-hours windows.";
+"quietHours.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"quietHours.live" = "Live";
+"quietHours.stale" = "Stale";
+"quietHours.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"quietHours.staleBanner" = "Reconnecting — this list may be out of date";
+"quietHours.offlineBanner" = "Offline — showing the last loaded windows";
+
+/* --- Toast dismiss --- */
+"quietHours.toast.dismiss" = "Dismiss";
