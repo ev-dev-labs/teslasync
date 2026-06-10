@@ -1,0 +1,106 @@
+=== P2 Feature view 0033 XRayControls (Windows) ===
+Artifact: apps/windows/TeslaSync.App/feature-views/XRayControls.*
+Web source (spec): web/src/features/admin/components/ingest-xray/XRayControls.tsx
+Honesty Covenant: observed (no red-as-green; pre-existing blockers + capability gap disclosed verbatim below).
+
+--- CAPABILITY CHECK ---
+.NET SDK            : 10.0.300 (PRESENT)
+WinUI 3 / WindowsAppSDK : Microsoft.WindowsAppSDK 2.1.x, App TFM net10.0-windows10.0.19041.0 (PRESENT — App builds)
+Fluent Design       : Segoe Fluent glyphs + token brushes (PRESENT)
+UI-automation runner: WinAppDriver / Appium ABSENT — nothing listening on http://127.0.0.1:4723/ and
+                      WinAppDriver.exe not on PATH or standard install paths (see TEST step). This is the
+                      ONLY capability gap; the WinUI 3 + .NET 10 BUILD capability this prompt requires IS present.
+
+--- DELIVERABLE ---
+apps/windows/TeslaSync.App/feature-views/XRayControls/XRayControls.Model.cs   (WinUI-free model/projection/diagnostics/registration)
+apps/windows/TeslaSync.App/feature-views/XRayControls/XRayControls.cs         (WinUI 3 view: 3 TsSelect + status affordances + typed change events)
+apps/windows/TeslaSync.App.Tests/FeatureViews/XRayControlsTests.cs            (50 headless tests: projection/states/parity/a11y/i18n/diagnostics)
+
+Parity with the web source:
+  * Vehicle picker: "Select vehicle…" prompt + one option per vehicle, label = display_name || vin || "Vehicle {id}".
+  * Window selector: 5m/15m/1h/6h/24h.
+  * Bucket selector: 30s/1m/5m/15m/1h, each auto-disabled when BUCKET_SECS[b] >= WINDOW_SECS[windowSel]
+    (the web guard against the server-side "bucket >= window" 400). Verified for every window (see tests).
+  * Change callbacks onVehicleChange/onWindowChange/onBucketChange -> typed VehicleChanged/WindowChanged/BucketChanged events.
+  * i18n keys from source (admin.xray.controls.selectVehicle/vehicleAria/windowAria/bucketAria) resolve through
+    the P1/S10 catalog (present as translation.admin.xray.controls.* in apps/windows/Strings/en/Resources.resw +
+    apps/shared/i18n/catalog/en.json). Dynamic windowOption.{w}/bucketOption.{b} mirror the web's inline-fallback
+    behaviour (label falls back to the raw wire literal, exactly as the web t(`...`, w) call does).
+States rendered (superset of the web pure-presentational source, grounded in the parent useVehicles() lifecycle):
+  loading / ready / empty / stale / offline / error — every one renders; window + bucket stay interactive throughout.
+Accessibility: Narrator name on each selector + the surface, polite live-region hint, retry affordance named.
+Telemetry: view.opened slug=XRayControls (P1/S11), PII-safe (no vehicle id / window / bucket emitted).
+
+--- ENVIRONMENT PREP (pre-existing infra; not the XRayControls surface) ---
+P0. apps/windows/Generated (OpenAPI C# client) was ABSENT (gitignored, regenerated artifact). Materialised via the
+    repo's own generator: `npx tsx@4.22.4 apps/tools/codegen/gen-clients.ts` (10 C# files -> Generated/Api/*.cs) plus
+    a Generated.csproj wrapper modelled on apps/tools/codegen/verify/csharp/Verify.csproj. Without it Core/App/Tests
+    fail with CS0234 (TeslaSync.Windows.Generated.Api missing). Not committed (path is gitignored).
+P1. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was CORRUPT — two concatenated <Project> roots +
+    broken/unterminated XML comments containing literal <Compile> text (MSB4025; the project would not load, so
+    `dotnet test` could never compile). Regenerated as ONE valid root: the path-sorted, deduplicated union of all 561
+    previously-linked WinUI-free sources (0 missing on disk) + the new XRayControls.Model.cs link = 562 Compile items.
+
+--- PRE-EXISTING COMPILE BLOCKERS REPAIRED (unrelated surfaces; sanctioned by sibling precedent 0184/0185/0208) ---
+Repairing the Tests csproj revealed two pre-existing, integration-merge compile errors that block the WHOLE Windows
+app (32 CS errors -> 162 cascading XAML WMC errors). None are in XRayControls. Both are "unambiguous and minimal"
+(the same class of breakage prior prompts in this family fixed for BUILD_EXIT=0 — see
+.github/prompts/monorepo/logs/p2-windows-feature-views-0184-LegacyAlertRulesRedirect.log):
+  B1. enum DrivetrainHealth { Good, Warning, Critical } (namespace TeslaSync.App.FeatureViews) had been deleted from
+      BOTH HealthOverview.Model.cs and HealthRecommendations.Model.cs in a merge where each side documented it as
+      "defined in the OTHER file" -> defined NOWHERE -> CS0246/CS0103. Restored the canonical definition in
+      HealthOverview.Model.cs (members pinned by GlowFor: Good->Green, Warning->Cyan, Critical->Purple).
+  B2. class AiUsageResultMapper collided between AIUsageCard.Model.cs (-> RepositoryResult<AiUsageToday>) and
+      AISettings.Model.cs (-> RepositoryResult<AiUsageTodaySnapshot>) — two DIFFERENT mappers, same name, same
+      namespace -> CS0101/CS0111. Renamed AISettings's to AiUsageSnapshotResultMapper (matching its return type) and
+      updated its single caller (AISettings.Source.cs). AIUsageCard keeps the name (its Model + Source + 5 tests
+      stay valid). No behaviour change.
+
+--- GATE (apps/windows/TeslaSync.sln, Release) ---
+check-placeholders (apps/windows/TeslaSync.App/feature-views/XRayControls):
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+dotnet build apps/windows/TeslaSync.sln -c Release:
+  TeslaSync.Windows.Generated -> ok ; TeslaSync.App.Core -> ok ; TeslaSync.App.Platform -> ok ;
+  TeslaSync.App -> ok ; TeslaSync.App.Tests -> ok ; TeslaSync.App.UITests -> ok ; TeslaSync.TokenGen -> ok
+  0 Error(s) (17 pre-existing CA-suggestion warnings in Core/Generated, which do not set TreatWarningsAsErrors;
+  TeslaSync.App DOES set TreatWarningsAsErrors and built with 0 Warning(s)/0 Error(s)).
+BUILD_EXIT=0
+
+dotnet test apps/windows/TeslaSync.sln -c Release:
+  TeslaSync.App.Tests.dll (headless)   : Passed! - Failed: 0, Passed: 11887, Skipped: 0  (incl. 50 new XRayControls tests)
+  TeslaSync.App.UITests.dll (E2E)      : Failed! - Failed: 147, Passed: 0
+     Every failure is TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException:
+       "UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+        http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH."
+     0 of these 147 tests belong to XRayControls (they are ShellNavigation / chrome E2E specs gated on the absent
+     UI-automation runner). Per apps/windows/run-ui-automation.ps1 this absent runner is a BLOCKED capability,
+     never reported as green.
+TEST_EXIT=1   (solely the environment-gated UIAutomation E2E suite; the headless suite is fully green)
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes:
+  (no changes required)
+FORMAT_EXIT=0
+
+--- INDEPENDENT SURFACE VERIFICATION ---
+Isolated headless compile+run of XRayControls.Model.cs + XRayControlsTests.cs against the real TeslaSync.App.Core:
+  Passed! - Failed: 0, Passed: 50, Skipped: 0
+WinUI App build (TeslaSync.App, TreatWarningsAsErrors=true) including XRayControls.cs (the view): 0 Warning(s), 0 Error(s).
+=> The XRayControls surface is complete and fully verified: it builds in the WinUI app and all 50 of its headless
+   tests pass; the surface contributes ZERO failures to the gate.
+
+--- ACCEPTANCE ---
+[x] Surface renders all web-source states (+ a documented superset) — every branch asserted headlessly.
+[x] No direct HTTP from the view; data flows through the model/projection (controlled-component, web parity).
+[x] Every source i18n key has a matching P1/S10 catalog key (translation.admin.xray.controls.*).
+[x] Accessibility names on every interactive element + the surface; polite live region.
+[x] Tests: adapter/projection unit tests + per-state assertions + a11y-name + diagnostics (50 tests, all green).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[~] EXIT/STATUS: build + headless tests + format + placeholders all green; whole-solution `dotnet test` is EXIT=1
+    SOLELY because the UIAutomation E2E runner (WinAppDriver/Appium) is absent on this runner — a platform-capability
+    gap, with evidence above and 0 affected tests belonging to this surface.
+
+EXIT=1
+STATUS=BLOCKED
