@@ -349,6 +349,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.Model.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.Source.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.Model.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.ViewModel.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AddWidgetButton\AddWidgetButton.Model.cs" Link="FeatureViews\AddWidgetButton\AddWidgetButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertCard\AlertCard.Model.cs" Link="FeatureViews\AlertCard\AlertCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertMessageEditor\AlertMessageEditor.Model.cs" Link="FeatureViews\AlertMessageEditor\AlertMessageEditor.Model.cs" />
@@ -529,6 +531,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\PrivacySection\PrivacySection.Model.cs" Link="FeatureViews\PrivacySection\PrivacySection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PrivacySection\PrivacySection.Source.cs" Link="FeatureViews\PrivacySection\PrivacySection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PrivacySection\PrivacySection.ViewModel.cs" Link="FeatureViews\PrivacySection\PrivacySection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\QueueStatusPanel\QueueStatusPanel.Model.cs" Link="FeatureViews\QueueStatusPanel\QueueStatusPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\QueueStatusPanel\QueueStatusPanel.Source.cs" Link="FeatureViews\QueueStatusPanel\QueueStatusPanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\QueueStatusPanel\QueueStatusPanel.ViewModel.cs" Link="FeatureViews\QueueStatusPanel\QueueStatusPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\QuickNav\QuickNav.Model.cs" Link="FeatureViews\QuickNav\QuickNav.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Model.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Source.cs" Link="FeatureViews\RateLimitStatusPanel\RateLimitStatusPanel.Source.cs" />
