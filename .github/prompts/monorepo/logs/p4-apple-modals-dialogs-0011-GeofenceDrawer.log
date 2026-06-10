@@ -1,0 +1,287 @@
+=== P4 Modal / dialog 0011 GeofenceDrawer (Apple) ===
+Date          : 2026-06-10
+Runner        : Darwin (arm64), macOS 26.x (Mac Studio)
+Toolchain     : Xcode 26.5 (Build 17F42); Swift 6.3.2; swiftlint 0.63.3;
+                swiftformat 0.61.1; pwsh 7.6.2; xcodegen 2.45.4; OpenJDK 17.0.19;
+                Kotlin/Native 2.4.0 prebuilt cached (~/.konan). xcode-select ->
+                /Applications/Xcode.app/Contents/Developer (DEVELOPER_DIR set on
+                every xcrun/xcodebuild invocation for determinism).
+Web source    : web/src/components/maps/GeofenceDrawer.tsx   (THE spec)
+Native output : apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.*
+
+CAPABILITY (prompt: "requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 /
+macOS 15 HIG; if unavailable on the runner -> STATUS=BLOCKED with API evidence")
+  AVAILABLE — this is NOT a BLOCKED runner:
+    • xcodebuild -version           -> Xcode 26.5 (Build 17F42)
+    • xcrun --sdk iphonesimulator   -> 26.5   (SwiftUI + MapKit ship in the SDK)
+    • xcrun --sdk macosx            -> 26.5
+    • xcrun simctl list devices     -> iPhone 17 / 17 Pro / 17 Pro Max / 17e / Air
+  The web source uses Leaflet (no Recharts), so the native surface is SwiftUI +
+  MapKit (Leaflet -> MapKit per the prompt); no Swift Charts is needed. The surface
+  compiles + tests green on BOTH the iOS-simulator and macOS SDKs under Swift 6
+  strict concurrency. STATUS is therefore DONE, with the full-app integration build
+  DEFERRED on pre-existing, out-of-allowed-files baseline blockers (raw evidence
+  below) — never reported as passing.
+
+------------------------------------------------------------------------------------
+WHAT WAS BUILT (13 files — a complete, decomposed modal-surface bundle, the established
+P4 convention; cf. modals-dialogs/0002 AddAnnotationPopover, 0005 JobProgressDrawer)
+------------------------------------------------------------------------------------
+  GeofenceDrawer.Adapter.swift        (337) pure core (Foundation only): surface slug;
+                                       LoadStatus / Connection; GeofenceDrawerMode
+                                       (circle/polygon/rectangle, order, default
+                                       ['circle']); GeofencePoint; GeofenceItem
+                                       (DrawableGeofence); NewGeofence; GeofenceRenderKind;
+                                       GeofenceGeometry.renderKind (the fenceToLayer
+                                       decision, circle-wins), .circle/.rectangleRing/
+                                       .rectangle/.polygon/.corners (layerToGeometry);
+                                       GeofenceFormat.fixed (toFixed); GeofenceDraft (the
+                                       interactive draw reducer).
+  GeofenceDrawer.Projection.swift     (145) phase resolve (loading/empty/error/content) +
+                                       GeofenceDescribe.text (describeFence port) +
+                                       renderable filtering + describe rows + cameraPoints +
+                                       modes fallback.
+  GeofenceDrawer.Seams.swift          (223) P1/S11 telemetry; create/edit/delete control
+                                       seam (web onCreate/onEdit/onDelete); coalesced
+                                       update; P1/S8 source protocol + InMemory source;
+                                       P1/S10 i18n facade; VoiceOver builders (summary /
+                                       mode / draft hint).
+  GeofenceDrawer.Model.swift          (242) @MainActor @Observable holder: bind + resolve,
+                                       view.opened once, draw commands (selectMode/addPoint/
+                                       setRadius/undo/clear/commit), beginEdit/focus/delete,
+                                       stale one-shot auto-refresh, inline error.
+  GeofenceDrawer.States.swift         (185) loading / friendly empty (ContentUnavailableView)
+                                       / error+retry / inline reload error / freshness chip /
+                                       connectivity banner — every state renders real chrome.
+  GeofenceDrawer.Map.swift            (186) MapKit canvas: circle + polygon overlays
+                                       (fenceToLayer peer), live dashed draft preview, tap ->
+                                       coordinate via MapReader + MapProxy.convert (the
+                                       draw-click), camera fit/focus — the Leaflet -> MapKit
+                                       port.
+  GeofenceDrawer.Views.swift          (272) header (title + freshness + Done), draw toolbar
+                                       (mode chips + radius slider + live hint + Undo/Cancel/
+                                       Add-or-Save), saved-fences list (describeFence rows w/
+                                       focus/edit/delete), field label + .text helper.
+  GeofenceDrawer.swift                 (83) modal scaffold (TSGlassPanel + TSFadeIn + .isModal)
+                                       switching over the resolved phase; map + toolbar stay
+                                       live through empty + content.
+  GeofenceDrawer.Previews.swift        (87) #Preview gallery: content / empty / loading /
+                                       error / stale / offline.
+  GeofenceDrawer.Tests.swift          (239) adapter/geometry/format/draft-reducer (XCTest).
+  GeofenceDrawer.ProjectionTests.swift(203) describe/phase/renderables/rows/camera/modes +
+                                       accessibility + slug (XCTest).
+  GeofenceDrawer.ModelTests.swift     (235) state holder: telemetry-once, phase transitions,
+                                       create/edit/delete forwarding, stale/offline freshness.
+  GeofenceDrawer.strings               (78) P1/S10 catalog (table "GeofenceDrawer").
+
+  Total 2515 lines; every file <= 337 (swiftlint file_length 400 strict). Max code line
+  118 (line_length 120 strict). All public symbols are Geofence*-namespaced and were
+  collision-checked against Sources/ + the sibling tiers before authoring (grep: 0 matches
+  for GeofenceMode/NewGeofence/GeofenceItem/GeofenceGeometry/GeofenceDraft/GeofencePoint/
+  GeoPoint/RenderableFence/describeFence/GeofenceDrawerModel/...). The shared atomic
+  TSGeofenceDrawer (Sources/Components/Maps) is OUT of scope (the P4 component-library
+  bundle); this surface's top-level View is `GeofenceDrawer`, no collision.
+
+------------------------------------------------------------------------------------
+PARITY (web GeofenceDrawer.tsx -> native), no scope narrowing
+------------------------------------------------------------------------------------
+  • Data: web `useMap()` is react-leaflet's parent-map handle (NOT an HTTP hook) — the
+    component is a passive draw controller over the map's persisted `fences`. Native binds
+    those fences + the allowed modes + the map focus + freshness through the P1/S8
+    GeofenceDrawerSource seam (production wraps the shared map holder); no HTTP in the view.
+  • Render decision: web `fenceToLayer` (circle when lat/lng/radius present AND radius>0;
+    polygon when ring>=3; else nothing) -> GeofenceGeometry.renderKind, incl. circle-wins-
+    when-both, unit-asserted.
+  • Geometry: web `layerToGeometry` circle/rectangle/polygon ported; the rectangle bounds ->
+    4-corner ring [sw,(ne.lat,sw.lng),ne,(sw.lat,ne.lng)] pinned verbatim by a test; corners
+    normalised to sw/ne (getSouthWest/getNorthEast).
+  • describeFence: "{name} — {radius.toFixed(0)}m circle around {lat.toFixed(4)},
+    {lng.toFixed(4)}" / "{name} — {N}-vertex polygon" / name; default name "Geofence";
+    locale-independent toFixed (en_US_POSIX). The web's only user-facing prose is promoted
+    to P1/S10 keys. NB the circle branch guards on radius PRESENCE (not >0) — distinct from
+    renderKind — pinned by testCircleDescriptionUsesPresenceNotPositiveRadius.
+  • Draw modes: web `GeofenceMode` ('circle'|'polygon'|'rectangle', default ['circle'])
+    reproduced; the leaflet-draw click/edit/delete handlers become the GeofenceDraft reducer
+    (tap -> point, slider -> radius, commit -> NewGeofence) + the model onCreate/onEdit/
+    onDelete seam.
+  • Leaf-state widening: the web controller renders no loading/empty/error of its own; the
+    Apple modal-surface contract adds them (loading / friendly empty / retryable error) PLUS
+    the stale+offline freshness axis. The map + toolbar stay LIVE through the empty + content
+    phases so the first fence is always drawable (documented enhancement, NOT silent drift).
+  • Charts/maps: web Leaflet -> MapKit (Map / MapCircle / MapPolygon / MapPolyline /
+    MapReader); NO Recharts in the source, so no Swift Charts.
+  • Tailwind classes were NOT ported; chrome is P1/S9 tokens (TSSpacing/TSRadius/Color.TS/
+    Font.TS) via the shared TSGlassPanel / TSFadeIn / TSButton.
+
+------------------------------------------------------------------------------------
+STATES (every state renders — no hidden surfaces)
+------------------------------------------------------------------------------------
+  loading  -> GeofenceLoadingState (spinner + "Loading geofences…").
+  empty    -> GeofenceEmptyState (ContentUnavailableView "No geofences yet" + hint) beneath
+              a LIVE map + toolbar, so the first fence is drawable.
+  error    -> GeofenceErrorState (panel + Retry -> model.refresh()), never a blank box.
+  stale    -> freshness chip "Stale" + connectivity banner + ONE guarded auto-refresh.
+  offline  -> freshness chip "Offline" + banner; cached snapshot kept; no refetch.
+  content  -> live map + draw toolbar + saved-fences list (+ inline reload error if a refresh
+              failed while a cached snapshot remains).
+  Telemetry: model.start() emits P1/S11 view.opened surface="GeofenceDrawer" (once,
+  idempotent — ModelTests proven).
+
+------------------------------------------------------------------------------------
+GATES — runnable on THIS runner (raw exits pasted)
+------------------------------------------------------------------------------------
+[1] swiftformat --lint (the 12 swift files, config apps/apple/.swiftformat)
+      "0/12 files require formatting."                                  MY_FORMAT_EXIT=0
+
+[2] swiftlint lint --strict --no-cache --config apps/apple/.swiftlint.yml (the 12 files)
+      "Done linting! Found 0 violations, 0 serious in 12 files."        MY_LINT_EXIT=0
+    NB: the gate's `.swiftlint.yml` `included:` list does not yet enumerate `modals-dialogs`
+    (integration-owned, like the test-target membership) — so the gate as written would not
+    lint these files at all; I linted them explicitly to prove they are clean.
+
+[3] ./apps/tools/check-placeholders.ps1 (REAL scan of the surface files)
+      Real directory scan (-Path <copy of the 13 GeofenceDrawer.* files> -Language swift):
+      "PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0"            PLACEHOLDER_EXIT=0
+      No opt-outs needed (the web source has no i18n keys / no "Placeholder"-named keys).
+      Positive control: a "// TODO" probe in that dir -> COUNT=1 / EXIT=1 (caught), proving
+      the files were actually scanned. ./check-placeholders.ps1 -SelfTest -> all PASS.
+      (The prompt's literal `-Path .../GeofenceDrawer` is a filename PREFIX that Test-Path
+       does not resolve to a directory, so the script's "nothing to scan" branch returns 0
+       vacuously; the real DIRECTORY scan above is the genuine result.)
+
+[4] swift test (isolated SwiftPM package: the SwiftUI-free core Adapter+Projection+Seams+
+    Model as the `TeslaSync` library target, the 3 XCTest files as the test target, Swift 6
+    language mode + strict concurrency)
+      "Executed 65 tests, with 0 failures (0 unexpected)"              SWIFT_TEST_EXIT=0
+
+[5] iOS-simulator SDK typecheck — the FULL view layer + the real (Shared-free) design system
+    (Tokens.swift + TSDesign + TSMaterial + Motion + Buttons/Cards/Typography/Badges +
+    Maps/GeoHelpers) + the 9 non-test surface files (incl. the #Preview macro),
+    -swift-version 6 -strict-concurrency=complete -target arm64-apple-ios18.0-simulator
+    -D DEBUG                                                           IOS_TYPECHECK_EXIT=0
+
+[6] macOS SDK typecheck — same set, -target arm64-apple-macos15.0      MAC_TYPECHECK_EXIT=0
+
+  => The surface compiles on BOTH shipping SDKs (ADR-002 dual-platform) against the REAL
+     generated design tokens + shared components, the #Preview macro expands under Xcode 26.5,
+     and all 65 XCTests execute green under Swift 6 strict concurrency. Independently verified.
+
+------------------------------------------------------------------------------------
+GATE — full-app xcodebuild (the prompt's two steps; run verbatim on THIS runner)
+------------------------------------------------------------------------------------
+  Pre-req confirmed: `xcodegen generate` succeeds; grep of the generated pbxproj ->
+  modals-dialogs = 0, GeofenceDrawer = 0, feature-views = 3. The new modals-dialogs tier is
+  NOT yet globbed in project.yml `sources` (nor in `.swiftlint.yml` `included`, nor the
+  XCTest target) — all integration-owned files OUTSIDE this prompt's allowed set
+  (GeofenceDrawer.* + this log). So the full-app build neither includes nor is affected by
+  this surface's files; the P4 acceptance / integration gate wires the group in.
+
+  [7] iOS : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17'
+            build test
+        > scheme pre-action Scripts/build-shared-xcframework.sh assembled the KMP
+          Shared.xcframework via Gradle (Kotlin/Native 2.4.0 FROM-CACHE):
+          "xcframework successfully written out to .../XCFrameworks/debug/Shared.xcframework".
+          (Frameworks/ held only `.gitkeep` at HEAD; the framework is a gitignored build
+          artifact — .gitignore:379 apps/apple/**/*.xcodeproj/, plus Frameworks/*.xcframework.)
+        > the app/test compile then FAILED with 108 ": error:" lines — ALL in PRE-EXISTING,
+          unrelated SIBLING surfaces, NONE in this surface:
+            feature-views/StateTimeline.*  +  dashboard-widgets/StateTimelineWidget.*
+            declare the SAME public types (StateTimelineModel / StateTimelineUpdate /
+            StateTimelineConnection / StateTimelineLoadStatus) => "X is ambiguous for type
+            lookup" parallel-merge duplicate-type collisions. git status: both sibling files
+            are unmodified at HEAD; not mine.
+        > grep "GeofenceDrawer" of the raw log = 0 errors.            IOS_EXIT=65 (DEFERRED)
+
+  [8] macOS: xcodebuild -scheme TeslaSync-macOS build test
+        > FAILED with 4 ": error:" lines, ALL development code-signing — no signing identity
+          on this runner (DEVELOPMENT_TEAM=""):
+            "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require
+            signing with a development certificate.
+        > grep "GeofenceDrawer" of the raw log = 0 errors.            MAC_EXIT=65 (DEFERRED)
+
+  Reading: both full-app steps exit 65 NOT on any GeofenceDrawer code, but on (iOS)
+  pre-existing parallel-merge duplicate-type collisions in unrelated sibling StateTimeline*
+  surfaces and (macOS) development-signing — both owned by the p4-apple/P99 acceptance gate on
+  a signed macos-latest runner per apps/macos-pending-verifications.md. This surface adds 0
+  errors to the full-app build and is not even compiled by it (0 pbxproj references).
+
+------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------
+  1  No red-as-green   : the two full-app xcodebuild steps are reported RED (IOS_EXIT=65 /
+                         MAC_EXIT=65) and explicitly DEFERRED with raw evidence — never claimed
+                         passing. [1]-[6] are real GREEN exits on THIS runner. My 12 files are
+                         0/0 on format + lint.
+  2  No scope narrowing: every web region + branch reproduced — the fenceToLayer render
+                         decision, the layerToGeometry circle/rectangle/polygon constructors,
+                         describeFence (incl. the radius-presence circle guard), the three draw
+                         modes + create/edit/delete; all leaf states render + the freshness axis.
+  3  No skip-and-assume: web source read end-to-end; every runnable gate executed on THIS
+                         runner with raw exits pasted; the iOS/macOS failures confirmed by
+                         reading the raw logs (108 StateTimeline* collisions / 4 signing), not
+                         assumed; the KMP framework actually built + staged.
+  4  No stubs as final : complete production surface; placeholder scanner COUNT=0 on a REAL
+                         scan (+ positive control + self-test); 65 real tests pass; no
+                         TODO/stub/mock/Placeholder/Lorem.
+  5  No parity shortcut: geometry math, render decision, describe string, draw reducer, tint /
+                         typography / a11y / telemetry all mapped to platform seams + tokens and
+                         unit-asserted; the SwiftUI layer typechecks against the REAL design
+                         system on BOTH SDKs.
+  6  No delegation     : authored directly (delegation FORBIDDEN; none used).
+  7  No predecessor bypass: consumes the P1/S8 source seam, P1/S9 tokens, P1/S10 i18n facade,
+                         P1/S11 view.opened, and the P4-core shared TSGlassPanel/TSFadeIn/TSButton
+                         + the MapKit shared map idioms; did NOT edit project.yml /
+                         .swiftlint.yml / Localizable.xcstrings / macos-pending-verifications.md
+                         (parallel-unsafe + outside the prompt's commit scope) — strings ship as
+                         the per-surface table; tier registration is the acceptance gate's.
+  8  No commit on red  : the committed artifact (GeofenceDrawer.* + this log) is GREEN on every
+                         gate scoped to it (format/lint/placeholder/dual-SDK typecheck + 65
+                         tests). The only non-green steps are the environment-blocked full-app
+                         xcodebuild build/test, RED solely on pre-existing, unrelated sibling
+                         StateTimeline* duplicate-type collisions + macOS signing — which this
+                         commit neither introduces nor touches (0 errors in its files, 0 pbxproj
+                         references).
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/modals-dialogs/GeofenceDrawer.*
+                         and this log (the generated TeslaSync.xcodeproj + the staged
+                         Frameworks/Shared.xcframework + apps/shared build output are gitignored
+                         and were removed/untouched; git status shows only the 13 new files).
+                         The leaf-state widening over the passive web controller is documented
+                         here + in code.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+------------------------------------------------------------------------------------
+ACCEPTANCE
+------------------------------------------------------------------------------------
+  [x] Surface renders all states reproduced + widened per the Apple modal contract:
+      loading / empty / error / content, with stale + offline freshness — never blank; the
+      map + draw toolbar stay live so the first fence is always drawable.
+  [x] Hooks bind to the shared P1/S8 state-holder seam (GeofenceDrawerSource); no HTTP in view.
+  [x] Every i18n key resolves through the P1/S10 catalog (GeofenceDrawer.strings); no English
+      literal in code (bidirectional key parity verified — 35 code literals all defined; the 3
+      mode keys are built via mode.labelKey at runtime).
+  [x] Accessibility: .isModal root trait + Done dismissal; per-fence describeFence VoiceOver
+      label + focus hint; edit/delete/undo/cancel/add/mode all carry labels; the radius Slider
+      exposes a value; the map canvas is labelled + carries the draw hint; decorative glyphs
+      hidden.
+  [x] Tests: adapter/geometry/format/draft + projection/describe/rows/modes/a11y + state-holder/
+      telemetry/create-edit-delete — 65/65 executed green (isolated SwiftPM, real tokens, Swift 6).
+  [x] No TODO/stub/mock/Placeholder/Lorem (placeholder gate COUNT=0, real scan + positive control).
+  [x] Host-runnable gates green on iOS-sim AND macOS SDKs under Swift 6 strict concurrency;
+      full-app xcodebuild build/test DEFERRED to the integration runner for pre-existing,
+      out-of-scope baseline reasons (StateTimeline* collisions + macOS signing; evidence above).
+
+DISPOSITION
+  Production-polished, Apple-idiomatic GeofenceDrawer modal shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED on this runner: the SwiftUI-free core + state holder build
+  and 65/65 tests pass under Swift 6 strict concurrency, the entire SwiftUI + MapKit view layer
+  typechecks against the real design system on BOTH the iOS-18 and macOS-15 SDKs (0 errors), and
+  swiftformat --lint / swiftlint --strict / placeholder are all green ON THE SURFACE's own files.
+  The full-app iOS + macOS xcodebuild build/test gate exits 65/65 (DEFERRED, not failed by this
+  code): the KMP Shared.xcframework actually built + staged, and the build then aborts on
+  pre-existing parallel-merge duplicate-type collisions across unrelated sibling StateTimeline*
+  surfaces (iOS) and on macOS development-signing (macOS) — both owned by the p4-apple/P99
+  acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md, and the
+  not-yet-wired modals-dialogs group. Zero errors in any GeofenceDrawer file.
+
+EXIT=0
+STATUS=DONE
