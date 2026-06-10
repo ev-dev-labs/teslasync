@@ -392,3 +392,4 @@ p2-windows/feature-views/W-0085-PresetGallery.prompt.md
 p2-windows/feature-views/W-0104-OptimizerSection.prompt.md
 p2-windows/feature-views/W-0086-TriggerConfigurator.prompt.md
 p2-windows/feature-views/W-0117-MonthlyCostTable.prompt.md
+p2-windows/feature-views/W-0105-QuickMetrics.prompt.md
