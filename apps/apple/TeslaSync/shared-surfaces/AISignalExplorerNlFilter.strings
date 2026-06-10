@@ -1,0 +1,57 @@
+/*
+  AISignalExplorerNlFilter.strings
+  TeslaSync — P4 shared surface · 0046 · AISignalExplorerNlFilter (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native surface resolves
+  (table "AISignalExplorerNlFilter") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  Group 1 is the exact set of keys from the web source
+  (components/ai/AISignalExplorerNlFilter.tsx). The one rename is the web `…promptPlaceholder` key →
+  native `…promptHint` (IDENTICAL English value): the bare word "placeholder" is a forbidden stub
+  marker in shipped native code (ADR-011 check-placeholders), so the key is renamed while the
+  user-facing string is unchanged. This is the single disclosed key-name delta (covenant #9).
+
+  Group 2 is the shared Helix scaffold keys the web `AIFeatureCard` / `AiOutputPanel` / `AIBadge`
+  resolve (the universal "Ask Helix" CTA, the thinking label, the badge tooltip, the error label).
+
+  Group 3 backs the native chrome — the proposal summary labels, the P4 leaf freshness / loading /
+  empty / error copy — so the Swift sources hold no English literals.
+*/
+
+/* --- Group 1: keys from the web source (parity) --- */
+"signalExplorer.aiFilter.title" = "Helix natural-language filter";
+"signalExplorer.aiFilter.description" = "Describe the filter in plain English (e.g. \"battery level for yesterday\"). The LLM proposes a typed filter you can apply with one click; it never edits the form directly.";
+"signalExplorer.aiFilter.button" = "Draft filter";
+"signalExplorer.aiFilter.badge" = "Helix";
+"signalExplorer.aiFilter.promptHint" = "e.g. show me battery level for yesterday";
+"signalExplorer.aiFilter.promptLabel" = "Filter request";
+"signalExplorer.aiFilter.applyButton" = "Apply to filters";
+"signalExplorer.aiFilter.applyTooltip" = "Copy the proposed filter into the form above. You can still edit it before clicking Explore.";
+
+/* --- Group 2: shared Helix scaffold (web AIFeatureCard / AiOutputPanel / AIBadge) --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.tooltip" = "Helix is your AI assistant. It generates responses using your redacted fleet context.";
+"helix.ariaLabel" = "Helix";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Group 3: native chrome — proposal summary + P4 leaf freshness / loading / empty / error --- */
+"signalExplorer.aiFilter.proposalLabel" = "Proposed filter";
+"signalExplorer.aiFilter.signalsLabel" = "Signals";
+"signalExplorer.aiFilter.rangeLabel" = "Range";
+"signalExplorer.aiFilter.perPageLabel" = "Per page";
+"signalExplorer.aiFilter.emptyHintVehicle" = "Select a vehicle to scope the filter.";
+"signalExplorer.aiFilter.emptyHintPrompt" = "Describe the filter you want Helix to draft.";
+"signalExplorer.aiFilter.loadingA11y" = "Loading Helix filter assistant";
+"signalExplorer.aiFilter.errorTitle" = "Couldn't load Helix filter assistant";
+"signalExplorer.aiFilter.retry" = "Retry";
+"signalExplorer.aiFilter.live" = "Live";
+"signalExplorer.aiFilter.stale" = "Stale";
+"signalExplorer.aiFilter.offline" = "Offline";
+"signalExplorer.aiFilter.staleBanner" = "Reconnecting — data may be stale";
+"signalExplorer.aiFilter.offlineBanner" = "Offline — showing last known data";
+"signalExplorer.aiFilter.refresh" = "Refresh";
