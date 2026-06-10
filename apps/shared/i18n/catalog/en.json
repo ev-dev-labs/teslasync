@@ -1,6 +1,141 @@
 {
   "direction": "ltr",
   "entries": {
+    "translation.featureView.backendStatus.title": {
+      "tokens": [],
+      "translated": true,
+      "value": "Backend Status"
+    },
+    "translation.featureView.backendStatus.description": {
+      "tokens": [],
+      "translated": true,
+      "value": "Component health, database pool, and runtime info"
+    },
+    "translation.featureView.backendStatus.healthy": {
+      "tokens": [],
+      "translated": true,
+      "value": "healthy"
+    },
+    "translation.featureView.backendStatus.componentHealth": {
+      "tokens": [],
+      "translated": true,
+      "value": "Component Health"
+    },
+    "translation.featureView.backendStatus.databasePool": {
+      "tokens": [],
+      "translated": true,
+      "value": "Database Connection Pool"
+    },
+    "translation.featureView.backendStatus.systemRuntime": {
+      "tokens": [],
+      "translated": true,
+      "value": "System Runtime"
+    },
+    "translation.featureView.backendStatus.col.status": {
+      "tokens": [],
+      "translated": true,
+      "value": "Status"
+    },
+    "translation.featureView.backendStatus.col.component": {
+      "tokens": [],
+      "translated": true,
+      "value": "Component"
+    },
+    "translation.featureView.backendStatus.col.latency": {
+      "tokens": [],
+      "translated": true,
+      "value": "Latency"
+    },
+    "translation.featureView.backendStatus.col.failures": {
+      "tokens": [],
+      "translated": true,
+      "value": "Failures"
+    },
+    "translation.featureView.backendStatus.col.lastCheck": {
+      "tokens": [],
+      "translated": true,
+      "value": "Last Check"
+    },
+    "translation.featureView.backendStatus.pool.maxOpen": {
+      "tokens": [],
+      "translated": true,
+      "value": "Max Open"
+    },
+    "translation.featureView.backendStatus.pool.open": {
+      "tokens": [],
+      "translated": true,
+      "value": "Open"
+    },
+    "translation.featureView.backendStatus.pool.inUse": {
+      "tokens": [],
+      "translated": true,
+      "value": "In Use"
+    },
+    "translation.featureView.backendStatus.pool.idle": {
+      "tokens": [],
+      "translated": true,
+      "value": "Idle"
+    },
+    "translation.featureView.backendStatus.pool.waitCount": {
+      "tokens": [],
+      "translated": true,
+      "value": "Wait Count"
+    },
+    "translation.featureView.backendStatus.goVersion": {
+      "tokens": [],
+      "translated": true,
+      "value": "Go Version"
+    },
+    "translation.featureView.backendStatus.uptime": {
+      "tokens": [],
+      "translated": true,
+      "value": "Uptime"
+    },
+    "translation.featureView.backendStatus.goroutines": {
+      "tokens": [],
+      "translated": true,
+      "value": "Goroutines"
+    },
+    "translation.featureView.backendStatus.osArch": {
+      "tokens": [],
+      "translated": true,
+      "value": "OS / Arch"
+    },
+    "translation.featureView.backendStatus.noComponents": {
+      "tokens": [],
+      "translated": true,
+      "value": "No components found"
+    },
+    "translation.featureView.backendStatus.noPool": {
+      "tokens": [],
+      "translated": true,
+      "value": "Connection pool statistics are unavailable."
+    },
+    "translation.featureView.backendStatus.noRuntime": {
+      "tokens": [],
+      "translated": true,
+      "value": "Runtime information is unavailable."
+    },
+    "translation.featureView.backendStatus.empty": {
+      "tokens": [],
+      "translated": true,
+      "value": "No backend status is available yet. Health, pool and runtime counters appear here once the API has reported in."
+    },
+    "translation.featureView.backendStatus.loading": {
+      "tokens": [],
+      "translated": true,
+      "value": "Loading backend status\u2026"
+    },
+    "translation.featureView.backendStatus.error": {
+      "tokens": [],
+      "translated": true,
+      "value": "Could not load backend status. Check API logs and try again."
+    },
+    "translation.featureView.backendStatus.refresh": {
+      "tokens": [],
+      "translated": true,
+      "value": "Refresh"
+    },
     "translation.AC": {
       "tokens": [],
       "translated": true,
