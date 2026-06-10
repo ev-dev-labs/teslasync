@@ -1,0 +1,53 @@
+/*
+  FlagEditDrawer.strings
+  TeslaSync — P4 modal / dialog · 0019 · FlagEditDrawer (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `FlagEditDrawer`
+  resolves (table "FlagEditDrawer") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/feature-flags/FlagEditDrawer.tsx): the drawer titles, the Save / Cancel
+  actions, and the key / value / reason field labels, placeholders, and validation copy. The second
+  group backs the native chrome (the header close affordance, the loading / empty / error envelopes,
+  the P4 freshness / cached-data copy) and the VoiceOver-only "Empty" placeholder so the Swift
+  sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.flags.drawer.editTitle" = "Edit flag \"{{key}}\"";
+"admin.flags.drawer.createTitle" = "Create flag";
+"admin.flags.drawer.save" = "Save flag";
+"common.cancel" = "Cancel";
+"admin.flags.editor.keyLabel" = "Flag key";
+"admin.flags.editor.keyPlaceholder" = "feature.dlq.replay_enabled";
+"admin.flags.editor.keyImmutable" = "Flag keys are immutable once created. Delete + re-create to rename.";
+"admin.flags.editor.valueLabel" = "Value (JSON)";
+"admin.flags.editor.valueEmpty" = "Value is required.";
+"admin.flags.editor.valueInvalid" = "Invalid JSON: {{msg}}";
+"admin.flags.editor.reasonLabel" = "Reason";
+"admin.flags.editor.reasonPlaceholder" = "Why this change? (logged in audit)";
+
+/* --- Native chrome: header close (accessibility) --- */
+"flagEdit.close" = "Close";
+
+/* --- Native chrome: loading / empty / error + retry --- */
+"flagEdit.loading" = "Loading flag…";
+"flagEdit.empty" = "No flag selected";
+"flagEdit.emptyMessage" = "Pick a flag to edit, or start a new one from the registry.";
+"flagEdit.errorTitle" = "Couldn't load this flag";
+"flagEdit.retry" = "Retry";
+
+/* --- Native chrome: freshness chip (Live / Stale / Offline) --- */
+"flagEdit.live" = "Live";
+"flagEdit.stale" = "Stale";
+"flagEdit.offline" = "Offline";
+
+/* --- Native chrome: connectivity banner (stale / offline) --- */
+"flagEdit.staleBanner" = "Reconnecting — this flag may be out of date";
+"flagEdit.offlineBanner" = "Offline — showing the flag from your last sync";
+
+/* --- VoiceOver-only: empty-field placeholder --- */
+"flagEdit.a11y.empty" = "Empty";
