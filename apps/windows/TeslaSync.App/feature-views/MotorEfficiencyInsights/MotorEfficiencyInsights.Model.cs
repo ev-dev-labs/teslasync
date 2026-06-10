@@ -110,7 +110,7 @@ public sealed record MotorHistorySample(
 
 /// <summary>
 /// The aggregated motor statistics a drive's motor history rolls up to — the native mirror of the web
-/// <c>MotorStats</c> (web/src/features/driving/components/driving-dynamics/helpers.ts). Torques are SI
+/// <c>MotorEfficiencyStats</c> (web/src/features/driving/components/driving-dynamics/helpers.ts). Torques are SI
 /// newton-metres, temperatures SI Celsius and powers the SI-derived kilowatts the API delivers;
 /// <see cref="HighTorquePct"/> is a 0..100 percentage. The <c>MotorEfficiencyInsights</c> surface displays
 /// <see cref="AvgTorqueNm"/>, <see cref="MaxTorqueNm"/>, <see cref="HighTorquePct"/>, <see cref="AvgPowerKw"/>,
@@ -127,7 +127,7 @@ public sealed record MotorHistorySample(
 /// <param name="MinPowerKw">Minimum drive power in kW (web <c>minPower</c>).</param>
 /// <param name="PeakRegenKw">Peak regen power in kW (web <c>peakRegen</c>).</param>
 /// <param name="HighTorquePct">Share of samples above the high-torque threshold, 0..100 (web <c>highTorquePct</c>).</param>
-public sealed record MotorStats(
+public sealed record MotorEfficiencyStats(
     int TotalReadings,
     double AvgTorqueNm,
     double MaxTorqueNm,
@@ -140,7 +140,7 @@ public sealed record MotorStats(
     double HighTorquePct);
 
 /// <summary>
-/// Aggregates a drive's motor history into a <see cref="MotorStats"/> — the 1:1 native port of the web
+/// Aggregates a drive's motor history into a <see cref="MotorEfficiencyStats"/> — the 1:1 native port of the web
 /// <c>computeMotorStats(motorHistory)</c> (web/src/features/driving/components/driving-dynamics/helpers.ts) and
 /// the surface's "cached telemetry → projection" data adapter. Like the web helper it returns
 /// <see langword="null"/> for an absent / empty history (the surface then shows its empty state); a sample is
@@ -156,8 +156,8 @@ public static class MotorStatsComputation
 
     /// <summary>Aggregate <paramref name="history"/> into motor statistics, or null when there is nothing to aggregate.</summary>
     /// <param name="history">The drive's motor-telemetry samples (web <c>motorHistory</c>); null or empty → null.</param>
-    /// <returns>The aggregated <see cref="MotorStats"/>, or <see langword="null"/> when the history is empty.</returns>
-    public static MotorStats? Compute(IReadOnlyList<MotorHistorySample>? history)
+    /// <returns>The aggregated <see cref="MotorEfficiencyStats"/>, or <see langword="null"/> when the history is empty.</returns>
+    public static MotorEfficiencyStats? Compute(IReadOnlyList<MotorHistorySample>? history)
     {
         IReadOnlyList<MotorHistorySample> samples = history ?? Array.Empty<MotorHistorySample>();
         if (samples.Count == 0)
@@ -201,7 +201,7 @@ public static class MotorStatsComputation
             ? (double)CountAbove(torques, HighTorqueThresholdNm) / torques.Count * 100
             : 0;
 
-        return new MotorStats(
+        return new MotorEfficiencyStats(
             TotalReadings: samples.Count,
             AvgTorqueNm: Average(torques),
             MaxTorqueNm: Max(torques),
@@ -303,7 +303,7 @@ public static class MotorStatsComputation
 /// <param name="ErrorMessage">Already-localized error message for the error / offline surfaces, when set.</param>
 public sealed record MotorEfficiencyInsightsModel(
     MotorEfficiencyInsightsState Status,
-    MotorStats? Stats,
+    MotorEfficiencyStats? Stats,
     ThrottleStyle? Style,
     UnitPref Units,
     DateTimeOffset? UpdatedAt = null,
@@ -333,7 +333,7 @@ public sealed record MotorEfficiencyInsightsModel(
     /// <param name="updatedAt">The freshness timestamp.</param>
     /// <param name="isFetching">True while a background refresh is in flight.</param>
     public static MotorEfficiencyInsightsModel Ready(
-        MotorStats stats,
+        MotorEfficiencyStats stats,
         ThrottleStyle? style = null,
         UnitPref? units = null,
         DateTimeOffset? updatedAt = null,
@@ -349,7 +349,7 @@ public sealed record MotorEfficiencyInsightsModel(
     /// <param name="units">The user's unit preference; defaults to metric.</param>
     /// <param name="updatedAt">The freshness timestamp.</param>
     public static MotorEfficiencyInsightsModel Stale(
-        MotorStats stats,
+        MotorEfficiencyStats stats,
         ThrottleStyle? style = null,
         UnitPref? units = null,
         DateTimeOffset? updatedAt = null)
@@ -365,7 +365,7 @@ public sealed record MotorEfficiencyInsightsModel(
     /// <param name="updatedAt">The freshness timestamp.</param>
     /// <param name="message">An already-localized offline message, or null for the default copy.</param>
     public static MotorEfficiencyInsightsModel Offline(
-        MotorStats stats,
+        MotorEfficiencyStats stats,
         ThrottleStyle? style = null,
         UnitPref? units = null,
         DateTimeOffset? updatedAt = null,
@@ -624,7 +624,7 @@ public static class MotorEfficiencyInsightsProjection
         _ => model.Stats is not null ? MotorEfficiencyInsightsState.Ready : MotorEfficiencyInsightsState.Empty,
     };
 
-    private static MotorTorquePanelDisplay BuildTorque(MotorStats? stats, string emptyMessage, ILocalizer localizer)
+    private static MotorTorquePanelDisplay BuildTorque(MotorEfficiencyStats? stats, string emptyMessage, ILocalizer localizer)
     {
         string title = localizer.GetString("dynamics.torqueDistribution", "Torque Distribution");
         string avgLabel = localizer.GetString("dynamics.avgTorque", "Avg Torque");
@@ -652,7 +652,7 @@ public static class MotorEfficiencyInsightsProjection
     }
 
     private static MotorThrottlePanelDisplay BuildThrottle(
-        MotorStats? stats,
+        MotorEfficiencyStats? stats,
         ThrottleStyle? style,
         string emptyMessage,
         ILocalizer localizer)
@@ -682,7 +682,7 @@ public static class MotorEfficiencyInsightsProjection
     }
 
     private static MotorThermalPanelDisplay BuildThermal(
-        MotorStats? stats,
+        MotorEfficiencyStats? stats,
         TemperatureUnit unit,
         string? locale,
         string emptyMessage,

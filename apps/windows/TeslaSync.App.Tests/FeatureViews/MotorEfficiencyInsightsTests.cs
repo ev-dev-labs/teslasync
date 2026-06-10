@@ -22,7 +22,7 @@ public sealed class MotorEfficiencyInsightsTests
     private const string DegreeF = "\u00B0F";
 
     // Mirrors the web __tests__ baseStats (avg torque 50, max torque 200, avg/max motor temp 49/64, high-torque 10%).
-    private static MotorStats BaseStats(double avgPowerKw = 0) => new(
+    private static MotorEfficiencyStats BaseStats(double avgPowerKw = 0) => new(
         TotalReadings: 100,
         AvgTorqueNm: 50,
         MaxTorqueNm: 200,

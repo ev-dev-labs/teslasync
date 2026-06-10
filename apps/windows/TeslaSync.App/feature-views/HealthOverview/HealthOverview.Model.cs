@@ -36,27 +36,6 @@ public enum HealthOverviewState
 }
 
 /// <summary>
-/// The drivetrain health level both drivetrain-health surfaces render — the native port of the web
-/// <c>HealthStatus</c> union (<c>'good' | 'warning' | 'critical'</c>) keyed off <c>overallHealth</c>
-/// (web/src/features/driving/components/drivetrain-health/constants.ts). Defined once here for the
-/// <c>TeslaSync.App.FeatureViews</c> namespace (co-located with the surface that first renders it) and shared
-/// by <c>HealthOverview</c> and <c>HealthRecommendations</c>: Good drives the green glow / success accent /
-/// check icon, Warning the cyan glow / warning accent, and Critical the purple glow / danger accent — exactly
-/// as the web keys those off <c>overallHealth</c>.
-/// </summary>
-public enum DrivetrainHealth
-{
-    /// <summary>Healthy (web <c>'good'</c>) — green glow, success accent, check icon.</summary>
-    Good,
-
-    /// <summary>Elevated (web <c>'warning'</c>) — cyan glow, warning accent.</summary>
-    Warning,
-
-    /// <summary>Critical (web <c>'critical'</c>) — purple glow, danger accent.</summary>
-    Critical,
-}
-
-/// <summary>
 /// The panel glow a <c>HealthOverview</c> resolves to — the native, WinUI-free analogue of the web
 /// <c>HEALTH_GLOW[overallHealth]</c> result
 /// (web/src/features/driving/components/drivetrain-health/constants.ts: good→green, warning→cyan,

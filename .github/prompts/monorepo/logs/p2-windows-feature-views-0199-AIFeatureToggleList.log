@@ -1,0 +1,88 @@
+=== P2 Feature view 0199 AIFeatureToggleList (Windows) ===
+date: 2026-06-09T23:12:54.9648769-07:00
+capability: .NET 10.0.300 ; WindowsDesktop runtime 10.0.8 ; Microsoft.WindowsAppSDK (UseWinUI) -- CAPABLE
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2: headless tests -- dotnet test TeslaSync.App.Tests.csproj -c Release --no-build ---
+Passed!  - Failed:     0, Passed: 11496, Skipped:     0, Total: 11496, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+--- AIFeatureToggleList surface tests (subset evidence) ---
+Passed!  - Failed:     0, Passed:    16, Skipped:     0, Total:    16, Duration: 75 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+--- STEP 3: UIAutomation E2E -- dotnet test TeslaSync.App.UITests.csproj -c Release (SEPARATE GATE) ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 254 ms - TeslaSync.App.UITests.dll (net10.0)
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: WinAppDriver/Appium runner + deployed MSIX app absent on this runner;
+  nothing on http://127.0.0.1:4723/ and WinAppDriver.exe not on PATH. Environmental + out of scope for this
+  surface; 147/147 fail-fast, identical for every surface. git-verified: zero files modified under TeslaSync.App.UITests/.)
+
+--- STEP 4: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- STEP 5: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AIFeatureToggleList ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- GIT SCOPE (this surface + necessary repo-hygiene repairs) ---
+ M apps/windows/TeslaSync.App.Tests/FeatureViews/MotorEfficiencyInsightsTests.cs
+ M apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+ M apps/windows/TeslaSync.App/feature-views/HealthOverview/HealthOverview.Model.cs
+ M apps/windows/TeslaSync.App/feature-views/HealthRecommendations/HealthRecommendations.Model.cs
+ M apps/windows/TeslaSync.App/feature-views/MotorEfficiencyInsights/MotorEfficiencyInsights.Model.cs
+?? .github/prompts/monorepo/logs/p2-windows-feature-views-0199-AIFeatureToggleList.log
+?? apps/windows/TeslaSync.App.Tests/FeatureViews/AIFeatureToggleListTests.cs
+?? apps/windows/TeslaSync.App/feature-views/AIFeatureToggleList/
+
+--- SURFACE NOTES: AIFeatureToggleList (parity port of web/src/features/settings/components/AIFeatureToggleList.tsx) ---
+- Files: feature-views/AIFeatureToggleList/AIFeatureToggleList.cs (WinUI 3 view, ContentControl) +
+         feature-views/AIFeatureToggleList/AIFeatureToggleList.Model.cs (WinUI-free projection / registration / diagnostics) +
+         feature-views/AIFeatureToggleList/AIFeatureToggleList.Registry.cs (GENERATED from web/src/ai/features.ts:
+         the 57-entry AI feature registry id/name/description, AI_FEATURE_IDS order; generated not transcribed,
+         so it cannot silently drift from the canonical web registry) +
+         TeslaSync.App.Tests/FeatureViews/AIFeatureToggleListTests.cs (16 headless tests).
+- Controlled, presentational surface (the web component takes values + onToggle props and never fetches): no
+  loading/error/stale/offline branch -- same precedent as the sibling ToolCard / AlertCard leaves. The web
+  source's real branches ARE reproduced and unit-tested: the populated list (one row per AI_FEATURE_IDS entry,
+  in registry order) and the defensive empty branch (zero features -> friendly TsEmptyState, never a blank box).
+- Each row: feature label (text-sm/medium) + Caption description beside a TsToggle bound to the controlled
+  Boolean(values[id]) state; toggling raises FeatureToggled(id,isOn) -- the native analogue of web onToggle.
+- Shared components: TsToggle, Subhead, Caption, TsEmptyState, DisplayTokens (no raw library imports, no inline styles).
+- i18n (all via the P1/S10 ILocalizer facade; English fallback = web meta.name/meta.description, no hardcoded
+  English in the view): translation.ai.settings.feature.legend (heading + section aria-label),
+  translation.ai.settings.feature.<id>.label, translation.ai.settings.feature.<id>.description. All 57 label +
+  description keys + the legend already exist in Strings/{en,he,ar}/Resources.resw (verified); a ReswLocalizer
+  test proves the projection feeds the exact catalog keys (the "Helix" rebrand wins over the registry fallback).
+- Accessibility: section carries the legend as its Narrator name (web aria-label); every toggle carries the
+  feature label as its name (web aria-label={label}); surface/rows/toggles carry the web data-testid values as
+  automation ids (ai-feature-toggle-list / ai-feature-row-<id> / ai-feature-toggle-<id>).
+- Telemetry (P1/S11): view.opened slug=AIFeatureToggleList, PII-safe (never a feature id / label / opt-in choice),
+  emitted once on Loaded.
+- Repo hygiene (pre-existing integration-merge corruption that blocked the shared build at this worktree HEAD;
+  git-verified unmodified vs HEAD before repair; ALL fixes restore the single-definition state the files' own
+  doc comments document):
+    * TeslaSync.App.Tests.csproj: consolidated TWO concatenated <Project> roots + orphaned comment prose
+      (MSB4025 XML load failure) into ONE valid root -- deduplicated, path-sorted union of every linked source
+      preserved (535) + the new AIFeatureToggleList Model/Registry links (537 total). XML re-validated.
+    * DrivetrainHealth enum was declared 3x in the TeslaSync.App.FeatureViews namespace (CS0101):
+      removed the 2 duplicates (HealthRecommendations dup + HealthOverview copy), kept the single canonical
+      co-located with its DrivetrainHealthSnapshot parser.
+    * MotorStats record collided across two surfaces (CS0101/CS8863): renamed the MotorEfficiencyInsights copy
+      to MotorEfficiencyStats (smaller blast radius; MotorStatsComputation/MotorHistorySample untouched).
+  After these repairs the App project compiles 0 warnings / 0 errors and TeslaSync.App.Tests passes 11496/11496.
+
+=== SURFACE GATE SUMMARY ===
+BUILD_EXIT=0   HEADLESS_TEST_EXIT=0 (TeslaSync.App.Tests: 11496 passed, 0 failed; AIFeatureToggleListTests: 16 passed)
+FORMAT_EXIT=0  PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+UIAutomation E2E suite: BLOCKED on absent WinAppDriver runtime (environmental; separate gate, 0 files touched).
+
+EXIT=0
+STATUS=DONE
