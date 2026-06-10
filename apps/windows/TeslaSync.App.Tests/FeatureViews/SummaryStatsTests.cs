@@ -99,13 +99,13 @@ public sealed class SummaryStatsTests
     [Fact]
     public void Compute_returns_null_for_empty_series()
     {
-        Assert.Null(MotorStats.Compute(Array.Empty<MotorStatsSample>()));
+        Assert.Null(SummaryMotorStats.Compute(Array.Empty<MotorStatsSample>()));
     }
 
     [Fact]
     public void Compute_matches_web_reduction()
     {
-        var stats = MotorStats.Compute(Samples(
+        var stats = SummaryMotorStats.Compute(Samples(
             new MotorStatsSample(100, 50, 40, 60, 30, 10),
             new MotorStatsSample(250, null, null, 50, 90, 5)));
 
@@ -126,7 +126,7 @@ public sealed class SummaryStatsTests
     public void Compute_excludes_rows_with_no_torque_or_temp_reading()
     {
         // A row with neither axle torque nor either motor temp contributes only its power.
-        var stats = MotorStats.Compute(Samples(
+        var stats = SummaryMotorStats.Compute(Samples(
             new MotorStatsSample(null, null, null, null, 42, null)));
 
         Assert.NotNull(stats);
@@ -142,7 +142,7 @@ public sealed class SummaryStatsTests
     public void Compute_torque_sums_present_axle_when_other_is_null()
     {
         // Web: f + r with f ?? 0 / r ?? 0, but only when at least one axle is present.
-        var stats = MotorStats.Compute(Samples(new MotorStatsSample(null, 75, null, null, null, null)));
+        var stats = SummaryMotorStats.Compute(Samples(new MotorStatsSample(null, 75, null, null, null, null)));
 
         Assert.Equal(75, stats!.AvgTorque);
     }
@@ -161,7 +161,7 @@ public sealed class SummaryStatsTests
     [Fact]
     public void Project_builds_six_cards_in_web_order_with_units()
     {
-        var stats = MotorStats.Compute(Samples(
+        var stats = SummaryMotorStats.Compute(Samples(
             new MotorStatsSample(100, 50, 40, 60, 30, 10),
             new MotorStatsSample(250, null, null, 50, 90, 5)));
 
@@ -192,7 +192,7 @@ public sealed class SummaryStatsTests
     [Fact]
     public void Project_tiles_carry_their_web_lucide_glyphs()
     {
-        var stats = MotorStats.Compute(Samples(new MotorStatsSample(10, 10, 30, 30, 5, 1)));
+        var stats = SummaryMotorStats.Compute(Samples(new MotorStatsSample(10, 10, 30, 30, 5, 1)));
         var view = MotorSummaryProjection.Project(stats, UnitPref.Metric, Localizer);
 
         Assert.Equal(MotorSummaryProjection.TotalReadingsGlyph, view.Cards[0].Glyph);
@@ -207,7 +207,7 @@ public sealed class SummaryStatsTests
     [Fact]
     public void Project_temperature_tile_renders_single_degree_in_celsius()
     {
-        var stats = MotorStats.Compute(Samples(new MotorStatsSample(null, null, 49, null, null, null)));
+        var stats = SummaryMotorStats.Compute(Samples(new MotorStatsSample(null, null, 49, null, null, null)));
 
         var view = MotorSummaryProjection.Project(stats, UnitPref.Metric, Localizer);
 
@@ -218,7 +218,7 @@ public sealed class SummaryStatsTests
     [Fact]
     public void Project_temperature_tile_converts_and_renders_single_degree_in_fahrenheit()
     {
-        var stats = MotorStats.Compute(Samples(new MotorStatsSample(null, null, 49, null, null, null)));
+        var stats = SummaryMotorStats.Compute(Samples(new MotorStatsSample(null, null, 49, null, null, null)));
 
         var view = MotorSummaryProjection.Project(stats, UnitPref.Imperial, Localizer);
 
@@ -229,7 +229,7 @@ public sealed class SummaryStatsTests
     [Fact]
     public void Project_cards_have_non_empty_accessibility_names()
     {
-        var stats = MotorStats.Compute(Samples(new MotorStatsSample(120, 80, 41, 55, 63, 12)));
+        var stats = SummaryMotorStats.Compute(Samples(new MotorStatsSample(120, 80, 41, 55, 63, 12)));
         var view = MotorSummaryProjection.Project(stats, UnitPref.Metric, Localizer);
 
         foreach (var card in view.Cards)

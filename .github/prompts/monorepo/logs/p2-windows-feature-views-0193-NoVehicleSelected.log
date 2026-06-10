@@ -1,0 +1,96 @@
+=== P2 Feature view 0193 NoVehicleSelected (Windows) ===
+date_utc=2026-06-10T05:24:51.2221937Z
+dotnet=10.0.300  host=ATUL-THINK-I9
+
+--- STEP 1/4: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+Time Elapsed 00:01:43.15
+BUILD_EXIT=0
+
+--- STEP 2/4: dotnet test apps/windows/TeslaSync.sln -c Release ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 123 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 11389, Skipped:     0, Total: 11389, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+-- WinAppDriver probe evidence (cause of the 147 UITest failures) --
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+HEADLESS_TEST_EXIT=0  (TeslaSync.App.Tests: 11389 passed, 0 failed — the gate that validates this surface's UI-thread-free logic)
+-- surface-scoped run (FullyQualifiedName~NoVehicleSelected) --
+Passed!  - Failed:     0, Passed:    18, Skipped:     0, Total:    18, Duration: 30 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+--- STEP 3/4: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+format formatting/whitespace errors: 0 (clean across the whole solution; verified with an isolated capture)
+FORMAT_EXIT=0
+
+--- STEP 4/4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/NoVehicleSelected ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- PLATFORM-CAPABILITY NOTE ---
+Required capability (WinUI 3 / Windows App SDK 2.1.3 / .NET 10 / Fluent) IS present on this runner:
+the solution BUILDS clean (BUILD_EXIT=0) and the headless unit suite runs (HEADLESS_TEST_EXIT=0).
+WHOLE_SOLUTION_TEST_EXIT=1 is caused SOLELY by the environment-gated UIAutomation E2E suite
+(TeslaSync.App.UITests): all 147 tests fail with UiAutomationUnavailableException because the
+WinAppDriver/Appium runner is absent on this headless box (nothing listening on 127.0.0.1:4723 and
+WinAppDriver.exe not found). That suite is intentionally never silently skipped (its fixture documents
+the absent runner as "the precise BLOCKED reason"); 0 of those 147 tests belong to this surface, and
+they fail identically for every surface. The absent UI-automation runner is a BLOCKED capability that is
+never reported as green. This mirrors the established precedent for prior feature-view surfaces
+(e.g. 0184 LegacyAlertRulesRedirect).
+
+--- BASELINE REPAIRS (pre-existing integration breakage that blocked the solution-wide gate) ---
+The HEAD integration merge (aef718030, clean tree) carried two pre-existing defects that broke the
+whole-solution build/test gate before any NoVehicleSelected code existed. Both were repaired minimally:
+1. MotorStats namespace collision: feature-views/MotorEfficiencyInsights/MotorEfficiencyInsights.Model.cs
+   and feature-views/SummaryStats/SummaryStats.Model.cs BOTH declared `public sealed record MotorStats`
+   (structurally different shapes) in namespace TeslaSync.App.FeatureViews -> CS0101 + CS8863 -> the C#
+   compile failed -> no LocalAssembly -> the XAML compiler cascaded (WMC1509/WMC0001/WMC9999, 83 errors).
+   Fix: renamed the SummaryStats record (fewer references) to `SummaryMotorStats` across SummaryStats.Model.cs,
+   SummaryStats.ViewModel.cs and SummaryStatsTests.cs (5 + 3 + 9 = 17 precise type references; web-name
+   prose `<c>MotorStats</c>` / `motorStats: MotorStats | null` / `computeMotorStats` left intact). The
+   MotorEfficiencyInsights record keeps the `MotorStats` name. This was the sole blocker of the whole
+   headless suite; the rename is unambiguous and minimal.
+2. Two-root test csproj: apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj had TWO <Project>
+   roots concatenated (lines 1-785 and 786-1397) -> invalid XML (MSB4025) -> dotnet test could not load.
+   Per the file's own documented INVARIANT, consolidated back to ONE valid <Project> root holding the
+   deduplicated, path-sorted union of all 529 previously-linked Compile sources, plus this surface's 2 new
+   links (NoVehicleSelected.Model.cs, NoVehicleSelected.ViewModel.cs) = 531 total. No linked source dropped.
+
+--- FILES (this surface) ---
+apps/windows/TeslaSync.App/feature-views/NoVehicleSelected/NoVehicleSelected.Model.cs      (registration, display, projection adapter, navigator port, diagnostics)
+apps/windows/TeslaSync.App/feature-views/NoVehicleSelected/NoVehicleSelected.ViewModel.cs  (UI-thread-free state holder)
+apps/windows/TeslaSync.App/feature-views/NoVehicleSelected/NoVehicleSelected.cs            (WinUI ContentControl: TsPageContainer > TsGlassPanel > TsEmptyState)
+apps/windows/TeslaSync.App.Tests/FeatureViews/NoVehicleSelectedTests.cs                    (18 tests: adapter/projection, ViewModel, diagnostics, a11y, argument validation)
+
+--- PARITY (web/src/features/onboarding/components/NoVehicleSelected.tsx) ---
+- Composition: PageContainer(title) > GlassPanel(p-8=32px) > EmptyState(Car glyph, title, message, action).
+- Data hooks actually used by source: useTranslation (-> ILocalizer), useNavigate (-> INoVehicleSelectedNavigator -> "Onboarding").
+  useSelectedVehicle is referenced only in the web doc comment as the REASON the surface exists; the
+  component performs no data fetch, so there is no loading/error/stale/offline branch to model (the surface
+  IS the empty state a data-backed page renders when no vehicle is selected). Reproduced faithfully.
+- i18n keys (resolve to the shared catalog + Strings/en/Resources.resw, present):
+    translation.common.noVehicleSelected.title  = "No vehicle selected"
+    translation.common.noVehicleSelected.desc   = "Add a vehicle to your fleet to see data on this page."
+    translation.common.noVehicleSelected.action = "Set up TeslaSync"
+- Prop overrides title?/description? reproduced (override wins, else i18n fallback).
+- Telemetry: view.opened slug=NoVehicleSelected (Loaded); no-vehicle.setup-requested slug=NoVehicleSelected (CTA).
+- A11y: surface Narrator name (title + message); CTA carries its localized label; empty state is a live region.
+
+--- ACCEPTANCE CRITERIA ---
+[x] Surface renders all states the web source has (single empty state + prop-override variant) - no hidden surfaces.
+[x] Hooks bind to shared P1/S8 seams (ILocalizer, INoVehicleSelectedNavigator); no direct HTTP in the view.
+[x] Every i18n key from source has a matching catalog/resw key (translation.common.noVehicleSelected.*).
+[x] Accessibility labels present on the surface and the interactive call-to-action.
+[x] Tests: adapter/projection + ViewModel + diagnostics + a11y label assertions (18 passing).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+
+--- GATE SUMMARY ---
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0 (TeslaSync.App.Tests: 11389 passed, incl. 18 new)  SURFACE_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+WHOLE_SOLUTION_TEST_EXIT=1 only via the WinAppDriver-absent UIAutomation E2E suite (147 env failures, 0 on this surface).
+
+EXIT=0
+STATUS=DONE

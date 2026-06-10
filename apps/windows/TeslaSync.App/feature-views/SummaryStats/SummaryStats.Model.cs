@@ -128,7 +128,7 @@ public sealed record MotorStatsSample(
 /// <param name="MinPower">Minimum drive power in kW (web <c>minPower</c>).</param>
 /// <param name="PeakRegen">Maximum regenerative power in kW (web <c>peakRegen</c>).</param>
 /// <param name="HighTorquePct">Percent of torque samples above the high-torque threshold (web <c>highTorquePct</c>).</param>
-public sealed record MotorStats(
+public sealed record SummaryMotorStats(
     int TotalReadings,
     double AvgTorque,
     double MaxTorque,
@@ -150,7 +150,7 @@ public sealed record MotorStats(
     /// </summary>
     /// <param name="samples">The motor-history samples (order is irrelevant to the aggregates).</param>
     /// <returns>The aggregate figures, or <see langword="null"/> when there are no samples.</returns>
-    public static MotorStats? Compute(IReadOnlyList<MotorStatsSample> samples)
+    public static SummaryMotorStats? Compute(IReadOnlyList<MotorStatsSample> samples)
     {
         if (samples is null || samples.Count == 0)
         {
@@ -198,7 +198,7 @@ public sealed record MotorStats(
             }
         }
 
-        return new MotorStats(
+        return new SummaryMotorStats(
             TotalReadings: samples.Count,
             AvgTorque: Avg(torques),
             MaxTorque: Max(torques),
@@ -292,7 +292,7 @@ public sealed record MotorSummaryDisplay(bool HasData, IReadOnlyList<MotorSummar
 }
 
 /// <summary>
-/// Pure projection from a <see cref="MotorStats"/> aggregate to the six display tiles — the native port of the
+/// Pure projection from a <see cref="SummaryMotorStats"/> aggregate to the six display tiles — the native port of the
 /// <c>&lt;StatCard&gt;</c> composition in
 /// web/src/features/driving/components/driving-dynamics/SummaryStats.tsx. Tile order, labels, value precision
 /// (the web <c>fmtNumber(x, 1)</c>), unit suffixes (<c>Nm</c> / <c>kW</c>) and the temperature tile's
@@ -339,7 +339,7 @@ public static class MotorSummaryProjection
     /// <param name="units">The user's unit preference (web <c>useUnits</c>); drives the temperature tile.</param>
     /// <param name="localizer">The i18n facade resolving every label.</param>
     /// <returns>The render-ready display model.</returns>
-    public static MotorSummaryDisplay Project(MotorStats? stats, UnitPref units, ILocalizer localizer)
+    public static MotorSummaryDisplay Project(SummaryMotorStats? stats, UnitPref units, ILocalizer localizer)
     {
         ArgumentNullException.ThrowIfNull(units);
         ArgumentNullException.ThrowIfNull(localizer);

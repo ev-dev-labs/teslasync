@@ -13,7 +13,7 @@ namespace TeslaSync.App.FeatureViews;
 /// <c>motorStats: MotorStats | null</c> as a prop and reads <c>useTranslation</c>; the page derives
 /// <c>motorStats</c> via <c>computeMotorStats(useMotorHistory(vehicleId, 200))</c> and the temperature tile
 /// formats with <c>useUnits</c>). The native surface binds its own cache-then-network
-/// <see cref="IMotorSummarySource"/>, reduces each emission with <see cref="MotorStats.Compute"/>, projects the
+/// <see cref="IMotorSummarySource"/>, reduces each emission with <see cref="SummaryMotorStats.Compute"/>, projects the
 /// result through <see cref="MotorSummaryProjection"/> with the active units, and exposes the mutually-exclusive
 /// <see cref="State"/> plus the freshness flags so the view is a thin renderer. When the aggregate is absent (no
 /// vehicle / no samples) the empty state renders (web <c>motorStats === null</c>). Drive it from one confinement
@@ -26,7 +26,7 @@ public sealed class SummaryStatsViewModel : INotifyPropertyChanged, IDisposable
 
     private UnitPref _units;
     private CancellationTokenSource? _cts;
-    private MotorStats? _lastStats;
+    private SummaryMotorStats? _lastStats;
     private bool _disposed;
 
     private MotorSummaryState _state = MotorSummaryState.Loading;
@@ -272,7 +272,7 @@ public sealed class SummaryStatsViewModel : INotifyPropertyChanged, IDisposable
         RepositoryError? error,
         bool offline = false)
     {
-        var stats = MotorStats.Compute(samples);
+        var stats = SummaryMotorStats.Compute(samples);
 
         // Web parity: computeMotorStats returns null for an empty series → the empty state, not zeroed cards.
         if (stats is null)
