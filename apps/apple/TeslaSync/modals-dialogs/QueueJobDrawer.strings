@@ -1,0 +1,50 @@
+/*
+  QueueJobDrawer.strings
+  TeslaSync — P4 modal / dialog · 0020 · QueueJobDrawer (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `QueueJobDrawer`
+  resolves (table "QueueJobDrawer") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/QueueJobDrawer.tsx). The second group is the per-status word catalog
+  the web `t(\`queueStatus.jobStatus.${status}\`, status)` resolves (the `STATUS_TONE` keys, with
+  any unmapped status falling back to its raw token at runtime). The third group backs the native
+  chrome (P4 freshness / empty-title / error-retry / close + VoiceOver-only labels) so the Swift
+  sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"queueStatus.jobStarted" = "Started {{at}}";
+"queueStatus.jobDuration" = "Took {{duration}}";
+"queueStatus.drawer.titleWithWorker" = "Recent {{worker}} jobs";
+"queueStatus.drawer.title" = "Recent jobs";
+"queueStatus.drawer.loading" = "Loading recent jobs…";
+"queueStatus.drawer.error" = "Could not load recent jobs. Check API logs and try again.";
+"queueStatus.drawer.empty" = "No recent jobs to show. New jobs will appear here as the worker processes them.";
+
+/* --- Per-status word catalog (web `STATUS_TONE` statuses) --- */
+"queueStatus.jobStatus.sent" = "Sent";
+"queueStatus.jobStatus.pending" = "Pending";
+"queueStatus.jobStatus.deferred_dnd" = "Deferred (DND)";
+"queueStatus.jobStatus.failed" = "Failed";
+"queueStatus.jobStatus.ready" = "Ready";
+"queueStatus.jobStatus.queued" = "Queued";
+"queueStatus.jobStatus.processing" = "Processing";
+"queueStatus.jobStatus.success" = "Success";
+"queueStatus.jobStatus.partial" = "Partial";
+"queueStatus.jobStatus.running" = "Running";
+"queueStatus.jobStatus.cancelled" = "Cancelled";
+"queueStatus.jobStatus.skipped" = "Skipped";
+
+/* --- Native chrome: P4 freshness / empty-title / error-retry / a11y-only labels --- */
+"queueStatus.drawer.close" = "Close";
+"queueStatus.drawer.retry" = "Retry";
+"queueStatus.drawer.emptyTitle" = "No recent jobs";
+"queueStatus.drawer.live" = "Live";
+"queueStatus.drawer.stale" = "Stale";
+"queueStatus.drawer.offline" = "Offline";
+"queueStatus.drawer.staleBanner" = "Reconnecting — this list may be out of date";
+"queueStatus.drawer.offlineBanner" = "Offline — showing the last loaded jobs";
