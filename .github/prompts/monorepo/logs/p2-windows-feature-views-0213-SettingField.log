@@ -1,0 +1,117 @@
+=== P2 Feature view 0213 SettingField (Windows) ===
+date: 2026-06-10T12:55:00-07:00
+capability: .NET 10.0.300 ; Microsoft.WindowsAppSDK (UseWinUI) ; net10.0-windows10.0.19041 -- CAPABLE
+  (dotnet --list-sdks: 9.0.314, 10.0.300 ; WindowsDesktop/NETCore.App 10.0.8 present ; TeslaSync.App is
+   OutputType=WinExe, UseWinUI=true, WindowsPackageType=MSIX, TargetFramework=net10.0-windows10.0.19041.0.
+   The Release build below compiles the WinUI app + XAML/MSIX tooling end to end, so WinUI 3 is available.)
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    17 Warning(s)  (all pre-existing CA* in TeslaSync.App.Core: CA1859/CA1716/CA1000/CA1720;
+                    none in SettingField.cs / SettingField.Model.cs ; TeslaSync.App has
+                    TreatWarningsAsErrors=true and compiled 0/0, so the new view+model are warning-clean)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2: headless tests -- dotnet test apps/windows/TeslaSync.sln -c Release (TeslaSync.App.Tests.dll) ---
+Passed!  - Failed:     0, Passed: 14142, Skipped:     0, Total: 14142, Duration: 14 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+--- SettingField surface tests (subset evidence: --filter FullyQualifiedName~SettingFieldTests --no-build) ---
+Passed!  - Failed:     0, Passed:    20, Skipped:     0, Total:    20, Duration: 52 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+--- STEP 3: UIAutomation E2E -- TeslaSync.App.UITests.dll (SEPARATE GATE) ---
+Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147, Duration: 309 ms - TeslaSync.App.UITests.dll (net10.0)
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+  was not found at its standard install paths or on PATH.
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: WinAppDriver/Appium runner + deployed MSIX app absent on this runner;
+  environmental + out of scope for this surface; identical fail-fast for every surface; the prompt gate's
+  unit of work is the headless suite above. git-verified: zero files modified under TeslaSync.App.UITests/.
+  Same disposition as the predecessor surfaces -- see logs 0198/0191/0182.)
+
+--- STEP 4: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+  (First pass reported 566 ENDOFLINE diagnostics across the three new .cs files -- they had been authored with
+   CRLF; converted to LF per .editorconfig (end_of_line=lf) and re-verified clean. No style/whitespace/using-order
+   findings.)
+
+--- STEP 5: check-placeholders.ps1 (SettingField is a FLAT feature-view surface, so scanned per-file) ---
+literal gate path (-Path .../feature-views/SettingField): PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  (the literal path is a flat-surface stem, not a directory; the real coverage is the per-file scan below)
+real per-file scan (csharp) of SettingField.cs + SettingField.Model.cs + SettingFieldTests.cs:
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- GIT SCOPE (this surface + the necessary repo-hygiene repair) ---
+ M apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+?? .github/prompts/monorepo/logs/p2-windows-feature-views-0213-SettingField.log
+?? apps/windows/TeslaSync.App.Tests/FeatureViews/SettingFieldTests.cs
+?? apps/windows/TeslaSync.App/feature-views/SettingField.Model.cs
+?? apps/windows/TeslaSync.App/feature-views/SettingField.cs
+(zero files modified under TeslaSync.App.UITests/.)
+
+--- SURFACE NOTES: SettingField (parity port of web/src/features/settings/components/SettingField.tsx) ---
+- The web component is a pure presentational field wrapper: it renders a label row -- an uppercase, muted,
+  wide-tracked <label> plus an optional inline <HelpIcon> (web/src/components/ui/HelpIcon.tsx) -- and then the
+  field control passed as children. It performs no fetching. The only conditional render is the help affordance:
+  it appears iff a help descriptor is supplied AND its resolved text is non-empty (the web
+  `{help && <HelpIcon>}` gate together with HelpIcon's own `if (!text) return null`).
+- Files:
+    feature-views/SettingField.Model.cs  -- WinUI-free: SettingFieldHelp (web SettingFieldHelp i18nKey/content/for),
+        SettingFieldModel (label + optional help), SettingFieldDisplay, SettingFieldProjection (the label
+        upper-casing + HelpIcon's text/aria-label resolution), SettingFieldDiagnostics, SettingFieldRegistration.
+    feature-views/SettingField.cs        -- WinUI 3 view (ContentControl): a column of [label row, field]. The label
+        is a tokenized TextBlock (TsTypeLabelFontSize / FontWeights.Medium / DisplayTokens.TextMuted /
+        tracking-wider) shown upper-cased; the optional help affordance is the shared TsHelpTooltip. The
+        caller-owned field (the web children) is exposed via the Field property.
+    TeslaSync.App.Tests/FeatureViews/SettingFieldTests.cs -- 20 headless tests (label passthrough + uppercase,
+        help-text resolution incl. i18n-key-over-content + content fallback + empty-text suppression + whitespace
+        truthiness, the affordance accessible name "Help for {id}" / "More info" incl. a localized template,
+        diagnostics PII-safety, registration, null-arg validation).
+- States: the web source is pure presentational and has NO fetch lifecycle, so the generic loading / error /
+  stale / offline branches do not exist on this surface (same precedent as the sibling presentational leaves
+  HighlightCard / AdvancedSettings). The reproduced branches are exactly the source's conditional renders:
+  the label is always shown, and the help affordance is shown only when help resolves to non-empty text. Both
+  real branches are reproduced and unit-tested; nothing is hidden behind a blank box.
+- Shared components only: TsHelpTooltip (the inline help affordance, the @/components/ui counterpart of the web
+  HelpIcon), DisplayTokens/TypographyTokens (P1/S9 tokens). No raw library imports, no inline styles, no
+  hardcoded English in the view.
+- i18n (all via the P1/S10 ILocalizer facade; English fallbacks = the web fallback strings; the keys the composed
+  HelpIcon uses are already present in Strings/{en,he,ar}/Resources.resw):
+    a11y.helpFor            = "Help for {0}"   (the per-field affordance label)
+    help.tooltip.iconLabel  = "More info"      (the generic affordance label)
+  SettingField itself is anonymous -- its label and help text come from the parent settings page, exactly as the
+  web component takes them as props -- so it extracts no additional literal keys.
+- Accessibility: the label is displayed upper-cased (web `uppercase`) but exposes its natural casing to Narrator;
+  the help affordance (the only interactive element) carries the web aria-label as its Narrator name and the help
+  text as its spoken description + visual tooltip. System font scale + reduced-motion are inherited from the
+  shared primitives.
+- Telemetry (P1/S11): view.opened slug=SettingField, PII-safe (never the label or help text), emitted once on Loaded.
+- Repo hygiene (pre-existing integration-merge corruption that blocked the shared test build at this worktree HEAD;
+  git-verified unmodified vs HEAD before repair; the fix restores the single-root state the file's own INVARIANT
+  doc comments document):
+    * TeslaSync.App.Tests.csproj at HEAD (committed via the auto-integration merge that followed the clean
+      af0d388a5 tip) had THREE concatenated <Project> roots (1593 lines; <Project x3, </Project> x3) -> MSB4025
+      "multiple root elements" XML-load failure (baseline RED: dotnet build/test of the sln could not load the
+      project; the predecessor 0198 log records the same class of breakage). Re-consolidated into ONE valid root
+      by regenerating the Compile ItemGroup directly from the WinUI-free sources on disk under feature-views/ and
+      dashboard-widgets/ (every .cs with no Microsoft.UI / Windows.UI dependency on a non-comment line). The
+      result is the ordinal-sorted, Include-deduplicated union = 675 Compile items: the 659 from the last clean
+      revision (af0d388a5, verified a strict subset), PLUS 15 links for 6 surfaces that other branches merged but
+      that branch never linked (ComputedMetricEditor, LegacyAlertStudioRedirect, LegacyNotificationsRedirect,
+      NotificationRow, PedalUsage, SpeedGearPanel), PLUS the new SettingField.Model.cs link. Re-validated: single
+      root, XML well-formed, zero duplicate Includes, every linked path present on disk; all package/project
+      references and Content items preserved. 1593 lines/3 roots -> 729 lines/1 root.
+  After the repair the App project compiles 0 warnings / 0 errors and TeslaSync.App.Tests passes 14142/14142.
+
+=== SURFACE GATE SUMMARY ===
+BUILD_EXIT=0   HEADLESS_TEST_EXIT=0 (TeslaSync.App.Tests: 14142 passed, 0 failed; SettingFieldTests: 20 passed)
+FORMAT_EXIT=0  PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+UIAutomation E2E suite: BLOCKED on absent WinAppDriver runtime (environmental; separate gate, 0 files touched).
+
+EXIT=0
+STATUS=DONE
