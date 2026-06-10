@@ -1,0 +1,67 @@
+/*
+  JobProgressDrawer.strings
+  TeslaSync — P4 modal / dialog · 0005 · JobProgressDrawer (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `JobProgressDrawer` resolves (table "JobProgressDrawer") lives here with its web
+  `t(key, default)` English value. These entries fold into the app `Localizable.xcstrings`
+  master catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (components/feedback/JobProgressDrawer.tsx). The second + third groups are the export type /
+  status catalogs the web `prettyType` / `prettyStatus` map. The fourth group backs the native
+  chrome (relative-time buckets, P4 freshness / loading / empty / error copy, VoiceOver-only
+  labels) so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"export.jobDrawer.expand" = "Show export jobs ({{count}} active)";
+"export.jobDrawer.activeCount" = "{{count}} export running";
+"export.jobDrawer.recentLabel" = "Exports";
+"export.jobDrawer.label" = "Export job progress";
+"export.jobDrawer.title" = "Export jobs";
+"export.jobDrawer.activePill" = "{{count}} active";
+"export.jobDrawer.minimize" = "Minimize";
+"export.jobDrawer.close" = "Dismiss";
+"export.jobDrawer.loading" = "Loading export jobs…";
+"export.jobDrawer.activeHeading" = "In progress";
+"export.jobDrawer.activeEmpty" = "No active exports";
+"export.jobDrawer.recentHeading" = "Recent";
+"export.jobDrawer.recentEmpty" = "No recent exports";
+"export.jobDrawer.statusLine" = "{{status}} · started {{relative}}";
+"export.jobDrawer.completedLine" = "{{size}} · {{relative}}";
+"export.jobDrawer.download" = "Download";
+
+/* --- Export type catalog (web `prettyType`) --- */
+"export.types.account" = "Account export";
+"export.types.drives" = "Drives";
+"export.types.charging" = "Charging";
+"export.types.analytics" = "Analytics";
+"export.types.backup" = "Backup";
+"export.types.importDrives" = "Import drives";
+"export.types.importCharging" = "Import charging";
+
+/* --- Export status catalog (web `prettyStatus`) --- */
+"export.status.queued" = "Queued";
+"export.status.processing" = "Processing";
+"export.status.ready" = "Ready";
+"export.status.failed" = "Failed";
+"export.status.expired" = "Expired";
+
+/* --- Native chrome: relative-time buckets (web `formatRelative`) --- */
+"export.jobDrawer.relative.justNow" = "just now";
+"export.jobDrawer.relative.minutes" = "{{count}}m ago";
+"export.jobDrawer.relative.hours" = "{{count}}h ago";
+"export.jobDrawer.relative.days" = "{{count}}d ago";
+
+/* --- Native chrome: P4 freshness / empty / error + a11y-only labels --- */
+"export.jobDrawer.live" = "Live";
+"export.jobDrawer.stale" = "Stale";
+"export.jobDrawer.offline" = "Offline";
+"export.jobDrawer.staleBanner" = "Reconnecting — this list may be out of date";
+"export.jobDrawer.offlineBanner" = "Offline — showing the last loaded jobs";
+"export.jobDrawer.emptyTitle" = "No export jobs";
+"export.jobDrawer.emptyMessage" = "Exports you start will appear here.";
+"export.jobDrawer.errorTitle" = "Couldn't load export jobs";
+"export.jobDrawer.retry" = "Retry";
