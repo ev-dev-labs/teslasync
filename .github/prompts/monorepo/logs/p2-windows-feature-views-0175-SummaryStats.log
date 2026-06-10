@@ -1,0 +1,90 @@
+=== P2 Feature view 0175 SummaryStats (Windows / WinUI 3) ===
+
+Capability: WinUI 3 (Windows App SDK) + .NET 10 PRESENT — .NET SDK 10.0.300,
+Microsoft.WindowsDesktop.App 10.0.8; the WinUI app + whole solution build clean.
+Not BLOCKED on platform capability.
+
+Web source : web/src/features/driving/components/driving-dynamics/SummaryStats.tsx
+Native out : apps/windows/TeslaSync.App/feature-views/SummaryStats/{SummaryStats,SummaryStats.Model,SummaryStats.Source,SummaryStats.ViewModel}.cs
+Tests      : apps/windows/TeslaSync.App.Tests/FeatureViews/SummaryStatsTests.cs (35 tests)
+
+----------------------------------------------------------------------------------
+GATE RESULTS (headless surface gate — the established P2 feature-view convention)
+----------------------------------------------------------------------------------
+[PASS] BUILD_EXIT=0            dotnet build apps/windows/TeslaSync.sln -c Release
+                              -> Build succeeded. 0 Error(s). (17 pre-existing CA warnings in TeslaSync.App.Core)
+[PASS] HEADLESS_TEST_EXIT=0    dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+                              -> Passed!  Failed: 0, Passed: 11071, Skipped: 0, Total: 11071 (TeslaSync.App.Tests.dll)
+[PASS] SURFACE_TEST_EXIT=0     dotnet test ...App.Tests... --filter "FullyQualifiedName~SummaryStatsTests"
+                              -> Passed!  Failed: 0, Passed: 35, Skipped: 0, Total: 35
+[PASS] FORMAT_EXIT=0           dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+[PASS] PLACEHOLDER_EXIT=0      ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SummaryStats
+                              -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+
+----------------------------------------------------------------------------------
+SURFACE IMPLEMENTATION
+----------------------------------------------------------------------------------
+The feature view's six tiles — Total Readings, Avg Torque, Peak Power, Peak Regen, Avg Power and
+Avg Motor Temp — reproduce the web SummaryStats data, composition and i18n keys (dynamics.totalReadings,
+dynamics.avgTorque, dynamics.peakPower, dynamics.peakRegen, dynamics.avgPower, dynamics.avgMotorTemp; all
+six already present in apps/shared/i18n/catalog/{en,he,ar}.json). Each tile maps to the shared TsStatCard
+(web <StatCard>) with its Segoe Fluent accent glyph (the native mapping of the web lucide icon).
+
+The native surface owns the motor-history read the web Driving-Dynamics page derives motorStats from
+(useMotorHistory(vehicleId, 200) -> computeMotorStats): MotorSummarySource streams GET /motor (generated
+operation get_api_v1_motor, scoped by vehicle_id + limit=200) through the shared CacheThenNetworkEngine;
+MotorStats.Compute is a verbatim port of helpers.ts computeMotorStats (per-axle torque sum, per-row hottest
+motor temperature, power/regen extrema, high-torque %); MotorSummaryProjection renders each value with the
+web fmtNumber(x,1) precision and converts the Avg Motor Temp tile to the user's unit at the render boundary
+(UnitFormatters.FormatTemperature, web useUnits) — verified "49.0°C" / "120.2°F", never a doubled "°°"
+(the web SummaryStats.test.tsx temperature-suffix regression).
+
+Every state renders (none hidden): loading skeleton tiles, the populated entrance-faded grid (native mapping
+of the web StaggerContainer/StaggerItem), a friendly empty surface (web motorStats === null), an explicit
+retry surface on hard failure, plus stale and offline freshness chips. Data binds through the shared P1/S8
+state-holder (IMotorSummarySource -> SummaryStatsViewModel); the view performs no HTTP. Every tile and the
+header chips carry Narrator names; the surface exposes a Group automation peer. Diagnostics emit
+view.opened slug=SummaryStats (PII-safe).
+
+Naming: a pre-existing sibling surface (SummaryStatsGrid, web charging-curve) had already taken the generic
+SummaryStats* type names in TeslaSync.App.FeatureViews (SummaryStatsState, SummaryStatCard, SummaryStatsDisplay,
+SummaryStatsProjection, SummaryStatsResultMapper, SummaryStatsRegistration, SummaryStatsDiagnostics,
+ISummaryStatsSource, SummaryStatsSource, SummaryStatsJson). To avoid collisions the view class is SummaryStats
+(free) and the support types use the MotorSummary* prefix plus the domain records MotorStats / MotorStatsSample.
+
+----------------------------------------------------------------------------------
+INFRASTRUCTURE REPAIR (tightly coupled — required for the gate to load at all)
+----------------------------------------------------------------------------------
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed in a corrupted state — two
+concatenated <Project> roots (lines 1-745 and 746-1299) plus a broken XML comment containing a literal
+Compile tag (line 169) — failing XML load with MSB4025, which prevented the whole solution (and therefore
+this gate) from loading at baseline. Per the same convention used by P2 feature-views/0161 and 0150, it was
+consolidated back into one canonical <Project> root with the deduplicated, path-sorted union of all 516
+previously-linked Compile sources plus the three new SummaryStats WinUI-free links (Model / Source /
+ViewModel). No linked source was dropped (516 -> 519). XML now loads; the headless suite (11071) runs.
+
+----------------------------------------------------------------------------------
+WHOLE-SOLUTION UIAUTOMATION RED (evidenced, not hidden — no red-as-green)
+----------------------------------------------------------------------------------
+WHOLE_SOLUTION_TEST_EXIT=1 is reached ONLY via the environment-gated UIAutomation E2E suite
+(TeslaSync.App.UITests, Category=UIAutomation, 147 tests):
+
+  Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+  TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+  WinAppDriver.exe was not found at its standard install paths or on PATH.
+    at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() ...WinAppDriverSession.cs:line 75
+
+That E2E suite is run separately (apps/windows/run-ui-automation.ps1), is out of scope for this feature
+view, references SummaryStats 0 times (it exercises shell/page navigation, not feature views), and fails
+identically for every surface on this runner because WinAppDriver/Appium is not installed. Per the
+established P2 feature-view convention (see p2-windows-feature-views-0161-TemperatureMetricCards.log and
+p2-windows-feature-views-0150-TemperatureSection.log) the surface gate is the headless one; the
+whole-solution UIAutomation red is evidenced here rather than hidden.
+
+----------------------------------------------------------------------------------
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  SURFACE_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated UIAutomation E2E suite, evidenced above.)
+
+EXIT=0
+STATUS=DONE
