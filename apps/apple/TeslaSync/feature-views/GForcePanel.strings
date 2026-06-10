@@ -1,0 +1,35 @@
+/*
+  GForcePanel.strings
+  TeslaSync — P4 feature view · 0169 · GForcePanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `GForcePanel` resolves
+  (table "GForcePanel") lives here with its web English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table so
+  each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/driving/components/driving-dynamics/GForcePanel.tsx) — the `dynamics.*` tile labels, the
+  panel title, and the empty message. The remaining keys back the native-only chrome (the tile "no
+  reading" voice-over phrase, freshness chip, loading + error + retry copy).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"dynamics.gForce" = "Acceleration G-Force";
+"dynamics.lateral" = "Lateral";
+"dynamics.longitudinal" = "Longitudinal";
+"dynamics.combined" = "Combined";
+"dynamics.gForceNoData" = "No G-force telemetry received yet";
+
+/* --- Native chrome: tile accessibility --- */
+"dynamics.gForce.noReading" = "No reading";
+
+/* --- Native chrome: freshness chip --- */
+"dynamics.gForce.live" = "Live";
+"dynamics.gForce.stale" = "Stale";
+"dynamics.gForce.offline" = "Offline";
+"dynamics.gForce.updating" = "Updating";
+
+/* --- Native chrome: states --- */
+"dynamics.gForce.loading" = "Loading G-force telemetry";
+"dynamics.gForce.errorTitle" = "Couldn't load G-force telemetry";
+"dynamics.gForce.retry" = "Retry";

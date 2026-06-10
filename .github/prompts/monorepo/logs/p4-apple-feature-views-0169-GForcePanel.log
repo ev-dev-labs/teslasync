@@ -1,0 +1,165 @@
+================================================================================
+=== P4 Feature view 0169 GForcePanel (Apple) ===
+================================================================================
+Surface : apps/apple/TeslaSync/feature-views/GForcePanel.*
+Web src : web/src/features/driving/components/driving-dynamics/GForcePanel.tsx
+Tier    : Feature view (composed driving-dynamics panel, below page level)
+Toolchain (capability evidence — SwiftUI + Swift Charts + MapKit available):
+    Xcode 26.5 (Build 17F42); Swift 6 strict concurrency; iOS 18 SDK + macOS 15 SDK present.
+    xcodegen 2.x, swiftlint, swiftformat, pwsh all on PATH. iPhone 16 simulator available+booted.
+    => capability PRESENT (no BLOCKED-on-capability); the SwiftUI surface compiles on BOTH SDKs (below).
+
+--------------------------------------------------------------------------------
+ARTIFACT (7 files, 1308 lines — no stubs, no skeleton-only, no placeholder)
+--------------------------------------------------------------------------------
+GForcePanel.Model.swift      P1/S8 state-holder seam + P1/S11 telemetry seam + P1/S10 i18n facade
+                             (Foundation+Observation+OSLog only; SwiftUI-free, host-testable).
+GForcePanel.Adapter.swift    Pure projection core (Foundation only): fmtNumber port (safeNumber +
+                             half-up, fixed 2 decimals), lateral/longitudinal/combined=hypot tiles,
+                             "g" unit + "—" sentinel, VoiceOver summary.
+GForcePanel.Views.swift      Presentational chrome: responsive 3-up stat grid (web Grid
+                             cols={{default:1,sm:3}}), the StatCard parity tile (label+gauge glyph+
+                             value+g unit), freshness chip, loading skeleton grid.
+GForcePanel.swift            Surface: TSFadeIn(0.05)+TSGlassPanel, header (title + freshness chip),
+                             content state switch (loading/empty/error/content), onAppear start +
+                             autoRefreshIfStale, onDisappear stop, onChange(connection) auto-refresh.
+GForcePanel.Previews.swift   8 DEBUG previews (content/partial/empty(both nil)/empty(no snapshot)/
+                             loading/error/stale/offline).
+GForcePanel.strings          P1/S10 catalog (table "GForcePanel"): 5 parity keys + 8 native-chrome.
+GForcePanel.Tests.swift      33 XCTest (adapter math, hasAny gate, model phases/refresh/telemetry,
+                             a11y summary, per-state ImageRenderer smoke).
+
+--------------------------------------------------------------------------------
+WEB PARITY (read end-to-end; every branch + t() reproduced)
+--------------------------------------------------------------------------------
+Data source : useDriveDynamicsLatest(vehicleId, INTERVALS.REALTIME) -> DriveDynamicsSnapshot
+              lateral_acceleration?:number  longitudinal_acceleration?:number  (g)
+              Bound natively via the P1/S8 GForceSource seam (no HTTP in the view).
+Numeric pipeline (VERBATIM):
+    lateral       = typeof lateral_acceleration === 'number' ? value : null
+    longitudinal  = typeof longitudinal_acceleration === 'number' ? value : null
+    hasAny        = lateral != null || longitudinal != null
+    magnitude     = (lateral != null && longitudinal != null) ? sqrt(lat^2 + lon^2) : null
+    each tile     = value != null ? fmtNumber(value, 2) : '—'   unit = "g" (always)
+Shared components mapping (web -> native, P4 component-library bundle):
+    @/components/layout  Grid            -> LazyVGrid adaptive track (1-up -> 3-up)
+    @/components/ui      GlassPanel      -> TSGlassPanel
+    @/components/data-display StatCard   -> GForceStatCardView (label+gauge glyph+value+unit, parity)
+    @/components/feedback EmptyState     -> TSEmptyState (ContentUnavailableView)
+    @/components/motion  FadeIn          -> TSFadeIn (Reduce-Motion aware)
+    lucide Gauge                          -> SF Symbol gauge.with.dots.needle.bottom.50percent
+Charts/maps : none in this leaf (web source uses neither Recharts nor Leaflet).
+i18n keys (5 web parity keys — all PRESENT in GForcePanel.strings):
+    dynamics.gForce="Acceleration G-Force"  dynamics.lateral="Lateral"
+    dynamics.longitudinal="Longitudinal"    dynamics.combined="Combined"
+    dynamics.gForceNoData="No G-force telemetry received yet"
+    (+ native chrome: gForce.noReading/live/stale/offline/updating/loading/errorTitle/retry)
+States rendered (every one — no hidden surface):
+    loading -> stat-card-shaped skeleton grid (never a blank box)
+    empty   -> TSEmptyState "No G-force telemetry received yet" (web hasAny=false branch)
+    error   -> QueryError peer: title + bound message + Retry affordance (native leaf addition)
+    content -> 3-up Lateral / Longitudinal / Combined stat row, TSFadeIn delay 0.05
+    stale   -> header freshness chip + one-shot auto-refresh (P4 leaf live-state contract)
+    offline -> header chip, cached readings retained, no refetch
+Accessibility : header isHeader trait; each tile .combine + verbatim "<label> <spoken>" label;
+                grid .contain with joined VoiceOver summary; freshness chip + retry labelled;
+                gauge/triangle glyphs accessibilityHidden; Dynamic Type via Font.TS tokens;
+                Reduce Motion honoured by TSFadeIn / TSSkeleton.
+Telemetry     : GForcePanelModel.start() emits view.opened surface="GForcePanel" (P1/S11),
+                asserted once-only by GForcePanelModelTests.testStartEmitsViewOpenedOnce.
+
+================================================================================
+HOST-RUNNABLE GATES (all green — raw outputs)
+================================================================================
+[XCODEGEN]  xcodegen generate -> EXIT=0; project.pbxproj enumerates all 7 GForcePanel.* (42 refs:
+            6 .swift across app + test targets, .strings resource).
+
+[FORMAT]    swiftformat --lint (6 swift) -> 0/6 files require formatting.            FORMAT_EXIT=0
+
+[LINT]      swiftlint lint --strict (6 swift) -> Found 0 violations, 0 serious.      LINT_EXIT=0
+
+[PLACEHOLDER] check-placeholders.ps1 -Language swift (real files) ->
+            PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0  (0 opt-outs)
+
+[ISO_BUILD] Isolated SwiftPM build of the surface against the REAL shared components
+            (Sources/Components + Sources/Design + generated Tokens.swift, single "TeslaSync"
+            module, -strict-concurrency=complete, swift-tools 6.0). UnitFormatters.swift excluded
+            (pre-existing external dep on `UnitPreferences`, NOT used by this surface).
+            swift build -> "Build complete!"                                         ISO_BUILD=0
+
+[ISO_TEST]  swift test -> Executed 33 tests, with 0 failures.                        ISO_TEST=0 (33/33)
+            Includes GForcePanelViewStateTests (7 per-state ImageRenderer renders, AppKit nsImage).
+
+[IOS18_TYPECHECK]  swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+            -sdk <iphonesimulator> -target arm64-apple-ios18.0-simulator <46 module files>
+            -> 0 errors.                                                             IOS18_TYPECHECK=0
+
+[MACOS15_TYPECHECK] swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+            -sdk <macosx> -target arm64-apple-macos15.0 <46 module files>
+            -> 0 errors.                                                             MACOS15_TYPECHECK=0
+
+================================================================================
+FULL-APP xcodebuild (gate steps) — DEFERRED on a PRE-EXISTING, UNRELATED blocker
+================================================================================
+Staged the KMP Shared.xcframework first (scheme pre-actions do NOT run under the xcodebuild CLI):
+    ./Scripts/build-shared-xcframework.sh -> BUILD SUCCESSFUL (Gradle :core:assembleSharedXCFramework,
+    7m); release Shared.xcframework staged into apps/apple/Frameworks. SHARED_EXIT=0.
+
+iOS  : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+       build[-for-testing] -> ** TEST BUILD FAILED ** via a swift-frontend (IRGen) CRASH while
+       compiling a PRE-EXISTING, OUT-OF-SCOPE file — NOT GForcePanel:
+         4. While evaluating request IRGenRequest(IR Generation for file
+            ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+         5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+            (a reabstraction thunk for a (Bool, isolated (any Actor)?) async closure)
+         ... abort + report_at_maximum_capacity(...)  =>  Command SwiftCompile failed.
+       The crash is in AppearanceSettings.Controls.swift (an Appearance toggle control), a file this
+       prompt may not touch (allowed files = GForcePanel.* + this log). It has no relationship to the
+       GForce code path or types (which contain no Bool/actor-async thunk of that shape).
+       Independence proof: removing all GForcePanel.* and regenerating still drives the full-app build
+       into the same pre-existing failure region (the build is also repeatedly killed by environmental
+       memory/time pressure — ** BUILD INTERRUPTED ** — before it can even relink), i.e. the blocker is
+       orthogonal to this surface.                                          IOS_EXIT=DEFERRED
+
+macOS: xcodebuild -scheme TeslaSync-macOS build test -> same pre-existing app-target compile blocker,
+       plus macOS development-signing (no codesigning identity on this runner).   MAC_EXIT=DEFERRED
+
+Deferred to the apple acceptance gate p4-apple/P99-0001 (runs on macos-latest with signing identities),
+matching the accepted predecessor disposition for every sibling P4 leaf (DrivingTips 0168,
+DrivingCoachSection 0167, ScheduledExportsPanel 0262, SignalCatalogPanel 0264, ToolCard, ...; see
+apps/macos-pending-verifications.md) and the prior 0169 GForcePanel session
+(artifact-...-0107-P-0169-GForcePanel.log: "full-app xcodebuild ... reported DEFERRED ... never as
+passed"). No non-GForcePanel file was edited to work around it.
+
+################################################################
+# HONESTY COVENANT
+################################################################
+ 1 No red-as-green   : IOS_EXIT/MAC_EXIT recorded as DEFERRED with the real pre-existing cause
+                       (AppearanceSettings.Controls.swift IRGen crash), NEVER as 0. Every "0" below
+                       is a real executed command whose output is pasted.
+ 2 No scope narrowing: full surface — 6 .swift + .strings, all states (loading/empty/error/content/
+                       stale/offline), P1/S8+S10+S11 seams, every t() key, 33 tests.
+ 3 No skip-and-assume: web source read end-to-end; every render branch + numeric guard reproduced and
+                       pinned by an EXECUTED test (combined=hypot, both-axes-only, "—"/g, safeNumber).
+ 4 No stubs as final : complete implementation (1308 lines / 7 files); placeholder COUNT=0, 0 opt-outs.
+                       The /tmp SwiftPM + swiftc harnesses are throwaway verification scaffolding only.
+ 5 No parity shortcut: numeric pipeline ported VERBATIM (fixed 2 decimals, half-up, safeNumber collapse,
+                       magnitude = sqrt(lat^2+lon^2) only when BOTH axes present, unit "g" always).
+ 6 No delegation     : authored in-session (delegation FORBIDDEN; none used).
+ 7 No predecessor bypass: builds on P4 core tokens (P1/S9) + shared components + state-holder seams;
+                       did NOT edit project.yml, Localizable.xcstrings, shared registry types, the
+                       macos-pending ledger, or any non-GForcePanel file.
+ 8 No commit on red  : committing on GREEN host-runnable gates (format/lint/placeholder/iso-build/
+                       iso-test 33/33/ios18+macos15 typecheck/xcodegen); the only non-green step is the
+                       environment/structurally-blocked full-app build, explicitly DEFERRED.
+ 9 No silent drift   : changes confined to the allowed GForcePanel.* files + this log.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+HOST-RUNNABLE GATES: FORMAT=0 LINT=0 PLACEHOLDER=0 ISO_BUILD=0 ISO_TEST=0(33/33)
+                     IOS18_TYPECHECK=0 MACOS15_TYPECHECK=0 XCODEGEN=0
+FULL-APP xcodebuild: IOS_EXIT=DEFERRED MAC_EXIT=DEFERRED
+                     (pre-existing AppearanceSettings.Controls.swift IRGen crash + macOS signing
+                      -> p4-apple/P99-0001 on macos-latest; tracked by the macos-pending precedent)
+
+EXIT=0
+STATUS=DONE
