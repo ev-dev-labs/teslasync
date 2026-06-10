@@ -1,0 +1,160 @@
+=== P4 Feature view 0268 SignalDiffTable (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/SignalDiffTable.*
+Web src : web/src/features/telemetry/components/SignalDiffTable.tsx (THE spec)
+Toolchain: Xcode 26.5 / iPhoneSimulator26.5 SDK / Swift 6 strict concurrency / swiftlint + swiftformat + pwsh + xcodegen present
+Disposition: code-complete + DEFERRED full-app Xcode gate (ADR-012), matching every P4 feature-view surface
+            to date (0010 ToolCard, 0180 AlertMessageEditor, 0231 FSMTimelineChart, 0262 ScheduledExportsPanel,
+            0269 SignalHistoryTable). The COMMITTED artifact (SignalDiffTable.* + this log) is GREEN on every
+            host-runnable gate AND on a real isolated iOS-18 + macOS-15 swiftc typecheck + Swift-6 XCTest.
+            The full-app xcodebuild build/test is DEFERRED only on PRE-EXISTING, unrelated conditions this
+            commit neither introduces nor touches (zero SignalDiffTable errors), deferred to the signed
+            macos-latest acceptance runner per apps/macos-pending-verifications.md.
+
+Files shipped (10):
+  SignalDiffTable.Models.swift        — Foundation value types (cell value, source layer, entry, row, delta, sort, projection)
+  SignalDiffTable.Adapter.swift       — pure ports: fmtNumber/asNumber/formatRaw/deltaLabel/deltaNumericText/formatAge + sort
+  SignalDiffTable.Model.swift         — P1/S8 source seam + @Observable model (phase/selection/pin/sort) + P1/S11 telemetry
+  SignalDiffTable.Localization.swift  — P1/S10 strings facade + testable accessibility summary
+  SignalDiffTable.swift               — the surface View: state branches + Δ / Src legend (HelpTooltip popovers)
+  SignalDiffTable.Table.swift         — populated content: connectivity banner + adaptive Grid/cards + source badge
+  SignalDiffTable.strings             — P1/S10 i18n catalog contribution (per-surface table)
+  SignalDiffTable.Previews.swift      — #Previews for every state
+  SignalDiffTable.Tests.swift         — adapter (format/delta/builder/source-layer) unit tests
+  SignalDiffTable.ModelTests.swift    — state-holder + accessibility unit tests (split to satisfy file_length)
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEP 1 — xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test
+────────────────────────────────────────────────────────────────────────────────
+  Command executed live: `timeout 280 xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build`
+  Result : did NOT reach the surface compile — terminated in the MANDATORY scheme pre-action
+           `Scripts/build-shared-xcframework.sh` (Gradle `:core:assembleSharedXCFramework`), the Kotlin/Native
+           RELEASE-XCFramework link long-pole (ADR-004). XCODEBUILD_RC=124 (timeout).
+  Corroboration: the same task run standalone & offline —
+           `./gradlew :core:assembleSharedXCFramework --offline` — also GRADLE_EXIT=124 at 540s; no
+           core/build/XCFrameworks/release/Shared.xcframework produced. The Kotlin/Native toolchain IS
+           provisioned (~/.konan/provisioned.ok) and `:core:tasks --offline` succeeds in 1s, so this is a
+           build-DURATION limit in the parallel slot, not a missing-toolchain failure.
+  Nature : environmental + pre-existing. Even once the framework stages, the full-app compile globs all ~2,120
+           sibling feature-views into one TeslaSync module, which sibling gate logs (0269, 0262, 0231, 0180)
+           show is RED on pre-existing cross-surface duplicate-symbol collisions owned by the P4 integration
+           prompt — NOT this surface. This surface is namespaced (every public type is `SignalDiff*`) and
+           contributes ZERO new collisions (verified: 0 other-file declarations of all 31 declared types).
+  IOS_EXIT=124  (DEFERRED — see ISOLATED VERIFICATION below)
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEP 2 — xcodebuild -scheme TeslaSync-macOS build test
+────────────────────────────────────────────────────────────────────────────────
+  Result : DEFERRED — same mandatory KMP `Shared.xcframework` pre-action dependency as Step 1, plus macOS
+           development-signing (no signing identity provisioned in this slot — the documented sibling blocker).
+  MAC_EXIT=DEFERRED (environmental: KMP release-link duration + dev-signing)
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEP 3 — swiftlint --strict   (literal gate command, tree-wide)
+────────────────────────────────────────────────────────────────────────────────
+  Global (2,866 files): "Found 1 violation, 1 serious."
+    /apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift:158:9 (opening_brace)
+    → PRE-EXISTING, in a dashboard-widget owned by another prompt; outside this surface's allowed files.
+  This surface (9 swift files): `swiftlint lint --strict` → "Found 0 violations, 0 serious in 9 files."
+  LINT_EXIT=2 global (1 pre-existing, unrelated) ; SURFACE_LINT_EXIT=0 (green)
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEP 4 — swiftformat --lint apps/apple   (literal gate command, tree-wide)
+────────────────────────────────────────────────────────────────────────────────
+  Global: "0/2870 files require formatting, 2 files skipped."  (0 SignalDiffTable hits)
+  This surface (9 swift files): "0/9 files require formatting."
+  FORMAT_EXIT=0 (green)
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEP 5 — check-placeholders.ps1 -Path .../feature-views/SignalDiffTable
+────────────────────────────────────────────────────────────────────────────────
+  Literal gate path : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  Meaningful scan (all 10 files staged to a temp dir, -Language swift): PLACEHOLDER_COUNT=0  EXIT=0
+  Direct grep (TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented|fatalError("unimpl|not)): 0 matches
+  PLACEHOLDER_EXIT=0 (green — no stubs in shipped code, 0 opt-outs)
+
+────────────────────────────────────────────────────────────────────────────────
+ISOLATED VERIFICATION (real Xcode 26 toolchain, this surface only — no sibling collisions)
+────────────────────────────────────────────────────────────────────────────────
+  • xcodegen generate → exit 0; project assembles with the surface (60 pbxproj references to SignalDiffTable).
+  • swiftc -typecheck -sdk iphonesimulator26.5 -target arm64-apple-ios18.0-simulator -swift-version 6
+      Inputs: real apps/design/generated/apple/Tokens.swift (the REAL design system) +
+              SignalDiffTable.{Models,Adapter,Model,Localization,swift,Table,Previews}.swift
+      Result: TYPECHECK_EXIT=0 — 0 errors, 0 warnings. The full surface (incl. SwiftUI views + previews)
+              compiles against the real tokens on the iOS-18 simulator SDK under Swift 6 strict concurrency (2.4s).
+  • swiftc -typecheck -sdk macosx26.5 -target arm64-apple-macos15.0 -swift-version 6  (same inputs)
+      Result: MAC_TYPECHECK_EXIT=0 — the surface compiles for macOS 15 too.
+  • swift test (SwiftPM, platforms macOS v15, swift-tools 6.0 = language mode v6)
+      Inputs: real SignalDiffTable.{Models,Adapter,Model,Localization}.swift as target "TeslaSync";
+              real SignalDiffTable.{Tests,ModelTests}.swift as @testable test target.
+      Result: "Executed 33 tests, with 0 failures (0 unexpected)" — 33/33 GREEN under Swift 6 strict
+              concurrency. Covers: fmtNumber grouping/decimals + safeNumber guard, asNumber coercion
+              (number/string-trim/bool/null/compound), formatRaw (null/number/bool/string/compound),
+              deltaLabel (numeric+pct vs absolute base, zero-base no-pct, bool-numeric, none-on-equal-render,
+              changed-on-differ), deltaNumericText sign/percent strings, formatAge ms/s/min/h/d thresholds,
+              source-layer fold + badge labels, row projection + pinned-first sort + delta-column sort,
+              model phases (loading→empty/error→content) + view.opened-once telemetry + multi-selection +
+              selection-prune-on-update + optimistic pin float + sort toggle + connection/filter/vehicle
+              tracking, and the a11y grid summary / Δ description / row label.
+
+────────────────────────────────────────────────────────────────────────────────
+PARITY (web SignalDiffTable.tsx → native)
+────────────────────────────────────────────────────────────────────────────────
+  Data sources : useTelemetry (SignalDiffRow[]) → SignalDiffTableSource (P1/S8 seam) ; useTranslation →
+                 SignalDiffTableStrings (P1/S10 facade). No transport in the view.
+  Shared maps  : DataTable(virtualized,selectable=multi,stickyHeader)→adaptive Grid (macOS/iPad) + card list
+                 (iPhone) with a leading selection toggle ; PinButton(item_type=widget,context=
+                 signal-diff:vehicle:N)→pin toggle (optimistic float, pin.pin/pin.unpin labels) ;
+                 HelpTooltip(Δ, Src A / Src B)→legend chips with info popover (.help + popover) ;
+                 SourceLayerBadge(l1/l2/log/stale/unknown + ageMs)→tinted mono badge w/ tooltip = desc+age.
+  Pure logic   : fmtNumber→groupedNumber (locale grouping, minFrac=maxFrac=decimals, halfUp, safeNumber) ;
+                 asNumber / formatRaw / deltaLabel (num/changed/none) / the signed-delta+pct cell string /
+                 formatAge — all ported 1:1 and pinned by tests.
+  Columns      : pin · Signal (sortable, mono) · Window A (mono, secondary) · Window B (mono, primary) ·
+                 Δ (sortable; +emerald / -rose / 0-muted numeric, amber "changed", muted em-dash none) ·
+                 Src A · Src B (L1/L2/LOG/STALE/— badges). sortedRows = pinned-first then name (default).
+  States       : loading("Loading…") · empty — BOTH web variants reproduced
+                 (filterActive→"No signals match the current filter", else "No differences between the two
+                 snapshots") · content · plus the feature-level error(retry) / stale / offline chrome the web
+                 delegates to its host. EVERY state renders — no hidden surface.
+  i18n         : every web key (signalDiff.signal/valueA/valueB/delta/deltaChanged/sourceA/sourceB/
+                 tableNoMatches/tableEmpty/tableLoading + legend.* + help.signal.* + sourceLayer.*.desc +
+                 pin.pin/pin.unpin) + native chrome resolve through the per-surface "SignalDiffTable" .strings
+                 table (web English as the fallback value); no English literal in native code. Shipped as a
+                 per-surface table (NOT edited into the shared Localizable.xcstrings — parallel-unsafe).
+  a11y         : each row collapses to one VoiceOver element (combined name/windows/Δ/sources/pinned summary)
+                 with .isSelected trait + rotor actions for select + pin; sortable headers labelled +
+                 value(sorted asc/desc) + hint; source badges + info buttons + retry labelled; Dynamic Type via
+                 system fonts; Reduce-Motion respected (no custom animation). P1/S11 view.opened emitted once
+                 with slug "SignalDiffTable".
+
+────────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+────────────────────────────────────────────────────────────────────────────────
+  1  No red-as-green   : the DEFERRED full-app iOS xcodebuild (RC=124, KMP pre-action timeout), the deferred
+                         macOS build, and the 1 global swiftlint violation are reported verbatim with exit
+                         codes; NONE are claimed green. DONE rests on the host gates + isolated real-toolchain
+                         iOS+macOS typecheck + 33/33 Swift-6 test that ARE green for this surface.
+  2  No scope narrowing: all 7 web columns + selection + pin + the Δ classification + both empty variants + the
+                         source badges + the HelpTooltip legend reproduced; nothing dropped.
+  3  No skip-and-assume: every gate command actually executed (xcodebuild run live to its RC=124 timeout; the
+                         KMP assemble run standalone to GRADLE_EXIT=124; swiftlint/swiftformat run tree-wide;
+                         placeholder gate run on a real staged copy).
+  4  No stubs as final : zero TODO/stub/mock/placeholder (gate step 5 green, 0 opt-outs); full implementations.
+  5  No parity shortcut: fmtNumber/asNumber/formatRaw/deltaLabel/formatAge/sort ported 1:1 from the web source
+                         + helpers and pinned by tests (e.g. "+4.00 (+5.1%)", "-4.30 (-37.4%)").
+  6  No delegation     : implemented directly; no agents/sub-tasks.
+  7  No predecessor bypass: consumes P1/S8 state-holders, P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius/
+                         TSTypeMetrics), P1/S10 i18n, P1/S11 diagnostics as-is; did NOT self-register
+                         project.yml/.swiftlint.yml (already glob feature-views), did NOT edit the shared
+                         xcstrings catalog, and did NOT edit apps/macos-pending-verifications.md (owned by the
+                         P99 acceptance prompt).
+  8  No commit on red  : the COMMITTED artifact (SignalDiffTable.* + this log) is GREEN on every host gate AND
+                         on a real isolated iOS-18 + macOS-15 typecheck + 33/33 Swift-6 XCTest; the deferred
+                         full-app gate is RED/timeout only on pre-existing, unrelated conditions (KMP release
+                         link duration + sibling-surface symbol collisions + macOS dev-signing + 1 pre-existing
+                         dashboard-widget lint nit) this commit neither introduces nor touches.
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/feature-views/SignalDiffTable.* + this log.
+  10 Log ends with EXIT/STATUS below.
+
+EXIT=0
+STATUS=DONE

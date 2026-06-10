@@ -1,0 +1,67 @@
+/*
+  SignalDiffTable.strings
+  TeslaSync — P4 feature view · 0268 · SignalDiffTable (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SignalDiffTable` resolves (table "SignalDiffTable") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of keys extracted from the web source
+  (features/telemetry/components/SignalDiffTable.tsx + the shared SourceLayerBadge
+  it composes). The rest backs the native-only chrome (error/retry, stale/offline
+  banners, accessibility) the web delegates to its host page / shared components.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"signalDiff.signal" = "Signal";
+"signalDiff.valueA" = "Window A";
+"signalDiff.valueB" = "Window B";
+"signalDiff.delta" = "Δ";
+"signalDiff.deltaChanged" = "changed";
+"signalDiff.sourceA" = "Src A";
+"signalDiff.sourceB" = "Src B";
+"signalDiff.tableNoMatches" = "No signals match the current filter";
+"signalDiff.tableEmpty" = "No differences between the two snapshots";
+"signalDiff.tableLoading" = "Loading…";
+
+/* --- Column legend (web HelpTooltip) --- */
+"signalDiff.legend.delta" = "Δ";
+"signalDiff.legend.source" = "Src A / Src B";
+"signalDiff.legend.deltaAria" = "More info about the Δ column";
+"signalDiff.legend.sourceAria" = "More info about the source-layer column";
+"help.signal.deltaCol" = "Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ.";
+"help.signal.sourceLayer" = "The layer that supplied this value: L1 (in-process), L2 (Redis), LOG (TimescaleDB history), or STALE (older than 2 minutes).";
+
+/* --- Source-layer badge (web SourceLayerBadge) --- */
+"sourceLayer.age" = "age";
+"sourceLayer.l1.desc" = "Read from the in-process SignalStore (hot path, freshest).";
+"sourceLayer.l2.desc" = "Read from Redis cross-pod cache (legacy entry; freshness unknown).";
+"sourceLayer.log.desc" = "Replayed from signal_log (durable history).";
+"sourceLayer.stale.desc" = "Redis-backed value older than the 2-minute freshness window.";
+"sourceLayer.unknown.desc" = "Source layer unknown.";
+
+/* --- Pin affordance (web shared PinButton) --- */
+"pin.pin" = "Pin";
+"pin.unpin" = "Unpin";
+
+/* --- Native chrome: error + actions --- */
+"signalDiff.error.title" = "Couldn't load signal diff";
+"signalDiff.action.retry" = "Retry";
+
+/* --- Native chrome: connectivity banners --- */
+"signalDiff.banner.stale" = "Reconnecting — values may be stale";
+"signalDiff.banner.offline" = "Offline — showing last known values";
+
+/* --- Accessibility --- */
+"signalDiff.a11y.table" = "Signal differences";
+"signalDiff.a11y.count" = "%lld differing signals";
+"signalDiff.a11y.pinned" = "pinned";
+"signalDiff.a11y.select" = "Select signal";
+"signalDiff.a11y.delta" = "change";
+"signalDiff.a11y.noChange" = "no change";
+"signalDiff.a11y.sortHint" = "Sorts the table";
+"signalDiff.a11y.sortedAscending" = "sorted ascending";
+"signalDiff.a11y.sortedDescending" = "sorted descending";
