@@ -352,3 +352,4 @@ p2-windows/feature-views/W-0179-AlertCard.prompt.md
 p2-windows/feature-views/W-0180-AlertMessageEditor.prompt.md
 p2-windows/feature-views/W-0184-LegacyAlertRulesRedirect.prompt.md
 p2-windows/feature-views/W-0185-LegacyAlertsRedirect.prompt.md
+p2-windows/feature-views/W-0183-InboxBody.prompt.md
