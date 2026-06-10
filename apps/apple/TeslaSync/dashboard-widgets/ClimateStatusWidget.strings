@@ -1,0 +1,46 @@
+/*
+  ClimateStatusWidget.strings
+  TeslaSync — P4 dashboard widget · 0028 · ClimateStatusWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ClimateStatusWidget` resolves (table "ClimateStatusWidget") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/ClimateStatusWidget.tsx, namespace "dashboard"): the
+  shell title, the three row labels (Cabin / Outside / HVAC), the Defrost / Heater
+  chip labels, and the empty message. The remaining keys back the native-only chrome
+  (the kW unit suffix, registry description, freshness chip, refresh/retry/loading/
+  error copy, and the stale/offline banners).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.climate" = "Climate";
+"widget.cabin" = "Cabin";
+"widget.outside" = "Outside";
+"widget.hvac" = "HVAC";
+"widget.defrost" = "Defrost";
+"widget.batHeater" = "Heater";
+"widget.noClimate" = "No climate data";
+
+/* --- Unit suffix (web concatenated `kW` literal) --- */
+"widget.climateStatus.kw" = "kW";
+
+/* --- Registry metadata (registry/climate.ts description) --- */
+"widget.climateStatus.description" = "Inside/outside temp, HVAC state";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.climateStatus.live" = "Live";
+"widget.climateStatus.stale" = "Stale";
+"widget.climateStatus.offline" = "Offline";
+"widget.climateStatus.refresh" = "Refresh";
+"widget.climateStatus.retry" = "Retry";
+
+/* --- Native chrome: states --- */
+"widget.climateStatus.loading" = "Loading climate";
+"widget.climateStatus.errorTitle" = "Couldn't load climate";
+"widget.climateStatus.offlineBanner" = "Offline — showing last known climate";
+"widget.climateStatus.staleBanner" = "Reconnecting — values may be stale";
