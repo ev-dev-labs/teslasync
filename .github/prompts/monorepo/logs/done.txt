@@ -402,3 +402,4 @@ p2-windows/feature-views/W-0153-DetailCards.prompt.md
 p2-windows/feature-views/W-0141-ElevationChart.prompt.md
 p2-windows/feature-views/W-0162-TemperatureTrendChart.prompt.md
 p2-windows/feature-views/W-0134-WidgetPicker.prompt.md
+p2-windows/feature-views/W-0165-AutopilotSection.prompt.md
