@@ -347,3 +347,4 @@ p2-windows/feature-views/W-0171-MotorEfficiencyInsights.prompt.md
 p2-windows/feature-views/W-0176-SOCRouteChart.prompt.md
 p2-windows/feature-views/W-0178-TripPlannerMap.prompt.md
 p2-windows/feature-views/W-0177-TripLegList.prompt.md
+p2-windows/feature-views/W-0175-SummaryStats.prompt.md
