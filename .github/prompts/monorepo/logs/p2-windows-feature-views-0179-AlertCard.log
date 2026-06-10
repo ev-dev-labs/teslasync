@@ -1,0 +1,76 @@
+=== P2 Feature view 0179 AlertCard (Windows) ===
+date: 2026-06-09T20:58:01.3594590-07:00
+capability: .NET 10.0.300 ; WindowsDesktop runtime 10.0.x ; Microsoft.WindowsAppSDK (UseWinUI) — CAPABLE
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2: headless tests — dotnet test TeslaSync.App.Tests.csproj -c Release ---
+Passed!  - Failed:     0, Passed: 11084, Skipped:     0, Total: 11084, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+--- AlertCard surface tests (subset evidence) ---
+Passed!  - Failed:     0, Passed:    48, Skipped:     0, Total:    48, Duration: 70 ms - TeslaSync.App.Tests.dll (net10.0)
+ALERTCARD_TEST_EXIT=0
+
+--- STEP 3: UIAutomation E2E — dotnet test TeslaSync.App.UITests.csproj -c Release (SEPARATE GATE) ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 233 ms - TeslaSync.App.UITests.dll (net10.0)
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: WinAppDriver/Appium runner + deployed MSIX app absent on this runner;
+  nothing on http://127.0.0.1:4723/ and WinAppDriver.exe not on PATH. Run via apps/windows/run-ui-automation.ps1
+  where the runner provides WinAppDriver. Environmental + out of scope for this surface; 147/147 fail-fast,
+  identical for every surface. git-verified: zero files modified under TeslaSync.App.UITests/.)
+
+--- STEP 4: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- STEP 5: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AlertCard ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- GIT SCOPE (this surface) ---
+   M apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+  ?? .github/prompts/monorepo/logs/p2-windows-feature-views-0179-AlertCard.log
+  ?? apps/windows/TeslaSync.App.Tests/FeatureViews/AlertCardTests.cs
+  ?? apps/windows/TeslaSync.App/feature-views/AlertCard/
+
+--- SURFACE NOTES: AlertCard (parity port of web/src/features/notifications/components/AlertCard.tsx) ---
+- Files: feature-views/AlertCard/AlertCard.cs (WinUI 3 view, ContentControl) +
+         feature-views/AlertCard/AlertCard.Model.cs (WinUI-free model / projection / diagnostics / registration) +
+         TeslaSync.App.Tests/FeatureViews/AlertCardTests.cs (48 headless tests).
+- Pure presentational card (the web component never fetches): no loading/empty/error/stale/offline branch —
+  same precedent as the sibling BatteryPill / AddWidgetButton leaves. The web source's real conditional
+  branches are ALL reproduced and unit-tested: read vs unread (accent border + status dot + bolder title +
+  mark-read action), acknowledged vs not (success badge + reopen-vs-acknowledge action), and named vs
+  anonymous acknowledgement copy.
+- Shared components: TsGlassPanel, TsBadge, TsButton, TsSeverityBadge, TsStatusDot, DisplayTokens, SeverityLevels.
+- Type-icon map: native port of the web TYPE_ICONS table (16 alert types -> Segoe Fluent glyphs) with the bell
+  fallback; relative time is a 1:1 port of the web bespoke getTimeAgo tiers (Xm/Xh/Xd ago).
+- i18n (all via the P1/S10 ILocalizer facade; no English literals in native code):
+    translation.alerts.viewContext, translation.alerts.ack.ackedBy ({0} actor interpolation),
+    translation.alerts.ack.ackedByAnonymous, translation.alerts.timeline.title,
+    translation.alerts.timeline.kindAnonymous.reopened, translation.alerts.ack.button, translation.Unread.
+    translation.'Mark read' is absent from the resw catalog -> resolved via the facade English fallback
+    (exactly as the web i18next returns the key as its own default).
+- Accessibility: composed Narrator name on the surface; every interactive element named (title region ->
+  'View context'; status dot -> 'Unread'; each action button via its label); decorative glyphs set
+  AccessibilityView.Raw. WrapRow flow panel keeps the meta/action bar from clipping (web flex-wrap).
+- Telemetry (P1/S11): view.opened slug=AlertCard, PII-safe (never an alert title/message/severity/actor),
+  emitted once on Loaded.
+- Repo hygiene: consolidated the recurring multi-root MSB4025 corruption in TeslaSync.App.Tests.csproj
+  (two concatenated <Project> roots) into ONE valid root — the deduplicated, path-sorted union of every
+  previously linked source preserved (516) + the new AlertCard.Model.cs link (517 total). XML re-validated.
+
+=== SURFACE GATE SUMMARY ===
+BUILD_EXIT=0   HEADLESS_TEST_EXIT=0 (TeslaSync.App.Tests: 11084 passed, 0 failed; AlertCardTests: 48 passed)
+FORMAT_EXIT=0  PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+UIAutomation E2E suite: BLOCKED on absent WinAppDriver runtime (environmental; separate gate, 0 files touched).
+
+EXIT=0
+STATUS=DONE
