@@ -1,0 +1,48 @@
+/*
+  EntryDrawer.strings
+  TeslaSync — P4 modal / dialog · 0018 · EntryDrawer (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `EntryDrawer`
+  resolves (table "EntryDrawer") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/admin/components/dlq-inspector/EntryDrawer.tsx, plus the shared `common.close` /
+  `common.copyButton.*` keys it composes). The second group backs the native chrome (P4 freshness /
+  loading / empty / error copy) so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"admin.dlq.drawer.title" = "DLQ entry #{{id}}";
+"admin.dlq.drawer.titleFallback" = "DLQ entry";
+"admin.dlq.drawer.tabs.inner" = "Inner payload";
+"admin.dlq.drawer.tabs.raw" = "Raw envelope";
+"admin.dlq.drawer.replay" = "Replay";
+"admin.dlq.drawer.id" = "ID";
+"admin.dlq.drawer.arrivedAt" = "Arrived";
+"admin.dlq.drawer.dlqTopic" = "DLQ topic";
+"admin.dlq.drawer.reason" = "Reason";
+"admin.dlq.drawer.vin" = "VIN";
+"admin.dlq.drawer.sourceTopic" = "Source topic";
+"admin.dlq.drawer.redeliveries" = "Redeliveries";
+"admin.dlq.drawer.parseError" = "Parse error";
+"admin.dlq.drawer.binaryPayload" = "(non-UTF-8 binary, {{n}} bytes — use the copy button to download base64)";
+"admin.dlq.drawer.binaryEnvelope" = "(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)";
+"common.close" = "Close";
+"common.copyButton.copy" = "Copy";
+"common.copyButton.copied" = "Copied";
+
+/* --- Native chrome: P4 freshness / loading / empty / error + reload-failure --- */
+"admin.dlq.drawer.loading" = "Loading entry…";
+"admin.dlq.drawer.emptyTitle" = "No entry selected";
+"admin.dlq.drawer.emptyMessage" = "Pick a dead-letter entry to inspect its payload.";
+"admin.dlq.drawer.errorTitle" = "Couldn't load this entry";
+"admin.dlq.drawer.retry" = "Retry";
+"admin.dlq.drawer.reloadFailed" = "Couldn't refresh this entry";
+"admin.dlq.drawer.live" = "Live";
+"admin.dlq.drawer.stale" = "Stale";
+"admin.dlq.drawer.offline" = "Offline";
+"admin.dlq.drawer.staleBanner" = "Reconnecting — this entry may be out of date";
+"admin.dlq.drawer.offlineBanner" = "Offline — showing the last loaded entry";
