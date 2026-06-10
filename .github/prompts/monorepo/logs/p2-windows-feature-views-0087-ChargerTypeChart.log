@@ -1,0 +1,96 @@
+=== P2 Feature view 0087 ChargerTypeChart (Windows) ===
+Date            : 2026-06-10
+Branch          : auto/p/p2-windows__feature-views__W-0087-ChargerTypeChart.prompt.md
+Web source      : web/src/features/charging/components/charging-curve/ChargerTypeChart.tsx
+Native output   : apps/windows/TeslaSync.App/feature-views/ChargerTypeChart/{ChargerTypeChart.cs, ChargerTypeChart.Model.cs}
+Tests           : apps/windows/TeslaSync.App.Tests/FeatureViews/ChargerTypeChartTests.cs (33 [Fact]/[Theory] methods)
+Platform        : WinUI 3 (Windows App SDK 2.1.0 / WinUI) + .NET 10 (SDK 10.0.300) -> PRESENT (build + headless tests green below)
+
+--- Surface summary ----------------------------------------------------------------------------------
+Pure presentational port of the web ChargerTypeChart. The WinUI-free ChargerTypeChartProjection groups the
+input sessions by charger category (web getChargerLabel: Supercharger / DC Fast / Home / AC, in first-seen
+Map order), computes per-group avg kW (peak_power_w/1000), avg kWh (total_energy_added_wh/1000) and avg
+duration (durationMinutes), and renders one of three web-derived branches:
+  - Loading : title + skeleton chrome (parent still resolving the sessions).
+  - Empty   : title + friendly empty surface (web ChartContainer chart.noData "No data available").
+  - Ready   : two grouped bar series "Avg Power" (kW) / "Avg Energy" (kWh) via TsBarChart (native analogue of
+              the recharts ComposedChart, no <Legend>), the per-charger-type legend list
+              ("{count} sessions . {avgDuration} min avg", palette-by-index dots = native analogue of the web
+              CHARGER_COLORS <Cell>), and the accessible Charger Type / Sessions / Avg kW / Avg kWh /
+              Avg minutes data table (web ChartContainer dataColumns fallback).
+No fetch-driven error/stale/offline branch exists in the presentational web source (the parent ChargingCurvePage
+owns the query lifecycle) - same honest mapping as the sibling ChargerTypeBreakdown / MonthlyCostChart ports.
+All 12 web t() keys flow through the ILocalizer facade (asserted by RecordingLocalizer test); diagnostics emit
+"view.opened slug=ChargerTypeChart" (PII-safe). Native chart constraint documented honestly: the cartesian
+surface shares one Y scale (the web uses split left/right kW/kWh axes) and tints bars per-series, so the exact
+per-category figures live on the accessible table + tooltips and the charger-type colour lives on the legend.
+
+--- Pre-existing blockers fixed to make the gate genuinely evaluable (no silent drift) ----------------
+1. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was COMMITTED with TWO <Project> roots
+   (invalid XML -> MSB4025, "multiple root elements") - the recurring integration-merge breakage the file's own
+   INVARIANT comment documents. The whole test project was unloadable, masking every downstream issue. Fixed by
+   consolidating to ONE canonical <Project> root: the existence-filtered, de-duplicated, path-sorted union of
+   every <Compile> link across both broken roots (1262 raw -> 593 unique existing; 0 dangling) plus the new
+   ChargerTypeChart.Model.cs link.
+2. QueueStatusPanel.{Model,Source,ViewModel}.cs existed on disk and are referenced by the committed
+   QueueStatusPanelTests.cs, but were never compile-linked in EITHER malformed root (masked by the XML load
+   failure). Added the 3 missing WinUI-free links (verified WinUI-free; ResponseViewer.Snippet.cs is a WinUI
+   view file and correctly stays unlinked). Final canonical set = 597 <Compile> links.
+3. QueueStatusPanel.cs had a pre-existing CA1822 (BuildCardHeader does not access instance data) escalated to an
+   error by the app project's TreatWarningsAsErrors, blocking the app build. Applied the exact analyzer fix
+   (marked the method static). Surgical, behaviour-preserving.
+4. My three new .cs files were authored with CRLF; normalised to LF (line endings only, no code change) so
+   dotnet format --verify-no-changes is clean.
+
+--- Gate: dotnet build apps/windows/TeslaSync.sln -c Release -------------------------------------------
+  TeslaSync.TokenGen -> ok ; Generated -> ok ; TeslaSync.App.Core -> ok ; TeslaSync.App.Platform -> ok
+  TeslaSync.App.Tests -> ...\TeslaSync.App.Tests.dll
+  TeslaSync.App       -> ...\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+  Build succeeded.  0 Warning(s)  0 Error(s)
+BUILD_EXIT=0
+
+--- Gate: dotnet test apps/windows/TeslaSync.sln -c Release --------------------------------------------
+  TeslaSync.App.Tests.dll  (headless logic) : Passed!  - Failed: 0, Passed: 12433, Skipped: 0, Total: 12433
+      (includes the 33 new ChargerTypeChartTests + the now-compilable QueueStatusPanelTests)
+  TeslaSync.App.UITests.dll (E2E)           : Failed!  - Failed: 147, Passed: 0, Total: 147
+      Every failure is identical and environmental:
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+        WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+        WinAppDriver.exe was not found at its standard install paths or on PATH.
+      Every UITest is [Trait("Category","UIAutomation")], gated on the absent UI-automation runner.
+TEST_EXIT=1   (solely the environment-gated UIAutomation E2E suite; the headless suite is fully green)
+
+  Evidence the headless suite is wholly green when the absent E2E runner is excluded:
+    dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+      TeslaSync.App.Tests.dll  : Passed!  - Failed: 0, Passed: 12433, Skipped: 0, Total: 12433
+      TeslaSync.App.UITests.dll: No test matches the given testcase filter `Category!=UIAutomation`
+    FILTERED_TEST_EXIT=0
+
+--- Gate: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---------------------------------
+  No changes required (CRLF->LF already normalised on the new files).
+FORMAT_EXIT=0
+
+--- Gate: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ChargerTypeChart -------
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- Acceptance criteria ------------------------------------------------------------------------------
+  [x] Surface renders all web states (loading / empty / ready) - presentational source has no error/stale/offline.
+  [x] No direct HTTP; data binds via the WinUI-free projection (parent owns the query lifecycle, P1/S8 pattern).
+  [x] Every source i18n key flows through the ILocalizer facade (RecordingLocalizer test asserts all 12 keys).
+  [x] Accessibility: surface / chart / each legend row / each table row carry Narrator names; dots are Raw.
+  [x] Tests: adapter (grouping + kW/kWh/count/duration formatting), per-state projection, a11y names, diagnostics.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+  [x] view.opened slug=ChargerTypeChart diagnostics event (P1/S11), PII-safe.
+
+--- EXIT / STATUS ------------------------------------------------------------------------------------
+Build, headless tests (12433/12433), format and placeholder gates are all GREEN. The whole-solution
+`dotnet test` is EXIT=1 SOLELY because the UIAutomation E2E runner (WinAppDriver/Appium) is absent on this
+runner - a platform-capability gap (the capability note's "If unavailable on the runner -> STATUS=BLOCKED with
+API evidence"), with the per-test UiAutomationUnavailableException evidence above. The WinUI 3 + .NET 10
+capability itself IS present (the app and headless test assemblies build and the headless suite passes).
+This matches the established sibling precedent (p2-windows-feature-views-0049-WindowStatusDetail.log).
+
+EXIT=1
+STATUS=BLOCKED
