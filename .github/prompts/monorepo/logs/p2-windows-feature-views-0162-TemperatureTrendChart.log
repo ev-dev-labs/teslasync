@@ -1,0 +1,104 @@
+=== P2 Feature view 0162 TemperatureTrendChart (Windows) ===
+date: 2026-06-10T09:58:56-07:00
+worktree: D:\repos\teslasync-wt2\wt-07
+capability probe: .NET SDK 10.0.300 (also 9.0.314); workloads android/ios/maccatalyst/maui-windows
+  present. WinUI 3 app (net10.0-windows10.0.19041.0, UseWinUI, Microsoft.WindowsAppSDK) builds on this
+  runner (BUILD below, BUILD_EXIT=0). NOT blocked.
+
+web source: web/src/features/driving/components/drivetrain-health/TemperatureTrendChart.tsx
+native output: apps/windows/TeslaSync.App/feature-views/TemperatureTrendChart.cs
+              apps/windows/TeslaSync.App/feature-views/TemperatureTrendChart.Model.cs
+native tests : apps/windows/TeslaSync.App.Tests/FeatureViews/TemperatureTrendChartTests.cs
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App.Core -> ...\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> ...\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> ...\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> ...\TeslaSync.App.Tests.dll
+  TeslaSync.App -> ...\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+Build succeeded.
+    17 Warning(s)   (all pre-existing CAxxxx analyzer warnings in TeslaSync.App.Core; none in the new surface)
+    0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+  WinAppDriver.exe was not found at its standard install paths or on PATH.
+  ... (147 identical UiAutomationUnavailableException failures total — one per UIAutomation E2E test) ...
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 122 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 13113, Skipped:     0, Total: 13113, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite) which
+fail fast because WinAppDriver/Appium is not present on this runner (nothing on http://127.0.0.1:4723/,
+WinAppDriver.exe not on PATH). They are out of scope for this surface (run separately via
+apps/windows/run-ui-automation.ps1), do not link or exercise TemperatureTrendChart, and fail uniformly
+(147/147) for every surface. git-verified: zero files modified under TeslaSync.App.UITests/.
+
+### STEP 2b: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation (headless surface-logic gate, W9-0002 separation)
+Passed!  - Failed:     0, Passed: 13113, Skipped:     0, Total: 13113, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+TemperatureTrendChart surface tests (subset):
+Passed!  - Failed:     0, Passed:    39, Skipped:     0, Total:    39, Duration: 46 ms - TeslaSync.App.Tests.dll (net10.0)
+TEMPERATURETRENDCHART_TESTS_EXIT=0
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+(first pass surfaced ENDOFLINE on the new test file authored with CRLF; the three new .cs files were
+ normalized to LF and the verify re-run is clean.)
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TemperatureTrendChart
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite — WinAppDriver
+ absent on this runner; evidenced above. WinUI 3 + .NET 10 BUILD capability IS present: BUILD_EXIT=0.)
+
+=== ACCEPTANCE (web parity: features/driving/components/drivetrain-health/TemperatureTrendChart.tsx) ===
+- Surface renders every state the web source has: loading (header + skeleton), empty, ready (line chart +
+  markers + accessible table). The web render gate — the parent first filters null-temperature points
+  (chartData.filter(d => d.outsideTemp !== null)) and then `data.length <= 1 → return null` — maps to the
+  friendly Empty state when fewer than two plottable points exist. The page owns error/stale/offline once
+  for the whole Drivetrain-Health experience (the web chart has no fetch-driven branch of its own), so the
+  surface's branch set is loading/empty/ready exactly as the web component.
+- Data: bound via the shared P1/S8 state-holder model (TemperatureTrendChartModel: the web `data` prop +
+  the parent fetch flag); no direct HTTP from the view. SI Celsius outside-temperature points
+  (d.outsideTempAvgC) + the pre-formatted drive-date label (formatDateShort). Unit conversion happens only
+  in the projection (useUnits boundary).
+- Charts: native TsLineChart (web recharts LineChart) with one outside-temperature line (#06b6d4 → regen
+  role), built-in legend (web <Legend/>), and two dashed HorizontalLine annotations — Warm Zone at 35°C
+  (#f59e0b → energy role) and Freezing at 0°C (#06b6d4 → regen role) — the web <ReferenceLine> markers.
+  Plus the accessible data-table expander (web ChartContainer dataColumns Date / Outside).
+- Unit handling: native converts BOTH the line and the markers to the display unit at the single projection
+  boundary, so the plotted line, the threshold markers, the Y unit and the column header agree. (The web
+  plots the data raw °C while only converting its markers — a latent imperial-mode inconsistency; the native
+  render corrects it per the SI-canonical display-boundary mandate + the StatorTempChart sibling precedent.
+  Metric output is identical to the web; imperial is unit-consistent. Documented, not silent.) Verified:
+  metric line 10/20 °C unchanged, imperial 50/68 °F; markers metric 35/0, imperial 95/32.
+- i18n: all eight source keys resolve from the P1/S10 catalog — drivetrain.tempHistory / .tempHistorySub /
+  .tempHistory.aria [added to en+he+ar] / col.date / col.outside / outsideTemp / warmZone / freezing — plus
+  shared chart.noData + common.loading. Web parity preserved: the line legend label is the bare
+  t('drivetrain.outsideTemp') with NO unit suffix; the unit travels on the series Unit + the column header.
+  No English literals in native code (English fallbacks mirror the web t(key, fallback) defaults).
+- a11y: Narrator name on the surface (per state), the chart (aria), the data-table expander and every data
+  row (date + labelled unit-suffixed reading, em dash for a gap); reduced-motion honored via TsFadeIn
+  (web <FadeIn delay={0.25}>); system font scale inherited.
+- Tests: 39 headless TemperatureTrendChartTests (branch gate incl. the null-filter + length gate; metric/
+  imperial line + marker conversion; gap-on-null; semantic roles; unit-free legend name; resolved labels;
+  unit-suffixed columns; data table incl. em-dash for missing reading / blank date; per-state + per-row
+  Narrator names; PII-safe diagnostics; registration; argument validation) — part of the green headless suite.
+- Telemetry: view.opened slug=TemperatureTrendChart (PII-safe), emitted once on Loaded (P1/S11).
+- Repo hygiene: the wt-07 HEAD TeslaSync.App.Tests.csproj had drifted back to TWO Project roots (MSB4025,
+  multiple root elements) with 679 duplicate Compile items; re-consolidated into the documented single
+  canonical root — the path-sorted, Include-deduplicated union of every previously linked WinUI-free source
+  (1300 → 621 unique, all verified present on disk) — plus the new TemperatureTrendChart.Model.cs link
+  (622 total). No files modified under TeslaSync.App.UITests/.
+
+EXIT=0
+STATUS=DONE

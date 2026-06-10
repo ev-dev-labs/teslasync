@@ -9210,6 +9210,9 @@
   <data name="translation.drivetrain.tempHistory" xml:space="preserve">
     <value>Temperature Trend</value>
   </data>
+  <data name="translation.drivetrain.tempHistory.aria" xml:space="preserve">
+    <value>Outside temperature trend line chart per recent drive</value>
+  </data>
   <data name="translation.drivetrain.tempHistorySub" xml:space="preserve">
     <value>Outside temperature recorded during recent drives</value>
   </data>

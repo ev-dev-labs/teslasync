@@ -8,7 +8,7 @@
     are Compile-linked below (the views themselves are exercised by the app build). The matching test
     classes live under this project and are picked up by the SDK default-compile glob.
 
-    INVARIANT: keep this file as exactly ONE Project root with a single, path-sorted, deduplicated
+    INVARIANT: keep this file as exactly ONE Project root with a single, path-sorted, Include-deduplicated
     Compile ItemGroup. A chain of integration merges had repeatedly re-concatenated this file into
     multiple Project roots plus duplicate Compile items and broken XML comments, failing XML load
     (MSB4025); re-consolidated for P2 feature-views/0084 ConflictWarnings into this single canonical
@@ -54,6 +54,10 @@
     HEAD had drifted back to two Project roots (MSB4025) with every Compile item duplicated across the
     two halves; both are repaired here by regenerating the Compile group directly from the WinUI-free
     sources on disk. Do NOT re-concatenate.
+    (MSB4025); re-consolidated for P2 feature-views/0162 TemperatureTrendChart into this single canonical
+    root - the path-sorted, Include-deduplicated union of every previously linked WinUI-free
+    Model/Source/ViewModel logic source, plus the new TemperatureTrendChart surface link. Do NOT
+    re-concatenate, and never write a literal build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -90,7 +94,7 @@
   </ItemGroup>
 
   <!-- WinUI-free Model / Source / ViewModel / Projection / Registry sources Compile-linked from
-       TeslaSync.App (path-sorted, deduplicated union); the WinUI views are exercised by the app build. -->
+       TeslaSync.App (path-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -574,6 +578,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\LoadingSkeleton.Model.cs" Link="FeatureViews\LoadingSkeleton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MiniGridPreview\MiniGridPreview.Model.cs" Link="FeatureViews\MiniGridPreview\MiniGridPreview.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MonthlyCostChart\MonthlyCostChart.Model.cs" Link="FeatureViews\MonthlyCostChart\MonthlyCostChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MonthlyCostTable\MonthlyCostTable.Model.cs" Link="FeatureViews\MonthlyCostTable\MonthlyCostTable.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MoreDetailsPanel\MoreDetailsPanel.Model.cs" Link="FeatureViews\MoreDetailsPanel\MoreDetailsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MoreDetailsPanel\MoreDetailsPanel.Source.cs" Link="FeatureViews\MoreDetailsPanel\MoreDetailsPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MoreDetailsPanel\MoreDetailsPanel.ViewModel.cs" Link="FeatureViews\MoreDetailsPanel\MoreDetailsPanel.ViewModel.cs" />
@@ -676,10 +681,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\StatorTempChart.Model.cs" Link="FeatureViews\StatorTempChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatusHeader\StatusHeader.Model.cs" Link="FeatureViews\StatusHeader\StatusHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummarySlide\SummarySlide.Model.cs" Link="FeatureViews\SummarySlide\SummarySlide.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Model.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Source.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsRow.Model.cs" Link="FeatureViews\SummaryStatsRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Model.cs" Link="FeatureViews\SummaryStats\SummaryStats.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Source.cs" Link="FeatureViews\SummaryStats\SummaryStats.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.ViewModel.cs" Link="FeatureViews\SummaryStats\SummaryStats.ViewModel.cs" />
@@ -698,6 +699,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureSection\TemperatureSection.Model.cs" Link="FeatureViews\TemperatureSection\TemperatureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureSection\TemperatureSection.Source.cs" Link="FeatureViews\TemperatureSection\TemperatureSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureSection\TemperatureSection.ViewModel.cs" Link="FeatureViews\TemperatureSection\TemperatureSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemperatureTrendChart.Model.cs" Link="FeatureViews\TemperatureTrendChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.Model.cs" Link="FeatureViews\TeslaApiRefTool\TeslaApiRefTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" Link="FeatureViews\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" />
