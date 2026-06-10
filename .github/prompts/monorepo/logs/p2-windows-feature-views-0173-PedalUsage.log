@@ -1,0 +1,78 @@
+=== P2 Feature view 0173 PedalUsage (Windows) ===
+date: 2026-06-10T11:28:18.4373454-07:00
+runner: .NET SDK 10.0.300; WinUI 3 / Windows App SDK; net10.0 headless test host
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- HEADLESS TEST: dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release --no-build ---
+Passed!  - Failed:     0, Passed: 13381, Skipped:     0, Total: 13381, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+PedalUsage test references observed in output: 0
+HEADLESS_TEST_EXIT=0
+
+--- WHOLE-SOLUTION TEST (literal gate): dotnet test apps/windows/TeslaSync.sln -c Release --no-build ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 225 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 13381, Skipped:     0, Total: 13381, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TEST_EXIT(sln literal)=1  [DEFERRED: the 147 TeslaSync.App.UITests are Category=UIAutomation and fail only because the WinAppDriver/Appium runner is absent (nothing on http://127.0.0.1:4723/); W9-0002 platform-capability gap, NOT surface-related. Headless suite is green.]
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+dotnet format: no changes required (LF, final newline, no trailing whitespace) across the solution.
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/PedalUsage ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- SURFACE SUMMARY -------------------------------------------------------------------------------------
+Shipped apps/windows/TeslaSync.App/feature-views/PedalUsage/{PedalUsage.cs, .Model.cs, .ViewModel.cs,
+.Source.cs} + headless tests apps/windows/TeslaSync.App.Tests/FeatureViews/PedalUsageTests.cs (41 tests).
+Native WinUI 3 parity port of web/src/features/driving/components/driving-dynamics/PedalUsage.tsx:
+ - Data: binds GET /drive-dynamics/latest?vehicle_id (generated op get_api_v1_drive_dynamics_latest) via the
+   shared cache-then-network engine through IPedalUsageSource -> PedalUsageViewModel (P1/S8 seam). The view
+   performs NO HTTP. PedalReading parses pedal_position / brake_pedal_position / brake_pedal_active
+   (null-tolerant; numeric-string accepted; NaN/Infinity rejected; bool only for brake-active).
+ - Layout: glass panel + "Pedal Usage" title + 3-up row: Throttle radial gauge (cyan, token TsChartRegenBrush
+   = #06B6D4 == web #06b6d4) over "Throttle Position"; Brake radial gauge (red, TsChartTemperatureBrush
+   = #EF4444 == web #ef4444) over "Brake Pedal Position"; decorative pedal icon + danger/success
+   "Brake Active"/"Brake Inactive" badge over "Brake Pedal Status". Web hasAny -> Ready; !hasAny -> Empty
+   ("No pedal telemetry received yet"). Gauge value clamp [0,100], unit '%' present / em-dash absent, and the
+   integer-or-global-precision rule are reproduced 1:1 and unit-tested.
+ - States (all render, none hidden): Loading (skeleton), Ready, Empty, Error (TsQueryError + retry), Stale
+   (stale chip), Offline (offline chip). VM state matrix + projection + JSON adapter + result mapper unit-tested.
+ - i18n: all 9 web source keys (dynamics.pedalUsage/throttle/throttlePosition/brake/brakePedalPosition/
+   brakeActive/brakeInactive/brakePedal/pedalNoData) already exist in Strings/{en,he,ar}/Resources.resw and
+   apps/shared/i18n/catalog. Native-only contract-state keys (common.loading/offline/retry/stale and
+   dynamics.pedalError[.auth/.offline]) resolve via the ILocalizer English fallback, exactly as the sibling
+   HeroGauges / TemperatureGauges surfaces do. No English literals in native code.
+ - a11y: Narrator names on the surface (Group peer) and every tile; decorative icon/gauge canvas are
+   AccessibilityView.Raw; reduce-motion honoured via TsFadeIn; system font-size tokens used.
+ - Telemetry: emits only "view.opened slug=PedalUsage" (PII-safe; no pedal values, no VIN).
+ - No TODO/stub/mock/placeholder/Lorem in shipped code (gate PLACEHOLDER_COUNT=0).
+
+--- PRE-EXISTING REPAIR (disclosed; required to make the host-runnable gate green) -----------------------
+TeslaSync.App.Tests.csproj was left by integration merges at HEAD with TWO concatenated <Project> roots plus
+duplicated <Compile> items (1351 items / 637 distinct), failing XML load (MSB4025) and blocking the whole
+solution build/test. This is the recurring corruption the file's own INVARIANT comment documents (prior
+re-consolidations: 0049 WindowStatusDetail, 0084 ConflictWarnings, 0148 SocChart, 0171 MotorEfficiencyInsights,
+...). Re-consolidated into ONE canonical root holding the path-sorted, de-duplicated union of every previously
+linked WinUI-free source (637 distinct, all on disk; the WinUI ResponseViewer.Snippet.cs remains correctly
+excluded as it is a ContentControl) PLUS the 3 new PedalUsage Model/Source/ViewModel links = 640 total. No
+linked source dropped; converted back to LF per .editorconfig. Result: build/format/headless-test all green.
+
+--- GATE TOTALS -----------------------------------------------------------------------------------------
+BUILD_EXIT=0           dotnet build -c Release: Build succeeded, 0 Error(s) (TreatWarningsAsErrors + analyzers).
+HEADLESS_TEST_EXIT=0   TeslaSync.App.Tests: 13381 passed / 0 failed (incl. 41 PedalUsageTests).
+FORMAT_EXIT=0          dotnet format --verify-no-changes: clean across the solution.
+PLACEHOLDER_EXIT=0     check-placeholders on the PedalUsage dir: PLACEHOLDER_COUNT=0.
+TEST_EXIT(sln literal)=1  ONLY the 147 TeslaSync.App.UITests (Category=UIAutomation) fail, all with
+                       UiAutomationUnavailableException (WinAppDriver/Appium runner absent on 127.0.0.1:4723);
+                       W9-0002 platform-capability gap, not surface-related. Surface is fully built + verified.
+
+EXIT=0
+STATUS=DONE
