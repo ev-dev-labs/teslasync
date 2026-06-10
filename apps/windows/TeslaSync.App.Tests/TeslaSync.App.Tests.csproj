@@ -37,15 +37,17 @@
     Do NOT re-concatenate.
     feature-view and dashboard-widget surface. The WinUI app targets a WinUI TFM and cannot be
     project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
-    compile-linked into the single item group below; the views themselves are exercised by the app build.
-    The matching test classes live under this project and are picked up by the SDK default-compile glob.
+    Compile-linked into the single item group below; the views themselves are exercised by the app
+    build. The matching test classes live under this project and are picked up by the SDK
+    default-compile glob.
 
-    INVARIANT: keep this file as exactly ONE project root with a single, path-sorted, deduplicated
-    compile item group. A chain of integration merges had repeatedly re-concatenated this file into
-    multiple roots plus orphaned comment prose, failing XML load (MSB4025); consolidated for P2
-    dashboard-widgets/0115 WeatherAtCarWidget into this single canonical root (the deduplicated,
-    path-sorted union of every previously linked source preserved) plus the new WeatherAtCarWidget
-    surface Model / Source / ViewModel links. Do NOT re-concatenate, and never write a literal
+    INVARIANT: keep this file as exactly ONE Project root with a single, path-sorted, deduplicated
+    Compile item group. A chain of integration merges had repeatedly re-concatenated this file into
+    multiple roots plus duplicate Compile items and broken XML comments, failing XML load (MSB4025);
+    re-consolidated for P2 feature-views/0170 LiveMotorStatus (driving-dynamics) into this single
+    canonical root - the path-sorted, on-disk-validated, deduplicated union of every WinUI-free
+    Model/Source/ViewModel logic source under dashboard-widgets/ and feature-views/, plus the new
+    LiveMotorStatus\Driving surface links. Do NOT re-concatenate, and never write a literal
     build-item or project start tag inside this comment.
     (MSB4025); re-consolidated for P2 feature-views/0148 SocChart into this single canonical root -
     the path-sorted, deduplicated union of every WinUI-free Model/Source/ViewModel logic source on
@@ -590,6 +592,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Model.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Source.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.ViewModel.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveMotorStatus\Driving\LiveMotorStatus.Model.cs" Link="FeatureViews\LiveMotorStatus\Driving\LiveMotorStatus.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveMotorStatus\Driving\LiveMotorStatus.Source.cs" Link="FeatureViews\LiveMotorStatus\Driving\LiveMotorStatus.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveMotorStatus\Driving\LiveMotorStatus.ViewModel.cs" Link="FeatureViews\LiveMotorStatus\Driving\LiveMotorStatus.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveMotorStatus\LiveMotorStatus.Model.cs" Link="FeatureViews\LiveMotorStatus\LiveMotorStatus.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveMotorStatus\LiveMotorStatus.Source.cs" Link="FeatureViews\LiveMotorStatus\LiveMotorStatus.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveMotorStatus\LiveMotorStatus.ViewModel.cs" Link="FeatureViews\LiveMotorStatus\LiveMotorStatus.ViewModel.cs" />
@@ -685,6 +690,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Model.cs" Link="FeatureViews\SessionComparisonChart\SessionComparisonChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Source.cs" Link="FeatureViews\SessionComparisonChart\SessionComparisonChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.ViewModel.cs" Link="FeatureViews\SessionComparisonChart\SessionComparisonChart.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Model.cs" Link="FeatureViews\SessionComparisonChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Source.cs" Link="FeatureViews\SessionComparisonChart.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.ViewModel.cs" Link="FeatureViews\SessionComparisonChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionCurveChart\SessionCurveChart.Model.cs" Link="FeatureViews\SessionCurveChart\SessionCurveChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionDetailPanel\SessionDetailPanel.Model.cs" Link="FeatureViews\SessionDetailPanel\SessionDetailPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SlideRenderer\SlideRenderer.Model.cs" Link="FeatureViews\SlideRenderer\SlideRenderer.Model.cs" />
@@ -1553,5 +1561,7 @@
 
   </ItemGroup>
   </ItemGroup>
+
+</Project>
 
 </Project>
