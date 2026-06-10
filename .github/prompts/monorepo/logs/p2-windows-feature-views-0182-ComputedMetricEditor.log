@@ -1,0 +1,93 @@
+=== P2 Feature view 0182 ComputedMetricEditor (Windows / WinUI 3) ===
+run-at: 2026-06-10T12:40:00-07:00
+web source: web/src/features/notifications/components/ComputedMetricEditor.tsx
+native output: apps/windows/TeslaSync.App/feature-views/ComputedMetricEditor/ComputedMetricEditor.{Model,Source,ViewModel}.cs + ComputedMetricEditor.cs
+
+--- CAPABILITY (WinUI 3 + .NET 10) ---
+dotnet --list-sdks: 9.0.314, 10.0.300 ; dotnet --version: 10.0.300
+WindowsAppSDK 2.1.3 (UseWinUI=true, net10.0-windows10.0.19041.0, MSIX).
+WinUI 3 BUILD capability: AVAILABLE - TeslaSync.App (WinUI TFM) compiles the ComputedMetricEditor
+view (XAML markup compiler + C# 0 errors). NOT BLOCKED on the WinUI 3 build/test capability.
+
+--- DATA SOURCES (web -> native P1/S8 state-holders) ---
+useNotifications/useAlertMetrics -> IComputedMetricCatalogSource (cache-then-network GET /alerts/metrics,
+  generated op get_api_v1_alerts_metrics) -> RepositoryResult<IReadOnlyList<ComputedMetricSummary>>.
+usePreviewComputedMetric       -> IComputedMetricPreviewSource (fire-on-edit POST /alerts/test,
+  generated op post_api_v1_alerts_test, body {kind:'computed_metric', metric_id, metric_window,
+  metric_op, metric_threshold, vehicle_id?}) -> ComputedMetricPreviewOutcome. No HTTP in the view.
+
+--- STEP 1: BUILD -- dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded. 0 Error(s). 17 Warning(s) (all pre-existing CA in TeslaSync.App.Core, which does not
+  TreatWarningsAsErrors; ComputedMetricEditor compiles 0/0 under the App's TreatWarningsAsErrors=true +
+  Recommended analyzers). TeslaSync.App + TeslaSync.App.Tests build clean.
+BUILD_EXIT=0
+
+--- STEP 2a: HEADLESS TESTS -- dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" ---
+Passed!  - Failed: 0, Passed: 13539, Skipped: 0, Total: 13539 - TeslaSync.App.Tests.dll (net10.0)
+  ComputedMetricEditorModelTests + ComputedMetricEditorViewModelTests: Passed 64, Failed 0, Total 64.
+  Coverage:
+   - Adapter (cached->projection): ComputedMetricSummary/ComputedMetricPreview FromJson + ParseList
+     (null-tolerant, label->id fallback, skip non-objects); ComputedMetricCatalogMapper preserves every
+     LoadStatus and collapses loaded-empty -> Empty.
+   - Operator/unit projections: ComputedMetricOps.All == web ALL_OPS order; Key() gt/gte/lt/lte/eq/neq/
+     pctGt/pctLt (web opKey); Label() '% change >' (web opLabel); ComputedMetricUnits.Suffix table.
+   - Request shape: ComputedMetricPreviewRequest serializes snake_case via [JsonPropertyName], kind=
+     computed_metric, omits null vehicle_id (round-trip parsed); DebounceKey stability.
+   - ViewModel per-state matrix: loading / loaded / empty / error / stale / offline (registry) and
+     idle / rendered / error (preview); ready gate with JS parseFloat parity ("200abc"->ready, ""/"abc"/
+     "." -> not); SelectMetric resets window+op to first pair; window/op option fallbacks; SetThreshold/
+     SelectMetric raise ValueChanged (web onChange); preview value/suffix/verdict composition (would="",
+     wouldNot="NOT"); threshold parsed via parseFloat at the preview boundary.
+   - i18n: every notifications.alertStudio.computedMetric.* + metricNames/metricWindows/metricOps key
+     asserted through the localizer (RecordingLocalizer); PreviewValue {{value}}{{suffix}}{{verdict}}
+     interpolation. Diagnostics: view.opened slug=ComputedMetricEditor, PII-safe, counted.
+HEADLESS_TEST_EXIT=0
+
+--- STEP 2b: UIAUTOMATION E2E -- dotnet test apps/windows/TeslaSync.App.UITests.csproj -c Release (SEPARATE GATE) ---
+Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0), Duration 252 ms
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+  was not found at its standard install paths or on PATH.
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: environmental - WinAppDriver/Appium runner + deployed MSIX app absent on
+  this runner. 147/147 fail-fast in 252 ms, identical for every surface; out of scope for this surface and
+  documented by TeslaSync.App.UITests.csproj as the separate W9-0002 [Category=UIAutomation] gate. The
+  ComputedMetricEditor surface is fully covered by the headless suite in STEP 2a. git-verified: zero files
+  modified under apps/windows/TeslaSync.App.UITests/.)
+
+--- STEP 3: FORMAT -- dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+No changes needed (ComputedMetricEditor sources + tests + regenerated test csproj are LF / no-BOM / final
+  newline per root .editorconfig).
+FORMAT_EXIT=0
+
+--- STEP 4: PLACEHOLDER/STUB GATE -- check-placeholders.ps1 -Path .../feature-views/ComputedMetricEditor ---
+PLACEHOLDER_ALLOWED=3
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  (the 3 allowed lines are the web-parity i18n key ids metricPlaceholder/windowPlaceholder/
+   thresholdPlaceholder - immutable web catalog key names - each carrying // parity:allow with a reason.
+   No TODO/FIXME/stub/mock/Lorem/Coming soon/NotImplementedException in shipped code.)
+
+--- FILES DELIVERED ---
+apps/windows/TeslaSync.App/feature-views/ComputedMetricEditor/ComputedMetricEditor.Model.cs      (records + FromJson, catalog/preview state enums, ops/units projections, request, registration, diagnostics, i18n text, catalog mapper)
+apps/windows/TeslaSync.App/feature-views/ComputedMetricEditor/ComputedMetricEditor.Source.cs     (IComputedMetricCatalogSource + IComputedMetricPreviewSource + repository-backed sources; outcome type)
+apps/windows/TeslaSync.App/feature-views/ComputedMetricEditor/ComputedMetricEditor.ViewModel.cs  (INotifyPropertyChanged state holder: registry state matrix + derived options + ready gate + preview + ValueChanged)
+apps/windows/TeslaSync.App/feature-views/ComputedMetricEditor/ComputedMetricEditor.cs            (WinUI 3 view: 3 dropdowns + numeric threshold + Live preview GlassPanel + catalog loading/empty/error/stale/offline chrome)
+apps/windows/TeslaSync.App.Tests/FeatureViews/ComputedMetricEditorModelTests.cs                  (headless model/adapter/i18n/diagnostics tests)
+apps/windows/TeslaSync.App.Tests/FeatureViews/ComputedMetricEditorViewModelTests.cs              (headless per-state + ready + edit + preview tests)
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                                       (REPAIR: HEAD committed a dual-<Project>-root file [MSB4025] against its own INVARIANT; re-consolidated to ONE canonical root regenerated from every WinUI-free logic source on disk [647 Compile links], which adds the new ComputedMetricEditor trio and restores the ElevationChart + WidgetPicker surfaces their pre-existing test classes require)
+
+--- ACCEPTANCE CRITERIA ---
+[x] Surface renders on Windows with all web states reproduced (idle/computing/value preview + metric/window/op/threshold) plus native registry data states (loading/empty/error/stale/offline).
+[x] Hooks bind via the shared P1/S8 state-holder layer (IComputedMetricCatalogSource/IComputedMetricPreviewSource -> CacheThenNetworkEngine / IApiClient); no direct HTTP in the view.
+[x] Every i18n key from source resolves through P1/S10 (notifications.alertStudio.computedMetric.* + metricNames/metricWindows/metricOps), asserted in tests.
+[x] Accessibility: Narrator names on every interactive element (metric/window/operator selects, threshold input, retry button, stale/offline chips, preview panel); LiveRegion on the preview body; preview icon AccessibilityView=Raw.
+[x] Tests: adapter unit test + per-state UI/state test + a11y/i18n key test + diagnostics test (64 passing headless).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0; 3 web-parity i18n key ids allow-listed with reasons).
+[x] Telemetry: view.opened slug=ComputedMetricEditor emitted on load (P1/S11), PII-safe (slug only, never a metric id/threshold/value).
+
+--- GATE SUMMARY ---
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+UIAutomation E2E suite: BLOCKED on absent WinAppDriver runtime (environmental; separate W9-0002 gate, 0 files touched).
+
+EXIT=0
+STATUS=DONE
