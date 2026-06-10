@@ -1,0 +1,69 @@
+/*
+  SignalCatalogPanel.strings
+  TeslaSync — P4 feature view · 0264 · SignalCatalogPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SignalCatalogPanel` resolves (table "SignalCatalogPanel") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of keys extracted from the web source
+  (features/telemetry/components/SignalCatalogPanel.tsx). The rest backs the
+  native-only chrome (four-level Status badge labels, the formatStaleness pieces,
+  error/retry, stale/offline banners, accessibility) the web delegates to its host
+  page / shared components.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"signalGap.status" = "Status";
+"signalGap.signal" = "Signal";
+"signalGap.lastValue" = "Last Value";
+"signalGap.lastUpdated" = "Last Updated";
+"signalGap.timeSince" = "Time Since";
+"signalGap.totalSignals" = "Total Signals";
+"signalGap.active" = "Active (<30s)";
+"signalGap.stale" = "Stale (>5min)";
+"signalGap.neverReceived" = "Never Received";
+"signalGap.refreshInterval" = "Refreshes every 5s";
+"signalGap.filterPlaceholder" = "Filter by signal name...";
+"signalGap.filterLabel" = "Filter signals";
+"signalGap.all" = "All";
+"signalGap.staleOnly" = "Stale Only";
+"signalGap.activeOnly" = "Active Only";
+"signalGap.mostStale" = "Most Stale";
+"signalGap.az" = "A-Z";
+"signalGap.category" = "Category";
+"signalGap.noMatch" = "No signals match current filters";
+"signalGap.noData" = "No signal data available";
+"signalGap.lastRefreshed" = "Last refreshed";
+
+/* --- Selection aria-labels (web `selection` prop) --- */
+"signalCatalog.addSignal" = "Add %@ to selection";
+"signalCatalog.removeSignal" = "Remove %@ from selection";
+
+/* --- Status badge labels (web getCatalogStalenessStyle) --- */
+"signalCatalog.status.active" = "Active";
+"signalCatalog.status.aging" = "Aging";
+"signalCatalog.status.stale" = "Stale";
+"signalCatalog.status.neverReceived" = "Never received";
+
+/* --- formatStaleness pieces (web template literals) --- */
+"signalCatalog.staleness.never" = "—";
+"signalCatalog.staleness.seconds" = "%@s ago";
+"signalCatalog.staleness.minutes" = "%@m ago";
+"signalCatalog.staleness.hoursMinutes" = "%1$@h %2$@m ago";
+
+/* --- Native chrome: error + actions --- */
+"signalCatalog.error.title" = "Couldn't load signals";
+"signalCatalog.action.retry" = "Retry";
+
+/* --- Native chrome: connectivity banners --- */
+"signalCatalog.banner.stale" = "Reconnecting — values may be stale";
+"signalCatalog.banner.offline" = "Offline — showing last known values";
+
+/* --- Accessibility --- */
+"signalCatalog.a11y.table" = "Signal catalog";
+"signalCatalog.a11y.noTimestamp" = "no timestamp";
+"signalCatalog.a11y.count" = "%lld signals";
