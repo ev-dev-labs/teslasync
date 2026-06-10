@@ -1,0 +1,192 @@
+================================================================================
+P4 · Feature view · 0264 — SignalCatalogPanel (Apple)
+Run: 2026-06-09T17:10-0700   Host: Darwin arm64 (Atuls-Mac-Studio)
+Prompt: .github/prompts/monorepo/p4-apple/feature-views/P-0264-SignalCatalogPanel.prompt.md
+Web source (spec): web/src/features/telemetry/components/SignalCatalogPanel.tsx
+Native output: apps/apple/TeslaSync/feature-views/SignalCatalogPanel.*
+Mode: code-complete + DEFERRED Xcode app build/test (established P4 Apple disposition;
+      ADR-012 macOS-pending; apps/macos-pending-verifications.md). Delegation: NONE (authored directly).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42)                                  OK
+  macOS SDK (typecheck) ...... arm64-apple-macos15.0; -swift-version 6             OK
+  iOS-sim SDK (typecheck) .... arm64-apple-ios18.0-simulator; -swift-version 6     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                          OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  codesign identities ........ "0 valid identities found"                          WARN (macOS app gate blocker, ADR-012)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web source "Charts / maps used: (none)"). The core requirement is SwiftUI, which
+  is available and proven by a real macOS-SDK + iOS-18-SDK compile below
+  (strict-concurrency=complete). The capability-BLOCKED escape hatch does NOT apply.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/SignalCatalogPanel.*) ===
+  SignalCatalogPanel.Models.swift        196  Foundation DTOs: cell value, raw payload, entry, two staleness
+                                              taxonomies (category 3-way + tone 4-way), row, filter/sort modes,
+                                              summary, projection
+  SignalCatalogPanel.Adapter.swift       275  pure ports: renderValue, parse/staleness/category/tone,
+                                              formatStaleness (Xs/Xm/Xh Ym ago), formatDateTime, relative,
+                                              row, buildProjection(+summary), search/mode filter, 3 sorts
+  SignalCatalogPanel.Localization.swift  273  P1/S10 facade (table "SignalCatalogPanel") + a11y summary +
+                                              staleness templates (23 web keys + native chrome)
+  SignalCatalogPanel.Model.swift         298  P1/S8 source seam + @Observable model (phase/connection/search/
+                                              filter/sort/selection) + P1/S11 telemetry seam + InMemory source
+  SignalCatalogPanel.swift               266  surface View: summary + header + filter bar + states
+                                              (loading skeletons / no-data / filtered-empty / content / error)
+  SignalCatalogPanel.Summary.swift       131  the four StatCards (Total/Active/Stale/Never), adaptive 2-up/4-up
+  SignalCatalogPanel.Filters.swift       151  search field + All/Stale/Active + Most-Stale/A-Z/Category segments
+  SignalCatalogPanel.Table.swift         318  adaptive table (Grid / compact cards) + 4-level Status badge +
+                                              Time-Since + selection checkbox + stale/offline banner
+  SignalCatalogPanel.Previews.swift      117  #if DEBUG previews — one per state (7, incl. selection)
+  SignalCatalogPanel.Tests.swift         294  XCTest: format + builder + a11y (executed-proven subset)
+  SignalCatalogPanel.ModelTests.swift    178  XCTest: model phases/telemetry/wiring/selection (split for length)
+  SignalCatalogPanel.strings              69  P1/S10 catalog contribution (23 source keys + native chrome + a11y)
+  Total 2566 lines (2497 swift + 69 strings). Every file <= 400 (house file_length); largest 318.
+  One exported View per file; all public types prefixed `SignalCatalogPanel` (the `SignalCatalog*` stem is
+  owned by dashboard-widgets/SignalCatalogWidget.* in the SAME module — coexistence proven in [3]).
+
+=== PARITY (vs web SignalCatalogPanel.tsx) ===
+  Data sources -> bound via the shared seam (SignalCatalogPanelSource -> SignalCatalogPanelModel):
+    useSignalGaps (polling GET /signals/{id}/live every 5 s) is the production source; useTranslation ->
+    SignalCatalogPanelStrings; useTelemetry context -> the model. The view performs NO HTTP.
+  Adapter (cached -> projection) -> SignalCatalogPanelFormat + …Builder faithfully port:
+    renderValue (value != null ? String(v) : '—'), the staleness math (ts ? (now-ts)/1000 : Infinity),
+    BOTH web staleness taxonomies kept separate — SignalRow['category'] (never / stale>300 / active) drives
+    the filter modes + the 4 summary counts + the category sort, while getCatalogStalenessStyle's 4 levels
+    (neverReceived / active<30 / aging<300 / stale) drive the row Status badge + Time-Since color;
+    formatStaleness (Xs / Xm / Xh Ym ago, '—' for non-finite), formatDateTime, and the search + filter-mode
+    + sort-mode useMemo chain (case-insensitive untrimmed name includes; stale-keeps-stale+never; staleness
+    desc never-first, alpha localeCompare, category never<stale<active; stable). Proven by an executed
+    harness (55/55 below) including the empty-string-timestamp (falsy -> never) and garbage-timestamp
+    (category active but tone stale) web edge cases.
+  Composition -> native primitives (no Tailwind): the four StatCards (adaptive 2-up/4-up), the panel header
+    ("Refreshes every 5s"), a search field (magnifyingglass + prompt + aria-label), the All/Stale/Active and
+    Most-Stale/A-Z/Category segment groups (active tint, selected a11y trait), an adaptive table — a columnar
+    SwiftUI Grid on macOS/regular width (Status / Signal / Last Value / Last Updated / Time Since, + optional
+    leading selection checkbox) and a card list on compact iPhone width — and the last-refreshed line.
+    Recharts -> none. Leaflet -> none.
+  States (all render) -> loading (web 8x <Skeleton>) · empty ("No signal data available", signals.length===0)
+    · filtered-empty ("No signals match current filters") · content (table) · stale / offline connectivity
+    banner over cached rows · error (web QueryError equivalent with retry, native chrome for the spec).
+    The model phase resolution keeps cached rows visible behind refresh/errors, matching the web shell.
+  Optional selection -> the web `selection` prop is reproduced (leading add/remove checkbox column, the
+    `max` cap that disables further toggles, the web add/remove aria-labels) — model-driven + unit-tested.
+  i18n -> all 23 web source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    signalGap.status/.signal/.lastValue/.lastUpdated/.timeSince/.totalSignals/.active/.stale/.neverReceived/
+    .refreshInterval/.filterPlaceholder/.filterLabel/.all/.staleOnly/.activeOnly/.mostStale/.az/.category/
+    .noMatch/.noData/.lastRefreshed + signalCatalog.addSignal/.removeSignal -> ALL PRESENT (verified: 23/23,
+    0 dead, 0 missing). No English literals in native code; the one verbatim web key name carrying the
+    forbidden word is sanctioned with // parity:allow. Native-chrome keys added for the 4 badge labels, the
+    formatStaleness pieces, error/retry, banners, and a11y.
+  a11y -> the table is one contained element with a localized label + a row-count value; every row is a
+    combined element labelled name+value+status+last-updated+time-since; segment buttons carry label +
+    .isSelected; the selection checkbox carries the web add/remove label; the retry button has a label;
+    the search field carries the web aria-label. Dynamic Type via the token ramp; skeleton + any motion
+    respect Reduce Motion. No neon body text (semantic status colors used only on tinted chips).
+  Telemetry -> SignalCatalogPanelModel.start() emits viewOpened(surface:"SignalCatalogPanel") exactly once
+    (P1/S11), spy-asserted in the XCTest model suite.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real exit codes) ===
+[1] swiftc -typecheck (the 9 non-test surface files + DEBUG previews compiled with the REAL generated
+    Color/Font/Spacing/Radius tokens — apps/design/generated/apple/Tokens.swift — under -swift-version 6
+    -strict-concurrency=complete). The surface's ONLY app-module dependency is the generated token set
+    (no TS* component referenced), so this is the complete dependency surface.
+      macOS  -target arm64-apple-macos15.0 .............. MACOS_EXIT=0
+      iOS18  -target arm64-apple-ios18.0-simulator ...... IOS_EXIT=0
+[2] swiftc -typecheck COEXISTENCE (surface + the same-module siblings dashboard-widgets/
+    SignalCatalogWidget.Models.swift and feature-views/LiveSignalsTable.Models.swift + Tokens).
+    Proves no in-module redeclaration once feature-views is registered (the `SignalCatalog*` and
+    `LiveSignal*` stems coexist with the `SignalCatalogPanel*` types).
+      COEXIST_EXIT=0
+[3] EXECUTED adapter harness (Models + Adapter + Localization compiled to a native binary + a main that
+    exercises renderValue/jsNumber/parse/staleness/category/tone/formatStaleness/formatDateTime/relative +
+    row/buildProjection(+summary)/filter(search,modes)/sort(3 modes) + a11y tableSummary/rowLabel/
+    selectionLabel against expected web values, incl. the empty-string + garbage-timestamp edge cases):
+      ADAPTER HARNESS: 55/55 assertions passed; 0 failed   (RUN_EXIT=0)
+[4] swiftlint --strict (the 11 feature-views .swift files, repo rules):
+      Done linting! Found 0 violations, 0 serious in 11 files.   (LINT_EXIT=0)
+[5] swiftformat --lint (the 11 .swift files, repo .swiftformat):
+      0/11 files require formatting.   (FORMAT_EXIT=0)
+[6] check-placeholders.ps1 — honest scan of an isolated copy of the 11 shipped .swift files:
+      PLACEHOLDER_ALLOWED=1   PLACEHOLDER_COUNT=0   EXIT=0
+    The single ALLOWED is the verbatim web i18n key name "signalGap.filterPlaceholder" (contains the
+    forbidden substring "Placeholder"); it carries `// parity:allow verbatim web i18n key`. Not a stub.
+    (The prompt's prefix-path form `.../SignalCatalogPanel` has no extension; Test-Path is false so it
+    scans zero files and reports a vacuous COUNT=0 — the isolated-copy scan above is the honest result.)
+[7] i18n parity (executed): 38 code-referenced keys == 38 catalog keys (0 dead, 0 missing); all 23
+    web-source keys present in SignalCatalogPanel.strings.
+[8] xcodegen generate enumerates the surface via the EXISTING project.yml globs (no self-registration):
+    60 app-target refs to the 9 non-test files, 12 test-bundle refs to the 2 test files, 6 refs to the
+    .strings resource. (The generated .xcodeproj is git-ignored and was removed after the check.)
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED, with verified evidence) ===
+  The prompt gate's `xcodebuild -scheme TeslaSync … build test` (iOS + macOS) and the XCTest suite are
+  DEFERRED on this host — NOT shown green — for independent, code-external reasons:
+    (a) Shared.xcframework not staged: apps/apple/Frameworks holds only .gitkeep; the app target links the
+        KMP `Shared.xcframework` (a scheme pre-action shells out to apps/shared/gradlew assembleShared
+        XCFramework — Kotlin/Native). apps/macos-pending-verifications.md defers producing that binary to a
+        macos-latest runner. Without it the app cannot link.
+    (b) macOS signing: `security find-identity -p codesigning` -> "0 valid identities found"; the macOS
+        app/widget entitlements require a development certificate (ADR-012 defers to a signed runner).
+  The host swiftc compile in [1]+[2] IS the meaningful per-surface validation: it compiles this surface
+  against the REAL token module on BOTH the macOS-15 and iOS-18 SDKs under Swift 6 strict concurrency and
+  proves in-module coexistence with the sibling SignalCatalog*/LiveSignal* types. XCTest
+  (SignalCatalogPanel.Tests.swift + .ModelTests.swift) runs in the TeslaSync(/-macOS) XCTest target under
+  Xcode; its pure adapter + a11y subset is PROVEN GREEN by the executed harness in [3]; the model
+  phase/telemetry/filter/sort/selection suites compile against the same public API exercised by [1].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading / empty / filtered-empty / content / stale / offline / error) —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SignalCatalogPanelSource); no direct HTTP in view.
+  [x] Every i18n key from source has a matching catalog key — 23/23 source keys present (verified executed).
+  [x] Accessibility labels on every interactive element (search field, filter/sort segments, selection
+      checkbox, retry); table carries a label + row-count value; rows are combined name/value/status/time labels.
+  [x] Tests: adapter unit (executed harness 55/55 + XCTest format/builder) + per-state model test + a11y test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (1 sanctioned web-key opt-out).
+  [x] Host gates green (typecheck macOS+iOS / coexistence / executed-harness / lint / format / placeholder /
+      i18n parity); Xcode app build/test DEFERRED with capability evidence, per the established P4 Apple disposition.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); reasons verified here (0 identities,
+                       .gitkeep-only Frameworks). Every host "EXIT=0" is a real run.
+  2  No scope narrowing: implemented ALL states + the summary cards + search + filter modes + sort modes +
+                         the 4-level status badge + value coercion + both staleness taxonomies + relative/
+                         absolute time + optional selection + i18n + a11y + telemetry; both adaptive layouts.
+  3  No skip-and-assume: each host gate executed; the swiftlint run caught real trailing-comma/line-length/
+                         file-length issues (fixed: split tests, reflowed, moved the parity:allow inline),
+                         then re-run green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of renderValue / staleness / category / tone / formatStaleness /
+                         filter / sort + all states + 23/23 keys + the selection prop + the web edge cases.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml (the feature-views path
+                         is already globbed) and did NOT edit the shared Localizable.xcstrings; strings shipped
+                         as the per-surface table.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed SignalCatalogPanel.* files + this log + the
+                         macos-pending row.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SignalCatalogPanel shipped at parity with the web source: pure-Swift display
+  math (executed-green adapter, 55/55), P1/S8 state-holder seam (no view HTTP), P1/S11 view.opened telemetry,
+  every state + the four summary cards + search/filter/sort + the four-level Status badge + optional chip
+  selection + 23/23 i18n keys + a11y labels, an adaptive table (Grid / cards). All host-runnable gates pass on
+  both the macOS-15 and iOS-18 SDKs; the Xcode app build/test is DEFERRED to the signed macos-latest runner
+  (Shared.xcframework absent + 0 signing identities — neither a defect in this code), matching the
+  user-approved "code-complete + DEFERRED Xcode gate" P4 Apple disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/SignalCatalogPanel.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0264-SignalCatalogPanel.log \
+          apps/macos-pending-verifications.md
+  git commit -m "feat(apps/apple/feature-views): add SignalCatalogPanel surface (P4)"
+
+EXIT=0
+STATUS=DONE
