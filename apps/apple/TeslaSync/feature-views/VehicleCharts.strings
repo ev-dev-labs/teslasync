@@ -1,0 +1,95 @@
+/*
+  VehicleCharts.strings
+  TeslaSync — P4 feature view · 0303 · VehicleCharts (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VehicleCharts` resolves (table "VehicleCharts") lives here with its web value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  Group 1 is the exact keys + values extracted from the web source
+  (features/vehicles/components/VehicleCharts.tsx). Group 2 localizes the labels +
+  value tokens the web hardcoded in English (the native covenant forbids literals
+  in code). Group 3 backs the native-only chrome (map, chart, loading / error /
+  empty, freshness).
+*/
+
+/* --- Group 1: web source (verbatim t() calls) --- */
+"common.location" = "Location";
+"common.vehicleConfig" = "Vehicle Configuration";
+"common.carPreferences" = "Car Display Preferences";
+"common.speedHistory" = "Speed History";
+"common.positionDataWillAppear" = "Position data will appear here";
+"common.yes" = "Yes";
+"common.no" = "No";
+"vehicles.detail.europeVehicle" = "Europe Vehicle";
+"vehicles.detail.rhd" = "Right-Hand Drive";
+
+/* --- Group 2: configuration grid labels (web hardcoded English) --- */
+"vehicles.config.model" = "Model";
+"vehicles.config.trim" = "Trim";
+"vehicles.config.color" = "Color";
+"vehicles.config.roof" = "Roof";
+"vehicles.config.wheels" = "Wheels";
+"vehicles.config.firmware" = "Firmware";
+"vehicles.config.name" = "Name";
+"vehicles.config.chargePort" = "Charge Port";
+"vehicles.config.rearHeaters" = "Rear Heaters";
+"vehicles.config.efficiency" = "Efficiency";
+"vehicles.config.sunroof" = "Sunroof";
+"vehicles.config.remoteStart" = "Remote Start";
+"vehicles.config.offroadLightbar" = "Offroad Lightbar";
+"vehicles.config.swUpdate" = "SW Update";
+"vehicles.config.swDownload" = "SW Download";
+"vehicles.config.swInstall" = "SW Install";
+
+/* --- Group 2: configuration grid value tokens --- */
+"vehicles.config.notInstalled" = "Not Installed";
+"vehicles.config.active" = "Active";
+"vehicles.config.off" = "Off";
+"vehicles.config.present" = "Present";
+"vehicles.config.none" = "None";
+
+/* --- Group 2: preferences grid labels + helper --- */
+"vehicles.prefs.distance" = "Distance";
+"vehicles.prefs.temperature" = "Temperature";
+"vehicles.prefs.chargeUnit" = "Charge Unit";
+"vehicles.prefs.tirePressure" = "Tire Pressure";
+"vehicles.prefs.time24h" = "24h Time";
+"vehicles.prefs.helper" = "These are your vehicle's display settings — you can sync your app to match them from the Settings page.";
+
+/* --- Group 2: parseSettingEnum display values --- */
+"vehicles.units.miles" = "Miles";
+"vehicles.units.kilometers" = "Kilometers";
+"vehicles.units.celsius" = "Celsius";
+"vehicles.units.fahrenheit" = "Fahrenheit";
+"vehicles.units.percent" = "Percent";
+"vehicles.units.psi" = "PSI";
+"vehicles.units.bar" = "Bar";
+"vehicles.units.kpa" = "kPa";
+
+/* --- Group 3: native map chrome --- */
+"map.label" = "Vehicle location map";
+"map.marker" = "Vehicle";
+"map.coordinateA11y" = "Current location {{lat}}, {{lng}}";
+"map.style.label" = "Map style";
+"map.style.standard" = "Standard";
+"map.style.hybrid" = "Hybrid";
+"map.style.imagery" = "Satellite";
+"map.refresh" = "Refresh";
+"map.staleBanner" = "Reconnecting — this data may be out of date";
+"map.offlineBanner" = "Offline — showing the last known data";
+
+/* --- Group 3: native speed-chart chrome --- */
+"chart.speed.axisTime" = "Time";
+"chart.speed.axisSpeed" = "Speed ({{unit}})";
+"chart.speed.series" = "Speed {{unit}}";
+"chart.speed.aria" = "Speed history area chart";
+
+/* --- Group 3: native surface chrome (loading / error / empty) --- */
+"vehicleCharts.loading" = "Loading vehicle charts";
+"vehicleCharts.errorTitle" = "Couldn't load vehicle charts";
+"vehicleCharts.retry" = "Retry";
+"vehicleCharts.emptyTitle" = "No vehicle data yet";
+"vehicleCharts.emptyMessage" = "Live position, configuration, and speed history will appear here once your vehicle reports in.";
