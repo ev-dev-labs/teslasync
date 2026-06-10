@@ -388,3 +388,4 @@ p2-windows/feature-views/W-0083-ConditionBuilder.prompt.md
 p2-windows/feature-views/W-0084-ConflictWarnings.prompt.md
 p2-windows/feature-views/W-0087-ChargerTypeChart.prompt.md
 p2-windows/feature-views/W-0080-ActionBuilder.prompt.md
+p2-windows/feature-views/W-0085-PresetGallery.prompt.md
