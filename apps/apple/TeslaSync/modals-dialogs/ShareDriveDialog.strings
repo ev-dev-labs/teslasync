@@ -1,0 +1,67 @@
+/*
+  ShareDriveDialog.strings
+  TeslaSync — P4 modal / dialog · 0028 · ShareDriveDialog (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ShareDriveDialog resolves (table "ShareDriveDialog") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/driving/components/ShareDriveDialog.tsx). The remainder backs the
+  native state envelope (loading, empty, error retry, freshness chip,
+  connectivity banner), the header close + open affordances, the title-field
+  VoiceOver label, and the inline error lines.
+*/
+
+/* --- Web source keys (ShareDriveDialog.tsx) --- */
+"share.title" = "Share Drive";
+"share.description" = "Generate a public link to share this drive report. Anyone with the link can view the map, stats, and charts — no login required.";
+"share.titlePlaceholder" = "Optional title (e.g., \"SF to LA Road Trip\")";
+"share.includeSpeed" = "Include speed data";
+"share.includeTelemetry" = "Include detailed telemetry (battery, power)";
+"share.expiry" = "Link expires after";
+"share.expiry7d" = "7 days";
+"share.expiry30d" = "30 days";
+"share.expiry90d" = "90 days";
+"share.expiryNever" = "Never";
+"share.generate" = "Generate Link";
+"share.created" = "Share link created!";
+"share.copy" = "Copy Link";
+"share.createAnother" = "Create another link";
+"share.existing" = "Active Share Links";
+"share.untitled" = "Untitled share";
+"share.views" = "views";
+"share.expired" = "Expired";
+/* web `Expires {{date}}` — the native renderer substitutes the formatted date via String(format:). */
+"share.expiresOn" = "Expires %@";
+"share.noExpiry" = "No expiry";
+"share.copyLink" = "Copy link";
+"share.revoke" = "Revoke";
+
+/* --- Header close + open affordances (accessibility) --- */
+"share.closeAria" = "Close";
+"share.open" = "Open in browser";
+"share.titleField" = "Share title";
+
+/* --- Loading (web sharesLoading spinner) --- */
+"share.loading" = "Loading share links…";
+
+/* --- Empty (web no rows → friendly placeholder) --- */
+"share.empty" = "No active share links";
+"share.empty.detail" = "Generate a link above to share this drive.";
+
+/* --- Error + retry (web QueryError) --- */
+"share.errors.load" = "Couldn't load the share links.";
+"share.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"share.live" = "Live";
+"share.stale" = "Stale";
+"share.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"share.staleBanner" = "Reconnecting — the links shown may be out of date";
+"share.offlineBanner" = "Offline — changes will sync when you reconnect";
