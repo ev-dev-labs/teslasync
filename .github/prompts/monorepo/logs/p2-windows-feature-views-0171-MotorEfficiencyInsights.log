@@ -1,0 +1,64 @@
+=== P2 Feature view 0171 MotorEfficiencyInsights (Windows) ===
+
+Platform capability: WinUI 3 (Windows App SDK) + .NET 10 SDK (10.0.300) are present on this host; the
+WinUI app builds and its headless logic tests run. The only absent capability is the WinAppDriver/Appium
+UI-automation runner (W9-0002), which gates the separate TeslaSync.App.UITests E2E suite — disclosed and
+deferred below, never reported as green.
+
+--- Gate results -------------------------------------------------------------------------------------------
+BUILD_EXIT=0                      dotnet build apps/windows/TeslaSync.sln -c Release   (0 errors; 17 pre-existing Core CA warnings, Core has no TreatWarningsAsErrors; the App project is warning-clean under TreatWarningsAsErrors=true)
+TEST_EXIT(headless)=0             dotnet test apps/windows/TeslaSync.App.Tests          Passed! Failed: 0, Passed: 10967, Skipped: 0 (incl. 71 new MotorEfficiencyInsights cases)
+FORMAT_EXIT=0                     dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+PLACEHOLDER_EXIT=0                apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/MotorEfficiencyInsights  (PLACEHOLDER_COUNT=0)
+TEST_EXIT(sln literal)=1          dotnet test apps/windows/TeslaSync.sln -c Release     [DEFERRED — not surface-related]
+                                  TeslaSync.App.Tests.dll  -> Passed! Failed: 0, Passed: 10967
+                                  TeslaSync.App.UITests.dll -> Failed: 147, Passed: 0 — every case throws
+                                  UiAutomationUnavailableException: "WinAppDriver/Appium runner is absent:
+                                  nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not
+                                  found". This is the W9-0002 UI-automation runner gap (re-run via
+                                  apps/windows/run-ui-automation.ps1 on a WinAppDriver-provisioned host); it
+                                  contains no MotorEfficiencyInsights-specific test. NOT reported as green.
+
+--- Surface ------------------------------------------------------------------------------------------------
+MotorEfficiencyInsights is implemented to parity with
+web/src/features/driving/components/driving-dynamics/MotorEfficiencyInsights.tsx and verified headlessly
+(71 new tests). The web component's three glass panels are reproduced natively:
+  - Torque Distribution (lightning glyph): Avg Torque / Max Torque (Nm) + High Torque Time (%).
+  - Throttle Behavior (gauge glyph): Avg Power (kW), a driving-style Badge (conservative=success /
+    moderate=warning / aggressive=danger, derived from avg power via getThrottleStyle) and a power MetricBar
+    (max 200 kW, empty label/sublabel so no stray "0.00" readout — the web regression is reproduced + guarded).
+  - Motor Thermal (thermometer glyph): Avg / Max Motor Temp converted to the user's unit at the display
+    boundary (the unit label already carries the degree sign — the "49.0°°C" doubling bug is guarded), plus a
+    thermal Badge (raw-Celsius threshold: <100 good / <140 warm / else hot).
+All six P2 states render (loading skeletons / ready / empty "No motor data recorded yet" per panel / error
+QueryError with retry / stale chip / offline chip). The data adapter (computeMotorStats: torque/temp/power/
+regen aggregation, high-torque %) is ported 1:1 and unit-tested. The view performs no HTTP — it binds a
+WinUI-free Model projected by MotorEfficiencyInsightsProjection. All 17 web i18n keys (dynamics.*) resolve
+through the i18n facade and already exist in Strings/{en,he,ar}/Resources.resw; the native-only error/stale
+keys (dynamics.motorInsightsError / dynamics.motorInsightsErrorMessage / common.stale) resolve via the
+ILocalizer English fallback, exactly as the sibling TemperatureGauges surface does. Narrator names are set on
+the surface and every panel; entrances honour reduce-motion; diagnostics emit only
+"view.opened slug=MotorEfficiencyInsights" (PII-safe).
+
+--- Pre-existing repairs (disclosed; required to make the host-runnable gate green) ------------------------
+1. TeslaSync.App.Tests.csproj had again been left by integration merges with TWO concatenated <Project>
+   roots plus a broken header comment whose literal <Compile> text sat outside the comment delimiters,
+   failing XML load (MSB4025) and blocking the whole solution's build/test. Consolidated into ONE valid
+   canonical root holding the deduplicated, path-sorted union of every previously linked source (509 distinct
+   links — neither root was a superset; root 1 uniquely had HealthOverview/HealthRecommendations/
+   LiveMotorStatus/PowerOutputChart/TemperatureGauges, root 2 uniquely had StatorTempChart/
+   TemperatureMetricCards) plus the new MotorEfficiencyInsights.Model link (510 total). No linked source
+   dropped.
+2. The App project did not compile at HEAD: the DrivetrainHealth enum (web HealthStatus 'good'|'warning'|
+   'critical') was defined identically in BOTH HealthOverview.Model.cs and HealthRecommendations.Model.cs in
+   the same TeslaSync.App.FeatureViews namespace (CS0101), cascading into 130 XamlCompiler WMC0001 errors.
+   Deduplicated to the single canonical definition in HealthRecommendations.Model.cs (co-located with its
+   DrivetrainHealthSnapshot JSON parser); the identical duplicate in HealthOverview.Model.cs was removed and
+   documented. Members are identical, so both drivetrain-health surfaces and all their tests are unchanged
+   (10967/10967 headless green).
+
+BUILD_EXIT=0 | TEST_EXIT(headless)=0 | FORMAT_EXIT=0 | PLACEHOLDER_EXIT=0
+TEST_EXIT(sln literal)=1 [DEFERRED: WinAppDriver UI-automation runner absent; W9-0002; not surface-related]
+
+EXIT=0
+STATUS=DONE

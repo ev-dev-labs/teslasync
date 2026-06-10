@@ -35,24 +35,13 @@ public enum HealthOverviewState
     Offline,
 }
 
-/// <summary>
-/// The drivetrain health level a <c>HealthOverview</c> renders — the native mirror of the web
-/// <c>HealthStatus = 'good' | 'warning' | 'critical'</c>
-/// (web/src/features/driving/components/drivetrain-health/constants.ts). Drives the panel glow, the accent
-/// colour, the headline icon, the alert variant and the badge tone, exactly as the web source keys all of
-/// those off <c>overallHealth</c>.
-/// </summary>
-public enum DrivetrainHealth
-{
-    /// <summary>Healthy (web <c>'good'</c>) — green glow, success accent, check icon, no alert.</summary>
-    Good,
-
-    /// <summary>Running warm (web <c>'warning'</c>) — cyan glow, warning accent, triangle icon, warning alert.</summary>
-    Warning,
-
-    /// <summary>Overheating (web <c>'critical'</c>) — purple glow, danger accent, triangle icon, danger alert.</summary>
-    Critical,
-}
+// The drivetrain health level a HealthOverview renders (web HealthStatus = 'good' | 'warning' | 'critical')
+// is the canonical DrivetrainHealth enum defined once in HealthRecommendations.Model.cs (same
+// TeslaSync.App.FeatureViews namespace), co-located with its DrivetrainHealthSnapshot JSON parser, and shared
+// by both drivetrain-health surfaces. A second, identical definition previously lived here and collided
+// (CS0101); the single shared definition is reused — Good drives the green glow/success accent/check icon,
+// Warning the cyan glow/warning accent, Critical the purple glow/danger accent, exactly as the web keys those
+// off overallHealth.
 
 /// <summary>
 /// The panel glow a <c>HealthOverview</c> resolves to — the native, WinUI-free analogue of the web
