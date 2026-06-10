@@ -1,0 +1,247 @@
+=== P4 Feature view 0303 VehicleCharts (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/VehicleCharts.*
+Web src : web/src/features/vehicles/components/VehicleCharts.tsx (THE spec)
+Runner  : Darwin arm64, Xcode 26.5 (17F42), Swift 6.3.2, swiftlint 0.63.3,
+          swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.x. SwiftUI + Swift Charts +
+          MapKit present (iPhone 16 iOS-26.5 sim booted) -> NOT capability-blocked.
+Disposition: code-complete; every host-runnable gate GREEN; the two full-app
+          xcodebuild steps DEFERRED (environment-blocked by PRE-EXISTING, unrelated
+          conditions, evidenced below) — the same sanctioned "code-complete +
+          DEFERRED Xcode gate" disposition as 0120 TeslaChargingSessionsMap / 0060
+          LocationMapWidget / 0107 ChargingSessionCard (ADR-002/004/009,
+          apps/macos-pending-verifications.md).
+
+==================================================================================
+ARTIFACTS (15 Swift files + 1 strings catalog; all match the VehicleCharts.* glob)
+==================================================================================
+  Pure logic (Foundation/CoreLocation/Observation/OSLog-only; unit-tested, no SwiftUI):
+    VehicleCharts.Adapter.swift     JS-truthiness coordinate guard, cleanNil port,
+                                    parseSettingEnum port, decoded records (VehicleState/
+                                    Position/VehicleConfigSnapshot/UserPreferenceSnapshot slices)
+    VehicleCharts.Projection.swift  trail filter + batteryData speed series (reverse, keep 0,
+                                    drop nil/NaN) + section flags (the web component body)
+    VehicleCharts.Labels.swift      {{token}} interpolation + section/coordinate/chart label +
+                                    a11y builders + setting-value -> localized label resolver
+    VehicleCharts.Tiles.swift       the 18-tile config grid + 5-tile preferences grid display
+                                    models (web vehicleConfigData / userPrefData MetricCard arrays)
+  State holder (Foundation/Observation/OSLog; SwiftUI-free):
+    VehicleCharts.Model.swift       surface slug, status/connection/update, Source seam,
+                                    @Observable model (phase resolution), i18n facade, in-mem source
+    VehicleCharts.Formatting.swift  telemetry seam (view.opened) + formatTime/fmtNumber parity +
+                                    useUnits seam (convertSpeedFromSI + unit label)
+  View (SwiftUI + Swift Charts + MapKit):
+    VehicleCharts.swift             phase switch + lifecycle + freshness chrome + responsive
+                                    one/two-column composite (web grid-cols-1 lg:grid-cols-2)
+    VehicleCharts.Views.swift       section header, metric tile (MetricCard), tile grid, config /
+                                    preferences / speed-history sections
+    VehicleCharts.Map.swift         MapKit canvas (TSGeo-fit camera), vehicle marker, cyan trail
+                                    polyline, map-style switcher, mono coordinate footer
+    VehicleCharts.Charts.swift      Swift Charts speed AreaMark+LineMark (chartSeriesSpeed),
+                                    selection tooltip, AXChartDescriptor (view-as-table)
+    VehicleCharts.States.swift      freshness chip / QueryError / empty / skeleton
+    VehicleCharts.Previews.swift    7 states (full / speed-only / empty / loading / error /
+                                    stale / offline)
+    VehicleCharts.strings           i18n catalog (9 web keys + localized labels/tokens + chrome)
+  Tests (XCTest, @testable import TeslaSync):
+    VehicleCharts.Tests.swift       numeric/cleanNil/parseSettingEnum/projection/units/formatting (15)
+    VehicleCharts.TilesTests.swift  config grid / preferences grid / labels (9)
+    VehicleCharts.ModelTests.swift  state-holder phases/delegation/telemetry/connection/units (11)
+
+  Total 3031 lines; every file <= 316 (swiftlint file_length 400 strict). No new
+  duplicate types: all public symbols are VehicleCharts*-namespaced and were
+  collision-checked against Sources/ + feature-views/ + dashboard-widgets/ before
+  authoring (grep: 0 pre-existing decls). Two extra files vs the 9-file template
+  (Tiles.swift, Map.swift) + TilesTests.swift are deliberate decomposition to keep
+  every function within the strict function_body_length (50) / file_length budgets
+  — not a scope change (the glob folds them into the same targets).
+
+==================================================================================
+PARITY (web VehicleCharts.tsx -> native), no scope narrowing
+==================================================================================
+  - Live-map guard `state.latitude && state.longitude` (JS truthiness, 0 falsy) ->
+    VehicleChartsStateRecord.currentCoordinate (drops 0 / NaN / nil) — tested.
+  - Trail `positions.filter(p => p.latitude && p.longitude).map([lat,lng])` ->
+    VehicleChartsProjection.trail (same truthiness filter, source order) — tested.
+  - Speed series `positions.map(p => ({ time: formatTime(p.ts), speed:
+    p.speed_mph != null ? convertSpeedFromSI(p.speed_mph) : null })).reverse()` ->
+    VehicleChartsProjection.speedSeries: oldest-first (reverse), a real 0 kept, nil/NaN
+    dropped; SI -> display unit converted at the RENDER boundary via the useUnits seam
+    (ADR-009: speed_mph is the legacy name for an SI m/s value) — tested.
+    Platform adaptation (NOT scope narrowing): a sample with no finite speed is omitted
+    rather than drawn as a Recharts connectNulls gap; every real-speed point is plotted,
+    and the friendly "Position data will appear here" shows when there is no speed.
+  - Vehicle Configuration `MetricCard` array (18 tiles) -> VehicleChartsConfigTiles.make:
+    cleanNil passthrough (Model..Charge Port..), boolean tokens (Europe/RHD -> Yes/No,
+    Remote Start -> Active/Off, Offroad Lightbar -> Present/No), `${pct}%` (SW Download/
+    Install), and the `|| 'Not Installed'` / `|| 'None'` / `|| '—'` fallbacks — every
+    branch ported + tested (count/order == the web array, sentinel -> em-dash).
+  - Car Display Preferences `MetricCard` array (5 tiles) -> VehicleChartsPreferenceTiles.make
+    via the parseSettingEnum port (Distance/Temperature/Charge Unit/Tire Pressure/24h Time)
+    — tested (DistanceUnitMiles -> Miles, PressureUnitPsi -> PSI, missing -> em-dash).
+  - Recharts speed `<AreaChart>` (areaGradient cyan + ChartTooltip) -> Swift Charts AreaMark
+    (translucent chartSeriesSpeed gradient) under a 2pt LineMark, monotone interpolation,
+    chartXSelection tooltip + RuleMark/PointMark, and an AXChartDescriptor exposing every
+    (time, speed) point ("view as table"). Axes on the token dashed grid.
+  - Leaflet MapContainer+MapTileLayer+Marker(vehicleIcon)+Polyline(#00f0ff)+MapLayerSwitcher
+    -> MapKit Map + car-glyph accent pin + cyan MapPolyline (only when trail.count > 1) +
+    segmented map-style switcher; camera frames current+trail via the shared, unit-tested
+    TSGeo.boundingRegion, falling back to the current position at a zoom-14-equivalent span.
+    Footer `${fmtNumber(lat)}, ${fmtNumber(lng)}` -> mono coordinate readout + a11y label.
+  - All 9 web i18n keys reproduced verbatim (common.location/.vehicleConfig/.carPreferences/
+    .speedHistory/.positionDataWillAppear/.yes/.no, vehicles.detail.europeVehicle/.rhd);
+    every label the web HARDCODED in English (Model, Trim, Active, Not Installed, Miles, ...)
+    is localized through the per-surface table. 63 catalog keys; 0 English literal in code
+    (verified: every localize()/string() key resolves to a catalog entry).
+  - States: loading (skeleton), loaded (composite), empty (friendly — no map/config/prefs/
+    speed), error (QueryError+retry), stale (chip+refresh), offline (cached+chip) — all
+    rendered, never blank. The Speed History panel is ALWAYS present in the composite (web
+    parity) with its own no-data message.
+  - A11y: section headers = .isHeader; each metric tile = one combined "label, value" element;
+    map labelled + marker labelled; speed chart = AXChartDescriptor + container label; coord
+    footer labelled; decorative glyphs accessibilityHidden; Reduce-Motion honored (skeleton +
+    transitions via TSAnimation/TSSkeleton); Dynamic Type via the system-font token ramp.
+  - Telemetry: VehicleChartsSurface.slug="VehicleCharts" emitted via P1/S11 view.opened on
+    appear (idempotent), os_log default sink, redaction-safe (no VIN/coord/speed/config).
+
+==================================================================================
+HOST-RUNNABLE GATES — executed on THIS runner, raw results
+==================================================================================
+[1] Isolated SwiftPM build + test of the shipped pure logic (module "TeslaSync", the REAL
+    Adapter/Projection/Labels/Tiles/Model/Formatting + the 3 *Tests.swift), Swift 6 language
+    mode (strict concurrency complete), Xcode 26.5 toolchain:
+
+      $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift build
+      Build complete! (0.52s)                                     BUILD_EXIT=0
+
+      $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
+      Executed 35 tests, with 0 failures (0 unexpected)           TEST_EXIT=0
+
+    Suites: VehicleChartsNumericTests(2) VehicleChartsAdapterTests(5)
+    VehicleChartsProjectionTests(4) VehicleChartsFormattingTests(4)
+    VehicleChartsConfigTilesTests(4) VehicleChartsPreferenceTilesTests(2)
+    VehicleChartsLabelsTests(3) VehicleChartsModelTests(11) => 35/35 GREEN.
+
+[2] SwiftUI VIEW layer typechecked against the REAL design system (Tokens.swift +
+    Sources/Design/* + Sources/Components/** minus DataDisplay/UnitFormatters.swift),
+    Swift 6, on BOTH SDKs, all 12 production files (incl. Charts/Map/Views/States/Previews):
+
+      iOS  : xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator
+             -swift-version 6 -D DEBUG <DS> VehicleCharts.{Adapter,Projection,Formatting,Labels,
+             Tiles,Model,Charts,Views,Map,States,swift,Previews}.swift
+             total errors = 0   errors in VehicleCharts files = 0   TYPECHECK_IOS_EXIT=0
+      macOS: same fileset, -target arm64-apple-macos15.0
+             total errors = 0   errors in VehicleCharts files = 0   TYPECHECK_MAC_EXIT=0
+
+    => The full SwiftUI surface (Charts AreaMark/LineMark + AXChartDescriptor, MapKit Map +
+       MapPolyline + TSGeo, responsive grid, all states) compiles against the real Color.TS /
+       Font.TS / TSSpacing / TSRadius / TSMaterial(tsGlassPanel) / TSSkeleton / TSAnimation /
+       TSGeo APIs on both iOS-18 and macOS-15.
+
+[3] swiftlint --strict (the gate's LINT step), all 15 Swift files:
+      Done linting! Found 0 violations, 0 serious in 15 files.    LINT_EXIT=0
+
+[4] swiftformat --lint (the gate's FORMAT step), all 15 Swift files:
+      0/15 files require formatting.                              FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 (the gate's PLACEHOLDER step):
+      & ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/VehicleCharts
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0               PLACEHOLDER_EXIT=0
+      (No TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/stub/mock/fatalError.)
+
+[6] xcodegen generate -> TeslaSync.xcodeproj (git-ignored): the 12 production files are members
+    of the TeslaSync + TeslaSync-macOS app targets and the 3 *Tests.swift of the XCTest bundles
+    (pbxproj membership confirmed). No project.yml edit needed (folder-glob sources).
+
+==================================================================================
+FULL xcodebuild GATE — DEFERRED (environment-blocked; NOT a defect in this code)
+==================================================================================
+  Command (exactly as specified by the prompt):
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+
+  Bounded REAL attempt of BOTH gate steps on THIS runner — captured outcomes:
+
+    iOS  : start 03:38 -> end 03:50
+           > the scheme pre-action ran Scripts/build-shared-xcframework.sh =>
+             apps/shared/gradlew :core:assembleSharedXCFramework (KMP Kotlin/Native, ADR-004).
+             That Gradle build SUCCEEDED here ("xcframework successfully written out ..." +
+             "Shared.xcframework staged"). NOT a hard block, only slow (parallel-slot contended:
+             slot-48 was building the same target concurrently).
+           > the app/test Swift compile then FAILED with 108 ": error:" lines — ALL in
+             PRE-EXISTING, unrelated SIBLING surfaces, none in this surface:
+               RecentDrivesListWidget.{Previews,Model,swift}  ('RecentDrivesModel'/'RecentDrivesUpdate'/
+               RecentDrivesSection.Seams.swift                'RecentDrivesLoadStatus'/'RecentDrivesConnection'
+               StateTimeline{,Widget}.{Previews,Model,Source} ambiguous for type lookup)
+             i.e. parallel-merge duplicate-type collisions ("X is ambiguous for type lookup").
+             This is the documented "duplicate-type dashboard-widget/feature-view collisions"
+             condition (apps/macos-pending-verifications.md).
+           > total ": error:" = 108 ; errors attributable to ANY VehicleCharts file = 0
+           ** BUILD FAILED **                                            IOS_EXIT=65
+
+    macOS: start 03:51 -> end 03:51 (Shared.xcframework UP-TO-DATE, cached)
+           > the build FAILED FAST (pre-compile) at development code-signing — no signing
+             identity on this runner (project DEVELOPMENT_TEAM=""):
+               error: "TeslaSync-macOS" has entitlements that require signing with a development
+                       certificate. Enable development signing ...
+               error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+           > total ": error:" = 4 (all signing) ; VehicleCharts errors = 0
+           ** BUILD FAILED **                                            MAC_EXIT=65
+
+  Reading: both gates exit 65 NOT on any VehicleCharts code, but on (iOS) pre-existing
+  parallel-merge duplicate-type collisions in unrelated sibling RecentDrives*/StateTimeline*
+  surfaces and (macOS) development-signing — both owned by p4-apple/P99 acceptance on a signed
+  macos-latest runner per apps/macos-pending-verifications.md. This surface's OWN code (12
+  production files) is proven to compile under the real Xcode 26 / Swift 6 toolchain by [1]
+  (isolated build) and [2] (SDK typecheck vs the real design system, iOS + macOS); its test
+  code is proven to compile + pass by [1] (35/35). This surface adds 0 errors to the full-app
+  build (grep of both raw logs: 0 lines matching VehicleCharts).
+
+==================================================================================
+HONESTY COVENANT (binding)
+==================================================================================
+  1 No red-as-green   : the two xcodebuild steps are reported RED (IOS_EXIT=65 / MAC_EXIT=65)
+                        and explicitly DEFERRED with raw evidence — never claimed passing.
+                        [1]-[6] are pasted raw exits.
+  2 No scope narrowing: every web region + branch reproduced (map guard, trail filter, speed
+                        series, all 18 config tiles + 5 preference tiles + every value branch,
+                        area chart, map, footer, all states).
+  3 No skip-and-assume: web source read end-to-end; every t() + every hardcoded label + every
+                        conditional ported and tested; every gate executed on THIS runner;
+                        iOS + macOS failures confirmed by reading the raw logs, not assumed.
+  4 No stubs as final : complete production surface; placeholder scanner COUNT=0; 35 real tests.
+  5 No parity shortcut: truthiness filters / SI->display unit conversion / formatters / a11y /
+                        i18n / telemetry / camera all mapped to platform tokens + facades + the
+                        shared TSGeo and verified; the SwiftUI layer typechecks against the REAL
+                        design system on both SDKs. The one platform adaptation (omit a missing
+                        speed sample vs a Recharts gap) is called out above, not hidden.
+  6 No delegation     : authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass: consumes P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade,
+                        P1/S11 view.opened, and the P4-core shared Maps TSGeo / Feedback TSSkeleton;
+                        did NOT self-register in project.yml (folder-glob) and did NOT edit the
+                        shared Localizable.xcstrings / macos-pending-verifications.md (parallel-
+                        unsafe; out of allowed files) — strings shipped as the per-surface table.
+  8 No commit on red  : the committed artifact is GREEN on every runnable gate AND independently
+                        compiles+tests under the real Xcode 26 / Swift 6 toolchain (isolated
+                        build/test + iOS & macOS SDK typecheck). The only non-green steps are the
+                        environment-blocked full-app xcodebuild build/test, RED solely on pre-
+                        existing, unrelated sibling surfaces + macOS signing — which this commit
+                        neither introduces nor touches (0 errors in its files).
+  9 No silent drift   : changes confined to apps/apple/TeslaSync/feature-views/VehicleCharts.*
+                        and this log (the generated TeslaSync.xcodeproj is git-ignored).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic VehicleCharts shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner: the pure logic builds + 35/35 tests pass under Swift 6
+  strict concurrency, and the entire SwiftUI + Swift Charts + MapKit view layer typechecks
+  against the real design system on BOTH the iOS-18 and macOS-15 SDKs (0 errors), with
+  swiftlint --strict / swiftformat --lint / placeholder all green. The full-app iOS-Simulator +
+  macOS xcodebuild build/test gate exits 65/65 (DEFERRED, not failed by this code): the KMP
+  Shared.xcframework actually built + staged on this runner, and the build then aborts on pre-
+  existing parallel-merge duplicate-type collisions across unrelated sibling RecentDrives* /
+  StateTimeline* surfaces (iOS) and on macOS development-signing (macOS) — both owned by the
+  p4-apple/P99 acceptance gate on a signed macos-latest runner per
+  apps/macos-pending-verifications.md. Zero errors in any VehicleCharts file.
+
+EXIT=0
+STATUS=DONE
