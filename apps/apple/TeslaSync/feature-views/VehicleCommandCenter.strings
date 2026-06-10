@@ -1,0 +1,278 @@
+/*
+  VehicleCommandCenter.strings
+  TeslaSync — P4 feature view · 0261 · VehicleCommandCenter (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VehicleCommandCenter` (+ its catalog, dialogs, tiles and banners) resolves
+  (table "VehicleCommandCenter") lives here with its web English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns
+  its own strings without editing the shared catalog.
+
+  Keys mirror the web source verbatim where the web component / commands.ts use a
+  `t(key, default)` (the `commands.*` command labels, category labels, dialog
+  prompts, select options and confirm copy). The remaining keys back the native
+  chrome (freshness chip, relative-time labels, banners, search field, tile
+  accessibility, dialogs).
+*/
+
+
+/* --- commands.cat.* --- */
+"commands.cat.alerts" = "Alerts & Location";
+"commands.cat.charging" = "Charging";
+"commands.cat.climate" = "Climate & Comfort";
+"commands.cat.climateProtect" = "Climate Protection";
+"commands.cat.doors" = "Doors & Trunk";
+"commands.cat.drive" = "Drive";
+"commands.cat.media" = "Media";
+"commands.cat.navigation" = "Navigation";
+"commands.cat.schedules" = "Schedules";
+"commands.cat.security" = "Security & Access";
+"commands.cat.software" = "Software";
+"commands.cat.sunroof" = "Sunroof";
+"commands.cat.vehicle" = "Vehicle";
+"commands.cat.windows" = "Windows";
+
+/* --- commands.security.* --- */
+"commands.security.admin" = "Admin";
+"commands.security.clearPin" = "Clear PIN";
+"commands.security.clearSpeedPin" = "Clear Speed PIN";
+"commands.security.confirmClearDrivePin" = "Clear PIN to Drive without authentication?";
+"commands.security.confirmClearPin" = "Clear speed limit PIN without authentication?";
+"commands.security.confirmErase" = "This will erase all user data from the vehicle touchscreen. Continue?";
+"commands.security.enable" = "Enable";
+"commands.security.enterPin" = "Enter 4-digit PIN:";
+"commands.security.enterSpeedLimit" = "Enter speed limit (50-90 MPH):";
+"commands.security.enterSpeedPin" = "Enter 4-digit PIN:";
+"commands.security.enterValetPin" = "Enter 4-digit valet PIN:";
+"commands.security.eraseData" = "Erase Data";
+"commands.security.guestMode" = "Guest Mode";
+"commands.security.guestOnly" = "Guest mode only";
+"commands.security.lock" = "Lock";
+"commands.security.pinToDrive" = "PIN to Drive";
+"commands.security.requiresPin" = "Requires PIN";
+"commands.security.resetPin" = "Reset PIN";
+"commands.security.resetValetPin" = "Reset Valet PIN";
+"commands.security.sentry" = "Sentry";
+"commands.security.setMph" = "Set MPH";
+"commands.security.speedActivate" = "Activate";
+"commands.security.speedDeactivate" = "Deactivate";
+"commands.security.speedLimit" = "Speed Limit";
+"commands.security.speedLimitMode" = "Speed Limit";
+"commands.security.valetMode" = "Valet Mode";
+"commands.security.wakeUp" = "Wake Up";
+"commands.security.wakeVehicle" = "Wake vehicle";
+
+/* --- commands.climate.* --- */
+"commands.climate.bioweapon" = "Bioweapon";
+"commands.climate.campMode" = "Camp Mode";
+"commands.climate.climate" = "Climate";
+"commands.climate.climateKeeper" = "Climate Keeper";
+"commands.climate.cop" = "Overheat Protect";
+"commands.climate.copFan" = "Overheat Protect";
+"commands.climate.copHigh" = "High";
+"commands.climate.copLow" = "Low";
+"commands.climate.copMedium" = "Medium";
+"commands.climate.copOff" = "Overheat Protect";
+"commands.climate.copOn" = "On (AC)";
+"commands.climate.copTemp" = "COP Temp";
+"commands.climate.default" = "Default";
+"commands.climate.defenseMode" = "Defense Mode";
+"commands.climate.dogMode" = "Dog Mode";
+"commands.climate.driver" = "Driver";
+"commands.climate.driverPassenger" = "Driver/Passenger";
+"commands.climate.enterTemp" = "Enter temperature in °C (e.g., 21):";
+"commands.climate.fanOnly" = "Fan only";
+"commands.climate.keepMode" = "Keep";
+"commands.climate.maxPrecondition" = "Max Precondition";
+"commands.climate.off" = "OFF";
+"commands.climate.override" = "Override";
+"commands.climate.resetPrecondition" = "Reset Precondition";
+"commands.climate.seatCool" = "Seat Cool";
+"commands.climate.seatHeat" = "Seat Heat";
+"commands.climate.setLevel" = "Low/Med/High";
+"commands.climate.setTemps" = "Set Temps";
+"commands.climate.steeringHeat" = "Steering Heat";
+"commands.climate.toggle" = "Toggle";
+
+/* --- commands.charging.* --- */
+"commands.charging.amperage" = "Amperage";
+"commands.charging.charge" = "Charge";
+"commands.charging.chargePort" = "Charge Port";
+"commands.charging.close" = "Close";
+"commands.charging.dailyMode" = "Daily mode";
+"commands.charging.enterAmps" = "Enter charging amps (e.g., 16, 32, 48):";
+"commands.charging.enterLimit" = "Enter charge limit % (50–100):";
+"commands.charging.maxRange" = "Max Range";
+"commands.charging.open" = "Open";
+"commands.charging.percent" = "Charge %";
+"commands.charging.setAmps" = "Set Amps";
+"commands.charging.setLimit" = "Set Limit";
+"commands.charging.standard" = "Standard";
+"commands.charging.tripMode" = "Trip mode";
+
+/* --- commands.doors.* --- */
+"commands.doors.frunk" = "Frunk";
+"commands.doors.open" = "Open";
+"commands.doors.trunk" = "Trunk";
+
+/* --- commands.drive.* --- */
+"commands.drive.confirmRemoteStart" = "This will enable keyless driving for 2 minutes. Continue?";
+"commands.drive.keylessDrive" = "Keyless drive";
+"commands.drive.remoteStart" = "Remote Start";
+
+/* --- commands.windows.* --- */
+"commands.windows.close" = "Close Windows";
+"commands.windows.vent" = "Vent Windows";
+
+/* --- commands.sunroof.* --- */
+"commands.sunroof.close" = "Sunroof";
+"commands.sunroof.closeMode" = "Close";
+"commands.sunroof.stop" = "Sunroof";
+"commands.sunroof.stopMode" = "Stop";
+"commands.sunroof.vent" = "Sunroof";
+"commands.sunroof.ventMode" = "Vent";
+
+/* --- commands.schedules.* --- */
+"commands.schedules.addCharge" = "Add Charge Schedule";
+"commands.schedules.addPrecondition" = "Add Precondition";
+"commands.schedules.byId" = "By ID";
+"commands.schedules.enterScheduleId" = "Enter schedule ID to remove:";
+"commands.schedules.midnight" = "Midnight daily";
+"commands.schedules.morning" = "7 AM daily";
+"commands.schedules.removeCharge" = "Remove Schedule";
+"commands.schedules.removePrecondition" = "Remove Precondition";
+
+/* --- commands.alerts.* --- */
+"commands.alerts.boombox" = "Boombox";
+"commands.alerts.findMyCar" = "Find my car";
+"commands.alerts.flashLights" = "Flash Lights";
+"commands.alerts.horn" = "Horn";
+"commands.alerts.locatePing" = "Locate Ping";
+"commands.alerts.randomFart" = "Random fart";
+
+/* --- commands.homelink.* --- */
+"commands.homelink.garage" = "Garage door";
+"commands.homelink.latitude" = "Latitude";
+"commands.homelink.longitude" = "Longitude";
+"commands.homelink.trigger" = "HomeLink";
+"commands.homelink.triggerTitle" = "Enter vehicle coordinates";
+
+/* --- commands.nav.* --- */
+"commands.nav.byId" = "By ID";
+"commands.nav.coordinates" = "Lat / Lon";
+"commands.nav.enterAddress" = "Enter destination address:";
+"commands.nav.enterScId" = "Enter Supercharger ID:";
+"commands.nav.latitude" = "Latitude";
+"commands.nav.longitude" = "Longitude";
+"commands.nav.sendAddress" = "Send Address";
+"commands.nav.sendGPS" = "Send GPS";
+"commands.nav.sendGPSTitle" = "Enter GPS coordinates";
+"commands.nav.supercharger" = "Supercharger";
+"commands.nav.toVehicleNav" = "To vehicle nav";
+
+/* --- commands.software.* --- */
+"commands.software.cancelUpdate" = "Cancel Update";
+"commands.software.enterDelay" = "Install in how many minutes? (0 = now, 120 = 2 hours)";
+"commands.software.installNow" = "Install now";
+"commands.software.scheduleUpdate" = "Schedule Update";
+"commands.software.stopPending" = "Stop pending";
+
+/* --- commands.vehicle.* --- */
+"commands.vehicle.changeName" = "Change name";
+"commands.vehicle.enterName" = "Enter new vehicle name:";
+"commands.vehicle.rename" = "Rename";
+
+/* --- commands.media.* --- */
+"commands.media.enterVolume" = "Enter volume level (0.0 – 11.0):";
+"commands.media.nextFav" = "Next Favorite";
+"commands.media.nextTrack" = "Next Track";
+"commands.media.playPause" = "Play / Pause";
+"commands.media.prevFav" = "Prev Favorite";
+"commands.media.prevTrack" = "Prev Track";
+"commands.media.volumeDown" = "Volume Down";
+"commands.media.volumeUp" = "Volume Up";
+
+/* --- commands.freshness.* --- */
+"commands.freshness.label" = "Data freshness";
+"commands.freshness.updating" = "Updating";
+
+/* --- commands.timeAgo.* --- */
+"commands.timeAgo.days" = "%dd ago";
+"commands.timeAgo.hours" = "%dh ago";
+"commands.timeAgo.justNow" = "just now";
+"commands.timeAgo.minutes" = "%dm ago";
+
+/* --- commands.age.* --- */
+"commands.age.hours" = "%dh ago";
+"commands.age.justNow" = "just now";
+"commands.age.minutes" = "%dm ago";
+"commands.age.seconds" = "%ds ago";
+"commands.age.unknown" = "—";
+
+/* --- commands.status.* --- */
+"commands.status.errorTitle" = "Couldn't load command status";
+"commands.status.retry" = "Retry";
+
+/* --- commands.search.* --- */
+"commands.search.clear" = "Clear search";
+"commands.search.label" = "Search commands";
+"commands.search.noResults" = "No commands match your search";
+"commands.search.prompt" = "Search commands...";
+
+/* --- commands.favorites.* --- */
+"commands.favorites.empty" = "Star a command to pin it here";
+"commands.favorites.title" = "Favorites";
+
+/* --- commands.group.* --- */
+"commands.group.collapse" = "Collapse";
+"commands.group.expand" = "Expand";
+
+/* --- commands.tile.* --- */
+"commands.tile.hint.configure" = "Opens options before running";
+"commands.tile.hint.confirm" = "Asks for confirmation before running";
+"commands.tile.hint.run" = "Runs the command";
+"commands.tile.running" = "Running";
+
+/* --- commands.dialog.* --- */
+"commands.dialog.cancel" = "Cancel";
+"commands.dialog.confirm" = "Confirm";
+"commands.dialog.confirmCountdown" = "Confirm (%d)";
+"commands.dialog.confirmField" = "Confirmation text";
+"commands.dialog.selectPrompt" = "Choose an option";
+"commands.dialog.send" = "Send";
+"commands.dialog.typeToConfirm" = "Type %@ to confirm";
+
+/* --- commands.on.* --- */
+"commands.on" = "ON";
+
+/* --- commands.off.* --- */
+"commands.off" = "OFF";
+
+/* --- commands.asleep.* --- */
+"commands.asleep" = "Vehicle is %@. Wake it up first to send commands.";
+
+/* --- commands.staleData.* --- */
+"commands.staleData" = "Vehicle data is %@ old. The vehicle may be asleep or offline.";
+
+/* --- commands.loading.* --- */
+"commands.loading" = "Loading vehicle commands";
+
+/* --- commands.wakeUpStarted.* --- */
+"commands.wakeUpStarted" = "%@ is waking up";
+
+/* --- commands.wakeFailed.* --- */
+"commands.wakeFailed" = "Failed to wake %1$@: %2$@";
+
+/* --- commands.sentTo.* --- */
+"commands.sentTo" = "Command sent to %@";
+
+/* --- commands.failedOn.* --- */
+"commands.failedOn" = "Command failed on %@";
+
+/* --- commands.failedDetail.* --- */
+"commands.failedDetail" = "Command failed: %@";
+
+/* --- commands.toggleFavorite.* --- */
+"commands.toggleFavorite" = "Toggle favorite";
+
