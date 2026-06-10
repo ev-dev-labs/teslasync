@@ -398,3 +398,4 @@ p2-windows/feature-views/W-0135-AddressInput.prompt.md
 p2-windows/feature-views/W-0148-SocChart.prompt.md
 p2-windows/feature-views/W-0151-TirePressureSection.prompt.md
 p2-windows/feature-views/W-0139-DriveStatCards.prompt.md
+p2-windows/feature-views/W-0153-DetailCards.prompt.md
