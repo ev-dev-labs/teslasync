@@ -1,0 +1,44 @@
+/*
+  AISafetySettingExplainer.strings
+  TeslaSync — P4 shared surface · 0045 · AISafetySettingExplainer (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `AISafetySettingExplainer` resolves (table "AISafetySettingExplainer") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface prompt owns its
+  own strings without editing the shared catalog.
+
+  The first group is the parity set extracted from the web source
+  (web/src/components/ai/AISafetySettingExplainer.tsx + the shared AIFeatureCard / AiOutputPanel /
+  AIThinkingIndicator literals it composes). The second group backs the native P4 leaf chrome (the
+  freshness / connectivity / loading / error copy) so the Swift sources hold no English prose.
+*/
+
+/* --- Parity: the web source's t(key, default) calls --- */
+"safetySettings.aiExplainer.title" = "Explain my safety settings";
+"safetySettings.aiExplainer.description" = "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.";
+"safetySettings.aiExplainer.button" = "Explain my settings";
+"safetySettings.aiExplainer.badge" = "Helix";
+
+/* --- Parity: shared AIFeatureCard / AiOutputPanel / AIThinkingIndicator literals --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Output panel: friendly empty hint (P4 "never a blank box") --- */
+"safetySettings.aiExplainer.output.a11yTitle" = "Safety-setting explanation";
+"safetySettings.aiExplainer.output.emptyHint" = "No explanation yet — ask Helix to explain your safety settings.";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"safetySettings.aiExplainer.live" = "Live";
+"safetySettings.aiExplainer.stale" = "Stale";
+"safetySettings.aiExplainer.offline" = "Offline";
+"safetySettings.aiExplainer.staleBanner" = "Reconnecting — Helix may be stale";
+"safetySettings.aiExplainer.offlineBanner" = "Offline — showing the last known explanation";
+"safetySettings.aiExplainer.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error states --- */
+"safetySettings.aiExplainer.loadingA11y" = "Loading safety-setting explainer";
+"safetySettings.aiExplainer.errorTitle" = "Couldn't load Helix";
+"safetySettings.aiExplainer.retry" = "Retry";
