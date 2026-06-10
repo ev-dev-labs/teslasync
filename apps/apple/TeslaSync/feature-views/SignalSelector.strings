@@ -1,0 +1,38 @@
+/*
+  SignalSelector.strings
+  TeslaSync — P4 feature view · 0270 · SignalSelector (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SignalSelector` resolves (table "SignalSelector") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/telemetry/components/SignalSelector.tsx) — the `Signals` label word,
+  the `Search signals…` placeholder, and the layer-help tooltip body + its aria
+  label. The remaining keys back the native chrome (the loading / empty / error
+  states + the stale/offline freshness banners) and the VoiceOver copy the Apple
+  HIG states + accessibility contract requires around the always-present field.
+*/
+
+/* --- From the web source (parity) --- */
+"Signals" = "Signals";
+"Search signals…" = "Search signals…";
+"help.signal.layers" = "TeslaSync exposes three live-state layers: L1 (in-process), L2 (Redis shared), and log (TimescaleDB history).";
+"help.signal.layers.aria" = "More info about signal layers (L1, L2, log)";
+
+/* --- Native chrome: freshness banners (stale / offline) --- */
+"telemetry.signalSelector.staleBanner" = "Refreshing — the signal list may be stale";
+"telemetry.signalSelector.offlineBanner" = "Offline — showing the last loaded signal list";
+
+/* --- Native chrome: loading / empty / error states --- */
+"telemetry.signalSelector.loadingHint" = "Loading available signals…";
+"telemetry.signalSelector.emptyHint" = "No signals are available for this vehicle yet";
+"telemetry.signalSelector.errorTitle" = "Couldn't load the available signals";
+"telemetry.signalSelector.retry" = "Retry";
+
+/* --- Accessibility (VoiceOver) --- */
+"telemetry.signalSelector.a11ySelector" = "Signals selector";
+"telemetry.signalSelector.a11ySelected" = "selected";
