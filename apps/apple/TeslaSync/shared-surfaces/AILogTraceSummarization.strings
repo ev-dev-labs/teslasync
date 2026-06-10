@@ -1,0 +1,45 @@
+/*
+  AILogTraceSummarization.strings
+  TeslaSync — P4 shared surface · 0026 · AILogTraceSummarization (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `AILogTraceSummarization` resolves (table "AILogTraceSummarization") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface prompt owns its
+  own strings without editing the shared catalog.
+
+  The first group is the parity set extracted from the web source
+  (web/src/components/ai/AILogTraceSummarization.tsx + the shared AIFeatureCard / AiOutputPanel /
+  AIThinkingIndicator literals it composes). The second group backs the native P4 leaf chrome (the
+  freshness / connectivity / loading / error copy) so the Swift sources hold no English prose.
+*/
+
+/* --- Parity: the web source's t(key, default) calls --- */
+"liveLogs.aiSummary.title" = "Helix log/trace summary";
+"liveLogs.aiSummary.description" = "Get a 3-6 sentence factual summary of the recent log and trace window. The narrator is grounded in a redacted envelope of the same window the table below shows; it never invents log lines and never speculates about root cause.";
+"liveLogs.aiSummary.button" = "Summarize";
+"liveLogs.aiSummary.badge" = "Helix";
+
+/* --- Parity: shared AIFeatureCard / AiOutputPanel / AIThinkingIndicator literals --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Output panel: friendly empty hints (P4 "never a blank box") --- */
+"liveLogs.aiSummary.output.a11yTitle" = "Log and trace summary";
+"liveLogs.aiSummary.output.emptyHint" = "No summary yet — ask Helix to summarize the recent log and trace window.";
+"liveLogs.aiSummary.output.noWindowHint" = "Waiting for a log and trace window to summarize.";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"liveLogs.aiSummary.live" = "Live";
+"liveLogs.aiSummary.stale" = "Stale";
+"liveLogs.aiSummary.offline" = "Offline";
+"liveLogs.aiSummary.staleBanner" = "Reconnecting — Helix may be stale";
+"liveLogs.aiSummary.offlineBanner" = "Offline — showing the last known summary";
+"liveLogs.aiSummary.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error states --- */
+"liveLogs.aiSummary.loadingA11y" = "Loading log and trace summary";
+"liveLogs.aiSummary.errorTitle" = "Couldn't load Helix";
+"liveLogs.aiSummary.retry" = "Retry";
