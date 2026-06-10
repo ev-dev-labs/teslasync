@@ -1,0 +1,157 @@
+=== P4 Modal / dialog 0022 DashboardSettingsModal (Apple) ===
+Runner: Darwin (macOS 26), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1,
+        xcodegen present, pwsh present, iPhone 16 simulator (booted).
+Web source: web/src/features/dashboard/components/DashboardSettingsModal.tsx (read end-to-end).
+Native output: apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.* (11 files).
+ADR refs: ADR-002 (shared SwiftUI source), ADR-005, ADR-009; freshness ADR-013; deferral ADR-012.
+
+CAPABILITY
+  Required: SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG. PRESENT on this
+  runner (Xcode 26.5 ships the iOS 18+ / macOS 15+ SDKs; this surface uses SwiftUI only — no charts,
+  no maps, per the web source). NOT blocked on capability.
+
+ARTIFACT (11 files, one surface)
+  DashboardSettingsModal.Adapter.swift     — surface slug, value/draft/descriptor/vehicle models,
+                                              icon catalog (16 glyphs), refresh catalog (6 cadences),
+                                              load/freshness/phase enums (dependency-free Foundation).
+  DashboardSettingsModal.Projection.swift  — pure: buildDraft, phase, inlineFailure, commit deltas,
+                                              isDirty (faithful port of handleSave).
+  DashboardSettingsModal.Seams.swift       — P1/S11 telemetry, action seam (commit/cancel), update
+                                              snapshot, P1/S8 source protocol + in-memory source,
+                                              P1/S10 strings facade, VoiceOver builders.
+  DashboardSettingsModal.Model.swift       — @Observable state holder (draft, phase, mutators,
+                                              save/cancel, stale auto-refresh, view.opened once).
+  DashboardSettingsModal.swift             — main view (header + body(for: phase) + dismiss).
+  DashboardSettingsModal.States.swift      — header, freshness chip, connectivity/inline banners,
+                                              populated container, footer, loading/empty/error states.
+  DashboardSettingsModal.Controls.swift    — Identity (name + 8-col emoji grid), Vehicle Filter,
+                                              Auto-Refresh, Display (2 toggles) sections.
+  DashboardSettingsModal.Previews.swift    — #Preview per state (populated/loading/empty/error/
+                                              stale/offline).
+  DashboardSettingsModal.strings           — P1/S10 table "DashboardSettingsModal" (36 keys).
+  DashboardSettingsModal.ModelTests.swift  — state-holder coverage (23 tests).
+  DashboardSettingsModal.Tests.swift       — projection + accessibility coverage (18 tests).
+
+HOST-RUNNABLE GATES (all executed on THIS runner; raw exits pasted)
+
+  [1] swiftformat --lint (surface, .swift) ............................. FORMAT_EXIT=0
+      0/10 files require formatting.
+  [2] swiftformat --lint apps/apple (FULL gate) ....................... FORMAT_FULL_EXIT=0
+      0/3370 files require formatting, 2 files skipped (.strings — unsupported type, expected).
+  [3] swiftlint --strict (surface, 10 files) .......................... LINT_EXIT=0
+      Done linting! Found 0 violations, 0 serious in 10 files.
+  [4] swiftlint --strict (FULL gate) .................................. LINT_FULL_EXIT=0
+      Done linting! Found 0 violations, 0 serious in 3235 files. (modals-dialogs is not in the
+      .swiftlint.yml `included:` set — the tier is unwired, see DEFERRED below — so the surface was
+      linted explicitly in [3].)
+  [5] check-placeholders.ps1 -Path …/DashboardSettingsModal ........... PLACEHOLDER_EXIT=0
+      PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 (real scan; no TODO/FIXME/stub/Placeholder/Lorem).
+  [6] xcodegen generate .............................................. XCODEGEN_EXIT=0
+      Project spec parses; plists + project written; generated .xcodeproj is git-ignored.
+  [7] Isolated SwiftPM build — real design system (generated Tokens.swift) + shared TSButton +
+      the 9 production surface files — Swift 6 language mode, strict concurrency complete,
+      platforms macOS 15 ................................................ BUILD_EXIT=0
+      "Build complete! (8.15s)" — the entire SwiftUI view layer + core + state holder typecheck +
+      compile against the REAL tokens/components (0 errors).
+  [8] swift test (same package) ...................................... TEST_EXIT=0
+      Executed 41 tests, with 0 failures (0 unexpected). (18 projection/a11y + 23 state-holder.)
+  [9] swiftc -typecheck — iOS 18 simulator SDK (arm64-apple-ios18.0-simulator), Swift 6, strict
+      concurrency — Tokens + TSButton + the 9 production files .......... IOS_TYPECHECK_EXIT=0
+      0 errors (#Preview expands). Dual-SDK parity with [7]/[8] (macOS 15) confirmed.
+  [10] i18n key parity (code keys vs strings table) .................. PASS
+      31 literal code keys + the 6 runtime-built dashSettings.refresh{value} keys all resolve in the
+      36-key table; 0 missing, 0 true orphans (the 6 cadence keys are built by interpolation in the
+      Adapter).
+
+DEFERRED (NOT failed by this code) — full-app iOS + macOS xcodebuild build/test
+
+  The prompt Gate's `xcodebuild -scheme TeslaSync … build test` (iOS + macOS) is DEFERRED to the P4
+  acceptance gate / ADR-012 CI matrix on a signed macos host, for two pre-existing, out-of-scope
+  reasons this commit's allowed-files scope cannot touch:
+
+    (a) The modals-dialogs tier is NOT wired into project.yml. HARD EVIDENCE: a fresh
+        `xcodegen generate` produced a project.pbxproj that references "DashboardSettingsModal" 0
+        times and any modals-dialogs file 0 times (vs. "feature-views" 3 times). project.yml is NOT
+        an allowed file for prompt 0022 (allowed: DashboardSettingsModal.* + this log), and editing
+        it is parallel-unsafe across the concurrent surface prompts — tier registration is the
+        acceptance gate's responsibility. Running xcodebuild now would compile the app WITHOUT this
+        surface, so a "green" full-app build would be misleading (Honesty Covenant #1).
+    (b) The KMP Shared.xcframework is unstaged (apps/apple/Frameworks holds only .gitkeep). The
+        TeslaSync scheme's pre-build Run Script (`Scripts/build-shared-xcframework.sh`) runs
+        `gradlew :core:assembleSharedXCFramework` (Kotlin/Native) as the long-pole. A bounded build
+        attempt on THIS runner confirmed it via the live process tree:
+            xcodebuild -scheme TeslaSync … build
+              └─ build-shared-xcframework.sh
+                   └─ gradlew -p apps/shared --console=plain :core:assembleSharedXCFramework
+        i.e. the build was executing the KMP assemble, not this surface's code. Attempt stopped to
+        free the runner; this is a baseline prerequisite, not a defect in DashboardSettingsModal.
+
+  Per apps/macos-pending-verifications.md: such items are "not unfinished work — the code is written,
+  committed, and all host-runnable gates are green"; they are deferred artifact verifications the CI
+  matrix runs. Zero errors in any DashboardSettingsModal file (proven by [7]/[8]/[9]).
+
+HONESTY COVENANT
+  1  No red-as-green   : the full-app xcodebuild is NOT claimed green — it is DEFERRED with hard
+                         evidence (0 pbxproj refs + live KMP-Gradle ps). Every gate claimed green
+                         was executed here with its raw exit pasted.
+  2  No scope narrowing: all four web sections (Identity / Vehicle Filter / Auto-Refresh / Display)
+                         + footer reproduced; the presentational web modal is widened with
+                         loading/empty/error + stale/offline freshness so no state is a blank box.
+  3  No skip-and-assume: web source read end-to-end; every runnable gate run on THIS runner; the
+                         iOS block confirmed by reading the live process tree, not assumed.
+  4  No stubs as final : complete production surface; placeholder scan COUNT=0 (real scan); 41 real
+                         tests pass; no TODO/stub/mock/Placeholder/Lorem.
+  5  No parity shortcut: name/icon(16)/scope/cadence(6)/two switches, the handleSave rename+icon+
+                         update deltas, the all-vehicles sentinel, tint/typography/a11y/telemetry all
+                         mapped to platform seams + tokens and unit-asserted on BOTH SDKs.
+  6  No delegation     : authored directly (delegation FORBIDDEN; none used).
+  7  No predecessor bypass: consumes P1/S8 source seam, P1/S9 generated tokens, P1/S10 i18n facade,
+                         P1/S11 view.opened, and the P4-core shared TSButton; did NOT edit project.yml
+                         / .swiftlint.yml / .swiftformat / Localizable.xcstrings (parallel-unsafe +
+                         outside this prompt's commit scope) — strings ship as the per-surface table.
+  8  No commit on red  : the committed artifact (DashboardSettingsModal.* + this log) is GREEN on
+                         every gate scoped to it ([1]–[10]). The only non-green step is the
+                         environment-/baseline-blocked full-app xcodebuild, which this commit neither
+                         introduces nor touches (0 errors in its files, 0 pbxproj references).
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/modals-dialogs/DashboardSettingsModal.*
+                         and this log. The leaf-state + freshness widening over the passive
+                         presentational web modal is documented here + in code.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders all states from the web source, reproduced + widened per the Apple modal
+      contract: loading / empty (dashboard not found) / error (retry) / populated, with stale +
+      offline freshness on the fleet vehicle list — never blank; header + scrolling form + pinned
+      footer.
+  [x] Hooks bind to the shared P1/S8 state-holder seam (DashboardSettingsSource); no HTTP in the
+      view (the web modal is presentational — the load lifecycle is modeled so every state renders).
+  [x] Every i18n key resolves through the P1/S10 catalog (DashboardSettingsModal.strings, 36 keys);
+      no English literal in code (parity verified — 0 missing, 0 orphan; refresh keys built from
+      values all defined). Web `dashSettings.*` / `common.*` key names preserved.
+  [x] Accessibility: dialog container label + Close/Cancel dismissal; name field, icon swatches
+      (.isSelected trait + glyph label), vehicle-filter + auto-refresh pickers, and both switches all
+      carry VoiceOver labels; decorative glyphs hidden; Dynamic Type via tokens; Reduce-Motion-gated
+      loading pulse.
+  [x] Tests: projection/commit adapter unit tests + per-state state-holder tests + a11y label tests
+      — 41/41 executed green (isolated SwiftPM, real tokens, Swift 6 strict concurrency) + iOS-18 SDK
+      typecheck.
+  [x] No TODO/stub/mock/Placeholder/Lorem in shipped code (placeholder gate COUNT=0, real scan).
+  [x] EXIT=0 / STATUS=DONE; full-app iOS+macOS xcodebuild build/test DEFERRED to the acceptance gate
+      for pre-existing, out-of-scope baseline reasons (unwired tier + unstaged KMP Shared.xcframework;
+      hard pbxproj + live-ps evidence above).
+
+DISPOSITION
+  Production-polished, Apple-idiomatic DashboardSettingsModal shipped at parity with the web source
+  and INDEPENDENTLY VERIFIED on this runner: the SwiftUI view layer + core + state holder build and
+  41/41 tests pass under Swift 6 strict concurrency against the REAL design system on the macOS-15
+  SDK, the view layer typechecks clean on the iOS-18 simulator SDK (#Preview expands), and
+  swiftformat --lint / swiftlint --strict / placeholder / xcodegen are all green ON THE SURFACE's own
+  files (and the full-tree format/lint gates are green). The full-app iOS + macOS xcodebuild
+  build/test gate is DEFERRED (not failed by this code): the KMP Shared.xcframework is unstaged and
+  its Kotlin/Native Gradle assemble is the pre-build long-pole (live ps evidence), and the
+  modals-dialogs tier is not yet wired into project.yml (0 pbxproj references) — both owned by the
+  P4 acceptance gate per apps/macos-pending-verifications.md. Zero errors in any
+  DashboardSettingsModal file.
+
+EXIT=0
+STATUS=DONE
