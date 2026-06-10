@@ -1,0 +1,112 @@
+=== P2 Feature view 0208 NotificationSettings (Windows) ===
+dotnet=10.0.300  target=net10.0-windows10.0.19041.0  WindowsAppSDK=2.1.3 (WinUI)  Fluent Design System
+
+--- STEP 1/4: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+(1 pre-existing Core warning CA1716 on LoadState<T>.Error — not this surface; non-fatal.)
+BUILD_EXIT=0
+
+--- STEP 2/4: dotnet test apps/windows/TeslaSync.sln -c Release ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 320 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 11564, Skipped:     0, Total: 11564, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+-- WinAppDriver probe evidence (cause of the 147 UITest failures) --
+TeslaSync.App.UITests.Tests.AccessibilityTreeTests.* [FAIL] -> UiAutomationUnavailableException
+(UI automation cannot run: WinAppDriver/Appium runner is absent — nothing listening on 127.0.0.1:4723 and
+WinAppDriver.exe not found. 0 of those 147 tests belong to this surface; they fail identically for every surface.)
+HEADLESS_TEST_EXIT=0  (TeslaSync.App.Tests: 11564 passed, 0 failed — incl. 66 new NotificationSettings tests)
+-- surface-scoped run (FullyQualifiedName~NotificationSettings) --
+Passed!  - Failed:     0, Passed:    66, Skipped:     0, Total:    66, Duration: 120 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+--- STEP 3/4: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+(clean across the whole solution; the "warnings while loading the workspace" note is a benign MSBuild message)
+FORMAT_EXIT=0
+
+--- STEP 4/4: check-placeholders.ps1 ---
+self-test: all PASS, SELFTEST_EXIT=0
+gate path (apps/windows/TeslaSync.App/feature-views/NotificationSettings): PLACEHOLDER_COUNT=0  EXIT=0
+explicit per-file scan of the shipped surface files (the surface ships as flat NotificationSettings.* files
+per the prompt's allowed-files / native-output spec, so each file was scanned directly for full coverage):
+  NotificationSettings.Model.cs       PLACEHOLDER_COUNT=0
+  NotificationSettings.Source.cs      PLACEHOLDER_COUNT=0
+  NotificationSettings.ViewModel.cs   PLACEHOLDER_COUNT=0
+  NotificationSettings.cs             PLACEHOLDER_COUNT=0
+  NotificationSettingsTests.cs        PLACEHOLDER_COUNT=0
+COMBINED_PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- PLATFORM-CAPABILITY NOTE ---
+Required capability (WinUI 3 / Windows App SDK 2.1.3 / .NET 10 / Fluent) IS present on this runner: the
+solution BUILDS clean (BUILD_EXIT=0) and the headless unit suite runs (HEADLESS_TEST_EXIT=0). The only
+non-green step is the environment-gated UIAutomation E2E suite (TeslaSync.App.UITests): all 147 tests fail
+with UiAutomationUnavailableException because the WinAppDriver/Appium runner is absent on this headless box.
+That suite is a BLOCKED capability that is never silently skipped or reported as green; 0 of its tests belong
+to this surface and they fail identically for every surface. This mirrors the established precedent for prior
+feature-view surfaces (e.g. 0184 LegacyAlertRulesRedirect, 0193 NoVehicleSelected).
+
+--- BASELINE REPAIRS (pre-existing integration breakage that blocked the solution-wide gate) ---
+The branch HEAD carried two pre-existing defects (integration-merge artifacts) that broke the whole-solution
+build/test gate before any NotificationSettings code existed. Both were repaired minimally:
+1. Duplicate DrivetrainHealth enum: feature-views/HealthRecommendations/HealthRecommendations.Model.cs declared
+   the identical `public enum DrivetrainHealth` TWICE (lines 15 and 97) in namespace TeslaSync.App.FeatureViews
+   -> CS0101 -> the App C# compile failed -> no LocalAssembly -> the WinUI XAML markup compiler cascaded
+   (WMC0001/WMC0110 "Unknown type 'TsButton'..." + WMC9999 internal NRE, 83 errors). Fix: removed BOTH duplicate
+   copies from HealthRecommendations.Model.cs; the surface now relies on the single canonical definition that
+   already exists in feature-views/HealthOverview/HealthOverview.Model.cs (whose doc comment documents it as the
+   shared definition for both drivetrain-health surfaces). No behaviour change.
+2. Corrupt test csproj comment: apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj had a header comment
+   block re-concatenated by prior merges into orphaned prose containing literal Compile/Project markup after a
+   premature comment close -> invalid XML (MSB4025) -> dotnet build/test could not load the project. Per the
+   file's own documented INVARIANT, consolidated the header back to ONE valid comment + single Project root
+   (every previously-linked Compile source preserved), then added this surface's 3 links in sorted position
+   (NotificationSettings.Model/Source/ViewModel.cs, between NoVehicleSelected and OverviewTab).
+
+--- FILES (this surface) ---
+apps/windows/TeslaSync.App/feature-views/NotificationSettings.Model.cs      (state/permission/category enums, data records, sound play-gate, projection, registration, diagnostics)
+apps/windows/TeslaSync.App/feature-views/NotificationSettings.Source.cs     (4 P1/S8 seams: tab-signals cache-then-network GET/PUT source + permission gateway + push & sound stores + in-memory defaults)
+apps/windows/TeslaSync.App/feature-views/NotificationSettings.ViewModel.cs  (UI-thread-free state holder: freshness state machine + optimistic toggles)
+apps/windows/TeslaSync.App/feature-views/NotificationSettings.cs            (WinUI ContentControl: 3 GlassPanel sections, all states, a11y names, per-channel test cue)
+apps/windows/TeslaSync.App.Tests/FeatureViews/NotificationSettingsTests.cs  (66 tests: adapter/sound model/play-gate, per-state projection, i18n routing, a11y, ViewModel transitions, optimistic save, diagnostics)
+
+--- PARITY (web/src/features/settings/components/NotificationSettings.tsx) ---
+- Composition: three glass panels reproduced 1:1 —
+  (1) Browser/OS Notifications: bell IconBox + title/subtitle; per-permission branch — unsupported message,
+      Enable button (default), Enabled badge + "Notify me about" Alerts/Export toggles + hint (granted),
+      blocked hint (denied).
+  (2) Browser tab signals: "Show unread count" + "Flash tab title on critical alerts" toggles + hint.
+  (3) Notification sounds: volume IconBox + title/subtitle; master toggle; autoplay hint (master && !dismissed);
+      "Channels" + the 7 channel rows (toggle + Test button, dimmed while master off); volume slider (0-100, step 5).
+- Data sources bound via shared P1/S8 seams (no direct HTTP in the view):
+  useWebPush -> INotificationPermissionGateway; useNotificationListener -> IWebPushPreferenceStore;
+  useSettings/useSaveSettings -> INotificationTabSignalsSource (cache-then-network GET /settings + full-object
+  PUT /settings, web `saveSettings.mutate({ ...settings, [key]: value })` parity);
+  useNotificationSoundPrefs -> INotificationSoundPreferenceStore; useTranslation -> ILocalizer.
+- States: loading (skeleton chrome), loaded, empty (default toggles), stale (chip), offline (cached + chip),
+  error (QueryError + retry) all rendered; plus web branches (permission unsupported/default/granted/denied,
+  autoplay hint, master-off dimming). tab_badge_enabled/critical_flash_enabled default ON when missing
+  (web `settings?.field !== false`). Sound defaults: master off, volume 0.6, web per-channel gates.
+- i18n: every SOURCE key resolves through the facade and is present in Strings/en/Resources.resw
+  (translation.browserNotifications.*, translation.notificationSounds.* incl. category.*, translation.settings.tab.*).
+  testAria interpolates the channel name ("Test {{name}} sound"). The native-only error/freshness chrome keys
+  (settings.error.*, settings.staleChip/offlineChip/refresh) carry English fallbacks (the web source has no
+  error UI for this surface — same pattern as ChargingDetailSection); common.retry/common.loading are present.
+- Telemetry: view.opened slug=NotificationSettings (Loaded), PII-safe (no preference values), per P1/S11.
+- A11y: surface Narrator name; every toggle, button and the slider carry AutomationProperties.Name; loading and
+  error surfaces are live regions; reduced-motion honoured via the shared chrome.
+
+--- ACCEPTANCE CRITERIA ---
+[x] Surface renders all states the web source has (incl. permission branches) — no hidden surfaces.
+[x] Hooks bind to the shared P1/S8 state-holder seams; no direct HTTP in the view.
+[x] Every i18n key from source has a matching catalog/resw key (verified present).
+[x] Accessibility labels present on every interactive element (toggles, buttons, slider).
+[x] Tests: adapter + per-state projection/UI + a11y label + diagnostics (66 passing).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (COMBINED_PLACEHOLDER_COUNT=0).
+[x] EXIT=0 / STATUS=DONE (WinUI 3 + .NET 10 build capability present; UIAutomation E2E env-blocked sub-gate).
+
+--- GATE SUMMARY ---
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0 (11564 passed, incl. 66 new)  SURFACE_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+WHOLE_SOLUTION_TEST_EXIT=1 only via the WinAppDriver-absent UIAutomation E2E suite (147 env failures, 0 on this surface).
+
+EXIT=0
+STATUS=DONE
