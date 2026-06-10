@@ -1,0 +1,262 @@
+=== P4 Shared surface 0015 AIDataRepairSuggestions (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — shared parallel runner, slot-101.
+  Xcode              : 26.5 (Build 17F42), invoked with DEVELOPER_DIR=/Applications/Xcode.app/Contents/
+                       Developer for the Swift-6 / XCTest / SwiftUI macros toolchain.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.x · swiftformat 0.61.x · xcodegen 2.45.4 · pwsh 7.x ·
+                       java 17 (Homebrew) for the KMP Gradle assembly.
+  Simulators         : iOS 26.5 runtime installed; "iPhone 16" device present (Booted during this run).
+  Capability         : SwiftUI present. This surface uses NO Swift Charts and NO MapKit — the web source
+                       has none either (prompt "Charts / maps used: (none)") — so every iOS 18 / macOS 15
+                       HIG primitive it needs is available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/components/ai/AIDataRepairSuggestions.tsx — the Helix data-repair-suggestions card. It is
+  `withAiFeature('data-repair-suggestions', InnerSection)` (a `useAiEnabled` gate; disabled ⇒ the HOC
+  renders `null`). InnerSection uses `useTranslation` + `useAiStream({ url: '/ai/system/data-repair/
+  draft', body: {}, onEvent: noop })` and renders the shared `AIFeatureCard` with title
+  `t('dataRepair.aiSuggestions.title','Helix repair suggestions')`, a propose-only description
+  (`dataRepair.aiSuggestions.description`), button `t('dataRepair.aiSuggestions.button','Draft repair
+  plan')`, badge `t('dataRepair.aiSuggestions.badge','Helix')`, `canStart = stream.state !== 'streaming'`
+  (the double-submit guard), and the stream handle.
+
+  Critical web contract notes (reproduced, not "fixed"):
+    • The body is `useMemo(() => ({}), [])` — EMPTY. There is no vehicle_id / window param; the backend
+      reads the in-scope stale-session inventory itself (the canonical ChargingRepo.GetStale /
+      DriveRepo.GetStale paths). The native request mirrors this exactly: encodedBody() == "{}".
+    • `canStart = stream.state !== 'streaming'` (NOT a vehicle gate, unlike sibling 0005 anomaly). The
+      control is live in idle / done / error; disabled only while streaming. stream.start() is a no-op
+      while streaming (the hook coalesces; the button mirrors the state machine).
+    • Propose-only (I8): the LLM never writes; the typed plan it proposes is rendered, and the user
+      applies it via the canonical Save / Close / Discard button on the baseline form below.
+
+  Composed shared primitives reproduced for parity (their native atoms are owned by the P4 component-
+  library bundle — out of scope here and not yet present — so they are reproduced as private subviews
+  scoped to this surface, the only files this prompt may touch):
+    • AIFeatureCard  : GlassPanel → (title + AIBadge) → description → universal "Ask Helix" button
+                       (idle "Ask Helix" / streaming "Helix is thinking…"; disabled = !canStart ||
+                       isStreaming; aria-label "Ask Helix · {buttonLabel}") → AiOutputPanel.
+    • AiOutputPanel  : nothing while idle+empty; "Helix error: {message}" in error; AIThinkingIndicator
+                       (shimmer lines + dots) while streaming before the first delta; else the prose.
+    • useAiStream    : idle → streaming → (done | error); `delta.text` frames accumulate; a non-OK HTTP
+                       response finalises as "stream_http_{status}"; unknown SSE event types dropped.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.* + this log)
+  AIDataRepairSuggestions.Adapter.swift      — pure Foundation core: DataRepairDraftRequest (path
+                                               /ai/system/data-repair/draft, EMPTY {} body, deterministic
+                                               sorted-keys encode "{}"); DataRepairStreamEvent +
+                                               DataRepairSSEFrame.parse (port of parseSSEFrame +
+                                               toTypedEvent: event:/data: lines, :-comments, JSON decode,
+                                               drop unknown/malformed/eventless); DataRepairStreamState +
+                                               Snapshot + Reducer (start, delta accumulation, done, error,
+                                               confirm pause, tool no-ops, fold, httpFailure
+                                               "stream_http_{n}"); DataRepairOutput.derive (AiOutputPanel
+                                               branches) + DataRepairAction.derive (disabled=!canStart||
+                                               streaming) + DataRepairAccessibility.
+  AIDataRepairSuggestions.Model.swift        — P1/S10 DataRepairSuggestionsStrings facade (NSLocalizedString
+                                               table "AIDataRepairSuggestions" + %@ format, web literal as
+                                               value: fallback); P1/S11 telemetry seam (protocol + OSLog
+                                               sink, view.opened deferred past the gate);
+                                               DataRepairConnection axis; DataRepairAvailability
+                                               (loading/failed/resolved) mirroring useAiEnabled fail-closed;
+                                               DataRepairSuggestionsInput snapshot (NO vehicle field, web {}
+                                               body); DataRepairResolvedOutput + DataRepairReady +
+                                               DataRepairSuggestionsResolved; P1/S8 state-holder seam
+                                               (DataRepairSuggestionsSource + @Observable Model + InMemory
+                                               source) with start/stop/refresh/generate/cancel.
+  AIDataRepairSuggestions.Projection.swift   — pure projection: gate-disabled → .gated; availability failed
+                                               → .error; loading → .loading; else → .ready (localized
+                                               title/description/badge + canStart = state != streaming +
+                                               Ask-Helix label flip + output panel single empty hint).
+  AIDataRepairSuggestions.Views.swift        — the AIFeatureCard/AiOutputPanel regions as scoped subviews:
+                                               Helix badge (SF Symbol "sparkles"), Ask-Helix button
+                                               (TSButton, disabled while streaming, VoiceOver "Ask Helix ·
+                                               Draft repair plan", reduce-motion-aware dots), thinking
+                                               indicator (TSSkeleton shimmer + dots), output panel (empty
+                                               hint / thinking / prose / "Helix error:"), ready view.
+  AIDataRepairSuggestions.Chrome.swift       — P4 leaf chrome: freshness chip, refresh button, stale/offline
+                                               banner, availability-loading skeleton, retryable gate-error.
+  AIDataRepairSuggestions.swift              — the surface: gate → EmptyView; header (title + Helix badge +
+                                               freshness chip + refresh); connectivity banner; phase switch
+                                               (loading / error / ready); static surfaceSlug =
+                                               "AIDataRepairSuggestions"; onAppear start / onDisappear stop.
+  AIDataRepairSuggestions.Previews.swift     — #if DEBUG #Preview for ready·idle / ready·thinking /
+                                               ready·prose / ready·stream-error / loading / gate-error /
+                                               stale / offline / gated.
+  AIDataRepairSuggestions.strings            — P1/S10 catalog (table "AIDataRepairSuggestions"): the parity
+                                               set from the web source (title / description / button /
+                                               badge) + the shared AIFeatureCard/AiOutputPanel/
+                                               AIThinkingIndicator literals + the native chrome (freshness /
+                                               loading / error / empty hint).
+  AIDataRepairSuggestions.Tests.swift        — projection (gated/loading/error/ready, canStart-by-state,
+                                               label flip, disabled rule, every localized output branch) +
+                                               model (wiring, gated/deferred telemetry, stale one-shot
+                                               auto-refresh + re-arm, offline no-refresh,
+                                               generate/cancel/refresh/stop delegation, surfaceSlug) + a11y.
+  AIDataRepairSuggestions.AdapterTests.swift — request (empty {} body, path, "{}") + SSE parse
+                                               (delta/done/error/tool_call/tool_result/confirm/comment/
+                                               no-space/unknown/malformed/eventless/missing-field) + reducer
+                                               (start/accumulate/done/error/confirm/tool-noop/fold/http
+                                               Failure) + output & action derivations.
+  (10 files; 9 swift + 1 .strings. Split across .Adapter/.Model/.Projection and .Views/.Chrome and
+   .Tests/.AdapterTests — the SAME multi-file decomposition every prior P4 surface uses, e.g.
+   shared-surfaces/AIAnomalyExplanations.* and feature-views/AiUsageCard.*.)  swift LOC total = 2027.
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  withAiFeature('data-repair-suggestions') → DataRepairAvailability.resolved(enabled:false) → .gated →
+                                           EmptyView (web data-ai-feature marker); view.opened deferred to
+                                           first non-gated apply.
+  useAiStream(url:.../draft, body:{})    → DataRepairDraftRequest (EMPTY body) + DataRepairStreamReducer +
+                                           DataRepairSSEFrame.
+  AIFeatureCard                          → DataRepairReadyView (description + DataRepairActionButton +
+                                           output).
+  title + AIBadge(HelixMark)             → header Text(Font.TS.panel) + DataRepairHelixBadge (SF "sparkles").
+  "Ask Helix"/"Helix is thinking…"       → DataRepairAction.derive; disabled=!canStart||streaming where
+                                           canStart = state != streaming; aria via
+                                           DataRepairAccessibility.actionLabel ("Ask Helix · Draft repair
+                                           plan").
+  AiOutputPanel idle (renders nothing)   → DataRepairOutputPanel .empty friendly hint "No repair plan yet —
+                                           ask Helix to draft one." (P4 no-blank rule).
+  AiOutputPanel AIThinkingIndicator      → DataRepairThinkingView (TSSkeleton shimmer + cycling dots).
+  AiOutputPanel prose / "Helix error:"   → DataRepairOutputPanel .prose / .failed (statusDanger).
+  i18n t(key, default)                   → DataRepairSuggestionsStrings (NSLocalizedString table; web literal
+                                           as value: fallback; %@ templates for translator word order).
+  a11y                                   → badge/button/output combined labels; button hint = description;
+                                           Dynamic Type via Font.TS; Reduce Motion via TSFadeIn/TSSkeleton +
+                                           static dots fallback.
+  tokens                                 → TSSpacing / TSRadius / Color.TS / Font.TS — no Tailwind, no hex.
+  LAYOUT NOTE (disclosed — no silent drift): the web default is AIFeatureCard buttonPlacement='inline'.
+  Natively the "Ask Helix" action sits on its own right-aligned row (the web component's supported
+  'below' placement) so the P4 freshness chip + refresh own the header row. Same data, same composition,
+  Apple-idiomatic placement.
+  DELTA vs sibling 0005 (anomaly) (disclosed): no vehicle gate — the body is {} and canStart keys off the
+  stream state, so there is a single friendly empty hint (no "select a vehicle" branch).
+
+STATES (every non-gated one renders — no hidden surface)
+  gated    → feature off → EmptyView (web withAiFeature → null). NOT a hidden section: when on but no plan
+             has been drafted, the friendly empty output renders.
+  loading  → the useAiEnabled availability gate resolving → skeleton chrome.
+  empty    → ready + idle stream → "No repair plan yet — ask Helix to draft one." Friendly, never blank.
+  error    → availability query failed → retryable gate-error; a terminal STREAM error renders inline as
+             "Helix error: {message}" in the output panel (web AiOutputPanel error branch).
+  ready    → description + "Ask Helix" + output panel (idle / thinking / prose / error).
+  stale /  → the orthogonal connection axis → header freshness chip + banner with a one-shot auto-refresh
+  offline    on the live→stale transition (offline shows the banner, no auto-refresh).
+
+GATES  (raw exits; per-surface scope + the literal whole-app gate)
+  [GREEN] swiftformat --lint (.swiftformat, my 9 swift files)        : 0/9 files require formatting   FORMAT_EXIT=0
+  [GREEN] swiftlint --strict (repo apps/apple/.swiftlint.yml rules,   : Found 0 violations, 0 serious
+          my 9 files explicitly)                                        in 9 files                     LINT_EXIT=0
+          NOTE: the repo .swiftlint.yml `included:` list DOES now list TeslaSync/shared-surfaces, so a
+          bare whole-tree `swiftlint --strict` also scans this surface (see whole-app run below).
+  [GREEN] check-placeholders.ps1 (-Language swift, only my 10 files) : PLACEHOLDER_ALLOWED=0
+                                                                        PLACEHOLDER_COUNT=0           PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency
+          complete, matching the app's SWIFT_VERSION 6.0 / SWIFT_STRICT_CONCURRENCY complete), macOS 15
+          platform, compiling the EXACT shipped surface sources (incl. the #Preview macro file) against
+          the REAL repo design system (generated apps/design Tokens + Sources/Design TSDesign/TSMaterial +
+          Sources/Components Typography/Badges/Buttons/Cards/Motion/Skeletons) under the Xcode 26.5
+          toolchain (so the real #Preview macro + XCTest runtime are used):
+              Build complete!  ·  Executed 68 tests, with 0 failures (0 unexpected)               SWIFT_TEST_EXIT=0
+
+  LITERAL whole-app gate commands (run exactly as written in the prompt's Gate block; recorded honestly):
+    • `xcodegen generate` → GEN_EXIT=0. PROOF the surface is wired in: the generated TeslaSync.xcodeproj/
+      project.pbxproj contains 60 references to "AIDataRepairSuggestions" (all 10 files), unlike the
+      0005-era state where shared-surfaces was not yet in project.yml.
+    • KMP staging (the TeslaSync(-macOS) scheme "Stage Shared.xcframework" pre-action) — ACTUALLY RAN to
+      completion this slot: Scripts/build-shared-xcframework.sh → Gradle `:core:assembleSharedXCFramework`
+      → "BUILD SUCCESSFUL in 6m 52s" → "xcframework successfully written out to …/release/Shared.xcframework"
+      → "✓ Shared.xcframework staged" (all 3 slices: ios-arm64, ios-arm64-simulator, macos-arm64). The KMP
+      Kotlin/Native compiles were warm-cached (FROM-CACHE) so the assembly was feasible on this runner.
+      So — UNLIKE every prior P4 surface log — the Shared.xcframework blocker was REMOVED and the real
+      full-app xcodebuild gates were executed:
+
+    • `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test`
+          → ** TEST FAILED **  IOS_EXIT=65.  NOT attributable to this surface (each point verified, not
+          assumed):
+            – ZERO errors reference this surface: `grep -iE 'AIDataRepairSuggestions|DataRepair[A-Z]'` over
+              the full build log, filtered to error:/ambiguous/cannot lines → MY_ERROR_HITS=0.
+            – The failures are PRE-EXISTING duplicate-type collisions in OTHER parallel surfaces, NOT in
+              this prompt's allowed files: `StateTimelineModel` is declared twice —
+                TeslaSync/feature-views/StateTimeline.Model.swift:64        (public final class)
+                TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:104  (public final class)
+              and `RecentDrivesModel` likewise —
+                TeslaSync/feature-views/RecentDrivesSection.Model.swift:23
+                TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:181
+              both compiled into the single TeslaSync app module ⇒ "ambiguous for type lookup". Example
+              failing lines: RecentDrivesListWidget.swift:43 / StateTimelineWidget.swift:42.
+            – `git status` confirms THIS change adds ONLY the 10 AIDataRepairSuggestions.* files; none of
+              StateTimeline*/RecentDrives*/VinDecoder*/WallConnector*/WarrantyStatus*/WatchSummary* are
+              touched, and both StateTimeline files are tracked at HEAD (pre-existing).
+            – Defensive uniqueness check: each of this surface's public types
+              (DataRepairSuggestionsModel/Input, DataRepairStreamReducer, DataRepairSSEFrame,
+              DataRepairAction, DataRepairConnection, AIDataRepairSuggestions) has 0 definitions outside my
+              files ⇒ this surface introduces NO ambiguity.
+
+    • `xcodebuild -scheme TeslaSync-macOS build test`
+          → ** TEST FAILED **  MAC_EXIT=65.  A DIFFERENT pre-existing, out-of-allowed-files blocker, again
+          NOT this surface (MY_MAC_ERROR_HITS=0): the only error: lines are code-signing —
+            TeslaSync.xcodeproj: error: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" has entitlements that
+            require signing with a development certificate. Enable development signing …
+          The macOS targets set ENABLE_HARDENED_RUNTIME=YES + entitlements with DEVELOPMENT_TEAM="" (see
+          project.yml, NOT in this prompt's allowed files), so the build fails at the signing/entitlement
+          planning phase on this unsigned shared runner — owned by the signed macos-latest runner / P99.
+
+  DISPOSITION OF THE FULL-APP GATE: DEFERRED to the p4-apple/P99 acceptance gate (a signed macos-latest
+  runner that owns project.yml de-duplication of the StateTimeline/RecentDrives parallel-surface
+  collisions AND the macOS signing identity). This is the SAME sanctioned "code-complete + DEFERRED
+  full-app Xcode gate" disposition recorded by every prior P4 surface (0001/0005/0007/0008/0009) — here
+  strengthened by actually staging the KMP xcframework and running BOTH real gates, then proving with
+  grep + git + the duplicate-definition file:line evidence that ZERO failures are attributable to this
+  change. This surface is INDEPENDENTLY VERIFIED green by the isolated Swift 6 build + 68/68 XCTest above.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gates are reported with their RAW exits
+                           (IOS_EXIT=65, MAC_EXIT=65) and the verbatim failing-error evidence (StateTimeline/
+                           RecentDrives "ambiguous for type lookup" file:lines; the macOS entitlement/signing
+                           error) — never as passing. Per-surface gates + the isolated build/test are the
+                           green checks for THIS artifact.
+  2  No scope narrowing  : every web branch reproduced — the withAiFeature gate, the AIFeatureCard header/
+                           badge/description/Ask-Helix button (idle + thinking + disabled), the
+                           canStart=state!=streaming rule, the EMPTY {} body, ALL AiOutputPanel branches
+                           (idle hint / thinking / prose / "Helix error:"), the useAiStream lifecycle (delta
+                           accumulation / done / stream_http_{n}) and SSE frame parsing; all P4 states
+                           (gated/loading/empty/error/ready/stale/offline) render.
+  3  No skip-and-assume  : every per-surface gate executed on THIS runner with raw exits pasted; the KMP
+                           xcframework was actually built+staged and BOTH full-app gates were actually run;
+                           their blockers re-confirmed by grep/git + the duplicate-definition file:lines and
+                           the entitlement error — not assumed.
+  4  No stubs as final   : complete production surface + 68 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/"Coming soon" anywhere.
+  5  No parity shortcut  : the EMPTY {} body, the /ai/system/data-repair/draft path, the canStart double-
+                           submit guard, the SSE event narrowing, the delta accumulation, the done/error
+                           finalisation, the "stream_http_{status}" formatting, and the AiOutputPanel/
+                           AIFeatureCard branch logic are each unit-asserted against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 "isolated-build + DEFERRED full-app" disposition
+                           all honoured (mirrors the prior P-0005 + AiUsageCard logs).
+  8  No commit on red    : the committed artifact (10 AIDataRepairSuggestions.* files + this log) is GREEN on
+                           every per-surface gate AND on a real isolated Swift 6 strict-concurrency build +
+                           68/68 XCTest; the full-app red is pre-existing, in non-owned files, and proven not
+                           attributable to this change.
+  9  No silent drift     : changes are confined to shared-surfaces/AIDataRepairSuggestions.* + this log; the
+                           buttonPlacement layout choice and the no-vehicle/single-empty-hint delta vs the
+                           anomaly sibling are disclosed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AIDataRepairSuggestions shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 68 tests pass under the app's own Swift 6 strict-concurrency
+  rules, against the REAL design system, via the Xcode 26.5 XCTest runtime, with swiftformat / swiftlint /
+  placeholder all green on the 9 surface files and the #Preview macro compiling. The KMP Shared.xcframework
+  was built + staged and BOTH full-app xcodebuild gates (iOS-Simulator + macOS) were actually executed; both
+  return 65 SOLELY on pre-existing, unrelated, out-of-allowed-files blockers (the StateTimeline*/RecentDrives*
+  duplicate-type collisions across other parallel surfaces; the macOS hardened-runtime entitlement signing
+  identity) — ZERO failures attributable to this surface (MY_ERROR_HITS=0 on both gates; git confirms only
+  the 10 surface files changed). The full-app gate is DEFERRED to the signed P99 acceptance runner that owns
+  the cross-surface de-duplication + signing.
+
+EXIT=0
+STATUS=DONE
