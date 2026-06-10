@@ -410,3 +410,4 @@ p2-windows/feature-views/W-0169-GForcePanel.prompt.md
 p2-windows/feature-views/W-0181-BrowserPushChannelCard.prompt.md
 p2-windows/feature-views/W-0170-LiveMotorStatus.prompt.md
 p2-windows/feature-views/W-0173-PedalUsage.prompt.md
+p2-windows/feature-views/W-0174-SpeedGearPanel.prompt.md
