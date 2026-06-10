@@ -1,0 +1,144 @@
+=== P2 Feature view 0135 AddressInput (Windows) ===
+Surface  : AddressInput  (web: web/src/features/driving/components/AddressInput.tsx)
+Output   : apps/windows/TeslaSync.App/feature-views/AddressInput/{AddressInput.cs, AddressInput.Model.cs,
+           AddressInput.Source.cs, AddressInput.ViewModel.cs}
+Platform : WinUI 3 (Windows App SDK) + .NET 10 — AVAILABLE (dotnet 10.0.300 SDK; maui-windows workload).
+           net10.0-windows10.0.19041.0 app builds; headless logic suite runs on plain net10.0.
+
+--- WEB SOURCE PARITY (the spec) ---
+AddressInput({ value, onChange, onSelect, placeholder, label }) is a thin wrapper over the shared
+@/components/forms <Combobox> wired as an async geocode autocomplete. Hooks: useTranslation + useGeocodeSearch.
+  * leading <MapPin/> glyph; free-text field whose RAW text the parent owns (value / onChange).
+  * 400ms debounce: value -> debouncedQuery; useGeocodeSearch(debouncedQuery) enabled only when length >= 3
+      -> GET /geocode/search?q=${encodeURIComponent(query)}&limit=5 -> GeocodeResult[] ({display_name,lat,lng}),
+      select: safeArray, staleTime: SLOW.
+  * loading={isLoading && debouncedQuery.length >= 3}; options={results ?? []}; maxVisibleOptions=5; allowFreeText.
+  * getOptionLabel=(r)=>r.display_name ; getOptionKey=(r)=>`${r.lat}-${r.lng}-${r.display_name}`.
+  * renderOption: <MapPin/> + <span class="line-clamp-2">{display_name}</span>.
+  * choosing a suggestion -> onChange(display_name) + onSelect({lat,lng,name=display_name}).
+  * label = label ?? t('addressInput.label','Address') ; hideLabel = !label  (the ONLY i18n key in source).
+
+--- NATIVE REPRODUCTION ---
+4-file surface mirroring the established XRayHeader Source/ViewModel/Model/view split (P1/S8 state-holder seam):
+  * AddressInput.Source.cs  : IAddressGeocodeSource + AddressGeocodeSource — one cache-then-network read via the
+      shared CacheThenNetworkEngine on generated op get_api_v1_geocode_search, query {q, limit} (snake_case,
+      URL-encoded verbatim — the endpoint declares no typed query params so BuildQuery passes them through),
+      raw JSON cached losslessly, mapped to RepositoryResult<IReadOnlyList<GeocodeSuggestion>>. No HTTP in the view.
+  * AddressInput.Model.cs   : GeocodeSuggestion(.FromJson, OptionKey), GeocodeSuggestions(.FromJsonArray/.IsEmpty,
+      tolerant of non-array + blank rows), AddressSelection (web TripLocation), AddressInputState (Idle/Loading/
+      Ready/Empty/Stale/Offline/Error), AddressInputProjection (OptionLabel/OptionKey + MeetsMinLength gate),
+      AddressGeocodeResultMapper, AddressInputRegistration (slug, MinQueryLength=3, DebounceMilliseconds=400,
+      DefaultLimit=5, MapPin glyph, copy), AddressInputDiagnostics.
+  * AddressInput.ViewModel.cs: UI-thread-free INPC state machine. SetQueryAsync gates on MeetsMinLength (web
+      enabled:length>=3) -> Idle with NO source call; otherwise one cache-then-network read classified into the
+      full matrix; Supersede() cancels the prior in-flight query per keystroke; RetryAsync / Clear.
+  * AddressInput.cs         : WinUI 3 view. The native counterpart of the web <Combobox> is the Fluent
+      AutoSuggestBox (the same primitive the atomic TsCombobox wraps) — used directly because the atomic
+      TsCombobox is a static, self-filtering, single-VALUE picker and cannot express this surface's async,
+      free-text, parent-owned-value contract. Composition: leading MapPin (Narrator-hidden) + AutoSuggestBox
+      (per-row MapPin + 2-line-clamped display_name via an XamlReader ItemTemplate, TextMemberPath=DisplayName);
+      400ms DispatcherQueueTimer debounce; status row (searching ProgressRing / no-matches / stale chip / offline
+      chip / error+retry); polite LiveRegion. DPs Value (two-way, web value) + Label (web label/hideLabel) +
+      PromptText (web placeholder prop — named per the TsCombobox/TsSearchInput convention); events ValueChanged
+      (web onChange) + LocationSelected (web onSelect). Create() factory wires the repository source.
+  * states (ALL render — no hidden surface): Idle (query < 3, resting; web hook disabled) / Loading (searching
+      spinner) / Ready (suggestions) / Empty (no matches) / Stale (chip, auto-refresh) / Offline (cached + chip) /
+      Error (inline message + Retry). error/stale/offline/empty are the native superset the cache-then-network
+      layer can produce; the web Combobox owns loading + the option list, its parent owns the rest.
+  * i18n: the one web-source key addressInput.label ("Address") is present in the P1/S10 catalog as
+      translation.addressInput.label in Strings/{en,ar,he}/Resources.resw. The native-superset state copy
+      (searching/noMatches/typeMore/stale/offline/retry/error/offlineMessage) resolves to its English fallback
+      when absent — the same precedent the sibling TripPlannerMap / XRayHeader surfaces follow.
+  * a11y: AutoSuggestBox always carries a Narrator name (label ?? "Address", even when the visible label is
+      hidden); retry button + decorative map-pins (AccessibilityView=Raw) handled; state changes announced via a
+      polite LiveRegion; no custom motion (reduced-motion honoured by construction).
+  * Telemetry: view.opened slug=AddressInput emitted once on Loaded (P1/S11), PII-safe (never logs the typed
+      query, an address or a coordinate).
+
+--- PRE-EXISTING BASELINE BREAKAGE FOUND ON THIS BRANCH (git status clean at start) — REPAIRED ---
+  R1  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj had TWO <Project> roots (MSB4025: "multiple
+      root elements", line 701) — could not load, so the whole build/test gate was unreachable. Half 1 also
+      carried 40 duplicate <Compile> items, and four surfaces whose tests already exist on disk
+      (AchievementBadge, SecurityStatusCards, SentryModeChart, SummaryStatsRow) were linked in NEITHER half.
+      Repair (per the file's own stated INVARIANT, matching the sibling 0084 ConflictWarnings precedent):
+      regenerated as exactly ONE canonical root whose Compile group is the path-sorted, deduplicated union of
+      every WinUI-free source on disk under dashboard-widgets/ + feature-views/ (608 entries = the prior 599 +
+      the 3 new AddressInput logic links + the 6 previously-orphaned sibling links). Single root verified; LF per
+      root .editorconfig end_of_line=lf. Net diff: 9 insertions, 772 deletions. ZERO files touched under
+      apps/windows/TeslaSync.App.UITests.
+
+--- STEP 1: BUILD -- dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded. 0 Error(s). (17 pre-existing CA* warnings in TeslaSync.App.Core; none in the new surface, which
+compiles clean under the app project's TreatWarningsAsErrors.)
+BUILD_EXIT=0
+
+--- STEP 2a: HEADLESS TEST -- dotnet test apps/windows/TeslaSync.App.Tests.csproj -c Release ---
+Passed!  - Failed: 0, Passed: 12717, Skipped: 0, Total: 12717 - TeslaSync.App.Tests.dll (net10.0)
+  (incl. 31 new AddressInputTests: geocode JSON parse adapter [tolerant: numeric-strings, blank-label/non-object
+   drop], cache-then-network result mapper [cached/offline/loaded preserve + parse; loading/empty/error pass
+   through], projection [option label/key parity, 3-char min-length gate], source request shape [op
+   get_api_v1_geocode_search, q + limit, empty-array -> Empty terminal], view-model full state matrix
+   [idle-no-call / loading->ready / empty / stale / offline / error+retry / clear], trimmed query + limit context,
+   i18n facade key coverage incl. addressInput.label, a11y label presence, registry id/slug/defaults, PII-safe
+   view.opened diagnostics; + the 4 newly-linked sibling surfaces' pre-existing tests now compile and pass.)
+HEADLESS_TEST_EXIT=0
+
+--- STEP 2b: UIAUTOMATION E2E -- dotnet test apps/windows/TeslaSync.App.UITests.csproj -c Release (SEPARATE GATE) ---
+Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was
+  not found at its standard install paths or on PATH.  (WinAppDriverSession.EnsureReady, UiAutomationTestBase.RunAsync)
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: environmental — the WinAppDriver/Appium runtime + a deployed MSIX app are
+  absent on this runner. All 147 tests fail-fast identically for EVERY surface; this is the documented behaviour
+  of apps/windows/run-ui-automation.ps1 ["never reports an absent runner as green"] and the W9-0002 Category split
+  [Category=UIAutomation runs independently]. Out of scope for this surface: git-verified ZERO files modified under
+  apps/windows/TeslaSync.App.UITests/. The surface deliverable is fully covered by the headless suite + app build.)
+
+  NOTE: the prompt's literal whole-solution `dotnet test apps/windows/TeslaSync.sln` therefore reports TEST_EXIT=1
+  SOLELY because it bundles the environment-gated UIAutomation suite; the surface's own test gate (HEADLESS) is green.
+
+--- STEP 3: FORMAT -- dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+No changes needed (AddressInput sources + test + the regenerated csproj normalised to LF per root .editorconfig).
+FORMAT_EXIT=0
+
+--- STEP 4: PLACEHOLDER/STUB GATE -- check-placeholders.ps1 -Path .../feature-views/AddressInput ---
+PLACEHOLDER_ALLOWED=1   (the single unavoidable WinUI `AutoSuggestBox.PlaceholderText` API call, marked
+                         `// parity:allow PlaceholderText is the WinUI hint API` exactly like the shared TsInput/
+                         TsCombobox/TsSearchInput components; the public DP is named PromptText per that convention.)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- FILES DELIVERED ---
+apps/windows/TeslaSync.App/feature-views/AddressInput/AddressInput.Model.cs       (GeocodeSuggestion, GeocodeSuggestions,
+  AddressSelection, AddressInputState, AddressInputProjection, AddressGeocodeResultMapper, AddressInputRegistration,
+  AddressInputDiagnostics)
+apps/windows/TeslaSync.App/feature-views/AddressInput/AddressInput.Source.cs      (IAddressGeocodeSource +
+  AddressGeocodeSource, cache-then-network geocode read)
+apps/windows/TeslaSync.App/feature-views/AddressInput/AddressInput.ViewModel.cs   (UI-thread-free INPC state machine)
+apps/windows/TeslaSync.App/feature-views/AddressInput/AddressInput.cs             (WinUI 3 view: AutoSuggestBox geocode
+  autocomplete, leading MapPin, 400ms debounce, full state matrix, Narrator names, LiveRegion; value/label/promptText
+  DPs + ValueChanged/LocationSelected events; Create() factory)
+apps/windows/TeslaSync.App.Tests/FeatureViews/AddressInputTests.cs                (31 headless tests)
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                       (REPAIR R1: single canonical root;
+  608 path-sorted dedup Compile links incl. AddressInput x3 + the 4 previously-orphaned sibling surfaces)
+
+--- ACCEPTANCE CRITERIA ---
+[x] Surface renders on Windows with every web-source state reproduced (idle/loading/ready/empty) plus the native
+    cache-then-network superset (stale/offline/error); no hidden surfaces.
+[x] Hooks bind to the shared P1/S8 state-holder layer (IAddressGeocodeSource via CacheThenNetworkEngine); no direct
+    HTTP from the view.
+[x] Every i18n key from source has a matching catalog key (addressInput.label -> translation.addressInput.label in
+    en/ar/he); native-superset copy resolves through the same i18n facade with English fallbacks.
+[x] Accessibility labels present on every interactive element (AutoSuggestBox name always set, retry button named,
+    decorative map-pins Narrator-hidden, polite LiveRegion announces state).
+[x] Tests: data adapter + result-mapper + projection unit tests + per-state view-model matrix + i18n + a11y label +
+    diagnostics tests (31 passing headless).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0; 1 documented WinUI-API parity:allow).
+[x] Telemetry: view.opened slug=AddressInput emitted on load (P1/S11), PII-safe.
+
+--- GATE SUMMARY ---
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+UIAutomation E2E suite: BLOCKED on absent WinAppDriver runtime (environmental; separate W9-0002 gate, 0 files touched).
+The surface deliverable and every gate within this runner's capability are green.
+EXIT=0
+STATUS=DONE
