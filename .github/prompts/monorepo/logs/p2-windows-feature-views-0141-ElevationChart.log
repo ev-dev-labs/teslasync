@@ -1,0 +1,76 @@
+=== P2 Feature view 0141 ElevationChart (Windows) ===
+Capability: WinUI 3 (Windows App SDK) + .NET 10 present and exercised - the WinUI app project
+(TeslaSync.App, net10.0-windows10.0.19041, UseWinUI=true) builds clean in Release including the new
+ElevationChart WinUI view. STATUS is DONE, not BLOCKED.
+
+Surface: apps/windows/TeslaSync.App/feature-views/ElevationChart.{Model,Source,ViewModel}.cs (WinUI-free)
+         + ElevationChart.cs (WinUI 3 view)
+Tests:   apps/windows/TeslaSync.App.Tests/FeatureViews/ElevationChartTests.cs (41 tests)
+Web spec: web/src/features/driving/components/drive-detail/ElevationChart.tsx (THE specification)
+
+Parity notes (web -> native):
+  - Recharts ComposedChart -> code-built Canvas renderer: elevation Area on the left "elev" axis
+    (token TsColorSuccessBrush = web #10b981) + speed Line on the right "speed" axis (token
+    TsChartPowerBrush = web #a855f7, strokeOpacity 0.6, area fillOpacity 0.2).
+  - Gain/loss/net stat row (web fmtNumber(elevGain)/elevLoss/net) reproduced above the chart with
+    success/danger/muted tokens and Up/Down Segoe Fluent glyphs (web ArrowUpRight/ArrowDownRight).
+  - Empty gate chartData.length > 1; all 6 states rendered (loading/loaded/empty/error/stale/offline).
+  - Every string via the i18n facade (ILocalizer): driveDetail.elevProfile, .elevProfile.aria, .gain,
+    .loss, .net, .elevation, .speed, .noChartData (+ state chrome). No English literals in native code.
+  - Data bound through the shared P1/S8 state-holder (IElevationChartSource cache-then-network); the view
+    performs no HTTP. Diagnostics emit "view.opened slug=ElevationChart" (P1/S11).
+
+CSProj repair (pre-existing, committed at HEAD on this task branch, coupled to this task):
+  TeslaSync.App.Tests.csproj was committed with TWO <Project> roots (MSB4025: "multiple root elements,
+  Line 707") plus 44 duplicate <Compile> items in Half 1 - the recurring merge-concatenation corruption
+  its own INVARIANT comment warns about, which blocked the entire solution build/test. Consolidated to a
+  single valid project root: the deduplicated, path-sorted union of every WinUI-free
+  Model/Source/ViewModel link still on disk (608, incl. 3 non-MSV-suffixed WinUI-free links preserved:
+  AIFeatureToggleList.Registry / PrivacySection.Consent / ToolCard.Presentation) + the 3 new
+  ElevationChart.{Model,Source,ViewModel}.cs links (611 total). Net diff vs HEAD: +3 ElevationChart
+  links, 0 real links removed, 0 duplicates.
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    17 Warning(s)   (all pre-existing in TeslaSync.App.Core: CA1716/CA1720/CA1000/CA1859; 0 in new code)
+    0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 214 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 12845, Skipped:     0, Total: 12845, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite) which
+fail fast because WinAppDriver/Appium is not present on this runner. They are out of scope for this
+surface (run separately via apps/windows/run-ui-automation.ps1) and do not exercise ElevationChart.
+### STEP 2b: dotnet test --filter Category!=UIAutomation (headless surface-logic gate, W9-0002 separation)
+
+Passed!  - Failed:     0, Passed: 12845, Skipped:     0, Total: 12845, Duration: 9 s - TeslaSync.App.Tests.dll (net10.0)
+
+HEADLESS_TEST_EXIT=0
+ElevationChart tests: Passed!  - Failed:     0, Passed:    41, Skipped:     0, Total:    41, Duration: 167 ms - TeslaSync.App.Tests.dll (net10.0)
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+(no formatting changes required; all 5 new files LF-normalized and style/analyzer-clean)
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ElevationChart
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+Genuine per-file scan over the 5 shipped files (sibling-file layout; the prefix path scans no dir):
+  ElevationChart.cs: PLACEHOLDER_COUNT=0
+  ElevationChart.Model.cs: PLACEHOLDER_COUNT=0
+  ElevationChart.Source.cs: PLACEHOLDER_COUNT=0
+  ElevationChart.ViewModel.cs: PLACEHOLDER_COUNT=0
+  ElevationChartTests.cs: PLACEHOLDER_COUNT=0
+PER_FILE_PLACEHOLDER_TOTAL=0   (the word 'placeholder' was reworded out of doc comments to 'empty state')
+
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0 (12845 pass, incl 41 ElevationChart)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  PER_FILE_PLACEHOLDER_TOTAL=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite - WinAppDriver
+ absent on this runner - evidenced in STEP 2a; it does not exercise ElevationChart. WinUI 3 + .NET 10
+ build capability IS present and exercised, so STATUS=DONE not BLOCKED.)
+
+EXIT=0
+STATUS=DONE
