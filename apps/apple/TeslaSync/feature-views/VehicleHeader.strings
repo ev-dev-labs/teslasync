@@ -1,0 +1,49 @@
+/*
+  VehicleHeader.strings
+  TeslaSync — P4 feature view · 0301 · VehicleHeader (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VehicleHeader` resolves (table "VehicleHeader") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact key extracted from the web source
+  (features/vehicles/components/vehicle-detail/VehicleHeader.tsx). The second group is
+  the status-label map (web types/fsm/vehicle.ts VEHICLE_STATE_LABELS), resolved here
+  because the web Badge prints the raw status token while native shows the project's
+  canonical localizable label. The third group backs the native chrome: the back /
+  VIN / empty / error / freshness copy, so the Swift sources hold no English literals.
+*/
+
+/* --- Key from the web source (parity) --- */
+"common.wakeUp" = "Wake Up";
+
+/* --- Status labels (web VEHICLE_STATE_LABELS) --- */
+"status.online" = "Online";
+"status.driving" = "Driving";
+"status.charging" = "Charging";
+"status.parked" = "Parked";
+"status.updating" = "Updating";
+"status.asleep" = "Asleep";
+"status.offline" = "Offline";
+
+/* --- Native chrome: structure + VoiceOver --- */
+"vehicleHeader.back" = "Back to vehicles";
+"vehicleHeader.vinLabel" = "VIN";
+"vehicleHeader.wakingA11y" = "Waking up";
+
+/* --- Native chrome: P4 leaf empty / error / loading --- */
+"vehicleHeader.unavailable" = "Vehicle unavailable";
+"vehicleHeader.unavailableDetail" = "Select a vehicle to see its details";
+"vehicleHeader.errorTitle" = "Couldn't load vehicle";
+"vehicleHeader.retry" = "Retry";
+"vehicleHeader.loadingA11y" = "Loading vehicle";
+
+/* --- Native chrome: P4 leaf freshness --- */
+"vehicleHeader.live" = "Live";
+"vehicleHeader.stale" = "Stale";
+"vehicleHeader.offlineChip" = "Offline";
+"vehicleHeader.staleA11y" = "Stale — tap to refresh";
+"vehicleHeader.offlineA11y" = "Offline — showing last known data";
