@@ -131,6 +131,19 @@
     feature-views/0161 TemperatureMetricCards into this single canonical root (the deduplicated, path-sorted
     union of every previously linked source) plus the new TemperatureMetricCards surface Model / Source /
     ViewModel links. Do NOT re-concatenate.
+    P2/W2-0001 - headless unit tests for the WinUI-free, UI-thread-free logic
+    (Model / Source / ViewModel / Projection) of the WinUI app. Targets plain net10.0 so
+    `dotnet test` runs without a WinUI / UI-thread host; the WinUI app targets a WinUI TFM, so
+    its UI-thread-free sources are Compile-linked below rather than project-referenced (the
+    views themselves are exercised by the app build). The matching test classes live under this
+    project and are picked up by the SDK default-compile glob.
+
+    INVARIANT: keep this file as ONE <Project> root with a single, path-sorted, deduplicated
+    <Compile> ItemGroup. A chain of integration merges had repeatedly re-concatenated this file
+    into multiple roots plus orphaned comment prose, failing XML load (MSB4025); consolidated
+    for P2 feature-views/0166 DriveAnalyticsSection into this single valid root (the path-sorted
+    union of every previously linked source preserved) plus the new DriveAnalyticsSection surface
+    Model / Source / ViewModel links. Do NOT re-concatenate.
   -->
     P2/W2-0001 — headless unit tests for the WinUI app's UI-thread-free logic models (Model / Source /
     ViewModel) of each feature-view and dashboard-widget surface. Targets plain net10.0 so `dotnet test`
@@ -536,6 +549,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\DetailedStatistics.Model.cs" Link="FeatureViews\DetailedStatistics.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailedStatistics.Source.cs" Link="FeatureViews\DetailedStatistics.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailedStatistics.ViewModel.cs" Link="FeatureViews\DetailedStatistics.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveAnalyticsSection.Model.cs" Link="FeatureViews\DriveAnalyticsSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveAnalyticsSection.Source.cs" Link="FeatureViews\DriveAnalyticsSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveAnalyticsSection.ViewModel.cs" Link="FeatureViews\DriveAnalyticsSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveDetailHeader\DriveDetailHeader.Model.cs" Link="FeatureViews\DriveDetailHeader\DriveDetailHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveHighlightSlide\DriveHighlightSlide.Model.cs" Link="FeatureViews\DriveHighlightSlide\DriveHighlightSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.Model.cs" Link="FeatureViews\DriveOverviewChart.Model.cs" />
