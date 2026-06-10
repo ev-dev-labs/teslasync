@@ -1,0 +1,48 @@
+/*
+  VehicleStatePanel.strings
+  TeslaSync — P4 feature view · 0287 · VehicleStatePanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VehicleStatePanel` resolves (table "VehicleStatePanel") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  The first group is the title + the ten row labels + the state words the web source
+  renders (the source hardcodes all but `common.off` as English literals; the native
+  port routes every one through the facade so the Swift sources hold no English prose).
+  The second group backs the native chrome (the P4 leaf freshness / loading / error
+  copy). Locale-formatted speed values, the unit symbols (km/h, mph), and the em-dash
+  sentinel are SI/scale literals carried in code, not translated strings.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"vehicleState.title" = "Vehicle State";
+"vehicleState.highBeams" = "High Beams";
+"vehicleState.turnSignal" = "Turn Signal";
+"vehicleState.hazards" = "Hazards";
+"vehicleState.driverSeat" = "Driver Seat";
+"vehicleState.pairedKeys" = "Paired Keys";
+"vehicleState.valetMode" = "Valet Mode";
+"vehicleState.serviceMode" = "Service Mode";
+"vehicleState.speedLimit" = "Speed Limit";
+"vehicleState.centerDisplay" = "Center Display";
+"vehicleState.homelinkDevices" = "HomeLink Devices";
+"vehicleState.on" = "On";
+"common.off" = "Off";
+"vehicleState.active" = "Active";
+"vehicleState.occupied" = "Occupied";
+"vehicleState.empty" = "Empty";
+"vehicleState.enabled" = "Enabled";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"vehicleState.live" = "Live";
+"vehicleState.stale" = "Stale";
+"vehicleState.offline" = "Offline";
+"vehicleState.staleBanner" = "Reconnecting — data may be stale";
+"vehicleState.offlineBanner" = "Offline — showing last known data";
+"vehicleState.refresh" = "Refresh";
+"vehicleState.loadingA11y" = "Loading vehicle state";
+"vehicleState.noData" = "No vehicle state available";
+"vehicleState.errorTitle" = "Couldn't load vehicle state";
+"vehicleState.retry" = "Retry";
