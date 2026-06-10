@@ -1,0 +1,44 @@
+/*
+  Modal.strings
+  TeslaSync — P4 modal/dialog · 0014 · Modal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  Modal resolves (table "Modal") lives here with its web `t(key, default)`
+  English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared
+  catalog.
+
+  components/ui/Modal.tsx is content-agnostic — its only user-facing literal is
+  the close button's `aria-label="Close"`. The remaining keys back the native
+  body envelope the web delegates to its `children` (loading skeleton, empty,
+  error + retry), the live-state freshness chip + connectivity banner, and the
+  VoiceOver summaries.
+*/
+
+/* --- Web source literal (Modal.tsx aria-label="Close") --- */
+"modal.close" = "Close";
+
+/* --- Untitled dialog accessibility label (web aria-label undefined fallback) --- */
+"modal.dialog" = "Dialog";
+
+/* --- Empty (web children resolved to nothing) --- */
+"modal.empty.title" = "Nothing to show";
+"modal.empty.body" = "There's nothing here yet.";
+
+/* --- Error + retry (web QueryError) --- */
+"modal.error.title" = "Something went wrong";
+"modal.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"modal.live" = "Live";
+"modal.stale" = "Stale";
+"modal.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"modal.staleBanner" = "Reconnecting — refreshing…";
+"modal.offlineBanner" = "Offline — showing the last loaded data";
+
+/* --- VoiceOver summaries --- */
+"modal.a11y.loading" = "Loading";
+"modal.a11y.content" = "Dialog content";
