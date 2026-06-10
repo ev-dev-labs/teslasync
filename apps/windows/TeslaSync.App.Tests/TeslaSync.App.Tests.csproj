@@ -1,105 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    P2/W2-0001 — headless (net10.0) unit tests for the WinUI app's UI-thread-free logic (Model / Source /
-    ViewModel / Projection) of each feature-view and dashboard-widget surface. Targets plain net10.0 so
-    `dotnet test` runs without a WinUI / UI-thread host; the WinUI app targets a WinUI TFM, so its
-    UI-thread-free sources are Compile-linked below rather than project-referenced (the views themselves are
-    exercised by the app build). The matching test classes live under this project and are picked up by the
-    SDK default-compile glob.
+    P2/W2-0001 - headless (net10.0) unit tests for the WinUI app UI-thread-free logic
+    (Model / Source / ViewModel / Projection / Registry / diagnostics) of each feature-view and
+    dashboard-widget surface. Targets plain net10.0 so dotnet test runs without a WinUI / UI-thread
+    host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources are Compile-linked below
+    rather than project-referenced (the views themselves are exercised by the app build). The matching
+    test classes live under this project and are picked up by the SDK default-compile glob.
 
-    INVARIANT: keep this file as ONE <Project> root with a single, path-sorted, deduplicated <Compile>
-    ItemGroup. A chain of integration merges had repeatedly re-concatenated this file into multiple <Project>
-    roots plus duplicate <Compile> items, failing XML load (MSB4025); consolidated for P2
-    feature-views/0161 TemperatureMetricCards into this single canonical root (the deduplicated, path-sorted
-    union of every previously linked source) plus the new TemperatureMetricCards surface Model / Source /
-    ViewModel links. Do NOT re-concatenate.
-    P2/W2-0001 - headless unit tests for the WinUI-free, UI-thread-free logic
-    (Model / Source / ViewModel / Projection) of the WinUI app. Targets plain net10.0 so
-    `dotnet test` runs without a WinUI / UI-thread host; the WinUI app targets a WinUI TFM, so
-    its UI-thread-free sources are Compile-linked below rather than project-referenced (the
-    views themselves are exercised by the app build). The matching test classes live under this
-    project and are picked up by the SDK default-compile glob.
-
-    INVARIANT: keep this file as ONE <Project> root with a single, path-sorted, deduplicated
-    <Compile> ItemGroup. A chain of integration merges had repeatedly re-concatenated this file
-    into multiple roots plus orphaned comment prose, failing XML load (MSB4025); consolidated
-    for P2 feature-views/0166 DriveAnalyticsSection into this single valid root (the path-sorted
-    union of every previously linked source preserved) plus the new DriveAnalyticsSection surface
-    Model / Source / ViewModel links. Do NOT re-concatenate.
-  -->
-    P2/W2-0001 — headless unit tests for the WinUI app's UI-thread-free logic models (Model / Source /
-    ViewModel) of each feature-view and dashboard-widget surface. Targets plain net10.0 so `dotnet test`
-    runs without a WinUI / UI-thread host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources
-    are Compile-linked below rather than project-referenced (the views themselves are exercised by the app
-    build). The matching test classes live under this project and are picked up by the SDK default-compile glob.
-
-    Invariant: keep this file as ONE Project root with a single, path-sorted, deduplicated Compile ItemGroup.
-    A chain of integration merges had repeatedly re-concatenated multiple Project roots plus duplicate Compile
-    items and broken XML comments, failing XML load (MSB4025); consolidated here for P2
-    feature-views/0157 LiveMotorStatus into one valid root (no linked source dropped) plus the LiveMotorStatus
-    surface logic links.
-  -->
-
-    Headless (net10.0) unit tests for the WinUI app's UI-thread-free logic (Model / Source / ViewModel /
-    Projection). Targets plain net10.0 so `dotnet test` runs without a WinUI / UI-thread host; the WinUI app
-    targets a WinUI TFM, so its UI-thread-free sources are Compile-linked below rather than
-    project-referenced (the views themselves are exercised by the app build). The matching test classes live
-    under this project and are picked up by the SDK default-compile glob.
-
-    Keep this file as ONE <Project> root with a single, path-sorted, deduplicated Compile ItemGroup. A chain of
-    integration merges had repeatedly re-concatenated this file into multiple <Project> roots plus duplicate
-    <Compile> items and broken XML comments, failing XML load (MSB4025); consolidated for P2
-    feature-views/0158 PowerOutputChart into this single canonical root - the deduplicated union of every
-    previously linked source is preserved, plus the new PowerOutputChart surface Model link.
     INVARIANT: keep this file as exactly ONE Project root with a single, path-sorted, deduplicated
-    Compile ItemGroup. Repeated integration merges have re-concatenated multiple roots plus broken
-    comments, failing XML load (MSB4025); consolidated back to this single canonical root.
-  -->
-
-    P2/W2-0001 - headless unit tests for the WinUI-free, UI-thread-free logic (Model / Source / ViewModel /
-    Projection) of the WinUI app. Targets plain net10.0 so dotnet test runs without a WinUI / UI-thread
-    host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources are Compile-linked below rather
-    than project-referenced (the views themselves are exercised by the app build). The matching test
-    classes live under this project and are picked up by the SDK default-compile glob.
-
-    INVARIANT: keep this file as ONE Project root with a single, path-sorted, deduplicated Compile
-    ItemGroup. A chain of integration merges had repeatedly re-concatenated this file into multiple Project
-    roots plus nested / unterminated XML comments, failing XML load (MSB4025); consolidated for P2
-    feature-views/0163 ThermalLoadPanel into this single canonical root (the path-sorted union of every
-    previously linked source preserved) plus the new ThermalLoadPanel surface Model link. Do NOT
-    roots plus duplicate Compile items and broken XML comments, failing XML load (MSB4025); consolidated
-    for P2 feature-views/0179 AlertCard into this single canonical root (the deduplicated, path-sorted
-    union of every previously linked source preserved) plus the new AlertCard surface Model link. Do NOT
-    re-concatenate, and never write a literal Compile or Project tag inside this comment.
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Projection / Registry / diagnostics) for each
-    feature-view and dashboard-widget surface. The WinUI app targets a WinUI TFM and cannot be
-    project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
-    Compile-linked into the single item group below; the views themselves are exercised by the app build.
-    The matching test classes live under this project and are picked up by the SDK default-compile glob.
-
-    INVARIANT: keep this file as exactly ONE project root with a single, path-sorted, deduplicated compile
-    item group. A chain of integration merges had repeatedly re-concatenated this file into multiple roots
-    plus broken comment prose, failing XML load (MSB4025); consolidated for P2 feature-views/0185
-    LegacyAlertsRedirect into this single canonical root (the deduplicated, path-sorted union of every
-    previously linked source preserved) plus the new LegacyAlertsRedirect surface Model / Source / ViewModel
-    links. Do NOT re-concatenate, and never write a literal project or compile tag inside this comment.
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free sources (Model / Source / ViewModel / Projection). The WinUI app targets a WinUI TFM
-    and cannot be project-referenced, so each surface's WinUI-free sources are Compile-linked below; the
-    view *.cs surfaces themselves are exercised by the app build. Test classes are picked up by the SDK
-    default-compile glob.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, path-sorted, deduplicated Compile
-    ItemGroup. A chain of integration merges has repeatedly re-concatenated this file into multiple roots
-    plus duplicate Compile items and broken XML comments, failing XML load (MSB4025); keep it consolidated.
-    feature-views/0193 NoVehicleSelected into this single canonical root (the deduplicated, path-sorted union of
-    every previously linked source preserved) plus the new NoVehicleSelected surface Model / ViewModel links.
-    Do NOT re-concatenate, and never write a literal build-item or project tag inside this comment.
-    plus duplicate items and orphaned comment prose, failing XML load (MSB4025); it is consolidated here
-    into one canonical root holding the deduplicated, path-sorted union of every linked source. Do NOT
-    re-concatenate, and never write a literal compile or project start tag inside this comment.
+    Compile ItemGroup. Repeated integration merges had re-concatenated multiple roots plus orphaned
+    comment prose, failing XML load (MSB4025); consolidated back to this single canonical root. Do
+    NOT re-concatenate, and never write a literal Compile or Project tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -586,6 +498,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ReferenceLinksSection.ViewModel.cs" Link="FeatureViews\ReferenceLinksSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.Model.cs" Link="FeatureViews\RegexTester\RegexTester.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegexTester\RegexTester.ViewModel.cs" Link="FeatureViews\RegexTester\RegexTester.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RegionSettings\RegionSettings.Model.cs" Link="FeatureViews\RegionSettings\RegionSettings.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RegionSettings\RegionSettings.Source.cs" Link="FeatureViews\RegionSettings\RegionSettings.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RegionSettings\RegionSettings.ViewModel.cs" Link="FeatureViews\RegionSettings\RegionSettings.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Model.cs" Link="FeatureViews\ResponseViewer.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.Source.cs" Link="FeatureViews\ResponseViewer.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResponseViewer.ViewModel.cs" Link="FeatureViews\ResponseViewer.ViewModel.cs" />
