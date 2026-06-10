@@ -1,0 +1,64 @@
+/*
+  IncidentsCard.strings
+  TeslaSync — P4 feature view · 0247 · IncidentsCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `IncidentsCard` resolves (table "IncidentsCard") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog (parallel-unsafe across the concurrent slots).
+
+  The first group is the exact user-facing copy from the web source
+  (features/system/components/status/IncidentsCard.tsx) — the "Active incidents"
+  header, the "Log incident" CTA, the severity labels, the status badge labels, the
+  "Affects:" / "Started …" / "· N updates" row metadata, and the relative-time
+  units from `relativeFrom`. The remaining keys back the native read-state chrome
+  (loading / empty / error / freshness / connectivity) and accessibility summaries
+  the prompt's state list requires.
+*/
+
+/* --- Card chrome (web header) --- */
+"status.incidents.title" = "Active incidents";
+"status.incidents.logCta" = "Log incident";
+"status.incidents.surfaceA11y" = "Active incidents";
+
+/* --- Severity labels (web `SEVERITY_TONE.label`) --- */
+"status.incidents.severity.minor" = "minor";
+"status.incidents.severity.major" = "major";
+"status.incidents.severity.critical" = "critical";
+
+/* --- Status labels (web `inc.status` in the badge) --- */
+"status.incidents.status.investigating" = "investigating";
+"status.incidents.status.identified" = "identified";
+"status.incidents.status.monitoring" = "monitoring";
+"status.incidents.status.resolved" = "resolved";
+
+/* --- Row metadata (web "Affects:" / "Started …" / "· N updates") --- */
+"status.incidents.affects" = "Affects: {{components}}";
+"status.incidents.started" = "Started {{time}}";
+"status.incidents.updates" = "{{count}} updates";
+
+/* --- Relative time (web `relativeFrom`) --- */
+"status.incidents.relative.justNow" = "just now";
+"status.incidents.relative.minutes" = "{{count}}m ago";
+"status.incidents.relative.hours" = "{{count}}h ago";
+"status.incidents.relative.days" = "{{count}}d ago";
+
+/* --- Read states (native loading / empty / error) --- */
+"status.incidents.loading" = "Loading incidents…";
+"status.incidents.empty.title" = "No active incidents";
+"status.incidents.empty.message" = "All systems operational. Active incidents will appear here.";
+"status.incidents.error.title" = "Failed to load incidents.";
+"status.incidents.retry" = "Retry";
+
+/* --- Freshness chip + connectivity banner (ADR-013) --- */
+"status.incidents.live" = "Live";
+"status.incidents.stale" = "Stale";
+"status.incidents.offline" = "Offline";
+"status.incidents.staleBanner" = "Reconnecting — this list may be out of date";
+"status.incidents.offlineBanner" = "Offline — showing the last loaded incidents";
+
+/* --- Accessibility (count + per-row status) --- */
+"status.incidents.a11y.count" = "{{count}} active";
+"status.incidents.a11y.rowStatus" = "status {{status}}";

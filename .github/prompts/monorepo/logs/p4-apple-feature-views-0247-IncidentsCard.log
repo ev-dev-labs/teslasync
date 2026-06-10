@@ -1,0 +1,253 @@
+=== P4 Feature view 0247 IncidentsCard (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/IncidentsCard.*
+Web spec: web/src/features/system/components/status/IncidentsCard.tsx
+Tier    : Feature view (composed status component below page level)
+Runner  : Darwin · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftformat + swiftlint + pwsh + xcodegen + gradle/KMP present
+ADR refs: ADR-002 (one SwiftUI source group, iOS+macOS) · ADR-004 (KMP Shared core) · ADR-009 · ADR-013 (live-state freshness)
+
+Capability check (prompt gate): SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 — ALL PRESENT on this
+runner (Xcode 26.5 ships the iOS 26.5 + macOS 26.5 SDKs which include the 18.0/15.0 deployment targets; iPhone 16
+simulator present + booted). This surface uses no chart/map (the web source has none). NOT BLOCKED.
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: IncidentsCard.* + this log)
+--------------------------------------------------------------------------------
+  IncidentsCard.Types.swift     — pure, SwiftUI-free value model: ActiveIncident (the per-row Incident projection the
+                                 card renders — id / title / severity / status / affected_components / updates.length /
+                                 started_at), IncidentsLoadStatus (loading/loaded/failed), IncidentsConnection
+                                 (live/stale/offline, ADR-013), IncidentsCardPhase (loading/empty/error/content). REUSES
+                                 IncidentSeverity / IncidentStatus from the sibling IncidentForm.Types.swift (surface
+                                 0246, same module) + the shared LocalizedText (ConditionBuilder.Types.swift) — NOT
+                                 redefined (avoids the duplicate-type class of breakage).
+  IncidentsCard.Adapter.swift   — pure projection core (Foundation only): the render-phase resolution (web list-vs-null
+                                 widened with loading/empty/error envelopes), the relativeFrom(now, iso) port (just now /
+                                 Xm / Xh / Xd, with the Math.max(0,…) future clamp + unit boundaries), the
+                                 "Affects: a, b" line (affected_components.length>0 guard + join(', ')), the
+                                 "Started … · N updates" metadata (updates.length>1 guard), the severity SF-Symbol +
+                                 amber→orange→red escalation rank (web SEVERITY_TONE), the status badge tone (web
+                                 STATUS_BADGE), the localized severity/status option text, and the a11y label builders.
+                                 All copy as LocalizedText descriptors (IncidentsCardText).
+  IncidentsCard.Model.swift     — P1/S8 state holder (@MainActor @Observable IncidentsCardModel): subscribes to an
+                                 IncidentsSource read seam (web useIncidents({ activeOnly:true })), holds the resolved
+                                 phase + connection + rows + the inline reload-error, owns the "Log incident" sheet state
+                                 + the post-dismiss list refresh (web create→list-invalidation), drives the one-shot
+                                 stale auto-refresh (prompt "stale chip + auto-refresh"), and emits the P1/S11
+                                 view.opened once. Plus the P1/S11 telemetry seam (+OSLog sink), the P1/S10 facade
+                                 (IncidentsCardStrings), and the InMemory + Controllable sources. SwiftUI-free
+                                 (Foundation/Observation/OSLog) → host-runs.
+  IncidentsCard.swift           — SwiftUI surface: the web active-incidents GlassPanel with the amber alarm ring/tint
+                                 (rendered ONLY while incidents are present), the always-visible header, the per-phase
+                                 body, and the IncidentForm presented as a sheet whose dismissal refetches the list.
+                                 Emits view.opened on appear; built from P1/S9 tokens; no view I/O.
+  IncidentsCard.States.swift    — the read states (loading spinner / friendly empty / error+retry / inline reload-error /
+                                 freshness chip / cached-data banner) — every state renders real chrome, never a blank
+                                 box. Copy via P1/S10 (ICView); chrome via P1/S9 tokens.
+  IncidentsCard.Views.swift     — the SwiftUI i18n bridge (ICView), the severity color/glyph + status badge tone
+                                 extensions, the header (alert glyph + title + count badge + ghost "Log incident" CTA),
+                                 the populated content (inline error + staggered rows on a per-minute TimelineView clock
+                                 = the native parity of the web `now` tick), and the per-incident row (web <Link> → a
+                                 native accessible button into the incident timeline). Full a11y; icons decorative.
+  IncidentsCard.Previews.swift  — #if DEBUG previews: content / loading / empty / error / stale-cached / offline-cached,
+                                 driven by the in-memory read source + in-memory create seam.
+  IncidentsCard.Tests.swift     — XCTest (co-located → TeslaSync(/-macOS) test bundles): the Adapter projections + the
+                                 a11y builders + the IncidentsCardModel lifecycle (snapshot→phase/count/freshness, the
+                                 inline reload-error over cached rows, the one-shot stale auto-refresh + live reset +
+                                 offline-no-refetch, the retry, the "Log incident" sheet + post-dismiss refresh, and the
+                                 view.opened-once telemetry). The identical assertions execute GREEN in the host harness
+                                 below (76/76).
+  IncidentsCard.strings         — per-surface P1/S10 i18n table "IncidentsCard" (every web string + native read-state
+                                 chrome).
+
+--------------------------------------------------------------------------------
+PARITY (reproduced from the web source — composition, data, states, i18n)
+--------------------------------------------------------------------------------
+  Data hook  : web useIncidents({ activeOnly: true }) (GET /status/incidents?active=1) → the P1/S8 `IncidentsSource`
+               read seam (push-based onUpdate + start/stop/refresh); the view performs no HTTP. The "Log incident" CTA
+               mounts the sibling IncidentForm (its useCreateIncident lives there, surface 0246) via an injected
+               IncidentCreating seam; the sheet's dismissal refetches the list (web create→qc.invalidate).
+  Composition: header (AlertTriangle glyph + "Active incidents" + count Badge + ghost "Log incident") over the list of
+               compact rows; each row = severity icon (AlertCircle/Triangle/Octagon) + title (truncate) + status Badge +
+               severity label + optional "Affects: …" + "Started <rel>[· N updates]" + chevron, opening
+               /system-status/incidents/:id. SEVERITY_TONE (minor=amber, major=orange, critical=red) reproduced from the
+               semantic tokens (orange = perceptual mix of warning+danger). STATUS_BADGE (investigating=danger,
+               identified=warning, monitoring=info, resolved=success) reproduced 1:1.
+  States     : every state renders (no hidden surface). The web card returns null when there are no active incidents;
+               per the P4 "every state MUST render — no hidden surfaces" mandate the native surface instead renders a
+               labeled empty state and keeps the amber alarm treatment ONLY while incidents are present (a documented,
+               intentional widening — the ActiveSessionsSection precedent — NOT silent drift). loading (spinner) /
+               empty (friendly "all clear") / error (QueryError-style + Retry) / content, plus the inline reload-error
+               over cached rows + the stale chip + auto-refresh + the offline cached banner (ADR-013). Each branch has a
+               preview + a unit test + an executed host check.
+  i18n keys  : every web literal shipped in the "IncidentsCard" table — "Active incidents"; "Log incident"; the severity
+               labels minor/major/critical; the status labels investigating/identified/monitoring/resolved; "Affects:
+               {{components}}"; "Started {{time}}"; "{{count}} updates"; the relativeFrom units (just now / {{count}}m
+               ago / {{count}}h ago / {{count}}d ago). Native-only chrome (still localized): loading / empty / error /
+               retry / Live·Stale·Offline / banners / a11y count + row-status. The view holds no bare English literal
+               (all via the IncidentsCardStrings facade).
+  Apple HIG  : SwiftUI card; native Button rows (44pt targets, .isButton trait, per-row a11y label + automation id);
+               TimelineView(.periodic by:60) refreshes the relative timestamps without a model timer; ContentUnavailable
+               View for empty; sheet-presented IncidentForm; Dynamic Type (token fonts), Reduce-Motion-safe motion
+               (TSFadeIn/TSStagger honor the env), VoiceOver labels on every control, decorative icons hidden. iOS 18 /
+               iPadOS 18 / macOS 15 all type-check (Color.mix, TimelineView, ContentUnavailableView, .sheet all resolve
+               on both SDKs).
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftformat --lint  (THIS surface — its 8 Swift files, repo .swiftformat config)
+       → 0/8 files require formatting
+       FORMAT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint lint --strict  (THIS surface — its 8 Swift files, repo .swiftlint.yml)
+       → Done linting! Found 0 violations, 0 serious in 8 files.
+       LINT_EXIT=0
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/IncidentsCard -Language swift
+       (real ADR-011 gate script; verbatim prompt path prefix — matches all 9 IncidentsCard.* files)
+       → PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0
+       PLACEHOLDER_EXIT=0
+       (No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented/stub/mock. The web `placeholder=` is N/A — this
+        is a read list + a CTA, no inputs.)
+
+[HOST] swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+       -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator
+       (IncidentsCard .Types/.Adapter/.Model/.States/.Views/.swift/.Previews vs the REAL design system — 41 files from
+        Sources/Components + Sources/Design + design/generated/apple/Tokens.swift — plus the REAL sibling IncidentForm
+        .Types/.Adapter/.Model/.Views/.swift and the shared LocalizedText; 54 files total. Only design file excluded:
+        Sources/Components/DataDisplay/UnitFormatters.swift, which uses the KMP Units.* API and is unused by this surface
+        — the 0021/0246 precedent.)
+       → error count = 0 ; IncidentsCard error count = 0
+       TYPECHECK_IOS_EXIT=0
+
+[HOST] swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+       -sdk <MacOSX26.5> -target arm64-apple-macos15.0   (same 54-file set)
+       → error count = 0
+       TYPECHECK_MAC_EXIT=0
+       (Confirms the surface compiles for BOTH app targets — iOS 18 + macOS 15 — incl. Color.mix / TimelineView /
+        ContentUnavailableView / .sheet on both SDKs.)
+
+[HOST] swiftc -swift-version 6  (ConditionBuilder.Types + IncidentForm .Types/.Adapter/.Model + IncidentsCard
+       .Types/.Adapter/.Model + an executed driver — Foundation/Observation/OSLog, no SwiftUI)
+       → === IncidentsCard host harness ===  CHECKS=76 FAILURES=0  HARNESS_OK
+       HARNESS_EXIT=0
+       Verified GREEN by EXECUTION (the same assertions as IncidentsCard.Tests.swift): resolvePhase (loading/empty/error
+       without rows; content with rows for every status); relativeTime buckets 0/59/60/90/3599/3600/86399/86400/259200 +
+       the future clamp; affectsLine empty/blank/single/multi-trim-filter; metadataLine with/without the "· N updates"
+       suffix (the >1 guard); severitySymbolName circle/triangle/octagon; severityRank caution/elevated/critical;
+       statusTone danger/warning/info/success; the severity/status descriptor keys + fallbacks; a11y logCtaID / rowID /
+       cardLabel / full + bare rowLabel. Model: initial loading + 0 count + live; view.opened once + slug "IncidentsCard"
+       + source.start once; loaded→content (count); loaded-empty→empty; failed-empty→error (no inline); failed-with-rows→
+       content + inline reload-error; stale→ONE auto-refresh, no re-refresh, live reset then a 2nd stale refreshes once;
+       offline→content, no refetch; refresh()→source.refresh; presentLogForm/dismissLogForm + handleLogFormDismissed→
+       refresh; stop()→view.opened re-arms on restart; InMemory source pushes on start+refresh; model a11y label.
+
+[GRADLE/KMP] apps/apple/Scripts/build-shared-xcframework.sh  (ADR-004 — the Apple build links a fresh Shared.xcframework)
+       → BUILD SUCCESSFUL ; ✓ Shared.xcframework staged (ios-arm64, ios-arm64-simulator, macos-arm64)
+       SHARED_XCFRAMEWORK_EXIT=0
+       (The KMP/Kotlin-Native Apple toolchain is fully functional on this runner — the framework the scheme links built
+        clean from source.)
+
+[HOST] xcodegen generate
+       → Created apps/apple/TeslaSync.xcodeproj ; all IncidentsCard.* files REGISTERED (Types/Adapter/Model/swift/States/
+         Views/Previews in the iOS+macOS app targets, Tests in the XCTest bundles, .strings as a resource — 54 pbxproj
+         references).
+       XCODEGEN_EXIT=0
+
+[RAN, RED-on-PREDECESSOR] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+                          -derivedDataPath /tmp/ts-dd build   (run TWICE — cold + warm cache)
+       → ** BUILD FAILED ** (xcodebuild exit 65), BOTH runs, on the IDENTICAL out-of-scope batches —
+         ZERO `error:` diagnostics anywhere, ZERO IncidentsCard errors (grep "IncidentsCard.*error:" = 0). My
+         IncidentsCard batch DID compile (it appears verbatim in the SwiftCompile log:
+         "Compiling IncidentForm.Views.swift, IncidentForm.swift, IncidentsCard.Adapter.swift, IncidentsCard.Model.swift,
+          IncidentsCard.Previews.swift, IncidentsCard.States.swift, IncidentsCard.Types.swift, IncidentsCard.Views.swift,
+          IncidentsCard.swift" — and was NOT among the failed batches).
+         ROOT CAUSE: a Swift COMPILER CRASH ("Please submit a bug report … Stack dump") while compiling an OUT-OF-SCOPE
+         predecessor batch. The crashing swift-frontend invocation's -primary-file list is entirely sibling-authored
+         files — AnomalyInlineRow.{Adapter,Model,Previews,Seams,States,Views,swift}, AppCommandActions, AppCommands,
+         AppContainer, AppMenuCommands, AppRoute, AppRouteParser, AppSettings(+Model/Store/View), AppShell,
+         AppearanceSettings.{Adapter,Controls,Model,Models,Panels,Previews,Seams} — NONE are IncidentsCard. These files
+         are OUTSIDE this prompt's allowed scope (IncidentsCard.* + the log); editing them is forbidden by the covenant
+         (#6 no delegation / #7 no predecessor bypass). git status confirms my working tree touches ONLY the 9
+         IncidentsCard.* files. DEFERRED to the owning prompts / the P99 apple-acceptance integration gate.
+       IOS_SCHEME_EXIT=65  (RED — out-of-scope predecessor compiler-crash only; 0 in-scope errors)
+       (Machine was under extreme concurrent-build contention from ~8 sibling-slot xcodebuilds — load avg peaked at 142 —
+        which aggravates the frontend crash; the crash reproduced deterministically on the same out-of-scope batch in
+        both the cold and the warm-cache run.)
+
+[RAN, RED-on-ENVIRONMENT] xcodebuild -scheme TeslaSync-macOS -derivedDataPath /tmp/ts-dd-mac build
+       → ** BUILD FAILED ** (xcodebuild exit 65) — 2 errors, ZERO in IncidentsCard. Both are the pre-existing
+         ENVIRONMENTAL code-signing constraint, not code, and the build stops at the signing stage BEFORE the app Swift
+         compile is reached:
+           "TeslaSync-macOS"        has entitlements that require signing with a development certificate.
+           "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+         project.yml ships DEVELOPMENT_TEAM="" + macOS entitlements + hardened runtime; this runner has no provisioning
+         certificate, so the macOS app/widgets fail to sign. Independent of this surface — TYPECHECK_MAC_EXIT=0 already
+         proves the code compiles for macOS 15. DEFERRED to a signing-capable CI runner per
+         apps/macos-pending-verifications.md (the identical 0246 precedent).
+       MAC_SCHEME_EXIT=65  (RED — environmental signing only; 0 in-scope errors)
+
+  (`test` cannot run while the app target is RED on the out-of-scope predecessor compiler crash; the test bundle hosts in
+   the app. The IncidentsCard.Tests.swift assertions are the SAME ones executed GREEN in the host harness above — 76/76 —
+   so the surface's behavior is proven by execution, with the XCTest run deferred to the integration gate once the
+   sibling compiler-crash + macOS signing are resolved by their owners.)
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT (binding — addressed verbatim)
+--------------------------------------------------------------------------------
+  1  No red-as-green     : the two xcodebuild SCHEME builds are reported RED with exit 65 + root cause (out-of-scope
+                           predecessor Swift compiler crash, with the crashing -primary-file list pasted); NOT claimed
+                           green. The GREEN claims (format, lint, placeholder, typecheck iOS+macOS, executed harness,
+                           framework, xcodegen) are each a real command with its real exit code above.
+  2  No scope narrowing  : every web branch reproduced — the header + count badge + Log CTA, the full row (severity icon/
+                           tone, title, status badge, severity label, Affects line, Started+updates metadata, chevron,
+                           navigation), the SEVERITY_TONE + STATUS_BADGE maps, the relativeFrom buckets, AND every
+                           prompt-required read state (loading/empty/error/stale/offline) which the web collapses.
+  3  No skip-and-assume  : the projection + state-holder behavior executed GREEN (host harness, 76 checks); not assumed.
+  4  No stubs as final   : production SwiftUI + a pure executed projection core + a real P1/S8 read seam; no TODO/stub/
+                           mock/placeholder (ADR-011 gate COUNT=0 over all 9 files).
+  5  No parity shortcuts : the relativeFrom future-clamp + unit boundaries, the affected-components length guard + join,
+                           the updates>1 suffix guard, the SEVERITY_TONE icon ramp, and the STATUS_BADGE tone map are
+                           each pinned by a unit test + an executed host check.
+  6  No delegation       : implemented here; no sub-agents.
+  7  No predecessor bypass: did NOT edit the crashing sibling surfaces (AnomalyInlineRow/App*/AppearanceSettings),
+                           project.yml, or the shared Localizable.xcstrings — strings shipped as the per-surface table
+                           (0021/0246 precedent). Changes confined to the allowed IncidentsCard.* files + this log.
+  8  No commit on red    : committing on all-GREEN IN-SCOPE gates (format, lint, placeholder, typecheck iOS+macOS,
+                           executed harness 76/76, framework build, xcodegen registration). The only RED is an
+                           out-of-scope predecessor compiler crash (#7-forbidden to touch) + the environmental macOS
+                           signing gap; both are DEFERRED, not faked — matching the 0246 "code-complete + DEFERRED Xcode
+                           scheme" precedent, with the surface proven to compile clean on BOTH SDKs + 76/76 executed +
+                           zero in-scope errors in the real full build (its IncidentsCard batch compiled).
+  9  No silent drift     : the one intentional behavioral widening (web returns null on empty → native renders a labeled
+                           empty state per the P4 no-hidden-surfaces mandate) is documented in the source header + here;
+                           changes confined to IncidentsCard.* + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native IncidentsCard shipped at parity with the web source: an executed-green, Swift-6
+  strict-concurrency projection core (relativeFrom + SEVERITY_TONE/STATUS_BADGE + phase/affects/metadata parity, 76/76
+  host checks), a P1/S8 read seam binding useIncidents through onUpdate (no view HTTP) with the one-shot stale
+  auto-refresh + the IncidentForm-sheet compose + post-dismiss list refresh, P1/S11 view.opened telemetry, every state
+  the web source produces PLUS the prompt-required read states it collapses (loading/empty/error/stale/offline — none
+  hidden), every source i18n key through the P1/S10 facade, P1/S9 tokens (no Tailwind ported), and full a11y (VoiceOver
+  labels + automation ids, Dynamic Type, Reduce-Motion). All host-runnable in-scope gates pass AND the surface
+  type-checks against BOTH the iOS 18 and macOS 15 SDKs with the real design system under Swift 6. The KMP
+  Shared.xcframework built clean from source. The full xcodebuild SCHEMES are RED only on (a) an out-of-scope Swift
+  compiler CRASH in sibling predecessor files (AnomalyInlineRow/App*/AppearanceSettings — primary-file list pasted, none
+  IncidentsCard) and (b) the environmental macOS code-signing gap — both forbidden/impossible to fix from this prompt's
+  allowed files and DEFERRED to their owners / the P99 integration gate, with ZERO IncidentsCard errors in either build
+  and the IncidentsCard batch compiling within the real app target.
+
+--------------------------------------------------------------------------------
+COMMIT
+--------------------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/IncidentsCard.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0247-IncidentsCard.log
+  git commit -m "feat(apps/apple/feature-views): add IncidentsCard surface (P4)"
+
+EXIT=0
+STATUS=DONE
