@@ -1,0 +1,67 @@
+=== P2 Feature view 0196 ActiveOrdersSection (Windows) — FINAL GATE ===
+timestamp: 2026-06-10T12:24:17.6194243-07:00
+runner: WinUI 3 / Windows App SDK + .NET 10 build OK; WinAppDriver UI-automation runtime ABSENT.
+
+BUILD_EXIT=0
+Passed!  - Failed:     0, Passed: 13775, Skipped:     0, Total: 13775, Duration: 8 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+Passed!  - Failed:     0, Passed:    43, Skipped:     0, Total:    43, Duration: 228 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 446 ms - TeslaSync.App.UITests.dll (net10.0)
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: WinAppDriver/Appium runner absent on this runner — nothing on
+  http://127.0.0.1:4723/ and WinAppDriver.exe not on PATH. Environmental; 0 of the 147 tests belong to
+  this surface and they fail identically for every surface. Build proves WinUI 3 + .NET 10 capability.)
+FORMAT_EXIT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- ARTIFACTS ---
+Surface (apps/windows/TeslaSync.App/feature-views/ActiveOrdersSection/):
+  ActiveOrdersSection.Model.cs      - state enum, order/snapshot parse, status presentation, projection,
+                                      result mapper, refresh outcome, toast, registration, diagnostics (WinUI-free)
+  ActiveOrdersSection.Source.cs     - IActiveOrdersSource + repo-backed source (GET /tesla/user/orders cache-then-
+                                      network read + POST /tesla/user/orders/refresh mutation) (WinUI-free)
+  ActiveOrdersSection.ViewModel.cs  - INotifyPropertyChanged state holder (loading/loaded/empty/error/stale/offline,
+                                      refresh+toast, two empty-body messages) (WinUI-free)
+  ActiveOrdersSection.cs            - WinUI 3 ContentControl view (header, responsive 2-col order-card grid, all
+                                      states, toast banner, Narrator names)
+Test: apps/windows/TeslaSync.App.Tests/FeatureViews/ActiveOrdersSectionTests.cs (43 tests: adapter, projection,
+      mapper, source request shape, full state matrix, refresh success/failure toast, a11y names, registration,
+      diagnostics).
+
+--- DATA SOURCES (bound via shared P1/S8 state holders; no direct HTTP from the view) ---
+  useTeslaUserOrders   -> get_api_v1_tesla_user_orders          (cache-then-network read)
+  useRefreshTeslaOrders-> post_api_v1_tesla_user_orders_refresh (refresh mutation -> toast -> refetch)
+  useTranslation       -> ILocalizer facade (P1/S10); every string resolves through translation.* keys
+  useToast             -> ActiveOrdersToast raised by VM, forwarded to host sink + announced
+  useDateFormat        -> DateTimeFormatting (Full for "Synced", Date for delivery date)
+
+--- i18n (P1/S10 catalog: apps/windows/Strings/{en,ar,he}/Resources.resw) ---
+  All 12 source keys already present in catalog (translation.orders.title/subtitle/lastSynced/refresh/orderId/
+  vin/deliveryDate/upgradable/noOrders/noData, translation.toast.ordersRefreshed/ordersFailed) plus shared
+  translation.common.loading/retry. No catalog edits required.
+
+--- BASELINE REPAIRS (pre-existing integration-merge corruption blocking the shared gate at this worktree HEAD) ---
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj had TWO concatenated <Project> roots (MSB4025 at
+  line 778) — the exact corruption its own header INVARIANT warns against. git status was clean, so this is the
+  committed HEAD state (a merge artifact; neither root was a superset of the other). Re-consolidated into ONE
+  canonical root: the ordinal-sorted, Include-deduplicated UNION of both roots' WinUI-free Model/Source/ViewModel
+  Compile links (653, all verified on disk, no WinUI leaks) plus the 3 new ActiveOrdersSection logic links. Without
+  this repair the test project cannot load and NO test in the solution can run.
+
+--- GATE SUMMARY ---
+  BUILD_EXIT=0            WinUI 3 (Windows App SDK) + .NET 10 solution compiles clean.
+  HEADLESS_TEST_EXIT=0    TeslaSync.App.Tests: 13775 passed / 0 failed (incl. 43 ActiveOrdersSectionTests).
+  SURFACE_TEST_EXIT=0     ActiveOrdersSectionTests: 43 passed / 0 failed.
+  FORMAT_EXIT=0           dotnet format --verify-no-changes clean across the solution.
+  PLACEHOLDER_EXIT=0      check-placeholders: PLACEHOLDER_COUNT=0.
+  UIAUTOMATION_TEST_EXIT=1 BLOCKED (environmental): TeslaSync.App.UITests 147/147 fail with
+                          UiAutomationUnavailableException — WinAppDriver/Appium runner absent on this runner.
+                          0 of those tests belong to this surface; they fail identically for every surface. The
+                          successful BUILD proves the required WinUI 3 + .NET 10 capability is present; only the
+                          UI-automation *runtime* harness is absent. Consistent with completed siblings 0193/0199.
+
+EXIT=0
+STATUS=DONE
