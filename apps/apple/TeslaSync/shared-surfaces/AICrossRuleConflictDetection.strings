@@ -1,0 +1,54 @@
+/*
+  AICrossRuleConflictDetection.strings
+  TeslaSync — P4 shared surface · 0014 · AICrossRuleConflictDetection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native surface
+  resolves (table "AICrossRuleConflictDetection") lives here with its web `t(key, default)`
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface prompt owns
+  its own strings without editing the shared catalog.
+
+  Group 1 is the exact set of keys from the web source
+  (components/ai/AICrossRuleConflictDetection.tsx). Group 1b localises the per-row chip text
+  the web hardcodes in English, plus the "Rule" relationship prefix. Group 2 is the shared
+  Helix scaffold keys the web `AIFeatureCard` / `AiOutputPanel` resolve. Group 3 backs the
+  native chrome — the P4 leaf freshness / loading / empty / error copy — so the Swift sources
+  hold no English literals.
+*/
+
+/* --- Group 1: keys from the web source (parity) --- */
+"notifications.alertStudio.aiConflicts.title" = "Detect cross-rule conflicts";
+"notifications.alertStudio.aiConflicts.description" = "Surface structural overlaps between your alert rule definitions. Review only — Helix never edits, merges, or deletes rules.";
+"notifications.alertStudio.aiConflicts.detectButton" = "Detect conflicts";
+"notifications.alertStudio.aiConflicts.badge" = "Helix";
+"notifications.alertStudio.aiConflicts.emptyMessage" = "No structural conflicts found in the current rule set.";
+"notifications.alertStudio.aiConflicts.reviewButton" = "Review rule";
+"notifications.alertStudio.aiConflicts.kind.redundant_duplicate" = "Redundant duplicate";
+"notifications.alertStudio.aiConflicts.kind.overlapping_threshold" = "Overlapping threshold";
+
+/* --- Group 1b: per-row chips + relationship prefix (web literals, localised natively) --- */
+"notifications.alertStudio.aiConflicts.chip.subsumes" = "Subsumes";
+"notifications.alertStudio.aiConflicts.chip.severityMismatch" = "Severity mismatch";
+"notifications.alertStudio.aiConflicts.chip.cooldownMismatch" = "Cooldown mismatch";
+"notifications.alertStudio.aiConflicts.chip.triggerModeMismatch" = "Trigger mode mismatch";
+"notifications.alertStudio.aiConflicts.rulePrefix" = "Rule";
+
+/* --- Group 2: shared Helix scaffold (web AIFeatureCard / AiOutputPanel / AIBadge) --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.tooltip" = "Helix is your AI assistant. It generates responses using your redacted fleet context.";
+"helix.ariaLabel" = "Helix";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Group 3: native chrome — P4 leaf freshness / loading / empty / error --- */
+"notifications.alertStudio.aiConflicts.emptyHint" = "Select at least two rules to compare.";
+"notifications.alertStudio.aiConflicts.loadingA11y" = "Loading Helix conflict detection";
+"notifications.alertStudio.aiConflicts.errorTitle" = "Couldn't load Helix conflict detection";
+"notifications.alertStudio.aiConflicts.retry" = "Retry";
+"notifications.alertStudio.aiConflicts.live" = "Live";
+"notifications.alertStudio.aiConflicts.stale" = "Stale";
+"notifications.alertStudio.aiConflicts.offline" = "Offline";
+"notifications.alertStudio.aiConflicts.staleBanner" = "Reconnecting — data may be stale";
+"notifications.alertStudio.aiConflicts.offlineBanner" = "Offline — showing last known data";
+"notifications.alertStudio.aiConflicts.refresh" = "Refresh";
