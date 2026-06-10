@@ -1,12 +1,12 @@
 //
 //  VehicleHeader.Tests.swift
-//  TeslaSync — P4 feature view · 0301 · VehicleHeader (Apple)
+//  TeslaSync — P4 feature view · 0305 · VehicleHeader (Apple)
 //
 //  Adapter + projection coverage for the VehicleHeader surface:
-//    • StatusMap — the web `statusVariant` mapping across all seven states + the
-//      VEHICLE_STATE_LABELS key/fallback pairs.
-//    • Format — the "model + trim" badge composition (web template literal) and the VIN
-//      fallback (web `?? ''`).
+//    • StatusMap — the web `getVehicleStatus` → variant mapping across all seven states
+//      + the VEHICLE_STATE_LABELS key/fallback pairs.
+//    • Format — the title fallback (web `display_name || vin || …`), the "model + trim"
+//      subtitle composition (web template literal), and the VIN fallback (web `?? ''`).
 //    • Projection — the web render plus the P4 leaf contract across loading / empty /
 //      error / data and the status / waking branches.
 //    • Accessibility — the composed VoiceOver header label.
@@ -19,11 +19,12 @@ import XCTest
 @testable import TeslaSync
 
 private func makeVehicle(
+    displayName: String = "",
     model: String = "Model S",
     trim: String = "Plaid",
     vin: String = "5YJSA1E26MF000000"
 ) -> VehicleHeaderVehicle {
-    VehicleHeaderVehicle(model: model, trimBadging: trim, vin: vin)
+    VehicleHeaderVehicle(displayName: displayName, model: model, trimBadging: trim, vin: vin)
 }
 
 // MARK: - Status variant (web `statusVariant`)
@@ -63,6 +64,29 @@ final class VehicleHeaderStatusLabelTests: XCTestCase {
         XCTAssertEqual(VehicleHeaderStatusMap.labelFallback(.updating), "Updating")
         XCTAssertEqual(VehicleHeaderStatusMap.labelFallback(.asleep), "Asleep")
         XCTAssertEqual(VehicleHeaderStatusMap.labelFallback(.offline), "Offline")
+    }
+}
+
+// MARK: - Title (web `display_name || vin || t('common.vehicle')`)
+
+final class VehicleHeaderTitleTests: XCTestCase {
+    func testPrefersDisplayName() {
+        XCTAssertEqual(
+            VehicleHeaderFormat.title(makeVehicle(displayName: "Lightning", vin: "VIN1")),
+            "Lightning"
+        )
+    }
+
+    func testFallsBackToVINWhenNoDisplayName() {
+        XCTAssertEqual(VehicleHeaderFormat.title(makeVehicle(displayName: "", vin: "VIN2")), "VIN2")
+    }
+
+    func testTrimsWhitespaceDisplayNameThenFallsBack() {
+        XCTAssertEqual(VehicleHeaderFormat.title(makeVehicle(displayName: "   ", vin: "VIN3")), "VIN3")
+    }
+
+    func testNilVehicleHasEmptyTitle() {
+        XCTAssertEqual(VehicleHeaderFormat.title(nil), "")
     }
 }
 
@@ -125,14 +149,15 @@ final class VehicleHeaderProjectionTests: XCTestCase {
         XCTAssertNil(resolved.vehicle)
     }
 
-    func testDataComposesVariantModelLineAndVIN() {
+    func testDataComposesVariantTitleModelLineAndVIN() {
         let resolved = VehicleHeaderProjection.resolve(VehicleHeaderInput(
-            vehicle: makeVehicle(model: "Model X", trim: "Plaid", vin: "VIN9"),
+            vehicle: makeVehicle(displayName: "Bolt", model: "Model X", trim: "Plaid", vin: "VIN9"),
             status: .charging,
             waking: true
         ))
         XCTAssertEqual(resolved.phase, .data)
         XCTAssertEqual(resolved.variant, .warning)
+        XCTAssertEqual(resolved.title, "Bolt")
         XCTAssertEqual(resolved.modelLine, "Model X Plaid")
         XCTAssertEqual(resolved.vin, "VIN9")
         XCTAssertTrue(resolved.waking)
@@ -160,18 +185,20 @@ final class VehicleHeaderAccessibilityTests: XCTestCase {
     func testHeaderLabelJoinsParts() {
         XCTAssertEqual(
             VehicleHeaderAccessibility.headerLabel(
+                title: "Lightning",
                 statusLabel: "Driving",
                 modelLine: "Model S Plaid",
                 vinLabel: "VIN",
                 vin: "ABC123"
             ),
-            "Driving, Model S Plaid, VIN ABC123"
+            "Lightning, Driving, Model S Plaid, VIN ABC123"
         )
     }
 
     func testHeaderLabelDropsEmptyParts() {
         XCTAssertEqual(
             VehicleHeaderAccessibility.headerLabel(
+                title: "",
                 statusLabel: "Offline",
                 modelLine: "",
                 vinLabel: "VIN",

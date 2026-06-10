@@ -1,11 +1,11 @@
 //
 //  VehicleHeader.States.swift
-//  TeslaSync — P4 feature view · 0301 · VehicleHeader (Apple)
+//  TeslaSync — P4 feature view · 0305 · VehicleHeader (Apple)
 //
 //  The P4 leaf-contract chrome composed by `VehicleHeader` when the surface is not in
 //  its data state: the loading skeleton, the empty (no-vehicle) state, and the error
-//  state with a retry affordance. Each keeps the header's panel shape + leading back
-//  button so the surface never collapses to a blank box. All copy resolves through the
+//  state with a retry affordance. Each keeps the leading back button + a leading-aligned
+//  row so the surface never collapses to a blank box. All copy resolves through the
 //  P1/S10 facade; all colour comes from the P1/S9 tokens.
 //
 
@@ -13,20 +13,21 @@ import SwiftUI
 
 // MARK: - Loading (web parent `isLoading`)
 
-/// The initial-fetch chrome — the back button beside skeleton badge + VIN lines, so the
-/// header keeps its shape while the parent vehicle query resolves.
+/// The initial-fetch chrome — the back button beside skeleton title + status pill +
+/// subtitle lines, so the header keeps its shape while the parent vehicle query
+/// resolves.
 struct VehicleHeaderLoadingView: View {
     let onBack: () -> Void
 
     var body: some View {
         HStack(spacing: TSSpacing.lg) {
             VehicleHeaderBackButton(action: onBack)
-            VStack(alignment: .leading, spacing: TSSpacing.sm) {
-                HStack(spacing: TSSpacing.sm) {
-                    TSSkeleton(width: 88, height: 22, cornerRadius: TSRadius.pill)
-                    TSSkeleton(width: 120, height: 18, cornerRadius: TSRadius.pill)
+            VStack(alignment: .leading, spacing: TSSpacing.xs) {
+                HStack(spacing: TSSpacing.md) {
+                    TSSkeleton(width: 184, height: 28)
+                    TSSkeleton(width: 84, height: 24, cornerRadius: TSRadius.pill)
                 }
-                TSSkeleton(width: 160, height: 12)
+                TSSkeleton(width: 200, height: 12)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: TSSpacing.md)

@@ -1,18 +1,20 @@
 //
 //  VehicleHeader.Model.swift
-//  TeslaSync — P4 feature view · 0301 · VehicleHeader (Apple)
+//  TeslaSync — P4 feature view · 0305 · VehicleHeader (Apple)
 //
-//  The state-holder seam (P1/S8) for the vehicle-detail header. The web source is a
-//  pure presentational leaf fed `vehicle`, `status`, `onWake`, and `waking` by its
-//  parent (the Vehicle Detail page), so the input snapshot here carries that vehicle +
-//  status + the wake-in-flight flag plus the parent's loading / error / connectivity
-//  state rather than issuing HTTP itself.
+//  The state-holder seam (P1/S8) for the vehicle header. The web source
+//  (features/vehicles/components/VehicleHeader.tsx) takes `vehicle`, `state`, and
+//  `onRefetchState`, derives `status = vehicle ? getVehicleStatus(state) : 'offline'`,
+//  and owns the wake mutation (`useWakeVehicle`) internally — re-fetching state after a
+//  wake lands. The input snapshot here carries that vehicle + derived status + the
+//  wake-in-flight flag plus the parent query's loading / error / connectivity state
+//  rather than issuing HTTP itself.
 //
 //  States: the web leaf always renders. On top of that, this surface honours the P4
-//  leaf contract: a `phase` (loading / empty / error / data) fed by the parent's query
-//  state, and an orthogonal `connection` axis (live / stale / offline) surfaced as a
-//  freshness chip with a one-shot auto-refresh on the stale transition (web parent
-//  re-fetch). The view binds through `VehicleHeaderModel`; no networking lives here.
+//  leaf contract: a `phase` (loading / empty / error / data) fed by the query state, and
+//  an orthogonal `connection` axis (live / stale / offline) surfaced as a freshness chip
+//  with a one-shot auto-refresh on the stale transition (web `onRefetchState`). The view
+//  binds through `VehicleHeaderModel`; no networking lives here.
 //
 
 import Foundation
@@ -64,8 +66,8 @@ public struct VehicleHeaderInput: Sendable, Equatable {
 
 /// The resolved, view-ready state — the native mirror of the header's render plus the
 /// P4 leaf contract. `phase` selects the body; for the data phase the status variant,
-/// the composed "model + trim" line, and the VIN are pre-computed so the view is a pure
-/// function of this value.
+/// the title (`display_name || vin`), the composed "model + trim" subtitle, and the VIN
+/// are pre-computed so the view is a pure function of this value.
 public struct VehicleHeaderResolved: Sendable, Equatable {
     public enum Phase: Sendable, Equatable {
         case loading
@@ -78,6 +80,7 @@ public struct VehicleHeaderResolved: Sendable, Equatable {
     public let vehicle: VehicleHeaderVehicle?
     public let status: VehicleHeaderStatus
     public let variant: VehicleHeaderBadgeVariant
+    public let title: String
     public let modelLine: String
     public let vin: String
     public let waking: Bool
@@ -87,6 +90,7 @@ public struct VehicleHeaderResolved: Sendable, Equatable {
         vehicle: VehicleHeaderVehicle?,
         status: VehicleHeaderStatus,
         variant: VehicleHeaderBadgeVariant,
+        title: String,
         modelLine: String,
         vin: String,
         waking: Bool
@@ -95,6 +99,7 @@ public struct VehicleHeaderResolved: Sendable, Equatable {
         self.vehicle = vehicle
         self.status = status
         self.variant = variant
+        self.title = title
         self.modelLine = modelLine
         self.vin = vin
         self.waking = waking
@@ -132,6 +137,7 @@ public enum VehicleHeaderProjection {
             vehicle: input.vehicle,
             status: input.status,
             variant: VehicleHeaderStatusMap.variant(input.status),
+            title: VehicleHeaderFormat.title(input.vehicle),
             modelLine: VehicleHeaderFormat.modelLine(input.vehicle),
             vin: VehicleHeaderFormat.vin(input.vehicle),
             waking: input.waking
