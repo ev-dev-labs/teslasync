@@ -65,9 +65,24 @@ param(
     [string]$BaseRef       = "HEAD",            # integration branch starts here
     [string]$WorktreeRoot  = "",                # default: <repo>\..\teslasync-wt
     [string]$IntegrationBranch = "",            # default: auto/integration-<timestamp>
-    [int]$TimeoutMinutes   = 600,
+    [int]$TimeoutMinutes   = 90,                 # hard cap per prompt (was 600 = 10h, which let a hung
+                                                # worker block a slot all day). Observed widget runs are
+                                                # 17-48 min, so 90 is generous headroom.
+    [int]$StallMinutes     = 25,                # stall watchdog: if a worker produces NO new transcript
+                                                # output for this long it is considered HUNG (wedged on a
+                                                # model-API call) -> killed + retried, instead of sitting
+                                                # at 0% CPU for the full timeout. This is the direct fix
+                                                # for "0% CPU for hours".
     [int]$PollSeconds      = 5,
-    [switch]$ContinueOnRed = $false,            # keep going to later segments even if a segment had reds
+    [int]$MaxRetries       = 2,                  # retry a prompt up to N times when copilot exits non-zero
+                                                # WITHOUT writing a gate verdict (rate-limit/network/auth blip)
+                                                # OR hangs (stall/timeout), so a transient hiccup or a wedged
+                                                # worker doesn't lose a widget as RED.
+    [switch]$ContinueOnRed = $false,            # advance past GENUINE reds in PARALLEL surface
+                                                # segments only; SEQUENTIAL infra/gate reds always halt
+    [switch]$AllowDeferredBlocked = $false,     # treat sanctioned env-deferred BLOCKEDs (WinAppDriver/
+                                                # emulator/macOS/Xcode absent) as success: record to
+                                                # deferred-blocked.csv + done.txt and advance, instead of RED.
     [switch]$CleanIgnored  = $false,            # worker recovery uses `git clean -ffdx` (wipes node_modules/bin/obj)
     [switch]$KeepWorktrees = $false,            # don't prune the worker pool on exit
     [switch]$DryRun        = $false,
@@ -144,6 +159,56 @@ function Test-LogSaysRed {
     return @($false, '')
 }
 
+# Distinguish a SANCTIONED host/runner-absence BLOCKED (which the prompt's capability
+# clause legitimately allows) from a real red BLOCKED. Ported from the sequential runner.
+# Returns @($isDeferred, $reason, $category). A BLOCKED is deferred only if the final
+# STATUS=BLOCKED, no OTHER real-red signal is present (parity gap / [FAIL] / commit fail /
+# drift), and EITHER an explicit DEFERRED_VERIFICATION=true marker OR a host-deferral
+# sentinel matches (WinAppDriver/emulator/macOS/Xcode/hardware/generic-runner). The
+# sentinels also match prose evidence in the log body when no BLOCKED_REASON= marker exists.
+function Test-LogIsDeferredBlocked {
+    param([string]$LogPath)
+    if (-not (Test-Path $LogPath)) { return @($false, '', '') }
+    $content = Get-Content $LogPath -Raw
+    $statusMatches = [regex]::Matches($content, '(?m)^STATUS=(\w+)\s*$')
+    if ($statusMatches.Count -eq 0) { return @($false, '', '') }
+    if ($statusMatches[$statusMatches.Count - 1].Groups[1].Value -ne 'BLOCKED') { return @($false, '', '') }
+
+    $reasonMatch = [regex]::Match($content, '(?ms)^BLOCKED_REASON\s*=\s*(.+?)(?=^[A-Z][A-Z_0-9]*\s*=|^==+|\z)')
+    $hasMarker = $reasonMatch.Success
+    $reason = if ($hasMarker) { $reasonMatch.Groups[1].Value.Trim() } else { '' }
+    if ($hasMarker -and $reason.Length -eq 0) { return @($false, '', 'no-reason') }
+
+    # Real-red guards: a BLOCKED with any of these is NOT sanctioned-deferred.
+    if ($content -match '(?m)^\s*\[FAIL\]') { return @($false, $reason, 'has-fail-marker') }
+    $commitMatches = [regex]::Matches($content, '(?m)^COMMIT_EXIT=(\d+)\s*$')
+    if ($commitMatches.Count -gt 0 -and $commitMatches[$commitMatches.Count - 1].Groups[1].Value -ne '0') { return @($false, $reason, 'has-commit-failure') }
+    if ($content -match '(?m)^PARITY_COVERED=(\d+)') {
+        $cov = [int]$Matches[1]
+        if ($content -match '(?m)^PARITY_REQUIRED=(\d+)') { if ($cov -lt [int]$Matches[1]) { return @($false, $reason, 'has-parity-gap') } }
+    }
+    if ($content -match '(?m)^UNEXPECTED_COUNT=(?!0\s*$)\d+') { return @($false, $reason, 'has-unexpected-drift') }
+
+    if ($content -match '(?im)^\s*DEFERRED_VERIFICATION\s*=\s*true\s*$') { return @($true, $reason, 'explicit') }
+
+    $sentinels = @(
+        @{ Cat='macos-deferred';      Pat='macos|mac\s*os|xcode|kotlin[/-]?native.*apple|apple\s*framework.*requires|requires\s+(?:a\s+)?macos' },
+        @{ Cat='windows-ui-deferred'; Pat='winappdriver|appium|ui[\s-]*automation.*(?:absent|not\s*installed|unavailable)|127\.0\.0\.1:4723|uiautomationunavailable' },
+        @{ Cat='android-deferred';    Pat='android.*emulator|androidtest|adb.*not\s*(?:available|installed)|no.*android.*device' },
+        @{ Cat='hardware-deferred';   Pat='physical\s*device.*required|hardware.*required|hololens|vision\s*pro' },
+        @{ Cat='generic-runner';      Pat='runner\s+is\s+(?:not\s*installed|absent|unavailable)|automation\s*runner.*absent' }
+    )
+    $matchTarget = if ($hasMarker) { $reason } else { $content }
+    $suffix      = if ($hasMarker) { '' } else { '-implicit' }
+    foreach ($s in $sentinels) {
+        if ($matchTarget -match "(?i)$($s.Pat)") {
+            $disp = if ($hasMarker) { $reason } else { '(implicit from log body)' }
+            return @($true, $disp, ($s.Cat + $suffix))
+        }
+    }
+    return @($false, $reason, 'unrecognized')
+}
+
 # Resolve the prompt's declared artifact log (| Log | `path` |) RELATIVE TO a
 # given worktree root, since the prompt writes it inside its own worktree.
 function Get-ArtifactLogInWorktree {
@@ -152,6 +217,20 @@ function Get-ArtifactLogInWorktree {
     if (-not $m.Success) { return $null }
     $leaf = Split-Path ($m.Groups[1].Value.Replace('/', '\')) -Leaf
     return (Join-Path $WorktreeDir ".github\prompts\monorepo\logs\$leaf")
+}
+
+# A non-green, non-deferred job is TRANSIENT (retryable) when copilot exited non-zero
+# WITHOUT the widget gate ever writing a verdict (no final STATUS= line in the artifact
+# log — usually the log is missing entirely). That is the signature of a model-API
+# rate-limit, network drop, or auth refresh killing the CLI mid-run, NOT a real widget
+# failure (which always writes STATUS=DONE/BLOCKED). Timeouts are NOT transient — they
+# already consumed the full budget, so retrying just burns another timeout.
+function Test-TransientFailure {
+    param($Job, [bool]$TimedOut)
+    if ($TimedOut) { return $false }
+    if (-not $Job.ArtifactLog -or -not (Test-Path $Job.ArtifactLog)) { return $true }
+    $content = Get-Content $Job.ArtifactLog -Raw -ErrorAction SilentlyContinue
+    return (-not ($content -match '(?m)^STATUS='))
 }
 
 # PID-based recursive process-tree kill (no name-based killing).
@@ -255,6 +334,46 @@ if ($SelfTest) {
     GateCase 'parity' "PARITY_REQUIRED=10`nPARITY_COVERED=3`nEXIT=0`nSTATUS=DONE" $true
     Check 'missing-log is red' ((Test-LogSaysRed (Join-Path $tmp 'nope.log'))[0])
 
+    Write-Host "`nDeferred-BLOCKED detection self-test:" -ForegroundColor Cyan
+    function DeferCase([string]$n,[string]$body,[bool]$expectDeferred,[string]$expectCat){
+        $f = Join-Path $tmp "defer-$n.log"; Set-Content $f $body -Encoding UTF8
+        $r = Test-LogIsDeferredBlocked $f
+        $okFlag = ($r[0] -eq $expectDeferred)
+        $okCat  = ($expectCat -eq '' -or $r[2] -eq $expectCat)
+        Check "$n -> deferred=$expectDeferred cat=$($r[2])" ($okFlag -and $okCat)
+    }
+    # Real prior-run shape: STATUS=BLOCKED, no BLOCKED_REASON=, WinAppDriver prose in body.
+    DeferCase 'winappdriver-implicit' "The WinAppDriver runner is absent on 127.0.0.1:4723.`nEXIT=1`nSTATUS=BLOCKED" $true 'windows-ui-deferred-implicit'
+    # Explicit BLOCKED_REASON= marker with sentinel text.
+    DeferCase 'macos-marker' "BLOCKED_REASON=this surface requires a macOS host with Xcode`nSTATUS=BLOCKED" $true 'macos-deferred'
+    # Explicit opt-in marker wins.
+    DeferCase 'explicit-optin' "DEFERRED_VERIFICATION=true`nBLOCKED_REASON=host gap`nSTATUS=BLOCKED" $true 'explicit'
+    # Compound: deferred sentinel BUT a real [FAIL] => must stay RED (not deferred).
+    DeferCase 'compound-fail' "[FAIL] parity gap`nWinAppDriver absent`nSTATUS=BLOCKED" $false 'has-fail-marker'
+    # Compound: deferred sentinel BUT commit failure => must stay RED.
+    DeferCase 'compound-commit' "WinAppDriver absent`nCOMMIT_EXIT=1`nSTATUS=BLOCKED" $false 'has-commit-failure'
+    # BLOCKED with no recognized sentinel => unrecognized, stays RED.
+    DeferCase 'unrecognized' "STATUS=BLOCKED`nsomething unexplained" $false 'unrecognized'
+    # Last STATUS is DONE => not blocked at all.
+    DeferCase 'done-not-blocked' "WinAppDriver absent`nEXIT=0`nSTATUS=DONE" $false
+    # Hard crash: EXIT=1 but NO STATUS line => not a clean BLOCKED, stays RED.
+    DeferCase 'crash-no-status' "boom unhandled exception`nEXIT=1" $false
+
+    Write-Host "`nTransient-failure (retry) detection self-test:" -ForegroundColor Cyan
+    function TransientCase([string]$n, [object]$logBody, [bool]$timedOut, [bool]$expect) {
+        $lp = Join-Path $tmp "trans-$n.log"
+        if ($null -ne $logBody) { Set-Content $lp $logBody -Encoding UTF8 } elseif (Test-Path $lp) { Remove-Item $lp }
+        $job = [PSCustomObject]@{ ArtifactLog = $lp }
+        Check "$n -> transient=$expect" ((Test-TransientFailure -Job $job -TimedOut $timedOut) -eq $expect)
+    }
+    TransientCase 'missing-log'  $null               $false $true    # copilot died before any gate verdict => retry
+    TransientCase 'no-status'    "EXIT=1"             $false $true    # partial log, no STATUS verdict => retry
+    TransientCase 'has-verdict'  "EXIT=1`nSTATUS=BLOCKED" $false $false  # gate ran (STATUS present) => genuine, no retry
+    TransientCase 'green-verdict' "EXIT=0`nSTATUS=DONE"  $false $false
+    TransientCase 'timeout'      $null               $true  $false   # timeout already spent budget => never retry
+    $nullJob = [PSCustomObject]@{ ArtifactLog = $null }
+    Check 'null-artifactlog -> transient=True' ((Test-TransientFailure -Job $nullJob -TimedOut $false) -eq $true)
+
     Write-Host "`nUnion-merge mechanics self-test:" -ForegroundColor Cyan
     $g = Join-Path $tmp "repo"; git init -q $g
     Push-Location $g
@@ -328,6 +447,7 @@ Write-Host "  Integration branch: $IntegrationBranch"
 Write-Host "  Worktree root     : $WorktreeRoot"
 Write-Host "  Model             : $(if ($Model) { $Model } else { '(default)' })"
 Write-Host "  Timeout           : $TimeoutMinutes min/prompt"
+Write-Host "  Deferred-OK       : $AllowDeferredBlocked $(if ($AllowDeferredBlocked) { '(WinAppDriver/emulator/macOS-absent BLOCKEDs -> recorded + advance)' } else { '(sanctioned BLOCKEDs count as RED; pass -AllowDeferredBlocked)' })" -ForegroundColor $(if ($AllowDeferredBlocked){'Yellow'}else{'DarkGray'})
 Write-Host "================================================================" -ForegroundColor Cyan
 
 if ($MaxParallel -gt 8) {
@@ -362,6 +482,15 @@ $runLog    = Join-Path $runStateDir "orchestrator.log"
 $stateFile = Join-Path $runStateDir "state.jsonl"   # append-only manifest (finding 7)
 function Log([string]$m) { $e = "[{0}] {1}" -f (Get-Date -Format 'HH:mm:ss'), $m; Write-Host $e; Add-Content $runLog $e }
 function State([hashtable]$row) { ($row + @{ ts = (Get-Date -Format 'o') } | ConvertTo-Json -Compress) | Add-Content $stateFile }
+# Append a sanctioned env-deferred BLOCKED to deferred-blocked.csv for later re-verification
+# on a capable host (e.g. a WinAppDriver-equipped runner).
+$deferredCsv = Join-Path $runStateDir "deferred-blocked.csv"
+function Write-DeferredCsv([string]$Rel, [string]$Cat, [string]$Reason) {
+    if (-not (Test-Path $deferredCsv)) { Set-Content -Path $deferredCsv -Value 'timestamp,prompt_relpath,commit_sha,sentinel_category,blocked_reason' -Encoding UTF8 }
+    $sha = ''; try { $sha = (git -C $RepoRoot rev-parse --short HEAD 2>$null) } catch {}
+    $r = '"' + (($Reason -replace '"','""') -replace "`r?`n", ' ') + '"'
+    Add-Content -Path $deferredCsv -Value ("{0},{1},{2},{3},{4}" -f (Get-Date -Format 'o'), $Rel, $sha, $Cat, $r)
+}
 
 # Disable background maintenance so concurrent commits don't race a repack/gc (finding 5).
 git -C $RepoRoot config gc.auto 0           | Out-Null
@@ -373,7 +502,7 @@ $commonDir = (git -C $RepoRoot rev-parse --git-common-dir).Trim()
 if (-not [System.IO.Path]::IsPathRooted($commonDir)) { $commonDir = Join-Path $RepoRoot $commonDir }
 $infoDir = Join-Path $commonDir "info"
 New-Item -ItemType Directory -Path $infoDir -Force | Out-Null
-$attrLines = @('*.resw merge=union','*.resx merge=union','*.xlf merge=union')
+$attrLines = @('*.resw merge=union','*.resx merge=union','*.xlf merge=union','*.csproj merge=union','*.sln merge=union')
 Set-Content -Path (Join-Path $infoDir "attributes") -Value $attrLines -Encoding UTF8
 Log "Union merge driver wired for: $($attrLines -join ', ')"
 
@@ -383,7 +512,9 @@ Log "Base SHA: $baseSha"
 # Integration worktree on a fresh branch (your dirty branch stays untouched).
 function New-Worktree {
     param([string]$Path, [string]$Branch, [string]$StartSha)
-    if (Test-Path $Path) { git -C $RepoRoot worktree remove --force $Path *>$null }
+    git -C $RepoRoot worktree remove --force $Path *>$null              # drop registration if any
+    if (Test-Path $Path) { Remove-Item $Path -Recurse -Force -ErrorAction SilentlyContinue }  # nuke orphaned dir
+    git -C $RepoRoot worktree prune *>$null
     if ($Branch) { git -C $RepoRoot worktree add -q --force -b $Branch $Path $StartSha 2>&1 | Out-Null }
     else         { git -C $RepoRoot worktree add -q --force --detach $Path $StartSha 2>&1 | Out-Null }
 }
@@ -400,25 +531,53 @@ if ($Resume) {
 
 $branchExists = [bool](git -C $RepoRoot branch --list $IntegrationBranch)
 if ($branchExists -and $Resume) {
-    if (Test-Path $integWt) { git -C $RepoRoot worktree remove --force $integWt *>$null }
+    git -C $RepoRoot worktree remove --force $integWt *>$null
+    if (Test-Path $integWt) { Remove-Item $integWt -Recurse -Force -ErrorAction SilentlyContinue }  # nuke orphaned dir
+    git -C $RepoRoot worktree prune *>$null
     git -C $RepoRoot worktree add -q --force $integWt $IntegrationBranch 2>&1 | Out-Null
 } else {
     if (-not $Resume) { git -C $RepoRoot branch -D $IntegrationBranch *>$null }  # drop stale same-name branch
     New-Worktree -Path $integWt -Branch $IntegrationBranch -StartSha $baseSha
 }
+# Fail loudly + early if the integration worktree didn't materialize, instead of dying
+# silently mid-setup (an orphaned dir or stale lock used to wedge this).
+if (-not (Test-Path (Join-Path $integWt '.git'))) {
+    Write-Host "FATAL: integration worktree not created at $integWt (orphaned dir or git lock?). Remove it + 'git worktree prune' then retry." -ForegroundColor Red
+    exit 1
+}
 Log "Integration worktree: $integWt ($IntegrationBranch)"
 
-# Neutralize phantom EOL drift ONCE on the integration branch. Some committed blobs
-# carry CRLF despite `.gitattributes eol=lf`, so every fresh checkout shows a fixed set
-# of web/src *.tsx files as "modified" that reset --hard can't clear. Left unfixed, each
-# worker worktree starts dirty -> the prompt's drift gate miscounts and the agent commits
-# EOL-only noise into its branch. Renormalizing here (scoped to auto/integration-*, NOT
-# your feature branch) makes every worker that branches off this tip start clean.
+# Neutralize phantom EOL drift ONCE on the integration branch. Many committed blobs
+# carry CRLF despite `.gitattributes eol=lf`. Git refuses to auto-convert them on
+# checkout (the round-trip would be "unsafe"), so it writes CRLF verbatim AND reports the
+# file as clean — meaning `git status`/`git diff` can't even see the problem, yet a fresh
+# worktree off this tip shows ~2 of them as phantom "modified" once stat-checked, and the
+# rest sit as latent CRLF that pollute the agent's commits. `git add --renormalize` does
+# NOT fix them for the same safety reason.
+#
+# Robust fix: ask git which files actually have CRLF in the working tree (`ls-files --eol`
+# -> `w/crlf`), excluding any whose attribute wants CRLF (`eol=crlf`), then brute-force
+# rewrite those bytes to LF and commit. Scoped to auto/integration-* (NOT your feature
+# branch). Verified deterministic: 671 files -> fresh worktree 0-dirty.
 git -C $integWt add --renormalize -- . *>$null
+git -C $integWt add -A *>$null
+$crlfFiles = git -C $integWt ls-files --eol 2>$null |
+    Where-Object { $_ -match 'w/crlf' -and $_ -notmatch 'eol=crlf' } |
+    ForEach-Object { (($_ -split "`t", 2)[1]).Trim() }
+foreach ($cf in $crlfFiles) {
+    $cp = Join-Path $integWt $cf
+    if (Test-Path $cp) {
+        try {
+            $t = [System.IO.File]::ReadAllText($cp) -replace "`r`n", "`n"
+            [System.IO.File]::WriteAllText($cp, $t, ([System.Text.UTF8Encoding]::new($false)))
+        } catch {}
+    }
+}
+git -C $integWt add -A *>$null
 $normCount = (git -C $integWt diff --cached --name-only 2>$null | Measure-Object).Count
 if ($normCount -gt 0) {
-    git -C $integWt commit -q -m "chore(runner): renormalize EOL for clean worktree base ($normCount files)" *>$null
-    Log "Renormalized EOL on $IntegrationBranch ($normCount files) — workers will start clean."
+    git -C $integWt commit -q -m "chore(runner): normalize EOL for clean worktree base ($normCount files)" *>$null
+    Log "Normalized EOL on $IntegrationBranch ($normCount files, $(@($crlfFiles).Count) forced) — workers will start clean."
 }
 
 # Subsequent waves branch off the integration tip; align the recorded base + worker
@@ -553,6 +712,7 @@ function Invoke-PromptJob {
         Prompt=$Prompt; Wt=$Wt; Branch=$branch; Proc=$proc; Tip=$Tip; Launched=$launched
         Transcript=$transcript; ArtifactLog=(Get-ArtifactLogInWorktree $promptContent $Wt)
         Start=(Get-Date); PromptContent=$promptContent
+        LastLen=[long]0; LastProgress=(Get-Date)   # stall-watchdog progress markers
     }
 }
 
@@ -592,13 +752,42 @@ $successCount = 0; $failCount = 0; $skipCount = 0
 
 function Get-IntegTip { return (git -C $integWt rev-parse HEAD).Trim() }
 
+# Merge ONE completed (green or sanctioned-deferred) branch into the integration
+# branch and checkpoint it IMMEDIATELY: done.txt + deferred-blocked.csv advance per
+# prompt and are committed on the integration branch. This is the resumability
+# contract — a reboot/Ctrl-C/crash mid-segment never loses finished work, and
+# -Resume skips everything already merged. Later workers branch off the advancing
+# tip so they inherit earlier widgets' shared-catalog (*.resw) additions. On a
+# non-union merge conflict the prompt is queued for the sequential fixup pass.
+# (The orchestrator is single-threaded, so these merges are naturally serialized;
+# gc.auto/maintenance are disabled so a concurrent worker commit can't race a repack.)
+function Complete-Branch {
+    param($Entry)   # { Branch; Prompt; Deferred; DeferCat; DeferReason }
+    $outcome = Merge-GreenBranch -Branch $Entry.Branch
+    if ($outcome -eq 'merged') {
+        $script:successCount++
+        if ($Entry.Deferred) {
+            $script:results += [PSCustomObject]@{ Rel=$Entry.Prompt.RelPath; Green=$true; Reason="deferred ($($Entry.DeferCat))" }
+            Write-DeferredCsv -Rel $Entry.Prompt.RelPath -Cat $Entry.DeferCat -Reason $Entry.DeferReason
+        } else {
+            $script:results += [PSCustomObject]@{ Rel=$Entry.Prompt.RelPath; Green=$true; Reason='' }
+        }
+        Add-Done $Entry.Prompt.RelPath
+        git -C $RepoRoot branch -D $Entry.Branch *>$null
+    } else {
+        $script:fixupList += $Entry.Prompt
+        git -C $RepoRoot branch -D $Entry.Branch *>$null
+        State @{ event='fixup-queued'; rel=$Entry.Prompt.RelPath }
+    }
+}
+
 function Invoke-Wave {
     param($Items, [bool]$Parallel)
     $queue   = [System.Collections.Generic.Queue[object]]::new()
     $Items | Where-Object { -not $doneSet.Contains($_.RelPath) } | ForEach-Object { $queue.Enqueue($_) }
     $running = @()   # active job objects
-    $green   = @()   # branches to merge (in completion order; merged after barrier)
     $cap     = if ($Parallel) { $MaxParallel } else { 1 }
+    if (-not $script:retryCounts) { $script:retryCounts = @{} }
 
     while ($queue.Count -gt 0 -or $running.Count -gt 0) {
         # Fill free slots
@@ -616,24 +805,58 @@ function Invoke-Wave {
         $still = @()
         foreach ($job in $running) {
             $elapsedMin = ((Get-Date) - $job.Start).TotalMinutes
+            # Stall watchdog: track transcript growth. A worker that produces NO new
+            # output for $StallMinutes is wedged (hung on a model-API call) — kill + retry
+            # rather than let it sit at 0% CPU until the hard timeout.
+            $len = 0; try { $fi = Get-Item -LiteralPath $job.Transcript -ErrorAction SilentlyContinue; if ($fi) { $len = [long]$fi.Length } } catch {}
+            if ($len -gt $job.LastLen) { $job.LastLen = $len; $job.LastProgress = (Get-Date) }
+            $stalledMin = ((Get-Date) - $job.LastProgress).TotalMinutes
+            $hung     = ((-not $job.Proc.HasExited) -and ($stalledMin -ge $StallMinutes))
             $timedOut = ($elapsedMin -gt $TimeoutMinutes)
-            if ($job.Proc.HasExited -or $timedOut) {
-                if ($timedOut -and -not $job.Proc.HasExited) {
-                    Log ("TIMEOUT {0} — killing PID {1}" -f $job.Prompt.Label, $job.Proc.Id)
+            if ($job.Proc.HasExited -or $timedOut -or $hung) {
+                if (($timedOut -or $hung) -and -not $job.Proc.HasExited) {
+                    $why = if ($hung) { "stalled ${StallMinutes}m, no output" } else { "timeout > $TimeoutMinutes min" }
+                    Log ("KILL   {0} — {1} (PID {2})" -f $job.Prompt.Label, $why, $job.Proc.Id)
                     Stop-ProcessTree -ProcessId $job.Proc.Id
                     Start-Sleep -Seconds 2
                 }
                 Close-AgentProcess -Job $job.Launched
-                $res = Resolve-JobResult -Job $job -TimedOut:$timedOut
+                $res = Resolve-JobResult -Job $job -TimedOut:($timedOut -or $hung)
                 $commitSha = (git -C $job.Wt rev-parse HEAD 2>$null)
                 State @{ event='done'; idx=$job.Prompt.Index; rel=$job.Prompt.RelPath; branch=$job.Branch; green=$res.Green; reason=$res.Reason; commit=$commitSha }
+                # Detach the worker off its job branch BEFORE we merge/delete it, so the
+                # incremental `git branch -D` in Complete-Branch isn't blocked by a
+                # still-checked-out branch (git refuses to delete a branch checked out in
+                # any worktree). The job's commit is preserved on the branch ref until the
+                # merge consumes it. Worker is reset to the tip on its next dispatch anyway.
+                git -C $job.Wt switch -q --detach 2>$null
                 if ($res.Green) {
-                    $green += [PSCustomObject]@{ Branch=$job.Branch; Prompt=$job.Prompt }
-                    Log ("GREEN  [{0}] {1}" -f $job.Prompt.Index, $job.Prompt.Label) 
-                } else {
-                    $script:failCount++
-                    $script:results += [PSCustomObject]@{ Rel=$job.Prompt.RelPath; Green=$false; Reason=$res.Reason }
-                    Log ("RED    [{0}] {1} — {2}" -f $job.Prompt.Index, $job.Prompt.Label, $res.Reason)
+                    Log ("GREEN  [{0}] {1}" -f $job.Prompt.Index, $job.Prompt.Label)
+                    Complete-Branch ([PSCustomObject]@{ Branch=$job.Branch; Prompt=$job.Prompt; Deferred=$false })
+                }
+                else {
+                    $dr = $null
+                    if ($AllowDeferredBlocked -and $job.ArtifactLog -and (Test-Path $job.ArtifactLog)) {
+                        $dr = Test-LogIsDeferredBlocked $job.ArtifactLog
+                    }
+                    if ($dr -and $dr[0]) {
+                        Log ("DEFER  [{0}] {1} — sanctioned [{2}]" -f $job.Prompt.Index, $job.Prompt.Label, $dr[2])
+                        Complete-Branch ([PSCustomObject]@{ Branch=$job.Branch; Prompt=$job.Prompt; Deferred=$true; DeferCat=$dr[2]; DeferReason=$dr[1] })
+                    }
+                    elseif ((($timedOut -or $hung) -or (Test-TransientFailure -Job $job -TimedOut $timedOut)) -and (([int]$script:retryCounts[$job.Prompt.RelPath]) -lt $MaxRetries)) {
+                        $script:retryCounts[$job.Prompt.RelPath] = ([int]$script:retryCounts[$job.Prompt.RelPath]) + 1
+                        $attempt = $script:retryCounts[$job.Prompt.RelPath]
+                        $rsn = if ($hung) { "hung — ${StallMinutes}m no output" } elseif ($timedOut) { "timeout ${TimeoutMinutes}m" } else { $res.Reason }
+                        git -C $RepoRoot branch -D $job.Branch *>$null
+                        $queue.Enqueue($job.Prompt)
+                        Log ("RETRY  [{0}] {1} — {2}, attempt {3}/{4}" -f $job.Prompt.Index, $job.Prompt.Label, $rsn, $attempt, $MaxRetries)
+                        State @{ event='retry'; idx=$job.Prompt.Index; rel=$job.Prompt.RelPath; attempt=$attempt; reason=$rsn }
+                    }
+                    else {
+                        $script:failCount++
+                        $script:results += [PSCustomObject]@{ Rel=$job.Prompt.RelPath; Green=$false; Reason=$res.Reason }
+                        Log ("RED    [{0}] {1} — {2}" -f $job.Prompt.Index, $job.Prompt.Label, $res.Reason)
+                    }
                 }
                 $job.Slot.Busy = $false
             } else {
@@ -641,22 +864,6 @@ function Invoke-Wave {
             }
         }
         $running = $still
-    }
-
-    # Barrier: merge all green branches sequentially into integration (finding 2/5).
-    foreach ($g in $green) {
-        $outcome = Merge-GreenBranch -Branch $g.Branch
-        if ($outcome -eq 'merged') {
-            $script:successCount++
-            $script:results += [PSCustomObject]@{ Rel=$g.Prompt.RelPath; Green=$true; Reason='' }
-            Add-Done $g.Prompt.RelPath
-            git -C $RepoRoot branch -D $g.Branch *>$null
-        } else {
-            # Defer to sequential fixup on the merged tip.
-            $script:fixupList += $g.Prompt
-            git -C $RepoRoot branch -D $g.Branch *>$null
-            State @{ event='fixup-queued'; rel=$g.Prompt.RelPath }
-        }
     }
 }
 
@@ -667,13 +874,27 @@ foreach ($seg in $segments) {
     Write-Host (">>> {0} segment — {1} ({2} pending) <<<" -f `
         $(if ($seg.Parallel){'PARALLEL'}else{'SEQUENTIAL'}), $seg.Program, $segPend.Count) -ForegroundColor Magenta
 
+    $failBefore = $failCount
     Invoke-Wave -Items $seg.Items -Parallel:$seg.Parallel
+    $segReds = $failCount - $failBefore
 
-    # STOP between segments if this segment produced reds (a red infra prompt must
-    # block dependent segments) unless -ContinueOnRed.
-    if ($failCount -gt 0 -and -not $ContinueOnRed) {
-        Log "STOP: segment had $failCount red prompt(s). Fix + re-run with -Resume (or -ContinueOnRed)."
-        break
+    # Halt policy. With -AllowDeferredBlocked the sanctioned WinAppDriver/emulator/
+    # macOS BLOCKEDs are recorded as deferred-done, so they never reach $failCount —
+    # only a GENUINE red gets here. A red in a SEQUENTIAL segment (foundation, infra
+    # chain Wn, or the W99/A99/P99 acceptance gate) ALWAYS halts: those gate every
+    # dependent segment and must never be skipped. -ContinueOnRed only permits
+    # advancing past reds in a PARALLEL surface segment (mutually-independent pages/
+    # widgets), so one crashed widget doesn't strand the other 800.
+    if ($segReds -gt 0) {
+        if (-not $seg.Parallel) {
+            Log "STOP: SEQUENTIAL segment ($($seg.Program)) had $segReds red prompt(s) — infra/gate failure blocks all dependent segments. Fix + re-run with -Resume."
+            break
+        }
+        if (-not $ContinueOnRed) {
+            Log "STOP: PARALLEL segment had $segReds red prompt(s). Fix + re-run with -Resume, or pass -ContinueOnRed to advance past reds in surface segments only."
+            break
+        }
+        Log "CONTINUE-ON-RED: advancing past $segReds genuine red prompt(s) in PARALLEL segment $($seg.Program) — see end-of-run summary."
     }
 }
 
@@ -701,7 +922,16 @@ if ($fixupList.Count -gt 0 -and ($failCount -eq 0 -or $ContinueOnRed)) {
                 Log "FIXUP still conflicts: $($p.Label)"
             }
         } else {
-            $failCount++; $results += [PSCustomObject]@{ Rel=$p.RelPath; Green=$false; Reason="fixup: $($res.Reason)" }
+            $deferRes = if ($AllowDeferredBlocked -and $job.ArtifactLog -and (Test-Path $job.ArtifactLog)) { Test-LogIsDeferredBlocked $job.ArtifactLog } else { @($false) }
+            if ($deferRes[0]) {
+                Merge-GreenBranch -Branch $job.Branch | Out-Null
+                $successCount++; $results += [PSCustomObject]@{ Rel=$p.RelPath; Green=$true; Reason="deferred ($($deferRes[2]))" }
+                Write-DeferredCsv -Rel $p.RelPath -Cat $deferRes[2] -Reason $deferRes[1]
+                Add-Done $p.RelPath
+                Log "FIXUP deferred $($p.Label) [$($deferRes[2])]"
+            } else {
+                $failCount++; $results += [PSCustomObject]@{ Rel=$p.RelPath; Green=$false; Reason="fixup: $($res.Reason)" }
+            }
         }
         git -C $RepoRoot branch -D $job.Branch *>$null
     }
@@ -720,6 +950,8 @@ Write-Host "================================================================" -F
 Write-Host "  PARALLEL RUN FINISHED" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host "  Merged green : $successCount" -ForegroundColor Green
+$deferredDone = ($results | Where-Object { $_.Reason -like 'deferred*' }).Count
+if ($deferredDone -gt 0) { Write-Host "   of which deferred : $deferredDone (env-pending; see deferred-blocked.csv)" -ForegroundColor Yellow }
 Write-Host "  Red/failed   : $failCount" -ForegroundColor $(if ($failCount){'Red'}else{'Green'})
 Write-Host "  Skipped done : $skipCount" -ForegroundColor DarkGray
 Write-Host "  Integration  : $IntegrationBranch  (in $integWt)"
