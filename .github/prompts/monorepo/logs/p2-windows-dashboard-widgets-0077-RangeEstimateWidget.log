@@ -1,0 +1,86 @@
+=== P2 Dashboard widget 0077 RangeEstimateWidget (Windows) ===
+Run timestamp: 2026-06-10T06:42:21.1664032-07:00
+.NET SDK: 10.0.300
+
+--- [1/4] dotnet build apps/windows/TeslaSync.sln -c Release ---
+Total build error lines: 118
+RangeEstimateWidget (THIS surface) error lines: 0  <-- target surface
+Build errors grouped by code (all pre-existing, unrelated surfaces):
+    CS0246 x 70
+    CS0103 x 40
+    CS0101 x 4
+    CS0111 x 4
+Build errors grouped by file (all pre-existing, unrelated surfaces):
+    HealthOverviewTests.cs x 46
+    HealthOverview.Model.cs x 44
+    HealthRecommendations.Model.cs x 12
+    AIUsageCard.Model.cs x 8
+    HealthRecommendationsTests.cs x 8
+Representative pre-existing errors (verbatim, first 6):
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\AIUsageCard\AIUsageCard.Model.cs(279,21): error CS0101: The namespace 'TeslaSync.App.FeatureViews' already contains a definition for 'AiUsageResultMapper' [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\AIUsageCard\AIUsageCard.Model.cs(282,50): error CS0111: Type 'AiUsageResultMapper' already defines a member called 'Map' with the same parameter types [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs(359,46): error CS0246: The type or namespace name 'DrivetrainHealth' could not be found (are you missing a using directive or an assembly reference?) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs(370,45): error CS0246: The type or namespace name 'DrivetrainHealth' could not be found (are you missing a using directive or an assembly reference?) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs(381,50): error CS0246: The type or namespace name 'DrivetrainHealth' could not be found (are you missing a using directive or an assembly reference?) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs(397,39): error CS0246: The type or namespace name 'DrivetrainHealth' could not be found (are you missing a using directive or an assembly reference?) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+BUILD_EXIT=1
+
+--- [2/4] dotnet test apps/windows/TeslaSync.sln -c Release ---
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\AIUsageCard\AIUsageCard.Model.cs(279,21): error CS0101: The namespace 'TeslaSync.App.FeatureViews' already contains a definition for 'AiUsageResultMapper' [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\AIUsageCard\AIUsageCard.Model.cs(282,50): error CS0111: Type 'AiUsageResultMapper' already defines a member called 'Map' with the same parameter types [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs(79,5): error CS0246: The type or namespace name 'DrivetrainHealth' could not be found (are you missing a using directive or an assembly reference?) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs(100,9): error CS0246: The type or namespace name 'DrivetrainHealth' could not be found (are you missing a using directive or an assembly reference?) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs(109,9): error CS0246: The type or namespace name 'DrivetrainHealth' could not be found (are you missing a using directive or an assembly reference?) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs(117,9): error CS0246: The type or namespace name 'DrivetrainHealth' could not be found (are you missing a using directive or an assembly reference?) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs(359,46): error CS0246: The type or namespace name 'DrivetrainHealth' could not be found (are you missing a using directive or an assembly reference?) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+    D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs(370,45): error CS0246: The type or namespace name 'DrivetrainHealth' could not be found (are you missing a using directive or an assembly reference?) [D:\repos\teslasync-wt2\wt-05\apps\windows\TeslaSync.App.Tests\TeslaSync.App.Tests.csproj]
+TEST_EXIT=1  (whole-solution test cannot run because the App/Tests build is red on the pre-existing conflicts above; App.UITests additionally require an absent WinAppDriver runner)
+
+--- [3/4] dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+    Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0  (PASS - dotnet format verified no required changes; it logged a workspace-load warning because of the pre-existing build errors above, but still verified the formatting is clean and exited 0)
+
+--- [4/4] check-placeholders.ps1 -Path apps/windows/.../RangeEstimateWidget ---
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SURFACE-ISOLATION PROOF (RangeEstimateWidget compiled + tested against TeslaSync.App.Core + Generated) ===
+Rationale: the aggregate solution is red ONLY on pre-existing, unrelated integration conflicts in
+OTHER surfaces (Health* use an undefined 'DrivetrainHealth' type; AISettings + AIUsageCard both
+declare 'AiUsageResultMapper' in TeslaSync.App.FeatureViews). Those break the App AND aggregate Tests
+projects regardless of this widget. The full sln build above proves THIS surface contributes 0 errors.
+    Passed!  - Failed:     0, Passed:    41, Skipped:     0, Total:    41, Duration: 151 ms - TeslaSync.App.Tests.dll (net10.0)
+ISOLATION_TEST_EXIT=0  (41 headless tests: parse adapter, SI projection, result mapper, view-model state matrix, registry, diagnostics, source, a11y)
+WHITESPACE_VERIFY_EXIT=0  (LF line endings + indentation on all 4 surface files)
+
+Surface files (all CS0-error-free in the sln build, LF, no stubs):
+    RangeEstimateWidget.cs  (11673 bytes)
+    RangeEstimateWidget.Model.cs  (12599 bytes)
+    RangeEstimateWidget.Source.cs  (4953 bytes)
+    RangeEstimateWidget.ViewModel.cs  (15260 bytes)
+Test file: apps/windows/TeslaSync.App.Tests/Widgets/RangeEstimateWidgetTests.cs (41 tests)
+
+Parity summary vs web/src/features/dashboard/widgets/RangeEstimateWidget.tsx:
+  - Registry: id=range-estimate, category=battery, default 1x2, min 1x2, max 2x40, slug=RangeEstimateWidget.
+  - Data: useVehicles + useVehicleState (GET /vehicles/{vehicleID}/state) via shared P1/S8 state-holder; no HTTP in the view.
+  - SI: rated_range / ideal_range read as SI metres, converted only at the display boundary (useUnits-equivalent UnitPref + UnitConverters.DistanceFromSi).
+  - States reproduced: loading (skeleton), loaded, empty (state-null -> 'No range data'), error (retry), stale (chip), offline (cached + chip).
+  - Composition: title-less WidgetShell -> overlaid freshness chip + refresh; vertically-centred rated (bold accent-cyan) + ideal (semibold) '{value} {unit}' readouts.
+  - Web gate parity: a present zero-range state STILL renders '0 {unit}' readouts (gate is state-truthiness, not positive-range) - distinct from the sibling range-bar surface.
+  - i18n: source keys widget.ratedRange / widget.idealRange / widget.noRange resolve from the P1/S10 catalog (already present in en/ar/he); native chrome keys use localizer fallbacks.
+  - a11y: Narrator name on each readout (label + value + unit) and the refresh control; reduced-motion-aware skeleton; view.opened diagnostics with slug=RangeEstimateWidget.
+
+=== HONESTY COVENANT VERDICT ===
+Rule 1 (No red-as-green): the whole-solution build/test/format is RED, so this is NOT reported DONE.
+Rule 2 (No scope narrowing) / Rule 6 (No delegation): the RangeEstimateWidget surface is fully implemented (4 files) + tested (41) + format-clean + placeholder-clean, and compiles with ZERO errors in the full sln build.
+The red is 100% PRE-EXISTING and UNRELATED to this artifact's allowed files:
+  * CS0246/CS0103 'DrivetrainHealth' undefined  -> HealthOverview / HealthRecommendations surfaces (+ their tests).
+  * CS0101/CS0111 'AiUsageResultMapper' duplicate -> AISettings + AIUsageCard surfaces both declare it in TeslaSync.App.FeatureViews.
+  * App.UITests additionally require an absent WinAppDriver/Appium runner (the same gap that BLOCKED sibling 0076 RangeBarWidget).
+Fixing those is outside this prompt's allowed files (RangeEstimateWidget.* + this log) and would mean editing other teams' surfaces / deciding type ownership.
+Platform capability (build WinUI 3 / Windows App SDK + .NET 10) IS present: TeslaSync.App.Core + Generated + the isolation probe build and 41/41 tests pass.
+
+EXIT=1
+STATUS=BLOCKED
