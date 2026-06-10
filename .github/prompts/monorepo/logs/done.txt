@@ -343,3 +343,4 @@ p2-windows/feature-views/W-0161-TemperatureMetricCards.prompt.md
 p2-windows/feature-views/W-0164-TorqueHistoryChart.prompt.md
 p2-windows/feature-views/W-0163-ThermalLoadPanel.prompt.md
 p2-windows/feature-views/W-0166-DriveAnalyticsSection.prompt.md
+p2-windows/feature-views/W-0171-MotorEfficiencyInsights.prompt.md
