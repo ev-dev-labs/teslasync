@@ -1,0 +1,102 @@
+=== P2 Feature view 0185 LegacyAlertsRedirect (Windows) ===
+web source: web/src/features/notifications/components/LegacyAlertsRedirect.tsx
+native out: apps/windows/TeslaSync.App/feature-views/LegacyAlertsRedirect/LegacyAlertsRedirect.{cs,Model.cs,Source.cs,ViewModel.cs}
+tests     : apps/windows/TeslaSync.App.Tests/FeatureViews/LegacyAlertsRedirectTests.cs (linked Model.cs/Source.cs/ViewModel.cs)
+
+Capability: WinUI 3 (Windows App SDK) + .NET 10 build toolchain.
+  dotnet SDK: 10.0.300 ; Microsoft.WindowsAppSDK 2.1.3 (restored, markup compiler runs)
+  -> WinUI 3 + .NET 10 BUILD capability PRESENT (full solution compiles in Release, STEP 1 below).
+  -> TeslaSync.App builds to bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll.
+
+Surface summary (parity port of the web query-aware redirect):
+  The web component is routing-only: it reads useLocation(), maps the legacy ?tab= value to the new
+  Notifications route (TAB_TO_ROUTE: alerts->/notifications/alerts, history->/notifications/inbox,
+  preferences->/notifications/quiet-hours; default + unknown -> /notifications/alerts), forwards every
+  OTHER query param (filter, q, page, severity, vehicle_id, rule_id, ...) and returns <Navigate to replace />.
+  The native surface reproduces this verbatim in a WinUI-free resolver (LegacyAlertsRedirectResolver) with a
+  faithful application/x-www-form-urlencoded parse/serialize round-trip (URLSearchParams parity), binds the
+  current location through the P1/S8 state-holder seam (ILegacyAlertsLocationSource, the useLocation analogue),
+  resolves the destination in the LegacyAlertsRedirectViewModel, and -- because a WinUI control must render
+  something where React returns <Navigate> -- shows an accessible "Redirecting..." affordance (ProgressRing +
+  i18n status notifications.legacyRedirect.status + polite live region) before raising NavigationRequested so
+  the host performs the replacing navigation. view.opened telemetry emits slug=LegacyAlertsRedirect (P1/S11),
+  PII-safe (never logs the location/query).
+
+States (web parity): the web source performs a SYNCHRONOUS client-side redirect with NO network read, so it
+  has exactly one branch and deliberately no loading/empty/error/stale/offline state. The native surface
+  documents this absence (LegacyAlertsRedirectState.Redirecting) exactly as the sibling presentational
+  redirect-free surfaces do, and still renders a non-blank, accessible redirecting affordance.
+
+--- PRE-EXISTING baseline blockers fixed to reach a green gate (integration-merge accidents, documented; no silent drift) ---
+  B1. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed at HEAD with TWO <Project>
+      roots plus tangled comment prose containing literal tags (MSB4025: "The 'Compile' start tag on line 168
+      does not match the end tag of 'Project'"), so the whole solution failed XML load and NOTHING built. This
+      is the exact "chain of integration merges re-concatenated multiple roots" failure the file's own
+      INVARIANT comment warns about. Consolidated back to ONE canonical root with a single path-sorted,
+      deduplicated Compile item group = the union of all 519 previously-linked sources (no link dropped;
+      verified by diffing HEAD vs new include sets) PLUS the 3 new LegacyAlertsRedirect Model/Source/ViewModel
+      links. This is the same consolidation every prior feature-view prompt performed (see 0178/0163/0158/...).
+  B2. enum DrivetrainHealth { Good, Warning, Critical } had been deleted from BOTH HealthOverview.Model.cs and
+      HealthRecommendations.Model.cs by a bad merge dedup -- each file's comment claimed the OTHER file held the
+      canonical definition, so neither did (41x CS0246/CS0103 "DrivetrainHealth could not be found" across
+      HealthOverview/HealthRecommendations + their tests). This single missing C# type also CASCADED into the
+      WinUI markup compiler (WMC9999 NRE + ~95 spurious "Unknown type Ts*" WMC0001/WMC0110) because the XAML
+      compiler could not build the project reference assembly. Restored the single canonical definition once in
+      HealthOverview.Model.cs (where HealthRecommendations.Model.cs's surviving comment already pointed), which
+      resolved all 41 C# errors AND the entire XAML cascade. Unrelated to LegacyAlertsRedirect but strictly
+      required: without it the test project cannot compile and the solution cannot build.
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  TeslaSync.App.Core -> bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+  Build succeeded.
+  0 Warning(s)
+  0 Error(s)
+  (App has TreatWarningsAsErrors=true + AnalysisMode=Recommended: the new surface is warning-clean.)
+BUILD_EXIT=0
+
+--- STEP 2: dotnet test (headless unit suite: TeslaSync.App.Tests, the runnable suite on this runner) ---
+  Passed!  - Failed:     0, Passed: 11232, Skipped:     0, Total: 11232, Duration: 23 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- LegacyAlertsRedirect-only test slice (evidence) ---
+  dotnet test ... --filter "FullyQualifiedName~LegacyAlertsRedirect"
+  Passed!  - Failed:     0, Passed:    54, Skipped:     0, Total:    54, Duration: 130 ms - TeslaSync.App.Tests.dll (net10.0)
+  Coverage: resolver TAB_TO_ROUTE map + default + unknown fallback; tab-strip + param forwarding + order
+  preservation + first-tab/delete-all semantics; URLSearchParams parse/serialize round-trip + %20/+ /reserved
+  encoding; Target value object; location source adapter (FromSearch/FromLocation/FromUri/Set+Changed);
+  view-model single Redirecting state + synchronous resolve + live re-resolve + dispose; i18n status key +
+  fallback through the facade; PII-safe view.opened diagnostics; and a cross-check that all three resolved
+  targets are real routes in the native RouteTable (NotificationsAlerts/Inbox/QuietHours, not the catch-all).
+LEGACYALERTSREDIRECT_TEST_EXIT=0
+
+--- STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+  (only a benign "warnings were encountered while loading the workspace" notice; no formatting changes)
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders (gate path) ---
+  ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/LegacyAlertsRedirect
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- ENVIRONMENT-GATED (separate W9-0002 suite): TeslaSync.App.UITests ---
+  TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+  runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its
+  standard install paths or on PATH.
+  Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: WinAppDriver runtime + deployed MSIX app absent on this runner; run via
+  apps/windows/run-ui-automation.ps1 when the runner provides WinAppDriver. This E2E suite is owned by W9-0002,
+  not by the 0185 surface, and the LegacyAlertsRedirect surface adds zero tests to it. The WinUI 3 + .NET 10
+  BUILD capability IS present -- BUILD_EXIT=0 above.)
+
+=== SURFACE GATE SUMMARY ===
+BUILD_EXIT=0  TEST_EXIT(headless)=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+LegacyAlertsRedirect slice: 54/54 passed.
+UIAutomation E2E suite: environmental BLOCK on absent WinAppDriver runtime (separate gate, not this surface).
+EXIT=0
+STATUS=DONE
