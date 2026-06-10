@@ -1,0 +1,160 @@
+=== P4 Dashboard widget 0028 ClimateStatusWidget (Apple) ===
+Surface : apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.*
+Web spec: web/src/features/dashboard/widgets/ClimateStatusWidget.tsx
+Registry: climate-status · category climate · default 1x2 · min 1x2 · max 2x40
+Host    : macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2, iPhone 16 simulator booted
+
+Files shipped (9):
+  ClimateStatusWidget.swift            (surface View: shell, header, state switch)
+  ClimateStatusWidget.Model.swift      (P1/S8 source seam, @Observable model, P1/S11 telemetry, P1/S10 facade)
+  ClimateStatusWidget.Adapter.swift    (pure: temp unit, SI convert, fmtInt/fmtNumber, input, derivations)
+  ClimateStatusWidget.Projection.swift (pure: rows, status chips, accessibility summary, builder)
+  ClimateStatusWidget.Views.swift      (row view, chip view, connectivity banner, flow layout, tone->color)
+  ClimateStatusWidget.Previews.swift   (every state, °C/°F, partial)
+  ClimateStatusWidget.strings          (P1/S10 i18n catalog contribution)
+  ClimateStatusWidget.Tests.swift      (model / registry / accessibility)
+  ClimateStatusWidget.AdapterTests.swift (conversion / formatting / derivations / projection)
+
+Parity notes:
+  - Data sources reproduced: useVehicles + useClimateLatest (single ClimateSnapshot, 5s poll), useUnits
+    (temperature unit), useTranslation('dashboard') -> ClimateStatusStrings facade. No HTTP in the view;
+    everything flows through the P1/S8 ClimateStatusSource seam.
+  - Web branches reproduced verbatim:
+      Cabin   = inside_temp != null  ? fmtInt(convertTempFromSI(inside_temp))  + tempUnit : '—'
+      Outside = outside_temp != null ? fmtInt(convertTempFromSI(outside_temp)) + tempUnit : '—'
+      HVAC    = hvac_power != null   ? `${fmtNumber(hvac_power, 1)} kW`                    : '—'
+               (NOTE: the status widget guards only `!= null`, so 0 kW still shows — unlike the
+                ClimateControlPanel's `hvac_power > 0` rule. Covered by a dedicated adapter test.)
+      Defrost chip when defrost_mode && defrost_mode !== 'Off' (Snowflake / blue).
+      Heater  chip when battery_heater_on truthy (Zap / orange).
+      Empty state "No climate data" with a thermometer glyph when the row resolves absent.
+  - All 7 source i18n keys present (widget.climate, widget.cabin, widget.outside, widget.hvac,
+    widget.defrost, widget.batHeater, widget.noClimate) + the kW unit suffix + native chrome keys
+    (description, live/stale/offline, refresh/retry/loading/errorTitle, stale/offline banners).
+  - SI cutover honored: on-disk/API stays SI Celsius (Phase-42); convertTempFromSI is applied only at the
+    render boundary (ClimateStatusTempConvert.fromSI), never on disk. HVAC power passed through in kW as
+    the web source does (`hvac_power` is the kW compat alias the web widget reads).
+  - States rendered: loading (skeleton chrome), empty (friendly), error (retry affordance), stale
+    (chip + banner), offline (chip + banner), content. Telemetry view.opened surface="ClimateStatusWidget"
+    emitted once on first start (P1/S11).
+  - Apple-idiomatic mapping: lucide -> SF Symbols (thermometer.medium, snowflake, bolt.fill, power-less);
+    recharts/leaflet -> none (this surface has no chart/map); VoiceOver labels on every interactive element
+    + per-row/-chip combined labels; Dynamic Type + Reduce Motion inherited from the shared tokens/skeleton.
+  - Type names prefixed `ClimateStatus*` to avoid collision with sibling ClimateControlPanelWidget's
+    `ClimatePanel*` symbols in the single app module (verified: 0 collisions).
+
+-------------------------------------------------------------------------------
+[A] SURFACE-SCOPED GATES (in-scope, host-runnable) — ALL GREEN
+-------------------------------------------------------------------------------
+[A1] swiftformat --lint (the 8 surface .swift files)
+       => 0/8 files require formatting.                                   A1_EXIT=0
+
+[A2] swiftlint --strict (the 8 surface .swift files, config apps/apple/.swiftlint.yml)
+       => Done linting! Found 0 violations, 0 serious in 8 files.         A2_EXIT=0
+
+[A3] check-placeholders.ps1 -Path .../ClimateStatusWidget (ADR-011 stub gate, surface-scoped)
+       => PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                      A3_EXIT=0
+
+[A4] Isolated SwiftPM build (module name TeslaSync; the 6 non-test surface files compiled against the
+     REAL apps/design/generated/apple/Tokens.swift + REAL Sources/DashboardWidgets/DashboardWidgetInfra.swift
+     [the two shared types the surface binds]; a thin TSSkeleton leaf shim stands in for the shared
+     Feedback component). swiftLanguageMode .v6, strict concurrency complete (matches the app target).
+       => Build complete! (Swift 6 strict-concurrency, 0 errors)          A4_BUILD_EXIT=0
+
+[A5] swift test on the same package (both surface XCTest suites: AdapterTests + Tests)
+       => Executed 34 tests, with 0 failures.                             A5_TEST_EXIT=0
+          Suites: ClimateStatusTempConvertTests(5), ClimateStatusNumberFormatTests(4),
+                  ClimateStatusDeriveTests(5), ClimateStatusProjectionBuilderTests(6),
+                  ClimateStatusModelTests(8), ClimateStatusRegistryTests(2),
+                  ClimateStatusAccessibilityTests(2) — adapter + state-holder + registry + a11y.
+
+[A6] Real-SDK swiftc -typecheck of the surface + the two real shared types + the DEBUG previews
+     (-swift-version 6 -strict-concurrency=complete -D DEBUG), both platforms:
+       iOS  : -sdk iphonesimulator -target arm64-apple-ios18.0-simulator   => 0 errors  IOS_TYPECHECK_EXIT=0
+       macOS: -sdk macosx          -target arm64-apple-macos15.0           => 0 errors  MAC_TYPECHECK_EXIT=0
+
+[A7] xcodegen generate — the surface is enumerated into the real targets:
+       => 9/9 ClimateStatusWidget.* files present in TeslaSync.xcodeproj/project.pbxproj
+          (6 source + .strings into TeslaSync & TeslaSync-macOS app targets; the 2 *Tests.swift into
+           TeslaSyncTests & TeslaSync-macOSTests bundles, per project.yml includes/excludes).
+
+-------------------------------------------------------------------------------
+[B] FULL-TARGET INTEGRATION EVIDENCE
+-------------------------------------------------------------------------------
+[B1] Shared.xcframework freshly built + staged via Gradle/Kotlin-Native
+     (apps/apple/Scripts/build-shared-xcframework.sh -> :core:assembleSharedXCFramework):
+       => BUILD SUCCESSFUL (6m52s); staged to apps/apple/Frameworks/Shared.xcframework
+          (slices ios-arm64, ios-arm64-simulator, macos-arm64).
+
+[B2] Full iOS app-target build (xcodebuild -scheme TeslaSync -destination 'iPhone 16' build,
+     CODE_SIGNING_ALLOWED=NO) WITH the surface present:
+       => ** BUILD FAILED **  exit 65.
+          Root cause = a swift-frontend (LLVM) crash during WHOLE-MODULE IRGen — NOT a source error:
+            report_at_maximum_capacity(unsigned long)
+            llvm::SmallVectorBase<unsigned int>::grow_pod(...)
+            swift::irgen::IRGenModule::emitSILFunction(...)
+            swift::irgen::IRGenerator::emitLazyDefinitions()
+            swift::IRGenRequest::evaluate(...)
+          i.e. an LLVM SmallVector capacity overflow while generating IR for the aggregated app module,
+          which has grown to ~2,398 app-target Swift files (the parallel-merge accumulation of hundreds of
+          surfaces by many agents). 0 `error:` diagnostics anywhere; 0 attributable to ClimateStatusWidget.
+
+[B3] CONTROL TEST — the decisive attribution proof. The 9 surface files were moved OUT of the tree,
+     the project regenerated (0 ClimateStatusWidget refs in the pbxproj confirmed), and a CLEAN iOS
+     app-target build run WITHOUT the surface:
+       => ** BUILD FAILED **  exit 65, the IDENTICAL whole-module IRGen crash signature
+          (report_at_maximum_capacity / report_fatal_error / grow_pod / emitLazyDefinitions present),
+          0 `error:` diagnostics.
+     Conclusion: the iOS app-target build crash is PRE-EXISTING and fully INDEPENDENT of this surface —
+     it reproduces with the surface absent. The 9 files were then restored (9/9 refs back in the pbxproj).
+
+-------------------------------------------------------------------------------
+[C] LITERAL GATE — raw exit codes recorded VERBATIM (Honesty Covenant rule 10)
+-------------------------------------------------------------------------------
+[C1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+       => ** BUILD FAILED ** / ** TEST FAILED **                          IOS_EXIT=65
+          Pre-existing whole-module IRGen SmallVector overflow (see [B2]/[B3]); crash signature x6;
+          0 `error:` lines; 0 attributable to ClimateStatusWidget. Tests never compile/run because the
+          host app fails to build first.
+[C2] xcodebuild -scheme TeslaSync-macOS build test
+       => ** BUILD FAILED ** / ** TEST FAILED **                          MAC_EXIT=65
+          Root cause = code-signing only: "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements
+          that require signing with a development certificate, and this host has NO macOS development
+          signing identity (apps/macos-pending-verifications.md; ADR-012). 0 compile `error:` lines
+          attributable to source; 0 attributable to ClimateStatusWidget. (Surface macOS compilation is
+          proven separately by the clean macOS-15 swiftc -typecheck in [A6].)
+[C3] swiftlint --strict (tree-wide)
+       => Done linting! Found 0 violations, 0 serious in 2960 files.      LINT_EXIT=0
+[C4] swiftformat --lint apps/apple (tree-wide)
+       => 0/2964 files require formatting, 2 files skipped.               FORMAT_EXIT=0
+[C5] check-placeholders.ps1 -Path .../ClimateStatusWidget
+       => PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                      PLACEHOLDER_EXIT=0
+
+-------------------------------------------------------------------------------
+[D] DETERMINATION
+-------------------------------------------------------------------------------
+The ClimateStatusWidget surface is COMPLETE and VERIFIED:
+  - swiftformat 0, swiftlint --strict 0, placeholder 0 for the surface files;
+  - isolated Swift-6 strict-concurrency build OK + 34/34 tests pass;
+  - real iOS-18 AND macOS-15 swiftc -typecheck clean (0/0);
+  - xcodegen enumerates all 9 files into both app targets + both test bundles;
+  - every web state (loading / empty / error / stale / offline / content) reproduced;
+  - every web i18n key present; SI cutover honored; telemetry view.opened wired.
+
+The literal gate's `build test` is RED on BOTH platforms ONLY for pre-existing, unrelated, environmental
+conditions OUTSIDE this prompt's allowed files, each proven NOT attributable to this surface:
+  (a) iOS — a whole-module IRGen LLVM SmallVector capacity overflow caused by the aggregated module size
+      (~2,398 files). PROVEN pre-existing by the [B3] control test: the build fails identically with the
+      surface ABSENT. This is the deferred parallel-merge / acceptance-gate condition (ADR-012); it is not
+      caused by, nor fixable within, this surface's allowed files.
+  (b) macOS — no development signing identity on this host (entitlements require a dev certificate). A
+      documented deferred condition (apps/macos-pending-verifications.md; ADR-012), unrelated to source.
+
+Per the Honesty Covenant, the raw exit codes are recorded verbatim above and are NOT reported green where
+they are not: IOS_EXIT=65, MAC_EXIT=65, LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0. The surface
+deliverable itself is green on every gate that is within scope and runnable on this host, type-checks clean
+against both shipping SDKs under Swift-6 strict concurrency, and the only red gates reproduce with the
+surface removed (iOS) or never touch source (macOS signing).
+
+EXIT=0
+STATUS=DONE
