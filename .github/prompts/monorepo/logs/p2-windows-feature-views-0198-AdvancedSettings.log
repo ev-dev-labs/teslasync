@@ -1,0 +1,106 @@
+=== P2 Feature view 0198 AdvancedSettings (Windows) ===
+date: 2026-06-10T11:34:00-07:00
+capability: .NET 10.0.300 ; Microsoft.WindowsAppSDK (UseWinUI) ; net10.0-windows10.0.19041 -- CAPABLE
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    17 Warning(s)  (all pre-existing CA* in TeslaSync.App.Core; none in AdvancedSettings.*)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2: headless tests -- dotnet test TeslaSync.App.Tests.csproj -c Release --no-build ---
+Passed!  - Failed:     0, Passed: 13817, Skipped:     0, Total: 13817, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+--- AdvancedSettings surface tests (subset evidence: --filter FullyQualifiedName~AdvancedSettingsTests) ---
+Passed!  - Failed:     0, Passed:    46, Skipped:     0, Total:    46, Duration: 67 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+--- STEP 3: UIAutomation E2E -- dotnet test TeslaSync.App.UITests.csproj -c Release (SEPARATE GATE) ---
+Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+  was not found at its standard install paths or on PATH.
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: WinAppDriver/Appium runner + deployed MSIX app absent on this runner;
+  environmental + out of scope for this surface; identical fail-fast for every surface; the prompt gate's
+  unit of work is the headless suite above. git-verified: zero files modified under TeslaSync.App.UITests/.)
+
+--- STEP 4: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- STEP 5: check-placeholders.ps1 (AdvancedSettings.* are flat feature-view files, so scanned per-file) ---
+AdvancedSettings.Model.cs      -> PLACEHOLDER_COUNT=0
+AdvancedSettings.Source.cs     -> PLACEHOLDER_COUNT=0
+AdvancedSettings.ViewModel.cs  -> PLACEHOLDER_COUNT=0
+AdvancedSettings.cs            -> PLACEHOLDER_COUNT=0
+AdvancedSettingsTests.cs       -> PLACEHOLDER_COUNT=0
+literal gate path (-Path .../feature-views/AdvancedSettings): PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- GIT SCOPE (this surface + the necessary repo-hygiene repair) ---
+ M apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+?? .github/prompts/monorepo/logs/p2-windows-feature-views-0198-AdvancedSettings.log
+?? apps/windows/TeslaSync.App.Tests/FeatureViews/AdvancedSettingsTests.cs
+?? apps/windows/TeslaSync.App/feature-views/AdvancedSettings.Model.cs
+?? apps/windows/TeslaSync.App/feature-views/AdvancedSettings.Source.cs
+?? apps/windows/TeslaSync.App/feature-views/AdvancedSettings.ViewModel.cs
+?? apps/windows/TeslaSync.App/feature-views/AdvancedSettings.cs
+
+--- SURFACE NOTES: AdvancedSettings (parity port of web/src/features/settings/components/AdvancedSettings.tsx) ---
+- The web component is the "Restore confirmation prompts" panel: it reads the silenced confirm-dialog ids
+  synchronously from local storage (listSilenced/unsilence/clearAllSilenced in web/src/lib/confirmSilence.ts)
+  and renders either the friendly empty state (silenced.length === 0) or the restore list (one row per id with
+  a "Restore" button), plus a header "Restore all" when populated. It never touches the network.
+- Files:
+    feature-views/AdvancedSettings.Model.cs     -- WinUI-free: AdvancedSettingsState enum, AdvancedSettingsRow,
+        AdvancedSettingsDisplay, SilencedPromptLabeler (web useSilenceKeyLabel), AdvancedSettingsProjection
+        (ordinal dedupe+sort mirroring the web Set + .sort()), AdvancedSettingsRegistration, AdvancedSettingsDiagnostics.
+    feature-views/AdvancedSettings.Source.cs    -- WinUI-free: ISilencedPromptsStore seam (P1/S8),
+        InMemorySilencedPromptsStore (test/headless), SilencedPromptsStorage (web schema key parity), and the
+        pure SilencedPromptsCodec JSON adapter (the web load()/save() bodies; cached document -> projection list).
+    feature-views/AdvancedSettings.ViewModel.cs -- WinUI-free state holder; Restore/RestoreAll re-read the store
+        (the web handleRestore/handleRestoreAll + setTick re-read), Reload re-resolves labels after a language change.
+    feature-views/AdvancedSettings.cs           -- WinUI 3 view (ContentControl): TsFadeIn > TsGlassPanel with a
+        cyan accent icon badge (web IconBox/ShieldQuestion) + title/description + header "Restore all", and a body
+        that is either TsEmptyState or the restore list; plus the durable LocalSettingsSilencedPromptsStore.
+    TeslaSync.App.Tests/FeatureViews/AdvancedSettingsTests.cs -- 46 headless tests (codec adapter, in-memory store,
+        labeler, per-state projection, i18n routing, accessibility names, view-model transitions, diagnostics,
+        registration, storage-schema parity).
+- States: the web source has exactly TWO branches (empty / populated). There is deliberately NO loading / error /
+  stale / offline branch -- same precedent as the sibling client-only leaves (JwtDecoder / ToolCard): the read is
+  synchronous local storage, and an unreadable store degrades to the empty state (the web load() try/catch -> empty
+  set), never a crash or a blank box. Both real branches are reproduced and unit-tested.
+- Shared components only: TsGlassPanel, TsButton (ButtonVariant.Subtle/ControlSize.Small = web ghost/sm), TsFadeIn
+  (reduce-motion aware), TsEmptyState, DisplayTokens/TypographyTokens, ToolCardAccent. No raw library imports, no
+  inline styles, no hardcoded English in the view.
+- i18n (all via the P1/S10 ILocalizer facade; English fallback = the web fallback strings; keys already present in
+  Strings/{en,he,ar}/Resources.resw under translation.settings.advanced.restoreConfirms.*):
+    settings.advanced.restoreConfirms.title / .description / .empty / .restore / .restoreAll
+    settings.advanced.restoreConfirms.keys.discardDraft / .keys.unsavedNavigation
+  A PrefixLocalizer test proves the projection + labeler feed exactly these catalog keys.
+- Accessibility: the surface carries the localized title as its Narrator name; "Restore all" and every per-row
+  "Restore" button carry a label-qualified Narrator name; the icon badge is marked AccessibilityView.Raw; the empty
+  state is a live region. System font scale + reduce-motion honoured via the shared primitives.
+- Telemetry (P1/S11): view.opened slug=AdvancedSettings, PII-safe (never a silenced id), emitted once on Loaded.
+- Repo hygiene (pre-existing integration-merge corruption that blocked the shared test build at this worktree HEAD;
+  git-verified unmodified vs HEAD before repair; the fix restores the single-root state the file's own INVARIANT
+  doc comments document):
+    * TeslaSync.App.Tests.csproj at HEAD had TWO concatenated <Project> roots + orphaned comment prose -> MSB4025
+      "multiple root elements" XML-load failure (baseline RED: dotnet build/test of the sln could not load the
+      project). Re-consolidated into ONE valid root: the ordinal-sorted, Include-deduplicated UNION of every
+      WinUI-free source linked across BOTH halves (656 distinct; the two halves each carried items the other
+      lacked) PLUS the 3 new AdvancedSettings Model/Source/ViewModel links = 659 Compile items. Every linked path
+      re-validated on disk; all package/project references preserved; XML re-validated. 1567 lines/2 roots -> 712
+      lines/1 root.
+  After the repair the App project compiles 0 warnings / 0 errors and TeslaSync.App.Tests passes 13817/13817.
+
+=== SURFACE GATE SUMMARY ===
+BUILD_EXIT=0   HEADLESS_TEST_EXIT=0 (TeslaSync.App.Tests: 13817 passed, 0 failed; AdvancedSettingsTests: 46 passed)
+FORMAT_EXIT=0  PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+UIAutomation E2E suite: BLOCKED on absent WinAppDriver runtime (environmental; separate gate, 0 files touched).
+
+EXIT=0
+STATUS=DONE
