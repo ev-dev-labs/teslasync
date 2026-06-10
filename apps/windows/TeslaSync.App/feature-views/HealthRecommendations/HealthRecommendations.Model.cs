@@ -5,25 +5,9 @@ using TeslaSync.App.Core.Notifications;
 
 namespace TeslaSync.App.FeatureViews;
 
-/// <summary>
-/// The overall drivetrain health level the surface reasons about — the native union of the web
-/// <c>HealthStatus</c> (<c>'good' | 'warning' | 'critical'</c>) read off
-/// <c>GET /drivetrain/health</c>'s <c>overall_health</c> field
-/// (web/src/features/driving/components/drivetrain-health/constants.ts). It is the single input the web
-/// <c>HealthRecommendations</c> component receives as a prop and the only thing that shapes the derived
-/// recommendation list.
-/// </summary>
-public enum DrivetrainHealth
-{
-    /// <summary>Temperatures normal — only the evergreen low-priority tips show (web <c>'good'</c>).</summary>
-    Good,
-
-    /// <summary>Elevated temperatures — the medium-priority tips are added (web <c>'warning'</c>).</summary>
-    Warning,
-
-    /// <summary>Critically high temperatures — the high-priority tips lead the list (web <c>'critical'</c>).</summary>
-    Critical,
-}
+// DrivetrainHealth (Good / Warning / Critical) is defined once for the TeslaSync.App.FeatureViews namespace
+// in HealthOverview.Model.cs; HealthRecommendations consumes that single canonical definition rather than
+// redeclaring it (a duplicate declaration broke the whole-solution build with CS0101).
 
 /// <summary>
 /// The urgency of a single recommendation — the native mirror of the web

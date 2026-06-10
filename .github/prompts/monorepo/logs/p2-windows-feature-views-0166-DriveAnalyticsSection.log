@@ -1,0 +1,43 @@
+=== P2 Feature view 0166 DriveAnalyticsSection (Windows) ===
+run: 2026-06-09T19:19:24.3579572-07:00
+
+Capability: WinUI 3 (Windows App SDK) + .NET 10 build toolchain.
+  dotnet SDK: 10.0.300
+  -> WinUI 3 + .NET 10 BUILD capability PRESENT (solution builds Release, below).
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  Build succeeded.
+  0 Warning(s)
+  0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2: dotnet test (headless unit suite: Category!=UIAutomation) ---
+  (the runnable suite on this runner; includes the full DriveAnalyticsSection adapter/projection/state/a11y/source/diagnostics tests)
+  Passed!  - Failed:     0, Passed: 10721, Skipped:     0, Total: 10721, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- DriveAnalyticsSection-only test slice (evidence) ---
+  Passed!  - Failed:     0, Passed:    43, Skipped:     0, Total:    43, Duration: 486 ms - TeslaSync.App.Tests.dll (net10.0)
+DRIVEANALYTICS_TEST_EXIT=0
+
+--- STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+  format diagnostics: 0
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders (gate path) ---
+PLACEHOLDER_EXIT=0
+  (meaningful re-scan of the shipped surface files:)
+  PLACEHOLDER_COUNT(DriveAnalyticsSection)=0 (no TODO/FIXME/XXX/Placeholder/stub/Lorem/not-implemented)
+
+--- ENVIRONMENT-GATED (separate W9-0002 suite): Category=UIAutomation ---
+  Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 165 ms - TeslaSync.App.UITests.dll (net10.0)
+  reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: WinAppDriver runtime + deployed MSIX app absent on this runner;
+  run via apps/windows/run-ui-automation.ps1 when the runner provides WinAppDriver. This E2E suite is
+  owned by W9-0002, not by the 0166 surface, and adds zero tests from this surface.)
+
+=== SURFACE GATE SUMMARY ===
+BUILD_EXIT=0  TEST_EXIT(headless)=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+UIAutomation E2E suite: BLOCKED on absent WinAppDriver runtime (environmental; separate gate).
+EXIT=0
+STATUS=DONE
