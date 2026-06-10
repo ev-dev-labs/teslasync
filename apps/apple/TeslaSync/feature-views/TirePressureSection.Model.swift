@@ -1,19 +1,19 @@
 //
 //  TirePressureSection.Model.swift
-//  TeslaSync — P4 feature view · 0151 · TirePressureSection (Apple)
+//  TeslaSync — P4 feature view · 0299 · TirePressureSection (Apple)
 //
 //  State-holder seam (P1/S8) + telemetry seam (P1/S11 diagnostics) + i18n facade
-//  (P1/S10) for the drive-detail "Tire Pressure During Drive" surface. The view binds
-//  through `TirePressureSectionModel`; no networking lives in the view. SwiftUI parity
-//  of features/driving/components/drive-detail/TirePressureSection.tsx.
+//  (P1/S10) for the vehicle-detail "Tire Pressure" surface. The view binds through
+//  `TirePressureSectionModel`; no networking lives in the view. SwiftUI parity of
+//  web/src/features/vehicles/components/vehicle-detail/TirePressureSection.tsx.
 //
-//  The web component receives `chartData` + `stats` as props derived by the parent
-//  drive-detail page (`useDriveDetailData`), and the parent owns the `isLoading` /
-//  error / freshness lifecycle. The native surface reproduces that whole lifecycle
-//  through a `TirePressureSectionSource` so every prompt-required state (loading /
-//  empty / error / stale / offline / content) renders here. Each snapshot also carries
-//  the display unit + locale the web `useUnits()` resolves, so the same preference is
-//  honored at the native render boundary.
+//  The web component receives `tireData: TirePressureSnapshot | null | undefined` as a
+//  prop from the parent vehicle-detail page, which owns the `isLoading` / error /
+//  freshness lifecycle. The native surface reproduces that whole lifecycle through a
+//  `TirePressureSectionSource` so every prompt-required state (loading / empty / error /
+//  stale / offline / content) renders here. Each snapshot also carries the display unit
+//  + locale the web `useUnits()` resolves, so the same preference is honored at the
+//  native render boundary.
 //
 
 import Foundation
@@ -64,12 +64,12 @@ public enum TPSectionStrings {
 
 // MARK: - Source snapshot
 
-/// One coalesced snapshot pushed by a `TirePressureSectionSource`: the SI telemetry
-/// samples + their load status + the display unit / locale (web `useUnits()`) + the
-/// live-state connection + the last-update timestamp.
+/// One coalesced snapshot pushed by a `TirePressureSectionSource`: the SI tire reading
+/// (or `nil` when none is available) + its load status + the display unit / locale (web
+/// `useUnits()`) + the live-state connection + the last-update timestamp.
 public struct TPSectionUpdate: Sendable, Equatable {
     public var status: TPSectionLoadStatus
-    public var samples: [TPSectionSample]
+    public var snapshot: TPSectionSnapshot?
     public var unit: TPSectionUnit
     public var localeIdentifier: String
     public var connection: TPSectionConnection
@@ -78,7 +78,7 @@ public struct TPSectionUpdate: Sendable, Equatable {
 
     public init(
         status: TPSectionLoadStatus = .loading,
-        samples: [TPSectionSample] = [],
+        snapshot: TPSectionSnapshot? = nil,
         unit: TPSectionUnit = .kpa,
         localeIdentifier: String = "en_US",
         connection: TPSectionConnection = .live,
@@ -86,7 +86,7 @@ public struct TPSectionUpdate: Sendable, Equatable {
         updatedAt: Date? = nil
     ) {
         self.status = status
-        self.samples = samples
+        self.snapshot = snapshot
         self.unit = unit
         self.localeIdentifier = localeIdentifier
         self.connection = connection
@@ -98,8 +98,8 @@ public struct TPSectionUpdate: Sendable, Equatable {
 // MARK: - State-holder seam (P1/S8 layer)
 
 /// The seam the view binds through. The production app implements this over the shared
-/// P1/S8 state holders — composing the drive-detail query the web page reads and
-/// mapping its telemetry into SI `TPSectionSample`s alongside the resolved unit
+/// P1/S8 state holders — composing the vehicle tire-pressure query the web page reads
+/// and mapping its snapshot into a SI `TPSectionSnapshot` alongside the resolved unit
 /// preference. Previews + tests use `InMemoryTPSectionSource`. The view never talks to
 /// the network directly.
 @MainActor
@@ -114,9 +114,9 @@ public protocol TirePressureSectionSource: AnyObject {
 // MARK: - State holder (P1/S8)
 
 /// The surface's observable view-model. Subscribes to a `TirePressureSectionSource`,
-/// projects each snapshot into the converted, view-ready `TPSectionProjection`,
-/// exposes a render `TPSectionPhase` + freshness for SwiftUI to switch over, and emits
-/// the `view.opened` diagnostics event once on first appearance.
+/// projects each snapshot into the converted, view-ready `TPSectionProjection`, exposes
+/// a render `TPSectionPhase` + freshness for SwiftUI to switch over, and emits the
+/// `view.opened` diagnostics event once on first appearance.
 @MainActor
 @Observable
 public final class TirePressureSectionModel {
@@ -141,14 +141,14 @@ public final class TirePressureSectionModel {
         source.onUpdate = { [weak self] update in self?.apply(update) }
     }
 
-    /// The locale used for tile / tooltip / a11y number formatting.
+    /// The locale used for tile + accessibility number formatting.
     public var displayLocale: Locale {
         Locale(identifier: localeIdentifier)
     }
 
-    /// The combined VoiceOver summary for the chart.
+    /// The combined VoiceOver summary for the panel.
     public var accessibilitySummary: String {
-        TPSectionAccessibility.chartSummary(
+        TPSectionAccessibility.summary(
             projection: projection,
             localize: TPSectionStrings.string,
             localeIdentifier: localeIdentifier
@@ -179,14 +179,19 @@ public final class TirePressureSectionModel {
         refreshing = update.refreshing
         updatedAt = update.updatedAt
         localeIdentifier = update.localeIdentifier
-        projection = TPSectionProjector.project(samples: update.samples, unit: update.unit)
+        projection = TPSectionProjector.project(
+            snapshot: update.snapshot,
+            unit: update.unit,
+            localeIdentifier: update.localeIdentifier,
+            emptyDisplay: TPSectionStrings.string("tireSection.noValue", "—")
+        )
         phase = TPSectionProjector.resolvePhase(update.status, hasContent: projection.hasContent)
         handleAutoRefresh(for: update.connection)
     }
 
-    /// Stale → one guarded auto-refresh (prompt "stale chip + auto-refresh"); reset
-    /// once live so a later stale episode re-triggers exactly once. Offline keeps the
-    /// cached trace on screen and does not refetch.
+    /// Stale → one guarded auto-refresh (prompt "stale chip + auto-refresh"); reset once
+    /// live so a later stale episode re-triggers exactly once. Offline keeps the cached
+    /// grid on screen and does not refetch.
     private func handleAutoRefresh(for connection: TPSectionConnection) {
         switch connection {
         case .stale:
@@ -198,21 +203,6 @@ public final class TirePressureSectionModel {
         case .offline:
             break
         }
-    }
-}
-
-// MARK: - Empty projection (loading default)
-
-public extension TPSectionProjection {
-    /// The zero-value projection the model holds before any snapshot resolves (no
-    /// points, no wheels) — drives the loading skeleton until data arrives.
-    static var empty: TPSectionProjection {
-        TPSectionProjection(
-            points: [],
-            presentWheels: [],
-            ranges: [:],
-            unitSymbol: TPSectionUnit.kpa.symbol
-        )
     }
 }
 
