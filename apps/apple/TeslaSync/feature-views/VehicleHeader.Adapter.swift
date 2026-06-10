@@ -1,38 +1,44 @@
 //
 //  VehicleHeader.Adapter.swift
-//  TeslaSync — P4 feature view · 0301 · VehicleHeader (Apple)
+//  TeslaSync — P4 feature view · 0305 · VehicleHeader (Apple)
 //
-//  The testable projection core for the vehicle-detail header — the SwiftUI parity of
-//  features/vehicles/components/vehicle-detail/VehicleHeader.tsx. Everything here is
-//  pure + dependency-free (no store, no bundle, no rendered view) so the vehicle data
-//  model, the status enum, the web `statusVariant` mapping, the "model + trim" label
-//  composition, and the VoiceOver summary are all unit tested in isolation.
+//  The testable projection core for the vehicle header — the SwiftUI parity of
+//  features/vehicles/components/VehicleHeader.tsx. Everything here is pure +
+//  dependency-free (no store, no bundle, no rendered view) so the vehicle data model,
+//  the status enum, the web `getVehicleStatus` → variant mapping, the title fallback
+//  (`display_name || vin || 'Vehicle'`), the "model + trim" subtitle composition, and
+//  the VoiceOver summary are all unit tested in isolation.
 //
-//  Parity note: the web header is a presentational leaf fed `vehicle`, `status`,
-//  `onWake`, and `waking` by its parent (the Vehicle Detail page). It renders a status
-//  `Badge` (variant = `statusVariant(status)`, with a dot, size `lg`), a neutral badge
-//  carrying `{vehicle?.model} {vehicle?.trim_badging}`, the monospaced VIN, and the
-//  "Wake Up" button. This core reproduces the data + derivations; the chrome lives in
-//  the view layer. The web Badge prints the raw status token; native resolves each
-//  status through the project's canonical VEHICLE_STATE_LABELS map (web
-//  types/fsm/vehicle.ts) via the i18n facade so the UI shows a localizable label
-//  rather than an untranslated lowercase token — a documented, deliberate choice.
+//  Parity note: the web header takes `vehicle`, `state`, and `onRefetchState`, derives
+//  `status = vehicle ? getVehicleStatus(state) : 'offline'`, and renders an `h1` title
+//  (`vehicle?.display_name || vehicle?.vin || t('common.vehicle', 'Vehicle')`), the
+//  shared `StatusBadge` (size `md`), a muted subtitle `{model} {trim_badging} · {vin}`
+//  with the VIN monospaced, and the "Wake Up" `Button` (which fires the internal
+//  `useWakeVehicle` mutation and re-fetches state after it lands). This core reproduces
+//  the data + derivations; the chrome lives in the view layer. The web `StatusBadge`
+//  prints the raw status token capitalized; native resolves each status through the
+//  project's canonical VEHICLE_STATE_LABELS map (web types/fsm/vehicle.ts) via the i18n
+//  facade so the UI shows a localizable label rather than an untranslated lowercase
+//  token — a documented, deliberate choice.
 //
 
 import Foundation
 
 // MARK: - Vehicle model (web `Vehicle` fields the header consumes)
 
-/// The slice of the web `Vehicle` interface the header renders — the display `model`,
-/// the `trim_badging`, and the `vin`. Carried verbatim from upstream (no SI conversion
-/// applies to identity strings). Optional fields fall back to empty so the projection
-/// can compose the badge + VIN exactly as the web does (`?? ''`).
+/// The slice of the web `Vehicle` interface the header renders — the `display_name`
+/// (the `h1` title), the display `model`, the `trim_badging`, and the `vin`. Carried
+/// verbatim from upstream (no SI conversion applies to identity strings). Optional
+/// fields fall back to empty so the projection can compose the title, subtitle, and VIN
+/// exactly as the web does (`?? ''`).
 public struct VehicleHeaderVehicle: Equatable, Sendable {
+    public let displayName: String
     public let model: String
     public let trimBadging: String
     public let vin: String
 
-    public init(model: String, trimBadging: String, vin: String) {
+    public init(displayName: String = "", model: String, trimBadging: String, vin: String) {
+        self.displayName = displayName
         self.model = model
         self.trimBadging = trimBadging
         self.vin = vin
@@ -110,15 +116,28 @@ public enum VehicleHeaderStatusMap {
     }
 }
 
-// MARK: - Label formatting (web `{model} {trim_badging}` + VIN `?? ''`)
+// MARK: - Label formatting (web title + `{model} {trim_badging}` subtitle + VIN)
 
-/// The header's text derivations. The web composes the neutral badge as
-/// `` `${vehicle?.model ?? ''} ${vehicle?.trim_badging ?? ''}` `` and prints
-/// `vehicle?.vin ?? ''`. This reproduces that, trimming so a missing trim does not
-/// leave a dangling space and an absent vehicle yields an empty string.
+/// The header's text derivations. The web title is
+/// `vehicle?.display_name || vehicle?.vin || t('common.vehicle', 'Vehicle')`; the
+/// subtitle is `` `${vehicle?.model} ${vehicle?.trim_badging} · ${vehicle?.vin}` `` with
+/// the VIN monospaced. This reproduces those, trimming so a missing part does not leave
+/// dangling spacing and an absent vehicle yields an empty string (the view applies the
+/// localized `common.vehicle` fallback for an empty title).
 public enum VehicleHeaderFormat {
+    /// Web `vehicle?.display_name || vehicle?.vin || …` — the first non-empty of the
+    /// display name then the VIN, or empty when neither resolves (the view then shows
+    /// the localized `common.vehicle` fallback). Trimmed so whitespace-only values fall
+    /// through like the web's falsy `||` chain.
+    public static func title(_ vehicle: VehicleHeaderVehicle?) -> String {
+        guard let vehicle else { return "" }
+        let name = vehicle.displayName.trimmingCharacters(in: .whitespaces)
+        if !name.isEmpty { return name }
+        return vehicle.vin.trimmingCharacters(in: .whitespaces)
+    }
+
     /// Web `` `${model ?? ''} ${trim_badging ?? ''}` `` — the model and trim joined by a
-    /// single space, with empty parts dropped so the badge never shows stray spacing.
+    /// single space, with empty parts dropped so the subtitle never shows stray spacing.
     public static func modelLine(_ vehicle: VehicleHeaderVehicle?) -> String {
         guard let vehicle else { return "" }
         return [vehicle.model, vehicle.trimBadging]
@@ -136,13 +155,21 @@ public enum VehicleHeaderFormat {
 // MARK: - Accessibility summary (testable seam)
 
 /// Builds the header's VoiceOver string from already-localized parts, so the spoken
-/// content is asserted without rendering the view. Mirrors the web surface: the status,
-/// the model/trim, and the VIN read as one sentence.
+/// content is asserted without rendering the view. Mirrors the web surface reading
+/// order: the title, the status, the model/trim, and the VIN read as one sentence.
 public enum VehicleHeaderAccessibility {
-    /// The composed spoken label: "{statusLabel}, {modelLine}, VIN {vin}", dropping any
-    /// empty parts so an unavailable vehicle still reads cleanly.
-    public static func headerLabel(statusLabel: String, modelLine: String, vinLabel: String, vin: String) -> String {
-        var parts = [statusLabel]
+    /// The composed spoken label: "{title}, {statusLabel}, {modelLine}, VIN {vin}",
+    /// dropping any empty parts so an unavailable vehicle still reads cleanly.
+    public static func headerLabel(
+        title: String,
+        statusLabel: String,
+        modelLine: String,
+        vinLabel: String,
+        vin: String
+    ) -> String {
+        var parts: [String] = []
+        if !title.isEmpty { parts.append(title) }
+        parts.append(statusLabel)
         if !modelLine.isEmpty { parts.append(modelLine) }
         if !vin.isEmpty { parts.append("\(vinLabel) \(vin)") }
         return parts.joined(separator: ", ")

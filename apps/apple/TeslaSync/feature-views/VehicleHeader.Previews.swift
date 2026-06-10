@@ -1,6 +1,6 @@
 //
 //  VehicleHeader.Previews.swift
-//  TeslaSync — P4 feature view · 0301 · VehicleHeader (Apple)
+//  TeslaSync — P4 feature view · 0305 · VehicleHeader (Apple)
 //
 //  Xcode previews for each surface state (data / waking / loading / empty / error /
 //  stale / offline) and a sweep of the status variants. DEBUG-only; compiled by the app
@@ -13,12 +13,14 @@ import SwiftUI
 #if DEBUG
     private enum VehicleHeaderPreviewData {
         static let modelS = VehicleHeaderVehicle(
+            displayName: "Lightning",
             model: "Model S",
             trimBadging: "Plaid",
             vin: "5YJSA1E26MF000000"
         )
 
         static let model3 = VehicleHeaderVehicle(
+            displayName: "Daily Driver",
             model: "Model 3",
             trimBadging: "Long Range",
             vin: "5YJ3E1EA7KF000000"

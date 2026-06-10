@@ -1,6 +1,6 @@
 //
 //  VehicleHeader.ModelTests.swift
-//  TeslaSync — P4 feature view · 0301 · VehicleHeader (Apple)
+//  TeslaSync — P4 feature view · 0305 · VehicleHeader (Apple)
 //
 //  Lifecycle + binding coverage for `VehicleHeaderModel`: the `view.opened` telemetry
 //  (once + idempotent), the start/stop/refresh plumbing to the source, the stale → one
@@ -58,12 +58,18 @@ final class VehicleHeaderModelTests: XCTestCase {
         model.start()
 
         source.push(VehicleHeaderInput(
-            vehicle: VehicleHeaderVehicle(model: "Model 3", trimBadging: "RWD", vin: "VIN1"),
+            vehicle: VehicleHeaderVehicle(
+                displayName: "Roadster",
+                model: "Model 3",
+                trimBadging: "RWD",
+                vin: "VIN1"
+            ),
             status: .online,
             connection: .offline
         ))
 
         XCTAssertEqual(model.phase, .data)
+        XCTAssertEqual(model.resolved.title, "Roadster")
         XCTAssertEqual(model.resolved.modelLine, "Model 3 RWD")
         XCTAssertEqual(model.connection, .offline)
     }

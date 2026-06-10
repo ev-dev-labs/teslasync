@@ -1,14 +1,14 @@
 //
 //  VehicleHeader.Seams.swift
-//  TeslaSync — P4 feature view · 0301 · VehicleHeader (Apple)
+//  TeslaSync — P4 feature view · 0305 · VehicleHeader (Apple)
 //
 //  The dependency seams the VehicleHeader view-model binds through, kept apart from the
 //  model for the lint length budget: the surface identity, the P1/S11 telemetry
 //  contract, the navigation seam (web `<Link to="/vehicles">` back affordance), the
-//  wake-command seam (web `onWake`), the P1/S8 source protocol + its in-memory double
-//  for previews/tests, the P1/S10 i18n facade (web `useTranslation`), and the VoiceOver
-//  string facade. None of this imports SwiftUI, so the pure + model layer compiles and
-//  unit-tests with no rendering toolchain.
+//  wake-command seam (web `useWakeVehicle`), the P1/S8 source protocol + its in-memory
+//  double for previews/tests, the P1/S10 i18n facade (web `useTranslation`), and the
+//  VoiceOver string facade. None of this imports SwiftUI, so the pure + model layer
+//  compiles and unit-tests with no rendering toolchain.
 //
 
 import Foundation
@@ -71,10 +71,11 @@ public struct OSLogVehicleHeaderNavigator: VehicleHeaderNavigator {
 
 // MARK: - Wake-command seam (web `onWake`)
 
-/// The wake-command intent (web `onWake` → `POST /vehicles/{id}/wake`). Keeps the
-/// mutation out of the view; production injects an adapter that fires the wake mutation
-/// (whose pending flag flows back as `waking` in the next snapshot), previews/tests use
-/// the recording default.
+/// The wake-command intent (web `useWakeVehicle` → `POST /vehicles/{id}/wake`). Keeps
+/// the mutation out of the view; production injects an adapter that fires the wake
+/// mutation (whose pending flag flows back as `waking` in the next snapshot) and
+/// re-fetches state after it lands (web `onRefetchState`), previews/tests use the
+/// recording default.
 public protocol VehicleHeaderWakeCommand: Sendable {
     func wake()
 }
@@ -96,8 +97,8 @@ public struct OSLogVehicleHeaderWakeCommand: VehicleHeaderWakeCommand {
 // MARK: - P1/S8 source protocol + in-memory double
 
 /// The seam the view binds through. Production implements this over the shared P1/S8
-/// state holders — composing the vehicle query + the live FSM status (web `useVehicle`
-/// + `deriveStatus(state)`) with the wake mutation's pending flag and the live-state
+/// state holders — composing the vehicle query + the live FSM status (web `useVehicles`
+/// + `getVehicleStatus(state)`) with the wake mutation's pending flag and the live-state
 /// freshness. Previews/tests use `InMemoryVehicleHeaderSource`. The view never talks to
 /// the network directly.
 @MainActor
