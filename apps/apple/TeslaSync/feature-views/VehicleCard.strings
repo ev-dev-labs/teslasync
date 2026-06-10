@@ -1,0 +1,53 @@
+/*
+  VehicleCard.strings
+  TeslaSync — P4 feature view · 0302 · VehicleCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "VehicleCard").
+  Every key the native VehicleCard resolves lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its strings without
+  editing the shared catalog.
+
+  The first group is the EXACT keys extracted from the web source
+  (web/src/features/vehicles/components/VehicleCard.tsx, namespace "vehicles").
+  The second group is the vehicle-status labels the web `StatusBadge` resolves
+  through `t('vehicle.state.${state}', VEHICLE_STATE_LABELS[state])`. The rest
+  back the native chrome (stat labels, freshness chip, and the load / empty /
+  error states the P4 state list requires).
+*/
+
+/* --- Keys from the web source (parity, namespace "vehicles") --- */
+"card.interior" = "Interior";
+"card.charging" = "Charging";
+"card.viewDetails" = "View details";
+"card.removeVehicle" = "Remove vehicle";
+
+/* --- Vehicle status labels (web VEHICLE_STATE_LABELS via t('vehicle.state.*')) --- */
+"vehicle.state.online" = "Online";
+"vehicle.state.driving" = "Driving";
+"vehicle.state.charging" = "Charging";
+"vehicle.state.parked" = "Parked";
+"vehicle.state.updating" = "Updating";
+"vehicle.state.asleep" = "Asleep";
+"vehicle.state.offline" = "Offline";
+
+/* --- Native chrome: stat labels + accessibility nouns --- */
+"card.battery" = "Battery";
+"card.range" = "Range";
+"card.odometer" = "Odometer";
+"card.locked" = "Locked";
+"card.sentry" = "Sentry Mode";
+"card.awaitingState" = "Awaiting live telemetry";
+"card.value.none" = "—";
+
+/* --- Native chrome: live freshness chip (stale / offline) --- */
+"card.freshness.stale" = "Stale";
+"card.freshness.offline" = "Offline";
+
+/* --- Native chrome: load / empty / error states --- */
+"card.loading" = "Loading vehicle…";
+"card.empty.title" = "No vehicle";
+"card.empty.message" = "This vehicle is no longer available.";
+"card.error.title" = "Couldn’t load vehicle";
+"card.error.message" = "Something went wrong loading this vehicle.";
