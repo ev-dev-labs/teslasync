@@ -1,0 +1,52 @@
+=== P2 Feature view 0147 RouteMapSection (Windows) ===
+Run: 2026-06-09T17:05:44.3230758-07:00
+
+CAPABILITY: WinUI 3 (Windows App SDK) + .NET 10 present and functional on this runner — the WinUI app
+project (net10.0-windows10.0.19041.0) and the full TeslaSync.sln both build with 0 errors (below), so
+this surface is NOT a STATUS=BLOCKED capability case.
+
+PRE-EXISTING BLOCKER REPAIRED: apps/windows/TeslaSync.App.Tests.csproj arrived MSB4025-broken — two
+concatenated <Project> roots plus a nested/unterminated XML comment (a recurring integration-merge
+artifact the file's own comment documents). It failed XML load, blocking the entire solution build/test.
+Repaired to a single <Project> root holding the deduplicated, path-sorted Compile union (its documented
+invariant): the 472 unique links from root #1 + the 5 links unique to root #2 (VehicleHero x3,
+MiniGridPreview.Model, RecentActivity.Model) + the new RouteMapSection.Model.cs link = 478 links, the
+internal CostPerKwhChart.Model.cs duplicate removed. No other csproj content changed.
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.  17 Warning(s) (all pre-existing TeslaSync.App.Core CA warnings)  0 Error(s)
+  TeslaSync.App -> bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+  WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped: 0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 10280, Skipped: 0, Total: 10280 - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite). They
+fail fast because WinAppDriver/Appium is not present on this runner — an environment/infra gap, not a
+code defect, identical for every Windows surface. They run separately via apps/windows/run-ui-automation.ps1
+(which itself reports STATUS=BLOCKED when the runner is absent — it never reports an absent runner as green).
+
+### STEP 2b: dotnet test --filter Category!=UIAutomation (headless surface-logic gate, W9-0002 separation)
+Passed!  - Failed: 0, Passed: 10280, Skipped: 0, Total: 10280 - TeslaSync.App.Tests.dll (net10.0)
+RouteMapSection tests: Passed!  - Failed: 0, Passed: 31, Skipped: 0, Total: 31
+HEADLESS_TEST_EXIT=0
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+(0 error lines)
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/RouteMapSection
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite, evidenced above.)
+EXIT=0
+STATUS=DONE
