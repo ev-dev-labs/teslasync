@@ -1,0 +1,67 @@
+/*
+  SnapshotInspector.strings
+  TeslaSync — P4 feature view · 0234 · SnapshotInspector (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "SnapshotInspector").
+  These entries fold into the app Localizable.xcstrings master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns its
+  own strings without editing the shared catalog (parallel-safe across the concurrent
+  slots).
+
+  The web source (web/src/features/system/components/state-machine/SnapshotInspector.tsx)
+  resolves every string through `t('debugger.inspector.*', fallback)`; those keys are
+  reproduced verbatim below so the native surface speaks the same catalog. The remaining
+  keys back native-only chrome the Apple surface contract requires (the error / retry
+  envelope, the live-state freshness chip, the relative-time words used inside the
+  outside-window message, and the source-layer badge descriptions — inlined from the web
+  `SourceLayerBadge`, whose `sourceLayer.*` keys are reproduced as well). `{{rel}}`,
+  `{{value}}`, and `{{n}}` are interpolation tokens replaced at render with the relative
+  time, the grouped duration, and a relative magnitude.
+*/
+
+/* --- Header (web `debugger.inspector.*`) --- */
+"debugger.inspector.title" = "Transition snapshot";
+"debugger.inspector.copy" = "Copy snapshot";
+"debugger.inspector.from" = "From";
+"debugger.inspector.to" = "To";
+"debugger.inspector.trigger" = "Trigger";
+"debugger.inspector.duration" = "Duration";
+"debugger.inspector.durationUnit" = "{{value}} ms";
+
+/* --- Signals section (web `debugger.inspector.*`) --- */
+"debugger.inspector.signalsTitle" = "Signals at transition";
+"debugger.inspector.diffMode" = "Diff vs previous";
+"debugger.inspector.noSignals" = "No signals captured for this transition";
+
+/* --- Empty / loading branches (web `debugger.inspector.*`) --- */
+"debugger.inspector.loading" = "Loading…";
+"debugger.inspector.empty" = "Select a transition to inspect its snapshot";
+"debugger.inspector.emptyOutsideWindow" = "Nothing in the current window. Last transition {{rel}}.";
+"debugger.inspector.jumpToLast" = "Jump to last transition";
+
+/* --- Error envelope (native-only; web `QueryError` peer) --- */
+"debugger.inspector.error" = "Couldn't load the snapshot";
+"debugger.inspector.retry" = "Retry";
+
+/* --- Freshness chip (ADR-013) --- */
+"debugger.inspector.live" = "Live";
+"debugger.inspector.stale" = "Stale";
+"debugger.inspector.offline" = "Offline";
+
+/* --- Relative time (web `formatRelative`, used inside `{{rel}}`) --- */
+"debugger.inspector.dash" = "—";
+"debugger.inspector.justNow" = "just now";
+"debugger.inspector.minutesAgo" = "{{n}}m ago";
+"debugger.inspector.hoursAgo" = "{{n}}h ago";
+"debugger.inspector.daysAgo" = "{{n}}d ago";
+
+/* --- VoiceOver helpers (native-only a11y chrome) --- */
+"debugger.inspector.a11y.to" = "to";
+
+/* --- Source-layer badge (web `SourceLayerBadge`, inlined) --- */
+"sourceLayer.l1.desc" = "Read from the in-process SignalStore (hot path, freshest).";
+"sourceLayer.l2.desc" = "Read from Redis cross-pod cache (legacy entry; freshness unknown).";
+"sourceLayer.log.desc" = "Replayed from signal_log (durable history).";
+"sourceLayer.stale.desc" = "Redis-backed value older than the 2-minute freshness window.";
+"sourceLayer.unknown.desc" = "Source layer unknown.";
+"sourceLayer.age" = "age";
