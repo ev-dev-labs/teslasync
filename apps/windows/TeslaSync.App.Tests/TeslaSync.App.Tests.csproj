@@ -118,6 +118,18 @@
     Compile items, failing XML load (MSB4025); regenerated for P2 feature-views/0232 InputCommandTile directly
     from the WinUI-free sources on disk. Do NOT re-concatenate, and never write a literal build-item or project
     start tag inside this comment.
+    cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
+    Compile-linked in the single ItemGroup below (the Link mirrors each source's real location under
+    FeatureViews\ or Widgets\); the WinUI views themselves are exercised by the app build. The matching
+    test classes live under this project and are picked up by the SDK default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted,
+    Include-deduplicated Compile ItemGroup. A chain of integration merges had repeatedly re-concatenated
+    this file into multiple Project roots plus duplicate Compile items, failing XML load (MSB4025);
+    re-consolidated for P2 feature-views/0228 FSMHealthPanel into this single canonical root - the
+    ordinal-sorted, Include-deduplicated union of every WinUI-free logic source on disk under
+    dashboard-widgets/ and feature-views/, plus the new FSMHealthPanel surface link. Do NOT
+    re-concatenate, and never write a literal build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -164,6 +176,8 @@
        (ordinal-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union);
        the WinUI views themselves are exercised by the app build. -->
+  <!-- WinUI-free Model / Source / ViewModel / Projection logic sources Compile-linked from TeslaSync.App
+       (ordinal-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -609,6 +623,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentalImpact.ViewModel.cs" Link="FeatureViews\EnvironmentalImpact.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentSlide\EnvironmentSlide.Model.cs" Link="FeatureViews\EnvironmentSlide\EnvironmentSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EventHistoryTable.Model.cs" Link="FeatureViews\EventHistoryTable.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FSMHealthPanel\FSMHealthPanel.Model.cs" Link="FeatureViews\FSMHealthPanel\FSMHealthPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FeatureToggles.Model.cs" Link="FeatureViews\FeatureToggles.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FeatureToggles.Source.cs" Link="FeatureViews\FeatureToggles.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FeatureToggles.ViewModel.cs" Link="FeatureViews\FeatureToggles.ViewModel.cs" />
