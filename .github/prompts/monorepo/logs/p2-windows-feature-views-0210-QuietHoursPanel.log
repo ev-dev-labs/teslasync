@@ -1,0 +1,56 @@
+=== P2 Feature view 0210 QuietHoursPanel (Windows) ===
+runner: atul-think-i9  date: 2026-06-10T13:00:30.6174879-07:00
+dotnet: 10.0.300
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+
+Build succeeded.
+
+BUILD_EXIT=0
+
+--- HEADLESS TEST: dotnet test apps/windows/TeslaSync.App.Tests -c Release ---
+
+Passed!  - Failed:     0, Passed: 14058, Skipped:     0, Total: 14058, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+
+HEADLESS_TEST_EXIT=0
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 -Path .../QuietHoursPanel ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- I18N CATALOG COVERAGE ---
+37/37 web-source quietHours.* + toast.quietHours.* keys present in apps/shared/i18n/catalog/en.json (0 missing).
+
+--- FILES DELIVERED ---
+apps/windows/TeslaSync.App/feature-views/QuietHoursPanel/QuietHoursPanel.Model.cs       (1009) State enum, QuietHoursWindow + {windows:[]} parsing, Draft, WriteBody, Severity/Weekday catalogs, Validation (HHMM/equal/tz/weekdays + key map), Timeline (nextWindowChangeLabel), Timezones (listTimezones), Row/Form/Display projection, Registration, Diagnostics, Feedback
+apps/windows/TeslaSync.App/feature-views/QuietHoursPanel/QuietHoursPanel.Source.cs       (142)  IQuietHoursSource + cache-then-network list read (get_api_v1_notifications_quiet_hours) + create(POST)/update(PATCH {id})/delete(DELETE {id})
+apps/windows/TeslaSync.App/feature-views/QuietHoursPanel/QuietHoursPanel.ViewModel.cs    (508)  INotifyPropertyChanged state holder: load/retry, draft create/edit/cancel/mutators, validate+submit, delete, save/delete feedback (toast), loading/loaded/empty/stale/offline/error
+apps/windows/TeslaSync.App/feature-views/QuietHoursPanel/QuietHoursPanel.cs              (737)  WinUI 3 view: freshness header + skeleton + TsQueryError + GlassPanel (icon/title/subtitle/Add) + inline-callout feedback + TsEmptyState + dynamic window list + fixed create/edit form (TsInput times, TsSelect IANA tz, weekday/severity ToggleButtons); 16 Narrator names; never hidden
+apps/windows/TeslaSync.App.Tests/FeatureViews/QuietHoursPanelTests.cs                    (648)  46 headless tests: catalogs, window parse, validation, timeline, timezones, projection+a11y, Source adapter (cache->projection + POST/PATCH/DELETE shapes), per-state ViewModel matrix, submit/delete feedback, diagnostics, registration
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                              (REPAIR) recurring multi-Project-root corruption (MSB4025 then MSB4067 bare-text-under-Project): re-consolidated to ONE canonical root, single path-sorted dedup Compile group (671 links = union of all WinUI-free Model/Source/ViewModel on disk + 3 QuietHoursPanel links), one clean header comment
+
+Deliverable: 3044 lines (web source QuietHoursPanel.tsx = 582). All states reproduced; no stubs.
+
+--- ACCEPTANCE CRITERIA ---
+[x] Surface renders all web-source states (loading/loaded/empty/stale/offline/error) + create/edit form; no hidden surfaces (empty -> TsEmptyState, error -> TsQueryError, never a blank panel).
+[x] Hooks bind to the shared P1/S8 state-holder layer (IQuietHoursSource); no direct HTTP in the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (37/37 in en.json; native-only state keys resolve via the ILocalizer English fallback).
+[x] Accessibility: Narrator name per surface state + every interactive element (Add/refresh/edit/delete/enabled/start/end/timezone/weekday+severity toggles/cancel/submit); loading is a polite LiveRegion.
+[x] Tests: adapter unit test (cache->projection + write shapes) + per-state ViewModel tests + a11y label tests + diagnostics (46 passing headless; full suite 14058 passing).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[x] Telemetry: view.opened slug=QuietHoursPanel emitted on load (P1/S11), PII-safe (no times/timezone/severities ever logged).
+
+--- GATE SUMMARY ---
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+Capability: WinUI 3 (Windows App SDK) + .NET 10.0.300 present and building on this runner (proven by Release build + 14058 headless tests).
+UIAutomation E2E suite (TeslaSync.App.UITests): BLOCKED on absent WinAppDriver runtime (environmental; the suite fails-not-skips by design per RunnerAvailability; separate gate, 0 files touched). Every gate within this runner's capability is green.
+EXIT=0
+STATUS=DONE
