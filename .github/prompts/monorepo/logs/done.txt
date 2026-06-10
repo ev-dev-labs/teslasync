@@ -433,3 +433,4 @@ p2-windows/feature-views/W-0214-SettingsExportImport.prompt.md
 p2-windows/feature-views/W-0219-ChatMessageItem.prompt.md
 p2-windows/feature-views/W-0223-SuggestedPrompts.prompt.md
 p2-windows/feature-views/W-0217-TOTPEnrollmentSection.prompt.md
+p2-windows/feature-views/W-0222-SessionList.prompt.md
