@@ -425,3 +425,4 @@ p2-windows/feature-views/W-0207-GeneralSettings.prompt.md
 p2-windows/feature-views/W-0210-QuietHoursPanel.prompt.md
 p2-windows/feature-views/W-0213-SettingField.prompt.md
 p2-windows/feature-views/W-0212-ResetSection.prompt.md
+p2-windows/feature-views/W-0215-SettingsSearch.prompt.md
