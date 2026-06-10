@@ -1,0 +1,69 @@
+/*
+  SLOTrackingCard.strings
+  TeslaSync — P4 feature view · 0253 · SLOTrackingCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SLOTrackingCard` resolves (table "SLOTrackingCard") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first groups are the exact strings rendered by the web source
+  (features/system/components/status/SLOTrackingCard.tsx), where the English label
+  IS the key. The web component hardcodes its English; native routes every literal
+  through this facade so no English lives in the Swift code. The remainder back the
+  native state envelope (accessibility, freshness chip / banner, loading / empty /
+  error chrome).
+*/
+
+/* --- Title (web `<h3>Uptime &amp; SLO</h3>`) --- */
+"Uptime & SLO" = "Uptime & SLO";
+
+/* --- Window selector: short tab tokens (web `{w}`) --- */
+"24h" = "24h";
+"7d" = "7d";
+"30d" = "30d";
+"90d" = "90d";
+"1y" = "1y";
+
+/* --- Window selector: long labels (web `WINDOW_LABEL`) --- */
+"Last 24 hours" = "Last 24 hours";
+"Last 7 days" = "Last 7 days";
+"Last 30 days" = "Last 30 days";
+"Last 90 days" = "Last 90 days";
+"Last year" = "Last year";
+
+/* --- Personal-target editor (web header accessory) --- */
+"Target" = "Target";
+"Edit" = "Edit";
+"Save" = "Save";
+"Cancel" = "Cancel";
+"Target uptime percentage" = "Target uptime percentage";
+
+/* --- Figure subtitle (web `… components healthy`) --- */
+"components healthy" = "components healthy";
+
+/* --- Snapshot caveat (web default note for non-`series` source) --- */
+"Snapshot Caveat" = "Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot.";
+
+/* --- Loading / empty / error chrome --- */
+"Loading uptime" = "Loading uptime…";
+"No Uptime Title" = "No uptime data";
+"No uptime data available" = "No uptime data available for this window yet.";
+"Failed to load uptime data." = "Failed to load uptime data.";
+"Retry" = "Retry";
+
+/* --- Accessibility (VoiceOver) --- */
+"Edit Target" = "Edit target";
+"percent" = "percent";
+"uptime" = "uptime";
+"Uptime unavailable" = "Uptime unavailable";
+"Uptime window selector" = "Uptime window selector";
+
+/* --- Freshness chip (Stale / Offline) --- */
+"Stale" = "Stale";
+"Offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"Stale Banner" = "Reconnecting — uptime may be out of date";
+"Offline Banner" = "Offline — showing last known uptime";
