@@ -1,0 +1,55 @@
+/*
+  RecentDrivesSection.strings
+  TeslaSync — P4 feature view · 0297 · RecentDrivesSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  RecentDrivesSection resolves (table "RecentDrivesSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/RecentDrivesSection.tsx). The remainder
+  back the native state envelope (freshness chip, connectivity banner, error retry),
+  the sortable Distance header, the "View all" link, and the pagination bar.
+*/
+
+/* --- Web source keys (RecentDrivesSection.tsx column headers + chrome) --- */
+"common.date" = "Date";
+"common.distance" = "Distance";
+"common.duration" = "Duration";
+"common.battery" = "Battery";
+"common.recentDrives" = "Recent Drives";
+"common.viewAll" = "View all";
+"common.noDrives" = "No drives recorded yet";
+
+/* --- View all link (accessibility) --- */
+"recentDrives.viewAllAria" = "View all drives";
+
+/* --- Loading (web Spinner) --- */
+"recentDrives.loading" = "Loading drives…";
+
+/* --- Error + retry (web QueryError) --- */
+"recentDrives.errors.load" = "Failed to load drives.";
+"recentDrives.retry" = "Retry";
+
+/* --- Sortable Distance header (web DataTable sortable column) --- */
+"recentDrives.sortAria" = "Sort by distance";
+"recentDrives.sortNone" = "Not sorted";
+"recentDrives.sortAsc" = "Ascending";
+"recentDrives.sortDesc" = "Descending";
+
+/* --- Pagination (web DataTable pagination) --- */
+"recentDrives.pagination.prev" = "Previous page";
+"recentDrives.pagination.next" = "Next page";
+"recentDrives.pagination.status" = "Page {{0}} of {{1}}";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"recentDrives.live" = "Live";
+"recentDrives.stale" = "Stale";
+"recentDrives.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"recentDrives.staleBanner" = "Reconnecting — this list may be out of date";
+"recentDrives.offlineBanner" = "Offline — showing the last loaded drives";
