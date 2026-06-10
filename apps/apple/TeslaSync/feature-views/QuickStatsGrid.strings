@@ -1,0 +1,42 @@
+/*
+  QuickStatsGrid.strings
+  TeslaSync — P4 feature view · 0295 · QuickStatsGrid (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `QuickStatsGrid` resolves (table "QuickStatsGrid") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/QuickStatsGrid.tsx). The second group
+  backs the native chrome (surface title, the P4 leaf freshness / loading / empty /
+  error copy) so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"common.battery" = "Battery";
+"common.range" = "Range";
+"common.odometer" = "Odometer";
+"common.speed" = "Speed";
+"common.driving" = "Driving";
+"common.parked" = "Parked";
+"common.insideTemp" = "Inside Temp";
+"common.outsideTemp" = "Outside Temp";
+"common.power" = "Power";
+"common.state" = "State";
+
+/* --- Native chrome: surface title + P4 leaf freshness / loading / empty / error --- */
+"quickStats.title" = "Quick Stats";
+"quickStats.live" = "Live";
+"quickStats.stale" = "Stale";
+"quickStats.offline" = "Offline";
+"quickStats.staleBanner" = "Reconnecting — data may be stale";
+"quickStats.offlineBanner" = "Offline — showing last known data";
+"quickStats.refresh" = "Refresh";
+"quickStats.loadingA11y" = "Loading vehicle stats";
+"quickStats.emptyTitle" = "No vehicle data";
+"quickStats.empty" = "Live stats will appear once the vehicle reports in.";
+"quickStats.errorTitle" = "Couldn't load vehicle stats";
+"quickStats.retry" = "Retry";
