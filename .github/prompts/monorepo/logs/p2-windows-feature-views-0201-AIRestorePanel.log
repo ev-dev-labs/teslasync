@@ -1,0 +1,44 @@
+=== P2 Feature view 0201 AIRestorePanel (Windows) ===
+date: 2026-06-10T12:27:41.3608207-07:00
+dotnet: 10.0.300   OS: Microsoft Windows NT 10.0.26200.0
+capability: WinUI 3 (Windows App SDK) + .NET 10 build capability probed below via dotnet build.
+
+--- STEP 1: BUILD  dotnet build apps/windows/TeslaSync.sln -c Release ---
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:01:33.88
+BUILD_EXIT=0
+
+--- STEP 2a: HEADLESS SURFACE GATE  dotnet test apps/windows/TeslaSync.App.Tests -c Release ---
+Passed!  - Failed:     0, Passed: 13879, Skipped:     0, Total: 13879, Duration: 15 s - TeslaSync.App.Tests.dll (net10.0)
+surface subset: AIRestorePanelTests = 24 passed (FullyQualifiedName~AIRestorePanelTests)
+HEADLESS_TEST_EXIT=0
+
+--- STEP 2b: UIAUTOMATION E2E (SEPARATE, ENVIRONMENT-GATED)  dotnet test apps/windows/TeslaSync.App.UITests -c Release ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 259 ms - TeslaSync.App.UITests.dll (net10.0)
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: WinAppDriver/Appium runner + deployed MSIX app absent on this runner -- environmental, not a surface defect)
+git-verified UITests untouched: '' (empty = 0 files modified)
+
+--- STEP 3: FORMAT  dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- STEP 4: PLACEHOLDER  check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AIRestorePanel ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0 (TeslaSync.App.Tests: 13879 passed, 0 failed; AIRestorePanelTests: 24 passed)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+WHOLE_SOLUTION_TEST_EXIT=1 only via the WinAppDriver-absent UIAutomation E2E suite (147 env failures; 0 on this surface; 0 files touched under apps/windows/TeslaSync.App.UITests).
+Headless surface gate GREEN. The UIAutomation E2E suite is a SEPARATE, environment-gated gate: the harness's own RunnerAvailability probe fails (not skips) when the WinAppDriver/Appium runner + deployed MSIX are absent. That runtime is absent on this headless runner -- it is not an AIRestorePanel defect.
+
+CAPABILITY: WinUI 3 (Windows App SDK) + .NET 10 BUILD capability PRESENT (dotnet build succeeded, the WinUI XAML compiler ran, the AIRestorePanel surface compiled into TeslaSync.App.dll). UIAutomation RUNTIME (WinAppDriver/Appium + deployed MSIX) ABSENT -- evidence: UiAutomationUnavailableException "nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found".
+
+NOTE: apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was re-consolidated from two concatenated <Project> roots (pre-existing MSB4025 bad-merge corruption at HEAD 333a6b1f0 -- baseline build failed before any surface work) back into one canonical root with the path-sorted, Include-deduplicated union of every WinUI-free source on disk plus the new AIRestorePanel.Model.cs link, per the file's own INVARIANT comment (the same maintenance prior feature-view prompts 0084/0086/0117/0174 performed). No surface lost its test linkage.
+
+EXIT=0
+STATUS=DONE
