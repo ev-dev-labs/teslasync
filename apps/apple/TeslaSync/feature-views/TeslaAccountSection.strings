@@ -1,0 +1,67 @@
+/*
+  TeslaAccountSection.strings
+  TeslaSync — P4 feature view · 0216 · TeslaAccountSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `TeslaAccountSection`
+  resolves (table "TeslaAccountSection") lives here with its web English value. These entries fold
+  into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the shared
+  catalog. In tests / preview bundles (where the table is absent) `NSLocalizedString` returns the
+  `value:` fallback, keeping the projection deterministic.
+
+  The first group is the parity set extracted verbatim from the web source
+  (features/settings/components/TeslaAccountSection.tsx); the i18next `{{days}}` / `{{count}}`
+  interpolation tokens are rendered as the platform-native `%@` positional argument. The second group
+  backs the native chrome (the P4 leaf freshness / loading / error / toast copy) so the Swift sources
+  hold no English prose literals.
+*/
+
+/* --- Parity: header --- */
+"tesla.title" = "Tesla Account";
+"tesla.subtitle" = "Connect your Tesla account to sync vehicles and data";
+
+/* --- Parity: status row --- */
+"tesla.connected" = "Connected";
+"tesla.disconnected" = "Disconnected";
+"tesla.notConnected" = "Not connected";
+"tesla.expiringSoon" = "Expires in %@d";
+"tesla.tokenExpires" = "Token expires";
+"tesla.reauth.body" = "Reconnect to resume live data and commands.";
+
+/* --- Parity: action buttons --- */
+"tesla.connect" = "Connect Tesla Account";
+"tesla.refreshToken" = "Refresh Token";
+"tesla.syncVehicles" = "Sync Vehicles";
+"tesla.reauthorize" = "Re-authorize";
+"tesla.disconnect" = "Disconnect";
+"tesla.synced" = "Synced %@ vehicle(s).";
+
+/* --- Parity: disconnect confirmation (web ConfirmDialog) --- */
+"tesla.disconnectTitle" = "Disconnect Tesla Account?";
+"tesla.disconnectConfirm" = "Disconnect your Tesla account? You will need to re-authorize to use TeslaSync.";
+"common.cancel" = "Cancel";
+
+/* --- Parity: toasts (web useToast) --- */
+"toast.tokenRefreshed" = "Token refreshed";
+"toast.tokenRefreshFailed" = "Token refresh failed";
+"toast.syncFailed" = "Vehicle sync failed";
+"toast.disconnected" = "Tesla account disconnected";
+"toast.disconnectFailed" = "Disconnect failed";
+
+/* --- Native chrome: connect error + offline detail (P4 leaf error affordance) --- */
+"toast.tesla.authURLFailed" = "Couldn’t start Tesla sign-in";
+"toast.tesla.offline" = "You appear to be offline. Check your connection and try again.";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"tesla.live" = "Live";
+"tesla.stale" = "Stale";
+"tesla.offline" = "Offline";
+"tesla.staleBanner" = "Reconnecting — account status may be stale";
+"tesla.offlineBanner" = "Offline — showing last known account status";
+"tesla.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error / toast a11y --- */
+"tesla.loadingA11y" = "Loading Tesla account status";
+"tesla.errorTitle" = "Couldn’t load Tesla account status";
+"tesla.retry" = "Retry";
+"tesla.toast.dismiss" = "Dismiss";
