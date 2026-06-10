@@ -1,0 +1,114 @@
+=== P2 Feature view 0082 AutomationCard (Windows) ===
+Surface: web/src/features/automations/pages/AutomationCard.tsx  ->  native WinUI 3 parity port
+Branch:  auto/p/p2-windows__feature-views__W-0082-AutomationCard.prompt.md
+Runner:  .NET 10.0.300 SDK + maui-windows workload; WindowsAppSDK 2.1 (UseWinUI). App builds + headless
+         tests run; the end-to-end WinAppDriver UI-automation runner is absent (documented below).
+
+--- GATE STEPS ---
+BUILD_EXIT=0            (dotnet build apps/windows/TeslaSync.sln -c Release: Build succeeded, 0 Warning(s), 0 Error(s))
+HEADLESS_TEST_EXIT=0    (dotnet test TeslaSync.App.Tests -c Release: Passed! Failed: 0, Passed: 12211, Skipped: 0
+                         — 12151 pre-existing + 60 new AutomationCardTests cases, 0 regressions)
+FORMAT_EXIT=0           (dotnet format apps/windows/TeslaSync.sln --verify-no-changes: clean, exit 0)
+PLACEHOLDER_EXIT=0      (check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AutomationCard:
+                         PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0)
+
+--- AutomationCardTests (headless, TeslaSync.App.Tests) ---
+Passed!  - Failed: 0, Passed: 60, Skipped: 0, Total: 60 (xUnit Theory cases) - TeslaSync.App.Tests.dll (net10.0)
+
+--- PLATFORM-CAPABILITY NOTE (UI-automation E2E suite) ---
+The full-solution `dotnet test apps/windows/TeslaSync.sln` reports TEST_EXIT=1 SOLELY because of 147 tests in
+TeslaSync.App.UITests (every one tagged [Trait("Category","UIAutomation")]). They fail — before this surface
+existed and unrelated to it — with:
+  TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+  WinAppDriver.exe was not found at its standard install paths or on PATH.
+  at WinAppDriverSession.EnsureReady() ... WinAppDriverSession.cs:line 75
+Per-assembly result of the full-solution run:
+  Failed! - Failed: 147, Passed:     0 - TeslaSync.App.UITests.dll   (WinAppDriver runner absent)
+  Passed! - Failed:   0, Passed: 12211 - TeslaSync.App.Tests.dll     (this surface's headless gate)
+That end-to-end UI-automation suite is gated SEPARATELY by apps/windows/run-ui-automation.ps1 (P2/W9-0002),
+which by design exits STATUS=BLOCKED when the runner is absent and "never reports an absent runner as green"
+(WinAppDriverSession fails loud rather than silently skipping). It exercises shell-level flows (navigation,
+command palette, auth, platform activation) — NOT this feature view — and requires WinAppDriver 1.2.1+,
+Developer Mode and a deployed packaged app, none of which exist on this headless runner. This is a runner
+capability gap, NOT a defect in the AutomationCard surface: the surface builds, and every one of its required
+headless tests passes. Same accepted precedent as the sibling AlertCard (0179) and LiveVehicleState (0044)
+surface logs.
+
+--- INFRASTRUCTURE REPAIR (prerequisite, transparent — no silent drift) ---
+The integration-branch HEAD (5a3fd44e9) did NOT build: the gate's own `dotnet build`/`dotnet test` step was
+already red from drift accumulated by sibling-branch merges, masking each other. Minimal, surgical repairs
+were required so this surface could be built/verified at all (every one re-verified green):
+
+  1. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj — NETSDK1022 "Duplicate 'Compile' items":
+     39 feature-view headless sources had been linked twice (once with a per-surface Link, once with a flat
+     Link) by overlapping merges. Deduplicated by Include path (kept the first, path-sorted occurrence);
+     626 -> 587 unique <Compile> entries. No source dropped.
+  2. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj — the de-dup unmasked CS0246: the 517-line
+     QueueStatusPanelTests.cs referenced QueueStatusViewModel/QueueStatusSource/QueueStatusSnapshot/
+     QueueWorkerStat/IQueueStatusSource/QueueHeartbeatSeverity, but QueueStatusPanel.{Model,Source,ViewModel}.cs
+     were never linked into the test project. Added the 3 missing (headless-safe) links in sorted position.
+     A full audit confirmed these were the ONLY headless sources missing from the test project (241 *.cs that
+     reference Microsoft.UI are correctly excluded as WinUI view code).
+  3. apps/windows/TeslaSync.App/feature-views/QueueStatusPanel/QueueStatusPanel.cs — CA1822 (warning-as-error):
+     BuildCardHeader accesses no instance state; marked `static`. One-line, call site unchanged.
+
+These three are unrelated to AutomationCard's behaviour; they only restore the green baseline the gate assumes.
+
+--- SURFACE NOTES: AutomationCard (parity port of web/src/features/automations/pages/AutomationCard.tsx) ---
+Files (allowed scope + the standard headless test wiring the sibling surfaces also use):
+  - feature-views/AutomationCard/AutomationCard.cs        (WinUI 3 view, sealed ContentControl, code-built)
+  - feature-views/AutomationCard/AutomationCard.Model.cs  (WinUI-free model / projection / diagnostics /
+                                                           registration; compiled into BOTH the app and the
+                                                           headless test project)
+  - TeslaSync.App.Tests/FeatureViews/AutomationCardTests.cs (60 headless cases)
+  - TeslaSync.App.Tests/TeslaSync.App.Tests.csproj          (one <Compile> link for AutomationCard.Model.cs)
+
+Pure presentational card — the web component never fetches (its only data source is useTranslation; the page
+passes the `automation` prop and callbacks). There is therefore no fetch-driven loading/empty/error/stale/
+offline branch to reproduce — same precedent as the AlertCard / BatteryPill / AddWidgetButton leaves. EVERY
+real conditional branch in the web source IS reproduced and unit-tested:
+  * status: active (success badge) / disabled (neutral) / auto-disabled (danger) via getUIStatus precedence
+    (auto_disabled > !enabled > active).
+  * enable toggle state = auto_disabled ? false : enabled; the view re-routes an auto-disabled "turn on" to
+    ReEnableRequested vs ToggleRequested (web handleToggle), and the re-enable item shows in the kebab menu.
+  * isFiring -> cyan accent border (web ring-neon-cyan) + "Firing" chip; auto-disabled -> danger border.
+  * description shown only when present (truncated).
+  * scoped vehicle (Car glyph + name) vs "All vehicles".
+  * last_triggered_at -> "Last: {ago}" (CheckCircle) vs "Never run" (SkipForward); "Runs: {n}";
+    failure_count>0 -> "Fails: {n}" (XCircle); next_fire_time -> "Next: {formatDateTime}".
+  * auto_disabled && reason -> danger reason banner.
+  * conflicts[] -> one warning(amber)/info(blue) banner each, '"name" — reason'.
+  * PinButton -> native pin/unpin affordance (IsPinned + PinToggleRequested), Pin/Unpin glyph + a11y name.
+  * delete -> destructive TsConfirmDialog (title/message-with-name/Delete/Cancel) -> DeleteRequested.
+Shared components: TsGlassPanel, TsBadge, TsToggle, TsButton, TsConfirmDialog, MenuFlyout, DisplayTokens,
+StatusResources, DateTimeFormatting. No web Tailwind classes ported; platform tokens only.
+Relative time is a 1:1 port of the card's bespoke timeAgo (— / "just now" / Xm / Xh / Xd ago).
+i18n (ALL via the P1/S10 ILocalizer facade; no English literals in native code):
+  translation.automations.status.{active,disabled,auto-disabled}, .firing, .toggleLabel, .menu, .testRun,
+  .reEnable, .duplicate, .export, .delete, .allVehicles, .lastRun, .neverRun, .runs, .fails, .nextFire,
+  .conflictWith, .deleteTitle, .deleteMessage ({0} name interpolation), .deleteConfirm; translation.common.cancel;
+  translation.pin.pin, translation.pin.unpin. Keys absent from the resw catalog resolve via the facade English
+  fallback (exactly as the web i18next returns a key's defaultValue) — verified by the ReswLocalizer test.
+Accessibility: one composed Narrator name on the surface (name, status, vehicle, last/never run, runs, fails,
+next fire, auto-disabled reason, conflicts); every interactive element named (pin -> Pin/Unpin; toggle ->
+'Toggle automation'; kebab -> 'Actions menu'; each menu item by its label); decorative glyphs set
+AccessibilityView.Raw; a WrapRow flow panel keeps the meta rows from clipping (web flex-wrap); no animation
+(reduced-motion friendly).
+Telemetry (P1/S11): view.opened slug=AutomationCard, PII-safe (never an automation name/description/vehicle/
+conflict), emitted once on Loaded.
+
+--- GIT SCOPE (this surface) ---
+ M apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj   (de-dup + QueueStatusPanel links + AutomationCard link)
+ M apps/windows/TeslaSync.App/feature-views/QueueStatusPanel/QueueStatusPanel.cs  (CA1822 static repair)
+ ?? apps/windows/TeslaSync.App.Tests/FeatureViews/AutomationCardTests.cs
+ ?? apps/windows/TeslaSync.App/feature-views/AutomationCard/   (AutomationCard.cs + AutomationCard.Model.cs)
+ ?? .github/prompts/monorepo/logs/p2-windows-feature-views-0082-AutomationCard.log
+
+=== SURFACE GATE SUMMARY ===
+BUILD_EXIT=0   HEADLESS_TEST_EXIT=0 (TeslaSync.App.Tests: 12211 passed, 0 failed; AutomationCardTests: 60 passed)
+FORMAT_EXIT=0  PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+UIAutomation E2E suite: BLOCKED on absent WinAppDriver runtime (environmental; separate W9-0002 gate; 0 surface files touched).
+
+EXIT=0
+STATUS=DONE
