@@ -1,0 +1,121 @@
+=== P2 Feature view 0203 AIUsageCard (Windows) ===
+date_utc=2026-06-10T06:37:41Z
+dotnet=10.0.300  host=ATUL-THINK-I9
+
+--- STEP 1/4: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2/4: dotnet test apps/windows/TeslaSync.sln -c Release ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 184 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 11532, Skipped:     0, Total: 11532, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+-- WinAppDriver probe evidence (sole cause of the 147 UITest failures) --
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+HEADLESS_TEST_EXIT=0  (TeslaSync.App.Tests: 11532 passed, 0 failed - the suite that validates this surface's UI-thread-free logic)
+-- surface-scoped run (FullyQualifiedName~AIUsageCard) --
+Passed!  - Failed:     0, Passed:    34, Skipped:     0, Total:    34, Duration: 345 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+--- STEP 3/4: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+format formatting/whitespace errors: 0 (clean across the whole solution)
+FORMAT_EXIT=0
+
+--- STEP 4/4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AIUsageCard ---
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- PLATFORM-CAPABILITY NOTE ---
+Required capability (WinUI 3 / Windows App SDK 2.1.x / .NET 10 / Fluent) IS present on this runner:
+the solution BUILDS clean (BUILD_EXIT=0) and the headless unit suite runs (HEADLESS_TEST_EXIT=0,
+11532 passed). WHOLE_SOLUTION_TEST_EXIT=1 is caused SOLELY by the environment-gated UIAutomation E2E
+suite (TeslaSync.App.UITests): all 147 tests fail with UiAutomationUnavailableException because the
+WinAppDriver/Appium runner is absent on this headless box (nothing listening on 127.0.0.1:4723 and
+WinAppDriver.exe not found). That suite is intentionally never silently skipped (its fixture documents
+the absent runner as the precise BLOCKED reason); 0 of those 147 tests belong to this surface, and they
+fail identically for every surface. The absent UI-automation runner is a BLOCKED capability that is never
+reported as green. This mirrors the established precedent for prior feature-view surfaces
+(e.g. 0193 NoVehicleSelected).
+
+--- BASELINE REPAIRS (pre-existing integration breakage that blocked the solution-wide gate) ---
+The inherited integration HEAD (fc5ba227f, clean tree) carried two pre-existing defects that broke the
+whole-solution build/test gate before any AIUsageCard code existed. Both were repaired minimally; neither
+touches AIUsageCard logic. The second masked the first: the csproj XML-load failure short-circuited the
+build before compilation, hiding the namespace collision until the csproj was repaired.
+1. DrivetrainHealth triple-definition (CS0101): feature-views/HealthRecommendations/HealthRecommendations.Model.cs
+   declared `public enum DrivetrainHealth` TWICE (its own merge-debris duplicates) on top of the single
+   canonical definition in feature-views/HealthOverview/HealthOverview.Model.cs - three declarations of the
+   same type in namespace TeslaSync.App.FeatureViews. Both files are globbed into TeslaSync.App and linked
+   into TeslaSync.App.Tests, so the collision failed the C# Pass1 compile in both projects -> no local
+   reference assembly -> the XAML markup compiler cascaded (WMC0001 / WMC0110 / WMC9999, 85 errors).
+   Fix: removed BOTH duplicate enum blocks from HealthRecommendations.Model.cs; its references resolve to the
+   one canonical HealthOverview.Model.cs definition (whose doc comment already documents the shared ownership).
+   Minimal and intent-preserving - no behaviour change, no other file touched.
+2. Corrupt multi-root test csproj (MSB4025): apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj had
+   its header comment region re-concatenated by a chain of integration merges into orphaned prose containing
+   literal Project / Compile XML tags -> invalid XML ("'Compile' start tag on line 52 does not match the end
+   tag of 'Project'") -> dotnet build/test could not load the project at all. Per the file's own documented
+   INVARIANT, consolidated back to ONE valid <Project> root holding the deduplicated, path-sorted union of all
+   537 previously-linked Compile sources + this surface's 3 new links (AIUsageCard.Model/Source/ViewModel.cs)
+   = 540 total. No linked source dropped; the header comment was rewritten with no literal build-item tags.
+
+--- FILES (this surface) ---
+apps/windows/TeslaSync.App/feature-views/AIUsageCard/AIUsageCard.Model.cs       (state enum, AiUsageToday JSON adapter, cell/display records, projection, cache-then-network result mapper, registration, diagnostics)
+apps/windows/TeslaSync.App/feature-views/AIUsageCard/AIUsageCard.Source.cs       (IAiUsageTodaySource + repository-backed cache-then-network source over GET /ai/usage/today)
+apps/windows/TeslaSync.App/feature-views/AIUsageCard/AIUsageCard.ViewModel.cs    (UI-thread-free state holder: loading/loaded/empty/error/stale/offline matrix, currency reprojection)
+apps/windows/TeslaSync.App/feature-views/AIUsageCard/AIUsageCard.cs              (WinUI ContentControl: bordered card > Subhead + freshness chip + 3-cell grid + Caption; loading skeleton / empty / query-error surfaces; view.opened diagnostic; Group automation peer)
+apps/windows/TeslaSync.App.Tests/FeatureViews/AIUsageCardTests.cs               (34 tests: JSON adapter, cost derivation, projection + a11y names + currency, result mapper, ViewModel state matrix, source request shape, registration, diagnostics)
++ 3 Compile links added to TeslaSync.App.Tests.csproj; baseline repair in feature-views/HealthRecommendations/HealthRecommendations.Model.cs
+
+--- PARITY (web/src/features/settings/components/AIUsageCard.tsx) ---
+- Composition: bordered section (web rounded-md / border-subtle / p-4) > Subhead "Usage today" > 3-column grid
+  (Tokens in / Tokens out / Estimated cost) > Caption. Reproduced with native tokens (DisplayTokens.Border /
+  Surface / Radius), Subhead + Caption typography primitives, no Tailwind ported.
+- Data hooks actually used by source: useAiUsageToday (-> IAiUsageTodaySource cache-then-network over
+  GET /ai/usage/today, generated op get_api_v1_ai_usage_today, no path/query params - user-scoped server-side),
+  useTranslation (-> ILocalizer), useFormatting (-> currency symbol + ScalarFormatters).
+- Values: token counts via grouped integers (web fmtInt -> ScalarFormatters.FormatNumber(x,0)); cost via the
+  active currency symbol from cost_micro_cents / 1_000_000 at 2 decimals (web formatCurrency). Absent / error
+  values render the long em-dash sentinel (web PLACEHOLDER '—'), exactly as the web degrades.
+- Caption: call_count > 0 ? "{n} Helix calls today." : the empty/placeholder copy (web branch reproduced).
+- i18n keys (all six from source are wired through the i18n facade with the web English fallback):
+    translation.ai.settings.usage.title      = "Usage today"        (present in shared catalog)
+    translation.ai.settings.usage.tokensIn   = "Tokens in"          (present in shared catalog)
+    translation.ai.settings.usage.tokensOut  = "Tokens out"         (present in shared catalog)
+    translation.ai.settings.usage.cost       = "Estimated cost"     (present in shared catalog)
+    translation.ai.settings.usage.placeholder= "Usage populates ..." (present in shared catalog)
+    translation.ai.settings.usage.liveSuffix = "Helix calls today." (ABSENT from the shared catalog; the web
+       source itself ships this string only as an inline t() fallback, never as a catalog entry, so the native
+       Registration carries the same English fallback and resolves it correctly - no English literal in code,
+       no new catalog/generator artifact introduced, faithful to the web source's own wiring.)
+- States: the web card degrades every non-loaded branch to the em-dash; the native feature-view owns its read
+  and renders the full P2 state matrix on top of the same composition - loading skeleton, friendly empty
+  surface (the web placeholder copy), TsQueryError + retry on hard failure, stale chip and offline chip.
+- Telemetry: view.opened slug=AIUsageCard emitted once on Loaded (P1/S11 diagnostics contract).
+- A11y: surface Narrator name (title); each cell announces "{label}: {value}"; inner label/value marked Raw;
+  loading skeleton is a live region; Group automation peer.
+
+--- ACCEPTANCE CRITERIA ---
+[x] Surface renders every state from the web source plus the mandated P2 matrix (loading/loaded/empty/error/
+    stale/offline) - no hidden surfaces (no `{data && ...}` gate; placeholders always render the composition).
+[x] Hooks bind to the shared P1/S8 cache-then-network state-holder seam (IAiUsageTodaySource); no direct HTTP
+    from the view (the view holds no client; GET /ai/usage/today flows through the repository engine).
+[x] Every i18n key from source is wired through the facade; 5/6 resolve to the shared catalog, and liveSuffix
+    is carried as the web source's own inline English fallback (the web never had a catalog entry for it) -
+    documented above; no hardcoded English in native code.
+[x] Accessibility labels present: surface name, per-cell "{label}: {value}", skeleton live region.
+[x] Tests: data adapter unit test + projection/a11y test + per-state ViewModel test + source request-shape test
+    + diagnostics/registration test (34 passing headlessly).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0; 1 parity:allow with
+    reason for the web 'usage.placeholder' i18n key string literal).
+
+--- GATE SUMMARY ---
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0 (TeslaSync.App.Tests: 11532 passed, incl. 34 new)  SURFACE_TEST_EXIT=0 (34)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+WHOLE_SOLUTION_TEST_EXIT=1 only via the WinAppDriver-absent UIAutomation E2E suite (147 environment failures, 0 on this surface).
+
+EXIT=0
+STATUS=DONE

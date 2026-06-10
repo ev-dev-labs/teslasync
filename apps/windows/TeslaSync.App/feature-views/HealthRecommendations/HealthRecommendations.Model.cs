@@ -6,25 +6,6 @@ using TeslaSync.App.Core.Notifications;
 namespace TeslaSync.App.FeatureViews;
 
 /// <summary>
-/// The drivetrain-health level both drivetrain-health surfaces key off — the native mirror of the web
-/// <c>HealthStatus</c> (<c>'good' | 'warning' | 'critical'</c>). Defined once here for the
-/// <c>TeslaSync.App.FeatureViews</c> namespace (co-located with its <see cref="DrivetrainHealthSnapshot"/> JSON
-/// parser) and shared by both <c>HealthOverview</c> and <c>HealthRecommendations</c>; a second, identical
-/// declaration previously collided (CS0101), so it lives in exactly one place.
-/// </summary>
-public enum DrivetrainHealth
-{
-    /// <summary>Healthy drivetrain (web <c>'good'</c>) — green glow / success accent / check icon.</summary>
-    Good,
-
-    /// <summary>Running warm (web <c>'warning'</c>) — cyan glow / warning accent.</summary>
-    Warning,
-
-    /// <summary>Degraded drivetrain (web <c>'critical'</c>) — purple glow / danger accent.</summary>
-    Critical,
-}
-
-/// <summary>
 /// The urgency of a single recommendation — the native mirror of the web
 /// <c>Recommendation.priority</c> (<c>'high' | 'medium' | 'low'</c>). Drives the row's accent (high → danger,
 /// medium → warning, low → info) and the leading glyph, exactly like the web component's per-tip colour map.
@@ -84,27 +65,6 @@ public sealed record HealthRecommendation(
     string Text,
     RecommendationPriority Priority,
     string AutomationName);
-
-/// <summary>
-/// The drivetrain health level both drivetrain-health surfaces render (web <c>HealthStatus =
-/// 'good' | 'warning' | 'critical'</c>). This is the single canonical definition in the
-/// <c>TeslaSync.App.FeatureViews</c> namespace — co-located with its <see cref="DrivetrainHealthSnapshot"/>
-/// JSON parser and reused by <c>HealthOverview</c> (a duplicate definition there previously collided with
-/// CS0101, so it is defined once here). Good drives the green glow / success accent / check icon, Warning the
-/// cyan glow / warning accent, Critical the purple glow / danger accent, exactly as the web keys those off
-/// <c>overallHealth</c>. UI-free so the classification is unit-tested without a XAML runtime.
-/// </summary>
-public enum DrivetrainHealth
-{
-    /// <summary>Healthy (web <c>'good'</c>) — green glow, success accent, check icon, no alert.</summary>
-    Good,
-
-    /// <summary>Running warm (web <c>'warning'</c>) — cyan glow, warning accent, triangle icon, warning alert.</summary>
-    Warning,
-
-    /// <summary>Overheating (web <c>'critical'</c>) — purple glow, danger accent, triangle icon, danger alert.</summary>
-    Critical,
-}
 
 /// <summary>
 /// The drivetrain-health slice of <c>GET /drivetrain/health</c> the surface needs — just the
