@@ -1,0 +1,94 @@
+/*
+  SignalConfigModal.strings
+  TeslaSync — P4 modal / dialog · 0016 · SignalConfigModal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `SignalConfigModal`
+  resolves (table "SignalConfigModal") lives here with its English value. The web source
+  (components/ui/SignalConfigModal.tsx) hardcodes its copy; the native surface routes every string
+  through a key so no English literal lives in Swift. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table so
+  each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  Groups: dialog chrome + states; the footer / summary; the master controls; the category / row
+  chrome + accessibility; the 8 preset names + descriptions (web `PRESETS`); and the 10 interval
+  descriptors (web `INTERVAL_OPTIONS[i].desc`).
+*/
+
+/* --- Dialog chrome + states --- */
+"signals.config.title" = "Fleet Telemetry Signal Configuration";
+"signals.config.close" = "Close";
+"signals.config.loading" = "Loading signal catalog…";
+"signals.config.emptyTitle" = "No signals available";
+"signals.config.emptyMessage" = "This vehicle isn't reporting any configurable telemetry signals.";
+"signals.config.error" = "Couldn't load the signal catalog";
+"signals.config.retry" = "Retry";
+"signals.config.searchEmptyTitle" = "No matching signals";
+"signals.config.searchEmptyMessage" = "Try a different search term.";
+
+/* --- Freshness chip + banners (ADR-013) --- */
+"signals.config.live" = "Live";
+"signals.config.stale" = "Stale";
+"signals.config.offline" = "Offline";
+"signals.config.staleBanner" = "Reconnecting — this catalog may be out of date";
+"signals.config.offlineBanner" = "Offline — showing the last loaded signal catalog";
+"signals.config.reloadError" = "Couldn't refresh the signal catalog";
+
+/* --- Footer / summary (web footer line) --- */
+"signals.config.selectionSummary" = "{{selected}} of {{total}} signals selected";
+"signals.config.selectedCount" = "{{count}} signals selected";
+"signals.config.cadenceBreakdown" = "{{realtime}} at 500ms · {{standard}} at 10s";
+"signals.config.subscribeCount" = "Subscribe {{count}} Signals";
+"signals.config.cancel" = "Cancel";
+
+/* --- Master controls --- */
+"signals.config.selectAll" = "Select All";
+"signals.config.deselectAll" = "Deselect All";
+"signals.config.masterInterval" = "Master Interval";
+"signals.config.masterIntervalA11y" = "Master streaming interval";
+"signals.config.searchLabel" = "Search signals";
+"signals.config.searchPrompt" = "Search signals…";
+"signals.config.clearSearch" = "Clear search";
+"signals.config.setAll" = "Set all…";
+
+/* --- Category / row chrome + accessibility --- */
+"signals.config.expandHint" = "Expands or collapses this category";
+"signals.config.toggleCategory" = "Toggle all {{category}} signals";
+"signals.config.setAllA11y" = "Set the interval for all {{category}} signals";
+"signals.config.rowIntervalA11y" = "Streaming interval for {{name}}";
+"signals.config.selected" = "Selected";
+"signals.config.notSelected" = "Not selected";
+"signals.config.allSelected" = "All selected";
+"signals.config.someSelected" = "Some selected";
+"signals.config.noneSelected" = "None selected";
+"signals.config.categoryTally" = "{{selected}} of {{total}}";
+"signals.config.everyInterval" = "every {{interval}}";
+
+/* --- Presets (web `PRESETS` names + `title` descriptions) --- */
+"signals.config.preset.realtimeDriving.name" = "Real-time Driving";
+"signals.config.preset.realtimeDriving.desc" = "Driving signals at 1s, battery at 10s, config at 24h";
+"signals.config.preset.balanced.name" = "Balanced";
+"signals.config.preset.balanced.desc" = "All signals at 10s — good balance of data and battery";
+"signals.config.preset.lowPower.name" = "Low Power";
+"signals.config.preset.lowPower.desc" = "All signals at 60s — minimal battery impact";
+"signals.config.preset.trackMode.name" = "Track Mode";
+"signals.config.preset.trackMode.desc" = "Driving & powertrain at 1s, everything else at 30s";
+"signals.config.preset.costSaver.name" = "Cost Saver";
+"signals.config.preset.costSaver.desc" = "Essential signals only at 5–15min, non-essentials off";
+"signals.config.preset.sleepWatch.name" = "Sleep Watch";
+"signals.config.preset.sleepWatch.desc" = "Security & location at 60s, charging at 1min, rest off";
+"signals.config.preset.diagnostics.name" = "Diagnostics";
+"signals.config.preset.diagnostics.desc" = "Powertrain/tires/climate at 5s, driving at 10s";
+"signals.config.preset.tripLogger.name" = "Trip Logger";
+"signals.config.preset.tripLogger.desc" = "Location at 1s, driving at 5s — optimized for routes";
+
+/* --- Interval descriptors (web `INTERVAL_OPTIONS[i].desc`) --- */
+"signals.config.interval.0.desc" = "Real-time";
+"signals.config.interval.1.desc" = "Fast";
+"signals.config.interval.5.desc" = "Medium";
+"signals.config.interval.10.desc" = "Default";
+"signals.config.interval.30.desc" = "Slow";
+"signals.config.interval.60.desc" = "1 min";
+"signals.config.interval.300.desc" = "Rare";
+"signals.config.interval.900.desc" = "15 min";
+"signals.config.interval.3600.desc" = "1 hour";
+"signals.config.interval.86400.desc" = "Daily";
