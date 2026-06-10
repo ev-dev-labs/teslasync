@@ -1,0 +1,155 @@
+=== P4 Feature view 0191 NotificationRow (Apple) ===
+Date: 2026-06-10T04:42:00Z
+Host: macOS 26.5.1 / Xcode 26.5 Build version 17F42 
+Swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+Web source : web/src/features/notifications/components/NotificationRow.tsx
+Native out : apps/apple/TeslaSync/feature-views/NotificationRow.{Adapter,Drillthrough,Copy,Source,Model,Views,Chrome,swift,Previews,strings,Tests,ModelTests}
+
+Files shipped:
+  NotificationRow.Adapter.swift
+  NotificationRow.Chrome.swift
+  NotificationRow.Copy.swift
+  NotificationRow.Drillthrough.swift
+  NotificationRow.Model.swift
+  NotificationRow.ModelTests.swift
+  NotificationRow.Previews.swift
+  NotificationRow.Source.swift
+  NotificationRow.strings
+  NotificationRow.swift
+  NotificationRow.Tests.swift
+  NotificationRow.Views.swift
+
+----- [GATE 1] swiftformat --lint (host-runnable) -----
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-194659-46608/slot-10/apps/apple/.swiftformat
+SwiftFormat completed in 4.56s.
+0/11 files require formatting.
+FORMAT_EXIT=0
+
+----- [GATE 2] swiftlint --strict (host-runnable) -----
+Linting 'NotificationRow.ModelTests.swift' (11/11)
+Done linting! Found 0 violations, 0 serious in 11 files.
+LINT_EXIT=0
+
+----- [GATE 3] placeholder/stub gate (host-runnable) -----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+----- [VERIFY 4] isolated SwiftPM build + XCTest (Swift 6 language mode) -----
+(module 'TeslaSync' = 9 production NotificationRow.* files + real generated Tokens.swift
+ + exact-signature shims for the two shared P4 components TSFadeIn/TSSkeleton;
+ tests = co-located NotificationRow.Tests.swift + NotificationRow.ModelTests.swift)
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+	 Executed 41 tests, with 0 failures (0 unexpected) in 0.008 (0.011) seconds
+	 Executed 41 tests, with 0 failures (0 unexpected) in 0.008 (0.012) seconds
+SWIFT_TEST_EXIT=0  (41/41 passed, 0 failures)
+
+----- [VERIFY 5] real iOS-18 simulator typecheck (Swift 6, DEBUG/previews) -----
+IOS_TYPECHECK_EXIT=0  (target arm64-apple-ios18.0-simulator, 0 errors)
+
+----- [VERIFY 6] real macOS-15 typecheck (Swift 6, DEBUG/previews) -----
+MAC_TYPECHECK_EXIT=0  (target arm64-apple-macos15.0, 0 errors)
+
+----- [VERIFY 7] xcodegen generate (enumerates the surface into the app + test targets) -----
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260609-194659-46608/slot-10/apps/apple/TeslaSync.xcodeproj
+Enumerated NotificationRow.* pbxproj references: 72
+XCODEGEN_EXIT=0
+
+----- [GATE 8/9] full-app xcodebuild build test (iOS Simulator + macOS) — DEFERRED -----
+Command (per prompt):
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+
+First-hand result in THIS environment (bounded ~4 min attempt, captured live):
+  • The scheme pre-action `Scripts/build-shared-xcframework.sh` ran and DID assemble
+    the DEBUG KMP framework:
+      "xcframework successfully written out to:
+       apps/shared/core/build/XCFrameworks/debug/Shared.xcframework"
+    (Kotlin/Native compiles were FROM-CACHE; link tasks ran.)
+  • The full build is the documented Kotlin/Native long-pole and did not complete in
+    the bounded window — terminated with "** BUILD INTERRUPTED **".
+  • `apps/apple/Frameworks/` holds only `.gitkeep` — the RELEASE `Shared.xcframework`
+    the app target links is NOT staged (it requires the full Kotlin/Native toolchain
+    assembly; ADR-004).
+  • `security find-identity -p codesigning` → "0 valid identities found" — the macOS
+    app target cannot be development-signed on this host.
+
+  These are PRE-EXISTING, UNRELATED blockers (KMP RELEASE framework staging +
+  macOS development-signing), identical to those tracked in
+  apps/macos-pending-verifications.md for every prior P4/apple surface
+  (ToolCard, AlertMessageEditor, FSMTimelineChart, DrivingCoachSection,
+  ScheduledExportsPanel, SignalCatalogPanel, … and the sibling NotificationGroupRow
+  0190). They are NOT introduced or touched by this surface. Zero NotificationRow /
+  feature-views errors were produced. The full-app build+test is therefore DEFERRED to
+  the P4 acceptance gate runner (`macos-latest` with signing identities + the
+  Gradle-assembled RELEASE xcframework), per the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition.
+  IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED
+
+============================================================================
+HONESTY COVENANT (verbatim items, attested against the work above)
+============================================================================
+ 1 No red-as-green     : Every status reported is the literal tool result. The two
+                         full-app xcodebuild steps are explicitly marked DEFERRED
+                         (NOT green); EXIT=0/STATUS=DONE reflects the surface-level
+                         definition-of-done (all host-runnable gates + isolated
+                         cross-SDK verification green), not a passed xcodebuild.
+ 2 No scope narrowing  : All web-source data, composition, states, i18n keys, and the
+                         drill-through were reproduced (selection, severity badge,
+                         timestamp, vehicle + rule meta, unread accent, title/message,
+                         mark read/unread, archive/restore, "View context").
+ 3 No skip-and-assume  : Read the web source end-to-end; every t() call + conditional
+                         branch mapped. The URLComponents `:`-in-query behavior was
+                         verified by probe before pinning the test (matches AlertCard).
+ 4 No stubs as final   : No TODO/stub/mock/placeholder/Lorem — placeholder gate
+                         PLACEHOLDER_COUNT=0, 0 opt-outs. Every state renders real chrome.
+ 5 No parity shortcuts : severity `?? 'info'` default, `!!read_at`/`!!archived_at`
+                         derivations, `rule ? drill : null` gating, the SIGNAL_TO_PAGE
+                         map + fallback + param order + percent-encoded href, and the
+                         per-button web visibility gating are all mapped + tested (41/41).
+ 6 No delegation       : implemented directly; no sub-agents (delegation FORBIDDEN).
+ 7 No predecessor bypass: P1/S8 state-holder seam (no view HTTP), P1/S9 tokens
+                         (real Tokens.swift), P1/S10 per-surface i18n table, P1/S11
+                         view.opened telemetry (slug "NotificationRow"), P4 components.
+ 8 No commit on red    : the COMMITTED artifact is GREEN on every host-runnable gate
+                         (swiftformat/swiftlint/placeholder) AND on a real isolated
+                         Swift-6 build+test (41/41) AND on iOS-18-sim + macOS-15
+                         `swiftc -typecheck`. The only RED is pre-existing infra
+                         (KMP RELEASE xcframework staging + macOS signing) outside this
+                         prompt's allowed files, which this commit neither introduces
+                         nor touches.
+ 9 No silent drift     : changes confined to the 12 feature-views/NotificationRow.*
+                         files + this log. The generated TeslaSync.xcodeproj and any
+                         staged Shared.xcframework are git-ignored and not committed.
+10 EXIT/STATUS below.
+
+============================================================================
+DISPOSITION
+============================================================================
+Production-polished, Apple-idiomatic NotificationRow shipped at parity with the web
+source and INDEPENDENTLY VERIFIED: a pure Foundation projection core (severity folding,
+read/archived derivation, drill-through resolution, phase projection) behind a P1/S8
+state-holder seam (no view HTTP), an @Observable @MainActor model owning selection +
+activation + drill-through navigation + mark read/unread/archive/restore (busy-gated,
+failure-toasted), P1/S11 view.opened telemetry, EVERY state (loading/empty/error/
+stale/offline/content) rendering real chrome, all 6 web i18n keys + the native envelope
+keys resolved through the P1/S10 facade (no English literals in code), and full
+accessibility (per-control VoiceOver labels, selection value, Dynamic Type via tokens,
+Reduce-Motion via TSFadeIn/TSSkeleton). All token-driven (P1/S9) — no Tailwind ported.
+
+Verified GREEN here: swiftformat --lint 0/11 · swiftlint --strict 0 violations ·
+placeholder PLACEHOLDER_COUNT=0 · isolated SwiftPM `swift test` 41/41 under Swift-6
+language mode · real iOS-18-simulator + macOS-15 `swiftc -typecheck` 0 errors ·
+xcodegen enumerates all 12 files (72 pbxproj refs).
+
+DEFERRED: the full-app iOS-Simulator + macOS `xcodebuild build test`, blocked only by
+the pre-existing, unrelated KMP RELEASE Shared.xcframework staging (Kotlin/Native
+long-pole) + macOS development-signing — tracked by apps/macos-pending-verifications.md
+and run on the P4 `macos-latest` acceptance gate. This matches the repo's sanctioned
+"code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE
