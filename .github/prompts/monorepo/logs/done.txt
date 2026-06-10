@@ -336,3 +336,4 @@ p2-windows/feature-views/W-0152-WhyEndedPanel.prompt.md
 p2-windows/feature-views/W-0155-HealthOverview.prompt.md
 p2-windows/feature-views/W-0156-HealthRecommendations.prompt.md
 p2-windows/feature-views/W-0159-StatorTempChart.prompt.md
+p2-windows/feature-views/W-0160-TemperatureGauges.prompt.md
