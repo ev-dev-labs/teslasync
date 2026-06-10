@@ -812,6 +812,10 @@
   <!-- Linked WinUI-free Model / Source / ViewModel / Projection sources from the WinUI app project
        (deduplicated, path-sorted union). The headless net10.0 test project verifies each adapter, projection
        and diagnostics without a UI host; the WinUI views themselves are exercised by the app build. -->
+  <!-- WinUI-free sources Compile-linked from TeslaSync.App (path-sorted, deduplicated). -->
+  <!-- Linked WinUI-free Model / Source / ViewModel sources from the WinUI app project (deduplicated,
+       path-sorted union). The headless net10.0 test project verifies each adapter, projection and
+       diagnostics without a UI host; the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -1330,6 +1334,23 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Source.cs" Link="FeatureViews\XRayHeader\XRayHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveAnalyticsSection.Model.cs" Link="FeatureViews\DriveAnalyticsSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveAnalyticsSection.Source.cs" Link="FeatureViews\DriveAnalyticsSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveAnalyticsSection.ViewModel.cs" Link="FeatureViews\DriveAnalyticsSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs" Link="FeatureViews\HealthOverview\HealthOverview.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HealthRecommendations\HealthRecommendations.Model.cs" Link="FeatureViews\HealthRecommendations\HealthRecommendations.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HealthRecommendations\HealthRecommendations.Source.cs" Link="FeatureViews\HealthRecommendations\HealthRecommendations.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HealthRecommendations\HealthRecommendations.ViewModel.cs" Link="FeatureViews\HealthRecommendations\HealthRecommendations.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveMotorStatus\LiveMotorStatus.Model.cs" Link="FeatureViews\LiveMotorStatus\LiveMotorStatus.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveMotorStatus\LiveMotorStatus.Source.cs" Link="FeatureViews\LiveMotorStatus\LiveMotorStatus.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveMotorStatus\LiveMotorStatus.ViewModel.cs" Link="FeatureViews\LiveMotorStatus\LiveMotorStatus.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PowerOutputChart\PowerOutputChart.Model.cs" Link="FeatureViews\PowerOutputChart\PowerOutputChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemperatureGauges.Model.cs" Link="FeatureViews\TemperatureGauges\TemperatureGauges.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ThermalLoadPanel\ThermalLoadPanel.Model.cs" Link="FeatureViews\ThermalLoadPanel\ThermalLoadPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TorqueHistoryChart\TorqueHistoryChart.Model.cs" Link="FeatureViews\TorqueHistoryChart\TorqueHistoryChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TorqueHistoryChart\TorqueHistoryChart.Source.cs" Link="FeatureViews\TorqueHistoryChart\TorqueHistoryChart.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TorqueHistoryChart\TorqueHistoryChart.ViewModel.cs" Link="FeatureViews\TorqueHistoryChart\TorqueHistoryChart.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TripLegList\TripLegList.Model.cs" Link="FeatureViews\TripLegList\TripLegList.Model.cs" />
   </ItemGroup>
 
 </Project>
