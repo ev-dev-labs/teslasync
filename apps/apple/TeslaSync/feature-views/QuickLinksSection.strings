@@ -1,0 +1,46 @@
+/*
+  QuickLinksSection.strings
+  TeslaSync — P4 feature view · 0294 · QuickLinksSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `QuickLinksSection` resolves (table "QuickLinksSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first two groups are the exact keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/QuickLinksSection.tsx): the six
+  per-link labels the local `quickLinks` array resolves via `t(nav.x, …)`, plus the
+  panel title `t(vehicles.detail.quickLinks, 'Quick Links')`. The English values are
+  the literal `t()` defaults the source passes. The final group backs the native-only
+  chrome — the VoiceOver copy and the loading / empty / error / connectivity states
+  the prompt requires — so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity: quickLinks labels) --- */
+"nav.drives" = "Drives";
+"nav.charging" = "Charging";
+"nav.battery" = "Battery";
+"nav.climate" = "Climate";
+"nav.efficiency" = "Efficiency";
+"nav.settings" = "Settings";
+
+/* --- Key from the web source (panel title) --- */
+"vehicles.detail.quickLinks" = "Quick Links";
+
+/* --- Native chrome: accessibility --- */
+"vehicles.detail.quickLinks.openHint" = "Opens %@";
+"vehicles.detail.quickLinks.gridA11y" = "Quick links";
+"vehicles.detail.quickLinks.loadingA11y" = "Loading quick links";
+
+/* --- Native chrome: empty / error states --- */
+"vehicles.detail.quickLinks.emptyTitle" = "No quick links";
+"vehicles.detail.quickLinks.emptyHint" = "Navigation shortcuts will appear here.";
+"vehicles.detail.quickLinks.errorTitle" = "Couldn't load quick links";
+"vehicles.detail.quickLinks.retry" = "Retry";
+
+/* --- Native chrome: live-state connectivity chip --- */
+"vehicles.detail.quickLinks.live" = "Live";
+"vehicles.detail.quickLinks.stale" = "Stale";
+"vehicles.detail.quickLinks.offline" = "Offline";
