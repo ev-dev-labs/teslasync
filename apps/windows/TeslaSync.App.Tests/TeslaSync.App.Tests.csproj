@@ -843,6 +843,18 @@
     the path-sorted, deduplicated union of every previously linked WinUI-free Model/Source/ViewModel
     logic source on disk, plus the new SpeedGearPanel surface link. Do NOT re-concatenate, and never
     write a literal build-item or project start tag inside this comment.
+    feature-view and dashboard-widget surface. The WinUI app targets a WinUI TFM and cannot be
+    project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
+    compile-linked into the single item group below; the views themselves are exercised by the app build.
+    The matching test classes live under this project and are picked up by the SDK default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE project root with a single, path-sorted, Include-deduplicated
+    compile item group. A chain of integration merges had repeatedly re-concatenated this file into multiple
+    roots plus duplicate items and orphaned comment prose, failing XML load (MSB4025); re-consolidated for P2
+    feature-views/0187 LegacyNotificationsRedirect into this single canonical root - the deduplicated union of
+    every WinUI-free Model/Source/ViewModel logic source on disk under dashboard-widgets/ and feature-views/,
+    plus the new LegacyNotificationsRedirect surface links. Do NOT re-concatenate, and never write a literal
+    build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -885,6 +897,8 @@
        TeslaSync.App (path-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
+       TeslaSync.App (Half-1 order preserved, Include-deduplicated); the WinUI views are exercised by the app build. -->
+  <ItemGroup>    <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.ViewModel.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
@@ -1173,8 +1187,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.Source.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AchievementBadge.Model.cs" Link="FeatureViews\AchievementBadge.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.Model.cs" Link="FeatureViews\ActionBuilder.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.ViewModel.cs" Link="FeatureViews\ActionBuilder.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.Model.cs" Link="FeatureViews\AddressInput\AddressInput.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.Source.cs" Link="FeatureViews\AddressInput\AddressInput.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.ViewModel.cs" Link="FeatureViews\AddressInput\AddressInput.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.Model.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.ViewModel.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AddWidgetButton\AddWidgetButton.Model.cs" Link="FeatureViews\AddWidgetButton\AddWidgetButton.Model.cs" />
@@ -1212,6 +1227,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\AuditPanel\AuditPanel.Model.cs" Link="FeatureViews\AuditPanel\AuditPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AutomationActivityFeed\AutomationActivityFeed.Model.cs" Link="FeatureViews\AutomationActivityFeed\AutomationActivityFeed.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AutomationCard\AutomationCard.Model.cs" Link="FeatureViews\AutomationCard\AutomationCard.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AutopilotSection\AutopilotSection.Model.cs" Link="FeatureViews\AutopilotSection\AutopilotSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AutopilotSection\AutopilotSection.Source.cs" Link="FeatureViews\AutopilotSection\AutopilotSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AutopilotSection\AutopilotSection.ViewModel.cs" Link="FeatureViews\AutopilotSection\AutopilotSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Model.cs" Link="FeatureViews\BackendTool\BackendTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Source.cs" Link="FeatureViews\BackendTool\BackendTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.ViewModel.cs" Link="FeatureViews\BackendTool\BackendTool.ViewModel.cs" />
@@ -1299,12 +1317,10 @@
     <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" Link="FeatureViews\DrivingTemperatureStats\DrivingTemperatureStats.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingTips\DrivingTips.Model.cs" Link="FeatureViews\DrivingTips\DrivingTips.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPanel.Model.cs" Link="FeatureViews\EfficiencyPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPanel.Source.cs" Link="FeatureViews\EfficiencyPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPanel.ViewModel.cs" Link="FeatureViews\EfficiencyPanel.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ElevationChart.Model.cs" Link="FeatureViews\ElevationChart.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ElevationChart.Source.cs" Link="FeatureViews\ElevationChart.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ElevationChart.ViewModel.cs" Link="FeatureViews\ElevationChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.Model.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.ViewModel.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EntriesTable\EntriesTable.Model.cs" Link="FeatureViews\EntriesTable\EntriesTable.Model.cs" />
@@ -1335,7 +1351,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Model.cs" Link="FeatureViews\HashCalculator\HashCalculator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.Source.cs" Link="FeatureViews\HashCalculator\HashCalculator.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HashCalculator\HashCalculator.ViewModel.cs" Link="FeatureViews\HashCalculator\HashCalculator.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\HealthGaugeGrid\HealthGaugeGrid.Model.cs" Link="FeatureViews\HealthGaugeGrid\HealthGaugeGrid.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HealthOverview\HealthOverview.Model.cs" Link="FeatureViews\HealthOverview\HealthOverview.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HealthRecommendations\HealthRecommendations.Model.cs" Link="FeatureViews\HealthRecommendations\HealthRecommendations.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HealthRecommendations\HealthRecommendations.Source.cs" Link="FeatureViews\HealthRecommendations\HealthRecommendations.Source.cs" />
@@ -1378,6 +1393,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertsRedirect\LegacyAlertsRedirect.Model.cs" Link="FeatureViews\LegacyAlertsRedirect\LegacyAlertsRedirect.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertsRedirect\LegacyAlertsRedirect.Source.cs" Link="FeatureViews\LegacyAlertsRedirect\LegacyAlertsRedirect.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertsRedirect\LegacyAlertsRedirect.ViewModel.cs" Link="FeatureViews\LegacyAlertsRedirect\LegacyAlertsRedirect.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Model.cs" Link="FeatureViews\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Source.cs" Link="FeatureViews\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LegacyNotificationsRedirect\LegacyNotificationsRedirect.ViewModel.cs" Link="FeatureViews\LegacyNotificationsRedirect\LegacyNotificationsRedirect.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Model.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Source.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.ViewModel.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.ViewModel.cs" />
@@ -1573,9 +1591,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\WeekOverWeekSummary\WeekOverWeekSummary.Model.cs" Link="FeatureViews\WeekOverWeekSummary\WeekOverWeekSummary.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WeekOverWeekSummary\WeekOverWeekSummary.Source.cs" Link="FeatureViews\WeekOverWeekSummary\WeekOverWeekSummary.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WeekOverWeekSummary\WeekOverWeekSummary.ViewModel.cs" Link="FeatureViews\WeekOverWeekSummary\WeekOverWeekSummary.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\WidgetPicker\WidgetPicker.Catalog.cs" Link="FeatureViews\WidgetPicker\WidgetPicker.Catalog.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\WidgetPicker\WidgetPicker.Model.cs" Link="FeatureViews\WidgetPicker\WidgetPicker.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\WidgetPicker\WidgetPicker.ViewModel.cs" Link="FeatureViews\WidgetPicker\WidgetPicker.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WindowStatusDetail\WindowStatusDetail.Model.cs" Link="FeatureViews\WindowStatusDetail\WindowStatusDetail.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayBucketChart\XRayBucketChart.Model.cs" Link="FeatureViews\XRayBucketChart\XRayBucketChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayControls\XRayControls.Model.cs" Link="FeatureViews\XRayControls\XRayControls.Model.cs" />
@@ -1584,9 +1599,18 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Source.cs" Link="FeatureViews\XRayHeader\XRayHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ElevationChart.Model.cs" Link="FeatureViews\ElevationChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ElevationChart.Source.cs" Link="FeatureViews\ElevationChart.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ElevationChart.ViewModel.cs" Link="FeatureViews\ElevationChart.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HealthGaugeGrid\HealthGaugeGrid.Model.cs" Link="FeatureViews\HealthGaugeGrid\HealthGaugeGrid.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Model.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Source.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsRow.Model.cs" Link="FeatureViews\SummaryStatsRow.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\WidgetPicker\WidgetPicker.Catalog.cs" Link="FeatureViews\WidgetPicker\WidgetPicker.Catalog.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\WidgetPicker\WidgetPicker.Model.cs" Link="FeatureViews\WidgetPicker\WidgetPicker.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\WidgetPicker\WidgetPicker.ViewModel.cs" Link="FeatureViews\WidgetPicker\WidgetPicker.ViewModel.cs" />
   </ItemGroup>
-  </ItemGroup>
-
 </Project>
 
 
