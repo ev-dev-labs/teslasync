@@ -377,3 +377,4 @@ p2-windows/feature-views/W-0037-QueueStatusPanel.prompt.md
 p2-windows/feature-views/W-0042-EventHistoryTable.prompt.md
 p2-windows/feature-views/W-0044-LiveVehicleState.prompt.md
 p2-windows/feature-views/W-0040-RequestBuilder.prompt.md
+p2-windows/feature-views/W-0049-WindowStatusDetail.prompt.md
