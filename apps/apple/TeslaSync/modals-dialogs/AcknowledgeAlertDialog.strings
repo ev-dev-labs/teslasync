@@ -1,0 +1,51 @@
+/*
+  AcknowledgeAlertDialog.strings
+  TeslaSync — P4 modal/dialog · 0017 · AcknowledgeAlertDialog (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  AcknowledgeAlertDialog resolves (table "AcknowledgeAlertDialog") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/admin/components/AcknowledgeAlertDialog.tsx). The remainder backs the
+  native state envelope (loading, empty, error retry, freshness chip, connectivity
+  banner) and the VoiceOver builders. `{{max}}` / `{{count}}` are the i18next
+  interpolation tokens the projection substitutes with the note limit / live count.
+*/
+
+/* --- Web source keys (AcknowledgeAlertDialog.tsx) --- */
+"alerts.ack.dialogTitle" = "Acknowledge alert";
+"alerts.ack.noteLabel" = "Note (optional)";
+"alerts.ack.notePlaceholder" = "Optional: what's being done?";
+"alerts.ack.noteHint" = "Up to {{max}} characters. Shared in the audit timeline.";
+"alerts.ack.cancel" = "Cancel";
+"alerts.ack.submit" = "Acknowledge";
+
+/* --- Submit failure (native client surfaces the parent's mutation error inline) --- */
+"alerts.ack.error" = "Couldn't acknowledge the alert. Try again.";
+
+/* --- Loading (web Spinner) --- */
+"alerts.ack.state.loading" = "Loading the alert…";
+
+/* --- Empty (no alert to acknowledge) --- */
+"alerts.ack.state.empty" = "No alert selected to acknowledge";
+
+/* --- Error + retry (web QueryError) --- */
+"alerts.ack.state.error" = "Couldn't load the alert.";
+"alerts.ack.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"alerts.ack.live" = "Live";
+"alerts.ack.stale" = "Stale";
+"alerts.ack.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"alerts.ack.staleBanner" = "Reconnecting — the alert may be momentarily out of date";
+"alerts.ack.offlineBanner" = "Offline — your acknowledgement will sync when you reconnect";
+
+/* --- VoiceOver builders --- */
+"alerts.ack.a11y.close" = "Close";
+"alerts.ack.a11y.count" = "{{count}} of {{max}} characters";
