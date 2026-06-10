@@ -422,3 +422,4 @@ p2-windows/feature-views/W-0188-NotificationChannelsView.prompt.md
 p2-windows/feature-views/W-0200-AIProviderSection.prompt.md
 p2-windows/feature-views/W-0206-GasPriceSettings.prompt.md
 p2-windows/feature-views/W-0207-GeneralSettings.prompt.md
+p2-windows/feature-views/W-0210-QuietHoursPanel.prompt.md
