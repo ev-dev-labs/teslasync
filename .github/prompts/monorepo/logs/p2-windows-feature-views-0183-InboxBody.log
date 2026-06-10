@@ -1,0 +1,54 @@
+=== P2 Feature view 0183 InboxBody (Windows / WinUI 3) ===
+
+Web source : web/src/features/notifications/components/InboxBody.tsx
+Native out : apps/windows/TeslaSync.App/feature-views/InboxBody/{InboxBody.cs,
+             InboxBody.Model.cs, InboxBody.Source.cs, InboxBody.ViewModel.cs}
+Tests      : apps/windows/TeslaSync.App.Tests/FeatureViews/InboxBodyTests.cs (55 headless)
+Platform   : .NET 10.0.300 + WindowsAppSDK WinUI present -> AVAILABLE (not BLOCKED).
+
+--- Surface (production-polished native parity, no stubs) ---------------------------------------------
+WinUI 3 ContentControl over the shared InboxBodyViewModel (P1/S8 state-holder seam); no HTTP in the view.
+Composes the glass inbox panel InboxBody owns: header (select-all checkbox [flat], live "{n} notifications"
+count, grouped/flat view toggle [inbox tab], mark-all-read), a bulk-selection toolbar (mark read + archive on
+the inbox, restore on the archive, delete on both, with a delete confirmation), and a body that renders every
+state from the web source:
+  loading  -> skeleton rows (live region)
+  error    -> TsQueryError with Retry (cache-then-network hard failure)
+  empty    -> friendly TsEmptyState: inbox / archived / grouped copy variants, CTA event seam
+  loaded   -> day-grouped flat list (Today / Yesterday / dated headers, web groupByDay) OR threaded grouped list
+  stale    -> content + freshness chip   |   offline -> content + offline chip (native cache-then-network)
+Each row: severity chip (critical->danger, warn->warning, info->info, none->neutral), unread dot + bold title,
+relative time, selection checkbox, and a context menu (mark read/unread, archive/restore, view context when the
+row has an alert, delete). Auto-mark-read-on-open is reproduced for the flat inbox (opt-out via AutoMarkOnOpen).
+Data binds the web hooks to the shared layer: useNotificationLogs/useNotificationGroups -> InboxSource (one
+GET /notifications/logs read, ?grouped=true for threads); useMark*/useBulkMarkRead/useArchive/useUnarchive/
+useDelete -> InboxCommands (post_api_v1_notifications_{mark_read,mark_unread,archive,unarchive}, delete logs).
+i18n: every string from the source resolves through ILocalizer (PassthroughLocalizer in tests; resw in app);
+no English literals in native code. a11y: Narrator names on the surface, every row, every interactive element;
+reduce-motion honoured via TsFadeIn/TsSkeleton. Diagnostics: emits only "view.opened slug=InboxBody" (PII-safe).
+
+--- Pre-existing repairs (disclosed; required to make the host-runnable gate green) ------------------
+1. TeslaSync.App.Tests.csproj had again been left by integration merges with multiple concatenated <Project>
+   roots plus orphaned comment prose and stray "-->" delimiters outside any comment, failing XML load
+   (MSB4025) and blocking the whole solution build/test. Consolidated into ONE valid canonical root holding
+   the deduplicated, path-sorted union of every previously linked source plus the new InboxBody Model/Source/
+   ViewModel links. No linked source dropped.
+2. The App project did not compile at HEAD: the canonical DrivetrainHealth enum (web HealthStatus
+   'good'|'warning'|'critical') had been dropped from HealthRecommendations.Model.cs by a later merge while
+   every usage in HealthOverview/HealthRecommendations (+ their tests) remained, yielding 28 CS0246 that
+   cascaded into 162 XamlCompiler WMC errors across the App. Restored the single canonical definition to its
+   documented home (HealthRecommendations.Model.cs, co-located with DrivetrainHealthSnapshot); both
+   drivetrain-health surfaces and all their tests compile and pass unchanged.
+
+--- Gate ---------------------------------------------------------------------------------------------
+BUILD_EXIT=0   (dotnet build apps/windows/TeslaSync.sln -c Release)
+TEST_EXIT(headless)=0   TeslaSync.App.Tests: Passed 11162, Failed 0, Skipped 0 (incl. 55 InboxBodyTests)
+FORMAT_EXIT=0   (dotnet format apps/windows/TeslaSync.sln --verify-no-changes)
+PLACEHOLDER_EXIT=0   (check-placeholders.ps1 -Path .../feature-views/InboxBody: PLACEHOLDER_COUNT=0)
+TEST_EXIT(sln literal)=1 [DEFERRED: WinAppDriver UI-automation runner absent; W9-0002; not surface-related]
+   TeslaSync.App.UITests 147/147 fail in <1ms with UiAutomationUnavailableException: "nothing is listening on
+   http://127.0.0.1:4723/ and WinAppDriver.exe was not found". These are shell/page-state UI-automation tests,
+   unrelated to InboxBody; identical environmental deferral as the merged predecessor (0171).
+
+EXIT=0
+STATUS=DONE
