@@ -414,3 +414,4 @@ p2-windows/feature-views/W-0174-SpeedGearPanel.prompt.md
 p2-windows/feature-views/W-0186-LegacyAlertStudioRedirect.prompt.md
 p2-windows/feature-views/W-0187-LegacyNotificationsRedirect.prompt.md
 p2-windows/feature-views/W-0191-NotificationRow.prompt.md
+p2-windows/feature-views/W-0182-ComputedMetricEditor.prompt.md
