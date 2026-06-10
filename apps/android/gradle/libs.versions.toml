@@ -14,6 +14,9 @@ androidxActivity = "1.9.3"
 androidxLifecycle = "2.8.7"
 # Compose Bill of Materials — pins every androidx.compose.* artifact version.
 composeBom = "2026.04.01"
+# Vico — Compose-native charting (ADR-012 lock, apps/versions.lock.md). Major bumps
+# require a superseding ADR; Renovate keeps patch versions current.
+vico = "2.0.0"
 # Quality
 ktlint = "12.1.2"
 ktlintEngine = "1.5.0"
@@ -40,6 +43,9 @@ compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
+# Vico charts — Compose-native cartesian charts + Material 3 theme bridge.
+vico-compose = { module = "com.patrykandpatrick.vico:compose", version.ref = "vico" }
+vico-compose-m3 = { module = "com.patrykandpatrick.vico:compose-m3", version.ref = "vico" }
 # Test
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestExtJunit" }

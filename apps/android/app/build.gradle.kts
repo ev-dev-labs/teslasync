@@ -154,6 +154,8 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
+    implementation(libs.vico.compose)
+    implementation(libs.vico.compose.m3)
     debugImplementation(libs.compose.ui.tooling)
 
     // KMP shared core (ADR-004), consumed via composite-build substitution (settings.gradle.kts).
