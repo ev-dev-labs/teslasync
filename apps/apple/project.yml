@@ -50,6 +50,10 @@ targets:
         excludes:
           - "**/*Tests.swift"
           - "*Tests.swift"
+      - path: TeslaSync/shared-surfaces
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
       - path: Localization
       - path: ../design/generated/apple
         name: DesignTokens
@@ -92,6 +96,10 @@ targets:
           - "**/*Tests.swift"
           - "*Tests.swift"
       - path: TeslaSync/misc-surfaces
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
+      - path: TeslaSync/shared-surfaces
         excludes:
           - "**/*Tests.swift"
           - "*Tests.swift"
@@ -264,6 +272,10 @@ targets:
         includes:
           - "**/*Tests.swift"
           - "*Tests.swift"
+      - path: TeslaSync/shared-surfaces
+        includes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
     dependencies:
       - target: TeslaSync
       - framework: Frameworks/Shared.xcframework
@@ -294,6 +306,10 @@ targets:
           - "**/*Tests.swift"
           - "*Tests.swift"
       - path: TeslaSync/misc-surfaces
+        includes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
+      - path: TeslaSync/shared-surfaces
         includes:
           - "**/*Tests.swift"
           - "*Tests.swift"
