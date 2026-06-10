@@ -375,3 +375,4 @@ p2-windows/dashboard-widgets/W-0056-LivePowerFlowWidget.prompt.md
 p2-windows/dashboard-widgets/W-0108-VehicleHeroWidget.prompt.md
 p2-windows/feature-views/W-0037-QueueStatusPanel.prompt.md
 p2-windows/feature-views/W-0042-EventHistoryTable.prompt.md
+p2-windows/feature-views/W-0044-LiveVehicleState.prompt.md
