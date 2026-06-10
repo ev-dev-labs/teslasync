@@ -1,0 +1,59 @@
+/*
+  TOUSettingsModal.strings
+  TeslaSync — P4 modal / dialog · 0021 · TOUSettingsModal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  TOUSettingsModal resolves (table "TOUSettingsModal") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/battery/components/TOUSettingsModal.tsx). The remainder backs the
+  native state envelope (loading, empty, error retry, freshness chip,
+  connectivity banner), the header close affordance, and the VoiceOver builders.
+*/
+
+/* --- Web source keys (TOUSettingsModal.tsx) --- */
+"energy.tou.title" = "Update Rate Plan";
+"energy.tou.description" = "Configure your utility rate plan so the Powerwall can optimize charging and discharging based on electricity pricing.";
+"energy.tou.tabPreset" = "Preset Tariff";
+"energy.tou.tabCustom" = "Custom JSON";
+"energy.tou.selectPlan" = "Rate Plan";
+"energy.tou.selectPlaceholder" = "Choose a rate plan…";
+"energy.tou.previewLabel" = "Preview";
+"energy.tou.customLabel" = "TOU Settings JSON";
+"energy.tou.customHint" = "Paste the full tou_settings payload or just the inner object. See Tesla Fleet API docs for the schema.";
+"energy.tou.errorNoPreset" = "Please select a rate plan";
+"energy.tou.errorEmptyJSON" = "Please enter the TOU settings JSON";
+"energy.tou.errorNotObject" = "JSON must be an object";
+"energy.tou.errorInvalidJSON" = "Invalid JSON — please check syntax";
+"energy.tou.submit" = "Update Rate Plan";
+"common.cancel" = "Cancel";
+
+/* --- Header close (accessibility) --- */
+"tou.closeAria" = "Close";
+
+/* --- Loading (web initial fetch) --- */
+"tou.loading" = "Loading rate plan settings…";
+
+/* --- Empty (no TOU-capable site) --- */
+"tou.empty" = "No Powerwall site to configure";
+"tou.empty.detail" = "Connect a TOU-capable Powerwall energy site to set a rate plan.";
+
+/* --- Error + retry (web QueryError) --- */
+"tou.errors.load" = "Couldn't load the rate plan settings.";
+"tou.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"tou.live" = "Live";
+"tou.stale" = "Stale";
+"tou.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"tou.staleBanner" = "Reconnecting — the rate plan shown may be out of date";
+"tou.offlineBanner" = "Offline — changes will sync when you reconnect";
+
+/* --- VoiceOver builders --- */
+"tou.selected" = "selected";
