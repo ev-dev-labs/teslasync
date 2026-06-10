@@ -17,6 +17,10 @@ composeBom = "2026.04.01"
 # Quality
 ktlint = "12.1.2"
 ktlintEngine = "1.5.0"
+# detekt 1.23.8 — Gradle plugin runs on Gradle 8.x; the default (no type-resolution)
+# `detekt` task parses sources with its bundled Kotlin frontend. Required by the
+# apps-android CI lane (`./gradlew ktlintCheck detekt lint`) and the P3/A1 gate.
+detekt = "1.23.8"
 # Test
 junit = "4.13.2"
 androidxTestExtJunit = "1.2.1"
@@ -47,3 +51,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

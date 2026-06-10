@@ -1,0 +1,42 @@
+# detekt configuration for the TeslaSync Android program (P3/A1).
+#
+# Layered on top of detekt's bundled defaults (buildUponDefaultConfig = true in
+# app/build.gradle.kts). Only the rules that conflict with idiomatic Jetpack
+# Compose / Material 3 theme code are adjusted here; everything else keeps the
+# default severity so the `detekt` gate stays meaningful.
+#
+# Validation is disabled so a future detekt patch bump cannot fail the gate on a
+# benign unknown-property warning; the keys below are all current, valid rules.
+config:
+  validation: false
+  warningsAsErrors: true
+
+complexity:
+  LongMethod:
+    # @Composable showcase/preview functions are declarative trees, not logic.
+    ignoreAnnotated: ['Composable', 'Preview']
+  LongParameterList:
+    ignoreAnnotated: ['Composable']
+  CyclomaticComplexMethod:
+    ignoreAnnotated: ['Composable']
+  TooManyFunctions:
+    active: false
+
+naming:
+  FunctionNaming:
+    # Composables are PascalCase by Compose convention (mirrors the ktlint rule
+    # ktlint_function_naming_ignore_when_annotated_with = Composable).
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    # CompositionLocals follow the `LocalXxx` PascalCase convention.
+    active: false
+
+style:
+  MagicNumber:
+    # A theme/preview layer legitimately uses dp/sp and tonal-elevation numerals.
+    active: false
+  MaxLineLength:
+    maxLineLength: 140
+  UnusedPrivateMember:
+    # @Preview entry points are invoked only by tooling, never from code.
+    ignoreAnnotated: ['Preview']

@@ -1,11 +1,20 @@
+import io.teslasync.android.buildlogic.DesignTokenGenerator
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
 }
+
+// apps/design/tokens.json -> generated Material 3 theme Kotlin (P3/A1, ADR-005/ADR-012).
+// generateDesignTokens writes Kotlin into apps/design/generated/android/**, which is added
+// to the main source set below and consumed by the io.teslasync.android.ui.theme wrappers.
+val designTokensJson: File = rootDir.parentFile.resolve("design/tokens.json")
+val generatedAndroidRoot: File = rootDir.parentFile.resolve("design/generated/android")
 
 android {
     namespace = "io.teslasync.android"
@@ -43,6 +52,10 @@ android {
         compose = true
     }
 
+    // Compile the generated design-token theme layer (apps/design/generated/android/**)
+    // alongside the app sources. It is produced by the generateDesignTokens task.
+    sourceSets.getByName("main").java.srcDir(generatedAndroidRoot)
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -75,6 +88,60 @@ kotlin {
 
 ktlint {
     version.set(libs.versions.ktlintEngine.get())
+    filter {
+        // The generated design-token layer is machine-authored; lint the hand-written code only.
+        exclude { element ->
+            val normalizedPath = element.file.path.replace('\\', '/')
+            normalizedPath.contains("/design/generated/")
+        }
+    }
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom(rootDir.resolve("config/detekt/detekt.yml"))
+    basePath = rootDir.path
+}
+
+// ── Design-token generation (P3/A1) ──────────────────────────────────────────────
+val generateDesignTokens by tasks.registering {
+    group = "design"
+    description = "Generate the Material 3 theme Kotlin layer from apps/design/tokens.json."
+    val tokensFile = designTokensJson
+    val outDir = generatedAndroidRoot
+    inputs.file(tokensFile)
+    // No declared output dir: the generated files are committed under apps/design/generated
+    // (not build/), and declaring them as a task output makes every source-consuming task
+    // (ktlint/lint) require an explicit dependency. Ordering before compile is handled by the
+    // preBuild hook below; checkDesignTokensDrift guards that the committed files stay in sync.
+    doLast {
+        DesignTokenGenerator.generate(tokensFile, outDir)
+    }
+}
+
+val checkDesignTokensDrift by tasks.registering {
+    group = "verification"
+    description = "Fail the build if the generated Android theme drifted from tokens.json."
+    val tokensFile = designTokensJson
+    val outDir = generatedAndroidRoot
+    inputs.file(tokensFile)
+    doLast {
+        val drift = DesignTokenGenerator.drift(tokensFile, outDir)
+        if (drift.isNotEmpty()) {
+            throw GradleException(
+                buildString {
+                    append("Generated Android theme drifted from tokens.json; ")
+                    append("run `./gradlew :android:generateDesignTokens`:\n")
+                    drift.forEach { append("  - ").append(it).append('\n') }
+                },
+            )
+        }
+    }
+}
+
+// Generated sources must exist before any Kotlin compilation.
+tasks.named("preBuild") {
+    dependsOn(generateDesignTokens)
 }
 
 dependencies {
