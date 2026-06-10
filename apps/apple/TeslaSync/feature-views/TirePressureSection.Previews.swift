@@ -1,12 +1,12 @@
 //
 //  TirePressureSection.Previews.swift
-//  TeslaSync — P4 feature view · 0151 · TirePressureSection (Apple)
+//  TeslaSync — P4 feature view · 0299 · TirePressureSection (Apple)
 //
-//  Xcode previews — one per state the surface produces: content (the four populated
-//  tiles + four-wheel line chart), empty (resolved, no tire-pressure samples → web
-//  empty overlay), loading (initial skeleton chrome), error (fetch failed → retry), and
-//  the stale / offline freshness variants, plus a psi-unit variant. Preview-only;
-//  excluded from release builds via `#if DEBUG`.
+//  Xcode previews — one per state the surface produces: content (four populated tiles),
+//  a mixed-status variant (Normal / Low / Critical / No Data so every badge tone shows),
+//  a psi-unit variant, empty (resolved, no snapshot → web `EmptyState`), loading (initial
+//  skeleton chrome), error (fetch failed → retry), and the stale / offline freshness
+//  variants. Preview-only; excluded from release builds via `#if DEBUG`.
 //
 
 #if DEBUG
@@ -17,30 +17,32 @@
         func viewOpened(surface _: String) {}
     }
 
-    /// Sample SI (pascal) telemetry across eight samples around 290 kPa, with each wheel
-    /// drifting slightly and the rears sitting a touch higher — so every line, tile, and
-    /// legend entry render.
     private enum TPSectionPreviewData {
-        static let samples: [TPSectionSample] = (0 ..< 8).map { (index: Int) -> TPSectionSample in
-            let drift = Double(index) * 900
-            return TPSectionSample(
-                time: String(format: "%02d:%02d", 8 + index / 6, (index * 10) % 60),
-                frontLeftPa: 288_000 + drift,
-                frontRightPa: 290_000 + drift,
-                rearLeftPa: 296_000 + drift,
-                rearRightPa: 294_000 + drift
-            )
-        }
+        /// All four corners in the safe band (≈ 290 kPa), each drifting slightly.
+        static let normal = TPSectionSnapshot(
+            frontLeftPa: 288_000,
+            frontRightPa: 290_000,
+            rearLeftPa: 296_000,
+            rearRightPa: 294_000
+        )
+
+        /// One corner per status: Normal / Low (soft) / Critical (hard) / No Data.
+        static let mixed = TPSectionSnapshot(
+            frontLeftPa: 275_000,
+            frontRightPa: 220_000,
+            rearLeftPa: 190_000,
+            rearRightPa: nil
+        )
 
         static func update(
             status: TPSectionLoadStatus = .loaded,
-            samples: [TPSectionSample] = TPSectionPreviewData.samples,
+            snapshot: TPSectionSnapshot? = TPSectionPreviewData.normal,
             unit: TPSectionUnit = .kpa,
             connection: TPSectionConnection = .live
         ) -> TPSectionUpdate {
             TPSectionUpdate(
                 status: status,
-                samples: samples,
+                snapshot: snapshot,
                 unit: unit,
                 localeIdentifier: "en_US",
                 connection: connection
@@ -64,6 +66,12 @@
             .frame(maxWidth: 520)
     }
 
+    #Preview("Content · mixed status") {
+        tpSectionPreview(TPSectionPreviewData.update(snapshot: TPSectionPreviewData.mixed))
+            .padding()
+            .frame(maxWidth: 520)
+    }
+
     #Preview("Content · psi") {
         tpSectionPreview(TPSectionPreviewData.update(unit: .psi))
             .padding()
@@ -71,19 +79,19 @@
     }
 
     #Preview("Empty") {
-        tpSectionPreview(TPSectionPreviewData.update(samples: []))
+        tpSectionPreview(TPSectionPreviewData.update(snapshot: nil))
             .padding()
             .frame(maxWidth: 520)
     }
 
     #Preview("Loading") {
-        tpSectionPreview(TPSectionPreviewData.update(status: .loading, samples: []))
+        tpSectionPreview(TPSectionPreviewData.update(status: .loading, snapshot: nil))
             .padding()
             .frame(maxWidth: 520)
     }
 
     #Preview("Error") {
-        tpSectionPreview(TPSectionPreviewData.update(status: .failed("Request timed out"), samples: []))
+        tpSectionPreview(TPSectionPreviewData.update(status: .failed("Request timed out"), snapshot: nil))
             .padding()
             .frame(maxWidth: 520)
     }

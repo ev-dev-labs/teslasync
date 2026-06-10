@@ -1,6 +1,6 @@
 /*
   TirePressureSection.strings
-  TeslaSync — P4 feature view · 0151 · TirePressureSection (Apple)
+  TeslaSync — P4 feature view · 0299 · TirePressureSection (Apple)
 
   The P1/S10 i18n catalog contribution for this surface. Every key the native
   `TirePressureSection` resolves (table "TirePressureSection") lives here with its web
@@ -9,45 +9,39 @@
   per-surface table so each parallel surface prompt owns its own strings without
   editing the shared catalog.
 
-  The first group is the exact keys extracted from the web source
-  (features/driving/components/drive-detail/TirePressureSection.tsx). The remainder
-  back the native state envelope (short wheel names, the no-value placeholder, freshness
-  chip, connectivity banner, loading / empty / error chrome) and the chart axes.
+  The first two groups are the exact keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/TirePressureSection.tsx). The remainder
+  back the native state envelope (no-value dash, freshness chip, connectivity banner,
+  loading / error chrome) that the web leaf delegates to its parent page.
 */
 
 /* --- Keys from the web source (parity) --- */
-"driveDetail.tirePressure" = "Tire Pressure During Drive";
-"driveDetail.tirePressure.aria" = "Front and rear tire pressure lines over the drive timeline";
-"driveDetail.frontLeft" = "Front Left";
-"driveDetail.frontRight" = "Front Right";
-"driveDetail.rearLeft" = "Rear Left";
-"driveDetail.rearRight" = "Rear Right";
-"driveDetail.noChartData" = "No telemetry data available";
+"vehicles.detail.tirePressure" = "Tire Pressure";
+"vehicles.detail.tireFl" = "Front Left";
+"vehicles.detail.tireFr" = "Front Right";
+"vehicles.detail.tireRl" = "Rear Left";
+"vehicles.detail.tireRr" = "Rear Right";
+"vehicles.detail.noTireData" = "No tire pressure data available";
 
-/* --- Short wheel names (web `<Line name>` `FL (unit)` / `FR (unit)` / …) --- */
-"driveDetail.tireFlShort" = "FL";
-"driveDetail.tireFrShort" = "FR";
-"driveDetail.tireRlShort" = "RL";
-"driveDetail.tireRrShort" = "RR";
+/* --- Badge status words (web `t('common.normal', 'Normal')`, …) --- */
+"common.normal" = "Normal";
+"common.low" = "Low";
+"common.critical" = "Critical";
+"common.noData" = "No Data";
 
-/* --- Per-wheel no-value placeholder (web `'—'`) --- */
-"driveDetail.tireNoValue" = "—";
-
-/* --- Chart axes / scale labels --- */
-"driveDetail.time" = "Time";
-"driveDetail.pressure" = "Pressure";
-"driveDetail.wheel" = "Wheel";
+/* --- Per-corner no-value dash (web `formatPressure` `'—'` empty display) --- */
+"tireSection.noValue" = "—";
 
 /* --- Freshness chip (Live / Stale / Offline) --- */
-"driveDetail.live" = "Live";
-"driveDetail.stale" = "Stale";
-"driveDetail.offline" = "Offline";
+"tireSection.live" = "Live";
+"tireSection.stale" = "Stale";
+"tireSection.offline" = "Offline";
 
 /* --- Connectivity banner (stale / offline) --- */
-"driveDetail.staleBanner" = "Reconnecting — tire pressure may be stale";
-"driveDetail.offlineBanner" = "Offline — showing last known tire pressure";
+"tireSection.staleBanner" = "Reconnecting — tire pressure may be stale";
+"tireSection.offlineBanner" = "Offline — showing last known tire pressure";
 
-/* --- Loading / empty / error chrome --- */
-"driveDetail.tireLoading" = "Loading tire pressure";
-"driveDetail.tireErrorTitle" = "Couldn't load tire pressure";
-"driveDetail.retry" = "Retry";
+/* --- Loading / error chrome --- */
+"tireSection.loading" = "Loading tire pressure";
+"tireSection.errorTitle" = "Couldn't load tire pressure";
+"tireSection.retry" = "Retry";
