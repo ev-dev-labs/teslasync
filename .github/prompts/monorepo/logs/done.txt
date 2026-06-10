@@ -380,3 +380,4 @@ p2-windows/feature-views/W-0040-RequestBuilder.prompt.md
 p2-windows/feature-views/W-0049-WindowStatusDetail.prompt.md
 p2-windows/feature-views/W-0047-SentryModeChart.prompt.md
 p2-windows/feature-views/W-0048-SummaryStatsRow.prompt.md
+p2-windows/feature-views/W-0051-AchievementBadge.prompt.md
