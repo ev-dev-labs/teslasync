@@ -1,0 +1,62 @@
+/*
+  AddAnnotationPopover.strings
+  TeslaSync — P4 modal/dialog · 0002 · AddAnnotationPopover (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  AddAnnotationPopover resolves (table "AddAnnotationPopover") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (components/charts/AddAnnotationPopover.tsx). The second group is the six
+  category labels (CATEGORY_OPTIONS). The remainder backs the native state
+  envelope (loading, empty, error retry, freshness chip, connectivity banner),
+  the header close affordance, and the VoiceOver builders.
+*/
+
+/* --- Web source keys (AddAnnotationPopover.tsx) --- */
+"annotation.addTitle" = "Add Annotation";
+"annotation.date" = "Date";
+"annotation.label" = "Label";
+"annotation.labelPlaceholder" = "e.g., Battery replaced";
+"annotation.category" = "Category";
+"annotation.description" = "Description";
+"annotation.descPlaceholder" = "Optional description...";
+"annotation.add" = "Add Annotation";
+"common.cancel" = "Cancel";
+
+/* --- Category labels (CATEGORY_OPTIONS) --- */
+"annotation.cat.milestone" = "Milestone";
+"annotation.cat.maintenance" = "Maintenance";
+"annotation.cat.trip" = "Trip";
+"annotation.cat.issue" = "Issue";
+"annotation.cat.upgrade" = "Upgrade";
+"annotation.cat.custom" = "Custom";
+
+/* --- Header close (accessibility) --- */
+"addAnnotation.closeAria" = "Close";
+
+/* --- Loading (web Spinner) --- */
+"addAnnotation.loading" = "Preparing annotation…";
+
+/* --- Empty (resolved with no annotatable target) --- */
+"addAnnotation.empty" = "No point selected to annotate";
+
+/* --- Error + retry (web QueryError) --- */
+"addAnnotation.errors.load" = "Couldn't open the annotation form.";
+"addAnnotation.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"addAnnotation.live" = "Live";
+"addAnnotation.stale" = "Stale";
+"addAnnotation.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"addAnnotation.staleBanner" = "Reconnecting — your annotation may not be saved yet";
+"addAnnotation.offlineBanner" = "Offline — your annotation will sync when you reconnect";
+
+/* --- VoiceOver builders --- */
+"addAnnotation.selected" = "selected";
+"addAnnotation.timestampAria" = "Annotating {{0}}";
