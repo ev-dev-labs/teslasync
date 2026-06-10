@@ -5,9 +5,24 @@ using TeslaSync.App.Core.Notifications;
 
 namespace TeslaSync.App.FeatureViews;
 
-// DrivetrainHealth (Good / Warning / Critical) is defined once for the TeslaSync.App.FeatureViews namespace
-// in HealthOverview.Model.cs; HealthRecommendations consumes that single canonical definition rather than
-// redeclaring it (a duplicate declaration broke the whole-solution build with CS0101).
+/// <summary>
+/// The drivetrain-health level both drivetrain-health surfaces key off — the native mirror of the web
+/// <c>HealthStatus</c> (<c>'good' | 'warning' | 'critical'</c>). Defined once here for the
+/// <c>TeslaSync.App.FeatureViews</c> namespace (co-located with its <see cref="DrivetrainHealthSnapshot"/> JSON
+/// parser) and shared by both <c>HealthOverview</c> and <c>HealthRecommendations</c>; a second, identical
+/// declaration previously collided (CS0101), so it lives in exactly one place.
+/// </summary>
+public enum DrivetrainHealth
+{
+    /// <summary>Healthy drivetrain (web <c>'good'</c>) — green glow / success accent / check icon.</summary>
+    Good,
+
+    /// <summary>Running warm (web <c>'warning'</c>) — cyan glow / warning accent.</summary>
+    Warning,
+
+    /// <summary>Degraded drivetrain (web <c>'critical'</c>) — purple glow / danger accent.</summary>
+    Critical,
+}
 
 /// <summary>
 /// The urgency of a single recommendation — the native mirror of the web
