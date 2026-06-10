@@ -1,0 +1,44 @@
+/*
+  SignalStatsPanel.strings
+  TeslaSync — P4 feature view · 0272 · SignalStatsPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SignalStatsPanel` resolves (table "SignalStatsPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of strings rendered by the web source
+  (features/telemetry/components/SignalStatsPanel.tsx) — the explicit i18n keys it
+  passes to `t()` (signalStats.noDataInRange / signalStats.hideEmpty) plus the bare
+  column / title / empty strings the web passes verbatim as both key and default.
+  The second group backs the native chrome: the em-dash "no data" a11y label and the
+  P4 leaf freshness / loading / empty / error copy, so the Swift sources hold no
+  English literals.
+*/
+
+/* --- Strings from the web source (parity) --- */
+"signalStats.title" = "Stats Summary";
+"signalStats.signal" = "Signal";
+"signalStats.min" = "Min";
+"signalStats.max" = "Max";
+"signalStats.avg" = "Avg";
+"signalStats.count" = "Count";
+"signalStats.noDataInRange" = "No data in range";
+"signalStats.hideEmpty" = "Hide empty (%lld)";
+"signalStats.noStats" = "No stats available";
+"signalStats.noData" = "No data";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error --- */
+"signalStats.panelA11y" = "Signal statistics";
+"signalStats.live" = "Live";
+"signalStats.stale" = "Stale";
+"signalStats.offline" = "Offline";
+"signalStats.staleBanner" = "Reconnecting — data may be stale";
+"signalStats.offlineBanner" = "Offline — showing last known data";
+"signalStats.refresh" = "Refresh";
+"signalStats.loadingA11y" = "Loading signal stats";
+"signalStats.empty" = "No signal statistics to show yet.";
+"signalStats.errorTitle" = "Couldn't load signal stats";
+"signalStats.retry" = "Retry";
