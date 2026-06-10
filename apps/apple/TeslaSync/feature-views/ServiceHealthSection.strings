@@ -1,0 +1,52 @@
+/*
+  ServiceHealthSection.strings
+  TeslaSync — P4 feature view · 0252 · ServiceHealthSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ServiceHealthSection resolves (table "ServiceHealthSection") lives here with its
+  web t(key, default) English value. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/system/components/status/ServiceHealthSection.tsx, where the bare English
+  string is the t() key). The second group backs the native chrome (freshness /
+  loading / error copy, accordion accessibility) so the Swift sources hold no English
+  literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Service Health" = "Service Health";
+"Fleet Telemetry streaming status" = "Fleet Telemetry streaming status";
+"Enabled" = "Enabled";
+"Disabled" = "Disabled";
+"streaming" = "streaming";
+"Mode" = "Mode";
+"Vehicles Connected" = "Vehicles Connected";
+"Total Signals" = "Total Signals";
+"Avg Signals/s" = "Avg Signals/s";
+"VIN" = "VIN";
+"Status" = "Status";
+"Streaming" = "Streaming";
+"Idle" = "Idle";
+"Signals" = "Signals";
+"Signals/s" = "Signals/s";
+"Latency" = "Latency";
+"Last Received" = "Last Received";
+"No telemetry data available" = "No telemetry data available";
+"No vehicles connected" = "No vehicles connected";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"serviceHealth.stale" = "Stale";
+"serviceHealth.offline" = "Offline";
+"serviceHealth.staleBanner" = "Reconnecting — telemetry may be out of date";
+"serviceHealth.offlineBanner" = "Offline — showing last known telemetry";
+"serviceHealth.loadingA11y" = "Loading service health";
+"serviceHealth.errorTitle" = "Couldn't load service health";
+"serviceHealth.retry" = "Retry";
+
+/* --- Native chrome: accordion accessibility --- */
+"a11y.expanded" = "Expanded";
+"a11y.collapsed" = "Collapsed";
+"a11y.toggleHint" = "Double tap to show or hide the service health details";
