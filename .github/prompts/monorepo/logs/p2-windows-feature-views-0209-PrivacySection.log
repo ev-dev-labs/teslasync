@@ -1,0 +1,96 @@
+=== P2 Feature view 0209 PrivacySection (Windows) ===
+date: 2026-06-10T00:14:01.9203196-07:00
+capability: .NET 10.0.300 SDK ; Microsoft.WindowsAppSDK (UseWinUI, net10.0-windows10.0.19041.0) -- CAPABLE
+  (evidence: dotnet build apps/windows/TeslaSync.sln succeeds 0/0 and the headless suite runs; see steps below)
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2: headless tests -- dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release --no-build ---
+Passed!  - Failed:     0, Passed: 11581, Skipped:     0, Total: 11581 - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+--- PrivacySection surface tests (subset evidence) -- --filter FullyQualifiedName~PrivacySectionTests ---
+Passed!  - Failed:     0, Passed:    67, Skipped:     0, Total:    67 - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+--- STEP 3: UIAutomation E2E -- dotnet test apps/windows/TeslaSync.App.UITests.csproj -c Release --no-build (SEPARATE GATE) ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+  was not found at its standard install paths or on PATH.
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: WinAppDriver/Appium runner + deployed MSIX app absent on this runner.
+  Environmental + out of scope for this surface; 147/147 fail-fast, identical for every surface; this suite
+  is a SEPARATE W9-0002 gate per apps/windows/TeslaSync.App.UITests/README.md. git-verified: zero files
+  modified under TeslaSync.App.UITests/.)
+
+--- STEP 4: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- STEP 5: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/PrivacySection ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- GIT SCOPE (this surface + one necessary repo-hygiene repair) ---
+ M apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+?? .github/prompts/monorepo/logs/p2-windows-feature-views-0209-PrivacySection.log
+?? apps/windows/TeslaSync.App.Tests/FeatureViews/PrivacySectionTests.cs
+?? apps/windows/TeslaSync.App/feature-views/PrivacySection/
+
+--- SURFACE NOTES: PrivacySection (parity port of web/src/features/settings/components/PrivacySection.tsx) ---
+- Files (feature-views/PrivacySection/):
+    * PrivacySection.cs           -- WinUI 3 view (ContentControl): GlassPanel header (Shield IconBox + title +
+                                     subtitle) + recent-pages panel + consent panel + inline status line +
+                                     TsConfirmDialog (destructive, "Don't ask again" TsCheckbox) + Create() factory
+                                     wiring the repo source + LocalSettings-backed consent/silence persistence.
+    * PrivacySection.ViewModel.cs -- WinUI-free state holder (recent-count + clear flow, consent decision +
+                                     grant/withdraw/reset, require_cookie_consent read freshness, toast status line).
+    * PrivacySection.Source.cs    -- ConsentRequirementSource: cache-then-network read of GET /system/version
+                                     (web useVersionInfo) -> RepositoryResult<bool> require_cookie_consent.
+    * PrivacySection.Consent.cs   -- ConsentState enum + ConsentSource (web cookieConsent.ts) + ConfirmSilenceStore
+                                     (web confirmSilence.ts); both WinUI-free with optional persistence callbacks.
+    * PrivacySection.Model.cs     -- JSON reader, result mapper, projections (consent label/body, stored count),
+                                     registration (every i18n key), PII-safe diagnostics.
+    * TeslaSync.App.Tests/FeatureViews/PrivacySectionTests.cs -- 67 headless tests (JSON adapter, mapper per
+                                     LoadStatus, projections, consent + silence stores, view-model recent/consent/
+                                     requirement flows incl. loading/ready/stale/offline/error + silence short-circuit,
+                                     i18n key+fallback contract, a11y label presence, PII-safe diagnostics).
+- States: both client-store panels are ALWAYS rendered (web parity: synchronous getRecentPages/getConsent, no
+  loading/error gate). The require_cookie_consent read (web useVersionInfo) carries the cache-then-network
+  freshness states surfaced as a TsDataFreshness chip + a loading caption + an inline retry on hard error; a
+  missing/failed read coalesces to "not required" (web Boolean(undefined) === false) and NEVER hides a panel.
+- Data via shared P1/S8 state holders: RecentlyViewedSource.Shared (recent pages), repo-backed
+  ConsentRequirementSource (Operations.SystemAdmin.Version), ConsentSource + ConfirmSilenceStore. No HTTP in the view.
+- Shared components only: TsGlassPanel, TsButton, TsConfirmDialog, TsCheckbox, TsDataFreshness, TsSpinner,
+  PanelTitle/Caption/Text typography, DisplayTokens, LiveRegion (no inline styles, no raw library imports).
+- i18n (all via P1/S10 ILocalizer; English fallback == web default, no hardcoded English in the view): privacy.title,
+  privacy.subtitle, recentPages.clearTitle/clearBody/storedCount/clearButton/clearConfirmTitle/clearConfirmBody/
+  clearConfirmCta/cleared, consent.section.title/bodyOn/bodyOff, consent.state.accepted/declined/unknown,
+  consent.action.accept/decline/reset, consent.toast.accepted/declined/reset, common.cancel,
+  confirm.silence.checkbox (+ native version-read chrome keys privacy.consent.requirement.loading/error/retry).
+- Accessibility: surface + sub-controls carry the web data-testid values as automation ids (privacy-section,
+  privacy-recent-count, privacy-clear-recent-pages, privacy-consent-section, privacy-consent-state,
+  privacy-consent-accept/decline/reset); every interactive element has a Narrator name; status + error lines
+  use LiveRegion announcements; reduced-motion honoured (no bespoke motion).
+- Telemetry (P1/S11): view.opened slug=PrivacySection on Loaded; privacy.recentPages.cleared /
+  privacy.consent.changed on action -- PII-safe (never a path, title, or the specific consent value).
+- Repo hygiene (pre-existing integration-merge corruption blocking the shared build at this worktree HEAD;
+  git-verified the working tree was clean before repair; same MSB4025 class the file's own INVARIANT comment
+  documents and the 0199 log previously repaired):
+    * TeslaSync.App.Tests.csproj: removed orphaned comment prose (3 concatenated comment fragments + 2 stray
+      "-->" markers + literal <Project>/<Compile> text outside any comment) between the first valid comment and
+      <PropertyGroup>, which had broken XML load (MSB4025: 'Compile' start tag line 52 vs </Project> line 682).
+      Consolidated to ONE valid <Project> root; the deduplicated, path-sorted Compile union is preserved, plus the
+      four new PrivacySection Model/Consent/Source/ViewModel links. XML re-validated; solution now loads/builds 0/0.
+
+=== SURFACE GATE SUMMARY ===
+BUILD_EXIT=0   HEADLESS_TEST_EXIT=0 (TeslaSync.App.Tests: 11581 passed, 0 failed; PrivacySectionTests: 67 passed)
+FORMAT_EXIT=0  PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+UIAutomation E2E suite: BLOCKED on absent WinAppDriver runtime (environmental; separate W9 gate; 0 files touched).
+
+EXIT=0
+STATUS=DONE
