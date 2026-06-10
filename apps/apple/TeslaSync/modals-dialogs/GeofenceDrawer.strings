@@ -1,0 +1,78 @@
+/*
+  GeofenceDrawer.strings
+  TeslaSync — P4 modal/dialog · 0011 · GeofenceDrawer (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  GeofenceDrawer resolves (table "GeofenceDrawer") lives here with its English
+  value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The web source (components/maps/GeofenceDrawer.tsx) is an anonymous passive
+  controller with no `t()` calls; its only user-facing prose is the `describeFence`
+  string, promoted here to keys. The remainder backs the native modal chrome
+  (header, draw toolbar, saved list, the loading / empty / error envelope, the
+  freshness chip + connectivity banner) and the VoiceOver builders.
+*/
+
+/* --- Header --- */
+"geofence.title" = "Geofences";
+"geofence.done" = "Done";
+
+/* --- Draw modes (web GeofenceMode) --- */
+"geofence.mode.circle" = "Circle";
+"geofence.mode.polygon" = "Polygon";
+"geofence.mode.rectangle" = "Rectangle";
+"geofence.selected" = "selected";
+
+/* --- Draw toolbar --- */
+"geofence.shapeLabel" = "Shape";
+"geofence.radiusLabel" = "Radius";
+"geofence.radiusValue" = "{{meters}} m";
+"geofence.undo" = "Undo";
+"geofence.cancel" = "Cancel";
+"geofence.add" = "Add";
+"geofence.save" = "Save";
+
+/* --- Draw hints (the leaflet-draw tooltip peer) --- */
+"geofence.hint.circle.center" = "Tap the map to set the circle center";
+"geofence.hint.circle.radius" = "Adjust the slider to set the radius";
+"geofence.hint.rectangle.first" = "Tap the first corner";
+"geofence.hint.rectangle.second" = "Tap the opposite corner";
+"geofence.hint.rectangle.ready" = "Rectangle ready — tap Add";
+"geofence.hint.polygon.more" = "Tap to add a vertex ({{count}} more needed)";
+"geofence.hint.polygon.ready" = "Polygon ready — tap Add";
+
+/* --- Saved fences list --- */
+"geofence.savedLabel" = "Saved geofences";
+"geofence.edit" = "Edit geofence";
+"geofence.delete" = "Delete geofence";
+"geofence.focusHint" = "Centers the map on this geofence";
+
+/* --- describeFence (web accessible string) --- */
+"geofence.defaultName" = "Geofence";
+"geofence.describe.circle" = "{{name}} — {{radius}}m circle around {{lat}}, {{lng}}";
+"geofence.describe.polygon" = "{{name}} — {{count}}-vertex polygon";
+
+/* --- Map --- */
+"geofence.map.label" = "Geofence map";
+
+/* --- Loading --- */
+"geofence.loading" = "Loading geofences…";
+
+/* --- Empty (resolved with no fences) --- */
+"geofence.empty.title" = "No geofences yet";
+"geofence.empty.message" = "Pick a shape and tap the map to draw one.";
+
+/* --- Error + retry --- */
+"geofence.errors.load" = "Couldn't load geofences.";
+"geofence.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"geofence.live" = "Live";
+"geofence.stale" = "Stale";
+"geofence.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"geofence.staleBanner" = "Reconnecting — geofence changes may not be saved yet";
+"geofence.offlineBanner" = "Offline — geofence changes will sync when you reconnect";
