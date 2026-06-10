@@ -65,11 +65,11 @@
     Targets plain net10.0 so `dotnet test` runs without a WinUI/UI-thread host. The WinUI app targets a
     WinUI TFM, so its UI-thread-free sources are Compile-linked here rather than project-referenced; the
     views (*.cs) themselves are exercised by the app build. The test classes live under this project and
+    Headless (net10.0) unit tests for the WinUI app's UI-thread-free logic (Model / Source / ViewModel /
+    Projection). Runs without a WinUI / UI-thread host; each surface's WinUI-free sources are Compile-linked
+    from TeslaSync.App so the adapters, per-state projections and diagnostics are verified without a UI host
+    (the WinUI views themselves are exercised by the app build). The test classes live under this project and
     are picked up by the SDK default-compile glob.
-    re-concatenated multiple Project roots plus duplicate Compile items and stray closing tags,
-    failing XML load (MSB4025); consolidated here into a single valid root (no linked source
-    dropped) plus the FleetStatsBar feature-view surface logic links.
-  -->
 
     Repair note (P2 feature-views/0113 ForecastDetails): a chain of integration merges had again left this
     file with multiple concatenated Project roots plus stray closing tags and orphaned comment text, so the
@@ -139,6 +139,11 @@
     ItemGroup. A chain of integration merges had repeatedly re-concatenated multiple Project roots
     plus duplicate Compile items, failing XML load with MSB4025; the list below is the deduplicated,
     path-sorted union of every previously linked source.
+    Invariant: keep this as ONE <Project> root with a single, deduplicated, path-sorted Compile ItemGroup.
+    Repaired for P2 feature-views/0149 (SpeedHistogramChart): a chain of integration merges had again
+    concatenated multiple <Project> roots plus a broken XML comment, failing XML load (MSB4025). It has been
+    consolidated back into this single canonical root, preserving the union of every previously linked source
+    plus the new SpeedHistogramChart surface (Model / Source / ViewModel).
   -->
 
     Headless (net10.0) unit tests for the WinUI app's UI-thread-free logic. The project runs without a
@@ -203,6 +208,7 @@
   <!-- Test fixtures copied next to the test assembly: SI golden vectors, MSIX manifest, widget template. -->
   <!-- Test fixtures copied next to the test assembly: SI golden vectors (units-golden.json), the MSIX
        package manifest, and the packaged widget Adaptive Card template. -->
+  <!-- Test fixtures copied next to the test assembly: SI golden vectors, MSIX manifest, widget template. -->
   <ItemGroup>
     <Content Include="..\..\shared\spec\units-golden.json" Link="units-golden.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -230,6 +236,7 @@
        project (deduplicated, path-sorted union). The headless net10.0 test project verifies each
        adapter, projection and diagnostics without a UI host; the WinUI views are exercised by the
        app build. -->
+  <!-- Linked WinUI-free Model / Source / ViewModel sources from TeslaSync.App (deduplicated, path-sorted union). -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.ViewModel.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.ViewModel.cs" />
@@ -669,6 +676,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SessionCurveChart\SessionCurveChart.Model.cs" Link="FeatureViews\SessionCurveChart\SessionCurveChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionDetailPanel\SessionDetailPanel.Model.cs" Link="FeatureViews\SessionDetailPanel\SessionDetailPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SlideRenderer\SlideRenderer.Model.cs" Link="FeatureViews\SlideRenderer\SlideRenderer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SpeedHistogramChart.Model.cs" Link="FeatureViews\SpeedHistogramChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SpeedHistogramChart.Source.cs" Link="FeatureViews\SpeedHistogramChart.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SpeedHistogramChart.ViewModel.cs" Link="FeatureViews\SpeedHistogramChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SpeedTrendChart\SpeedTrendChart.Model.cs" Link="FeatureViews\SpeedTrendChart\SpeedTrendChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SpeedTrendChart\SpeedTrendChart.Source.cs" Link="FeatureViews\SpeedTrendChart\SpeedTrendChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SpeedTrendChart\SpeedTrendChart.ViewModel.cs" Link="FeatureViews\SpeedTrendChart\SpeedTrendChart.ViewModel.cs" />
