@@ -1,0 +1,64 @@
+/*
+  globalShortcuts.strings
+  TeslaSync — P4 misc surface · 0002 · globalShortcuts (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `GlobalShortcuts` surface + catalog resolves (table "globalShortcuts") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  Group 1 — keys extracted verbatim from the web source (lib/globalShortcuts.tsx).
+  Group 2 — the navigation destination labels (web `GOTO_SHORTCUTS[*].label`) interpolated
+            into the `Go to %@` template.
+  Group 3 — the palette command labels (web `commandRegistry` entries with a `shortcut`).
+  Group 4 — native chrome: title, VoiceOver wording, and the P4 leaf freshness / loading /
+            empty / error copy, so the Swift sources hold no English literals.
+*/
+
+/* --- Group 1: keys from the web source (parity) --- */
+"shortcuts.groups.actions" = "Actions";
+"shortcuts.groups.navigation" = "Navigation (press g then…)";
+"shortcuts.groups.commands" = "Commands";
+"shortcuts.openPalette" = "Open command palette";
+"shortcuts.openPaletteAlt" = "Open command palette";
+"shortcuts.openShortcuts" = "Show keyboard shortcuts";
+"shortcuts.close" = "Close modal / cancel";
+"shortcuts.goto" = "Go to %@";
+
+/* --- Group 2: navigation destination labels (web GOTO_SHORTCUTS) --- */
+"shortcuts.nav.dashboard" = "Dashboard";
+"shortcuts.nav.vehicles" = "Vehicles";
+"shortcuts.nav.charging" = "Charging";
+"shortcuts.nav.drives" = "Drives";
+"shortcuts.nav.trips" = "Trips";
+"shortcuts.nav.battery" = "Battery & Energy";
+"shortcuts.nav.analytics" = "Analytics";
+"shortcuts.nav.efficiency" = "Efficiency";
+"shortcuts.nav.settings" = "Settings";
+"shortcuts.nav.notifications" = "Notifications";
+"shortcuts.nav.liveSignals" = "Live Signals";
+"shortcuts.nav.automations" = "Automations";
+"shortcuts.nav.commands" = "Commands";
+"shortcuts.nav.climate" = "Climate";
+
+/* --- Group 3: palette command labels (web commandRegistry shortcut entries) --- */
+"palette.cmd.themePicker" = "Open theme picker";
+"palette.cmd.shortcuts" = "Show keyboard shortcuts";
+"palette.cmd.dashboardEdit" = "Edit dashboard layout";
+
+/* --- Group 4: native chrome (title, VoiceOver, freshness / loading / empty / error) --- */
+"shortcuts.title" = "Keyboard shortcuts";
+"shortcuts.subtitle" = "Press a key combination to jump anywhere in the app";
+"shortcuts.a11y.shortcutWord" = "shortcut";
+"shortcuts.loadingA11y" = "Loading keyboard shortcuts";
+"shortcuts.empty" = "No shortcuts registered";
+"shortcuts.emptyMessage" = "Keyboard shortcuts will appear here once they're registered.";
+"shortcuts.errorTitle" = "Couldn't load shortcuts";
+"shortcuts.retry" = "Retry";
+"shortcuts.live" = "Live";
+"shortcuts.stale" = "Stale";
+"shortcuts.offline" = "Offline";
+"shortcuts.staleA11y" = "Stale — tap to refresh";
+"shortcuts.offlineA11y" = "Offline — showing last known shortcuts";
