@@ -1,10 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Headless unit tests for the WinUI-free, UI-thread-free logic models (Model / Source / ViewModel /
-    Presentation). Targets plain net10.0 so dotnet test runs without a WinUI / UI-thread host; the WinUI app
-    targets a WinUI TFM, so its UI-thread-free sources are Compile-linked here rather than project-referenced
-    (the views themselves are exercised by the app build). The matching test classes live under this project
+    P2/W2-0001 - headless unit tests for the WinUI-free, UI-thread-free logic models
+    (Model / Source / ViewModel / Presentation) of the WinUI app. Targets plain net10.0 so
+    `dotnet test` runs without a WinUI / UI-thread host; the WinUI app targets a WinUI TFM, so
+    its UI-thread-free sources are Compile-linked below rather than project-referenced (the views
+    themselves are exercised by the app build). The matching test classes live under this project
     and are picked up by the SDK default-compile glob.
 
     Repair note (P2 feature-views/0129 QuickNav): a chain of integration merges had again left this file with
@@ -134,6 +135,10 @@
     ItemGroup (no linked source dropped). A chain of integration merges had repeatedly re-concatenated
     multiple project roots plus duplicate Compile items and broken comments, failing XML load (MSB4025);
     consolidated here into a single valid root plus the DriveOverviewChart (drive-detail) surface logic.
+    Invariant: keep this file as ONE Project root with a single, path-sorted, deduplicated Compile
+    ItemGroup. A chain of integration merges had repeatedly re-concatenated multiple Project roots
+    plus duplicate Compile items, failing XML load with MSB4025; the list below is the deduplicated,
+    path-sorted union of every previously linked source.
   -->
 
     Headless (net10.0) unit tests for the WinUI app's UI-thread-free logic. The project runs without a
@@ -221,6 +226,10 @@
   <!-- Linked WinUI-free Model / Source / ViewModel / Projection sources from the WinUI app project,
        deduplicated and path-sorted. The headless net10.0 test project verifies each adapter, projection
        and diagnostics without a UI host; the WinUI views themselves are exercised by the app build. -->
+  <!-- Linked WinUI-free Model / Source / ViewModel / Presentation sources from the WinUI app
+       project (deduplicated, path-sorted union). The headless net10.0 test project verifies each
+       adapter, projection and diagnostics without a UI host; the WinUI views are exercised by the
+       app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.ViewModel.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.ViewModel.cs" />
@@ -647,6 +656,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.Model.cs" Link="FeatureViews\ResultPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.Source.cs" Link="FeatureViews\ResultPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.ViewModel.cs" Link="FeatureViews\ResultPanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RouteMapSection\RouteMapSection.Model.cs" Link="FeatureViews\RouteMapSection\RouteMapSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.Model.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.Source.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.ViewModel.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.ViewModel.cs" />
