@@ -366,3 +366,4 @@ p2-windows/feature-views/W-0205-FeatureToggles.prompt.md
 p2-windows/feature-views/W-0202-AISettings.prompt.md
 p2-windows/feature-views/W-0209-PrivacySection.prompt.md
 p2-windows/feature-views/W-0208-NotificationSettings.prompt.md
+p2-windows/feature-views/W-0211-RegionSettings.prompt.md
