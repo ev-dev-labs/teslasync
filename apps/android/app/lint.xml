@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Lint suppressions scoped to the AUTO-GENERATED i18n catalog only
+  (apps/shared/i18n/generators/gen-i18n.ts -> res/values*/strings.xml).
+
+  These translation_* resources are machine-generated and ship ar/he as English
+  fallback. Two lint checks fire on that generated prose and are not actionable here:
+    - StringFormatInvalid: literal '%' in copy (e.g. "95% confidence") read as a
+      format specifier.
+    - MissingQuantity: generated <plurals> that don't enumerate every CLDR category.
+  The ignores are path-scoped to values*/strings.xml so the same checks stay ACTIVE
+  for hand-written app resources (e.g. app_strings.xml).
+-->
+<lint>
+    <issue id="StringFormatInvalid">
+        <ignore regexp="[/\\]values[^/\\]*[/\\]strings\.xml" />
+    </issue>
+    <issue id="MissingQuantity">
+        <ignore regexp="[/\\]values[^/\\]*[/\\]strings\.xml" />
+    </issue>
+</lint>

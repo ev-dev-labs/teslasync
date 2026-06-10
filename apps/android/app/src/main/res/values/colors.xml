@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Adaptive launcher background (token: color.dark.bg). -->
+    <color name="ic_launcher_background">#0A0A0F</color>
+    <!-- Window background before Compose draws — light theme (token: color.light.bg). -->
+    <color name="window_background">#F8FAFC</color>
+</resources>
