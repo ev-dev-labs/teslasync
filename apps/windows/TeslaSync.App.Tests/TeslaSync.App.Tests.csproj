@@ -85,6 +85,8 @@
     single valid root with the path-sorted, deduplicated union of every previously linked source preserved.
     P2/W2-0001 - headless unit tests for the WinUI-free, UI-thread-free logic (Model / Source / ViewModel /
     Presentation) of the WinUI app. Targets plain net10.0 so `dotnet test` runs without a WinUI / UI-thread
+    P2/W2-0001 — headless unit tests for the WinUI-free, UI-thread-free logic (Model / Source / ViewModel /
+    Projection) of the WinUI app. Targets plain net10.0 so `dotnet test` runs without a WinUI / UI-thread
     host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources are Compile-linked below rather
     than project-referenced (the views themselves are exercised by the app build). The matching test classes
     live under this project and are picked up by the SDK default-compile glob.
@@ -124,6 +126,10 @@
     Compile ItemGroup. A chain of integration merges had repeatedly re-concatenated multiple
     project roots plus duplicate linked-source items and nested comments, failing XML load
     (MSB4025); consolidated here into one valid root with no linked source dropped.
+    roots plus duplicate <Compile> items, failing XML load (MSB4025); consolidated for P2
+    feature-views/0161 TemperatureMetricCards into this single canonical root (the deduplicated, path-sorted
+    union of every previously linked source) plus the new TemperatureMetricCards surface Model / Source /
+    ViewModel links. Do NOT re-concatenate.
   -->
     P2/W2-0001 — headless unit tests for the WinUI app's UI-thread-free logic models (Model / Source /
     ViewModel) of each feature-view and dashboard-widget surface. Targets plain net10.0 so `dotnet test`
@@ -749,6 +755,9 @@
   </ItemGroup>
 
   <!-- WinUI-free sources Compile-linked from TeslaSync.App (path-sorted, deduplicated). -->
+  <!-- Linked WinUI-free Model / Source / ViewModel sources from the WinUI app project (deduplicated,
+       path-sorted union). The headless net10.0 test project verifies each adapter, projection and
+       diagnostics without a UI host; the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -1205,6 +1214,12 @@
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Source.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemperatureMetricCards\TemperatureMetricCards.Model.cs" Link="FeatureViews\TemperatureMetricCards\TemperatureMetricCards.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemperatureMetricCards\TemperatureMetricCards.Source.cs" Link="FeatureViews\TemperatureMetricCards\TemperatureMetricCards.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemperatureMetricCards\TemperatureMetricCards.ViewModel.cs" Link="FeatureViews\TemperatureMetricCards\TemperatureMetricCards.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemperatureSection\TemperatureSection.Model.cs" Link="FeatureViews\TemperatureSection\TemperatureSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemperatureSection\TemperatureSection.Source.cs" Link="FeatureViews\TemperatureSection\TemperatureSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemperatureSection\TemperatureSection.ViewModel.cs" Link="FeatureViews\TemperatureSection\TemperatureSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.Model.cs" Link="FeatureViews\TeslaApiRefTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" Link="FeatureViews\TeslaApiRefTool.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" />
