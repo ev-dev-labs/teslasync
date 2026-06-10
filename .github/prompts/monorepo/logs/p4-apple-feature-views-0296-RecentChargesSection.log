@@ -1,0 +1,279 @@
+================================================================================
+P4 · Feature view · 0296 — RecentChargesSection (Apple)
+Run: 2026-06-10T02:1x-0700   Host: Darwin arm64   Branch: auto/20260609-194659-46608/40
+Base: 6543e6fbb
+Prompt: P4/feature-views/0296 — Feature view: RecentChargesSection
+Web source (spec): web/src/features/vehicles/components/vehicle-detail/RecentChargesSection.tsx (92 lines)
+Mode: code-complete + host-green; full-app xcodebuild build/test RAN and captured,
+      DEFERRED to the signed macos-latest acceptance gate (ADR-012, P99-0001) on two
+      PRE-EXISTING, code-unrelated reasons — (a) a sibling-surface duplicate-declaration
+      collision (StateTimeline* ambiguous across feature-views/StateTimeline.* +
+      dashboard-widgets/StateTimelineWidget.*) PROVEN pre-existing by an isolation rebuild,
+      and (b) macOS dev-signing (0 identities) — identical disposition to ClimateSection 0291.
+      Honesty rule 7. Delegation: NONE (FORBIDDEN by this prompt; authored directly).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (Xcode toolchain) .... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  Xcode ...................... Xcode 26.5 (17F42)                                   OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present + Booted (83717DEE-…-CBDDD3140989)           OK
+  SwiftUI .................... present in both SDKs (this surface's core dependency) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER —
+                               web "Charts/maps used: (none)")                       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... project generates cleanly; 42 RecentChargesSection
+                               pbxproj refs across app + test targets               OK
+  Shared.xcframework ......... BUILT + STAGED — gradle :core:assembleSharedXCFramework
+                               BUILD SUCCESSFUL (10m03s); ios-arm64 + ios-arm64-simulator
+                               + macos-arm64 staged to apps/apple/Frameworks/        OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared components
+  "@/components/ui", "@/components/feedback". The core requirement is SwiftUI, AVAILABLE and
+  PROVEN by the real iOS-18-simulator AND macOS-15 SDK type-checks + the executed XCTest suite
+  below. The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply.
+
+=== WHAT WAS BUILT (parity with the web source, read end-to-end) ===
+  RecentChargesSection is the Recent Charges section of the Vehicle Detail page: a GlassPanel with
+  a green BatteryCharging "Recent Charges" header (+ a "View all" → /charging link) over either a
+  charging-sessions DataTable (when there is at least one session) or an EmptyState ("No charging
+  sessions recorded yet"). The native surface reproduces its data, composition, every state, and
+  i18n keys via shared P1/S8 state-holder seams (no view I/O):
+
+  Composition (web → native), all FIVE useChargeColumns cells reproduced VERBATIM (not stubbed):
+   1. Date     — formatDateTime(s.start_ts): locale year·abbrev-month·day·hour·minute, "—" if
+                 nil/invalid (web `if (!iso || isNaN) return '—'`).
+   2. Energy   — `${fmtNumber(convertEnergyFromSI(total_energy_added_wh ?? 0,'kWh'))} kWh`: SI Wh
+                 → kWh (÷1000) at the GLOBAL number precision (fmtNumber default = 2) + " kWh".
+                 SORTABLE (web `sortable: true`) — the native column carries a numeric comparator
+                 on the underlying SI Wh, so sorting orders by value, not the "X kWh" text.
+   3. Duration — durationStr(duration_min): h = floor(min/60) raw, m = fmtInt(min % 60),
+                 `{h}h {m}m` / `{m}m`.
+   4. Cost     — `cost != null ? formatCurrency(cost) : '—'`: currency symbol + fmtNumber at the
+                 USER precision (settings.decimal_precision ?? 2), else the em-dash.
+   5. Battery  — `end_soc_pct != null ? "{start}% → {end}%" : "{start}%"`, the SOC numbers
+                 interpolated JS-style (no grouping, integers without a fraction).
+
+  Energy pipeline ported VERBATIM from lib/unitConversion.ts + lib/numberFormat.ts:
+  convertEnergyFromSI (Wh → kWh = wh/1000) + fmtNumber (grouped, locale-aware, half-up; default
+  precision 2). SI Wh is read directly from the seam; the kWh conversion happens only at the cell
+  (web useUnits / display boundary), honouring the frontend SI cutover. Cost uses the user
+  precision (web useFormatting) distinct from the energy global precision; both default to 2.
+
+  DataTable parity: web `<DataTable compact pagination …>` → the shared `TSDataTable(density:
+  .compact)` with the five `TSColumn`s (energy sortable). Pagination is the shared table
+  component's concern (P4 component-library bundle), out of scope here; the surface feeds it the
+  full projected row set. keyExtractor = s.id → `RecentChargesRow: Identifiable` over the id.
+
+  Seams (P1/S8): RecentChargesSectionSource (one coalesced snapshot: sessions + useFormatting
+    prefs + loading/error + connectivity) → RecentChargesSectionModel (@Observable). Previews/tests
+    inject InMemoryRecentChargesSource; the view performs no networking. "View all" is an injected
+    `onViewAll` closure (web `<Link to="/charging">`), the sibling RecentActivity pattern.
+    Telemetry (P1/S11): view.opened with surface slug "RecentChargesSection", emitted once.
+    i18n (P1/S10): every string via RecentChargesSectionStrings; 0 hardcoded English literals in
+    native code (the unit "kWh", the SOC "%", the "→" arrow, the duration "h"/"m" suffixes and the
+    currency symbol are device/data literals carried in code — matching the web, which hardcodes
+    them — not translated strings).
+
+  Collision audit (rule 9): a tree-wide scan found 0 existing `RecentCharges*` / bare
+  `Charges*`/`ChargeRow`/`ChargeColumn` type declarations; ALL of this surface's type names use
+  the `RecentCharges*` / `RecentChargesSection*` prefix and are unique in the TeslaSync module.
+  (The sole shared nested name `Phase` is `RecentChargesSectionResolved.Phase`, matching the
+  ClimateSectionResolved.Phase sibling pattern.)
+
+  Files (7; allowed scope = apps/apple/TeslaSync/feature-views/RecentChargesSection.*):
+    RecentChargesSection.Adapter.swift   378  (session reading + formatting prefs + the cell
+                                               formatters [number/integer/jsNumber/energyKWh/
+                                               duration/currency/dateTime/battery] + 5-column meta
+                                               + row projection + a11y)
+    RecentChargesSection.Model.swift     245  (telemetry/i18n facade + connection + input/resolved
+                                               + projector + Source seam + @Observable model)
+    RecentChargesSection.Tests.swift     345  (number/cell/date formatting + column meta + comparator
+                                               + projection + projector + model/telemetry/stale +
+                                               a11y + per-state render)  [test target, not app target]
+    RecentChargesSection.swift           172  (surface View shell + header + View-all link + freshness
+                                               chip/banner + refresh + state switch)
+    RecentChargesSection.Views.swift     134  (TSDataTable content + column builder + loading skeleton
+                                               + empty + error chrome)
+    RecentChargesSection.Previews.swift  107  (7 per-state #if DEBUG previews)
+    RecentChargesSection.strings          40  (i18n catalog; 8 source keys + 9 native-chrome keys)
+  All 6 .swift files ≤ 378 lines (swiftlint file_length); decomposed page + sub-components (5
+  production .swift = 1036 lines), not a monolith.
+
+=== STATES (every state renders — no hidden surfaces) ===
+  loading ......... initial-fetch skeleton (a header bar + 5 row skeletons matching the table shape)
+  data ............ the five-column charge table (web `sessions && length > 0 ? DataTable`)
+  empty ........... no rows — nil OR [] (web `!(sessions && length > 0)`) → ContentUnavailableView
+                    (battery glyph + "No charging sessions recorded yet"), never blank
+  error ........... parent-query failure → retry affordance (web QueryError peer) → model.refresh()
+  stale ........... freshness window exceeded → amber freshness chip + banner + one guarded
+                    auto-refresh on the stale transition (web refetch self-refresh)
+  offline ......... no connectivity → cached rows + offline chip + banner
+  Each has a #if DEBUG preview (7 previews incl. single-row) and is exercised by the per-state
+  ImageRenderer render test (EXECUTED green).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 5 production + 1 test .swift compiled together with the REAL apps/apple
+  token + component closure (design/generated/apple/Tokens + Sources/Design + Sources/Components,
+  minus the KMP-Units-dependent UnitFormatters.swift); none of the surface files import the Shared
+  xcframework.
+
+  [1] Isolated SwiftPM build — module "TeslaSync", real tokens + component library, Swift 6
+        language mode, -strict-concurrency=complete:
+          swift build -> "Build complete!"
+        ISO_BUILD_EXIT=0                                                           OK
+  [2] swift test — the FULL XCTest suite EXECUTED on the macOS host (real Adapter / Model /
+        Views / Previews + real tokens):
+          Executed 31 tests, with 0 failures (0 unexpected)
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: fmtNumber half-up + grouping, fmtInt, the JS-template SOC number; the energy cell
+        (Wh→kWh ÷1000 @ global precision 2 + " kWh", nil→0); durationStr ({h}h {m}m / {m}m); the
+        currency cell (symbol + user precision, null→"—", alt symbol); the battery cell (range vs
+        start-only, fractional SOC); formatDateTime (year/month/minute present, nil/empty/invalid
+        →"—") + ISO parsing (±fractional seconds); the five-column metadata (order, labels,
+        sortable=energy-only, cell mapping, sort key, the energy comparator orders by SI Wh); the
+        row projection (id mapping, per-cell values, empty→no rows); projector phase precedence
+        (error > loading > empty[nil + []] > data + empty-error-string ≠ error); model
+        start-applies-initial + view.opened-once + slug + refresh-forwarding + push-updates +
+        stale-auto-refresh-once; a11y row summary; per-state ImageRenderer render smoke (loading /
+        data / empty / error / stale / offline).
+  [3] swiftc -typecheck — iOS 18 SIMULATOR SDK (-D DEBUG; -swift-version 6
+        -strict-concurrency=complete; -target arm64-apple-ios18.0-simulator; 46 files = surface +
+        real token/component closure):
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [4] swiftc -typecheck — macOS 15 SDK (same files/flags; -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [5] swiftlint --strict (6 surface .swift files; explicit paths; config apps/apple/.swiftlint.yml):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                                OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                              OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate) on a scan dir holding the RecentChargesSection.*
+        files (all 7, incl .strings):
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+        PLACEHOLDER_EXIT=0                                                         OK
+        (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented/stub/mock in any file;
+         0 opt-outs.)
+  [8] i18n key coverage (referenced == declared) + plutil:
+          referenced=17  declared=17  missing=0  orphan=0   plutil -lint: OK
+        I18N_EXIT=0                                                               OK
+
+=== GATE — FULL-APP XCODEBUILD (RAN on this host; real output; DEFERRED to signed runner) ===
+    Prereqs done: `xcodegen generate` -> GEN_EXIT=0 (42 RecentChargesSection pbxproj refs);
+    Shared.xcframework staged from the gradle release artifact (BUILD SUCCESSFUL 10m03s above;
+    ios-arm64 + ios-arm64-simulator + macos-arm64).
+
+    [A] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+          IOS_EXIT=65   (** BUILD FAILED **, before the test phase)
+          error: lines = 680 total; RecentCharges error: lines = 0 (verified:
+            grep 'error:' | grep -ci RecentCharges -> 0; non-StateTimeline error files -> 0). ALL
+            680 errors are a PRE-EXISTING DUPLICATE-DECLARATION collision in SIBLING surfaces — the
+            StateTimeline state types are declared TWICE across the merged tree:
+              'StateTimelineModel' / 'StateTimelineUpdate' / 'StateTimelineConnection' /
+              'StateTimelineLoadStatus' / 'StateTimelineSource' / 'StateTimelineTelemetry' …
+              is ambiguous for type lookup
+            declared in BOTH dashboard-widgets/StateTimelineWidget.Model.swift AND
+            feature-views/StateTimeline.{Model,Source}.swift (a parallel-merge collision OUTSIDE
+            this prompt's allowed files). Static proof:
+              StateTimelineModel  -> StateTimelineWidget.Model.swift:104 + StateTimeline.Model.swift:64
+              StateTimelineUpdate -> StateTimelineWidget.Model.swift:61  + StateTimeline.Source.swift:44
+            680/680 errors are StateTimeline*; ZERO RecentChargesSection files appear in any error.
+
+          PROOF the collision is PRE-EXISTING (not induced by this surface): with all 7
+          RecentChargesSection.* files MOVED OUT of the target and the project regenerated
+          (pbxproj RecentCharges refs = 0), `xcodebuild build` STILL fails identically —
+              ISO_IOS_EXIT=65; 26 error: lines, ALL StateTimeline (26/26), 0 non-StateTimeline,
+              ZERO RecentChargesSection files present (the lone "RecentCharges" log line is a
+              `note:` removing a stale .strings artifact from DerivedData — not an error).
+          (The build-only isolation run shows 26 StateTimeline app-target errors; the with-surface
+          `build test` run shows 680 because it ALSO compiles the StateTimeline* test/Preview
+          targets — both are 100% StateTimeline, 0% RecentCharges.) Files restored afterward (7
+          files; 42 pbxproj refs).
+
+    [B] xcodebuild -scheme TeslaSync-macOS build test
+          MAC_EXIT=65   (** BUILD FAILED **)
+          error: lines = 4; RecentCharges error: lines = 0. ALL 4 are development-signing
+          entitlements, PRE-EXISTING / infra:
+            "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing
+              with a development certificate. Enable development signing…
+          Fast-fails at code-signing before the app module compile (security find-identity
+          -p codesigning -> 0 valid identities on this runner; ADR-012 reserves signed builds for
+          the macos-latest acceptance gate). ZERO RecentChargesSection errors.
+
+    Disposition (two independent, code-unrelated reasons — neither a defect in this surface;
+    identical to the ClimateSection 0291 predecessor, rule 7):
+      (a) SIBLING DUPLICATE DECLARATION: the iOS whole-module app compile is aborted by a
+          pre-existing StateTimeline*/StateTimelineWidget* type redeclaration in two DIFFERENT
+          surfaces. PROVEN pre-existing by the isolation rebuild above. Fixing those files is
+          OUTSIDE this prompt's allowed files. RecentChargesSection compiles clean.
+      (b) DEV-SIGNING: macOS app/widget entitlements need a development certificate on a signed
+          runner (ADR-012). Independent of this UI surface.
+      Both are the downstream P99-0001 apple-acceptance-gate's responsibility (runs on
+      macos-latest with signing identities and the merged, de-collided tree).
+    The surface is PROVEN green where it can be: isolated SwiftPM build [1], 31/31 EXECUTED
+    tests [2], real iOS-18 AND macOS-15 SDK type-checks [3]/[4], swiftlint/swiftformat/
+    placeholder/i18n [5]/[6]/[7]/[8], and ZERO RecentChargesSection errors in the full-app iOS +
+    macOS xcodebuild.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced
+      (loading/data/empty/error/stale/offline) — each has a #if DEBUG preview and is exercised by
+      the per-state render test; EXECUTED green (31/31). All five DataTable columns reproduced
+      (not stubbed).
+  [x] Hooks bind to the shared P1/S8 state-holder layer (RecentChargesSectionSource →
+      RecentChargesSectionModel); no direct HTTP from the view. useFormatting → display-boundary
+      currency/energy; useTranslation → P1/S10 facade; useChargeColumns → the RecentChargesColumn
+      metadata + the projection.
+  [x] Every i18n key from source has a matching catalog key — referenced (17) == declared (17),
+      0 missing, 0 orphan; plutil -lint OK. No English literals in native code.
+  [x] Accessibility labels on every interactive element (the "View all" link + the refresh button
+      are labelled; the freshness chip is one combined element; the table header sort menus carry
+      the shared TSDataTable labels; the loading/empty/error chrome is labelled; the panel header
+      has the isHeader trait + a contained a11y label). The row a11y summary is a tested pure seam.
+      Dynamic Type via the Font.TS ramp; Reduce Motion via TSFadeIn/TSSkeleton.
+  [x] Tests: adapter/format + column-meta/comparator + row projection + per-state projector/model +
+      a11y label + per-state render — 31 methods, EXECUTED 31/31, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0, 0 opt-outs.
+  [x] EXIT=0 / STATUS=DONE — every host-runnable + surface-scoped gate green; the full-app
+      xcodebuild RAN with its REAL exit 65 (iOS: PRE-EXISTING sibling StateTimeline collision,
+      PROVEN by isolation rebuild; macOS: dev-signing) + ZERO RecentChargesSection errors, DEFERRED
+      to the signed P99 acceptance gate.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host/surface gates are genuinely green; the full-app xcodebuild is
+                          shown with its REAL exit 65 + cause (sibling StateTimeline collision +
+                          dev-signing) + zero-RecentCharges-errors + isolation proof, DEFERRED,
+                          never reported as pass.
+  2 No scope narrowing ... full surface: all FIVE DataTable columns' data + composition + every
+                          state + freshness chrome + the "View all" link + a11y + telemetry
+                          reproduced; not a header-only shell.
+  3 No skip-and-assume ... web RecentChargesSection.tsx read end-to-end; every t() + every cell
+                          renderer (formatDateTime / convertEnergyFromSI+fmtNumber / durationStr /
+                          formatCurrency / SOC interpolation) + the `sessions && length > 0`
+                          branch + the `sortable` flag reproduced.
+  4 No stubs as final .... complete implementation of all five columns + every state; placeholder
+                          gate COUNT=0, 0 opt-outs.
+  5 No parity shortcuts .. SI Wh → kWh conversion + fmtNumber (grouped, half-up, default precision
+                          2) + durationStr + formatCurrency (user precision) + the JS-template SOC
+                          numbers identical to web; the energy precision (global) vs cost precision
+                          (user) distinction reproduced VERBATIM rather than collapsed.
+  6 No delegation ........ authored directly (delegation FORBIDDEN by this prompt; none).
+  7 No predecessor bypass  same disposition as ClimateSection 0291 (host green + full-app build
+                          deferred to the signed runner); the sibling collision is PROVEN
+                          pre-existing by an isolation rebuild, matching the predecessor's standard.
+  8 No commit on red ..... committed work is green on every surface-scoped runnable gate; the only
+                          non-green steps are a PRE-EXISTING sibling-surface duplicate declaration +
+                          dev-signing, both out-of-scope / out-of-allowed-files, and the surface
+                          itself is 0-error in both full-app builds.
+  9 No silent drift ...... the RecentCharges* prefix decision, the full-app deferral + its causes
+                          (with real exit codes, the colliding sibling files + ambiguous types, and
+                          the isolation-rebuild proof), the energy-vs-cost precision distinction,
+                          and the TSDataTable pagination-out-of-scope note are all recorded above.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

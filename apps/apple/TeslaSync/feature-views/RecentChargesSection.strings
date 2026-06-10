@@ -1,0 +1,40 @@
+/*
+  RecentChargesSection.strings
+  TeslaSync — P4 feature view · 0296 · RecentChargesSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `RecentChargesSection` resolves (table "RecentChargesSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app `Localizable.xcstrings`
+  master catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/RecentChargesSection.tsx — the title, the five
+  DataTable column headers, the "View all" link, and the empty message), reusing the web
+  `common.*` namespace verbatim. The second group backs the native chrome (the P4 leaf
+  freshness / loading / error copy) so the Swift sources hold no English prose literals. The
+  energy unit "kWh", the SOC "%", the "→" arrow, the duration "h"/"m" suffixes and the currency
+  symbol are device/data literals carried in code (matching the web, which hardcodes them), not
+  translated strings.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"common.recentCharges" = "Recent Charges";
+"common.viewAll" = "View all";
+"common.date" = "Date";
+"common.energy" = "Energy";
+"common.duration" = "Duration";
+"common.cost" = "Cost";
+"common.battery" = "Battery";
+"common.noCharges" = "No charging sessions recorded yet";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"recentCharges.live" = "Live";
+"recentCharges.stale" = "Stale";
+"recentCharges.offline" = "Offline";
+"recentCharges.staleBanner" = "Reconnecting — data may be stale";
+"recentCharges.offlineBanner" = "Offline — showing last known data";
+"recentCharges.refresh" = "Refresh";
+"recentCharges.loadingA11y" = "Loading recent charges";
+"recentCharges.errorTitle" = "Couldn't load charges";
+"recentCharges.retry" = "Retry";
