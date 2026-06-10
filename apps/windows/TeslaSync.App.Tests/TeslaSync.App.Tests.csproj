@@ -80,6 +80,13 @@
     feature-views/0181 BrowserPushChannelCard into this single canonical root - the ordinal-sorted,
     Include-deduplicated union of every previously linked WinUI-free Model/Source/ViewModel logic source,
     plus the new BrowserPushChannelCard surface links. Do NOT re-concatenate.
+    INVARIANT: keep this file as exactly ONE project root with a single, path-sorted, deduplicated
+    compile item group. A chain of integration merges had repeatedly re-concatenated this file into
+    multiple project roots plus duplicate compile items, failing XML load (MSB4025); re-consolidated
+    for P2 feature-views/0173 PedalUsage into this single canonical root - the path-sorted,
+    deduplicated union of every previously linked WinUI-free Model/Source/ViewModel logic source plus
+    the new PedalUsage surface link. Do NOT re-concatenate, and never write a literal project or
+    build-item start tag inside this comment.
   -->
 
     INVARIANT: keep this file as exactly ONE project root with a single, path-sorted, deduplicated
@@ -419,9 +426,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.Source.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AchievementBadge.Model.cs" Link="FeatureViews\AchievementBadge.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.Model.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.ViewModel.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AchievementBadge.Model.cs" Link="FeatureViews\AchievementBadge.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.Model.cs" Link="FeatureViews\ActionBuilder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.ViewModel.cs" Link="FeatureViews\ActionBuilder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AddWidgetButton\AddWidgetButton.Model.cs" Link="FeatureViews\AddWidgetButton\AddWidgetButton.Model.cs" />
@@ -522,6 +526,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPanel.Model.cs" Link="FeatureViews\EfficiencyPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPanel.Source.cs" Link="FeatureViews\EfficiencyPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPanel.ViewModel.cs" Link="FeatureViews\EfficiencyPanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ElevationChart.Model.cs" Link="FeatureViews\ElevationChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ElevationChart.Source.cs" Link="FeatureViews\ElevationChart.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ElevationChart.ViewModel.cs" Link="FeatureViews\ElevationChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.Model.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.ViewModel.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EntriesTable\EntriesTable.Model.cs" Link="FeatureViews\EntriesTable\EntriesTable.Model.cs" />
@@ -630,6 +637,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.Model.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.Source.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.ViewModel.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PedalUsage\PedalUsage.Model.cs" Link="FeatureViews\PedalUsage\PedalUsage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PedalUsage\PedalUsage.Source.cs" Link="FeatureViews\PedalUsage\PedalUsage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PedalUsage\PedalUsage.ViewModel.cs" Link="FeatureViews\PedalUsage\PedalUsage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PowerOutputChart\PowerOutputChart.Model.cs" Link="FeatureViews\PowerOutputChart\PowerOutputChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PowerProfileChart\PowerProfileChart.Model.cs" Link="FeatureViews\PowerProfileChart\PowerProfileChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PresetGallery\PresetGallery.Model.cs" Link="FeatureViews\PresetGallery\PresetGallery.Model.cs" />
@@ -687,9 +697,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.Source.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.ViewModel.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SentryModeChart.Model.cs" Link="FeatureViews\SentryModeChart.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Model.cs" Link="FeatureViews\SessionComparisonChart\SessionComparisonChart.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Source.cs" Link="FeatureViews\SessionComparisonChart\SessionComparisonChart.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.ViewModel.cs" Link="FeatureViews\SessionComparisonChart\SessionComparisonChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Model.cs" Link="FeatureViews\SessionComparisonChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Source.cs" Link="FeatureViews\SessionComparisonChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.ViewModel.cs" Link="FeatureViews\SessionComparisonChart.ViewModel.cs" />
@@ -1563,5 +1570,6 @@
   </ItemGroup>
 
 </Project>
+
 
 </Project>
