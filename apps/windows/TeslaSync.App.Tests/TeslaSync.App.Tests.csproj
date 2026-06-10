@@ -59,6 +59,12 @@
     are Compile-linked into the single item group below; the views themselves are exercised by the app
     build. The matching test classes live under this project and are picked up by the SDK
     default-compile glob.
+    (MSB4025); re-consolidated for P2 feature-views/0167 DrivingCoachSection into this single canonical
+    root - the path-sorted, Include-deduplicated union of every WinUI-free Model/Source/ViewModel logic
+    source on disk under dashboard-widgets/ and feature-views/, plus the new DrivingCoachSection surface
+    Model link (the surface is presentational - WinUI-free logic lives entirely in its .Model.cs). Do
+    NOT re-concatenate, and never write a literal build-item or project start tag inside this comment.
+  -->
 
     INVARIANT: keep this file as exactly ONE project root with a single, path-sorted, deduplicated
     compile item group. A chain of integration merges had repeatedly re-concatenated this file into
@@ -496,6 +502,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.ViewModel.cs" Link="FeatureViews\DriveOverviewChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveStatCards.Model.cs" Link="FeatureViews\DriveStatCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveTimeline\DriveTimeline.Model.cs" Link="FeatureViews\DriveTimeline\DriveTimeline.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingCoachSection\DrivingCoachSection.Model.cs" Link="FeatureViews\DrivingCoachSection\DrivingCoachSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" Link="FeatureViews\DrivingPerformanceCards\DrivingPerformanceCards.ViewModel.cs" />
