@@ -9186,6 +9186,9 @@
   <data name="translation.drivetrain.torqueHistory" xml:space="preserve">
     <value>Motor Torque</value>
   </data>
+  <data name="translation.drivetrain.torqueHistory.aria" xml:space="preserve">
+    <value>Motor inverter torque output history area chart</value>
+  </data>
   <data name="translation.drivetrain.torqueHistorySub" xml:space="preserve">
     <value>Drive inverter torque output over time</value>
   </data>

@@ -75,6 +75,8 @@
     <Compile> items, failing XML load (MSB4025); consolidated for P2 feature-views/0140 DriveTimeline into this
     single canonical root (no linked source dropped) plus the new DriveTimeline surface Model link.
     Presentation) of the WinUI app. Targets plain net10.0 so dotnet test runs without a WinUI / UI-thread
+    P2/W2-0001 headless unit tests for the WinUI-free, UI-thread-free logic (Model / Source / ViewModel /
+    Projection) of the WinUI app. Targets plain net10.0 so `dotnet test` runs without a WinUI / UI-thread
     host; the WinUI app targets a WinUI TFM, so its UI-thread-free sources are Compile-linked below rather
     than project-referenced (the views themselves are exercised by the app build). The matching test classes
     live under this project and are picked up by the SDK default-compile glob.
@@ -96,13 +98,12 @@
     roots plus duplicate <Compile> items, failing XML load with MSB4025; consolidated for P2
     feature-views/0150 TemperatureSection into this single canonical root (the deduplicated, path-sorted union
     of every previously linked source) plus the new TemperatureSection surface Model / Source / ViewModel
+    INVARIANT: keep this file as ONE Project root with a single, path-sorted, deduplicated Compile ItemGroup.
+    A chain of integration merges had repeatedly re-concatenated this file into multiple Project roots plus
+    duplicate Compile items and duplicated / unterminated XML comments, failing XML load (MSB4025). Repaired
+    and re-consolidated for P2 feature-views/0164 TorqueHistoryChart: the path-sorted union of every
+    previously linked source is preserved, plus the new TorqueHistoryChart surface Model / Source / ViewModel
     links. Do NOT re-concatenate.
-    Invariant: keep this file as ONE Project root with a single, path-sorted, deduplicated Compile
-    ItemGroup (no linked source dropped). A chain of integration merges had repeatedly re-concatenated
-    multiple Project roots plus nested / unterminated comments, failing XML load (MSB4025); consolidated
-    for P2 feature-views/0155 HealthOverview into a single valid root with the path-sorted union of every
-    previously linked source preserved (plus the restored JourneyDetailsPanel.Model link and the new
-    HealthOverview surface Model link).
   -->
 
     P2/W2-0001 headless unit tests for the WinUI-free, UI-thread-free logic models (Model / Source /
@@ -681,6 +682,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.ViewModel.cs" Link="FeatureViews\TimeToChargeSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TitleSlide\TitleSlide.Model.cs" Link="FeatureViews\TitleSlide\TitleSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ToolCard.Presentation.cs" Link="FeatureViews\ToolCard.Presentation.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TorqueHistoryChart\TorqueHistoryChart.Model.cs" Link="FeatureViews\TorqueHistoryChart\TorqueHistoryChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TorqueHistoryChart\TorqueHistoryChart.Source.cs" Link="FeatureViews\TorqueHistoryChart\TorqueHistoryChart.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TorqueHistoryChart\TorqueHistoryChart.ViewModel.cs" Link="FeatureViews\TorqueHistoryChart\TorqueHistoryChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.Model.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.Source.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.ViewModel.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.ViewModel.cs" />

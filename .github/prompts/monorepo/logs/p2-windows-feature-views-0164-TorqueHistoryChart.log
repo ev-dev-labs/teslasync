@@ -1,0 +1,69 @@
+=== P2 Feature view 0164 TorqueHistoryChart (Windows) ===
+date: 2026-06-09T18:51:13.1457005-07:00
+worktree: D:\repos\teslasync-wt2\wt-08
+capability probe: .NET SDK 10.0.300; WinUI 3 app builds (BUILD below).
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-08\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  ... (147 identical UiAutomationUnavailableException failures total — one per UIAutomation E2E test) ...
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 296 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 10678, Skipped:     0, Total: 10678, Duration: 13 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite) which
+fail fast because WinAppDriver/Appium is not present on this runner (nothing on http://127.0.0.1:4723/,
+WinAppDriver.exe not on PATH). They are out of scope for this surface (run separately via
+apps/windows/run-ui-automation.ps1), do not link or exercise TorqueHistoryChart, and fail uniformly
+(147/147) for every surface. git-verified: zero files modified under TeslaSync.App.UITests/.
+### STEP 2b: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation (headless surface-logic gate, W9-0002 separation)
+Passed!  - Failed:     0, Passed: 10678, Skipped:     0, Total: 10678, Duration: 9 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+TorqueHistoryChart surface tests (subset):
+Passed!  - Failed:     0, Passed:    36, Skipped:     0, Total:    36, Duration: 213 ms - TeslaSync.App.Tests.dll (net10.0)
+TORQUEHISTORYCHART_TESTS_EXIT=0
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TorqueHistoryChart
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite — WinAppDriver
+ absent on this runner; evidenced above. WinUI 3 + .NET 10 BUILD capability IS present: BUILD_EXIT=0.)
+
+=== ACCEPTANCE (web parity: features/driving/components/drivetrain-health/TorqueHistoryChart.tsx) ===
+- Surface renders every state: loading (skeleton) / loaded (area chart) / empty / error (retry) / stale chip /
+  offline chip. The web null-render gate (data.length <= 1 || no torque reading) maps to the friendly Empty state.
+- Data: motor-history (GET /motor?vehicle_id&limit=200) via shared P1/S8 state holder (ITorqueHistoryChartSource
+  + cache-then-network); torque = torque_nm_front ?? torque_nm_rear, kept raw SI Nm (no conversion); time via
+  DateTimeFormatting (formatTime parity). No direct HTTP from the view.
+- Charts: native TsAreaChart (web recharts AreaChart) + built-in legend (web <Legend/>) + y=0 ChartAnnotation
+  (web <ReferenceLine y=0/>) + accessible data-table expander (web ChartContainer dataColumns Time/Torque).
+- i18n: all six source keys resolve from the P1/S10 catalog (drivetrain.torqueHistory / .torqueHistorySub /
+  .torqueHistory.aria [added en+he+ar] / col.time / col.torque / torque); native chrome uses English fallbacks
+  like the web t(key, fallback). No English literals in native code.
+- a11y: Narrator name on the surface, chart (aria), refresh, freshness chip and every data row; reduced-motion
+  honored via TsFadeIn; system font scale inherited.
+- Tests: 36 headless TorqueHistoryChartTests (parse adapter; projection time/torque/gate; result mapper; the
+  six-state view-model matrix; primary-vehicle + explicit-id source request shape incl. limit; registration;
+  PII-safe diagnostics) — part of the green headless suite.
+- Telemetry: view.opened slug=TorqueHistoryChart (PII-safe), emitted on Loaded.
+- Repo hygiene: consolidated the recurring multi-root MSB4025 corruption in TeslaSync.App.Tests.csproj into one
+  valid root (path-sorted union of every previously linked source preserved) + the 3 new TorqueHistoryChart links.
+
+EXIT=0
+STATUS=DONE
