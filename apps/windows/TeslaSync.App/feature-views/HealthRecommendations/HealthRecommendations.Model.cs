@@ -6,25 +6,6 @@ using TeslaSync.App.Core.Notifications;
 namespace TeslaSync.App.FeatureViews;
 
 /// <summary>
-/// The drivetrain-health level both drivetrain-health surfaces key off — the native mirror of the web
-/// <c>HealthStatus</c> (<c>'good' | 'warning' | 'critical'</c>). Defined once here for the
-/// <c>TeslaSync.App.FeatureViews</c> namespace (co-located with its <see cref="DrivetrainHealthSnapshot"/> JSON
-/// parser) and shared by both <c>HealthOverview</c> and <c>HealthRecommendations</c>; a second, identical
-/// declaration previously collided (CS0101), so it lives in exactly one place.
-/// </summary>
-public enum DrivetrainHealth
-{
-    /// <summary>Healthy drivetrain (web <c>'good'</c>) — green glow / success accent / check icon.</summary>
-    Good,
-
-    /// <summary>Running warm (web <c>'warning'</c>) — cyan glow / warning accent.</summary>
-    Warning,
-
-    /// <summary>Degraded drivetrain (web <c>'critical'</c>) — purple glow / danger accent.</summary>
-    Critical,
-}
-
-/// <summary>
 /// The urgency of a single recommendation — the native mirror of the web
 /// <c>Recommendation.priority</c> (<c>'high' | 'medium' | 'low'</c>). Drives the row's accent (high → danger,
 /// medium → warning, low → info) and the leading glyph, exactly like the web component's per-tip colour map.
