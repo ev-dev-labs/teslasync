@@ -1,0 +1,48 @@
+/*
+  ConfirmDialog.strings
+  TeslaSync — P4 modal / dialog · 0012 · ConfirmDialog (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `ConfirmDialog`
+  resolves (table "ConfirmDialog") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (components/ui/ConfirmDialog.tsx): the only literal `t()` call (`confirm.silence.checkbox`) plus
+  the caller-label prop defaults (`Confirm` / `Cancel`) and the typed-confirmation template
+  (`Type "X" to confirm`) the web inlines as English fallbacks. The second group backs the native
+  chrome (the header close affordance, the loading / empty / error envelopes, the P4 freshness /
+  cached-data copy) and the VoiceOver-only strings so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"confirm.silence.checkbox" = "Don't ask again for this action";
+"confirm.confirm" = "Confirm";
+"confirm.cancel" = "Cancel";
+"confirm.typed.label" = "Type \"{{value}}\" to confirm";
+
+/* --- Native chrome: header close (accessibility) --- */
+"confirm.close" = "Close";
+
+/* --- Native chrome: loading / empty / error + retry --- */
+"confirm.loading" = "Preparing…";
+"confirm.empty" = "Nothing to confirm";
+"confirm.emptyMessage" = "There's no pending action that needs your confirmation.";
+"confirm.errorTitle" = "Couldn't load this confirmation";
+"confirm.retry" = "Retry";
+
+/* --- Native chrome: freshness chip (Live / Stale / Offline) --- */
+"confirm.live" = "Live";
+"confirm.stale" = "Stale";
+"confirm.offline" = "Offline";
+
+/* --- Native chrome: connectivity banner (stale / offline) --- */
+"confirm.staleBanner" = "Reconnecting — this prompt may be out of date";
+"confirm.offlineBanner" = "Offline — this prompt is from your last sync";
+
+/* --- VoiceOver-only: severity prefix + checkbox state --- */
+"confirm.a11y.critical" = "Critical";
+"confirm.a11y.warning" = "Warning";
+"confirm.a11y.checked" = "Checked";
+"confirm.a11y.unchecked" = "Unchecked";
