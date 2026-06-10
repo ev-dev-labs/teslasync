@@ -1,0 +1,125 @@
+=== P4 Feature view 0214 SettingsExportImport (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/SettingsExportImport.*
+Web src  : web/src/features/settings/components/SettingsExportImport.tsx
+Runner   : Darwin (arm64) · Xcode 26.5 (17F42) · Swift 6.3.2 · iOS 18 sim (iPhone 16) · macOS 15
+Toolchain: xcodegen 2.45.4 · swiftlint · swiftformat · pwsh (placeholder gate) — ALL PRESENT
+KMP core : apps/shared → Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64) BUILD SUCCESSFUL
+
+Shipped files (13):
+  SettingsExportImport.swift           (composed GlassPanel view + .fileImporter)
+  SettingsExportImport.Adapter.swift   (section keys, import result/summary, bundle + validator)
+  SettingsExportImport.Projection.swift(labels, diff rows, toast, preview header, a11y)
+  SettingsExportImport.Model.swift     (surface slug, telemetry, seams, @Observable view-model)
+  SettingsExportImport.Seams.swift     (in-memory/controllable sources, i18n facade)
+  SettingsExportImport.Views.swift     (header, export row, import row, dropzone)
+  SettingsExportImport.Panels.swift    (error banner, preview, applied, diff list, toast)
+  SettingsExportImport.Previews.swift  (13 #Preview states)
+  SettingsExportImport.strings         (P1/S10 i18n catalog — web-parity + native chrome)
+  SettingsExportImport.Tests.swift     (validator/keys/summary/messages)
+  SettingsExportImport.AdapterTests.swift (label/diff/toast/header/a11y/i18n projections)
+  SettingsExportImport.ModelTests.swift   (export + intake pipeline + telemetry)
+  SettingsExportImport.ApplyTests.swift   (apply path + reset + projections)
+
+States reproduced from web source (all render — no hidden surface):
+  export: idle / exporting (spinner) / saved-toast / offline-toast / failed-toast
+  import: idle (dropzone) / parsing (Reading…) / inline parse-error
+          (too-large, read-fail, invalid-JSON, invalid-bundle, preview-fail branches)
+          / dry-run preview (per-section diff + Apply N change(s) / Nothing to apply)
+          / applied (Import complete) / applying (spinner)
+          / apply offline / apply failed / SUDO-cancel keeps preview
+
+------------------------------------------------------------------------------
+[1/6] iOS — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+------------------------------------------------------------------------------
+** BUILD SUCCEEDED **
+(app target compiles the new surface + all 2000+ feature views; 0 errors attributable to SettingsExportImport.*)
+IOS_BUILD_EXIT=0
+
+------------------------------------------------------------------------------
+[2/6] iOS — xcodebuild ... test  (surface-scoped: -only-testing the 12 SettingsExportImport test classes)
+------------------------------------------------------------------------------
+Test Case SettingsBundleSectionKeyTests              ... 4 tests passed
+Test Case SettingsImportSummaryTests                 ... 2 tests passed
+Test Case SettingsBundleValidatorTests               ... 12 tests passed
+Test Case SettingsImportErrorMessageTests            ... 3 tests passed
+Test Case SettingsBackupLabelTests                   ... 3 tests passed
+Test Case SettingsSectionDiffRowTests                ... 2 tests passed
+Test Case SettingsBackupToastTests                   ... 4 tests passed
+Test Case SettingsImportPreviewHeaderTests           ... 3 tests passed
+Test Case SettingsExportImportAccessibilityTests     ... 2 tests passed
+Test Case SettingsExportImportStringsTests           ... 3 tests passed
+Test Case SettingsExportImportModelTests             ... 14 tests passed
+Test Case SettingsExportImportApplyTests             ... 9 tests passed
+	 Executed 61 tests, with 0 failures (0 unexpected) in 0.094 (0.172) seconds
+** TEST SUCCEEDED **
+IOS_EXIT=0
+
+------------------------------------------------------------------------------
+[3/6] macOS — xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build test
+------------------------------------------------------------------------------
+(CODE_SIGNING_ALLOWED=NO required: this unsigned CI runner has DEVELOPMENT_TEAM="" — see
+ apps/macos-pending-verifications.md. The macOS app target + widgets carry hardened-runtime/App-Group
+ entitlements that demand a dev cert. Disabling signing is the standard unsigned-CI path; it does not
+ alter any shipped code.)
+note: Using codesigning identity override
+** BUILD SUCCEEDED **
+	 Executed 61 tests, with 0 failures (0 unexpected) in 0.450 (0.513) seconds
+** TEST SUCCEEDED **   (TeslaSync_macOSTests — same 12 classes, 61 tests, 0 failures)
+MAC_EXIT=0
+
+------------------------------------------------------------------------------
+[4/6] swiftlint --strict  (the 13 shipped SettingsExportImport.* files)
+------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 12 files.   (+ .strings is not Swift)
+LINT_EXIT=0
+
+------------------------------------------------------------------------------
+[5/6] swiftformat --lint apps/apple  (the 13 shipped files)
+------------------------------------------------------------------------------
+SwiftFormat completed. 0/12 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+[6/6] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/SettingsExportImport
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+==============================================================================
+PRE-EXISTING ENVIRONMENT NOTES (transparency — covenant #9 "no silent drift")
+==============================================================================
+A. The shared iOS/macOS XCTest target (TeslaSyncTests / TeslaSync-macOSTests) does NOT
+   compile in the committed repo state due to PRE-EXISTING peer-surface defects OUTSIDE
+   this prompt's allowed files (Swift 6 strict-concurrency + duplicate test-class names):
+     - SlideRenderer.FixturesTests.swift       (static let echo not @Sendable)
+     - PresetGallery.{Model,}Tests.swift        (let passthroughLocalize not @Sendable)
+     - ChargeStatusLiveWidget.Tests.swift       (invalid redeclaration of ChargeStatus*Tests)
+     - MonthlyCostChart.Tests.swift             (invalid redeclaration of MonthlyCostAccessibilityTests)
+     - MonthlyCostTable.Tests.swift             (invalid redeclaration of SpyMonthlyCostTelemetry + type errs)
+     - SafetyFeaturesWidget.ModelTests.swift    (invalid redeclaration of Safety*Tests)
+   These are NOT my files and NOT in this artifact's allowed-files scope. The new
+   SettingsExportImport.* sources/tests produced ZERO compiler diagnostics in every run.
+   To obtain real per-test PASS evidence, the 430 non-SettingsExportImport co-located
+   *Tests.swift files were temporarily moved aside, the project regenerated, the suite run,
+   then ALL 430 were restored byte-for-byte (git diff of every peer file = empty; repo
+   working tree now contains ONLY the 13 new SettingsExportImport.* files). No peer file is
+   modified or committed.
+B. macOS requires CODE_SIGNING_ALLOWED=NO on this runner (no signing identity / empty
+   DEVELOPMENT_TEAM). Platform capability (SwiftUI + Swift Charts + MapKit, iOS18/macOS15)
+   is fully PRESENT — both platforms built and ran the surface's tests.
+
+Acceptance criteria:
+  [x] Surface renders on iOS + macOS with every web-source state reproduced
+  [x] Hooks bound through shared P1/S8 seam layer; no direct HTTP in the view
+  [x] Every web i18n key present in the P1/S10 catalog (.strings)
+  [x] VoiceOver labels on every interactive element (export, choose, change, cancel, apply, done, dismiss)
+  [x] Tests: adapter unit + per-state model + a11y label + i18n — 61 tests, 0 failures on BOTH platforms
+  [x] No TODO/stub/mock/placeholder/Lorem (PLACEHOLDER_COUNT=0)
+  [x] view.opened telemetry emits surface slug "SettingsExportImport" (P1/S11)
+
+Every surface-scoped step above is 0:
+  IOS_BUILD_EXIT=0  IOS_EXIT=0  MAC_EXIT=0  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE
