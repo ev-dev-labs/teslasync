@@ -362,3 +362,4 @@ p2-windows/feature-views/W-0197-ActiveSessionsSection.prompt.md
 p2-windows/feature-views/W-0199-AIFeatureToggleList.prompt.md
 p2-windows/feature-views/W-0203-AIUsageCard.prompt.md
 p2-windows/feature-views/W-0204-AppearanceSettings.prompt.md
+p2-windows/feature-views/W-0205-FeatureToggles.prompt.md
