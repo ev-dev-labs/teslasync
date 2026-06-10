@@ -1,0 +1,65 @@
+/*
+  ReauthDialog.strings
+  TeslaSync — P4 modal/dialog · 0007 · ReauthDialog (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  ReauthDialog resolves (table "ReauthDialog") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (components/feedback/ReauthDialog.tsx). The remainder backs the native state
+  envelope (loading, empty, error retry, freshness chip, connectivity banner) and
+  the VoiceOver builders. `{{token}}` is the i18next placeholder the projection
+  substitutes with the confirmation token (CONFIRM).
+*/
+
+/* --- Web source keys (ReauthDialog.tsx) --- */
+"sudo.title" = "Confirm your identity";
+"sudo.description" = "For your security, please re-enter your password or authenticator code before this action runs.";
+"sudo.openMode.title" = "Confirm sensitive action";
+"sudo.openMode.body" = "This is a destructive action. Type {{token}} to continue.";
+"sudo.tabs.label" = "Reauth method";
+"sudo.tabs.password" = "Password";
+"sudo.tabs.totp" = "Authenticator";
+"sudo.passwordLabel" = "Password";
+"sudo.totpLabel" = "Authenticator code";
+"sudo.typedConfirmationLabel" = "Type {{token}} to confirm";
+"sudo.helper" = "Your reauth lasts 5 minutes; rapid follow-up actions will not re-prompt.";
+"sudo.cancel" = "Cancel";
+"sudo.submit" = "Confirm";
+"sudo.openMode.submit" = "Continue";
+
+/* --- Web source error keys (ReauthDialog.tsx) --- */
+"sudo.errors.typedConfirmationMismatch" = "Type {{token}} exactly to confirm.";
+"sudo.errors.passwordRequired" = "Enter your password to continue.";
+"sudo.errors.totpRequired" = "Enter the 6-digit code from your authenticator.";
+"sudo.errors.notConfigured" = "Step-up reauth is not configured on this server. Ask your administrator to set TESLASYNC_SUDO_PASSWORD or TESLASYNC_SUDO_TOTP_SECRET.";
+"sudo.errors.invalidPassword" = "Password did not match.";
+"sudo.errors.invalidTotp" = "Authenticator code was rejected.";
+"sudo.errors.unknown" = "Reauthentication failed.";
+
+/* --- Loading (web Spinner) --- */
+"sudo.state.loading" = "Verifying your session…";
+
+/* --- Empty (no active challenge) --- */
+"sudo.state.empty" = "No action is awaiting confirmation";
+
+/* --- Error + retry (web QueryError) --- */
+"sudo.state.error" = "Couldn't open the reauthentication form.";
+"sudo.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"sudo.live" = "Live";
+"sudo.stale" = "Stale";
+"sudo.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"sudo.staleBanner" = "Reconnecting — confirm again if this attempt fails";
+"sudo.offlineBanner" = "Offline — reconnect to confirm this action";
+
+/* --- VoiceOver builders --- */
+"sudo.a11y.selected" = "selected";
+"sudo.a11y.close" = "Close";
