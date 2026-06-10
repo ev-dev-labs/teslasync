@@ -130,3 +130,4 @@ p3-android/A0-0001-android-scaffold.prompt.md
 p3-android/A1-0001-design-tokens-theme.prompt.md
 p3-android/A2-0001-ui-components.prompt.md
 p3-android/A2-0002-chart-components.prompt.md
+p3-android/A2-0003-data-display-components.prompt.md
