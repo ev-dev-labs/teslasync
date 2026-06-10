@@ -1,24 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    P2/W2-0001 — headless (net10.0) unit tests for the WinUI app's UI-thread-free logic (Model / Source /
-    ViewModel / Projection) of each feature-view and dashboard-widget surface. Targets plain net10.0 so
-    `dotnet test` runs without a WinUI / UI-thread host; the WinUI app targets a WinUI TFM, so its
-    UI-thread-free sources are Compile-linked below rather than project-referenced (the views themselves are
-    exercised by the app build). The matching test classes live under this project and are picked up by the
-    SDK default-compile glob.
-
-    INVARIANT: keep this file as ONE <Project> root with a single, path-sorted, deduplicated <Compile>
-    ItemGroup. A chain of integration merges had repeatedly re-concatenated this file into multiple <Project>
-    roots plus duplicate <Compile> items, failing XML load (MSB4025); consolidated for P2
-    feature-views/0161 TemperatureMetricCards into this single canonical root (the deduplicated, path-sorted
-    union of every previously linked source) plus the new TemperatureMetricCards surface Model / Source /
-    ViewModel links. Do NOT re-concatenate.
-    P2/W2-0001 - headless unit tests for the WinUI-free, UI-thread-free logic
-    (Model / Source / ViewModel / Projection) of the WinUI app. Targets plain net10.0 so
-    `dotnet test` runs without a WinUI / UI-thread host; the WinUI app targets a WinUI TFM, so
-    its UI-thread-free sources are Compile-linked below rather than project-referenced (the
-    views themselves are exercised by the app build). The matching test classes live under this
+    P2/W2-0001 - headless (net10.0) unit tests for the WinUI app's UI-thread-free logic
+    (Model / Source / ViewModel / Projection) of each feature-view and dashboard-widget surface.
+    Targets plain net10.0 so `dotnet test` runs without a WinUI / UI-thread host; the WinUI app targets
+    a WinUI TFM, so its UI-thread-free sources are compile-linked below rather than project-referenced
+    (the views themselves are exercised by the app build). The matching test classes live under this
     project and are picked up by the SDK default-compile glob.
 
     INVARIANT: keep this file as ONE <Project> root with a single, path-sorted, deduplicated
@@ -100,6 +87,12 @@
     plus duplicate items and orphaned comment prose, failing XML load (MSB4025); it is consolidated here
     into one canonical root holding the deduplicated, path-sorted union of every linked source. Do NOT
     re-concatenate, and never write a literal compile or project start tag inside this comment.
+    INVARIANT: keep this file as exactly ONE project root with a single, path-sorted, deduplicated
+    compile item group. A chain of integration merges had repeatedly re-concatenated this file into
+    multiple roots plus orphaned comment prose, failing XML load (MSB4025); it is consolidated here into
+    one valid root holding the deduplicated, path-sorted union of every previously linked source. When
+    adding a surface, add its links in sorted position. Do NOT re-concatenate, and never write a literal
+    project or compile start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -415,6 +408,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\AlertMessageEditor\AlertMessageEditor.Source.cs" Link="FeatureViews\AlertMessageEditor\AlertMessageEditor.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertMessageEditor\AlertMessageEditor.ViewModel.cs" Link="FeatureViews\AlertMessageEditor\AlertMessageEditor.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertsSection\AlertsSection.Model.cs" Link="FeatureViews\AlertsSection\AlertsSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AppearanceSettings.Model.cs" Link="FeatureViews\AppearanceSettings\AppearanceSettings.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AppearanceSettings.Source.cs" Link="FeatureViews\AppearanceSettings\AppearanceSettings.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AppearanceSettings.ViewModel.cs" Link="FeatureViews\AppearanceSettings\AppearanceSettings.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AuditPanel\AuditPanel.Model.cs" Link="FeatureViews\AuditPanel\AuditPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Model.cs" Link="FeatureViews\BackendTool\BackendTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Source.cs" Link="FeatureViews\BackendTool\BackendTool.Source.cs" />
