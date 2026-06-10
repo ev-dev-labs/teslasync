@@ -79,6 +79,12 @@
     write a literal build-item or project start tag inside this comment.
   -->
 
+    (MSB4025); re-consolidated for P2 feature-views/0188 NotificationChannelsView into this single
+    canonical root - the path-sorted, Include-deduplicated union of every previously linked WinUI-free
+    Model/Source/ViewModel logic source on disk, plus the new NotificationChannelsView surface
+    Model / Source / ViewModel links. Do NOT re-concatenate, and never write a literal build-item or
+    project start tag inside this comment.
+  -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -409,6 +415,11 @@
     <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.ViewModel.cs" Link="FeatureViews\ActionBuilder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.Model.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.ViewModel.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.Model.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.ViewModel.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.Model.cs" Link="FeatureViews\AddressInput\AddressInput.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.Source.cs" Link="FeatureViews\AddressInput\AddressInput.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.ViewModel.cs" Link="FeatureViews\AddressInput\AddressInput.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AddWidgetButton\AddWidgetButton.Model.cs" Link="FeatureViews\AddWidgetButton\AddWidgetButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.Model.cs" Link="FeatureViews\AddressInput\AddressInput.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.Source.cs" Link="FeatureViews\AddressInput\AddressInput.Source.cs" />
@@ -629,6 +640,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\NoVehicleSelected\NoVehicleSelected.Model.cs" Link="FeatureViews\NoVehicleSelected\NoVehicleSelected.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NoVehicleSelected\NoVehicleSelected.ViewModel.cs" Link="FeatureViews\NoVehicleSelected\NoVehicleSelected.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationRow\NotificationRow.Model.cs" Link="FeatureViews\NotificationRow\NotificationRow.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\NotificationChannelsView.Model.cs" Link="FeatureViews\NotificationChannelsView.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\NotificationChannelsView.Source.cs" Link="FeatureViews\NotificationChannelsView.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\NotificationChannelsView.ViewModel.cs" Link="FeatureViews\NotificationChannelsView.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.Model.cs" Link="FeatureViews\NotificationSettings.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.Source.cs" Link="FeatureViews\NotificationSettings.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.ViewModel.cs" Link="FeatureViews\NotificationSettings.ViewModel.cs" />
@@ -688,7 +702,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.Source.cs" Link="FeatureViews\ResultPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.ViewModel.cs" Link="FeatureViews\ResultPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RouteMapSection\RouteMapSection.Model.cs" Link="FeatureViews\RouteMapSection\RouteMapSection.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SOCRouteChart\SOCRouteChart.Model.cs" Link="FeatureViews\SOCRouteChart\SOCRouteChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.Model.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.Source.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.ViewModel.cs" Link="FeatureViews\SavingsCalculator\SavingsCalculator.ViewModel.cs" />
