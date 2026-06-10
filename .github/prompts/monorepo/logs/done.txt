@@ -457,3 +457,4 @@ p2-windows/feature-views/W-0240-BackgroundWorkersCard.prompt.md
 p2-windows/feature-views/W-0244-HealthProbesSection.prompt.md
 p2-windows/feature-views/W-0247-IncidentsCard.prompt.md
 p2-windows/feature-views/W-0246-IncidentForm.prompt.md
+p2-windows/feature-views/W-0249-LiveStatusPill.prompt.md
