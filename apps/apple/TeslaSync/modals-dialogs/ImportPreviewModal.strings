@@ -1,0 +1,59 @@
+/*
+  ImportPreviewModal.strings
+  TeslaSync — P4 modal / dialog · 0024 · ImportPreviewModal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `ImportPreviewModal`
+  resolves (table "ImportPreviewModal") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  Group 1 is the exact set of keys extracted from the web source
+  (features/dashboard/components/ImportPreviewModal.tsx, plus the shared `common.close` it composes).
+  Group 2 is the validation copy the web `validateImport.ts` hook emits as raw strings — routed through
+  this facade so the native code holds no English literal while keeping the web wording. Group 3 backs
+  the native chrome (placeholders / VoiceOver / empty hints).
+*/
+
+/* --- Group 1: keys from the web component (parity) --- */
+"import.title" = "Import Dashboard";
+"import.preview" = "Import Preview";
+"import.fromFile" = "From File";
+"import.fromClipboard" = "Paste JSON";
+"import.fromUrl" = "From URL";
+"import.dropFile" = "Drop a .json file here or click to browse";
+"import.browse" = "Browse Files";
+"import.fileInput" = "Dashboard JSON file";
+"import.validate" = "Validate & Preview";
+"import.loadUrl" = "Load from URL";
+"import.emptyInput" = "No data to validate";
+"import.readError" = "Failed to read file";
+"import.invalidFileType" = "Please drop a .json file";
+"import.noImportParam" = "URL does not contain an import parameter";
+"import.invalidUrl" = "Invalid URL format";
+"import.availableCount" = "{{count}} widgets";
+"import.missingCount" = "{{count}} skipped";
+"import.widgets" = "Widgets";
+"import.notAvailable" = "Not available";
+"import.cannotPreview" = "Cannot preview this layout";
+"import.back" = "Back";
+"import.confirm" = "Import Dashboard";
+"common.close" = "Close";
+
+/* --- Group 2: validation copy from validateImport.ts (routed through the facade) --- */
+"import.validation.invalidJson" = "Invalid JSON format";
+"import.validation.expectedObject" = "Expected a JSON object";
+"import.validation.invalidName" = "Missing or invalid \"name\" field";
+"import.validation.invalidWidgets" = "Missing or invalid \"widgets\" array";
+"import.validation.invalidLayouts" = "Missing or invalid \"layouts\" object";
+"import.validation.noCompatible" = "No compatible widgets found in this layout";
+"import.validation.skipped" = "{{count}} widget(s) not available and will be skipped";
+
+/* --- Group 3: native chrome (placeholders / VoiceOver / empty hints) --- */
+"import.pasteLabel" = "Dashboard JSON";
+"import.pastePlaceholder" = "{\"name\": \"My Dashboard\", \"widgets\": [...], \"layouts\": {...}}";
+"import.urlPlaceholder" = "https://teslasync.example.com/dashboard#import=...";
+"import.urlLabel" = "Import URL";
+"import.previewThumbnail" = "Dashboard layout preview";
+"import.noWidgets" = "No widgets";
+"import.a11y.available" = "available";
