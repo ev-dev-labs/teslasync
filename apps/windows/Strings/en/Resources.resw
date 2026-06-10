@@ -3942,6 +3942,51 @@
   <data name="translation.backup.title" xml:space="preserve">
     <value>Backup &amp; Restore</value>
   </data>
+  <data name="translation.backup.exportImport.subtitle" xml:space="preserve">
+    <value>Export your TeslaSync configuration as a JSON file you can stash in a backup folder or git repo, and import it on a fresh install.</value>
+  </data>
+  <data name="translation.backup.export.help" xml:space="preserve">
+    <value>Includes general settings, alert rules, geofences, and your quiet-hours windows. Tesla credentials and notification-channel secrets are NEVER exported.</value>
+  </data>
+  <data name="translation.backup.import.help" xml:space="preserve">
+    <value>Drop or pick a previously exported bundle. Existing items with the same name are updated; nothing is deleted.</value>
+  </data>
+  <data name="translation.backup.import.summary" xml:space="preserve">
+    <value>{0} added, {1} updated, {2} unchanged</value>
+  </data>
+  <data name="translation.backup.import.errorNotObject" xml:space="preserve">
+    <value>Bundle must be a JSON object</value>
+  </data>
+  <data name="translation.backup.import.errorVersion" xml:space="preserve">
+    <value>schema_version must be a positive integer</value>
+  </data>
+  <data name="translation.backup.import.errorVersionNewer" xml:space="preserve">
+    <value>schema_version {0} is newer than this build supports (max {1})</value>
+  </data>
+  <data name="translation.backup.import.errorExportedAt" xml:space="preserve">
+    <value>exported_at must be a non-empty ISO-8601 string</value>
+  </data>
+  <data name="translation.backup.import.errorSectionsObject" xml:space="preserve">
+    <value>sections must be a JSON object</value>
+  </data>
+  <data name="translation.backup.import.errorUnknownSection" xml:space="preserve">
+    <value>Unknown section "{0}"</value>
+  </data>
+  <data name="translation.backup.import.errorSettingsObject" xml:space="preserve">
+    <value>sections.settings must be an object</value>
+  </data>
+  <data name="translation.backup.import.errorSectionArray" xml:space="preserve">
+    <value>sections.{0} must be an array</value>
+  </data>
+  <data name="translation.toast.settings.export.error" xml:space="preserve">
+    <value>Failed to export settings</value>
+  </data>
+  <data name="translation.toast.settings.import.dryRunError" xml:space="preserve">
+    <value>Failed to preview import</value>
+  </data>
+  <data name="translation.toast.settings.import.applyError" xml:space="preserve">
+    <value>Failed to apply import</value>
+  </data>
   <data name="translation.backup.totalBackups" xml:space="preserve">
     <value>Total Backups</value>
   </data>
