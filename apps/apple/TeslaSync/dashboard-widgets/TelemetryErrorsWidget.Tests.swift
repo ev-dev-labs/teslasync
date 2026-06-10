@@ -210,7 +210,7 @@ private let enUS = Locale(identifier: "en_US")
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpyTelemetryErrorsTelemetry()
+        let spy = TErrSpyTelemetryErrorsTelemetry()
         let (model, source) = makeModel(TelemetryErrorsUpdate(status: .loading), telemetry: spy)
         model.start()
         model.start()
@@ -317,7 +317,7 @@ private let enUS = Locale(identifier: "en_US")
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyTelemetryErrorsTelemetry: TelemetryErrorsWidgetTelemetry, @unchecked Sendable {
+private final class TErrSpyTelemetryErrorsTelemetry: TelemetryErrorsWidgetTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

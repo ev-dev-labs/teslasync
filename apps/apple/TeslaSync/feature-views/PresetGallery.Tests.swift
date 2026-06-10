@@ -19,9 +19,9 @@ import XCTest
 
 /// Identity localizer: returns each call's English fallback so assertions read the real
 /// copy without a bundle.
-private let passthroughLocalize: (String, String) -> String = { _, fallback in fallback }
+private let passthroughLocalize: @Sendable (String, String) -> String = { _, fallback in fallback }
 
-private enum SamplePresets {
+private enum PresetGallerySamplePresets {
     static func geofence() -> AutomationPresetItem {
         AutomationPresetItem(
             id: "sentry-on-leave",
@@ -116,8 +116,8 @@ final class AutomationPresetGalleryTriggerTests: XCTestCase {
     }
 
     func testFirstTriggerKindProjection() {
-        XCTAssertEqual(SamplePresets.geofence().firstTriggerKind, .geofence)
-        XCTAssertNil(SamplePresets.noTrigger().firstTriggerKind)
+        XCTAssertEqual(PresetGallerySamplePresets.geofence().firstTriggerKind, .geofence)
+        XCTAssertNil(PresetGallerySamplePresets.noTrigger().firstTriggerKind)
     }
 }
 
@@ -164,7 +164,7 @@ final class AutomationPresetGalleryIconTests: XCTestCase {
 
     func testUnmappedIconFallsBackToShield() {
         XCTAssertEqual(AutomationPresetGalleryProjection.symbolName(forIcon: "Nope"), "shield.fill")
-        XCTAssertEqual(SamplePresets.noTrigger().symbolName, "shield.fill")
+        XCTAssertEqual(PresetGallerySamplePresets.noTrigger().symbolName, "shield.fill")
     }
 }
 
@@ -178,7 +178,7 @@ final class AutomationPresetGalleryAccessibilityTests: XCTestCase {
 
     func testCardLabelIncludesNameTriggerAndActions() {
         let label = AutomationPresetGalleryAccessibility.cardLabel(
-            SamplePresets.geofence(),
+            PresetGallerySamplePresets.geofence(),
             localize: passthroughLocalize
         )
         XCTAssertTrue(label.contains("Sentry on leave"))
@@ -188,7 +188,7 @@ final class AutomationPresetGalleryAccessibilityTests: XCTestCase {
 
     func testCardLabelUsesNoTriggerFallback() {
         let label = AutomationPresetGalleryAccessibility.cardLabel(
-            SamplePresets.noTrigger(),
+            PresetGallerySamplePresets.noTrigger(),
             localize: passthroughLocalize
         )
         XCTAssertTrue(label.contains("No trigger configured"))

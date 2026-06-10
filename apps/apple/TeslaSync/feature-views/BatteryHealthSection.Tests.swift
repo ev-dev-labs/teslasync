@@ -207,7 +207,7 @@ import XCTest
     }
 
     func testStartAppliesInitialAndEmitsTelemetryOnce() {
-        let spy = SpyBatteryHealthTelemetry()
+        let spy = BatteryHealthSectionSpyBatteryHealthTelemetry()
         let (model, source) = makeModel(BatteryHealthInput(metrics: metrics(count: 3)), telemetry: spy)
         model.start()
         model.start()
@@ -259,7 +259,7 @@ import XCTest
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyBatteryHealthTelemetry: BatteryHealthTelemetry, @unchecked Sendable {
+private final class BatteryHealthSectionSpyBatteryHealthTelemetry: BatteryHealthTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

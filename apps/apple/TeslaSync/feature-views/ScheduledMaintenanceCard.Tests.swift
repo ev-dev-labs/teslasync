@@ -146,7 +146,7 @@ final class ScheduledMaintenanceModelTests: XCTestCase {
     }
 
     func testStartAppliesInitialAndEmitsTelemetryOnce() {
-        let spy = SpyTelemetry()
+        let spy = ScheduledMaintenanceCardSpyTelemetry()
         let (model, source) = makeModel(ScheduledMaintenanceInput(snapshot: .ok), telemetry: spy)
         model.start()
         model.start()
@@ -210,11 +210,11 @@ final class ScheduledMaintenanceMutationTests: XCTestCase {
     private struct Harness {
         let model: ScheduledMaintenanceModel
         let source: InMemoryScheduledMaintenanceSource
-        let toast: SpyToast
+        let toast: ScheduledMaintenanceCardSpyToast
     }
 
     private func makeHarness(result: MaintenanceMutationResult = .success(.ok)) -> Harness {
-        let toast = SpyToast()
+        let toast = ScheduledMaintenanceCardSpyToast()
         let source = InMemoryScheduledMaintenanceSource(
             initial: ScheduledMaintenanceInput(snapshot: .ok), mutationResult: result
         )
@@ -303,14 +303,14 @@ final class ScheduledMaintenanceAccessibilityTests: XCTestCase {
 
 // MARK: - Test doubles
 
-private final class SpyTelemetry: ScheduledMaintenanceTelemetry, @unchecked Sendable {
+private final class ScheduledMaintenanceCardSpyTelemetry: ScheduledMaintenanceTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)
     }
 }
 
-private final class SpyToast: ScheduledMaintenanceToasting, @unchecked Sendable {
+private final class ScheduledMaintenanceCardSpyToast: ScheduledMaintenanceToasting, @unchecked Sendable {
     private(set) var successes: [String] = []
     private(set) var errors: [String] = []
     func success(_ message: String) {

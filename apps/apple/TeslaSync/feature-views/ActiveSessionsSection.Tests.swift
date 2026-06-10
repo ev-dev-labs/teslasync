@@ -20,7 +20,7 @@ import XCTest
 /// real copy without a bundle.
 private let passthroughLocalize: @Sendable (String, String) -> String = { _, fallback in fallback }
 
-private enum SampleSessions {
+private enum ActiveSessionsSectionSampleSessions {
     static func current(id: String = "1") -> ActiveSessionItem {
         ActiveSessionItem(
             id: id,
@@ -150,9 +150,12 @@ private enum SampleSessions {
 
     func testHasOtherDevices() {
         XCTAssertFalse(ActiveSessionsProjection.hasOtherDevices([]))
-        XCTAssertFalse(ActiveSessionsProjection.hasOtherDevices([SampleSessions.current()]))
+        XCTAssertFalse(ActiveSessionsProjection.hasOtherDevices([ActiveSessionsSectionSampleSessions.current()]))
         XCTAssertTrue(
-            ActiveSessionsProjection.hasOtherDevices([SampleSessions.current(), SampleSessions.other()])
+            ActiveSessionsProjection.hasOtherDevices([
+                ActiveSessionsSectionSampleSessions.current(),
+                ActiveSessionsSectionSampleSessions.other()
+            ])
         )
     }
 }
@@ -166,7 +169,7 @@ private enum SampleSessions {
     }
 
     func testRowLabelIncludesDeviceCurrentAndMetrics() {
-        let item = SampleSessions.current()
+        let item = ActiveSessionsSectionSampleSessions.current()
         let label = ActiveSessionsAccessibility.rowLabel(
             item,
             dates: DefaultActiveSessionsDateFormatting(),
@@ -181,7 +184,7 @@ private enum SampleSessions {
 
     func testRowLabelOmitsCurrentForOtherDevices() {
         let label = ActiveSessionsAccessibility.rowLabel(
-            SampleSessions.other(),
+            ActiveSessionsSectionSampleSessions.other(),
             dates: DefaultActiveSessionsDateFormatting(),
             localize: passthroughLocalize
         )

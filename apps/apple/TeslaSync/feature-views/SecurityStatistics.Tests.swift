@@ -221,7 +221,7 @@ private let sampleSnapshot = SecurityStatsSnapshot(
     }
 
     func testStaleAfterFreshnessWindow() {
-        let clock = MutableClock(Date(timeIntervalSince1970: 1_000_000))
+        let clock = SecurityStatisticsMutableClock(Date(timeIntervalSince1970: 1_000_000))
         let source = InMemorySecurityStatisticsSource(outcome: .loaded(sampleSnapshot))
         let model = SecurityStatisticsModel(source: source, now: { clock.now() }, stalenessWindow: 60)
         model.start()
@@ -234,7 +234,7 @@ private let sampleSnapshot = SecurityStatsSnapshot(
     }
 
     func testReloadIfStaleReloadsOnlyWhenStale() {
-        let clock = MutableClock(Date(timeIntervalSince1970: 2_000_000))
+        let clock = SecurityStatisticsMutableClock(Date(timeIntervalSince1970: 2_000_000))
         let source = InMemorySecurityStatisticsSource(outcome: .loaded(sampleSnapshot))
         let model = SecurityStatisticsModel(source: source, now: { clock.now() }, stalenessWindow: 60)
         model.start()
@@ -274,7 +274,7 @@ private final class SpySecurityStatisticsTelemetry: SecurityStatisticsTelemetry,
 }
 
 /// A settable clock so the freshness window can be crossed deterministically.
-private final class MutableClock: @unchecked Sendable {
+private final class SecurityStatisticsMutableClock: @unchecked Sendable {
     var current: Date
     init(_ start: Date) {
         current = start

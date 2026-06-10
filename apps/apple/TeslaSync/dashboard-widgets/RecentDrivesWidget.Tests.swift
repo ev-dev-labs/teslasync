@@ -233,7 +233,7 @@ private enum RecentDrivesFixture {
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpyRecentDrivesTelemetry()
+        let spy = RecentDrivesWidgetSpyRecentDrivesTelemetry()
         let (model, source) = makeModel(RecentDrivesWidgetUpdate(status: .loading, drives: nil), telemetry: spy)
         model.start()
         model.start()
@@ -334,7 +334,7 @@ private enum RecentDrivesFixture {
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyRecentDrivesTelemetry: RecentDrivesWidgetTelemetry, @unchecked Sendable {
+private final class RecentDrivesWidgetSpyRecentDrivesTelemetry: RecentDrivesWidgetTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

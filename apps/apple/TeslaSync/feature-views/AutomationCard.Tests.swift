@@ -19,7 +19,7 @@ import XCTest
 
 // MARK: - Fixtures
 
-private enum Fixture {
+private enum AutomationCardFixture {
     nonisolated(unsafe) static let now = Date(timeIntervalSince1970: 1_700_000_000)
 
     static func ago(_ seconds: TimeInterval) -> String {
@@ -75,21 +75,21 @@ private enum Fixture {
     }
 
     func testToggleDisplayedChecked() {
-        XCTAssertTrue(AutomationToggleIntent.displayedChecked(Fixture.automation(enabled: true)))
-        XCTAssertFalse(AutomationToggleIntent.displayedChecked(Fixture.automation(enabled: false)))
+        XCTAssertTrue(AutomationToggleIntent.displayedChecked(AutomationCardFixture.automation(enabled: true)))
+        XCTAssertFalse(AutomationToggleIntent.displayedChecked(AutomationCardFixture.automation(enabled: false)))
         // Auto-disabled always renders OFF regardless of `enabled` (web ternary).
         XCTAssertFalse(
-            AutomationToggleIntent.displayedChecked(Fixture.automation(autoDisabled: true, enabled: true))
+            AutomationToggleIntent.displayedChecked(AutomationCardFixture.automation(autoDisabled: true, enabled: true))
         )
     }
 
     func testToggleResolveBranch() {
-        let plain = Fixture.automation(autoDisabled: false, enabled: false)
+        let plain = AutomationCardFixture.automation(autoDisabled: false, enabled: false)
         XCTAssertEqual(AutomationToggleIntent.resolve(plain, checked: true), .toggle(id: 7, enabled: true))
         XCTAssertEqual(AutomationToggleIntent.resolve(plain, checked: false), .toggle(id: 7, enabled: false))
 
         // Auto-disabled + flipped ON re-enables (web handleToggle); OFF stays a toggle.
-        let auto = Fixture.automation(autoDisabled: true, enabled: false)
+        let auto = AutomationCardFixture.automation(autoDisabled: true, enabled: false)
         XCTAssertEqual(AutomationToggleIntent.resolve(auto, checked: true), .reEnable(id: 7))
         XCTAssertEqual(AutomationToggleIntent.resolve(auto, checked: false), .toggle(id: 7, enabled: false))
     }
@@ -154,7 +154,7 @@ private enum Fixture {
     }
 
     func testStateAutomationAccessor() {
-        let data = Fixture.automation()
+        let data = AutomationCardFixture.automation()
         XCTAssertEqual(AutomationCardState.loaded(data).automation, data)
         XCTAssertNil(AutomationCardState.loading.automation)
         XCTAssertNil(AutomationCardState.empty.automation)
@@ -168,11 +168,26 @@ private enum Fixture {
     private let echo = AutomationCardLocalizer.echo
 
     func testTimeAgoBuckets() {
-        XCTAssertEqual(AutomationTimeFormat.timeAgo(nil, now: Fixture.now, localize: echo), "—")
-        XCTAssertEqual(AutomationTimeFormat.timeAgo(Fixture.ago(30), now: Fixture.now, localize: echo), "just now")
-        XCTAssertEqual(AutomationTimeFormat.timeAgo(Fixture.ago(300), now: Fixture.now, localize: echo), "5m ago")
-        XCTAssertEqual(AutomationTimeFormat.timeAgo(Fixture.ago(7200), now: Fixture.now, localize: echo), "2h ago")
-        XCTAssertEqual(AutomationTimeFormat.timeAgo(Fixture.ago(259_200), now: Fixture.now, localize: echo), "3d ago")
+        XCTAssertEqual(AutomationTimeFormat.timeAgo(nil, now: AutomationCardFixture.now, localize: echo), "—")
+        XCTAssertEqual(
+            AutomationTimeFormat.timeAgo(AutomationCardFixture.ago(30), now: AutomationCardFixture.now, localize: echo),
+            "just now"
+        )
+        XCTAssertEqual(
+            AutomationTimeFormat
+                .timeAgo(AutomationCardFixture.ago(300), now: AutomationCardFixture.now, localize: echo),
+            "5m ago"
+        )
+        XCTAssertEqual(
+            AutomationTimeFormat
+                .timeAgo(AutomationCardFixture.ago(7200), now: AutomationCardFixture.now, localize: echo),
+            "2h ago"
+        )
+        XCTAssertEqual(
+            AutomationTimeFormat
+                .timeAgo(AutomationCardFixture.ago(259_200), now: AutomationCardFixture.now, localize: echo),
+            "3d ago"
+        )
     }
 
     func testDateTimeFormatsAndFallsBack() throws {
@@ -204,7 +219,7 @@ private enum Fixture {
     private let echo = AutomationCardLocalizer.echo
 
     func testHeaderLabelComposesNameStatusAndChip() {
-        let data = Fixture.automation(enabled: true, isFiring: true)
+        let data = AutomationCardFixture.automation(enabled: true, isFiring: true)
         let label = AutomationCardAccessibility.headerLabel(
             data,
             status: .active,
@@ -215,7 +230,7 @@ private enum Fixture {
     }
 
     func testHeaderLabelWithoutChip() {
-        let data = Fixture.automation(enabled: false)
+        let data = AutomationCardFixture.automation(enabled: false)
         let label = AutomationCardAccessibility.headerLabel(
             data,
             status: .disabled,

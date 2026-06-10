@@ -19,7 +19,7 @@ private let echo: @Sendable (String, String) -> String = { _, fallback in fallba
 
 // MARK: - Fixtures
 
-private enum Fixture {
+private enum NotificationGroupRowFixture {
     static let date = Date(timeIntervalSince1970: 1_733_600_000)
 
     static func log(
@@ -87,7 +87,7 @@ private enum Fixture {
 
 @MainActor final class NotificationGroupProjectionTests: XCTestCase {
     func testSingletonDerivation() {
-        let singleton = Fixture.group(key: nil, count: 1, unread: 1).projected(archived: false)
+        let singleton = NotificationGroupRowFixture.group(key: nil, count: 1, unread: 1).projected(archived: false)
         XCTAssertTrue(singleton.isSingleton)
         XCTAssertEqual(singleton.extraCount, 0)
         XCTAssertFalse(singleton.showsGroupChrome)
@@ -95,30 +95,34 @@ private enum Fixture {
     }
 
     func testExtraCountClampsAtZero() {
-        XCTAssertEqual(Fixture.group(count: 0).projected(archived: false).extraCount, 0)
+        XCTAssertEqual(NotificationGroupRowFixture.group(count: 0).projected(archived: false).extraCount, 0)
     }
 
     func testChromeGating() {
         // !singleton && (extraCount > 0 || unread > 1)
-        XCTAssertTrue(Fixture.group(count: 5, unread: 3).projected(archived: false).showsGroupChrome)
+        XCTAssertTrue(NotificationGroupRowFixture.group(count: 5, unread: 3).projected(archived: false)
+            .showsGroupChrome)
         // singleton extra=0 unread=1 -> no chrome (web `unread_count > 1` is false)
-        XCTAssertFalse(Fixture.group(key: "k", count: 1, unread: 1).projected(archived: false).showsGroupChrome)
+        XCTAssertFalse(NotificationGroupRowFixture.group(key: "k", count: 1, unread: 1).projected(archived: false)
+            .showsGroupChrome)
         // extra=0 but unread=2 -> chrome shows (web `unread_count > 1`)
-        XCTAssertTrue(Fixture.group(key: "k", count: 1, unread: 2).projected(archived: false).showsGroupChrome)
+        XCTAssertTrue(NotificationGroupRowFixture.group(key: "k", count: 1, unread: 2).projected(archived: false)
+            .showsGroupChrome)
     }
 
     func testCanMarkGroupReadRespectsArchivedAndUnread() {
-        XCTAssertTrue(Fixture.group(unread: 3).projected(archived: false).canMarkGroupRead)
-        XCTAssertFalse(Fixture.group(unread: 3).projected(archived: true).canMarkGroupRead)
-        XCTAssertFalse(Fixture.group(unread: 0).projected(archived: false).canMarkGroupRead)
+        XCTAssertTrue(NotificationGroupRowFixture.group(unread: 3).projected(archived: false).canMarkGroupRead)
+        XCTAssertFalse(NotificationGroupRowFixture.group(unread: 3).projected(archived: true).canMarkGroupRead)
+        XCTAssertFalse(NotificationGroupRowFixture.group(unread: 0).projected(archived: false).canMarkGroupRead)
     }
 
     func testSubChipGating() {
-        let full = Fixture.group(count: 5, unread: 3, vehicles: 2).projected(archived: false)
+        let full = NotificationGroupRowFixture.group(count: 5, unread: 3, vehicles: 2).projected(archived: false)
         XCTAssertTrue(full.showsExpandToggle)
         XCTAssertTrue(full.showsUnreadChip)
         XCTAssertTrue(full.showsVehicleAffected)
-        let none = Fixture.group(key: "k", count: 1, unread: 0, vehicles: 0).projected(archived: false)
+        let none = NotificationGroupRowFixture.group(key: "k", count: 1, unread: 0, vehicles: 0)
+            .projected(archived: false)
         XCTAssertFalse(none.showsExpandToggle)
         XCTAssertFalse(none.showsUnreadChip)
         XCTAssertFalse(none.showsVehicleAffected)
@@ -127,7 +131,7 @@ private enum Fixture {
     func testSeverityDefaultFoldsThroughProjection() {
         let input = NotificationGroupInput(
             groupKey: "k",
-            latest: Fixture.log(1, severity: nil),
+            latest: NotificationGroupRowFixture.log(1, severity: nil),
             count: 1,
             unreadCount: 0,
             vehicleAffectedCount: 0
@@ -147,7 +151,11 @@ private enum Fixture {
     }
 
     func testMembersFilterOutLatest() {
-        let members = [Fixture.log(1).projected(), Fixture.log(2).projected(), Fixture.log(3).projected()]
+        let members = [
+            NotificationGroupRowFixture.log(1).projected(),
+            NotificationGroupRowFixture.log(2).projected(),
+            NotificationGroupRowFixture.log(3).projected()
+        ]
         let phase = NotificationMembersProjector.project(status: .loaded, members: members, latestId: 1)
         guard case let .loaded(rows) = phase else {
             XCTFail("expected loaded")
@@ -157,7 +165,7 @@ private enum Fixture {
     }
 
     func testMembersEmptyWhenOnlyLatest() {
-        let members = [Fixture.log(1).projected()]
+        let members = [NotificationGroupRowFixture.log(1).projected()]
         XCTAssertEqual(
             NotificationMembersProjector.project(status: .loaded, members: members, latestId: 1),
             .empty
@@ -204,8 +212,8 @@ private enum Fixture {
     func testTimestampIsDeterministic() {
         let locale = Locale(identifier: "en_US")
         let zone = TimeZone(identifier: "America/Los_Angeles") ?? .gmt
-        let first = NotificationGroupFormat.timestamp(Fixture.date, locale: locale, timeZone: zone)
-        let second = NotificationGroupFormat.timestamp(Fixture.date, locale: locale, timeZone: zone)
+        let first = NotificationGroupFormat.timestamp(NotificationGroupRowFixture.date, locale: locale, timeZone: zone)
+        let second = NotificationGroupFormat.timestamp(NotificationGroupRowFixture.date, locale: locale, timeZone: zone)
         XCTAssertEqual(first, second)
         XCTAssertFalse(first.isEmpty)
     }
@@ -220,7 +228,7 @@ private enum Fixture {
 
 @MainActor final class NotificationGroupAccessibilityTests: XCTestCase {
     func testRowLabelIncludesSeverityReadStateAndTitle() {
-        let row = Fixture.log(1, severity: "critical", read: false).projected()
+        let row = NotificationGroupRowFixture.log(1, severity: "critical", read: false).projected()
         let label = NotificationGroupAccessibility.rowLabel(
             row,
             localize: echo,
@@ -234,7 +242,7 @@ private enum Fixture {
     }
 
     func testGroupSummaryIncludesCounts() {
-        let group = Fixture.group(count: 5, unread: 3, vehicles: 2).projected(archived: false)
+        let group = NotificationGroupRowFixture.group(count: 5, unread: 3, vehicles: 2).projected(archived: false)
         let summary = NotificationGroupAccessibility.groupSummary(
             group,
             localize: echo,
@@ -247,7 +255,8 @@ private enum Fixture {
     }
 
     func testSingletonSummaryHasNoGroupCounts() {
-        let group = Fixture.group(key: nil, count: 1, unread: 1, vehicles: 1).projected(archived: false)
+        let group = NotificationGroupRowFixture.group(key: nil, count: 1, unread: 1, vehicles: 1)
+            .projected(archived: false)
         let summary = NotificationGroupAccessibility.groupSummary(group, localize: echo)
         XCTAssertFalse(summary.contains("similar"))
         XCTAssertFalse(summary.contains("vehicles affected"))

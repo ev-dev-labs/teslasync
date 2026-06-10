@@ -50,7 +50,7 @@ private final class RecordingEntriesProvider: EntriesTableProvider {
 
 /// Spy proving the `view.opened` diagnostics contract is invokable with the surface slug.
 @MainActor
-private final class TelemetrySpy: EntriesTableTelemetry {
+private final class EntriesTableTelemetrySpy: EntriesTableTelemetry {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)
@@ -312,7 +312,7 @@ private func sampleDTO(
     }
 
     func testTelemetryContract() {
-        let spy = TelemetrySpy()
+        let spy = EntriesTableTelemetrySpy()
         spy.viewOpened(surface: EntriesTable.surfaceSlug)
         XCTAssertEqual(spy.surfaces, ["EntriesTable"])
     }

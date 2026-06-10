@@ -19,7 +19,7 @@ import XCTest
 
 // MARK: - Fixtures
 
-private enum ForecastFixture {
+private enum BatteryDegradationForecastWidgetForecastFixture {
     static func projectedDate() -> Date {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC") ?? .gmt
@@ -70,7 +70,10 @@ private enum ForecastFixture {
 
     func testLoadingWithCachedContentStaysContent() {
         let (model, _) = makeModel(
-            BatteryDegradationForecastUpdate(status: .loading, snapshot: ForecastFixture.populated())
+            BatteryDegradationForecastUpdate(
+                status: .loading,
+                snapshot: BatteryDegradationForecastWidgetForecastFixture.populated()
+            )
         )
         model.start()
         XCTAssertEqual(model.phase, .content)
@@ -84,7 +87,10 @@ private enum ForecastFixture {
 
     func testLoadedWithDataShowsContent() {
         let (model, _) = makeModel(
-            BatteryDegradationForecastUpdate(status: .loaded, snapshot: ForecastFixture.populated())
+            BatteryDegradationForecastUpdate(
+                status: .loaded,
+                snapshot: BatteryDegradationForecastWidgetForecastFixture.populated()
+            )
         )
         model.start()
         XCTAssertEqual(model.phase, .content)
@@ -95,7 +101,10 @@ private enum ForecastFixture {
 
     func testEmptyStatusShowsEmptyEvenWithCache() {
         let (model, _) = makeModel(
-            BatteryDegradationForecastUpdate(status: .empty, snapshot: ForecastFixture.populated())
+            BatteryDegradationForecastUpdate(
+                status: .empty,
+                snapshot: BatteryDegradationForecastWidgetForecastFixture.populated()
+            )
         )
         model.start()
         XCTAssertEqual(model.phase, .empty)
@@ -109,14 +118,17 @@ private enum ForecastFixture {
 
     func testFailedWithCacheStaysContent() {
         let (model, _) = makeModel(
-            BatteryDegradationForecastUpdate(status: .failed("boom"), snapshot: ForecastFixture.populated())
+            BatteryDegradationForecastUpdate(
+                status: .failed("boom"),
+                snapshot: BatteryDegradationForecastWidgetForecastFixture.populated()
+            )
         )
         model.start()
         XCTAssertEqual(model.phase, .content)
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpyForecastTelemetry()
+        let spy = BDFSpyForecastTelemetry()
         let (model, source) = makeModel(
             BatteryDegradationForecastUpdate(status: .loading, snapshot: .empty),
             telemetry: spy
@@ -129,7 +141,10 @@ private enum ForecastFixture {
 
     func testRefreshDelegatesToSource() {
         let (model, source) = makeModel(
-            BatteryDegradationForecastUpdate(status: .loaded, snapshot: ForecastFixture.populated())
+            BatteryDegradationForecastUpdate(
+                status: .loaded,
+                snapshot: BatteryDegradationForecastWidgetForecastFixture.populated()
+            )
         )
         model.start()
         model.refresh()
@@ -138,9 +153,12 @@ private enum ForecastFixture {
     }
 
     func testStopResetsStartedSoTelemetryReArms() {
-        let spy = SpyForecastTelemetry()
+        let spy = BDFSpyForecastTelemetry()
         let (model, _) = makeModel(
-            BatteryDegradationForecastUpdate(status: .loaded, snapshot: ForecastFixture.populated()),
+            BatteryDegradationForecastUpdate(
+                status: .loaded,
+                snapshot: BatteryDegradationForecastWidgetForecastFixture.populated()
+            ),
             telemetry: spy
         )
         model.start()
@@ -157,7 +175,7 @@ private enum ForecastFixture {
                 status: .loaded,
                 connection: .offline,
                 vehicle: vehicle,
-                snapshot: ForecastFixture.populated(),
+                snapshot: BatteryDegradationForecastWidgetForecastFixture.populated(),
                 updatedAt: Date()
             )
         )
@@ -173,7 +191,8 @@ private enum ForecastFixture {
 
     func testResolvePhaseDirectly() {
         let empty = BatteryDegradationForecastProjection.empty
-        let filled = BatteryDegradationForecastBuilder.buildProjection(snapshot: ForecastFixture.populated())
+        let filled = BatteryDegradationForecastBuilder
+            .buildProjection(snapshot: BatteryDegradationForecastWidgetForecastFixture.populated())
         XCTAssertEqual(
             BatteryDegradationForecastModel.resolvePhase(status: .loading, projection: empty),
             .loading
@@ -230,7 +249,7 @@ private enum ForecastFixture {
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyForecastTelemetry: BatteryDegradationForecastTelemetry, @unchecked Sendable {
+private final class BDFSpyForecastTelemetry: BatteryDegradationForecastTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

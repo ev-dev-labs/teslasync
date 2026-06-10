@@ -68,7 +68,7 @@ final class GasPriceSettingsModelTests: XCTestCase {
     }
 
     func testStartAppliesInitialAndEmitsTelemetryOnce() {
-        let spy = SpyTelemetry()
+        let spy = GasPriceSettingsSpyTelemetry()
         let (model, source) = makeModel(dataInput, telemetry: spy)
         model.start()
         model.start()
@@ -130,7 +130,7 @@ final class GasPriceSettingsModelTests: XCTestCase {
     }
 
     func testToggledOutcomeRoutesInfoToast() {
-        let toast = SpyToast()
+        let toast = GasPriceSettingsSpyToast()
         let (model, source) = makeModel(dataInput, toast: toast)
         model.start()
         source.pushOutcome(.toggled(enabled: true))
@@ -140,7 +140,7 @@ final class GasPriceSettingsModelTests: XCTestCase {
     }
 
     func testIntervalOutcomeRoutesInfoToast() {
-        let toast = SpyToast()
+        let toast = GasPriceSettingsSpyToast()
         let (model, source) = makeModel(dataInput, toast: toast)
         model.start()
         source.pushOutcome(.intervalUpdated)
@@ -148,7 +148,7 @@ final class GasPriceSettingsModelTests: XCTestCase {
     }
 
     func testPolledOutcomeRoutesInfoToastAndClearsSpinner() {
-        let toast = SpyToast()
+        let toast = GasPriceSettingsSpyToast()
         let (model, source) = makeModel(dataInput, toast: toast)
         model.start()
         model.pollNow()
@@ -159,7 +159,7 @@ final class GasPriceSettingsModelTests: XCTestCase {
     }
 
     func testPollFailureRoutesErrorToastAndClearsSpinner() {
-        let toast = SpyToast()
+        let toast = GasPriceSettingsSpyToast()
         let (model, source) = makeModel(dataInput, toast: toast)
         model.start()
         model.pollNow()
@@ -170,7 +170,7 @@ final class GasPriceSettingsModelTests: XCTestCase {
     }
 
     func testToggleAndIntervalFailureMessages() {
-        let toast = SpyToast()
+        let toast = GasPriceSettingsSpyToast()
         let (model, source) = makeModel(dataInput, toast: toast)
         model.start()
         source.pushOutcome(.failed(.toggle, "x"))
@@ -237,7 +237,7 @@ final class GasPriceSettingsModelTests: XCTestCase {
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyTelemetry: GasPriceSettingsTelemetry, @unchecked Sendable {
+private final class GasPriceSettingsSpyTelemetry: GasPriceSettingsTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)
@@ -245,7 +245,7 @@ private final class SpyTelemetry: GasPriceSettingsTelemetry, @unchecked Sendable
 }
 
 /// Records the toast messages so the mutation-outcome routing can be asserted.
-private final class SpyToast: GasPriceSettingsToast, @unchecked Sendable {
+private final class GasPriceSettingsSpyToast: GasPriceSettingsToast, @unchecked Sendable {
     private(set) var infos: [String] = []
     private(set) var errors: [String] = []
 

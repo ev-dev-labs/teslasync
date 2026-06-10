@@ -19,7 +19,7 @@ import XCTest
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor final class SafetyModelTests: XCTestCase {
+@MainActor final class SafetyFeaturesWidgetSafetyModelTests: XCTestCase {
     private func makeModel(
         _ update: SafetyUpdate,
         telemetry: SafetyTelemetry = OSLogSafetyTelemetry()
@@ -62,7 +62,7 @@ import XCTest
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpySafetyTelemetry()
+        let spy = SafetyFeaturesWidgetSpySafetyTelemetry()
         let (model, source) = makeModel(SafetyUpdate(status: .loading, latest: nil), telemetry: spy)
         model.start()
         model.start()
@@ -105,7 +105,7 @@ import XCTest
 
 // MARK: - Registry parity
 
-@MainActor final class SafetyRegistryTests: XCTestCase {
+@MainActor final class SafetyFeaturesWidgetSafetyRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SafetyFeaturesWidget.registration
         XCTAssertEqual(registration.id, "safety-features")
@@ -131,7 +131,7 @@ import XCTest
 
 // MARK: - Accessibility summary content
 
-@MainActor final class SafetyAccessibilityTests: XCTestCase {
+@MainActor final class SafetyFeaturesWidgetSafetyAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testCellSummaryCombinesLabelValueAndStatusWord() {
@@ -169,7 +169,7 @@ import XCTest
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpySafetyTelemetry: SafetyTelemetry, @unchecked Sendable {
+private final class SafetyFeaturesWidgetSpySafetyTelemetry: SafetyTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

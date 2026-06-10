@@ -57,7 +57,7 @@ import XCTest
 
 @MainActor final class UuidGeneratorModelTests: XCTestCase {
     func testStartsEmpty() {
-        let model = UuidGeneratorModel(generator: CountingGenerator(), telemetry: SpyTelemetry())
+        let model = UuidGeneratorModel(generator: CountingGenerator(), telemetry: UuidGeneratorSpyTelemetry())
         XCTAssertEqual(model.phase, .empty)
         XCTAssertTrue(model.entries.isEmpty)
     }
@@ -80,7 +80,7 @@ import XCTest
     }
 
     func testStartEmitsViewOpenedExactlyOnce() {
-        let spy = SpyTelemetry()
+        let spy = UuidGeneratorSpyTelemetry()
         let model = UuidGeneratorModel(generator: CountingGenerator(), telemetry: spy)
         model.start()
         model.start()
@@ -101,7 +101,7 @@ import XCTest
 
 // MARK: - Test doubles
 
-private final class SpyTelemetry: UuidGeneratorTelemetry, @unchecked Sendable {
+private final class UuidGeneratorSpyTelemetry: UuidGeneratorTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

@@ -103,7 +103,7 @@ final class SafetyLayoutTests: XCTestCase {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor final class SafetyModelTests: XCTestCase {
+@MainActor final class SafetyHistoryWidgetSafetyModelTests: XCTestCase {
     private func makeModel(
         _ update: SafetyHistoryUpdate,
         telemetry: SafetyHistoryTelemetry = SafetyHistoryOSLogTelemetry()
@@ -155,7 +155,7 @@ final class SafetyLayoutTests: XCTestCase {
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpySafetyTelemetry()
+        let spy = SafetyHistoryWidgetSpySafetyTelemetry()
         let (model, source) = makeModel(SafetyHistoryUpdate(status: .loading, events: []), telemetry: spy)
         model.start()
         model.start()
@@ -193,7 +193,7 @@ final class SafetyLayoutTests: XCTestCase {
 
 // MARK: - Registry parity
 
-@MainActor final class SafetyRegistryTests: XCTestCase {
+@MainActor final class SafetyHistoryWidgetSafetyRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = SafetyHistoryWidget.registration
         XCTAssertEqual(registration.id, "safety-history")
@@ -219,7 +219,7 @@ final class SafetyLayoutTests: XCTestCase {
 
 // MARK: - Accessibility summary content
 
-final class SafetyAccessibilityTests: XCTestCase {
+final class SafetyHistoryWidgetSafetyAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     private func item(title: String, subtitle: String) -> SafetyFeedItem {
@@ -267,7 +267,7 @@ final class SafetyAccessibilityTests: XCTestCase {
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpySafetyTelemetry: SafetyHistoryTelemetry, @unchecked Sendable {
+private final class SafetyHistoryWidgetSpySafetyTelemetry: SafetyHistoryTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

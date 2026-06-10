@@ -36,7 +36,7 @@ import XCTest
     }
 
     func testStartAppliesInitialAndEmitsTelemetryOnce() {
-        let spy = SpyDrivingCoachTelemetry()
+        let spy = DrivingCoachSectionSpyDrivingCoachTelemetry()
         let (model, source) = makeModel(dataUpdate, telemetry: spy)
         model.start()
         model.start()
@@ -112,7 +112,7 @@ import XCTest
 
 // MARK: - Accessibility summary content
 
-@MainActor final class DrivingCoachAccessibilityTests: XCTestCase {
+@MainActor final class DrivingCoachSectionDrivingCoachAccessibilityTests: XCTestCase {
     private func localize(_ key: String, _ fallback: String) -> String {
         // Deterministic identity localizer (the projector/view inject the real P1/S10 facade at runtime).
         switch key {
@@ -145,7 +145,7 @@ import XCTest
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyDrivingCoachTelemetry: DrivingCoachSectionTelemetry, @unchecked Sendable {
+private final class DrivingCoachSectionSpyDrivingCoachTelemetry: DrivingCoachSectionTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

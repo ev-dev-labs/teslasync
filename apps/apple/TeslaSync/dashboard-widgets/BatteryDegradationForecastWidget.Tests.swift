@@ -23,7 +23,7 @@ import XCTest
 
 // MARK: - Fixtures
 
-private enum ForecastFixture {
+private enum BatteryDegradationForecastWidgetForecastFixture {
     static let enUS = Locale(identifier: "en_US")
     static let utc = TimeZone(identifier: "UTC") ?? .gmt
 
@@ -67,7 +67,7 @@ private enum ForecastFixture {
 // MARK: - Formatting
 
 @MainActor final class BatteryDegradationForecastFormatTests: XCTestCase {
-    private let enUS = ForecastFixture.enUS
+    private let enUS = BatteryDegradationForecastWidgetForecastFixture.enUS
 
     func testNumberRoundsHalfUpAndGroups() {
         XCTAssertEqual(BatteryDegradationForecastFormat.number(12.34, digits: 1, locale: enUS), "12.3")
@@ -95,16 +95,20 @@ private enum ForecastFixture {
 
     func testProjectedDateFormatsShortMonthAndYear() {
         let value = BatteryDegradationForecastFormat.projectedDate(
-            ForecastFixture.projectedDate(),
+            BatteryDegradationForecastWidgetForecastFixture.projectedDate(),
             locale: enUS,
-            timeZone: ForecastFixture.utc
+            timeZone: BatteryDegradationForecastWidgetForecastFixture.utc
         )
         XCTAssertEqual(value, "Apr 2027")
     }
 
     func testProjectedDateNilRendersDash() {
         XCTAssertEqual(
-            BatteryDegradationForecastFormat.projectedDate(nil, locale: enUS, timeZone: ForecastFixture.utc),
+            BatteryDegradationForecastFormat.projectedDate(
+                nil,
+                locale: enUS,
+                timeZone: BatteryDegradationForecastWidgetForecastFixture.utc
+            ),
             "\u{2014}"
         )
     }
@@ -152,7 +156,7 @@ private enum ForecastFixture {
 
     func testBuildProjectionResolvesHealthAndRate() {
         let projection = BatteryDegradationForecastBuilder.buildProjection(
-            snapshot: ForecastFixture.snapshot(healthPct: 92.4, health: 91, rate: 0.11)
+            snapshot: BatteryDegradationForecastWidgetForecastFixture.snapshot(healthPct: 92.4, health: 91, rate: 0.11)
         )
         XCTAssertEqual(projection.currentHealth, 92.4) // current_health_pct wins
         XCTAssertEqual(projection.rate, 0.11, accuracy: 0.0001)
@@ -163,7 +167,7 @@ private enum ForecastFixture {
 
     func testBuildProjectionFallsBackToLegacyHealth() {
         let projection = BatteryDegradationForecastBuilder.buildProjection(
-            snapshot: ForecastFixture.snapshot(healthPct: nil, health: 88)
+            snapshot: BatteryDegradationForecastWidgetForecastFixture.snapshot(healthPct: nil, health: 88)
         )
         XCTAssertEqual(projection.currentHealth, 88)
         XCTAssertEqual(projection.rate, 0) // degradation_rate ?? 0
@@ -176,20 +180,24 @@ private enum ForecastFixture {
         // Date only → has data.
         XCTAssertTrue(
             BatteryDegradationForecastBuilder.buildProjection(
-                snapshot: ForecastFixture.snapshot(date: ForecastFixture.projectedDate())
+                snapshot: BatteryDegradationForecastWidgetForecastFixture
+                    .snapshot(date: BatteryDegradationForecastWidgetForecastFixture.projectedDate())
             ).hasData
         )
         // Health only → has data.
         XCTAssertTrue(
             BatteryDegradationForecastBuilder.buildProjection(
-                snapshot: ForecastFixture.snapshot(health: 90)
+                snapshot: BatteryDegradationForecastWidgetForecastFixture.snapshot(health: 90)
             ).hasData
         )
     }
 
     func testVisibleRiskFactorsCapAtFive() {
         let projection = BatteryDegradationForecastBuilder.buildProjection(
-            snapshot: ForecastFixture.snapshot(health: 90, risks: ForecastFixture.riskFactors(8))
+            snapshot: BatteryDegradationForecastWidgetForecastFixture.snapshot(
+                health: 90,
+                risks: BatteryDegradationForecastWidgetForecastFixture.riskFactors(8)
+            )
         )
         XCTAssertEqual(projection.riskFactors.count, 8)
         XCTAssertEqual(projection.visibleRiskFactors.count, 5)
@@ -198,12 +206,12 @@ private enum ForecastFixture {
     func testShowsRateOnlyWhenPositive() {
         XCTAssertTrue(
             BatteryDegradationForecastBuilder.buildProjection(
-                snapshot: ForecastFixture.snapshot(health: 90, rate: 0.02)
+                snapshot: BatteryDegradationForecastWidgetForecastFixture.snapshot(health: 90, rate: 0.02)
             ).showsRate
         )
         XCTAssertFalse(
             BatteryDegradationForecastBuilder.buildProjection(
-                snapshot: ForecastFixture.snapshot(health: 90, rate: 0)
+                snapshot: BatteryDegradationForecastWidgetForecastFixture.snapshot(health: 90, rate: 0)
             ).showsRate
         )
     }
@@ -223,17 +231,21 @@ private enum ForecastFixture {
 
 @MainActor final class BatteryDegradationForecastAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
-    private let enUS = ForecastFixture.enUS
+    private let enUS = BatteryDegradationForecastWidgetForecastFixture.enUS
 
     func testSummaryIncludesTitleProjectedTierAndHealth() {
         let projection = BatteryDegradationForecastBuilder.buildProjection(
-            snapshot: ForecastFixture.snapshot(healthPct: 92.4, rate: 0.11, date: ForecastFixture.projectedDate())
+            snapshot: BatteryDegradationForecastWidgetForecastFixture.snapshot(
+                healthPct: 92.4,
+                rate: 0.11,
+                date: BatteryDegradationForecastWidgetForecastFixture.projectedDate()
+            )
         )
         let spoken = BatteryDegradationForecastAccessibility.summary(
             for: projection,
             localize: echo,
             locale: enUS,
-            timeZone: ForecastFixture.utc
+            timeZone: BatteryDegradationForecastWidgetForecastFixture.utc
         )
         XCTAssertTrue(spoken.contains("Battery Forecast"))
         XCTAssertTrue(spoken.contains("Projected 80% Capacity Apr 2027"))
@@ -246,7 +258,7 @@ private enum ForecastFixture {
             for: .empty,
             localize: echo,
             locale: enUS,
-            timeZone: ForecastFixture.utc
+            timeZone: BatteryDegradationForecastWidgetForecastFixture.utc
         )
         XCTAssertTrue(spoken.contains("No degradation forecast data"))
     }

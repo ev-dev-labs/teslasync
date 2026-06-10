@@ -156,7 +156,7 @@ import XCTest
     }
 
     func testStartEmitsViewOpenedOnceAndDispatchesReplaceOnce() {
-        let spy = SpyTelemetry()
+        let spy = LegacyAlertsRedirectSpyTelemetry()
         let router = InMemoryLegacyAlertsRedirectRouter()
         let model = makeModel(search: "?tab=history&foo=1", telemetry: spy, router: router)
 
@@ -169,7 +169,7 @@ import XCTest
     }
 
     func testStartIsIdempotent() {
-        let spy = SpyTelemetry()
+        let spy = LegacyAlertsRedirectSpyTelemetry()
         let router = InMemoryLegacyAlertsRedirectRouter()
         let model = makeModel(search: "?tab=preferences", telemetry: spy, router: router)
 
@@ -188,7 +188,7 @@ import XCTest
         let model = LegacyAlertsRedirectModel(
             source: source,
             router: router,
-            telemetry: SpyTelemetry()
+            telemetry: LegacyAlertsRedirectSpyTelemetry()
         )
 
         model.start()
@@ -201,7 +201,7 @@ import XCTest
 
     func testRedirectNowReplaysTheResolvedTarget() {
         let router = InMemoryLegacyAlertsRedirectRouter()
-        let model = makeModel(search: "?tab=history", telemetry: SpyTelemetry(), router: router)
+        let model = makeModel(search: "?tab=history", telemetry: LegacyAlertsRedirectSpyTelemetry(), router: router)
 
         model.start()
         model.redirectNow()
@@ -211,7 +211,7 @@ import XCTest
 
     func testAccessibilitySummaryPerPhase() {
         let router = InMemoryLegacyAlertsRedirectRouter()
-        let model = makeModel(search: "?tab=preferences", telemetry: SpyTelemetry(), router: router)
+        let model = makeModel(search: "?tab=preferences", telemetry: LegacyAlertsRedirectSpyTelemetry(), router: router)
 
         XCTAssertEqual(model.accessibilitySummary, "Redirecting to Notifications")
         model.start()
@@ -223,7 +223,11 @@ import XCTest
         let source = InMemoryLegacyAlertsRedirectSource(
             location: LegacyAlertsLocation(search: "?tab=alerts")
         )
-        let model = LegacyAlertsRedirectModel(source: source, router: router, telemetry: SpyTelemetry())
+        let model = LegacyAlertsRedirectModel(
+            source: source,
+            router: router,
+            telemetry: LegacyAlertsRedirectSpyTelemetry()
+        )
 
         model.start()
         model.stop()
@@ -237,7 +241,7 @@ import XCTest
 
 @MainActor final class LegacyAlertsRedirectSurfaceTests: XCTestCase {
     func testReportOpenEmitsSurfaceSlug() {
-        let spy = SpyTelemetry()
+        let spy = LegacyAlertsRedirectSpyTelemetry()
         LegacyAlertsRedirectSurface.reportOpen(to: spy)
         XCTAssertEqual(spy.openedSurfaces, ["LegacyAlertsRedirect"])
     }
@@ -252,7 +256,7 @@ import XCTest
 
 /// Records the surfaces opened so the `view.opened` contract can be asserted without an
 /// `os_log` round-trip. Single-threaded test usage only.
-private final class SpyTelemetry: LegacyAlertsRedirectTelemetry, @unchecked Sendable {
+private final class LegacyAlertsRedirectSpyTelemetry: LegacyAlertsRedirectTelemetry, @unchecked Sendable {
     private(set) var openedSurfaces: [String] = []
 
     func viewOpened(surface: String) {

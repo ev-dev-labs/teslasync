@@ -313,7 +313,7 @@ import XCTest
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpyForecastTelemetry()
+        let spy = ForecastDetailsSpyForecastTelemetry()
         let (model, source) = makeModel(ForecastUpdate(status: .loading), telemetry: spy)
         model.start()
         model.start()
@@ -344,7 +344,7 @@ import XCTest
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyForecastTelemetry: ForecastTelemetry, @unchecked Sendable {
+private final class ForecastDetailsSpyForecastTelemetry: ForecastTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

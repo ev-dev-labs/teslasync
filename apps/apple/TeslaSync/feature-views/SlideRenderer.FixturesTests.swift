@@ -11,7 +11,7 @@ import XCTest
 @testable import TeslaSync
 
 enum SlideRendererFixture {
-    static let echo: (String, String) -> String = { _, fallback in fallback }
+    static let echo: @Sendable (String, String) -> String = { _, fallback in fallback }
 
     static func deck() -> [SlideDefinitionInput] {
         [

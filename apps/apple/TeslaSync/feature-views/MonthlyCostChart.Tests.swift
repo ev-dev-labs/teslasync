@@ -200,7 +200,7 @@ final class MonthlyCostMonthLabelTests: XCTestCase {
 @MainActor final class MonthlyCostModelTests: XCTestCase {
     private func makeModel(
         initial: MonthlyCostUpdate?,
-        telemetry: MonthlyCostTelemetry = SpyMonthlyCostTelemetry()
+        telemetry: MonthlyCostTelemetry = MonthlyCostChartSpyMonthlyCostTelemetry()
     ) -> (MonthlyCostModel, InMemoryMonthlyCostSource) {
         let source = InMemoryMonthlyCostSource(initial: initial)
         let model = MonthlyCostModel(source: source, telemetry: telemetry)
@@ -255,7 +255,7 @@ final class MonthlyCostMonthLabelTests: XCTestCase {
     }
 
     func testStartEmitsViewOpenedExactlyOnce() {
-        let spy = SpyMonthlyCostTelemetry()
+        let spy = MonthlyCostChartSpyMonthlyCostTelemetry()
         let (model, _) = makeModel(initial: nil, telemetry: spy)
         model.start()
         model.start()
@@ -315,7 +315,7 @@ final class MonthlyCostMonthLabelTests: XCTestCase {
 
 // MARK: - Accessibility: VoiceOver summaries
 
-@MainActor final class MonthlyCostAccessibilityTests: XCTestCase {
+@MainActor final class MonthlyCostChartMonthlyCostAccessibilityTests: XCTestCase {
     /// English-fallback localizer (bundle-free).
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let formatter = DefaultMonthlyCostFormatting(currencySymbol: "$", localeIdentifier: "en_US")
@@ -362,7 +362,7 @@ final class MonthlyCostMonthLabelTests: XCTestCase {
 // MARK: - Telemetry spy
 
 /// Records the surfaces a model reports as opened. Single-threaded test use only.
-final class SpyMonthlyCostTelemetry: MonthlyCostTelemetry, @unchecked Sendable {
+final class MonthlyCostChartSpyMonthlyCostTelemetry: MonthlyCostTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
 
     func viewOpened(surface: String) {

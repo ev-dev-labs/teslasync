@@ -186,7 +186,7 @@ import XCTest
     }
 
     func testStaleAfterFreshnessWindow() {
-        let clock = MutableClock(Date(timeIntervalSince1970: 1_000_000))
+        let clock = BackendToolMutableClock(Date(timeIntervalSince1970: 1_000_000))
         let runner = InMemoryBackendToolRunner(outcome: .success(json: "{\"ok\":1}"))
         let model = BackendToolModel(runner: runner, now: { clock.now() }, stalenessWindow: 30)
         model.run()
@@ -231,7 +231,7 @@ private final class SpyBackendToolTelemetry: BackendToolTelemetry, @unchecked Se
 }
 
 /// A settable clock so the freshness window can be crossed deterministically.
-private final class MutableClock: @unchecked Sendable {
+private final class BackendToolMutableClock: @unchecked Sendable {
     var current: Date
     init(_ start: Date) {
         current = start

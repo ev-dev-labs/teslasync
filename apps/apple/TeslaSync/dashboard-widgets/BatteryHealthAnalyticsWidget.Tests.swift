@@ -264,7 +264,7 @@ final class BatteryHealthAnalyticsWidgetModelTests: XCTestCase {
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpyBatteryHealthTelemetry()
+        let spy = BHASpyBatteryHealthTelemetry()
         let (model, source) = makeModel(
             BatteryHealthAnalyticsWidgetUpdate(status: .loading, data: nil),
             telemetry: spy
@@ -384,7 +384,7 @@ final class BatteryHealthAnalyticsWidgetAccessibilityTests: XCTestCase {
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyBatteryHealthTelemetry: BatteryHealthAnalyticsWidgetTelemetry, @unchecked Sendable {
+private final class BHASpyBatteryHealthTelemetry: BatteryHealthAnalyticsWidgetTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

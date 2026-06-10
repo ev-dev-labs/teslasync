@@ -14,7 +14,7 @@ import XCTest
 @testable import TeslaSync
 
 /// Identity localizer for deterministic copy in assertions.
-private let passthroughLocalize: (String, String) -> String = { _, fallback in fallback }
+private let passthroughLocalize: @Sendable (String, String) -> String = { _, fallback in fallback }
 
 /// Records the `view.opened` surfaces. Lock-guarded so it satisfies the `Sendable`
 /// telemetry seam under Swift 6 strict concurrency.
@@ -54,7 +54,7 @@ private final class SpyAutomationPresetGalleryNavigator: AutomationPresetGallery
     }
 }
 
-private enum SamplePresets {
+private enum PresetGallerySamplePresets {
     static func one(id: String = "sentry-on-leave") -> AutomationPresetItem {
         AutomationPresetItem(
             id: id,
@@ -100,7 +100,7 @@ private enum SamplePresets {
         let model = makeModel(source: source)
         model.start()
         XCTAssertEqual(model.phase, .loading)
-        source.push(AutomationPresetGalleryUpdate(status: .loaded, items: SamplePresets.two()))
+        source.push(AutomationPresetGalleryUpdate(status: .loaded, items: PresetGallerySamplePresets.two()))
         XCTAssertEqual(model.phase, .content)
         XCTAssertEqual(model.items.count, 2)
     }
@@ -122,7 +122,7 @@ private enum SamplePresets {
     }
 
     func testFailedWithItemsKeepsContentAndSurfacesInlineError() {
-        let items = SamplePresets.two()
+        let items = PresetGallerySamplePresets.two()
         let source = InMemoryAutomationPresetGallerySource(initial: AutomationPresetGalleryUpdate(
             status: .loaded,
             items: items
@@ -137,17 +137,17 @@ private enum SamplePresets {
     func testInstallCallsNavigatorWithPresetID() {
         let source = InMemoryAutomationPresetGallerySource(initial: AutomationPresetGalleryUpdate(
             status: .loaded,
-            items: SamplePresets.two()
+            items: PresetGallerySamplePresets.two()
         ))
         let navigator = SpyAutomationPresetGalleryNavigator()
         let model = makeModel(source: source, navigator: navigator)
         model.start()
-        model.install(SamplePresets.one(id: "overnight-charge"))
+        model.install(PresetGallerySamplePresets.one(id: "overnight-charge"))
         XCTAssertEqual(navigator.installedIDs, ["overnight-charge"])
     }
 
     func testStaleAutoRefreshesOnceThenReArms() {
-        let items = SamplePresets.two()
+        let items = PresetGallerySamplePresets.two()
         let source = InMemoryAutomationPresetGallerySource(initial: AutomationPresetGalleryUpdate(
             status: .loaded,
             items: items
@@ -164,7 +164,7 @@ private enum SamplePresets {
     }
 
     func testOfflineKeepsItemsAndDoesNotRefresh() {
-        let items = SamplePresets.two()
+        let items = PresetGallerySamplePresets.two()
         let source = InMemoryAutomationPresetGallerySource(initial: AutomationPresetGalleryUpdate(
             status: .loaded,
             items: items

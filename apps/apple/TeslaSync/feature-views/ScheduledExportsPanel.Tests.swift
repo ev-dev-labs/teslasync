@@ -22,7 +22,7 @@ import XCTest
 /// copy without a bundle.
 private let passthroughLocalize: @Sendable (String, String) -> String = { _, fallback in fallback }
 
-private enum SampleSchedules {
+private enum ScheduledExportsPanelSampleSchedules {
     static func drives(
         id: Int = 1,
         enabled: Bool = true,
@@ -118,7 +118,7 @@ final class ScheduledExportFormStateTests: XCTestCase {
     }
 
     func testFromRowSeedsEveryField() {
-        let form = ScheduledExportFormState.from(SampleSchedules.emailWebhook())
+        let form = ScheduledExportFormState.from(ScheduledExportsPanelSampleSchedules.emailWebhook())
         XCTAssertEqual(form.name, "Charging email")
         XCTAssertEqual(form.exportType, .charging)
         XCTAssertEqual(form.format, .json)
@@ -184,17 +184,17 @@ final class ScheduledExportFormStateTests: XCTestCase {
 
 final class ScheduledExportItemTests: XCTestCase {
     func testTypeFormatLabel() {
-        let label = SampleSchedules.drives().typeFormatLabel(localize: passthroughLocalize)
+        let label = ScheduledExportsPanelSampleSchedules.drives().typeFormatLabel(localize: passthroughLocalize)
         XCTAssertEqual(label, "drives (csv)")
     }
 
     func testDeliveryLabelWithoutTarget() {
-        let item = SampleSchedules.drives(delivery: ScheduledExportDelivery(kind: .download))
+        let item = ScheduledExportsPanelSampleSchedules.drives(delivery: ScheduledExportDelivery(kind: .download))
         XCTAssertEqual(item.deliveryLabel(localize: passthroughLocalize), "download")
     }
 
     func testDeliveryLabelWithTarget() {
-        let item = SampleSchedules.drives(
+        let item = ScheduledExportsPanelSampleSchedules.drives(
             delivery: ScheduledExportDelivery(kind: .webhook, target: "https://x/h")
         )
         XCTAssertEqual(item.deliveryLabel(localize: passthroughLocalize), "webhook → https://x/h")
@@ -215,7 +215,7 @@ final class ScheduledExportsAccessibilityTests: XCTestCase {
     }
 
     func testRowLabelIncludesNameTypeCronDeliveryAndStatus() {
-        let item = SampleSchedules.emailWebhook()
+        let item = ScheduledExportsPanelSampleSchedules.emailWebhook()
         let label = ScheduledExportsAccessibility.rowLabel(
             item,
             dates: DefaultScheduledExportsDateFormatting(),
@@ -232,7 +232,7 @@ final class ScheduledExportsAccessibilityTests: XCTestCase {
 
     func testRowLabelNeverRunReadsNever() {
         let label = ScheduledExportsAccessibility.rowLabel(
-            SampleSchedules.drives(lastRunAt: nil, lastStatus: nil),
+            ScheduledExportsPanelSampleSchedules.drives(lastRunAt: nil, lastStatus: nil),
             dates: DefaultScheduledExportsDateFormatting(),
             localize: passthroughLocalize
         )

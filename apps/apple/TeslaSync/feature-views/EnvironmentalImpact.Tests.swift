@@ -20,7 +20,7 @@ import XCTest
 
 // MARK: - Fixtures
 
-private enum Fixture {
+private enum EnvironmentalImpactFixture {
     static let locale = Locale(identifier: "en_US")
 
     static let sample = EnvironmentalImpactData(
@@ -64,7 +64,10 @@ private final class RecordingLocalizer: @unchecked Sendable {
 @MainActor final class EnvironmentalImpactProjectionTests: XCTestCase {
     func testStateFromCoreStatsMirrorsWebConditional() {
         XCTAssertEqual(EnvironmentalImpactProjection.state(from: nil), .empty)
-        XCTAssertEqual(EnvironmentalImpactProjection.state(from: Fixture.sample), .loaded(Fixture.sample))
+        XCTAssertEqual(
+            EnvironmentalImpactProjection.state(from: EnvironmentalImpactFixture.sample),
+            .loaded(EnvironmentalImpactFixture.sample)
+        )
     }
 
     func testConnectionPrecedence() {
@@ -76,8 +79,8 @@ private final class RecordingLocalizer: @unchecked Sendable {
     }
 
     func testResolveKeepsCachedValueWhileLoading() {
-        let resolved = EnvironmentalImpactProjection.resolve(value: Fixture.sample, phase: .loading)
-        XCTAssertEqual(resolved.state, .loaded(Fixture.sample))
+        let resolved = EnvironmentalImpactProjection.resolve(value: EnvironmentalImpactFixture.sample, phase: .loading)
+        XCTAssertEqual(resolved.state, .loaded(EnvironmentalImpactFixture.sample))
         XCTAssertEqual(resolved.connection, .live)
     }
 
@@ -92,29 +95,43 @@ private final class RecordingLocalizer: @unchecked Sendable {
     }
 
     func testResolveKeepsCachedValueOnFailure() {
-        let cached = EnvironmentalImpactProjection.resolve(value: Fixture.sample, phase: .failed(message: "boom"))
-        XCTAssertEqual(cached.state, .loaded(Fixture.sample))
+        let cached = EnvironmentalImpactProjection.resolve(
+            value: EnvironmentalImpactFixture.sample,
+            phase: .failed(message: "boom")
+        )
+        XCTAssertEqual(cached.state, .loaded(EnvironmentalImpactFixture.sample))
 
         let nocache = EnvironmentalImpactProjection.resolve(value: nil, phase: .failed(message: "boom"))
         XCTAssertEqual(nocache.state, .error(message: "boom"))
     }
 
     func testResolveCarriesFreshness() {
-        let stale = EnvironmentalImpactProjection.resolve(value: Fixture.sample, phase: .loaded, stale: true)
+        let stale = EnvironmentalImpactProjection.resolve(
+            value: EnvironmentalImpactFixture.sample,
+            phase: .loaded,
+            stale: true
+        )
         XCTAssertEqual(stale.connection, .stale)
-        let offline = EnvironmentalImpactProjection.resolve(value: Fixture.sample, phase: .loaded, offline: true)
+        let offline = EnvironmentalImpactProjection.resolve(
+            value: EnvironmentalImpactFixture.sample,
+            phase: .loaded,
+            offline: true
+        )
         XCTAssertEqual(offline.connection, .offline)
     }
 
     func testStateDataAccessor() {
-        XCTAssertEqual(EnvironmentalImpactState.loaded(Fixture.sample).data, Fixture.sample)
+        XCTAssertEqual(
+            EnvironmentalImpactState.loaded(EnvironmentalImpactFixture.sample).data,
+            EnvironmentalImpactFixture.sample
+        )
         XCTAssertNil(EnvironmentalImpactState.loading.data)
         XCTAssertNil(EnvironmentalImpactState.empty.data)
         XCTAssertNil(EnvironmentalImpactState.error(message: nil).data)
     }
 
     func testMetricTonsDerivation() {
-        XCTAssertEqual(Fixture.sample.metricTonsCo2, 1.2846, accuracy: 0.0001)
+        XCTAssertEqual(EnvironmentalImpactFixture.sample.metricTonsCo2, 1.2846, accuracy: 0.0001)
     }
 
     func testConnectionHasUsableDataNeverBlanks() {
@@ -128,17 +145,41 @@ private final class RecordingLocalizer: @unchecked Sendable {
 
 @MainActor final class EnvironmentalImpactFormatTests: XCTestCase {
     func testFixedPrecisionAndGrouping() {
-        XCTAssertEqual(EnvironmentalImpactFormat.number(1284.6, decimals: 1, locale: Fixture.locale), "1,284.6")
-        XCTAssertEqual(EnvironmentalImpactFormat.number(21.4, decimals: 1, locale: Fixture.locale), "21.4")
-        XCTAssertEqual(EnvironmentalImpactFormat.number(1.2846, decimals: 2, locale: Fixture.locale), "1.28")
-        XCTAssertEqual(EnvironmentalImpactFormat.number(1830, decimals: 0, locale: Fixture.locale), "1,830")
-        XCTAssertEqual(EnvironmentalImpactFormat.number(1284.6, decimals: 0, locale: Fixture.locale), "1,285")
+        XCTAssertEqual(
+            EnvironmentalImpactFormat.number(1284.6, decimals: 1, locale: EnvironmentalImpactFixture.locale),
+            "1,284.6"
+        )
+        XCTAssertEqual(
+            EnvironmentalImpactFormat.number(21.4, decimals: 1, locale: EnvironmentalImpactFixture.locale),
+            "21.4"
+        )
+        XCTAssertEqual(
+            EnvironmentalImpactFormat.number(1.2846, decimals: 2, locale: EnvironmentalImpactFixture.locale),
+            "1.28"
+        )
+        XCTAssertEqual(
+            EnvironmentalImpactFormat.number(1830, decimals: 0, locale: EnvironmentalImpactFixture.locale),
+            "1,830"
+        )
+        XCTAssertEqual(
+            EnvironmentalImpactFormat.number(1284.6, decimals: 0, locale: EnvironmentalImpactFixture.locale),
+            "1,285"
+        )
     }
 
     func testNonFiniteGuardRendersZero() {
-        XCTAssertEqual(EnvironmentalImpactFormat.number(.nan, decimals: 1, locale: Fixture.locale), "0.0")
-        XCTAssertEqual(EnvironmentalImpactFormat.number(.infinity, decimals: 0, locale: Fixture.locale), "0")
-        XCTAssertEqual(EnvironmentalImpactFormat.number(-.infinity, decimals: 2, locale: Fixture.locale), "0.00")
+        XCTAssertEqual(
+            EnvironmentalImpactFormat.number(.nan, decimals: 1, locale: EnvironmentalImpactFixture.locale),
+            "0.0"
+        )
+        XCTAssertEqual(
+            EnvironmentalImpactFormat.number(.infinity, decimals: 0, locale: EnvironmentalImpactFixture.locale),
+            "0"
+        )
+        XCTAssertEqual(
+            EnvironmentalImpactFormat.number(-.infinity, decimals: 2, locale: EnvironmentalImpactFixture.locale),
+            "0.00"
+        )
     }
 }
 
@@ -146,7 +187,10 @@ private final class RecordingLocalizer: @unchecked Sendable {
 
 @MainActor final class EnvironmentalImpactStatTests: XCTestCase {
     func testPrimaryStats() {
-        let stats = EnvironmentalImpactProjection.primaryStats(Fixture.sample, locale: Fixture.locale)
+        let stats = EnvironmentalImpactProjection.primaryStats(
+            EnvironmentalImpactFixture.sample,
+            locale: EnvironmentalImpactFixture.locale
+        )
         XCTAssertEqual(stats.map(\.id), ["co2SavedKg", "treeEquiv"])
         XCTAssertEqual(stats[0].value, "1,284.6")
         XCTAssertEqual(stats[0].labelKey, "costAnalysis.environment.kgCo2")
@@ -157,7 +201,10 @@ private final class RecordingLocalizer: @unchecked Sendable {
     }
 
     func testSecondaryStats() {
-        let stats = EnvironmentalImpactProjection.secondaryStats(Fixture.sample, locale: Fixture.locale)
+        let stats = EnvironmentalImpactProjection.secondaryStats(
+            EnvironmentalImpactFixture.sample,
+            locale: EnvironmentalImpactFixture.locale
+        )
         XCTAssertEqual(stats.map(\.id), ["gallonsEquiv", "metricTons", "savings"])
         XCTAssertEqual(stats[0].value, "146.2")
         XCTAssertEqual(stats[0].labelKey, "costAnalysis.environment.gallons")
@@ -175,9 +222,9 @@ private final class RecordingLocalizer: @unchecked Sendable {
 @MainActor final class EnvironmentalImpactDescriptionTests: XCTestCase {
     func testDescriptionSegments() {
         let desc = EnvironmentalImpactDescription.build(
-            Fixture.sample,
-            locale: Fixture.locale,
-            localize: Fixture.echo
+            EnvironmentalImpactFixture.sample,
+            locale: EnvironmentalImpactFixture.locale,
+            localize: EnvironmentalImpactFixture.echo
         )
         XCTAssertEqual(
             desc.lead,
@@ -193,9 +240,9 @@ private final class RecordingLocalizer: @unchecked Sendable {
 
     func testDescriptionAccessibilityLabelReadsWholeSentence() {
         let desc = EnvironmentalImpactDescription.build(
-            Fixture.sample,
-            locale: Fixture.locale,
-            localize: Fixture.echo
+            EnvironmentalImpactFixture.sample,
+            locale: EnvironmentalImpactFixture.locale,
+            localize: EnvironmentalImpactFixture.echo
         )
         let label = desc.accessibilityLabel
         XCTAssertTrue(label.contains("By driving electric"), label)
@@ -208,8 +255,8 @@ private final class RecordingLocalizer: @unchecked Sendable {
     func testDescriptionReferencesWebKeys() {
         let recorder = RecordingLocalizer()
         _ = EnvironmentalImpactDescription.build(
-            Fixture.sample,
-            locale: Fixture.locale,
+            EnvironmentalImpactFixture.sample,
+            locale: EnvironmentalImpactFixture.locale,
             localize: recorder.localizer
         )
         let requested = Set(recorder.requested)
@@ -246,20 +293,23 @@ private final class RecordingLocalizer: @unchecked Sendable {
 
 @MainActor final class EnvironmentalImpactAccessibilityTests: XCTestCase {
     func testStatLabelComposesValueAndLabel() {
-        let stats = EnvironmentalImpactProjection.primaryStats(Fixture.sample, locale: Fixture.locale)
+        let stats = EnvironmentalImpactProjection.primaryStats(
+            EnvironmentalImpactFixture.sample,
+            locale: EnvironmentalImpactFixture.locale
+        )
         XCTAssertEqual(
-            EnvironmentalImpactAccessibility.statLabel(stats[0], localize: Fixture.echo),
+            EnvironmentalImpactAccessibility.statLabel(stats[0], localize: EnvironmentalImpactFixture.echo),
             "1,284.6 kg CO₂ saved"
         )
     }
 
     func testHeaderLabelWithAndWithoutChip() {
         XCTAssertEqual(
-            EnvironmentalImpactAccessibility.headerLabel(chip: nil, localize: Fixture.echo),
+            EnvironmentalImpactAccessibility.headerLabel(chip: nil, localize: EnvironmentalImpactFixture.echo),
             "Environmental Impact"
         )
         XCTAssertEqual(
-            EnvironmentalImpactAccessibility.headerLabel(chip: .stale, localize: Fixture.echo),
+            EnvironmentalImpactAccessibility.headerLabel(chip: .stale, localize: EnvironmentalImpactFixture.echo),
             "Environmental Impact, Stale"
         )
     }
@@ -267,8 +317,14 @@ private final class RecordingLocalizer: @unchecked Sendable {
     /// Guards that the figure tiles reference exactly the web keys — a regression
     /// here means the folded catalog would miss a string.
     func testStatLabelKeysMatchWebKeys() {
-        let primary = EnvironmentalImpactProjection.primaryStats(Fixture.sample, locale: Fixture.locale)
-        let secondary = EnvironmentalImpactProjection.secondaryStats(Fixture.sample, locale: Fixture.locale)
+        let primary = EnvironmentalImpactProjection.primaryStats(
+            EnvironmentalImpactFixture.sample,
+            locale: EnvironmentalImpactFixture.locale
+        )
+        let secondary = EnvironmentalImpactProjection.secondaryStats(
+            EnvironmentalImpactFixture.sample,
+            locale: EnvironmentalImpactFixture.locale
+        )
         XCTAssertEqual(
             primary.map(\.labelKey) + secondary.map(\.labelKey),
             [

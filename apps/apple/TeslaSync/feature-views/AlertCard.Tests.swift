@@ -19,7 +19,7 @@ import XCTest
 
 // MARK: - Fixtures
 
-private enum Fixture {
+private enum AlertCardFixture {
     nonisolated(unsafe) static let now = Date(timeIntervalSince1970: 1_700_000_000)
 
     static func iso(_ secondsAgo: TimeInterval) -> String {
@@ -113,12 +113,24 @@ private enum Fixture {
     private let echo = AlertCardLocalizer.echo
 
     func testTimeAgoBuckets() {
-        XCTAssertEqual(AlertTimeFormat.timeAgo(nil, now: Fixture.now, localize: echo), "—")
-        XCTAssertEqual(AlertTimeFormat.timeAgo("not-a-date", now: Fixture.now, localize: echo), "—")
-        XCTAssertEqual(AlertTimeFormat.timeAgo(Fixture.iso(30), now: Fixture.now, localize: echo), "0m ago")
-        XCTAssertEqual(AlertTimeFormat.timeAgo(Fixture.iso(300), now: Fixture.now, localize: echo), "5m ago")
-        XCTAssertEqual(AlertTimeFormat.timeAgo(Fixture.iso(7200), now: Fixture.now, localize: echo), "2h ago")
-        XCTAssertEqual(AlertTimeFormat.timeAgo(Fixture.iso(259_200), now: Fixture.now, localize: echo), "3d ago")
+        XCTAssertEqual(AlertTimeFormat.timeAgo(nil, now: AlertCardFixture.now, localize: echo), "—")
+        XCTAssertEqual(AlertTimeFormat.timeAgo("not-a-date", now: AlertCardFixture.now, localize: echo), "—")
+        XCTAssertEqual(
+            AlertTimeFormat.timeAgo(AlertCardFixture.iso(30), now: AlertCardFixture.now, localize: echo),
+            "0m ago"
+        )
+        XCTAssertEqual(
+            AlertTimeFormat.timeAgo(AlertCardFixture.iso(300), now: AlertCardFixture.now, localize: echo),
+            "5m ago"
+        )
+        XCTAssertEqual(
+            AlertTimeFormat.timeAgo(AlertCardFixture.iso(7200), now: AlertCardFixture.now, localize: echo),
+            "2h ago"
+        )
+        XCTAssertEqual(
+            AlertTimeFormat.timeAgo(AlertCardFixture.iso(259_200), now: AlertCardFixture.now, localize: echo),
+            "3d ago"
+        )
     }
 }
 
@@ -128,23 +140,23 @@ private enum Fixture {
     private let echo = AlertCardLocalizer.echo
 
     func testIsAcknowledgedDerivation() {
-        XCTAssertFalse(Fixture.alert().isAcknowledged)
-        XCTAssertFalse(Fixture.alert(acknowledgedAt: "").isAcknowledged)
-        XCTAssertTrue(Fixture.alert(acknowledgedAt: "2023-11-14T19:30:00Z").isAcknowledged)
+        XCTAssertFalse(AlertCardFixture.alert().isAcknowledged)
+        XCTAssertFalse(AlertCardFixture.alert(acknowledgedAt: "").isAcknowledged)
+        XCTAssertTrue(AlertCardFixture.alert(acknowledgedAt: "2023-11-14T19:30:00Z").isAcknowledged)
     }
 
     func testAckBadgeLabel() {
-        XCTAssertNil(AlertAckBadge.label(for: Fixture.alert(), localize: echo))
-        let named = Fixture.alert(acknowledgedAt: "2023-11-14T19:30:00Z", acknowledgedBy: "sam")
+        XCTAssertNil(AlertAckBadge.label(for: AlertCardFixture.alert(), localize: echo))
+        let named = AlertCardFixture.alert(acknowledgedAt: "2023-11-14T19:30:00Z", acknowledgedBy: "sam")
         XCTAssertEqual(AlertAckBadge.label(for: named, localize: echo), "Acknowledged by sam")
-        let anon = Fixture.alert(acknowledgedAt: "2023-11-14T19:30:00Z", acknowledgedBy: nil)
+        let anon = AlertCardFixture.alert(acknowledgedAt: "2023-11-14T19:30:00Z", acknowledgedBy: nil)
         XCTAssertEqual(AlertAckBadge.label(for: anon, localize: echo), "Acknowledged")
     }
 
     func testAckActionResolveAndMetadata() {
-        XCTAssertEqual(AlertAckAction.resolve(Fixture.alert()), .acknowledge)
+        XCTAssertEqual(AlertAckAction.resolve(AlertCardFixture.alert()), .acknowledge)
         XCTAssertEqual(
-            AlertAckAction.resolve(Fixture.alert(acknowledgedAt: "2023-11-14T19:30:00Z")),
+            AlertAckAction.resolve(AlertCardFixture.alert(acknowledgedAt: "2023-11-14T19:30:00Z")),
             .reopen
         )
         XCTAssertEqual(AlertAckAction.acknowledge.labelKey, "alerts.ack.button")
@@ -179,7 +191,7 @@ private enum Fixture {
 @MainActor final class AlertDrillthroughTests: XCTestCase {
     func testMappedSignalRoutesToContextPage() {
         let target = AlertDrillthrough.resolve(
-            Fixture.alert(createdAt: "2023-11-14T19:02:00Z", vehicleID: 1, ruleSignal: "BatteryLevel")
+            AlertCardFixture.alert(createdAt: "2023-11-14T19:02:00Z", vehicleID: 1, ruleSignal: "BatteryLevel")
         )
         XCTAssertEqual(target.path, "/battery")
         XCTAssertEqual(target.query.map(\.key), ["vehicle_id", "t", "signal"])
@@ -188,20 +200,20 @@ private enum Fixture {
     }
 
     func testUnmappedSignalFallsBackToExplorer() {
-        let target = AlertDrillthrough.resolve(Fixture.alert(ruleSignal: "CustomRuleSignal"))
+        let target = AlertDrillthrough.resolve(AlertCardFixture.alert(ruleSignal: "CustomRuleSignal"))
         XCTAssertEqual(target.path, AlertDrillthrough.signalExplorerFallback)
         XCTAssertEqual(target.query.first { $0.key == "signal" }?.value, "CustomRuleSignal")
     }
 
     func testNilSignalOmitsSignalParamAndUsesFallback() {
-        let target = AlertDrillthrough.resolve(Fixture.alert(ruleSignal: nil))
+        let target = AlertDrillthrough.resolve(AlertCardFixture.alert(ruleSignal: nil))
         XCTAssertEqual(target.path, "/signal-explorer")
         XCTAssertFalse(target.query.contains { $0.key == "signal" })
     }
 
     func testUnscopedVehicleAndEmptyTimestampAreOmitted() {
         let target = AlertDrillthrough.resolve(
-            Fixture.alert(createdAt: "", vehicleID: 0, ruleSignal: "Gear")
+            AlertCardFixture.alert(createdAt: "", vehicleID: 0, ruleSignal: "Gear")
         )
         XCTAssertEqual(target.path, "/drives")
         XCTAssertEqual(target.query.map(\.key), ["signal"])
@@ -209,7 +221,7 @@ private enum Fixture {
 
     func testHrefAssembly() {
         let target = AlertDrillthrough.resolve(
-            Fixture.alert(createdAt: "2023-11-14T19:02:00Z", vehicleID: 3, ruleSignal: "VehicleSpeed")
+            AlertCardFixture.alert(createdAt: "2023-11-14T19:02:00Z", vehicleID: 3, ruleSignal: "VehicleSpeed")
         )
         XCTAssertTrue(target.href.hasPrefix("/drives?"), target.href)
         XCTAssertTrue(target.href.contains("vehicle_id=3"), target.href)
@@ -218,7 +230,7 @@ private enum Fixture {
 
     func testEmptyQueryHrefIsBarePath() {
         let target = AlertDrillthrough.resolve(
-            Fixture.alert(createdAt: "", vehicleID: 0, ruleSignal: nil)
+            AlertCardFixture.alert(createdAt: "", vehicleID: 0, ruleSignal: nil)
         )
         XCTAssertEqual(target.href, "/signal-explorer")
     }
@@ -228,7 +240,7 @@ private enum Fixture {
 
 @MainActor final class AlertCardStateTests: XCTestCase {
     func testAlertAccessor() {
-        let data = Fixture.alert()
+        let data = AlertCardFixture.alert()
         XCTAssertEqual(AlertCardState.loaded(data).alert, data)
         XCTAssertNil(AlertCardState.loading.alert)
         XCTAssertNil(AlertCardState.empty.alert)
@@ -242,26 +254,26 @@ private enum Fixture {
     private let echo = AlertCardLocalizer.echo
 
     func testCardLabelComposesUnreadAlert() {
-        let data = Fixture.alert(
+        let data = AlertCardFixture.alert(
             severity: "critical",
             title: "Battery low",
             isRead: false,
-            createdAt: Fixture.iso(300)
+            createdAt: AlertCardFixture.iso(300)
         )
-        let label = AlertCardAccessibility.cardLabel(for: data, now: Fixture.now, localize: echo)
+        let label = AlertCardAccessibility.cardLabel(for: data, now: AlertCardFixture.now, localize: echo)
         XCTAssertEqual(label, "Battery low, critical, Unread, 5m ago")
     }
 
     func testCardLabelComposesReadAcknowledgedAlert() {
-        let data = Fixture.alert(
+        let data = AlertCardFixture.alert(
             severity: "info",
             title: "Charging complete",
             isRead: true,
-            createdAt: Fixture.iso(7200),
-            acknowledgedAt: Fixture.iso(60),
+            createdAt: AlertCardFixture.iso(7200),
+            acknowledgedAt: AlertCardFixture.iso(60),
             acknowledgedBy: "sam"
         )
-        let label = AlertCardAccessibility.cardLabel(for: data, now: Fixture.now, localize: echo)
+        let label = AlertCardAccessibility.cardLabel(for: data, now: AlertCardFixture.now, localize: echo)
         XCTAssertEqual(label, "Charging complete, info, Read, 2h ago, Acknowledged by sam")
     }
 
@@ -277,7 +289,7 @@ private enum Fixture {
     func testWebKeyParity() {
         XCTAssertEqual(AlertAckAction.acknowledge.labelKey, "alerts.ack.button")
         XCTAssertEqual(AlertAckAction.reopen.labelKey, "alerts.timeline.kindAnonymous.reopened")
-        let acked = Fixture.alert(acknowledgedAt: "2023-11-14T19:30:00Z", acknowledgedBy: "sam")
+        let acked = AlertCardFixture.alert(acknowledgedAt: "2023-11-14T19:30:00Z", acknowledgedBy: "sam")
         XCTAssertEqual(AlertAckBadge.label(for: acked, localize: echo), "Acknowledged by sam")
     }
 }

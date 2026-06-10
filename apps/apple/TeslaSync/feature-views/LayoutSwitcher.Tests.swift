@@ -20,7 +20,7 @@ import XCTest
 
 // MARK: - Fixtures
 
-private enum Fixture {
+private enum LayoutSwitcherFixture {
     /// A global (default) layout, a global non-default layout, and two
     /// vehicle-pinned layouts (vehicles 7 and 9).
     static let dashboards: [SavedDashboardSummary] = [
@@ -39,33 +39,39 @@ private enum Fixture {
 
 @MainActor final class LayoutSwitcherSelectionTests: XCTestCase {
     func testActiveResolvesByIdThenFallsBackToFirst() {
-        XCTAssertEqual(LayoutSwitcherProjection.active(Fixture.dashboards, activeID: "garage")?.id, "garage")
+        XCTAssertEqual(
+            LayoutSwitcherProjection.active(LayoutSwitcherFixture.dashboards, activeID: "garage")?.id,
+            "garage"
+        )
         // Unknown id falls back to the first layout (web `?? dashboards[0]`).
-        XCTAssertEqual(LayoutSwitcherProjection.active(Fixture.dashboards, activeID: "nope")?.id, "default")
+        XCTAssertEqual(
+            LayoutSwitcherProjection.active(LayoutSwitcherFixture.dashboards, activeID: "nope")?.id,
+            "default"
+        )
         XCTAssertNil(LayoutSwitcherProjection.active([], activeID: "default"))
     }
 
     func testVisibleFiltersByVehicleScope() {
         // No vehicle selected ⇒ only user-global layouts.
         XCTAssertEqual(
-            LayoutSwitcherProjection.visible(Fixture.dashboards, selectedVehicleID: nil).map(\.id),
+            LayoutSwitcherProjection.visible(LayoutSwitcherFixture.dashboards, selectedVehicleID: nil).map(\.id),
             ["default", "road-trip"]
         )
         // Vehicle 7 ⇒ globals + the layout pinned to 7.
         XCTAssertEqual(
-            LayoutSwitcherProjection.visible(Fixture.dashboards, selectedVehicleID: 7).map(\.id),
+            LayoutSwitcherProjection.visible(LayoutSwitcherFixture.dashboards, selectedVehicleID: 7).map(\.id),
             ["default", "road-trip", "garage"]
         )
         // Vehicle 9 ⇒ globals + the layout pinned to 9 (not 7's).
         XCTAssertEqual(
-            LayoutSwitcherProjection.visible(Fixture.dashboards, selectedVehicleID: 9).map(\.id),
+            LayoutSwitcherProjection.visible(LayoutSwitcherFixture.dashboards, selectedVehicleID: 9).map(\.id),
             ["default", "road-trip", "fleet"]
         )
     }
 
     func testRowsCarryActivePinnedAndDefaultFlags() {
         let rows = LayoutSwitcherProjection.rows(
-            Fixture.dashboards,
+            LayoutSwitcherFixture.dashboards,
             activeID: "garage",
             selectedVehicleID: 7
         )
@@ -90,14 +96,17 @@ private enum Fixture {
 
     func testActiveNameUsesNameOrUntitledFallback() {
         XCTAssertEqual(
-            LayoutSwitcherProjection.activeName(Fixture.summary(id: "x", name: "Overview"), localize: echo),
+            LayoutSwitcherProjection.activeName(
+                LayoutSwitcherFixture.summary(id: "x", name: "Overview"),
+                localize: echo
+            ),
             "Overview"
         )
         XCTAssertEqual(LayoutSwitcherProjection.activeName(nil, localize: echo), "Untitled")
     }
 
     func testPinnedLabelPrefersDisplayNameThenVinThenId() {
-        let pinned = Fixture.summary(id: "garage", vehicleID: 7)
+        let pinned = LayoutSwitcherFixture.summary(id: "garage", vehicleID: 7)
         XCTAssertEqual(
             LayoutSwitcherProjection.pinnedLabel(
                 active: pinned,
@@ -125,14 +134,14 @@ private enum Fixture {
         // Active layout has no vehicle scope ⇒ no pinned label (web `active.vehicleId != null`).
         XCTAssertNil(
             LayoutSwitcherProjection.pinnedLabel(
-                active: Fixture.summary(id: "default", vehicleID: nil),
+                active: LayoutSwitcherFixture.summary(id: "default", vehicleID: nil),
                 vehicle: LayoutSwitcherVehicle(id: 7, displayName: "Model 3")
             )
         )
         // No selected vehicle ⇒ no pinned label (web `&& vehicle`).
         XCTAssertNil(
             LayoutSwitcherProjection.pinnedLabel(
-                active: Fixture.summary(id: "garage", vehicleID: 7),
+                active: LayoutSwitcherFixture.summary(id: "garage", vehicleID: 7),
                 vehicle: nil
             )
         )
@@ -141,7 +150,7 @@ private enum Fixture {
     func testSaveAsSuggestion() {
         XCTAssertEqual(
             LayoutSwitcherProjection.saveAsSuggestion(
-                active: Fixture.summary(id: "x", name: "Overview"),
+                active: LayoutSwitcherFixture.summary(id: "x", name: "Overview"),
                 localize: echo
             ),
             "Overview (Copy)"
@@ -157,7 +166,7 @@ private enum Fixture {
 
 @MainActor final class LayoutSwitcherActionTests: XCTestCase {
     func testSaveAsOutcomeBranches() {
-        let active = Fixture.summary(id: "default", name: "Overview")
+        let active = LayoutSwitcherFixture.summary(id: "default", name: "Overview")
         // Blank ⇒ no-op (web early return).
         XCTAssertEqual(
             LayoutSwitcherProjection.saveAsOutcome(name: "   ", active: active, hasDuplicate: true),
@@ -183,7 +192,7 @@ private enum Fixture {
     func testPinControlDisabledRule() {
         // Pinned layout ⇒ offers Unpin, enabled.
         let pinned = LayoutSwitcherProjection.pinControl(
-            active: Fixture.summary(id: "g", vehicleID: 7),
+            active: LayoutSwitcherFixture.summary(id: "g", vehicleID: 7),
             selectedVehicleID: 7
         )
         XCTAssertTrue(pinned.isPinned)
@@ -193,7 +202,7 @@ private enum Fixture {
 
         // Global layout + a vehicle selected ⇒ offers Pin, enabled.
         let pinnable = LayoutSwitcherProjection.pinControl(
-            active: Fixture.summary(id: "d", vehicleID: nil),
+            active: LayoutSwitcherFixture.summary(id: "d", vehicleID: nil),
             selectedVehicleID: 7
         )
         XCTAssertFalse(pinnable.isPinned)
@@ -202,7 +211,7 @@ private enum Fixture {
 
         // Global layout + no vehicle ⇒ disabled (web `disabled`).
         let inert = LayoutSwitcherProjection.pinControl(
-            active: Fixture.summary(id: "d", vehicleID: nil),
+            active: LayoutSwitcherFixture.summary(id: "d", vehicleID: nil),
             selectedVehicleID: nil
         )
         XCTAssertTrue(inert.isDisabled)
@@ -211,14 +220,14 @@ private enum Fixture {
     func testPinOutcomeBranches() {
         XCTAssertEqual(
             LayoutSwitcherProjection.pinOutcome(
-                active: Fixture.summary(id: "g", vehicleID: 7),
+                active: LayoutSwitcherFixture.summary(id: "g", vehicleID: 7),
                 selectedVehicleID: 7
             ),
             .unpin(id: "g")
         )
         XCTAssertEqual(
             LayoutSwitcherProjection.pinOutcome(
-                active: Fixture.summary(id: "d", vehicleID: nil),
+                active: LayoutSwitcherFixture.summary(id: "d", vehicleID: nil),
                 selectedVehicleID: 7
             ),
             .pin(id: "d", vehicleID: 7)
@@ -226,7 +235,7 @@ private enum Fixture {
         // Disabled case (global + no vehicle) ⇒ no outcome.
         XCTAssertNil(
             LayoutSwitcherProjection.pinOutcome(
-                active: Fixture.summary(id: "d", vehicleID: nil),
+                active: LayoutSwitcherFixture.summary(id: "d", vehicleID: nil),
                 selectedVehicleID: nil
             )
         )
@@ -332,7 +341,7 @@ private enum Fixture {
 
 @MainActor final class LayoutSwitcherStateTests: XCTestCase {
     func testStateDataAccessor() {
-        let data = LayoutSwitcherData(dashboards: Fixture.dashboards, activeID: "default")
+        let data = LayoutSwitcherData(dashboards: LayoutSwitcherFixture.dashboards, activeID: "default")
         XCTAssertEqual(LayoutSwitcherState.loaded(data).data, data)
         XCTAssertNil(LayoutSwitcherState.loading.data)
         XCTAssertNil(LayoutSwitcherState.empty.data)
@@ -341,13 +350,13 @@ private enum Fixture {
 
     func testSelectedVehicleIDDerivation() {
         let withVehicle = LayoutSwitcherData(
-            dashboards: Fixture.dashboards,
+            dashboards: LayoutSwitcherFixture.dashboards,
             activeID: "default",
             selectedVehicle: LayoutSwitcherVehicle(id: 7, displayName: "Model 3")
         )
         XCTAssertEqual(withVehicle.selectedVehicleID, 7)
 
-        let noVehicle = LayoutSwitcherData(dashboards: Fixture.dashboards, activeID: "default")
+        let noVehicle = LayoutSwitcherData(dashboards: LayoutSwitcherFixture.dashboards, activeID: "default")
         XCTAssertNil(noVehicle.selectedVehicleID)
     }
 }

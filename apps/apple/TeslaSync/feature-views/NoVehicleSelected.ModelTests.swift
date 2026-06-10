@@ -54,7 +54,7 @@ private final class SpyNoVehicleSelectedNavigator: NoVehicleSelectedNavigator, @
     }
 }
 
-private enum SampleSelection {
+private enum NoVehicleSelectedSampleSelection {
     static let vehicle = SelectedVehicleRef(id: "veh_1", displayName: "Midnight Model 3")
 }
 
@@ -101,12 +101,12 @@ final class NoVehicleSelectedModelTests: XCTestCase {
 
     func testResolvedSomeResolvesContentWithSelection() {
         let source = InMemoryNoVehicleSelectedSource(
-            initial: NoVehicleSelectedUpdate(feed: .resolved(SampleSelection.vehicle))
+            initial: NoVehicleSelectedUpdate(feed: .resolved(NoVehicleSelectedSampleSelection.vehicle))
         )
         let model = makeModel(source: source)
         model.start()
         XCTAssertEqual(model.phase, .content)
-        XCTAssertEqual(model.selected, SampleSelection.vehicle)
+        XCTAssertEqual(model.selected, NoVehicleSelectedSampleSelection.vehicle)
         XCTAssertTrue(model.readyBody.contains("Midnight Model 3"))
     }
 
@@ -144,14 +144,17 @@ final class NoVehicleSelectedModelTests: XCTestCase {
 
     func testOfflineKeepsSelectionAndDoesNotRefresh() {
         let source = InMemoryNoVehicleSelectedSource(
-            initial: NoVehicleSelectedUpdate(feed: .resolved(SampleSelection.vehicle))
+            initial: NoVehicleSelectedUpdate(feed: .resolved(NoVehicleSelectedSampleSelection.vehicle))
         )
         let model = makeModel(source: source)
         model.start()
-        source.push(NoVehicleSelectedUpdate(feed: .resolved(SampleSelection.vehicle), connection: .offline))
+        source.push(NoVehicleSelectedUpdate(
+            feed: .resolved(NoVehicleSelectedSampleSelection.vehicle),
+            connection: .offline
+        ))
         XCTAssertEqual(model.connection, .offline)
         XCTAssertEqual(model.phase, .content)
-        XCTAssertEqual(model.selected, SampleSelection.vehicle)
+        XCTAssertEqual(model.selected, NoVehicleSelectedSampleSelection.vehicle)
         XCTAssertEqual(source.refreshCount, 0)
     }
 

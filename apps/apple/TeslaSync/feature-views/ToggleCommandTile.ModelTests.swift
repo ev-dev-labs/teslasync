@@ -327,7 +327,7 @@ private func makeToggleModel(
     }
 
     func testStaleAfterFreshnessWindow() {
-        let clock = MutableClock(Date(timeIntervalSince1970: 1_000_000))
+        let clock = ToggleCommandTileMutableClock(Date(timeIntervalSince1970: 1_000_000))
         let model = makeToggleModel(
             def: boundLockDef(),
             lastStatus: "✓ Locked",
@@ -345,7 +345,7 @@ private func makeToggleModel(
     }
 
     func testIdleTileNeverGoesStale() {
-        let clock = MutableClock(Date(timeIntervalSince1970: 1_000_000))
+        let clock = ToggleCommandTileMutableClock(Date(timeIntervalSince1970: 1_000_000))
         let model = makeToggleModel(
             def: boundLockDef(),
             dispatcher: InMemoryToggleCommandDispatcher(),
@@ -388,7 +388,7 @@ private final class SpyToggleCommandTelemetry: ToggleCommandTelemetry, @unchecke
 }
 
 /// A settable clock so the freshness window can be crossed deterministically.
-private final class MutableClock: @unchecked Sendable {
+private final class ToggleCommandTileMutableClock: @unchecked Sendable {
     var current: Date
     init(_ start: Date) {
         current = start

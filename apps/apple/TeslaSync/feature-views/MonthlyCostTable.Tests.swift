@@ -208,7 +208,7 @@ private func sampleBuckets() -> [MonthlyCostBucket] {
     }
 
     func testStartAppliesInitialAndEmitsTelemetryOnce() {
-        let spy = SpyMonthlyCostTelemetry()
+        let spy = MonthlyCostTableSpyMonthlyCostTelemetry()
         let (model, source) = makeModel(dataInput, telemetry: spy)
         model.start()
         model.start()
@@ -279,7 +279,7 @@ private func sampleBuckets() -> [MonthlyCostBucket] {
 
 // MARK: - Accessibility summary content
 
-@MainActor final class MonthlyCostAccessibilityTests: XCTestCase {
+@MainActor final class MonthlyCostTableMonthlyCostAccessibilityTests: XCTestCase {
     func testRowLabelJoinsParts() {
         XCTAssertEqual(
             MonthlyCostTableAccessibility.rowLabel(
@@ -297,7 +297,7 @@ private func sampleBuckets() -> [MonthlyCostBucket] {
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyMonthlyCostTelemetry: MonthlyCostTableTelemetry, @unchecked Sendable {
+private final class MonthlyCostTableSpyMonthlyCostTelemetry: MonthlyCostTableTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

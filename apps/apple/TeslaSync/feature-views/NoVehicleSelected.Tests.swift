@@ -20,7 +20,7 @@ import XCTest
 /// copy without a bundle.
 private let passthroughLocalize: @Sendable (String, String) -> String = { _, fallback in fallback }
 
-private enum SampleSelection {
+private enum NoVehicleSelectedSampleSelection {
     static let vehicle = SelectedVehicleRef(id: "veh_1", displayName: "Midnight Model 3")
 }
 
@@ -37,7 +37,7 @@ final class NoVehicleSelectedPhaseTests: XCTestCase {
 
     func testResolvedSomeResolvesContent() {
         XCTAssertEqual(
-            NoVehicleSelectedProjectionBuilder.resolvePhase(.resolved(SampleSelection.vehicle)),
+            NoVehicleSelectedProjectionBuilder.resolvePhase(.resolved(NoVehicleSelectedSampleSelection.vehicle)),
             .content
         )
     }
@@ -67,9 +67,9 @@ final class NoVehicleSelectedProjectionTests: XCTestCase {
     }
 
     func testResolvedSomeProjectionCarriesSelection() {
-        let projection = NoVehicleSelectedProjectionBuilder.build(.resolved(SampleSelection.vehicle))
+        let projection = NoVehicleSelectedProjectionBuilder.build(.resolved(NoVehicleSelectedSampleSelection.vehicle))
         XCTAssertEqual(projection.phase, .content)
-        XCTAssertEqual(projection.selected, SampleSelection.vehicle)
+        XCTAssertEqual(projection.selected, NoVehicleSelectedSampleSelection.vehicle)
     }
 
     func testFailedProjectionCarriesMessage() {
@@ -118,7 +118,7 @@ final class NoVehicleSelectedAccessibilityTests: XCTestCase {
     }
 
     func testContentSummaryIncludesVehicleName() {
-        let label = summary(.resolved(SampleSelection.vehicle))
+        let label = summary(.resolved(NoVehicleSelectedSampleSelection.vehicle))
         XCTAssertTrue(label.contains("Vehicle selected"))
         XCTAssertTrue(label.contains("Midnight Model 3"))
     }

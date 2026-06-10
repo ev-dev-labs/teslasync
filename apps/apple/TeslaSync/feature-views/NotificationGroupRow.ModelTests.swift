@@ -15,7 +15,7 @@ import XCTest
 
 // MARK: - Fixtures
 
-private enum Fixture {
+private enum NotificationGroupRowFixture {
     static let date = Date(timeIntervalSince1970: 1_733_600_000)
 
     static func log(_ identifier: Int, read: Bool = false) -> NotificationLogInput {
@@ -55,7 +55,7 @@ private enum Fixture {
         initial: NotificationGroupUpdate?,
         members: NotificationMembersUpdate? = nil,
         markRead: NotificationGroupMarkReadResult = .success(updated: 3),
-        telemetry: NotificationGroupRowTelemetry = SpyTelemetry()
+        telemetry: NotificationGroupRowTelemetry = NotificationGroupRowSpyTelemetry()
     ) -> (NotificationGroupRowModel, InMemoryNotificationGroupRowSource) {
         let source = InMemoryNotificationGroupRowSource(
             initial: initial,
@@ -68,7 +68,11 @@ private enum Fixture {
 
     func testLoadedContentProjectsGroup() {
         let (model, source) = makeModel(
-            initial: NotificationGroupUpdate(status: .loaded, group: Fixture.group(), connection: .live)
+            initial: NotificationGroupUpdate(
+                status: .loaded,
+                group: NotificationGroupRowFixture.group(),
+                connection: .live
+            )
         )
         model.start()
         XCTAssertEqual(model.phase, .content)
@@ -94,14 +98,18 @@ private enum Fixture {
 
     func testArchivedModeSuppressesMarkRead() {
         let (model, _) = makeModel(
-            initial: NotificationGroupUpdate(status: .loaded, group: Fixture.group(), archived: true)
+            initial: NotificationGroupUpdate(
+                status: .loaded,
+                group: NotificationGroupRowFixture.group(),
+                archived: true
+            )
         )
         model.start()
         XCTAssertEqual(model.group?.canMarkGroupRead, false)
     }
 
     func testStartEmitsViewOpenedOnce() {
-        let spy = SpyTelemetry()
+        let spy = NotificationGroupRowSpyTelemetry()
         let (model, _) = makeModel(initial: nil, telemetry: spy)
         model.start()
         model.start()
@@ -111,10 +119,14 @@ private enum Fixture {
     func testExpandTriggersLazyMemberLoadOnce() {
         let members = NotificationMembersUpdate(
             status: .loaded,
-            members: [Fixture.log(1), Fixture.log(2), Fixture.log(3)]
+            members: [
+                NotificationGroupRowFixture.log(1),
+                NotificationGroupRowFixture.log(2),
+                NotificationGroupRowFixture.log(3)
+            ]
         )
         let (model, source) = makeModel(
-            initial: NotificationGroupUpdate(status: .loaded, group: Fixture.group()),
+            initial: NotificationGroupUpdate(status: .loaded, group: NotificationGroupRowFixture.group()),
             members: members
         )
         model.start()
@@ -134,7 +146,7 @@ private enum Fixture {
 
     func testExpandShowsLoadingWhenMembersPending() {
         let (model, source) = makeModel(
-            initial: NotificationGroupUpdate(status: .loaded, group: Fixture.group()),
+            initial: NotificationGroupUpdate(status: .loaded, group: NotificationGroupRowFixture.group()),
             members: nil
         )
         model.start()
@@ -146,7 +158,10 @@ private enum Fixture {
 
     func testSingletonCannotExpand() {
         let (model, source) = makeModel(
-            initial: NotificationGroupUpdate(status: .loaded, group: Fixture.group(key: nil, count: 1, unread: 1))
+            initial: NotificationGroupUpdate(
+                status: .loaded,
+                group: NotificationGroupRowFixture.group(key: nil, count: 1, unread: 1)
+            )
         )
         model.start()
         model.toggleExpanded()
@@ -157,7 +172,7 @@ private enum Fixture {
 
     func testMarkGroupReadSuccessRaisesToast() async {
         let (model, source) = makeModel(
-            initial: NotificationGroupUpdate(status: .loaded, group: Fixture.group()),
+            initial: NotificationGroupUpdate(status: .loaded, group: NotificationGroupRowFixture.group()),
             markRead: .success(updated: 4)
         )
         model.start()
@@ -170,7 +185,7 @@ private enum Fixture {
 
     func testMarkGroupReadFailureRaisesErrorToast() async {
         let (model, _) = makeModel(
-            initial: NotificationGroupUpdate(status: .loaded, group: Fixture.group()),
+            initial: NotificationGroupUpdate(status: .loaded, group: NotificationGroupRowFixture.group()),
             markRead: .failure(message: "500")
         )
         model.start()
@@ -182,7 +197,10 @@ private enum Fixture {
 
     func testMarkGroupReadNoOpForSingleton() async {
         let (model, source) = makeModel(
-            initial: NotificationGroupUpdate(status: .loaded, group: Fixture.group(key: nil, count: 1, unread: 1))
+            initial: NotificationGroupUpdate(
+                status: .loaded,
+                group: NotificationGroupRowFixture.group(key: nil, count: 1, unread: 1)
+            )
         )
         model.start()
         await model.markGroupRead()
@@ -191,7 +209,10 @@ private enum Fixture {
     }
 
     func testDismissToastClears() async {
-        let (model, _) = makeModel(initial: NotificationGroupUpdate(status: .loaded, group: Fixture.group()))
+        let (model, _) = makeModel(initial: NotificationGroupUpdate(
+            status: .loaded,
+            group: NotificationGroupRowFixture.group()
+        ))
         model.start()
         await model.markGroupRead()
         XCTAssertNotNil(model.toast)
@@ -202,11 +223,27 @@ private enum Fixture {
     func testStaleAutoRefreshesExactlyOnceAndReArms() {
         let (model, source) = makeModel(initial: nil)
         model.start()
-        source.push(NotificationGroupUpdate(status: .loaded, group: Fixture.group(), connection: .stale))
-        source.push(NotificationGroupUpdate(status: .loaded, group: Fixture.group(), connection: .stale))
+        source.push(NotificationGroupUpdate(
+            status: .loaded,
+            group: NotificationGroupRowFixture.group(),
+            connection: .stale
+        ))
+        source.push(NotificationGroupUpdate(
+            status: .loaded,
+            group: NotificationGroupRowFixture.group(),
+            connection: .stale
+        ))
         XCTAssertEqual(source.refreshCount, 1)
-        source.push(NotificationGroupUpdate(status: .loaded, group: Fixture.group(), connection: .live))
-        source.push(NotificationGroupUpdate(status: .loaded, group: Fixture.group(), connection: .stale))
+        source.push(NotificationGroupUpdate(
+            status: .loaded,
+            group: NotificationGroupRowFixture.group(),
+            connection: .live
+        ))
+        source.push(NotificationGroupUpdate(
+            status: .loaded,
+            group: NotificationGroupRowFixture.group(),
+            connection: .stale
+        ))
         XCTAssertEqual(source.refreshCount, 2)
         XCTAssertEqual(model.connection, .stale)
     }
@@ -214,7 +251,11 @@ private enum Fixture {
     func testOfflineKeepsCachedThreadWithoutRefresh() {
         let (model, source) = makeModel(initial: nil)
         model.start()
-        source.push(NotificationGroupUpdate(status: .loaded, group: Fixture.group(), connection: .offline))
+        source.push(NotificationGroupUpdate(
+            status: .loaded,
+            group: NotificationGroupRowFixture.group(),
+            connection: .offline
+        ))
         XCTAssertEqual(model.connection, .offline)
         XCTAssertEqual(model.phase, .content)
         XCTAssertEqual(source.refreshCount, 0)
@@ -233,7 +274,7 @@ private enum Fixture {
 // MARK: - Test doubles
 
 /// Records the surfaces a model reports as opened.
-private final class SpyTelemetry: NotificationGroupRowTelemetry, @unchecked Sendable {
+private final class NotificationGroupRowSpyTelemetry: NotificationGroupRowTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

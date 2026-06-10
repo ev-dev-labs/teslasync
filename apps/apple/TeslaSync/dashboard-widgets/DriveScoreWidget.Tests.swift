@@ -169,7 +169,7 @@ import XCTest
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpyDriveScoreTelemetry()
+        let spy = DriveScoreWidgetSpyDriveScoreTelemetry()
         let (model, source) = makeModel(DriveScoreUpdate(status: .loading, analytics: nil), telemetry: spy)
         model.start()
         model.start()
@@ -204,7 +204,7 @@ import XCTest
     }
 
     func testStopResetsStartedSoTelemetryCanReArm() {
-        let spy = SpyDriveScoreTelemetry()
+        let spy = DriveScoreWidgetSpyDriveScoreTelemetry()
         let (model, source) = makeModel(DriveScoreUpdate(status: .loaded, analytics: nil), telemetry: spy)
         model.start()
         model.stop()
@@ -267,7 +267,7 @@ import XCTest
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyDriveScoreTelemetry: DriveScoreTelemetry, @unchecked Sendable {
+private final class DriveScoreWidgetSpyDriveScoreTelemetry: DriveScoreTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

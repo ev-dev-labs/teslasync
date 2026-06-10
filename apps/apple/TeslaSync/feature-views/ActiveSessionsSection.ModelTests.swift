@@ -59,7 +59,7 @@ private actor RecordingRevoker: ActiveSessionsRevoker {
     }
 }
 
-private enum SampleSessions {
+private enum ActiveSessionsSectionSampleSessions {
     static func current(id: String = "1") -> ActiveSessionItem {
         ActiveSessionItem(
             id: id,
@@ -116,7 +116,7 @@ private enum SampleSessions {
         let model = makeModel(source: source)
         model.start()
         XCTAssertEqual(model.phase, .loading)
-        source.push(ActiveSessionsUpdate(status: .loaded, items: SampleSessions.both()))
+        source.push(ActiveSessionsUpdate(status: .loaded, items: ActiveSessionsSectionSampleSessions.both()))
         XCTAssertEqual(model.phase, .content)
         XCTAssertTrue(model.hasOtherDevices)
     }
@@ -149,7 +149,7 @@ private enum SampleSessions {
     }
 
     func testFailedWithRowsKeepsContentAndSurfacesInlineError() {
-        let rows = SampleSessions.both()
+        let rows = ActiveSessionsSectionSampleSessions.both()
         let source = InMemoryActiveSessionsSource(
             initial: ActiveSessionsUpdate(status: .loaded, items: rows)
         )
@@ -162,12 +162,12 @@ private enum SampleSessions {
 
     func testRevokeFlowCallsSeamAndRefreshes() async {
         let source = InMemoryActiveSessionsSource(
-            initial: ActiveSessionsUpdate(status: .loaded, items: SampleSessions.both())
+            initial: ActiveSessionsUpdate(status: .loaded, items: ActiveSessionsSectionSampleSessions.both())
         )
         let recorder = RecordingRevoker(revokeResult: true)
         let model = makeModel(source: source, revoker: recorder)
         model.start()
-        let target = SampleSessions.other()
+        let target = ActiveSessionsSectionSampleSessions.other()
         model.requestRevoke(target)
         XCTAssertEqual(model.revokeTarget?.id, target.id)
         await model.confirmRevoke()
@@ -191,11 +191,11 @@ private enum SampleSessions {
 
     func testRevokeFailureSkipsRefresh() async {
         let source = InMemoryActiveSessionsSource(
-            initial: ActiveSessionsUpdate(status: .loaded, items: SampleSessions.both())
+            initial: ActiveSessionsUpdate(status: .loaded, items: ActiveSessionsSectionSampleSessions.both())
         )
         let model = makeModel(source: source, revoker: RecordingRevoker(revokeResult: false))
         model.start()
-        model.requestRevoke(SampleSessions.other())
+        model.requestRevoke(ActiveSessionsSectionSampleSessions.other())
         await model.confirmRevoke()
         XCTAssertNil(model.revokeTarget)
         XCTAssertEqual(source.refreshCount, 0)
@@ -203,7 +203,7 @@ private enum SampleSessions {
 
     func testRevokeAllOthersFlow() async {
         let source = InMemoryActiveSessionsSource(
-            initial: ActiveSessionsUpdate(status: .loaded, items: SampleSessions.both())
+            initial: ActiveSessionsUpdate(status: .loaded, items: ActiveSessionsSectionSampleSessions.both())
         )
         let recorder = RecordingRevoker(allOthersResult: 3)
         let model = makeModel(source: source, revoker: recorder)
@@ -228,7 +228,7 @@ private enum SampleSessions {
     }
 
     func testStaleAutoRefreshesOnceThenReArms() {
-        let rows = SampleSessions.both()
+        let rows = ActiveSessionsSectionSampleSessions.both()
         let source = InMemoryActiveSessionsSource(initial: ActiveSessionsUpdate(status: .loaded, items: rows))
         let model = makeModel(source: source)
         model.start()
@@ -242,7 +242,7 @@ private enum SampleSessions {
     }
 
     func testOfflineKeepsRowsAndDoesNotRefresh() {
-        let rows = SampleSessions.both()
+        let rows = ActiveSessionsSectionSampleSessions.both()
         let source = InMemoryActiveSessionsSource(initial: ActiveSessionsUpdate(status: .loaded, items: rows))
         let model = makeModel(source: source)
         model.start()
@@ -254,13 +254,13 @@ private enum SampleSessions {
 
     func testPendingTargetPrunedWhenRowVanishes() {
         let source = InMemoryActiveSessionsSource(
-            initial: ActiveSessionsUpdate(status: .loaded, items: SampleSessions.both())
+            initial: ActiveSessionsUpdate(status: .loaded, items: ActiveSessionsSectionSampleSessions.both())
         )
         let model = makeModel(source: source)
         model.start()
-        model.requestRevoke(SampleSessions.other())
+        model.requestRevoke(ActiveSessionsSectionSampleSessions.other())
         XCTAssertNotNil(model.revokeTarget)
-        source.push(ActiveSessionsUpdate(status: .loaded, items: [SampleSessions.current()]))
+        source.push(ActiveSessionsUpdate(status: .loaded, items: [ActiveSessionsSectionSampleSessions.current()]))
         XCTAssertNil(model.revokeTarget)
     }
 }

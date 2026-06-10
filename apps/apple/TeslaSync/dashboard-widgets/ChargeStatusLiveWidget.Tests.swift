@@ -21,7 +21,7 @@ import XCTest
 
 // MARK: - Adapter: cached DTO → projection (port parity with the web widget)
 
-@MainActor final class ChargeStatusAdapterTests: XCTestCase {
+@MainActor final class ChargeStatusLiveWidgetChargeStatusAdapterTests: XCTestCase {
     private let charging = LiveChargeStateDTO(
         isCharging: true,
         chargerPowerKw: 11.5,
@@ -165,7 +165,7 @@ import XCTest
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor final class ChargeStatusPhaseTests: XCTestCase {
+@MainActor final class ChargeStatusLiveWidgetChargeStatusPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
         XCTAssertEqual(ChargeStatusLiveModel.resolvePhase(status: .loading, hasState: false), .loading)
         XCTAssertEqual(ChargeStatusLiveModel.resolvePhase(status: .loading, hasState: true), .content)
@@ -178,7 +178,7 @@ import XCTest
     }
 }
 
-@MainActor final class ChargeStatusModelTests: XCTestCase {
+@MainActor final class ChargeStatusLiveWidgetChargeStatusModelTests: XCTestCase {
     private func makeModel(
         _ update: LiveChargeStatusUpdate,
         telemetry: ChargeStatusLiveTelemetry = OSLogChargeStatusLiveTelemetry()
@@ -216,7 +216,7 @@ import XCTest
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpyChargeStatusTelemetry()
+        let spy = ChargeStatusLiveWidgetSpyChargeStatusTelemetry()
         let (model, source) = makeModel(LiveChargeStatusUpdate(status: .loading, state: nil), telemetry: spy)
         model.start()
         model.start()
@@ -270,7 +270,7 @@ import XCTest
 
 // MARK: - Registry parity
 
-@MainActor final class ChargeStatusRegistryTests: XCTestCase {
+@MainActor final class ChargeStatusLiveWidgetChargeStatusRegistryTests: XCTestCase {
     func testRegistrationMatchesCanonical() {
         let registration = ChargeStatusLiveWidget.registration
         XCTAssertEqual(registration.id, "charge-status-live")
@@ -317,7 +317,7 @@ import XCTest
 
 // MARK: - Accessibility summary content
 
-@MainActor final class ChargeStatusAccessibilityTests: XCTestCase {
+@MainActor final class CSLiveChargeStatusAccessibilityTests: XCTestCase {
     func testChargingSummaryIncludesEveryDatum() {
         let projection = LiveChargeStatusProjector.project(
             state: LiveChargeStateDTO(
@@ -362,7 +362,7 @@ import XCTest
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyChargeStatusTelemetry: ChargeStatusLiveTelemetry, @unchecked Sendable {
+private final class ChargeStatusLiveWidgetSpyChargeStatusTelemetry: ChargeStatusLiveTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

@@ -207,7 +207,7 @@ import XCTest
     }
 
     func testStartEmitsViewOpenedOnce() {
-        let spy = SpyTirePressureTelemetry()
+        let spy = TPHistSpyTirePressureTelemetry()
         let source = InMemoryTirePressureHistorySource(initial: TirePressureHistoryUpdate(status: .loading))
         let model = TirePressureHistoryModel(source: source, telemetry: spy)
         model.start()
@@ -299,7 +299,7 @@ import XCTest
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyTirePressureTelemetry: TirePressureHistoryTelemetry, @unchecked Sendable {
+private final class TPHistSpyTirePressureTelemetry: TirePressureHistoryTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

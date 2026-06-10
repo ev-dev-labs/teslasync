@@ -260,7 +260,7 @@ final class DriveScoreGaugeWidgetPhaseTests: XCTestCase {
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpyDriveScoreTelemetry()
+        let spy = DriveScoreGaugeWidgetSpyDriveScoreTelemetry()
         let (model, source) = makeModel(DriveScoreGaugeWidgetUpdate(status: .loading, score: nil), telemetry: spy)
         model.start()
         model.start()
@@ -369,7 +369,7 @@ final class DriveScoreGaugeWidgetAccessibilityTests: XCTestCase {
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyDriveScoreTelemetry: DriveScoreGaugeWidgetTelemetry, @unchecked Sendable {
+private final class DriveScoreGaugeWidgetSpyDriveScoreTelemetry: DriveScoreGaugeWidgetTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

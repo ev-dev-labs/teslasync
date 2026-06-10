@@ -214,7 +214,7 @@ import XCTest
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpyTirePressureTelemetry()
+        let spy = TirePressureVisualWidgetSpyTirePressureTelemetry()
         let (model, source) = makeModel(TirePressureUpdate(status: .loading, reading: nil), telemetry: spy)
         model.start()
         model.start()
@@ -325,7 +325,7 @@ import XCTest
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyTirePressureTelemetry: TirePressureTelemetry, @unchecked Sendable {
+private final class TirePressureVisualWidgetSpyTirePressureTelemetry: TirePressureTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

@@ -236,7 +236,7 @@ import XCTest
     }
 
     func testStartAppliesInitialAndEmitsTelemetryOnce() {
-        let spy = SpyTelemetryErrorsTelemetry()
+        let spy = TelemetryErrorsPanelSpyTelemetryErrorsTelemetry()
         let json = TelemetryJSON.object([.init("errors", .array([.object([.init("code", .string("c"))])]))])
         let (model, source) = makeModel(
             TelemetryErrorsInput(requested: true, response: json, vin: "VIN1"),
@@ -296,7 +296,7 @@ import XCTest
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyTelemetryErrorsTelemetry: TelemetryErrorsTelemetry, @unchecked Sendable {
+private final class TelemetryErrorsPanelSpyTelemetryErrorsTelemetry: TelemetryErrorsTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

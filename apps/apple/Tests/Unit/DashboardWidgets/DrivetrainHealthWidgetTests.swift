@@ -33,7 +33,7 @@ private final class RecordingProvider: DrivetrainHealthProvider {
 /// Spy proving the `view.opened` diagnostics contract is invokable with the
 /// surface slug (the view fires this in `.onAppear`).
 @MainActor
-private final class TelemetrySpy: DashboardWidgetTelemetry {
+private final class DrivetrainHealthWidgetTestsTelemetrySpy: DashboardWidgetTelemetry {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)
@@ -304,7 +304,7 @@ private let motorJSON = """
     }
 
     func testTelemetryContract() {
-        let spy = TelemetrySpy()
+        let spy = DrivetrainHealthWidgetTestsTelemetrySpy()
         spy.viewOpened(surface: DrivetrainHealthWidget.surfaceSlug)
         XCTAssertEqual(spy.surfaces, ["DrivetrainHealthWidget"])
     }

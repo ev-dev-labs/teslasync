@@ -19,7 +19,7 @@ import XCTest
 
 // MARK: - Fixtures
 
-private enum Fixture {
+private enum LayoutManagerFixture {
     static func layout(
         id: String,
         name: String = "Layout",
@@ -44,7 +44,7 @@ private enum Fixture {
 
 @MainActor final class LayoutTabProjectionTests: XCTestCase {
     func testProjectionPreservesOrderAndDerivesActive() {
-        let tabs = Fixture.tabs(activeID: "b")
+        let tabs = LayoutManagerFixture.tabs(activeID: "b")
         XCTAssertEqual(tabs.map(\.id), ["a", "b", "c"])
         XCTAssertEqual(tabs.map(\.isActive), [false, true, false])
         XCTAssertEqual(tabs.map(\.name), ["Overview", "Trips", "Charging"])
@@ -52,15 +52,15 @@ private enum Fixture {
 
     func testIconFallbackMatchesWebNilCoalescing() {
         // Explicit icon is kept; nil falls back to the web default 📊.
-        XCTAssertEqual(LayoutGlyph.icon(for: Fixture.layout(id: "x", icon: "⚡️")), "⚡️")
-        XCTAssertEqual(LayoutGlyph.icon(for: Fixture.layout(id: "x", icon: nil)), "📊")
+        XCTAssertEqual(LayoutGlyph.icon(for: LayoutManagerFixture.layout(id: "x", icon: "⚡️")), "⚡️")
+        XCTAssertEqual(LayoutGlyph.icon(for: LayoutManagerFixture.layout(id: "x", icon: nil)), "📊")
         XCTAssertEqual(LayoutGlyph.defaultIcon, "📊")
-        let tabs = Fixture.tabs(activeID: "a")
+        let tabs = LayoutManagerFixture.tabs(activeID: "a")
         XCTAssertEqual(tabs[2].icon, "📊", "Charging has no icon → default glyph")
     }
 
     func testDefaultFlagThreadsThrough() {
-        let tabs = Fixture.tabs(activeID: "a")
+        let tabs = LayoutManagerFixture.tabs(activeID: "a")
         XCTAssertTrue(tabs[0].isDefault)
         XCTAssertFalse(tabs[1].isDefault)
     }
@@ -78,7 +78,7 @@ private enum Fixture {
     }
 
     func testDropMoveResolvesFromAndTo() {
-        let tabs = Fixture.tabs(activeID: "a")
+        let tabs = LayoutManagerFixture.tabs(activeID: "a")
         // Drag "c" (index 2) onto index 0 → move (2, 0).
         XCTAssertEqual(
             LayoutReorder.dropMove(draggedID: "c", toIndex: 0, tabs: tabs),
@@ -92,7 +92,7 @@ private enum Fixture {
     }
 
     func testDropMoveIgnoresNoOpAndUnknown() {
-        let tabs = Fixture.tabs(activeID: "a")
+        let tabs = LayoutManagerFixture.tabs(activeID: "a")
         XCTAssertNil(LayoutReorder.dropMove(draggedID: "b", toIndex: 1, tabs: tabs), "same index is a no-op")
         XCTAssertNil(LayoutReorder.dropMove(draggedID: "zzz", toIndex: 0, tabs: tabs), "unknown id")
         XCTAssertNil(LayoutReorder.dropMove(draggedID: "a", toIndex: 9, tabs: tabs), "out-of-range target")
@@ -172,7 +172,7 @@ private enum Fixture {
 
 @MainActor final class LayoutManagerStateTests: XCTestCase {
     func testLoadedAccessors() {
-        let state = LayoutManagerState.loaded(layouts: Fixture.layouts, activeID: "b")
+        let state = LayoutManagerState.loaded(layouts: LayoutManagerFixture.layouts, activeID: "b")
         XCTAssertEqual(state.layouts.map(\.id), ["a", "b", "c"])
         XCTAssertEqual(state.activeID, "b")
     }
@@ -199,7 +199,7 @@ private enum Fixture {
     private let echo = LayoutManagerLocalizer.echo
 
     func testTabLabelComposesNameAndDefault() {
-        let tabs = Fixture.tabs(activeID: "a")
+        let tabs = LayoutManagerFixture.tabs(activeID: "a")
         XCTAssertEqual(LayoutManagerAccessibility.tabLabel(tabs[0], localize: echo), "Overview, default")
         XCTAssertEqual(LayoutManagerAccessibility.tabLabel(tabs[1], localize: echo), "Trips")
     }

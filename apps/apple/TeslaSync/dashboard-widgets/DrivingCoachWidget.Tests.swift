@@ -184,7 +184,7 @@ import XCTest
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = SpyDrivingCoachTelemetry()
+        let spy = DrivingCoachWidgetSpyDrivingCoachTelemetry()
         let (model, source) = makeModel(DrivingCoachUpdate(status: .loading, coach: nil), telemetry: spy)
         model.start()
         model.start()
@@ -243,7 +243,7 @@ import XCTest
 
 // MARK: - Accessibility summary content
 
-@MainActor final class DrivingCoachAccessibilityTests: XCTestCase {
+@MainActor final class DrivingCoachWidgetDrivingCoachAccessibilityTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
 
     func testScoreSummaryIncludesScoreAndSavings() {
@@ -286,7 +286,7 @@ import XCTest
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyDrivingCoachTelemetry: DrivingCoachTelemetry, @unchecked Sendable {
+private final class DrivingCoachWidgetSpyDrivingCoachTelemetry: DrivingCoachTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

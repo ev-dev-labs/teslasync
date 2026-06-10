@@ -333,7 +333,7 @@ import XCTest
     }
 
     func testStaleAfterFreshnessWindow() {
-        let clock = MutableClock(Date(timeIntervalSince1970: 1_000_000))
+        let clock = UserImpersonateButtonMutableClock(Date(timeIntervalSince1970: 1_000_000))
         let provider = InMemoryImpersonationStatusProvider(initial: .loaded(ImpersonationStatus(mode: .restricted)))
         let model = makeModel(
             provider: provider,
@@ -386,7 +386,7 @@ private final class SpyImpersonateTelemetry: UserImpersonateButtonTelemetry, @un
 }
 
 /// A settable clock so the freshness window can be crossed deterministically.
-private final class MutableClock: @unchecked Sendable {
+private final class UserImpersonateButtonMutableClock: @unchecked Sendable {
     var current: Date
     init(_ start: Date) {
         current = start

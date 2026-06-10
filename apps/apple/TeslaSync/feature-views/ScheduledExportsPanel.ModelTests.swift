@@ -81,7 +81,7 @@ private actor RecordingMutator: ScheduledExportsMutator {
     }
 }
 
-private enum SampleSchedules {
+private enum ScheduledExportsPanelSampleSchedules {
     static func drives(id: Int = 1, enabled: Bool = true) -> ScheduledExportItem {
         ScheduledExportItem(
             id: id,
@@ -147,7 +147,7 @@ private enum SampleSchedules {
         let model = makeModel(source: source)
         model.start()
         XCTAssertEqual(model.phase, .loading)
-        source.push(ScheduledExportsUpdate(status: .loaded, items: SampleSchedules.both()))
+        source.push(ScheduledExportsUpdate(status: .loaded, items: ScheduledExportsPanelSampleSchedules.both()))
         XCTAssertEqual(model.phase, .content)
         XCTAssertEqual(model.items.count, 2)
     }
@@ -170,7 +170,7 @@ private enum SampleSchedules {
     }
 
     func testFailedWithRowsKeepsContentAndSurfacesInlineError() {
-        let rows = SampleSchedules.both()
+        let rows = ScheduledExportsPanelSampleSchedules.both()
         let source = InMemoryScheduledExportsSource(
             initial: ScheduledExportsUpdate(status: .loaded, items: rows)
         )
@@ -185,7 +185,7 @@ private enum SampleSchedules {
 
     func testStartCreateSeedsEmptyForm() {
         let model = makeModel(source: InMemoryScheduledExportsSource())
-        model.startEdit(SampleSchedules.charging())
+        model.startEdit(ScheduledExportsPanelSampleSchedules.charging())
         model.startCreate()
         XCTAssertTrue(model.showForm)
         XCTAssertNil(model.editingID)
@@ -195,7 +195,7 @@ private enum SampleSchedules {
 
     func testStartEditSeedsFromRow() {
         let model = makeModel(source: InMemoryScheduledExportsSource())
-        model.startEdit(SampleSchedules.charging())
+        model.startEdit(ScheduledExportsPanelSampleSchedules.charging())
         XCTAssertTrue(model.showForm)
         XCTAssertEqual(model.editingID, 2)
         XCTAssertEqual(model.form.name, "Charging email")
@@ -205,7 +205,7 @@ private enum SampleSchedules {
 
     func testCloseFormResets() {
         let model = makeModel(source: InMemoryScheduledExportsSource())
-        model.startEdit(SampleSchedules.charging())
+        model.startEdit(ScheduledExportsPanelSampleSchedules.charging())
         model.closeForm()
         XCTAssertFalse(model.showForm)
         XCTAssertNil(model.editingID)
@@ -232,12 +232,12 @@ private enum SampleSchedules {
 
     func testSubmitEditPassesEditingID() async {
         let source = InMemoryScheduledExportsSource(
-            initial: ScheduledExportsUpdate(status: .loaded, items: SampleSchedules.both())
+            initial: ScheduledExportsUpdate(status: .loaded, items: ScheduledExportsPanelSampleSchedules.both())
         )
         let mutator = RecordingMutator()
         let model = makeModel(source: source, mutator: mutator)
         model.start()
-        model.startEdit(SampleSchedules.charging())
+        model.startEdit(ScheduledExportsPanelSampleSchedules.charging())
         await model.submit()
         let editingIDs = await mutator.savedEditingIDs
         XCTAssertEqual(editingIDs, [2])
@@ -270,12 +270,12 @@ private enum SampleSchedules {
 
     func testToggleEnabledFlipsAndRefreshes() async {
         let source = InMemoryScheduledExportsSource(
-            initial: ScheduledExportsUpdate(status: .loaded, items: SampleSchedules.both())
+            initial: ScheduledExportsUpdate(status: .loaded, items: ScheduledExportsPanelSampleSchedules.both())
         )
         let mutator = RecordingMutator()
         let model = makeModel(source: source, mutator: mutator)
         model.start()
-        await model.toggleEnabled(SampleSchedules.charging()) // currently disabled
+        await model.toggleEnabled(ScheduledExportsPanelSampleSchedules.charging()) // currently disabled
         let calls = await mutator.setEnabledCalls
         XCTAssertEqual(calls.count, 1)
         XCTAssertEqual(calls.first?.id, 2)
@@ -286,12 +286,12 @@ private enum SampleSchedules {
 
     func testRunNowCallsSeamAndRefreshes() async {
         let source = InMemoryScheduledExportsSource(
-            initial: ScheduledExportsUpdate(status: .loaded, items: SampleSchedules.both())
+            initial: ScheduledExportsUpdate(status: .loaded, items: ScheduledExportsPanelSampleSchedules.both())
         )
         let mutator = RecordingMutator()
         let model = makeModel(source: source, mutator: mutator)
         model.start()
-        await model.runNow(SampleSchedules.drives())
+        await model.runNow(ScheduledExportsPanelSampleSchedules.drives())
         let ran = await mutator.runIDs
         XCTAssertEqual(ran, [1])
         XCTAssertNil(model.runningID)
@@ -300,11 +300,11 @@ private enum SampleSchedules {
 
     func testRunNowFailureSkipsRefresh() async {
         let source = InMemoryScheduledExportsSource(
-            initial: ScheduledExportsUpdate(status: .loaded, items: SampleSchedules.both())
+            initial: ScheduledExportsUpdate(status: .loaded, items: ScheduledExportsPanelSampleSchedules.both())
         )
         let model = makeModel(source: source, mutator: RecordingMutator(runResult: false))
         model.start()
-        await model.runNow(SampleSchedules.drives())
+        await model.runNow(ScheduledExportsPanelSampleSchedules.drives())
         XCTAssertEqual(source.refreshCount, 0)
     }
 
@@ -312,12 +312,12 @@ private enum SampleSchedules {
 
     func testDeleteFlowCallsSeamAndRefreshes() async {
         let source = InMemoryScheduledExportsSource(
-            initial: ScheduledExportsUpdate(status: .loaded, items: SampleSchedules.both())
+            initial: ScheduledExportsUpdate(status: .loaded, items: ScheduledExportsPanelSampleSchedules.both())
         )
         let mutator = RecordingMutator()
         let model = makeModel(source: source, mutator: mutator)
         model.start()
-        let target = SampleSchedules.charging()
+        let target = ScheduledExportsPanelSampleSchedules.charging()
         model.requestDelete(target)
         XCTAssertEqual(model.pendingDelete?.id, target.id)
         await model.confirmDelete()
@@ -340,18 +340,18 @@ private enum SampleSchedules {
 
     func testCancelDeleteClearsTarget() {
         let model = makeModel(source: InMemoryScheduledExportsSource())
-        model.requestDelete(SampleSchedules.drives())
+        model.requestDelete(ScheduledExportsPanelSampleSchedules.drives())
         model.cancelDelete()
         XCTAssertNil(model.pendingDelete)
     }
 
     func testDeleteFailureSkipsRefresh() async {
         let source = InMemoryScheduledExportsSource(
-            initial: ScheduledExportsUpdate(status: .loaded, items: SampleSchedules.both())
+            initial: ScheduledExportsUpdate(status: .loaded, items: ScheduledExportsPanelSampleSchedules.both())
         )
         let model = makeModel(source: source, mutator: RecordingMutator(deleteResult: false))
         model.start()
-        model.requestDelete(SampleSchedules.charging())
+        model.requestDelete(ScheduledExportsPanelSampleSchedules.charging())
         await model.confirmDelete()
         XCTAssertEqual(source.refreshCount, 0)
     }
@@ -359,7 +359,7 @@ private enum SampleSchedules {
     // MARK: Freshness
 
     func testStaleAutoRefreshesOnceThenReArms() {
-        let rows = SampleSchedules.both()
+        let rows = ScheduledExportsPanelSampleSchedules.both()
         let source = InMemoryScheduledExportsSource(initial: ScheduledExportsUpdate(status: .loaded, items: rows))
         let model = makeModel(source: source)
         model.start()
@@ -373,7 +373,7 @@ private enum SampleSchedules {
     }
 
     func testOfflineKeepsRowsAndDoesNotRefresh() {
-        let rows = SampleSchedules.both()
+        let rows = ScheduledExportsPanelSampleSchedules.both()
         let source = InMemoryScheduledExportsSource(initial: ScheduledExportsUpdate(status: .loaded, items: rows))
         let model = makeModel(source: source)
         model.start()
@@ -385,13 +385,13 @@ private enum SampleSchedules {
 
     func testPendingDeletePrunedWhenRowVanishes() {
         let source = InMemoryScheduledExportsSource(
-            initial: ScheduledExportsUpdate(status: .loaded, items: SampleSchedules.both())
+            initial: ScheduledExportsUpdate(status: .loaded, items: ScheduledExportsPanelSampleSchedules.both())
         )
         let model = makeModel(source: source)
         model.start()
-        model.requestDelete(SampleSchedules.charging())
+        model.requestDelete(ScheduledExportsPanelSampleSchedules.charging())
         XCTAssertNotNil(model.pendingDelete)
-        source.push(ScheduledExportsUpdate(status: .loaded, items: [SampleSchedules.drives()]))
+        source.push(ScheduledExportsUpdate(status: .loaded, items: [ScheduledExportsPanelSampleSchedules.drives()]))
         XCTAssertNil(model.pendingDelete)
     }
 }

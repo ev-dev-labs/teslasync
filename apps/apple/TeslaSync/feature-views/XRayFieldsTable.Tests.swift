@@ -39,7 +39,7 @@ private enum XRayFixtures {
 }
 
 /// Test-only telemetry spy (single-threaded under XCTest's serial main actor).
-private final class SpyTelemetry: XRayFieldsTelemetry, @unchecked Sendable {
+private final class XRayFieldsTableSpyTelemetry: XRayFieldsTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)
@@ -219,7 +219,7 @@ private final class SpyTelemetry: XRayFieldsTelemetry, @unchecked Sendable {
     }
 
     func testStartEmitsTelemetryOnce() {
-        let spy = SpyTelemetry()
+        let spy = XRayFieldsTableSpyTelemetry()
         let model = XRayFieldsModel(source: InMemoryXRayFieldsSource(), telemetry: spy)
         model.start()
         model.start()

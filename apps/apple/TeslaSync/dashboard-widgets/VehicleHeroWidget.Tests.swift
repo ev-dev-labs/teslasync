@@ -301,7 +301,7 @@ private func idleState(inside: Double? = 22.5) -> VehicleStateInput {
     }
 
     func testStartEmitsViewOpenedOnce() {
-        let spy = SpyTelemetry()
+        let spy = VehicleHeroWidgetSpyTelemetry()
         let (model, source) = make(VehicleHeroWidgetUpdate(status: .loading, vehicle: nil), telemetry: spy)
         model.start()
         model.start()
@@ -353,7 +353,7 @@ private func idleState(inside: Double? = 22.5) -> VehicleStateInput {
 
 // MARK: - Test doubles
 
-private final class SpyTelemetry: VehicleHeroWidgetTelemetry, @unchecked Sendable {
+private final class VehicleHeroWidgetSpyTelemetry: VehicleHeroWidgetTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

@@ -173,7 +173,7 @@ private let sampleRecord = RegionRecord(
     }
 
     func testStartAppliesInitialAndEmitsTelemetryOnce() {
-        let spy = SpyTelemetry()
+        let spy = RegionSettingsSpyTelemetry()
         let (model, source) = makeModel(dataInput, telemetry: spy)
         model.start()
         model.start()
@@ -245,7 +245,7 @@ private let sampleRecord = RegionRecord(
     }
 
     func testRefreshSuccessRoutesToToast() {
-        let toast = SpyToast()
+        let toast = RegionSettingsSpyToast()
         let (model, source) = makeModel(dataInput, toast: toast)
         model.start()
         source.completeRefresh(.succeeded)
@@ -254,7 +254,7 @@ private let sampleRecord = RegionRecord(
     }
 
     func testRefreshFailureRoutesToToast() {
-        let toast = SpyToast()
+        let toast = RegionSettingsSpyToast()
         let (model, source) = makeModel(dataInput, toast: toast)
         model.start()
         source.completeRefresh(.failed("Network request timed out"))
@@ -290,7 +290,7 @@ private let sampleRecord = RegionRecord(
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyTelemetry: RegionSettingsTelemetry, @unchecked Sendable {
+private final class RegionSettingsSpyTelemetry: RegionSettingsTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)
@@ -298,7 +298,7 @@ private final class SpyTelemetry: RegionSettingsTelemetry, @unchecked Sendable {
 }
 
 /// Records the toast messages so the refresh-outcome routing can be asserted.
-private final class SpyToast: RegionSettingsToast, @unchecked Sendable {
+private final class RegionSettingsSpyToast: RegionSettingsToast, @unchecked Sendable {
     private(set) var successes: [String] = []
     private(set) var errors: [(title: String, detail: String)] = []
 

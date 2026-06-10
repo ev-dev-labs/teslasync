@@ -36,15 +36,15 @@ private func connected(
     )
 }
 
-// MARK: - Harness
+// MARK: - TeslaAccountSectionHarness
 
 @MainActor
-private struct Harness {
+private struct TeslaAccountSectionHarness {
     let model: TeslaAccountModel
     let source: InMemoryTeslaAccountStatusSource
     let actions: InMemoryTeslaAccountActions
-    let opener: SpyTeslaAccountURLOpener
-    let telemetry: SpyTeslaAccountTelemetry
+    let opener: TeslaAccountSectionMutSpyTeslaAccountURLOpener
+    let telemetry: TeslaAccountSectionMutSpyTeslaAccountTelemetry
 }
 
 @MainActor
@@ -53,10 +53,10 @@ private func makeHarness(
     actions: InMemoryTeslaAccountActions = InMemoryTeslaAccountActions(),
     onAuthRecovered: @escaping @MainActor () -> Void = {},
     start: Bool = true
-) -> Harness {
+) -> TeslaAccountSectionHarness {
     let source = InMemoryTeslaAccountStatusSource(initial: initial)
-    let opener = SpyTeslaAccountURLOpener()
-    let telemetry = SpyTeslaAccountTelemetry()
+    let opener = TeslaAccountSectionMutSpyTeslaAccountURLOpener()
+    let telemetry = TeslaAccountSectionMutSpyTeslaAccountTelemetry()
     let model = TeslaAccountModel(
         source: source,
         actions: actions,
@@ -68,24 +68,30 @@ private func makeHarness(
         onAuthRecovered: onAuthRecovered
     )
     if start { model.start() }
-    return Harness(model: model, source: source, actions: actions, opener: opener, telemetry: telemetry)
+    return TeslaAccountSectionHarness(
+        model: model,
+        source: source,
+        actions: actions,
+        opener: opener,
+        telemetry: telemetry
+    )
 }
 
 @MainActor
-private struct ControllableHarness {
+private struct TeslaAccountSectionControllableHarness {
     let model: TeslaAccountModel
     let source: InMemoryTeslaAccountStatusSource
     let actions: ControllableTeslaAccountActions
-    let opener: SpyTeslaAccountURLOpener
+    let opener: TeslaAccountSectionMutSpyTeslaAccountURLOpener
 }
 
 @MainActor
 private func makeControllableHarness(
     initial: TeslaAccountStatusInput? = nil
-) -> ControllableHarness {
+) -> TeslaAccountSectionControllableHarness {
     let source = InMemoryTeslaAccountStatusSource(initial: initial)
     let actions = ControllableTeslaAccountActions()
-    let opener = SpyTeslaAccountURLOpener()
+    let opener = TeslaAccountSectionMutSpyTeslaAccountURLOpener()
     let model = TeslaAccountModel(
         source: source,
         actions: actions,
@@ -95,7 +101,7 @@ private func makeControllableHarness(
         timeZone: utc
     )
     model.start()
-    return ControllableHarness(model: model, source: source, actions: actions, opener: opener)
+    return TeslaAccountSectionControllableHarness(model: model, source: source, actions: actions, opener: opener)
 }
 
 @MainActor
@@ -287,7 +293,7 @@ private func waitUntil(_ condition: () -> Bool) async {
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyTeslaAccountTelemetry: TeslaAccountTelemetry, @unchecked Sendable {
+private final class TeslaAccountSectionMutSpyTeslaAccountTelemetry: TeslaAccountTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)
@@ -296,7 +302,7 @@ private final class SpyTeslaAccountTelemetry: TeslaAccountTelemetry, @unchecked 
 
 /// Records the URLs handed to the opener so the Connect / Re-authorize path can be asserted.
 @MainActor
-private final class SpyTeslaAccountURLOpener: TeslaAccountURLOpening {
+private final class TeslaAccountSectionMutSpyTeslaAccountURLOpener: TeslaAccountURLOpening {
     private(set) var opened: [URL] = []
     func open(_ url: URL) {
         opened.append(url)
