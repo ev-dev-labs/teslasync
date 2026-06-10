@@ -1,0 +1,73 @@
+/*
+  TelemetryPipelineCard.strings
+  TeslaSync — P4 feature view · 0256 · TelemetryPipelineCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  TelemetryPipelineCard resolves (table "TelemetryPipelineCard") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface prompt
+  owns its own strings without editing the shared catalog.
+
+  The web source (features/system/components/status/TelemetryPipelineCard.tsx) is anonymous
+  — it has no `t()` calls — so these keys are minted here under the `telemetry.pipeline.*`
+  namespace, each carrying the verbatim English copy from the web source so the native
+  surface reads identically and stays fully localizable.
+*/
+
+/* --- Fleet rollup grid --- */
+"telemetry.pipeline.vehicles" = "Vehicles";
+"telemetry.pipeline.vehiclesConnected" = "%lld connected";
+"telemetry.pipeline.noneConfigured" = "none configured";
+"telemetry.pipeline.gpsPositions" = "GPS positions";
+"telemetry.pipeline.drives" = "Drives";
+"telemetry.pipeline.chargingSessions" = "Charging sessions";
+"telemetry.pipeline.signalLog" = "Signal log";
+
+/* --- Liveness summary + connectivity chips --- */
+"telemetry.pipeline.liveness" = "Liveness:";
+"telemetry.pipeline.sending" = "sending";
+"telemetry.pipeline.slow" = "slow";
+"telemetry.pipeline.stale" = "stale";
+"telemetry.pipeline.offline" = "offline";
+"telemetry.pipeline.fleetConnected" = "Fleet Telemetry connected";
+"telemetry.pipeline.mqttDisconnected" = "MQTT broker disconnected";
+"telemetry.pipeline.pollingStreamingOnly" = "polling engine off (streaming-only)";
+"telemetry.pipeline.pollingDisabled" = "polling engine disabled";
+
+/* --- Per-vehicle row --- */
+"telemetry.pipeline.vin" = "VIN";
+"telemetry.pipeline.vehicleFallback" = "Vehicle %lld";
+"telemetry.pipeline.stream" = "stream";
+"telemetry.pipeline.poll" = "poll";
+"telemetry.pipeline.last" = "last:";
+"telemetry.pipeline.next" = "next:";
+"telemetry.pipeline.vehicleHint" = "Opens vehicle detail";
+
+/* --- Canonical vehicle-state labels (web `vehicleStateBadge`) --- */
+"telemetry.pipeline.state.online" = "online";
+"telemetry.pipeline.state.driving" = "driving";
+"telemetry.pipeline.state.charging" = "charging";
+"telemetry.pipeline.state.asleep" = "asleep";
+"telemetry.pipeline.state.offline" = "offline";
+"telemetry.pipeline.state.unknown" = "unknown";
+
+/* --- Empty state (no vehicles configured) --- */
+"telemetry.pipeline.noVehicles" = "No vehicles configured yet. Add a vehicle to see per-vehicle telemetry status.";
+"telemetry.pipeline.teslaAccount" = "Tesla account";
+"telemetry.pipeline.teslaAccountHint" = "Opens the Tesla account page to add a vehicle";
+
+/* --- Footer links --- */
+"telemetry.pipeline.openCoverage" = "Open Telemetry Coverage";
+"telemetry.pipeline.mqttInspector" = "MQTT Inspector";
+"telemetry.pipeline.allVehicles" = "All vehicles";
+
+/* --- Freshness banner (stale / offline) --- */
+"telemetry.pipeline.staleBanner" = "Reconnecting — telemetry status may be stale";
+"telemetry.pipeline.offlineBanner" = "Offline — showing last known telemetry status";
+
+/* --- States + accessibility --- */
+"telemetry.pipeline.loading" = "Loading telemetry pipeline";
+"telemetry.pipeline.errorTitle" = "Couldn't load telemetry pipeline";
+"telemetry.pipeline.retry" = "Retry";
+"telemetry.pipeline.lastSeen" = "last seen";
+"telemetry.pipeline.batteryValue" = "battery %lld%%";
