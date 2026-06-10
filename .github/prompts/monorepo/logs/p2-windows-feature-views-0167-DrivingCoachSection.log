@@ -1,0 +1,147 @@
+=== P2 Feature view 0167 DrivingCoachSection (Windows) ===
+Surface  : DrivingCoachSection  (web: web/src/features/driving/components/driving-dynamics/DrivingCoachSection.tsx)
+Output   : apps/windows/TeslaSync.App/feature-views/DrivingCoachSection/{DrivingCoachSection.cs, DrivingCoachSection.Model.cs}
+Platform : WinUI 3 (Windows App SDK) + .NET 10 — AVAILABLE (dotnet 10.0.300 SDK; net10.0-windows10.0.19041.0 app
+           builds Release clean). The surface's UI-thread-free logic + tests run headless on plain net10.0.
+
+--- WEB SOURCE PARITY (the spec) ---
+DrivingCoachSection({ coachData: DrivingCoachData | undefined }) is a PRESENTATIONAL child of the Driving-Dynamics
+page; its only hook is useTranslation. The parent owns the query (useDrivingCoach -> /analytics/driving-coach) and
+passes coachData down. Composition (each panel ALWAYS renders, with its own friendly empty sub-state — never a
+hidden surface):
+  * Section heading "Driving Coach".
+  * 3-up row: RadialGauge(overall_score, max 100, green/amber/red arc by band) + "{count} drives analyzed" caption;
+      Style Breakdown (stacked bar of efficient/moderate/aggressive over total_drives_analyzed + legend with counts,
+      or EmptyState "Drive more to see your style breakdown."); two StatCards (Avg / Best Efficiency, Wh/km).
+  * Weekly Score Trend LineChart when weekly_trend.length > 1, else EmptyState "Need at least 2 weeks...".
+  * Driving Patterns: 5 label/percentage/threshold bars (Hard Acceleration lo20/hi40, Hard Braking 15/30, Highway
+      50/70, Short Trips (<5 km) 30/50, Cold Starts 15/30); value<=lo green, <=hi amber, else red.
+  * Recommendations: impact Badge (high=danger/medium=warning/low=success) + tip, or EmptyState "Recommendations
+      will appear after more drives.".
+  * Per-Drive Scores DataTable (Date | Score badge | Style badge | Wh/km | Distance) or EmptyState "Drive data will
+      appear after your first trip.". Score badge >=75 success / >=50 warning / else danger; Style efficient=success
+      / moderate=warning / aggressive=danger. fmtNumber default = 2 decimals; formatDateShort = "MMM d".
+
+--- NATIVE REPRODUCTION ---
+2-file presentational surface mirroring the established BatteryHealthSection split (P1/S8 state-holder seam — the
+parent owns the query and supplies the lifecycle state; the view never performs HTTP and raises RetryRequested):
+  * DrivingCoachSection.Model.cs : DrivingCoachSectionState (Loading/Ready/Empty/Error/Stale/Offline);
+      DrivingCoachData (+ CoachStyleBreakdown / CoachPatterns / CoachWeeklyPoint / CoachRecommendationItem /
+      CoachDriveScore) — pure data, the web coachData prop; DrivingCoachSectionModel (Status + Data + freshness)
+      with Loading/Empty/Failed/Ready/Stale/Offline factories; the full Display projection (score gauge band, style
+      segments + legend, efficiency stats, weekly-trend gate, pattern thresholds, recommendation impact, per-drive
+      rows) via DrivingCoachSectionProjection.Project; DrivingCoachSectionRegistration (slug); PII-safe
+      DrivingCoachSectionDiagnostics. No WinUI types — unit-tested headless.
+  * DrivingCoachSection.cs        : WinUI 3 view (ContentControl). Renders every state — Loading skeleton chrome
+      (polite LiveRegion), Empty (heading + EmptyState), Error (TsQueryError + Retry -> RetryRequested), and the
+      Ready/Stale/Offline composition: TsRadialGauge + caption, the style stacked bar (proportional star-grid) +
+      legend, two TsStatCard, TsLineChart weekly trend, five threshold pattern bars, recommendation cards
+      (TsBadge + tip), and the per-drive badge table (Date + Score TsBadge + Style TsBadge + Wh/km + Distance in a
+      scrollable star-grid). Stale/offline freshness chip in the header. Built from shared components only
+      (@/components/ui/charts/data-display/feedback/motion equivalents); TsFadeIn honours reduce-motion.
+  * gauge band: TsRadialGauge tints its arc from a themed ChartRole (no arbitrary hex like the web RadialGauge), the
+      established OptimizerSection precedent; the web green/amber/red SCORE BAND is carried verbatim by the per-drive
+      Score / Style badges (same >=75 / >=50 thresholds) and is unit-tested via DrivingCoachSectionProjection.ScoreBand.
+  * i18n: the web dynamics.coach.* keys are pre-seeded by P1/S10 in Strings/{en,he,ar}/Resources.resw
+      (incl. drivesAnalyzed "{0} drives analyzed"). The three style labels the web reads via
+      t('dynamics.coach.style.${key}') were the only missing keys; added dynamics.coach.style.{efficient,moderate,
+      aggressive} to all three locale catalogs (English placeholders, matching the rest of the pre-seeded coach
+      namespace; he/ar are placeholder-translated like the existing entries). Generic column headers map to existing
+      catalog keys (translation.Date/Score/Style/Distance, units.whkm). No English literal is hardcoded in native code.
+  * a11y: surface AutomationProperties.Name per state; gauge / stat-cards / legend rows / pattern rows / recommendation
+      cards / per-drive rows each carry a Narrator name; decorative glyphs + bars are AccessibilityView=Raw; loading
+      announced via a polite LiveRegion; reduce-motion honoured by TsFadeIn / TsSkeleton; Group automation peer.
+  * Telemetry: view.opened slug=DrivingCoachSection emitted once on Loaded (P1/S11), PII-safe (never logs a score,
+      efficiency, distance, style or drive id).
+
+--- PRE-EXISTING BASELINE BREAKAGE FOUND ON THIS BRANCH (git status clean at start) — REPAIRED ---
+  R1  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj had TWO <Project> roots (MSB4025: "multiple root
+      elements", line 731) — could not load, so the whole build/test gate was unreachable for EVERY surface. This is
+      the recurring integration-merge hazard the file's own INVARIANT comment documents. Repair (matching the sibling
+      0135 AddressInput / 0084 ConflictWarnings precedent): regenerated as exactly ONE canonical root whose Compile
+      group is the path-sorted, Include-deduplicated union of every WinUI-free source on disk under dashboard-widgets/
+      + feature-views/ (627 entries = the 626 disk-verified existing logic links + the 1 new DrivingCoachSection.Model.cs
+      link; presentational surface, so only its .Model.cs is compile-linked). Disk-vs-linked reconcile: 0 missing,
+      0 stale. Single root verified; well-formed XML; LF. Net diff: 30 insertions, 822 deletions. ZERO files touched
+      under apps/windows/TeslaSync.App.UITests.
+
+--- STEP 1: BUILD -- dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded. 0 Error(s). The new surface compiles clean under the app project's TreatWarningsAsErrors
+(CA1822 build-helpers marked static; CA1859 projection/table return types tightened). The only warnings are the
+17 pre-existing CA* analyzer warnings in TeslaSync.App.Core (a clean from-scratch build) — none in the new surface.
+BUILD_EXIT=0
+
+--- STEP 2a: HEADLESS TEST -- dotnet test apps/windows/TeslaSync.App.Tests.csproj -c Release ---
+Passed!  - Failed: 0, Passed: 13214, Skipped: 0, Total: 13214 - TeslaSync.App.Tests.dll (net10.0)
+  (incl. 63 new DrivingCoachSectionTests: state branch precedence [loading/error/empty/ready/stale/offline + a fresh
+   snapshot with 0 analysed drives collapses to empty, freshness wins over emptiness]; the score gauge value/label/
+   drives-analyzed interpolation + grouping + band thresholds [90/75 success, 74/50 warning, 49/0 danger]; style
+   breakdown segments [count/total, skip zero] + legend [all three, counts] + empty copy; efficiency stat-cards
+   [two-decimal fmtNumber + Wh/km]; weekly-trend gate [>1 point, series name, needWeeks empty]; the five pattern
+   indicators [order, percent text, clamp, per-pattern threshold colour]; recommendation impact mapping
+   [high=danger/medium=warning/low=success/unknown=success] + empty copy; per-drive headers + per-cell formatting
+   [Apr 4 / 88 / Efficient / 150.50 / 12.50 km], score+style bands, drive-id key, null-date em dash, empty copy;
+   freshness chip [stale warning / offline danger] + cached content preserved; fixed loading/error/retry copy;
+   accessible names for every state; PII-safe view.opened diagnostics; registration slug; null-arg validation.)
+  No sibling regression from the csproj reconsolidation or the resw additions.
+HEADLESS_TEST_EXIT=0
+
+--- STEP 2b: UIAUTOMATION E2E -- dotnet test apps/windows/TeslaSync.App.UITests.csproj -c Release (SEPARATE GATE) ---
+Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+  runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard
+  install paths or on PATH.  (WinAppDriverSession.EnsureReady, WinAppDriverSession.RunAsync)
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: environmental — the WinAppDriver/Appium runtime + a deployed MSIX app are absent
+  on this runner. All 147 tests fail-fast identically for EVERY surface; the documented behaviour of
+  apps/windows/run-ui-automation.ps1 and the W9-0002 [Category=UIAutomation] split, deferred per
+  apps/environment-pending-verifications.md. Out of scope for this surface: git-verified ZERO files modified under
+  apps/windows/TeslaSync.App.UITests/. The surface deliverable is fully covered by the headless suite + app build.)
+
+  NOTE: the prompt's literal whole-solution `dotnet test apps/windows/TeslaSync.sln` therefore reports TEST_EXIT=1
+  SOLELY because it bundles the environment-gated UIAutomation suite; the surface's own test gate (HEADLESS) is green.
+  Per the prompt capability note, WinUI 3 + .NET 10 themselves ARE available (build + headless logic run), so this is
+  a deferred E2E verification, not a platform-capability block.
+
+--- STEP 3: FORMAT -- dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+No changes needed (DrivingCoachSection sources + test + the regenerated csproj normalised to LF per .editorconfig).
+FORMAT_EXIT=0
+
+--- STEP 4: PLACEHOLDER/STUB GATE -- check-placeholders.ps1 -Path .../feature-views/DrivingCoachSection ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- FILES DELIVERED ---
+apps/windows/TeslaSync.App/feature-views/DrivingCoachSection/DrivingCoachSection.Model.cs  (state enum, DrivingCoachData
+  + sub-records, DrivingCoachSectionModel + factories, the full Display projection, ScoreBand, registration, diagnostics)
+apps/windows/TeslaSync.App/feature-views/DrivingCoachSection/DrivingCoachSection.cs        (WinUI 3 presentational view:
+  gauge + style breakdown + efficiency + weekly trend + patterns + recommendations + per-drive table; all six states;
+  freshness chip; Narrator names; LiveRegion; RetryRequested)
+apps/windows/TeslaSync.App.Tests/FeatureViews/DrivingCoachSectionTests.cs                  (63 headless projection tests)
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                                (REPAIR R1: single canonical
+  root; 627 path-sorted dedup Compile links incl. DrivingCoachSection.Model.cs)
+apps/windows/Strings/{en,he,ar}/Resources.resw                                             (+dynamics.coach.style.
+  {efficient,moderate,aggressive} — the three style labels the web reads, completing the pre-seeded coach namespace)
+
+--- ACCEPTANCE CRITERIA ---
+[x] Surface renders on Windows with every web-source state reproduced (the populated composition + each panel's
+    friendly empty sub-state) plus the contract superset (loading skeleton / error+retry / stale / offline); no
+    hidden surfaces.
+[x] Hooks bind to the shared P1/S8 state-holder layer — the presentational surface takes its model from the parent's
+    query state-holder (web coachData prop), exactly like BatteryHealthSection; no direct HTTP from the view.
+[x] Every i18n key from source has a matching catalog key (dynamics.coach.* pre-seeded; the three style.* keys added
+    to en/he/ar); generic column headers map to existing catalog keys; no hardcoded English in native code.
+[x] Accessibility labels present on every interactive/meaningful element (surface + gauge + stat-cards + legend rows
+    + pattern rows + recommendation cards + per-drive rows named; decorative glyphs/bars Narrator-hidden; polite
+    LiveRegion; Group automation peer).
+[x] Tests: data/projection adapter (cached model -> projection) + per-state snapshot/branch assertions + a11y label
+    presence + diagnostics tests (63 passing headless).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[x] Telemetry: view.opened slug=DrivingCoachSection emitted on load (P1/S11), PII-safe.
+
+--- GATE SUMMARY ---
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+UIAutomation E2E suite: BLOCKED on absent WinAppDriver runtime (environmental; separate W9-0002 gate; 0 files touched).
+The surface deliverable and every gate within this runner's capability are green.
+EXIT=0
+STATUS=DONE

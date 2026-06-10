@@ -9351,6 +9351,15 @@
   <data name="translation.dynamics.coach.shortTrips" xml:space="preserve">
     <value>Short Trips (&lt;5 km)</value>
   </data>
+  <data name="translation.dynamics.coach.style.aggressive" xml:space="preserve">
+    <value>Aggressive</value>
+  </data>
+  <data name="translation.dynamics.coach.style.efficient" xml:space="preserve">
+    <value>Efficient</value>
+  </data>
+  <data name="translation.dynamics.coach.style.moderate" xml:space="preserve">
+    <value>Moderate</value>
+  </data>
   <data name="translation.dynamics.coach.styleBreakdown" xml:space="preserve">
     <value>Style Breakdown</value>
   </data>
