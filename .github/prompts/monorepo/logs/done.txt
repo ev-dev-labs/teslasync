@@ -448,3 +448,4 @@ p2-windows/feature-views/W-0231-FSMTimelineChart.prompt.md
 p2-windows/feature-views/W-0236-AccordionSection.prompt.md
 p2-windows/feature-views/W-0234-SnapshotInspector.prompt.md
 p2-windows/feature-views/W-0235-StateTimeline.prompt.md
+p2-windows/feature-views/W-0237-AiUsageCard.prompt.md
