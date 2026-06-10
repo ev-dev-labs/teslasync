@@ -1,0 +1,326 @@
+/*
+  AlertStudioPage.strings
+  TeslaSync — P4 feature view · 0192 · AlertStudioPage (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "AlertStudioPage").
+  Every key the native AlertStudioPage resolves lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its strings without editing
+  the shared catalog.
+
+  The web i18next `{{token}}` interpolation is preserved verbatim (the native
+  localizer substitutes `{{token}}`). The first groups are the EXACT static keys
+  extracted from web/src/features/notifications/pages/AlertStudioPage.tsx; the trailing
+  generated block covers the per-template / per-category keys the web builds from
+  `templateKey(name)`, each falling back to the curated English exactly as the web
+  `t(key, tpl.name)` call does.
+*/
+
+/* --- Page chrome --- */
+"notifications.alertStudio.title" = "Alert Studio";
+"notifications.alertStudio.subtitle" = "Create custom rules from Fleet Telemetry signals";
+"notifications.alertStudio.rules.untitled" = "Untitled";
+
+/* --- Page actions --- */
+"notifications.alertStudio.actions.templates" = "Templates";
+"notifications.alertStudio.actions.newRule" = "New Rule";
+"notifications.alertStudio.actions.saving" = "Saving...";
+"notifications.alertStudio.actions.updateRule" = "Update Rule";
+"notifications.alertStudio.actions.createRule" = "Create Rule";
+"notifications.alertStudio.actions.delete" = "Delete";
+"notifications.alertStudio.actions.test" = "Test";
+"notifications.alertStudio.actions.reset" = "Reset";
+
+/* --- Templates panel --- */
+"notifications.alertStudio.templates.header" = "Rule Templates - {{count}} pre-built rules";
+"notifications.alertStudio.templates.searchPlaceholder" = "Search templates...";
+"notifications.alertStudio.templates.allCategory" = "All";
+"notifications.alertStudio.templates.use" = "Use";
+"notifications.alertStudio.templates.noMatchesTitle" = "No templates found";
+"notifications.alertStudio.templates.noMatches" = "No templates match your search";
+
+/* --- Rules panel --- */
+"notifications.alertStudio.rules.title" = "Rules";
+"notifications.alertStudio.rules.countOne" = "1 rule";
+"notifications.alertStudio.rules.countMany" = "{{count}} rules";
+"notifications.alertStudio.rules.searchPlaceholder" = "Search rules...";
+"notifications.alertStudio.rules.emptyTitle" = "No alert rules yet";
+"notifications.alertStudio.rules.emptyDescription" = "Create your first rule or pick a template above.";
+"notifications.alertStudio.rules.noMatchesTitle" = "No matching rules";
+"notifications.alertStudio.rules.noMatches" = "No rules match \"{{search}}\"";
+"notifications.alertStudio.rules.selectRow" = "Select rule {{name}}";
+"notifications.alertStudio.rules.onceMode" = "Once";
+"notifications.alertStudio.rules.onceModeHint" = "Fires once until condition resets";
+"notifications.alertStudio.rules.disable" = "Disable";
+"notifications.alertStudio.rules.enable" = "Enable";
+"notifications.alertStudio.rules.disableRule" = "Disable rule";
+"notifications.alertStudio.rules.enableRule" = "Enable rule";
+"notifications.alertStudio.rules.deleteRule" = "Delete rule";
+"notifications.alertStudio.rules.confirmDeleteTitle" = "Delete rule?";
+"notifications.alertStudio.rules.confirmDelete" = "Delete \"{{name}}\"?";
+
+/* --- Snooze --- */
+"notifications.alertStudio.snooze.badge" = "Snoozed until {{time}}";
+"notifications.alertStudio.snooze.manage" = "Manage snooze";
+"notifications.alertStudio.snooze.button" = "Snooze";
+"notifications.alertStudio.snooze.title" = "Snooze \"{{name}}\"";
+"notifications.alertStudio.snooze.description" = "Suppress this rule temporarily. Snooze auto-expires; the rule will fire again afterwards if its condition is true.";
+"notifications.alertStudio.snooze.currentlySnoozed" = "Currently snoozed until {{time}}";
+"notifications.alertStudio.snooze.1h" = "Snooze 1 hour";
+"notifications.alertStudio.snooze.4h" = "Snooze 4 hours";
+"notifications.alertStudio.snooze.24h" = "Snooze 24 hours";
+"notifications.alertStudio.snooze.cancel" = "Cancel snooze";
+
+/* --- Editor: identity + targeting --- */
+"notifications.alertStudio.editor.editTitle" = "Edit Rule";
+"notifications.alertStudio.editor.newTitle" = "New Rule";
+"notifications.alertStudio.editor.nameLabel" = "Name";
+"notifications.alertStudio.editor.namePlaceholder" = "My alert rule";
+"notifications.alertStudio.editor.enabledLabel" = "Status";
+"notifications.alertStudio.editor.enabled" = "Enabled";
+"notifications.alertStudio.editor.disabled" = "Disabled";
+"notifications.alertStudio.editor.vehiclesLabel" = "Vehicles";
+"notifications.alertStudio.editor.vehiclesEmptyError" = "Select at least one vehicle.";
+"notifications.alertStudio.editor.vehiclesAll" = "All vehicles";
+"notifications.alertStudio.editor.vehiclesSpecific" = "Specific";
+"notifications.alertStudio.editor.vehiclesNone" = "No vehicles available";
+"notifications.alertStudio.editor.kindLabel" = "Rule type";
+
+/* --- Editor: computed metric (native chrome for the inline picker) --- */
+"notifications.alertStudio.editor.metricLabel" = "Metric";
+"notifications.alertStudio.editor.metricWindowLabel" = "Window";
+"notifications.alertStudio.editor.metricOpLabel" = "Operator";
+"notifications.alertStudio.editor.metricThresholdLabel" = "Threshold";
+"notifications.alertStudio.editor.metricPrompt" = "Select a metric";
+"notifications.alertStudio.editor.metricWindowPrompt" = "Select a window";
+"notifications.alertStudio.editor.metricsEmpty" = "No computed metrics available";
+
+/* --- Editor: kind --- */
+"notifications.alertStudio.kind.signal" = "Signal threshold";
+"notifications.alertStudio.kind.computedMetric" = "Computed metric";
+"notifications.alertStudio.kind.computedMetricHint" = "Aggregate metric (cost, kWh, distance) over a time window.";
+"notifications.alertStudio.kind.signalHint" = "Fires when a raw telemetry signal crosses a threshold.";
+
+/* --- Editor: signal + operator --- */
+"notifications.alertStudio.editor.signalNameLabel" = "Signal";
+"notifications.alertStudio.editor.signalNamePlaceholder" = "Select a telemetry signal";
+"notifications.alertStudio.editor.signalTypeHint" = "{{type}} signal from {{category}}";
+"notifications.alertStudio.editor.operatorLabel" = "Operator";
+"notifications.alertStudio.editor.allowedOperatorsLabel" = "Allowed Operators";
+"notifications.alertStudio.editor.allowedOperatorsPlaceholder" = "Select a signal to see its operators";
+
+/* --- Editor: typed value --- */
+"notifications.alertStudio.editor.typedValueLabel" = "Typed Value";
+"notifications.alertStudio.editor.noSignalTitle" = "Choose a signal";
+"notifications.alertStudio.editor.noSignalDescription" = "Select a telemetry signal before entering a comparison value.";
+"notifications.alertStudio.editor.minValueLabel" = "Minimum Value";
+"notifications.alertStudio.editor.maxValueLabel" = "Maximum Value";
+"notifications.alertStudio.editor.textValueLabel" = "Text Value";
+"notifications.alertStudio.editor.textValuePlaceholder" = "Value to compare";
+"notifications.alertStudio.editor.booleanValueLabel" = "Boolean Value";
+"notifications.alertStudio.editor.anyChangeDescription" = "This rule fires whenever the selected signal changes.";
+"notifications.alertStudio.editor.numericValueLabel" = "Numeric Value";
+
+/* --- Editor: severity + behavior --- */
+"notifications.alertStudio.editor.severityLabel" = "Severity";
+"notifications.alertStudio.editor.cooldownLabel" = "Cooldown (minutes)";
+"notifications.alertStudio.editor.alertBehaviorLabel" = "Alert Behavior";
+"notifications.alertStudio.editor.alertBehaviorPlaceholder" = "— Choose one —";
+"notifications.alertStudio.editor.alertBehavior.repeatLabel" = "Re-alert until resolved";
+"notifications.alertStudio.editor.alertBehavior.onceLabel" = "Notify on event";
+"notifications.alertStudio.editor.alertBehavior.recommendBanner" = "Recommended for \"{{op}}\" comparisons: {{recommended}}.";
+"notifications.alertStudio.editor.alertBehavior.recommendBannerAlt" = "{{alternative}} is also valid — pick whatever fits.";
+"notifications.alertStudio.editor.alertBehavior.forceChoose" = "Pick how this alert should behave.";
+"notifications.alertStudio.editor.alertBehavior.onceDesc" = "Fires when the condition is first met. Stays quiet until it resets.";
+"notifications.alertStudio.editor.alertBehavior.repeatDesc" = "Keeps firing every {{cooldown}} minutes while the condition stays true.";
+
+/* --- Editor: max fires + escalation --- */
+"notifications.alertStudio.editor.maxFiresLabel" = "Max alerts before condition resolves";
+"notifications.alertStudio.editor.maxFiresPlaceholder" = "Leave blank for unlimited";
+"notifications.alertStudio.editor.maxFiresHint" = "Only applies to repeat-mode rules. Once-mode already caps at 1 per resolution.";
+"notifications.alertStudio.editor.escalationCheckboxLabel" = "Escalate to a higher severity if the condition stays unresolved";
+"notifications.alertStudio.editor.escalationAfterLabel" = "Escalate after (minutes)";
+"notifications.alertStudio.editor.escalationAfterPlaceholder" = "e.g. 30";
+"notifications.alertStudio.editor.escalationSeverityLabel" = "Escalated severity";
+"notifications.alertStudio.editor.escalationSeverityPlaceholder" = "Select severity…";
+"notifications.alertStudio.editor.escalationHint" = "Only repeat-mode rules can escalate. The escalated severity must be higher than the base severity.";
+
+/* --- Editor: message template (web AlertMessageEditor controls) --- */
+"notifications.alertStudio.editor.messageTemplateLabel" = "Notification message";
+"notifications.alertStudio.editor.messageTemplatePrompt" = "Use {{Signal}} tokens, or leave blank for the default body.";
+"notifications.alertStudio.editor.includeTitleLabel" = "Include title in external notifications";
+"notifications.alertStudio.editor.messageHelp" = "Blank uses the op-aware default. Title-off delivers body-only to Discord/Slack/Telegram/ntfy/webhook.";
+
+/* --- Channels (test delivery target) --- */
+"notifications.alertStudio.channels.testTargetLabel" = "Test Delivery Target";
+"notifications.alertStudio.channels.browserToast" = "Browser toast notification (real-time via SSE)";
+"notifications.alertStudio.channels.alertHistory" = "Alert history (saved to database)";
+"notifications.alertStudio.channels.externalChannels" = "External channels for test notifications:";
+"notifications.alertStudio.channels.emptyTitle" = "No external channels configured";
+"notifications.alertStudio.channels.emptyDescription" = "Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts.";
+
+/* --- Severity / signal-type / boolean labels --- */
+"notifications.alertStudio.severity.info" = "Info";
+"notifications.alertStudio.severity.warn" = "Warning";
+"notifications.alertStudio.severity.critical" = "Critical";
+"notifications.alertStudio.signalTypes.numeric" = "Numeric";
+"notifications.alertStudio.signalTypes.text" = "Text";
+"notifications.alertStudio.signalTypes.bool" = "Boolean";
+"notifications.alertStudio.boolean.true" = "True";
+"notifications.alertStudio.boolean.false" = "False";
+
+/* --- Operators (web `operators.${op}`, fallback = symbol) --- */
+"notifications.alertStudio.operators.=" = "=";
+"notifications.alertStudio.operators.!=" = "!=";
+"notifications.alertStudio.operators.<" = "<";
+"notifications.alertStudio.operators.<=" = "<=";
+"notifications.alertStudio.operators.>" = ">";
+"notifications.alertStudio.operators.>=" = ">=";
+"notifications.alertStudio.operators.changed" = "changed";
+"notifications.alertStudio.operators.between" = "between";
+"notifications.alertStudio.operators.outside" = "outside";
+
+/* --- Signal option labels --- */
+"notifications.alertStudio.signals.optionLabel" = "{{name}} - {{type}} - {{category}}";
+"notifications.alertStudio.signals.customOptionLabel" = "{{name}} - {{type}} - Custom";
+"notifications.alertStudio.signalCategories.custom" = "Custom";
+
+/* --- Shared cross-surface keys (forms / bulk / common / draft) --- */
+"forms.unsavedRule" = "You have an unsaved alert rule.";
+"forms.unsavedTitle" = "Unsaved changes";
+"forms.unsavedWarning" = "You have unsaved changes. Discard them?";
+"forms.discard" = "Discard";
+"forms.keepEditing" = "Keep editing";
+"forms.validationFailed" = "Please fix the highlighted fields and try again.";
+"bulk.actions.enable" = "Enable";
+"bulk.actions.disable" = "Disable";
+"bulk.noun.rule_one" = "alert rule";
+"bulk.noun.rule_other" = "alert rules";
+"common.delete" = "Delete";
+"common.cancel" = "Cancel";
+"draft.noun.rule" = "Alert rule";
+"notifications.alertStudio.test.defaultMessage" = "Test notification from Alert Studio";
+
+/* --- Native chrome (states / freshness / a11y regions) --- */
+"notifications.alertStudio.state.loading" = "Loading alert rules…";
+"notifications.alertStudio.state.errorTitle" = "Couldn’t load alert rules";
+"notifications.alertStudio.state.retry" = "Retry";
+"notifications.alertStudio.state.offlineTitle" = "You’re offline";
+"notifications.alertStudio.state.offlineMessage" = "Reconnect to load your alert rules.";
+"notifications.alertStudio.freshness.stale" = "Stale";
+"notifications.alertStudio.freshness.offline" = "Offline";
+"notifications.alertStudio.channels.errorTitle" = "Couldn’t load channels";
+"notifications.alertStudio.ai.builderRegion" = "AI alert builder";
+"notifications.alertStudio.ai.conflictRegion" = "AI cross-rule conflict detection";
+"notifications.alertStudio.ai.tuningRegion" = "AI alert tuning suggestions";
+
+/* --- Generated per-template keys (web `templateKey(name)`); fallback = curated English --- */
+"notifications.alertStudio.templates.battery.low.20.name" = "Battery Low (< 20%)";
+"notifications.alertStudio.templates.battery.low.20.message" = "Battery at {{BatteryLevel}}%";
+"notifications.alertStudio.templates.battery.critical.10.name" = "Battery Critical (< 10%)";
+"notifications.alertStudio.templates.battery.critical.10.message" = "Battery critically low at {{BatteryLevel}}%!";
+"notifications.alertStudio.templates.battery.full.90.name" = "Battery Full (>= 90%)";
+"notifications.alertStudio.templates.battery.full.90.message" = "Battery reached {{BatteryLevel}}%";
+"notifications.alertStudio.templates.charge.limit.reached.name" = "Charge Limit Reached";
+"notifications.alertStudio.templates.charge.limit.reached.message" = "Battery at charge limit {{ChargeLimitSoc}}%";
+"notifications.alertStudio.templates.range.below.50.km.name" = "Range Below 50 km";
+"notifications.alertStudio.templates.range.below.50.km.message" = "Range low: {{RatedRange}} km remaining";
+"notifications.alertStudio.templates.charge.complete.name" = "Charge Complete";
+"notifications.alertStudio.templates.charge.complete.message" = "Charging complete at {{BatteryLevel}}%";
+"notifications.alertStudio.templates.charging.started.name" = "Charging Started";
+"notifications.alertStudio.templates.charging.started.message" = "Charging started - {{DetailedChargeState}}";
+"notifications.alertStudio.templates.charging.stopped.unexpectedly.name" = "Charging Stopped Unexpectedly";
+"notifications.alertStudio.templates.charging.stopped.unexpectedly.message" = "Charging stopped - {{DetailedChargeState}}";
+"notifications.alertStudio.templates.supercharging.dc.fast.name" = "Supercharging (DC Fast)";
+"notifications.alertStudio.templates.supercharging.dc.fast.message" = "Supercharging at {{DCChargingPower}} kW";
+"notifications.alertStudio.templates.slow.charge.rate.name" = "Slow Charge Rate";
+"notifications.alertStudio.templates.slow.charge.rate.message" = "Charging slow: {{ChargeAmps}}A";
+"notifications.alertStudio.templates.drive.started.name" = "Drive Started";
+"notifications.alertStudio.templates.drive.started.message" = "Drive started - gear is {{Gear}}";
+"notifications.alertStudio.templates.drive.ended.name" = "Drive Ended";
+"notifications.alertStudio.templates.drive.ended.message" = "Drive ended - gear is {{Gear}}";
+"notifications.alertStudio.templates.speed.limit.exceeded.name" = "Speed Limit Exceeded";
+"notifications.alertStudio.templates.speed.limit.exceeded.message" = "Speed {{VehicleSpeed}} km/h exceeded limit";
+"notifications.alertStudio.templates.high.speed.alert.160.km.h.name" = "High Speed Alert (> 160 km/h)";
+"notifications.alertStudio.templates.high.speed.alert.160.km.h.message" = "Very high speed: {{VehicleSpeed}} km/h!";
+"notifications.alertStudio.templates.reverse.gear.engaged.name" = "Reverse Gear Engaged";
+"notifications.alertStudio.templates.reverse.gear.engaged.message" = "Vehicle in reverse";
+"notifications.alertStudio.templates.odometer.milestone.100k.km.name" = "Odometer Milestone (100k km)";
+"notifications.alertStudio.templates.odometer.milestone.100k.km.message" = "Odometer: {{Odometer}} km";
+"notifications.alertStudio.templates.car.unlocked.while.parked.name" = "Car Unlocked While Parked";
+"notifications.alertStudio.templates.car.unlocked.while.parked.message" = "Vehicle is unlocked and parked!";
+"notifications.alertStudio.templates.vehicle.locked.name" = "Vehicle Locked";
+"notifications.alertStudio.templates.vehicle.locked.message" = "Vehicle locked";
+"notifications.alertStudio.templates.vehicle.unlocked.name" = "Vehicle Unlocked";
+"notifications.alertStudio.templates.vehicle.unlocked.message" = "Vehicle unlocked";
+"notifications.alertStudio.templates.sentry.mode.activated.name" = "Sentry Mode Activated";
+"notifications.alertStudio.templates.sentry.mode.activated.message" = "Sentry mode activated";
+"notifications.alertStudio.templates.door.opened.while.parked.name" = "Door Opened While Parked";
+"notifications.alertStudio.templates.door.opened.while.parked.message" = "Door opened - {{DoorState}}";
+"notifications.alertStudio.templates.window.left.open.name" = "Window Left Open";
+"notifications.alertStudio.templates.window.left.open.message" = "Front driver window is {{FdWindow}}";
+"notifications.alertStudio.templates.valet.mode.enabled.name" = "Valet Mode Enabled";
+"notifications.alertStudio.templates.valet.mode.enabled.message" = "Valet mode enabled";
+"notifications.alertStudio.templates.guest.mode.enabled.name" = "Guest Mode Enabled";
+"notifications.alertStudio.templates.guest.mode.enabled.message" = "Guest mode enabled";
+"notifications.alertStudio.templates.cabin.overheat.40c.name" = "Cabin Overheat (> 40C)";
+"notifications.alertStudio.templates.cabin.overheat.40c.message" = "Cabin temp: {{InsideTemp}}C";
+"notifications.alertStudio.templates.cabin.freezing.0c.name" = "Cabin Freezing (< 0C)";
+"notifications.alertStudio.templates.cabin.freezing.0c.message" = "Cabin temp: {{InsideTemp}}C - freezing!";
+"notifications.alertStudio.templates.hvac.left.on.while.parked.name" = "HVAC Left On While Parked";
+"notifications.alertStudio.templates.hvac.left.on.while.parked.message" = "HVAC running while parked";
+"notifications.alertStudio.templates.climate.keeper.active.name" = "Climate Keeper Active";
+"notifications.alertStudio.templates.climate.keeper.active.message" = "Climate keeper: {{ClimateKeeperMode}}";
+"notifications.alertStudio.templates.steering.wheel.heater.on.name" = "Steering Wheel Heater On";
+"notifications.alertStudio.templates.steering.wheel.heater.on.message" = "Steering wheel heater level {{HvacSteeringWheelHeatLevel}}";
+"notifications.alertStudio.templates.tire.pressure.low.name" = "Tire Pressure Low";
+"notifications.alertStudio.templates.tire.pressure.low.message" = "Low tire pressure detected";
+"notifications.alertStudio.templates.tire.pressure.soft.warning.name" = "Tire Pressure Soft Warning";
+"notifications.alertStudio.templates.tire.pressure.soft.warning.message" = "Tire pressure slightly low";
+"notifications.alertStudio.templates.front.left.tire.low.2.2.bar.name" = "Front Left Tire Low (< 2.2 bar)";
+"notifications.alertStudio.templates.front.left.tire.low.2.2.bar.message" = "FL tire: {{TpmsPressureFl}} bar";
+"notifications.alertStudio.templates.arrived.at.home.name" = "Arrived at Home";
+"notifications.alertStudio.templates.arrived.at.home.message" = "Vehicle arrived at home";
+"notifications.alertStudio.templates.left.home.name" = "Left Home";
+"notifications.alertStudio.templates.left.home.message" = "Vehicle left home";
+"notifications.alertStudio.templates.arrived.at.work.name" = "Arrived at Work";
+"notifications.alertStudio.templates.arrived.at.work.message" = "Vehicle arrived at work";
+"notifications.alertStudio.templates.navigation.started.name" = "Navigation Started";
+"notifications.alertStudio.templates.navigation.started.message" = "Navigating to {{DestinationName}}";
+"notifications.alertStudio.templates.driver.seatbelt.unbuckled.name" = "Driver Seatbelt Unbuckled";
+"notifications.alertStudio.templates.driver.seatbelt.unbuckled.message" = "Driver seatbelt unbuckled while driving!";
+"notifications.alertStudio.templates.speed.limit.mode.active.name" = "Speed Limit Mode Active";
+"notifications.alertStudio.templates.speed.limit.mode.active.message" = "Speed limit mode active";
+"notifications.alertStudio.templates.pin.to.drive.disabled.name" = "PIN to Drive Disabled";
+"notifications.alertStudio.templates.pin.to.drive.disabled.message" = "PIN to Drive has been disabled";
+"notifications.alertStudio.templates.high.motor.temperature.80c.name" = "High Motor Temperature (> 80C)";
+"notifications.alertStudio.templates.high.motor.temperature.80c.message" = "Motor stator temp: {{DiStatorTempF}}C";
+"notifications.alertStudio.templates.hvil.fault.name" = "HVIL Fault";
+"notifications.alertStudio.templates.hvil.fault.message" = "HV interlock fault detected!";
+"notifications.alertStudio.templates.high.regenerative.braking.name" = "High Regenerative Braking";
+"notifications.alertStudio.templates.high.regenerative.braking.message" = "Regen power: {{Power}} kW";
+"notifications.alertStudio.templates.software.update.available.name" = "Software Update Available";
+"notifications.alertStudio.templates.software.update.available.message" = "Update available: {{SoftwareUpdateVersion}}";
+"notifications.alertStudio.templates.software.update.installing.name" = "Software Update Installing";
+"notifications.alertStudio.templates.software.update.installing.message" = "Installing update: {{SoftwareUpdateInstallationPercentComplete}}%";
+"notifications.alertStudio.templates.music.playing.name" = "Music Playing";
+"notifications.alertStudio.templates.music.playing.message" = "Now playing: {{MediaNowPlayingTitle}} by {{MediaNowPlayingArtist}}";
+"notifications.alertStudio.templates.volume.too.high.name" = "Volume Too High";
+"notifications.alertStudio.templates.volume.too.high.message" = "Volume at {{MediaAudioVolume}}";
+"notifications.alertStudio.templates.powershare.active.name" = "Powershare Active";
+"notifications.alertStudio.templates.powershare.active.message" = "Powershare active: {{PowershareInstantaneousPowerKW}} kW";
+
+/* --- Generated per-category keys --- */
+"notifications.alertStudio.templateCategories.battery" = "Battery";
+"notifications.alertStudio.templateCategories.charging" = "Charging";
+"notifications.alertStudio.templateCategories.climate" = "Climate";
+"notifications.alertStudio.templateCategories.driving" = "Driving";
+"notifications.alertStudio.templateCategories.location" = "Location";
+"notifications.alertStudio.templateCategories.media" = "Media";
+"notifications.alertStudio.templateCategories.motor" = "Motor";
+"notifications.alertStudio.templateCategories.powershare" = "Powershare";
+"notifications.alertStudio.templateCategories.safety" = "Safety";
+"notifications.alertStudio.templateCategories.security" = "Security";
+"notifications.alertStudio.templateCategories.software" = "Software";
+"notifications.alertStudio.templateCategories.tire.pressure" = "Tire Pressure";
