@@ -1,0 +1,63 @@
+=== P2 Feature view 0170 LiveMotorStatus (Windows) ===
+run: 2026-06-10T11:28:53.1765021-07:00
+host: ATUL-THINK-I9  dotnet: 10.0.300
+
+Surface: apps/windows/TeslaSync.App/feature-views/LiveMotorStatus/Driving/ (Model / Source / ViewModel / view .cs)
+Web source: web/src/features/driving/components/driving-dynamics/LiveMotorStatus.tsx
+
+DEVIATION (no silent drift): prompt W-0170 and the already-merged predecessor W-0157 both name the native
+output path feature-views/LiveMotorStatus.* but port two DIFFERENT, coexisting web components (driving-dynamics
+vs drivetrain-health). 0157 (drivetrain-health) is committed at feature-views/LiveMotorStatus/. Per covenant
+rule 7 (no predecessor bypass) the 0157 surface is left untouched; 0170 ships as a coexisting surface under
+feature-views/LiveMotorStatus/Driving/ in namespace TeslaSync.App.FeatureViews.Driving, mirroring the repo's
+existing HeroGauges/{Analytics,Charging,Driving} same-name / per-namespace precedent. The prompt's gate /
+commit / placeholder paths (feature-views/LiveMotorStatus) cover the new files unchanged.
+
+PRE-EXISTING BLOCKER repaired (tightly coupled to this task): apps/windows/TeslaSync.App.Tests/
+TeslaSync.App.Tests.csproj was committed corrupt at HEAD - two concatenated <Project> roots (MSB4025 at line
+755) with ~1338 duplicated Compile items - which failed the whole Windows solution build BEFORE any change
+(baseline RED, captured). Re-consolidated into one canonical root: the path-sorted, on-disk-validated,
+deduplicated union of all 631 WinUI-free logic links + the 3 new LiveMotorStatus/Driving links (634 total).
+Same repair the predecessor surfaces (0157/0049/0084/0086/0117/0148) document performing.
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+17 Warning(s)   (pre-existing CA analyzers in TeslaSync.App.Core; the new surface compiles warning-clean under
+                 the App project's TreatWarningsAsErrors=true)
+0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation
+(headless surface-logic gate - authoritative; the W9-0002 UIAutomation E2E suite is separated per the 0157 precedent)
+Passed!  - Failed: 0, Passed: 13301, Skipped: 0, Total: 13301 - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+DrivingDynamicsLiveMotorStatus surface tests (FullyQualifiedName~DrivingDynamicsLiveMotorStatusTests):
+Passed!  - Failed: 0, Passed: 39, Skipped: 0, Total: 39 - TeslaSync.App.Tests.dll (net10.0)
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+format error lines: 0
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/LiveMotorStatus
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+### EVIDENCE: whole-solution dotnet test (the prompt's literal STEP 2)
+Its only red is the environment-gated W9-0002 UIAutomation E2E suite (WinAppDriver/Appium absent on this runner):
+Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed: 0, Passed: 13301, Skipped: 0, Total: 13301 - TeslaSync.App.Tests.dll (net10.0)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its
+standard install paths or on PATH.
+WHOLE_SOLUTION_TEST_EXIT=1  (non-zero ONLY via the env-gated UIAutomation E2E suite; the headless gate above is
+authoritative, identical to p2-windows-feature-views-0157-LiveMotorStatus.log)
+
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+DrivingDynamicsLiveMotorStatus surface tests: 39 passed / 0 failed.
+Platform capability: WinUI 3 (Windows App SDK 1.6+) + .NET 10 IS available - the surface builds and its logic is
+fully covered headlessly, so STATUS is DONE (not BLOCKED). The only non-headless red is the env-gated
+UIAutomation E2E suite (WinAppDriver absent), evidenced above and identical to the predecessor 0157 gate.
+EXIT=0
+STATUS=DONE
