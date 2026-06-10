@@ -1,0 +1,155 @@
+=== P2 Feature view 0239 BackendStatusSection (Windows) ===
+Runner: Windows_NT 10.0.26200  |  .NET SDK 10.0.300  |  Microsoft.WindowsDesktop.App 10.0.8 present
+        (WinUI 3 / Windows App SDK BUILD capability present — step [1] builds the WinUI 3 surface).
+Web source (spec): web/src/features/system/components/status/BackendStatusSection.tsx
+Native output:     apps/windows/TeslaSync.App/feature-views/BackendStatusSection.cs
+                   apps/windows/TeslaSync.App/feature-views/BackendStatusSection.Model.cs
+                   apps/windows/TeslaSync.App/feature-views/BackendStatusSection.Source.cs
+                   apps/windows/TeslaSync.App/feature-views/BackendStatusSection.ViewModel.cs
+Tests:             apps/windows/TeslaSync.App.Tests/FeatureViews/BackendStatusSectionTests.cs (53 tests)
+Tests wiring:      apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+                   (Compile-link of the WinUI-free Model.cs / Source.cs / ViewModel.cs)
+i18n catalog:      apps/shared/i18n/catalog/en.json (27 translation.featureView.backendStatus.* keys)
+
+--- DELIVERABLE SUMMARY ---
+Native WinUI 3 parity port of the web BackendStatusSection accordion, following the established
+Source / Model / ViewModel / View seam (sibling: RateLimitStatusPanel, FleetTelemetryHealth):
+  * BackendStatusSection.Source.cs — IBackendStatusSource + repository-backed BackendStatusSource: three
+    independent cache-then-network reads through the shared CacheThenNetworkEngine, one per web query:
+      - GET /system/health          (get_api_v1_system_health)          web useQuery(getExtendedHealth)
+      - GET /dev-tools/runtime-info (get_api_v1_dev_tools_runtime_info)  web useConnectionPool
+      - GET /system/version         (get_api_v1_system_version)          web useQuery(getVersionInfo)
+    All three generated operation ids verified present in Generated/Api/ApiEndpoints.cs. No HTTP in the view.
+  * BackendStatusSection.Model.cs — null-tolerant JSON adapters; BackendHealthSnapshot (components map +
+    embedded system block), ConnectionPoolSnapshot (max_open/open/in_use/idle/wait_count, exact Go wire
+    field names verified in internal/api/devtools/handler.go), VersionSnapshot; the getStatusIcon /
+    statusTextClass status→StatusKind+glyph mapping; the formatUptime port; the okCount badge variant; three
+    result mappers; registration (id=backend-status-section, slug=BackendStatusSection); PII-safe diagnostics.
+  * BackendStatusSection.ViewModel.cs — INotifyPropertyChanged state holder; folds the three streams into one
+    section state (loading/loaded/empty/error/stale/offline). The combined skeleton mirrors the web
+    isLoading = extLoading || poolLoading via sticky per-query "resolved" flags (TanStack isLoading semantics:
+    true only until first settle, never on refetch). Snapshot retention avoids content flicker on refresh.
+  * BackendStatusSection.cs — TsAccordion (Expander, defaultOpen) header = backend glyph + title + description
+    + "{ok}/{total} healthy" TsBadge + TsDataFreshness; body switches on state: loading skeleton (live region),
+    TsQueryError + retry, TsEmptyState, or the three sub-sections — Component Health (TsDataTable-style grid:
+    status glyph+tone / component / latency / failures coloured red when >0 / last-check), Database Connection
+    Pool (five TsStatCards), System Runtime (TsKVList). Each sub-section renders its own friendly empty surface
+    (never hidden). Every string via ILocalizer; AutomationProperties.SetName on every data row, the badge and
+    interactive elements; decorative icons set to AccessibilityView.Raw.
+  * All UI-free logic (parse / projection / state machine / i18n keys / diagnostics) is unit-tested headlessly;
+    the WinUI view is exercised by the app build (step [1]).
+
+--- PRE-EXISTING BLOCKER REPAIRED (tightly coupled to this task; matches the 0188/0214/0218/0221/0225/0226/0228/0232 precedent) ---
+Baseline `dotnet build apps/windows/TeslaSync.sln -c Release` FAILED before any change, at the test csproj:
+  TeslaSync.App.Tests.csproj(922,3): error MSB4025: The project file could not be loaded. Unexpected end tag.
+The csproj (committed at HEAD, clean working tree) had been re-concatenated by the .gitattributes merge=union
+strategy into ONE <Project> open tag but FOUR </Project> close tags (lines 920/922/925/927), a stray duplicate
+</ItemGroup>, multiple mangled/overlapping header XML comments with leaked prose (MSB4067 <#text> under
+<Project>), and 24 duplicate <Compile> Include items (NETSDK1022). This is the test project this surface must
+extend and which the gate's `dotnet test` must load, so repairing it is in-scope (the INVARIANT comment in the
+file documents this exact recurring repair).
+Repair: regenerated ONE canonical <Project> root (Sdk + a single clean header comment + the 5 real element
+children: PropertyGroup, PackageReference / ProjectReference / Content / Compile ItemGroups), dropping the
+corrupted comment/text nodes, then de-duplicated the Compile ItemGroup by Include path and added the new
+BackendStatusSection Model/Source/ViewModel links (alphabetically, before BackendTool).
+Result: XML_VALID=TRUE (System.Xml + System.Text.Json), PROJECT_OPEN=1, PROJECT_CLOSE=1, COMPILE_TOTAL=715,
+COMPILE_UNIQUE=715, DUP_COUNT=0, end_of_line=lf. No include path removed (only duplicates collapsed).
+
+--- i18n CATALOG REGISTRATION (acceptance criterion #3) ---
+Added 27 keys translation.featureView.backendStatus.* to apps/shared/i18n/catalog/en.json (surgical insert at
+the head of "entries", rest of the 39,798-line file preserved byte-for-byte). Validated with System.Text.Json
+(STJSON_VALID=TRUE) and ConvertFrom-Json -AsHashtable (ASHASH_VALID=TRUE); end_of_line=lf preserved. Matches
+the sibling convention (translation.rateLimitStatus.*, translation.commands.toggleFavorite). Every t() string
+from the web source has a matching catalog key AND an English fallback through the GetString facade.
+
+============================================================
+GATE RESULTS
+============================================================
+
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    -> Build succeeded.  0 Error(s).  17 Warning(s) — ALL pre-existing in TeslaSync.App.Core
+       (CA1716/CA1720/CA1000/CA1859); none in the new files. TeslaSync.App builds with
+       TreatWarningsAsErrors and produced 0 errors, so the new view/model/source/view-model are clean.
+    BUILD_EXIT=0
+
+[2] dotnet test apps/windows/TeslaSync.sln -c Release
+    Passed!  - Failed:    0, Passed: 14954, Skipped: 0, Total: 14954 - TeslaSync.App.Tests.dll  (net10.0)
+    Failed!  - Failed:  147, Passed:     0, Skipped: 0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+    TEST_EXIT=1
+
+    >>> ALL 147 failures are the W9 out-of-process UI-automation E2E suite (every test
+        [Trait("Category","UIAutomation")]), failing for ONE environmental reason:
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+        WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+        WinAppDriver.exe was not found at its standard install paths or on PATH.
+          at WinAppDriverSession.EnsureReady() ... WinAppDriverSession.cs:line 75
+        This suite is run by the dedicated harness apps/windows/run-ui-automation.ps1 (P2/W9-0002) which
+        REQUIRES Developer Mode + Windows App SDK runtime + WinAppDriver 1.2.1+ + a deployed packaged app,
+        and is documented to FAIL (never silently skip) when the runner is absent. 0 failures reference
+        TeslaSync.App.Tests (this surface's suite). This is the platform-capability gap the prompt's
+        capability clause treats as an honest BLOCK.
+
+[2b] dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"   (isolation evidence)
+    Passed!  - Failed: 0, Passed: 14954, Skipped: 0, Total: 14954 - TeslaSync.App.Tests.dll (net10.0)
+    NONUIA_TEST_EXIT=0
+    -> Everything except the WinAppDriver E2E suite is green. The block is isolated entirely to the absent
+       UI-automation runner.
+
+[2c] dotnet test --filter "FullyQualifiedName~BackendStatusSectionTests"   (this surface)
+    Passed!  - Failed: 0, Passed: 53, Skipped: 0, Total: 53 - TeslaSync.App.Tests.dll (net10.0)
+    -> adapter parse tests (health/pool/version, tolerant of missing fields & non-object),
+       status→StatusKind+glyph mapping, latency/failure/count formatting, formatUptime port, runtime
+       fallback (version → health.system → em-dash), 3 result mappers, the full state matrix
+       (loading / loaded / empty / error / stale / offline + "stays loading until pool resolves"),
+       refresh flow, source request shapes (3 generated operation ids), registration, diagnostics
+       (view.opened slug=BackendStatusSection), and component-row accessibility names.
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    -> clean (the 4 new view files + the test file + the repaired csproj normalized to LF per
+       .editorconfig end_of_line=lf).
+    FORMAT_EXIT=0
+
+[4] ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/BackendStatusSection
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+    Explicit per-file scan (BackendStatusSection.cs / .Model.cs / .Source.cs / .ViewModel.cs): COUNT=0 each.
+    No TODO / FIXME / XXX / Coming soon / Placeholder / Lorem ipsum / not implemented /
+    NotImplementedException / // stub / mock in shipped code.
+
+--- CAPABILITY PROBE (this runner) ---
+OS=Windows NT 10.0.26200.0 ; DOTNET_SDK=10.0.300 ; UserInteractive=True ;
+Microsoft.WindowsDesktop.App 10.0.8 = present (WinUI 3 / .NET 10 BUILD capability present, step [1] proves it) ;
+WinAppDriver.exe present = False ; listening on 127.0.0.1:4723 = False.
+=> The WinUI 3 / .NET 10 capability needed to BUILD and SHIP this surface IS present. The WinAppDriver
+   UI-automation RUNNER capability (needed only by the unrelated W9-0002 E2E suite, not to build/ship this
+   surface) is NOT present on this runner.
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+[x] Surface renders all states from the web source reproduced (loading skeleton / loaded / empty / error+retry
+    / stale / offline) plus a per-sub-section empty surface (Component Health / DB Pool / System Runtime).
+[x] Hooks bind to the shared P1/S8 state-holder layer (IBackendStatusSource + CacheThenNetworkEngine); no
+    direct HTTP from the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (27 translation.featureView.backendStatus.*
+    entries added to apps/shared/i18n/catalog/en.json) and an English fallback via the GetString facade.
+[x] Accessibility labels present on every data row, the count badge, the refresh/retry affordances; decorative
+    icons hidden from Narrator; loading is a live region.
+[x] Tests: adapter unit test + per-state (loading/loaded/empty/error/stale/offline) test + a11y-label test +
+    diagnostics test (all green in [2b]/[2c]).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (step [4]).
+[ ] EXIT=0 / STATUS=DONE -> NOT reached: the full-solution `dotnet test` cannot be 0 on this runner because the
+    WinAppDriver UI-automation runner is absent (step [2]). Sanctioned BLOCKED outcome per the prompt's
+    capability clause, with the runner evidence above.
+
+CONCLUSION: The BackendStatusSection surface is COMPLETE and verified — it builds clean (BUILD_EXIT=0), is
+format-clean (FORMAT_EXIT=0) and placeholder-clean (PLACEHOLDER_EXIT=0), and its entire unit-test suite passes
+(14,954 passed / 0 failed including the 53 BackendStatusSection tests, steps [2b]/[2c]). The full-solution
+`dotnet test` is red ONLY because the pre-existing W9 WinAppDriver UI-automation E2E suite (147 tests, unrelated
+to this surface) cannot run without the WinAppDriver runner, which is not installed on this runner
+(UiAutomationUnavailableException). This is the platform-capability gap the prompt's capability clause and the
+repo's own run-ui-automation.ps1 harness treat as an honest BLOCK.
+
+EXIT=1
+STATUS=BLOCKED
