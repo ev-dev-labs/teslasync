@@ -1,0 +1,46 @@
+/*
+  FleetSummary.strings
+  TeslaSync — P4 feature view · 0276 · FleetSummary (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `FleetSummary` (+ its adapter, tiles and freshness chip) resolves (table
+  "FleetSummary") lives here with its web English value. These entries fold into
+  the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own
+  strings without editing the shared catalog.
+
+  The `fleet.*` tile keys mirror the web source verbatim (web `vehicles`
+  namespace `t('fleet.vehicles', 'Vehicles')` etc). The `fleet.summary.*` keys
+  back the native chrome (freshness chip, relative-age labels, loading / empty /
+  error states, tile accessibility) that the standardized P4 state set requires.
+*/
+
+
+/* --- tile labels (web source `t(key, default)`) --- */
+"fleet.vehicles" = "Vehicles";
+"fleet.avgBattery" = "Avg Battery";
+"fleet.totalRange" = "Total Range";
+"fleet.chargingOnline" = "Charging / Online";
+
+/* --- tile accessibility --- */
+"fleet.summary.a11y.chargingValue" = "%1$@ of %2$@";
+
+/* --- freshness chip (ADR-013 live-state) --- */
+"fleet.summary.freshness.label" = "Data freshness";
+"fleet.summary.freshness.updating" = "Updating";
+"fleet.summary.freshness.live" = "Live";
+"fleet.summary.freshness.stale" = "Stale";
+"fleet.summary.freshness.offline" = "Offline";
+
+/* --- relative-age labels --- */
+"fleet.summary.age.unknown" = "—";
+"fleet.summary.age.justNow" = "just now";
+"fleet.summary.age.seconds" = "%ds ago";
+"fleet.summary.age.minutes" = "%dm ago";
+"fleet.summary.age.hours" = "%dh ago";
+
+/* --- non-content states --- */
+"fleet.summary.loading" = "Loading fleet summary";
+"fleet.summary.empty.title" = "No vehicles";
+"fleet.summary.empty.message" = "Add a vehicle to see fleet stats";
+"fleet.summary.error.message" = "Couldn't load fleet stats";
