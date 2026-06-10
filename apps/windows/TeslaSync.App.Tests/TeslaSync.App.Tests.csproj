@@ -378,9 +378,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Model.cs" Link="FeatureViews\BackendTool\BackendTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Source.cs" Link="FeatureViews\BackendTool\BackendTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.ViewModel.cs" Link="FeatureViews\BackendTool\BackendTool.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.Model.cs" Link="FeatureViews\Base64Tool.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.ViewModel.cs" Link="FeatureViews\Base64Tool.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\BatteryHealthSection.Model.cs" Link="FeatureViews\BatteryHealthSection\BatteryHealthSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.Model.cs" Link="FeatureViews\Base64Tool\Base64Tool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.ViewModel.cs" Link="FeatureViews\Base64Tool\Base64Tool.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryHealthSection.Model.cs" Link="FeatureViews\BatteryHealthSection.Model.cs" />
@@ -411,6 +408,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.ViewModel.cs" Link="FeatureViews\ClientUtilitiesSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.Model.cs" Link="FeatureViews\ColorConverter\ColorConverter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.ViewModel.cs" Link="FeatureViews\ColorConverter\ColorConverter.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ConditionBuilder\ConditionBuilder.Model.cs" Link="FeatureViews\ConditionBuilder\ConditionBuilder.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ConditionBuilder\ConditionBuilder.Source.cs" Link="FeatureViews\ConditionBuilder\ConditionBuilder.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ConditionBuilder\ConditionBuilder.ViewModel.cs" Link="FeatureViews\ConditionBuilder\ConditionBuilder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.Model.cs" Link="FeatureViews\CostForecastSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.Source.cs" Link="FeatureViews\CostForecastSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.ViewModel.cs" Link="FeatureViews\CostForecastSection.ViewModel.cs" />
@@ -644,8 +644,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureSection\TemperatureSection.Model.cs" Link="FeatureViews\TemperatureSection\TemperatureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureSection\TemperatureSection.Source.cs" Link="FeatureViews\TemperatureSection\TemperatureSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureSection\TemperatureSection.ViewModel.cs" Link="FeatureViews\TemperatureSection\TemperatureSection.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.Model.cs" Link="FeatureViews\TeslaApiRefTool.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" Link="FeatureViews\TeslaApiRefTool.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.Model.cs" Link="FeatureViews\TeslaApiRefTool\TeslaApiRefTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" Link="FeatureViews\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" />

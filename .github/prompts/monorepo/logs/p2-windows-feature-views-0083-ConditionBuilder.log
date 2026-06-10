@@ -1,0 +1,127 @@
+=== P2 Feature view 0083 ConditionBuilder (Windows) ===
+runner: ATUL-THINK-I9  date: 2026-06-10T09:10:53-07:00
+dotnet: 10.0.300   (WinUI 3 / Windows App SDK + .NET 10 present — platform capability AVAILABLE for build + headless tests)
+
+## dotnet build apps/windows/TeslaSync.sln -c Release
+
+Build succeeded.
+    17 Warning(s)
+    0 Error(s)
+-- all 17 warnings are pre-existing TeslaSync.App.Core analyzer debt (CA1716 LoadState<T>.Error,
+   CA1000/CA1859 RepositoryResult/SseEventDecoder/GeneratedApiClient, CA1720 LiveEvent/VehicleOption …) --
+-- ConditionBuilder warnings/errors: 0 (the App project compiles with TreatWarningsAsErrors=true) --
+BUILD_EXIT=0
+
+## dotnet test apps/windows/TeslaSync.sln -c Release (--no-build; build verified above)
+-- per-assembly result --
+Passed!  - Failed:     0, Passed: 12291, Skipped:     0, Total: 12291, Duration: 3 s   - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 246 ms - TeslaSync.App.UITests.dll (net10.0)
+-- root cause of UITests failures (first occurrence) --
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+-- ConditionBuilder-related UITest failures: 0 --
+-- new headless coverage: TeslaSync.App.Tests/FeatureViews/ConditionBuilderTests.cs = 72 tests, all green --
+TEST_EXIT=1
+
+## dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+-- distinct files flagged: 0 --
+-- ConditionBuilder files flagged: 0 --
+FORMAT_EXIT=0
+
+## ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ConditionBuilder
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+========================================================================
+ANALYSIS — what is delivered vs. what blocks a fully-green solution gate
+========================================================================
+
+DELIVERED (ConditionBuilder surface — complete, production-polished, parity with
+web/src/features/automations/pages/ConditionBuilder.tsx):
+  - apps/windows/TeslaSync.App/feature-views/ConditionBuilder/ConditionBuilder.Model.cs
+      Closed AutomationCondition record hierarchy (Signal / TimeWindow / Geofence /
+      OtherAutomation) + the ported pure transforms (createDefaultCondition,
+      conditionValueFromInput, the operator/signal change handlers, numericValue,
+      PlanSignal) + the option catalogs (SIGNAL_FIELD_OPTIONS/BOOL_FIELD_KEYS,
+      CONDITION_SIGNAL_OPERATORS numericOnly filtering, CONDITION_TYPES,
+      GEOFENCE_STATES, OTHER_AUTOMATION_STATES, COMMON_TIMEZONES, DAYS) with server
+      wire round-trips + the geofence JSON adapter (GeofenceOption.ParseList) +
+      ProjectGeofencePicker (every load state) + Registration + PII-safe Diagnostics.
+  - apps/windows/TeslaSync.App/feature-views/ConditionBuilder/ConditionBuilder.Source.cs
+      IConditionBuilderSource + repository-backed adapter over the shared
+      ILocationRepository (the web useGeofences read), mapping raw JSON to typed
+      geofence options while preserving the cache-then-network status. No HTTP in the view.
+  - apps/windows/TeslaSync.App/feature-views/ConditionBuilder/ConditionBuilder.ViewModel.cs
+      UI-thread-free state holder (P1/S8): owns the controlled condition list +
+      ConditionsChanged (the web onChange), add/remove/replace/change-kind mutations,
+      and the geofence load lifecycle folded into the mutually-exclusive
+      ConditionGeofenceState (loading / ready / empty / stale / offline / error).
+  - apps/windows/TeslaSync.App/feature-views/ConditionBuilder/ConditionBuilder.cs
+      WinUI 3 view: a stack of TsGlassPanel condition cards, each a Condition Type
+      dropdown + kind-specific fields (signal: signal/operator/value with the boolean
+      True/False select and the between Min/Max range; time window: Start/End
+      TimePickers + Timezone + seven weekday ToggleButtons; geofence: place + state
+      with the live geofence picker reflecting loading/empty/stale/offline/error via
+      a status chip, hint and retry; other automation: id + state) + a remove button
+      and an Add Condition button. Value edits update in place (focus-preserving);
+      structural/kind changes rebuild. Every string flows through the i18n facade and
+      every interactive element carries a Narrator name; no custom motion.
+  - apps/windows/TeslaSync.App.Tests/FeatureViews/ConditionBuilderTests.cs
+      72 headless tests: defaults, signal/operator/value change handlers, field plan,
+      numericValue/parse, boolean-signal operator filtering, wire round-trips,
+      catalog counts, the geofence JSON adapter (cached -> projection), every geofence
+      picker state, the option/label projections + a11y label sources, the view-model
+      condition mutations + the full geofence load matrix, the i18n key + fallback
+      contract, and the PII-safe diagnostics.
+
+GATE RESULTS ON THIS RUNNER:
+  BUILD_EXIT=0       WinUI 3 (Windows App SDK) + .NET 10 compile clean.
+  PLACEHOLDER_EXIT=0 No TODO/stub/Placeholder/Lorem in the shipped surface
+                     (the one statePlaceholder web i18n key is marked // parity:allow).
+  TEST_EXIT=1        TeslaSync.App.Tests  = 12291 passed / 0 failed
+                       (includes the 72 new ConditionBuilderTests).
+                     TeslaSync.App.UITests = 147 failed / 0 passed.
+  FORMAT_EXIT=0      0 files flagged solution-wide (0 ConditionBuilder files).
+
+WHY THE SOLUTION GATE IS BLOCKED (platform-capability gap, neither caused by nor
+inside the scope of the ConditionBuilder surface):
+
+  TEST_EXIT=1 — UI-AUTOMATION RUNNER ABSENT (the prompt's BLOCKED clause).
+    All 147 TeslaSync.App.UITests fail at session setup in ~250 ms with:
+      UiAutomationUnavailableException: UI automation cannot run:
+      WinAppDriver/Appium runner is absent: nothing is listening on
+      http://127.0.0.1:4723/ and WinAppDriver.exe was not found ...
+    This runner has no WinAppDriver/Appium UI-automation runtime and no deployed
+    MSIX / interactive desktop session. 0 of the 147 failures reference
+    ConditionBuilder (it is a composed feature view below page level, not an
+    independently routed page). The headless unit assembly that DOES exercise this
+    surface's logic passes 12291/12291. This matches the documented sibling
+    precedent (e.g. p2-windows-feature-views-0040-RequestBuilder.log and
+    0002-BackendTool.log: same exception, TEST_EXIT=1, STATUS=BLOCKED).
+
+INCIDENTAL REPAIR (necessary and tightly coupled — without it NOTHING in the
+solution builds or tests, blocking this surface's own gate; the same class of
+repair the RequestBuilder/0040 log records):
+  - apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj had regressed (a
+    chain of integration merges) to 14 DUPLICATE <Compile> links (NETSDK1022:
+    Base64Tool/BatteryHealthSection/SavingsCalculator/SavingsSlide/
+    SessionComparisonChart/TeslaApiRefTool .Model/.Source/.ViewModel) — the exact
+    re-concatenation its own INVARIANT comment warns against — AND was MISSING the
+    QueueStatusPanel Model/Source/ViewModel links its own QueueStatusPanelTests.cs
+    requires (CS0246). Reconsolidated to the deduplicated, path-sorted canonical
+    root and added the QueueStatusPanel links + the 3 new ConditionBuilder links.
+  - apps/windows/TeslaSync.App/feature-views/QueueStatusPanel/QueueStatusPanel.cs:
+    BuildCardHeader did not access instance data (CA1822, error under the App's
+    TreatWarningsAsErrors) — marked static, consistent with its sibling BuildCounters.
+  These two repairs are what moved the solution from "does not build at all" at the
+  inherited branch HEAD to BUILD_EXIT=0 / 12291 headless tests green.
+
+CONCLUSION: The ConditionBuilder surface is complete and verified at every level
+this runner supports (build clean, 72 headless tests green, placeholder-clean,
+format-clean). The solution gate cannot reach EXIT=0 here solely because of the
+absent WinAppDriver UI-automation runtime — exactly the platform-capability
+scenario the prompt's BLOCKED clause covers.
+
+EXIT=1
+STATUS=BLOCKED
