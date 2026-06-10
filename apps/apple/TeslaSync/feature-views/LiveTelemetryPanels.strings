@@ -1,0 +1,152 @@
+/*
+  LiveTelemetryPanels.strings
+  TeslaSync — P4 feature view · 0281 · LiveTelemetryPanels (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `LiveTelemetryPanels` (its seven panel projections + the live-section chrome)
+  resolves (table "LiveTelemetryPanels") lives here with its web English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  The `common.*` + `telemetry.*` keys mirror the web source's `t(key, default)`
+  calls across LiveTelemetryPanels.tsx and the seven panels it composes
+  (PowertrainPanel / ClimatePanel / SecurityPanel / VehicleStatePanel /
+  TirePressurePanel / EnergyChargingPanel / MediaNavigationPanel) VERBATIM. Web
+  literals that were hardcoded in VehicleStatePanel / TirePressurePanel (no `t()`)
+  are promoted to keys here so the native surface holds zero English literals. The
+  `liveTelemetry.*` keys back the standardized P4 chrome (freshness chip, relative
+  age, loading / empty / error states, banners) the leaf contract requires.
+*/
+
+
+/* --- section header + shared common labels (web `common.*`) --- */
+"common.liveTelemetry" = "Live Telemetry";
+"common.powertrain" = "Powertrain";
+"common.climate" = "Climate";
+"common.security" = "Security";
+"common.tirePressure" = "Tire Pressure";
+"common.insideTemp" = "Cabin";
+"common.outsideTemp" = "Outside";
+"common.on" = "On";
+"common.off" = "Off";
+"common.yes" = "Yes";
+"common.no" = "No";
+"common.active" = "Active";
+"common.inactive" = "Inactive";
+"common.locked" = "Locked";
+"common.unlocked" = "Unlocked";
+"common.closed" = "Closed";
+"common.enabled" = "Enabled";
+"common.disabled" = "Disabled";
+"common.unknown" = "Unknown";
+"common.minShort" = "min";
+
+/* --- Powertrain panel (web `PowertrainPanel`) --- */
+"telemetry.shiftState" = "Shift State";
+"telemetry.power" = "Power";
+"telemetry.rpmFront" = "Front RPM";
+"telemetry.rpmRear" = "Rear RPM";
+"telemetry.torqueFront" = "Front Torque";
+"telemetry.torqueRear" = "Rear Torque";
+"telemetry.motorTemp" = "Motor Temp (peak)";
+"telemetry.inverterTemp" = "Inverter Temp";
+"telemetry.regen" = "Regen";
+"telemetry.noMotorData" = "No motor data available";
+"telemetry.rpmUnit" = "RPM";
+"telemetry.torqueUnit" = "Nm";
+"telemetry.kilowattUnit" = "kW";
+
+/* --- Climate panel (web `ClimatePanel`) --- */
+"telemetry.driverSetpoint" = "Driver Setpoint";
+"telemetry.passengerSetpoint" = "Passenger Setpoint";
+"telemetry.hvacState" = "HVAC State";
+"telemetry.fanSpeed" = "Fan Speed";
+"telemetry.defrost" = "Defrost";
+"telemetry.climate" = "Climate";
+"telemetry.precondition" = "Precondition";
+"telemetry.noClimateData" = "No climate data available";
+
+/* --- Security panel (web `SecurityPanel`) --- */
+"telemetry.lockStatus" = "Vehicle lock status";
+"telemetry.sentryMode" = "Sentry Mode";
+"telemetry.doors" = "Doors";
+"telemetry.windows" = "Windows";
+"telemetry.userPresent" = "User Present";
+"telemetry.remoteStart" = "Remote Start";
+"telemetry.noSecurityData" = "No security data available";
+
+/* --- Vehicle State panel (web `VehicleStatePanel`, literals promoted to keys) --- */
+"telemetry.vehicleState" = "Vehicle State";
+"telemetry.highBeams" = "High Beams";
+"telemetry.turnSignal" = "Turn Signal";
+"telemetry.hazards" = "Hazards";
+"telemetry.driverSeat" = "Driver Seat";
+"telemetry.occupied" = "Occupied";
+"telemetry.empty" = "Empty";
+"telemetry.pairedKeys" = "Paired Keys";
+"telemetry.valetMode" = "Valet Mode";
+"telemetry.serviceMode" = "Service Mode";
+"telemetry.speedLimit" = "Speed Limit";
+"telemetry.centerDisplay" = "Center Display";
+"telemetry.homelinkDevices" = "HomeLink Devices";
+
+/* --- Tire Pressure panel (web `TirePressurePanel`, literals promoted to keys) --- */
+"telemetry.tireFL" = "FL";
+"telemetry.tireFR" = "FR";
+"telemetry.tireRL" = "RL";
+"telemetry.tireRR" = "RR";
+"telemetry.tireAllNormal" = "All Normal";
+"telemetry.tireAttention" = "Attention Needed";
+"telemetry.tireCheck" = "Check Pressure";
+"telemetry.noTireData" = "No tire pressure data available";
+
+/* --- Energy & Charging panel (web `EnergyChargingPanel`) --- */
+"telemetry.energyCharging" = "Energy & Charging";
+"telemetry.chargerVoltage" = "Charger Voltage";
+"telemetry.chargerCurrent" = "Charger Current";
+"telemetry.chargerPower" = "Charger Power";
+"telemetry.energyAdded" = "Energy Added";
+"telemetry.chargingState" = "Charging State";
+"telemetry.batteryLevel" = "Battery Level";
+"telemetry.chargeRate" = "Charge Rate";
+"telemetry.noChargingTelemetry" = "No charging telemetry available";
+"telemetry.voltUnit" = "V";
+"telemetry.ampUnit" = "A";
+"telemetry.kilowattHourUnit" = "kWh";
+
+/* --- Media & Navigation panel (web `MediaNavigationPanel`) --- */
+"telemetry.mediaNav" = "Media & Navigation";
+"telemetry.nowPlaying" = "Now Playing";
+"telemetry.nothingPlaying" = "Nothing playing";
+"telemetry.unknownArtist" = "Unknown artist";
+"telemetry.noMediaData" = "No media data";
+"telemetry.navigation" = "Navigation";
+"telemetry.noActiveDestination" = "No active destination";
+"telemetry.placeHome" = "Home";
+"telemetry.placeWork" = "Work";
+"telemetry.placeFavorite" = "Favorite";
+"telemetry.noLocationData" = "No location data";
+
+/* --- freshness chip + banners (ADR-013 live-state) --- */
+"liveTelemetry.live" = "Live";
+"liveTelemetry.stale" = "Stale";
+"liveTelemetry.offline" = "Offline";
+"liveTelemetry.updating" = "Updating";
+"liveTelemetry.refresh" = "Refresh";
+"liveTelemetry.freshness.label" = "Data freshness";
+"liveTelemetry.staleBanner" = "Reconnecting — data may be stale";
+"liveTelemetry.offlineBanner" = "Offline — showing last known data";
+
+/* --- relative-age labels --- */
+"liveTelemetry.age.unknown" = "—";
+"liveTelemetry.age.justNow" = "just now";
+"liveTelemetry.age.seconds" = "%ds ago";
+"liveTelemetry.age.minutes" = "%dm ago";
+"liveTelemetry.age.hours" = "%dh ago";
+
+/* --- non-content states --- */
+"liveTelemetry.loading" = "Loading live telemetry";
+"liveTelemetry.empty.title" = "No live telemetry";
+"liveTelemetry.empty.message" = "Live signals will appear here once the vehicle is awake";
+"liveTelemetry.error.message" = "Couldn't load live telemetry";
