@@ -1,0 +1,70 @@
+/*
+  TourLauncher.strings
+  TeslaSync — P4 misc surface · 0001 · TourLauncher (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  TourLauncher resolves (table "TourLauncher") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/onboarding/TourLauncher.tsx). The second group is the per-tour
+  title/description pairs from the registry (lib/tourRegistry.ts + the eight
+  features/onboarding/tours/*.ts definitions). The remainder backs the native
+  state envelope (loading, empty, error retry, freshness chip, connectivity
+  banner) and the header close affordance.
+*/
+
+/* --- Web source keys (TourLauncher.tsx) --- */
+"tour.launcher.title" = "Take a tour";
+"tour.launcher.subtitle" = "Bite-sized walkthroughs of each area. Replay any tour anytime.";
+"tour.launcher.recommendedHere" = "Recommended for this page";
+"tour.launcher.completed" = "Completed";
+"tour.launcher.start" = "Start";
+"tour.launcher.replay" = "Replay";
+"tour.launcher.startAria" = "Start tour: {{0}}";
+"tour.launcher.replayAria" = "Replay tour: {{0}}";
+"tour.launcher.resetAll" = "Reset all tours";
+"tour.launcher.close" = "Close";
+
+/* --- Tour registry titles + descriptions (TOUR_ORDER) --- */
+"tour.tours.main.title" = "Welcome to TeslaSync";
+"tour.tours.main.description" = "A quick tour of the dashboard, sidebar, and live data.";
+"tour.tours.vehicles.title" = "Vehicles & sharing";
+"tour.tours.vehicles.description" = "Browse fleet, open a vehicle, share access.";
+"tour.tours.drives.title" = "Drives & replay";
+"tour.tours.drives.description" = "Browse drives, replay the route, share moments.";
+"tour.tours.charging.title" = "Charging & cost analysis";
+"tour.tours.charging.description" = "Sessions, cost breakdowns, and curve diagnostics.";
+"tour.tours.alerts.title" = "Alerts & Alert Studio";
+"tour.tours.alerts.description" = "Triage the inbox and craft custom rules with previews.";
+"tour.tours.automations.title" = "Automations";
+"tour.tours.automations.description" = "Build triggers, conditions, and actions visually.";
+"tour.tours.settings.title" = "Settings";
+"tour.tours.settings.description" = "Theme, units, notifications, and tours.";
+"tour.tours.debugger.title" = "State machine debugger";
+"tour.tours.debugger.description" = "Timeline, layered sources, freeze/step, deep links.";
+
+/* --- Header close (accessibility) --- */
+"tourLauncher.closeAria" = "Close tour launcher";
+
+/* --- Loading (web Spinner) --- */
+"tourLauncher.loading" = "Loading tours…";
+
+/* --- Empty (resolved with no tours) --- */
+"tourLauncher.empty" = "No tours available";
+
+/* --- Error + retry (web QueryError) --- */
+"tourLauncher.errors.load" = "Failed to load tours.";
+"tourLauncher.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"tourLauncher.live" = "Live";
+"tourLauncher.stale" = "Stale";
+"tourLauncher.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"tourLauncher.staleBanner" = "Reconnecting — your tour progress may be out of date";
+"tourLauncher.offlineBanner" = "Offline — showing your last synced tour progress";
