@@ -172,6 +172,21 @@
     FSMTimelineChart into this single canonical root - the ordinal-sorted, Include-deduplicated union of every
     previously linked WinUI-free source on disk, plus the new FSMTimelineChart.Model link. Do NOT
     re-concatenate, and never write a literal build-item or project start tag inside this comment.
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Projection / Registry / Catalog / diagnostics) for each
+    feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and cannot be
+    project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are Compile-linked
+    in the single ItemGroup below (the Link mirrors each source's real location under FeatureViews\ or
+    Widgets\); the WinUI view files themselves are exercised by the app build. The matching test classes live
+    under this project and are picked up by the SDK default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted, Include-deduplicated
+    Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) source on disk under feature-views/
+    and dashboard-widgets/. A chain of integration merges had repeatedly re-concatenated this file into
+    multiple Project roots plus duplicate / stale Compile items, failing XML load (MSB4025); re-consolidated
+    for P2 feature-views/0234 SnapshotInspector into this single canonical root, regenerated directly from the
+    WinUI-free sources on disk (plus the new SnapshotInspector surface Model link). Do NOT re-concatenate, and
+    never write a literal build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -199,10 +214,6 @@
     </Content>
   </ItemGroup>
 
-  <!-- WinUI-free Model / Source / ViewModel logic sources Compile-linked from TeslaSync.App
-       (path-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union);
-       the WinUI views themselves are exercised by the app build. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated). -->
   <!-- WinUI-free Model / Source / ViewModel logic sources Compile-linked from TeslaSync.App
        (ordinal path-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
@@ -858,6 +869,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\SettingsSearch\SettingsSearch.Source.cs" Link="FeatureViews\SettingsSearch\SettingsSearch.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SettingsSearch\SettingsSearch.ViewModel.cs" Link="FeatureViews\SettingsSearch\SettingsSearch.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SlideRenderer\SlideRenderer.Model.cs" Link="FeatureViews\SlideRenderer\SlideRenderer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SnapshotInspector\SnapshotInspector.Model.cs" Link="FeatureViews\SnapshotInspector\SnapshotInspector.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SocChart\SocChart.Model.cs" Link="FeatureViews\SocChart\SocChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SOCRouteChart\SOCRouteChart.Model.cs" Link="FeatureViews\SOCRouteChart\SOCRouteChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SpeedGearPanel.Model.cs" Link="FeatureViews\SpeedGearPanel.Model.cs" />
