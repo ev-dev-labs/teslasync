@@ -1,0 +1,43 @@
+/*
+  MediaNavigationPanel.strings
+  TeslaSync — P4 feature view · 0282 · MediaNavigationPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `MediaNavigationPanel` resolves (table "MediaNavigationPanel") lives here with its
+  web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/telemetry-panels/MediaNavigationPanel.tsx). The
+  second group backs the native chrome (the P4 leaf freshness / loading / error /
+  empty copy), so the Swift sources hold no English prose literals. Unit labels
+  ("km", "mi", "ft") are unit literals carried in code, not translated strings.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"telemetry.mediaNav" = "Media & Navigation";
+"telemetry.nowPlaying" = "Now Playing";
+"telemetry.nothingPlaying" = "Nothing playing";
+"telemetry.unknownArtist" = "Unknown artist";
+"telemetry.noMediaData" = "No media data";
+"telemetry.navigation" = "Navigation";
+"common.minShort" = "min";
+"telemetry.noActiveDestination" = "No active destination";
+"telemetry.placeHome" = "Home";
+"telemetry.placeWork" = "Work";
+"telemetry.placeFavorite" = "Favorite";
+"telemetry.noLocationData" = "No location data";
+
+/* --- Native chrome: P4 leaf freshness / loading / error / empty --- */
+"mediaNav.live" = "Live";
+"mediaNav.stale" = "Stale";
+"mediaNav.offline" = "Offline";
+"mediaNav.staleBanner" = "Reconnecting — data may be stale";
+"mediaNav.offlineBanner" = "Offline — showing last known data";
+"mediaNav.refresh" = "Refresh";
+"mediaNav.loadingA11y" = "Loading media and navigation";
+"mediaNav.empty" = "No media or navigation data";
+"mediaNav.errorTitle" = "Couldn't load media & navigation";
+"mediaNav.retry" = "Retry";
