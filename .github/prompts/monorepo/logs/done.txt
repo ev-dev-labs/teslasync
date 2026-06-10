@@ -439,3 +439,4 @@ p2-windows/feature-views/W-0224-CollapsibleCommandGroup.prompt.md
 p2-windows/feature-views/W-0225-CommandSearch.prompt.md
 p2-windows/feature-views/W-0226-CommandTile.prompt.md
 p2-windows/feature-views/W-0227-FavoritesBar.prompt.md
+p2-windows/feature-views/W-0232-InputCommandTile.prompt.md
