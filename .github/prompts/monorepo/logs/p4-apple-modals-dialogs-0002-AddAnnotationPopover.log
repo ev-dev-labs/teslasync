@@ -1,0 +1,245 @@
+=== P4 Modal / dialog 0002 AddAnnotationPopover (Apple) ===
+Surface : apps/apple/TeslaSync/modals-dialogs/AddAnnotationPopover.*
+Web src : web/src/components/charts/AddAnnotationPopover.tsx (THE spec)
+Runner  : Darwin arm64, Xcode 26.5 (17F42), Swift 6.3.2, swiftlint, swiftformat,
+          xcodegen 2.45.4, pwsh 7.6.2, OpenJDK 17. SwiftUI present (iPhone 16
+          iOS-26.5 sim booted) -> NOT capability-blocked (the required capability
+          is SwiftUI + iOS18/iPadOS18/macOS15 HIG; this surface uses no Swift
+          Charts / MapKit — the web source has no charts or maps).
+Disposition: code-complete; every host-runnable gate GREEN; the surface's own code
+          INDEPENDENTLY compiles + tests under the real Xcode 26 / Swift 6 toolchain
+          (isolated build/test + iOS-18 & macOS-15 SDK typecheck). The two full-app
+          xcodebuild steps are DEFERRED — environment-blocked by PRE-EXISTING,
+          unrelated conditions (evidenced below), the same sanctioned "code-complete
+          + DEFERRED Xcode gate" disposition as 0001 TourLauncher / 0303 VehicleCharts
+          (ADR-002/009, apps/macos-pending-verifications.md).
+
+==================================================================================
+ARTIFACTS (9 Swift files + 1 strings catalog; all match the AddAnnotationPopover.* glob)
+==================================================================================
+  Pure logic (Foundation/OSLog/Observation-only; unit-tested, no SwiftUI):
+    AddAnnotationPopover.Adapter.swift (353) surface slug; LoadStatus/Connection/Phase;
+                                      AddAnnotationCategory (the 6 categories in
+                                      CATEGORY_OPTIONS order) + .option (i18n key + SF
+                                      Symbol + ANNOTATION_COLORS hex); AddAnnotationDateValue
+                                      (verbatim toDateInputValue / toIsoTimestamp port,
+                                      UTC); DraftContext + Draft; projection (resolvePhase,
+                                      hasUsableTarget, occurredAt, canSubmit, draft).
+    AddAnnotationPopover.Seams.swift   (184) telemetry seam (view.opened); submit/cancel
+                                      control seam (web onAdd/onCancel); source protocol +
+                                      update + in-memory source; i18n facade; VoiceOver
+                                      builders (summary/category/timestamp).
+  State holder (Foundation/Observation; SwiftUI-free):
+    AddAnnotationPopover.Model.swift   (207) @MainActor @Observable model: phase/connection,
+                                      form fields (label/category/description/editedDate),
+                                      derived occurredAt + canSubmit, date re-sync (web
+                                      useEffect), lifecycle (start->view.opened), submit
+                                      (validate->onAdd->reset) / cancel, stale auto-refresh,
+                                      inline-error + a11y.
+  View (SwiftUI, HIG-native):
+    AddAnnotationPopover.swift         (89)  phase switch + modal chrome + lifecycle + a11y +
+                                      surfaceSlug (web Modal -> HIG sheet content).
+    AddAnnotationPopover.Views.swift   (360) header (bookmark glyph + title + freshness chip
+                                      + close), form (editable date / read-only timestamp,
+                                      label field, 6 category pills w/ ANNOTATION_COLORS tint,
+                                      description field, Cancel/Add footer), flow layout, hex
+                                      color, .text helper.
+    AddAnnotationPopover.States.swift  (183) loading (Spinner) / empty / error+retry
+                                      (QueryError) / inline reload error / freshness chip /
+                                      connectivity banner. Never a blank box.
+    AddAnnotationPopover.Previews.swift(83)  7 states: content / editable date / empty /
+                                      loading / error / stale / offline.
+    AddAnnotationPopover.strings       (62)  i18n catalog: the web annotation.* + common.cancel
+                                      keys + the 6 annotation.cat.* labels + native state
+                                      chrome (loading/empty/error/chip/banner) + a11y builders.
+  Tests (XCTest, @testable import TeslaSync):
+    AddAnnotationPopover.Tests.swift   (236) date helpers (empty / ISO / fractional / bare /
+                                      shape-verbatim / malformed / round-trip), category
+                                      catalog (order + ANNOTATION_COLORS + keys), phase
+                                      resolution, occurredAt/canSubmit/draft, accessibility (28).
+    AddAnnotationPopover.ModelTests.swift(235) state holder: view.opened once/idempotent,
+                                      loading->content, loaded-empty, failed (+inline), date
+                                      sync (+ no-clobber + re-sync on new anchor), submit
+                                      delegation + reset, submit no-op on empty label, cancel,
+                                      stale auto-refresh re-arm, offline (12).
+
+  Total 1992 lines; every file <= 360 (swiftlint file_length 400 strict). Max code line
+  115 (line_length 120 strict). All public symbols are AddAnnotation*-namespaced and were
+  collision-checked against Sources/ + feature-views/ + dashboard-widgets/ before authoring
+  (grep: the only pre-existing match was the atomic chart component TSAddAnnotationPopover in
+  Sources/Components/Charts/Interaction.swift — out of scope per the prompt; this surface's
+  top-level View is `AddAnnotationPopover`, no collision).
+
+==================================================================================
+PARITY (web AddAnnotationPopover.tsx -> native), no scope narrowing
+==================================================================================
+  Data sources (web -> native P1/S8 seam):
+    useTranslation              -> AddAnnotationStrings facade (P1/S10), no literals.
+    timestamp prop              -> AddAnnotationDraftContext.timestamp (source-owned).
+    editableDate prop           -> AddAnnotationDraftContext.editableDate.
+    onAdd(label,cat,desc?,occAt)-> AddAnnotationController.submit(draft:).
+    onCancel                    -> AddAnnotationController.cancel().
+  Date helpers (verbatim port, UTC):
+    toDateInputValue(ts)        -> AddAnnotationDateValue.inputValue(fromTimestamp:) — empty
+                                   for empty; UTC YYYY-MM-DD for ISO/bare-date; shape-valid
+                                   string accepted verbatim when unparseable (web's own
+                                   "accept verbatim" branch); empty for unparseable text.
+    toIsoTimestamp(date)        -> AddAnnotationDateValue.isoTimestamp(fromInputValue:) — pins
+                                   YYYY-MM-DD to ...T00:00:00Z, empty for empty/malformed.
+  Composition (web Modal/form -> native):
+    Modal title "Add Annotation"-> header title + freshness chip + close "×".
+    editableDate ? date input   -> AddAnnotationDateField (DatePicker .date, in: ...today,
+      : read-only timestamp        String<->Date bridge keeping the YYYY-MM-DD shape) /
+                                   AddAnnotationTimestampRow (web fixed-date text).
+    label <Input maxLength=50>  -> AddAnnotationTextField (cap 50, autofocus-equivalent).
+    category pills (6)          -> AddAnnotationCategoryPills over a wrapping FlowLayout; each
+      icon + ANNOTATION_COLORS     pill = SF Symbol (Flag->flag.fill, Wrench->wrench…, MapPin->
+      selected tint                mappin.circle, AlertTriangle->exclamationmark.triangle,
+                                   ArrowUpCircle->arrow.up.circle, Tag->tag.fill) + the
+                                   verbatim ANNOTATION_COLORS hex tint when selected.
+    description <Input max=200> -> AddAnnotationTextField (cap 200).
+    Button ghost Cancel         -> TSButton(.ghost) -> handleClose (reset + onCancel + dismiss).
+    Button primary Add (disabled-> TSButton(.primary) .disabled(!canSubmit) -> handleSubmit
+      when !label.trim())          (validate + onAdd + reset + dismiss).
+    handleSubmit reset fields   -> model.submit() clears label/category/description to web
+                                   defaults (''/'milestone'/'').
+  Tailwind classes were NOT ported; chrome is P1/S9 tokens (TSSpacing/TSRadius/Color.TS/
+  Font.TS) via TSGlassPanel/TSFadeIn/TSButton.
+
+==================================================================================
+STATES (every state renders — no hidden surfaces)
+==================================================================================
+  loading  -> AddAnnotationLoadingState (spinner + "Preparing annotation…").
+  empty    -> AddAnnotationEmptyState (ContentUnavailableView "No point selected to
+              annotate") — guards the no-editable-date + unparseable-timestamp edge.
+  error    -> AddAnnotationErrorState (QueryError-equivalent + Retry -> model.refresh()).
+  stale    -> freshness chip "Stale" + connectivity banner + ONE guarded auto-refresh.
+  offline  -> freshness chip "Offline" + banner; cached context kept; no refetch.
+  content  -> the populated form (+ inline reload error if a refresh failed while a cached
+              context remains).
+  Telemetry: model.start() emits P1/S11 view.opened surface="AddAnnotationPopover" (once,
+  idempotent — ModelTests proven).
+
+==================================================================================
+GATE EXECUTION (every step run on THIS runner; raw exits)
+==================================================================================
+  [1] swiftformat --lint apps/apple/TeslaSync/modals-dialogs
+        -> "0/9 files require formatting."                       FORMAT_EXIT=0  GREEN
+  [2] swiftlint --strict (the 9 surface files, passed explicitly; repo .swiftlint.yml
+      `included` does not yet list the new modals-dialogs tier)
+        -> "Found 0 violations, 0 serious in 9 files."           LINT_EXIT=0    GREEN
+  [3] check-placeholders.ps1 — the prompt's literal -Path …/AddAnnotationPopover (no
+      extension) is not an existing path, so the tool returns Count=0 VACUOUSLY. To avoid
+      a false green it was run against the real directory holding the 10 files:
+        -Path …/modals-dialogs -> PLACEHOLDER_ALLOWED=2 ; PLACEHOLDER_COUNT=0   EXIT=0
+      The 2 ALLOWED are the web i18n keys annotation.labelPlaceholder /
+      annotation.descPlaceholder (literal name contains "Placeholder"), opted out with a
+      required `// parity:allow web i18n key …` reason — a real key, not a stub.
+      Positive control: dropping a "// TODO" probe into that dir -> COUNT=1 / EXIT=1
+      (caught), proving the 10 files were actually scanned.                    GREEN
+  [4] ISOLATED build + test (SwiftPM module "TeslaSync" = Adapter+Seams+Model, test target
+      = Tests+ModelTests, swift-tools 6.0 / Swift 6 language mode, strict concurrency)
+        -> "Executed 40 tests, with 0 failures"                  SWIFT_TEST_EXIT=0 GREEN
+      (The isolated Swift-6 build caught two real strict-concurrency / OSLog issues during
+      authoring — static non-Sendable DateFormatters and a `+`-concatenated OSLogMessage —
+      both fixed before this run; they would also have failed the full-app build.)
+  [5] SDK typecheck of the FULL view layer + the real (Shared-free) design system
+      (Tokens + TSMaterial + Motion + Buttons/Cards/Typography/Badges) + the 7 non-test
+      surface files, -D DEBUG, -swift-version 6:
+        iOS   arm64-apple-ios18.0-simulator  -> 0 errors   IOS_TYPECHECK=0 GREEN
+        macOS arm64-apple-macos15.0          -> 0 errors   MAC_TYPECHECK=0 GREEN
+
+  [6] FULL-APP xcodebuild (the prompt's two gate steps), run verbatim on THIS runner:
+
+    Pre-req: the new modals-dialogs tier is NOT globbed in project.yml yet (xcodegen
+    generate -> grep modals-dialogs project.pbxproj = 0; feature-views = 3). Tier
+    registration is owned by the P4 acceptance gate (the prompt's commit stages only the
+    surface glob + this log), so the full-app build neither includes nor is affected by
+    this surface's files — its OWN code is proven by [4]+[5] instead.
+
+    iOS  : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+           > scheme pre-action ran Scripts/build-shared-xcframework.sh =>
+             apps/shared/gradlew :core:assembleSharedXCFramework (KMP Kotlin/Native).
+             SUCCEEDED ("xcframework successfully written out …"; Frameworks/
+             Shared.xcframework staged). NOT a hard block — only slow (~7 min).
+           > the app/test compile then FAILED with 108 ": error:" lines — ALL in
+             PRE-EXISTING, unrelated SIBLING surfaces, none in this surface:
+               dashboard-widgets/RecentDrivesListWidget.*  ('RecentDrivesModel'/'…Update'/
+               dashboard-widgets/StateTimelineWidget.*       '…LoadStatus'/'…Connection'/
+               feature-views/StateTimeline.*                 'StateTimeline*' ambiguous for
+               feature-views/RecentDrivesSection.*           type lookup)
+             i.e. parallel-merge duplicate-type collisions ("X is ambiguous for type
+             lookup") — the documented condition (apps/macos-pending-verifications.md).
+           > ": error:" total = 108 ; errors in modals-dialogs/AddAnnotationPopover = 0
+           ** TEST FAILED **                                       IOS_EXIT=65
+
+    macOS: xcodebuild -scheme TeslaSync-macOS build test
+           > Shared.xcframework cached; FAILED FAST (~8 s, pre-compile) at development
+             code-signing — no signing identity on this runner (DEVELOPMENT_TEAM=""):
+               error: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that
+                       require signing with a development certificate.
+           > ": error:" total = 4 (all signing) ; AddAnnotationPopover errors = 0
+           ** BUILD FAILED **                                      MAC_EXIT=65
+
+  Reading: both full-app steps exit 65 NOT on any AddAnnotationPopover code, but on (iOS)
+  pre-existing parallel-merge duplicate-type collisions in unrelated sibling RecentDrives*/
+  StateTimeline* surfaces and (macOS) development-signing — both owned by the p4-apple/P99
+  acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md.
+  This surface adds 0 errors to the full-app build (grep of both raw logs: 0 lines matching
+  modals-dialogs/AddAnnotationPopover).
+
+==================================================================================
+HONESTY COVENANT (binding)
+==================================================================================
+  1 No red-as-green   : the two full-app xcodebuild steps are reported RED (IOS_EXIT=65 /
+                        MAC_EXIT=65) and explicitly DEFERRED with raw evidence — never
+                        claimed passing. [1]-[5] are real GREEN exits.
+  2 No scope narrowing: every web region + branch reproduced (modal title + close, the
+                        editable-date / read-only-timestamp fork, the required label field,
+                        the 6 category pills with glyph + ANNOTATION_COLORS selected tint,
+                        the optional description field, the disabled-until-label Add + the
+                        Cancel, the reset-on-submit/cancel) + all six states.
+  3 No skip-and-assume: web source read end-to-end; toDateInputValue / toIsoTimestamp ported
+                        and tested (incl. the shape-verbatim branch); every t() key mapped;
+                        every gate executed on THIS runner; iOS+macOS failures confirmed by
+                        reading the raw logs, not assumed.
+  4 No stubs as final : complete production surface; placeholder scanner COUNT=0 (2 web-key
+                        opt-outs with reasons); 40 real tests pass; no TODO/stub/mock/Lorem.
+  5 No parity shortcut: dates / categories / colors / validation / submit-reset / i18n /
+                        telemetry / a11y all mapped to platform seams + tokens and verified;
+                        the SwiftUI layer typechecks against the REAL design system on BOTH SDKs.
+  6 No delegation     : authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass: consumes the P1/S8 state-holder seam shape, P1/S9 tokens, P1/S10
+                        i18n facade, P1/S11 view.opened, and P4-core shared TSGlassPanel/
+                        TSFadeIn/TSButton; did NOT edit project.yml / .swiftlint.yml /
+                        Localizable.xcstrings / macos-pending-verifications.md (parallel-unsafe
+                        + outside the prompt's commit scope) — strings ship as the per-surface
+                        table; tier registration is the acceptance gate's, exactly as the
+                        full-app build is.
+  8 No commit on red  : the committed artifact is GREEN on every runnable gate AND
+                        independently compiles + tests under the real Xcode 26 / Swift 6
+                        toolchain (isolated build/test + iOS & macOS SDK typecheck). The only
+                        non-green steps are the environment-blocked full-app xcodebuild
+                        build/test, RED solely on pre-existing, unrelated sibling surfaces +
+                        macOS signing — which this commit neither introduces nor touches
+                        (0 errors in its files).
+  9 No silent drift   : changes confined to apps/apple/TeslaSync/modals-dialogs/
+                        AddAnnotationPopover.* and this log (the generated TeslaSync.xcodeproj
+                        and staged Frameworks/Shared.xcframework are git-ignored).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AddAnnotationPopover shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED on this runner: the pure logic + state holder build and
+  40/40 tests pass under Swift 6 strict concurrency, and the entire SwiftUI view layer
+  typechecks against the real design system on BOTH the iOS-18 and macOS-15 SDKs (0 errors),
+  with swiftformat --lint / swiftlint --strict / placeholder all green. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate exits 65/65 (DEFERRED, not failed by this
+  code): the KMP Shared.xcframework actually built + staged on this runner, and the build
+  then aborts on pre-existing parallel-merge duplicate-type collisions across unrelated
+  sibling RecentDrives*/StateTimeline* surfaces (iOS) and on macOS development-signing
+  (macOS) — both owned by the p4-apple/P99 acceptance gate on a signed macos-latest runner
+  per apps/macos-pending-verifications.md. Zero errors in any AddAnnotationPopover file.
+
+EXIT=0
+STATUS=DONE
