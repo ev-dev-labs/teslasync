@@ -1,0 +1,72 @@
+=== P2 Feature view 0176 SOCRouteChart (Windows) ===
+surface: apps/windows/TeslaSync.App/feature-views/SOCRouteChart (SOCRouteChart.cs + SOCRouteChart.Model.cs)
+web source: web/src/features/driving/components/SOCRouteChart.tsx
+runner caps: .NET SDK 10.0.300; WinUI 3 / Windows App SDK build OK; WinAppDriver/Appium ABSENT (UI-automation E2E env-gated)
+date: 2026-06-09T20:26:12.7309374-07:00
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    17 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2: dotnet test (headless surface-logic gate: --filter Category!=UIAutomation) ---
+Passed!  - Failed:     0, Passed: 11078, Skipped:     0, Total: 11078, Duration: 6 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+  SOCRouteChart surface tests (--filter FullyQualifiedName~SOCRouteChart):
+  Passed!  - Failed:     0, Passed:    42, Skipped:     0, Total:    42, Duration: 161 ms - TeslaSync.App.Tests.dll (net10.0)
+  SOCROUTECHART_TEST_EXIT=0
+
+--- STEP 2b: whole-solution dotnet test (evidence; W9-0002 UIAutomation E2E is environment-gated) ---
+Passed!  - Failed:     0, Passed: 11078, Skipped:     0, Total: 11078, Duration: 17 s - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 466 ms - TeslaSync.App.UITests.dll (net10.0)
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+WHOLE_SOLUTION_TEST_EXIT=1  (non-zero ONLY via env-gated W9-0002 UIAutomation E2E suite: WinAppDriver/Appium + MSIX-deployed app absent on this runner; 0 tests from the SOCRouteChart surface; run via apps/windows/run-ui-automation.ps1 when the runner provides WinAppDriver)
+
+--- STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SOCRouteChart ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+=== SURFACE GATE SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite
+(WinAppDriver/Appium + MSIX-deployed app absent on this runner; evidenced above; 0 tests from this surface,
+which are the pre-existing app-shell E2E tests owned by W9-0002, not by 0176).
+
+Surface notes:
+- Parity port of web/src/features/driving/components/SOCRouteChart.tsx (pure presentational child; only hook
+  is useTranslation). Files: feature-views/SOCRouteChart/SOCRouteChart.cs (WinUI view) +
+  SOCRouteChart.Model.cs (WinUI-free model / projection / diagnostics / registration).
+- States: loading / error / empty / ready / stale / offline ALL render. The web source has two render
+  branches (empty when chartData.length===0; the chart otherwise); the remaining states are the standard
+  native async chrome the trip-planner parent drives. No hidden surfaces.
+- Chart: native TsAreaChart (web recharts AreaChart) - battery-green SOC area series; a HorizontalLine
+  min-arrival-SOC annotation (web red "Min N%"); one VerticalLine per matched charge stop (web blue
+  "[bolt] Stop N"), anchored by the web stop-matching walk (running cumulative distance + first point within
+  5% of the stop arrival SOC, distance rounded to a whole unit). chartData distance+soc rounded to one decimal
+  feed both the series and the accessible Distance / SOC % table (expander).
+- i18n: all 5 web-source keys resolve from the P1/S10 catalog (tripPlanner.socChart.title / .aria / .empty /
+  .col.distance / .col.soc); native chrome (km / SOC axis titles, series name, min/stop labels, error,
+  stale/offline chips, fallback-table caption) resolves through the ILocalizer facade with English fallbacks,
+  exactly as the web source feeds t(key, fallback). No English literals in native code.
+- a11y: Narrator name on the surface, the chart (aria-label), the freshness chip, the data-table expander and
+  every row; axis titles are decorative (AccessibilityView.Raw, already spoken via the table); loading is a
+  live region; reduced-motion + system font scale inherited from the shared components.
+- Tests: 42 headless SOCRouteChartTests (branch precedence; container-state mapping; one-decimal rounding;
+  battery-area series; min-arrival + charge-stop annotations incl. the <5% tolerance, the cumulative-distance
+  walk and whole-unit rounding; accessible rows; i18n labels; freshness chip; per-state Narrator names; null
+  safety; PII-safe diagnostics; stable registration slug) - all green, part of the 11078-test headless suite.
+- Telemetry: view.opened slug=SOCRouteChart (PII-safe; never a distance/SOC/stop value), emitted on Loaded
+  per the P1/S11 diagnostics contract.
+- Repo hygiene: repaired the recurring multi-root MSB4025 corruption in TeslaSync.App.Tests.csproj (two
+  concatenated <Project> roots + orphaned comment prose exposing literal XML tags -> ONE valid root; the
+  path-sorted union of all 516 previously linked Compile sources preserved) plus the new SOCRouteChart.Model.cs
+  link. Same consolidation the sibling 0164 TorqueHistoryChart performed.
+
+EXIT=0
+STATUS=DONE
