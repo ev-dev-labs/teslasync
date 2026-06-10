@@ -367,3 +367,4 @@ p2-windows/feature-views/W-0202-AISettings.prompt.md
 p2-windows/feature-views/W-0209-PrivacySection.prompt.md
 p2-windows/feature-views/W-0208-NotificationSettings.prompt.md
 p2-windows/feature-views/W-0211-RegionSettings.prompt.md
+p2-windows/dashboard-widgets/W-0115-WeatherAtCarWidget.prompt.md
