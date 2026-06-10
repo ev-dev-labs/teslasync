@@ -1,0 +1,50 @@
+/*
+  NotificationBellPopover.strings
+  TeslaSync — P4 modal / dialog · 0010 · NotificationBellPopover (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `NotificationBellPopover` resolves (table "NotificationBellPopover") lives here with its web
+  `t(key, default)` English value. These entries fold into the app `Localizable.xcstrings`
+  master catalog at integration time; they are kept in a per-surface table so each parallel
+  surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (components/layout/NotificationBellPopover.tsx). The second group is the severity-label
+  catalog the web `SEVERITY_TONE` map carries (used as the dot's VoiceOver label). The third +
+  fourth groups back the native chrome (relative-time buckets, P4 freshness / retry / banner
+  copy) so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"nav.notifications" = "Notifications";
+"nav.notificationsUnread" = "{{count}} unread notifications";
+"notifications.bellPopover.title" = "Notifications";
+"notifications.bellPopover.unreadCount" = "{{count}} unread";
+"notifications.bellPopover.allRead" = "All caught up";
+"common.close" = "Close";
+"notifications.bellPopover.loading" = "Loading…";
+"notifications.bellPopover.error" = "Could not load notifications";
+"notifications.bellPopover.emptyTitle" = "You're all caught up";
+"notifications.bellPopover.emptyMessage" = "No unread notifications right now.";
+"notifications.bellPopover.untitled" = "Notification";
+"notifications.bellPopover.markAllRead" = "Mark all read";
+"notifications.bellPopover.viewAll" = "View all";
+
+/* --- Severity dot label catalog (web `SEVERITY_TONE[sev].label`) --- */
+"notifications.bellPopover.severity.info" = "Info";
+"notifications.bellPopover.severity.warn" = "Warning";
+"notifications.bellPopover.severity.critical" = "Critical";
+
+/* --- Native chrome: relative-time buckets (web `formatRelative`) --- */
+"notifications.bellPopover.relative.justNow" = "just now";
+"notifications.bellPopover.relative.minutes" = "{{count}}m ago";
+"notifications.bellPopover.relative.hours" = "{{count}}h ago";
+"notifications.bellPopover.relative.days" = "{{count}}d ago";
+
+/* --- Native chrome: P4 freshness / retry / banners --- */
+"notifications.bellPopover.live" = "Live";
+"notifications.bellPopover.stale" = "Stale";
+"notifications.bellPopover.offline" = "Offline";
+"notifications.bellPopover.staleBanner" = "Reconnecting — this list may be out of date";
+"notifications.bellPopover.offlineBanner" = "Offline — showing the last loaded notifications";
+"notifications.bellPopover.retry" = "Retry";
