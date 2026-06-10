@@ -1,0 +1,66 @@
+=== P2 Feature view 0214 SettingsExportImport (Windows) ===
+date: 2026-06-10T13:45:05.2077624-07:00
+runner: WinUI 3 (Windows App SDK present) + .NET 10.0.300 -- capability PRESENT (app builds & packages clean)
+web source: web/src/features/settings/components/SettingsExportImport.tsx (+ lib/settingsImportSchema.ts, api/hooks/useSettingsBackup.ts)
+
+--- STEP 1/4: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2a/4: HEADLESS unit suite -- dotnet test apps/windows/TeslaSync.App.Tests -c Release --no-build (Category!=UIAutomation) ---
+Passed!  - Failed:     0, Passed: 14222, Skipped:     0, Total: 14222, Duration: 22 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+--- STEP 2a': SURFACE suite -- --filter FullyQualifiedName~SettingsExportImportTests ---
+Passed!  - Failed:     0, Passed:    57, Skipped:     0, Total:    57, Duration: 115 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+--- STEP 2b/4: UIAUTOMATION E2E -- dotnet test apps/windows/TeslaSync.App.UITests -c Release --no-build (SEPARATE W9 GATE) ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 135 ms - TeslaSync.App.UITests.dll (net10.0)
+reason: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_TEST_EXIT=1  (BLOCKED: environmental -- WinAppDriver/Appium runner + deployed MSIX app absent; 0 of these 147 tests belong to this surface; they fail identically for every surface.)
+WHOLE_SOLUTION_TEST_EXIT=1 only via the WinAppDriver-absent UIAutomation E2E suite; headless surface verification is green.
+
+--- STEP 3/4: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+format: clean (no changes needed)
+FORMAT_EXIT=0
+
+--- STEP 4/4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SettingsExportImport ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- ARTIFACTS (apps/windows/TeslaSync.App/feature-views/SettingsExportImport/) ---
+SettingsExportImport.Model.cs      -- state enum, schema constants, bundle validator (port of validateSettingsBundle:
+                                      every rejection branch), import-result parser + summariser, localizable validation
+                                      messages, per-state Display projection, registration (slug), PII-safe diagnostics.
+SettingsExportImport.Source.cs     -- ISettingsBackupSource (P1/S8 seam: export / dry-run / apply via IApiClient ->
+                                      get_api_v1_settings_export + post_api_v1_settings_import), ISettingsBundleDownloader,
+                                      SettingsImportStepUpCanceledException (web SudoCanceledError analogue), in-memory fakes.
+SettingsExportImport.ViewModel.cs  -- UI-thread state holder: export busy + download + success/err toast, import intake
+                                      (size cap -> read -> JSON parse -> schema validate -> dry-run preview), apply
+                                      (applied diff + toast; step-up cancel keeps preview), reset; INotifyPropertyChanged.
+SettingsExportImport.cs            -- WinUI 3 ContentControl view: TsFadeIn>TsGlassPanel, cyan icon badge header, export
+                                      row, import row (drag-drop + FileOpenPicker dropzone / inline error / dry-run preview
+                                      with per-section diff + Apply/Cancel / applied diff + Done), InfoBar toasts, Narrator
+                                      labels, assertive live-region error, view.opened diagnostics; DownloadsFolder writer.
+tests: apps/windows/TeslaSync.App.Tests/FeatureViews/SettingsExportImportTests.cs (57 tests: validator/summarise/projection
+       per state + VM export/ingest/apply/reset flows + a11y region name + i18n routing + registration + diagnostics).
+i18n:  apps/windows/Strings/{en,ar,he}/Resources.resw -- +15 keys each (backup.exportImport.subtitle [disambiguated from the
+       admin backup.subtitle collision], backup.export.help, backup.import.help, backup.import.summary, 8 validation-message
+       keys, 3 toast.settings.* keys). All other backup.* / backup.section.* keys were already present.
+csproj: apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -- repaired pre-existing MSB4025 corruption (two <Project>
+       roots + orphaned comment prose) into ONE valid root with a single path-sorted, Include-deduplicated Compile ItemGroup
+       (680 WinUI-free sources incl. the 3 new SettingsExportImport links); 0 stale/missing includes.
+
+--- SUMMARY ---
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0 (14222 passed, 0 failed; incl. 57 new SettingsExportImportTests)  SURFACE_TEST_EXIT=0
+FORMAT_EXIT=0  PLACEHOLDER_EXIT=0 (PLACEHOLDER_COUNT=0)
+UIAUTOMATION_TEST_EXIT=1 -- BLOCKED on absent WinAppDriver/Appium runtime (environmental; separate W9 E2E gate;
+   0 of the 147 failing tests belong to this surface). WinUI 3 + .NET 10 build/test capability is PRESENT.
+All states from the web source reproduced (idle/parsing/preview/applied + export-busy + inline parse/validation error);
+hooks bound via the P1/S8 ISettingsBackupSource state-holder (no HTTP in the view); every i18n key present in P1/S10;
+a11y labels on every interactive element; adapter + per-state + a11y tests; view.opened telemetry emitted.
+
+EXIT=0
+STATUS=DONE
