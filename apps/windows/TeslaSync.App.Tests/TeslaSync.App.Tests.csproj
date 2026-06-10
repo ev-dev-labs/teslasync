@@ -187,6 +187,18 @@
     for P2 feature-views/0234 SnapshotInspector into this single canonical root, regenerated directly from the
     WinUI-free sources on disk (plus the new SnapshotInspector surface Model link). Do NOT re-concatenate, and
     never write a literal build-item or project start tag inside this comment.
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Registry / Projection / diagnostics) for each
+    feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and
+    cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
+    Compile-linked below (the views themselves are exercised by the app build). The matching test classes
+    live under this project and are picked up by the SDK default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted,
+    Include-deduplicated Compile ItemGroup - the union of every WinUI-free logic source on disk under
+    dashboard-widgets/ and feature-views/. A chain of integration merges had repeatedly re-concatenated
+    this file into multiple Project roots; do NOT re-concatenate, and never write a literal build-item or
+    project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -228,6 +240,8 @@
   <!-- WinUI-free Model / Source / ViewModel / Projection / Registry / diagnostics sources Compile-linked
        from TeslaSync.App (ordinal-sorted, Include-deduplicated union); the WinUI views are exercised by the
        app build. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated
+       union); the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -741,11 +755,11 @@
     <Compile Include="..\TeslaSync.App\feature-views\LayoutSwitcher\LayoutSwitcher.ViewModel.cs" Link="FeatureViews\LayoutSwitcher\LayoutSwitcher.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertRulesRedirect.Model.cs" Link="FeatureViews\LegacyAlertRulesRedirect.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertRulesRedirect.ViewModel.cs" Link="FeatureViews\LegacyAlertRulesRedirect.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertStudioRedirect\LegacyAlertStudioRedirect.Model.cs" Link="FeatureViews\LegacyAlertStudioRedirect\LegacyAlertStudioRedirect.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertStudioRedirect\LegacyAlertStudioRedirect.ViewModel.cs" Link="FeatureViews\LegacyAlertStudioRedirect\LegacyAlertStudioRedirect.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertsRedirect\LegacyAlertsRedirect.Model.cs" Link="FeatureViews\LegacyAlertsRedirect\LegacyAlertsRedirect.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertsRedirect\LegacyAlertsRedirect.Source.cs" Link="FeatureViews\LegacyAlertsRedirect\LegacyAlertsRedirect.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertsRedirect\LegacyAlertsRedirect.ViewModel.cs" Link="FeatureViews\LegacyAlertsRedirect\LegacyAlertsRedirect.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertStudioRedirect\LegacyAlertStudioRedirect.Model.cs" Link="FeatureViews\LegacyAlertStudioRedirect\LegacyAlertStudioRedirect.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LegacyAlertStudioRedirect\LegacyAlertStudioRedirect.ViewModel.cs" Link="FeatureViews\LegacyAlertStudioRedirect\LegacyAlertStudioRedirect.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Model.cs" Link="FeatureViews\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Source.cs" Link="FeatureViews\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyNotificationsRedirect\LegacyNotificationsRedirect.ViewModel.cs" Link="FeatureViews\LegacyNotificationsRedirect\LegacyNotificationsRedirect.ViewModel.cs" />
@@ -882,6 +896,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\SpeedTrendChart\SpeedTrendChart.Source.cs" Link="FeatureViews\SpeedTrendChart\SpeedTrendChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SpeedTrendChart\SpeedTrendChart.ViewModel.cs" Link="FeatureViews\SpeedTrendChart\SpeedTrendChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatChartSlide\StatChartSlide.Model.cs" Link="FeatureViews\StatChartSlide\StatChartSlide.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\StateTimeline\StateTimeline.Model.cs" Link="FeatureViews\StateTimeline\StateTimeline.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatHeroSlide\StatHeroSlide.Model.cs" Link="FeatureViews\StatHeroSlide\StatHeroSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatHeroSlide\StatHeroSlide.Source.cs" Link="FeatureViews\StatHeroSlide\StatHeroSlide.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatHeroSlide\StatHeroSlide.ViewModel.cs" Link="FeatureViews\StatHeroSlide\StatHeroSlide.ViewModel.cs" />

@@ -1,0 +1,59 @@
+=== P2 Feature view 0235 StateTimeline (Windows) ===
+date_utc=2026-06-10T22:18:29.1955310Z
+runner: .NET 10.0.300; WindowsDesktop 10.0.8 present (WinUI 3 build capability OK)
+
+--- [1/4] build (gate: dotnet build apps/windows/TeslaSync.sln -c Release) ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-04\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:01:03.90
+BUILD_EXIT=0
+
+--- [2/4] test (headless unit suite, Category!=UIAutomation) ---
+NOTE: TeslaSync.App.UITests tags its WinAppDriver E2E cases [Trait(Category,UIAutomation)] and (per its csproj)
+      is run independently from the headless suite (W9-0002 / run-ui-automation.ps1). The headless partition
+      below is the applicable unit/adapter/projection/a11y gate for this feature-view surface.
+Test run for D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed: 14848, Skipped:     0, Total: 14848, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- [platform-capability evidence] UI-automation E2E suite (Category=UIAutomation) ---
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_EXIT=1  (147 failed, 0 passed: WinAppDriver runner absent — nothing listening on http://127.0.0.1:4723/ and WinAppDriver.exe not found on PATH. Environment-gated E2E suite, run separately via apps/windows/run-ui-automation.ps1; NOT part of the StateTimeline build/headless deliverable and not a regression — identical absence-failure for every surface on a driver-less runner.)
+
+--- [3/4] format (dotnet format apps/windows/TeslaSync.sln --verify-no-changes) ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- [4/4] placeholders (check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/StateTimeline) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+BUILD_EXIT=0 TEST_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0
+UIAUTOMATION: BLOCKED (WinAppDriver absent) — separate W9-0002 capability gate; run via apps/windows/run-ui-automation.ps1 on a driver-equipped runner.
+EXIT=0
+STATUS=DONE
