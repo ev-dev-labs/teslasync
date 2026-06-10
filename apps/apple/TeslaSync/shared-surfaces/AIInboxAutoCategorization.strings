@@ -1,0 +1,45 @@
+/*
+  AIInboxAutoCategorization.strings
+  TeslaSync — P4 shared surface · 0021 · AIInboxAutoCategorization (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native surface resolves
+  (table "AIInboxAutoCategorization") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  Group 1 is the exact set of keys from the web source
+  (components/ai/AIInboxAutoCategorization.tsx). Group 2 is the shared Helix scaffold keys the web
+  `AIFeatureCard` / `AiOutputPanel` / `AIBadge` resolve. Group 3 backs the native chrome — the P4
+  leaf freshness / loading / empty / error copy + the accessible count phrase — so the Swift sources
+  hold no English literals.
+*/
+
+/* --- Group 1: keys from the web source (parity) --- */
+"notifications.inbox.aiCategorize.title" = "Suggest inbox categories";
+"notifications.inbox.aiCategorize.description" = "Bucket recent alerts into categories from your inbox history. Descriptive replay only — review before applying.";
+"notifications.inbox.aiCategorize.suggestButton" = "Suggest categories";
+"notifications.inbox.aiCategorize.badge" = "Helix";
+"notifications.inbox.aiCategorize.applyButton" = "Apply categories as filter";
+"notifications.inbox.aiCategorize.previewLabel" = "Proposed categories (review before applying):";
+
+/* --- Group 2: shared Helix scaffold (web AIFeatureCard / AiOutputPanel / AIBadge) --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.tooltip" = "Helix is your AI assistant. It generates responses using your redacted fleet context.";
+"helix.ariaLabel" = "Helix";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Group 3: native chrome — P4 leaf freshness / loading / empty / error + a11y count --- */
+"notifications.inbox.aiCategorize.countA11y" = "%lld alerts";
+"notifications.inbox.aiCategorize.emptyMessage" = "No categories suggested for the current inbox view.";
+"notifications.inbox.aiCategorize.loadingA11y" = "Loading Helix inbox categories";
+"notifications.inbox.aiCategorize.errorTitle" = "Couldn't load Helix categories";
+"notifications.inbox.aiCategorize.retry" = "Retry";
+"notifications.inbox.aiCategorize.live" = "Live";
+"notifications.inbox.aiCategorize.stale" = "Stale";
+"notifications.inbox.aiCategorize.offline" = "Offline";
+"notifications.inbox.aiCategorize.staleBanner" = "Reconnecting — data may be stale";
+"notifications.inbox.aiCategorize.offlineBanner" = "Offline — showing last known data";
+"notifications.inbox.aiCategorize.refresh" = "Refresh";

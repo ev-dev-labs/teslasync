@@ -1,0 +1,287 @@
+=== P4 Shared surface 0021 AIInboxAutoCategorization (Apple) ===
+Prompt:      .github/prompts/monorepo/p4-apple/shared-surfaces/0021-AIInboxAutoCategorization
+Web source:  web/src/components/ai/AIInboxAutoCategorization.tsx  (THE specification)
+Native out:  apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.*
+Runner:      Darwin (arm64), Xcode 26.5 (Build 17F42), Swift 6.3.2, swiftlint 0.63.3,
+             swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.6.2
+
+--------------------------------------------------------------------------------
+0. RUNNER CAPABILITY (prompt: "If unavailable on the runner -> STATUS=BLOCKED with API evidence")
+--------------------------------------------------------------------------------
+$ xcodebuild -version            -> Xcode 26.5 (Build version 17F42)
+$ swift --version                -> Apple Swift version 6.3.2, target arm64-apple-macosx26.0
+$ xcrun simctl list devices      -> iPhone 16 (Booted) present
+$ xcrun --sdk iphonesimulator    -> iPhoneSimulator SDK present (SwiftUI available)
+$ xcrun --sdk macosx             -> MacOSX SDK present (SwiftUI available)
+=> Capability (SwiftUI, iOS 18 / iPadOS 18 / macOS 15 HIG) is AVAILABLE. NOT blocked on capability.
+   "Charts / maps used: (none)" — the web source renders no Recharts/Leaflet, so Swift Charts /
+   MapKit are not required for this surface. It is a Foundation+SwiftUI AI panel only.
+
+--------------------------------------------------------------------------------
+1. SURFACE IMPLEMENTATION (no stubs, no skeleton-only) — 12 files, 2388 LOC (2343 swift + 45 strings)
+--------------------------------------------------------------------------------
+   AIInboxAutoCategorization.Adapter.swift      224  Foundation-only core: surface identity (slug +
+                                                     featureID); InboxCategoryJSONValue (typeof-narrowing
+                                                     JSON value); InboxCategoryToolResult; InboxCategoryBucket
+                                                     (category/count/ruleIDs?/sampleTitles?) + list(from:)
+                                                     — the exact web handleEvent walk (tool name +
+                                                     ok + status==='ok' + Array.isArray(categories) gate;
+                                                     per-bucket non-empty-category + count>=0 guards;
+                                                     positive-only rule_ids filter; non-empty sample_titles
+                                                     filter); stream phase / connection / gate enums.
+   AIInboxAutoCategorization.Logic.swift        150  pure web-ported booleans: isBusy, canStart (=state!==
+                                                     'paused-confirm'), suggestDisabled (=!canStart||
+                                                     streaming||offline), applyDisabled (=allRuleIds.length
+                                                     ===0||isBusy), allRuleIDs (deduped+sorted union — web
+                                                     allRuleIds), outputVisible/thinkingVisible, shows
+                                                     Proposal/showsEmptyProposal; InboxCategoryRequest
+                                                     (path /ai/alerts/inbox/categorize + memoised body that
+                                                     OMITS null vehicle_id / null window_days / empty
+                                                     severities / empty rule_ids); a11y summary seam.
+   AIInboxAutoCategorization.Model.swift        342  P1/S11 telemetry seam (view.opened); P1/S8 state-holder
+                                                     seam (InboxCategorySource + @Observable InboxCategoryModel
+                                                     + InboxCategoryInput snapshot); stream-event union;
+                                                     categorize()/applyCategories()/cancel()/refresh()/start/
+                                                     stop; tool_result -> proposal capture; inbox-scope-change
+                                                     cancel+reset (web cleanup effect over vehicleId/
+                                                     windowDays/severities/ruleIds); stale one-shot
+                                                     auto-refresh; render-state axis; P1/S10 i18n facade
+                                                     (table "AIInboxAutoCategorization", string + %lld format).
+   AIInboxAutoCategorization.Source.swift       111  InMemoryInboxCategorySource (previews/tests) +
+                                                     encodedFields round-trip so pushProposal drives the REAL
+                                                     decode path (incl. the resolved-but-empty capture).
+   AIInboxAutoCategorization.Chrome.swift       318  category chip ("{category} · {count}", emerald tone,
+                                                     "{n} alerts" a11y), wrapping flow layout, resolved-empty
+                                                     box (P4 "never a blank box"), AiOutputPanel (Helix error /
+                                                     thinking indicator + TSSkeleton shimmer / accumulated
+                                                     prose), gate loading skeleton, retryable gate-error,
+                                                     reduce-motion symbol-pulse helper.
+   AIInboxAutoCategorization.Views.swift        209  AIFeatureCard scaffold: header (title + Helix badge +
+                                                     description), cyan Helix badge (SF Symbol "sparkles"),
+                                                     universal Ask-Helix suggest button (TSButton, disabled=
+                                                     computed, VoiceOver "Ask Helix · Suggest categories",
+                                                     reduce-motion pulse), proposal block (right-aligned
+                                                     "Apply categories as filter" primary button + chip list).
+   AIInboxAutoCategorization.swift              212  the surface: renderState switch (gatedOff -> EmptyView;
+                                                     gateLoading; gateError; ready); ready card (status row +
+                                                     connectivity banner + header + suggest + empty/proposal +
+                                                     output panel); freshness chip + refresh + banner; combined
+                                                     VoiceOver summary; static surfaceSlug/featureID; onAppear
+                                                     start / onDisappear stop.
+   AIInboxAutoCategorization.Previews.swift     119  #if DEBUG #Preview x10: idle/invite, streaming, proposal,
+                                                     empty/no-categories, stream-error, gate-loading,
+                                                     gate-error, stale, offline, gated-off.
+   AIInboxAutoCategorization.strings             45  P1/S10 catalog (table "AIInboxAutoCategorization"): the 6
+                                                     web parity keys VERBATIM + shared Helix scaffold literals
+                                                     + native chrome (freshness / loading / empty / error /
+                                                     a11y count).
+   AIInboxAutoCategorization.AdapterTests.swift 179  JSON accessors + the tool_result -> [bucket] decode walk
+                                                     (full/minimal/count-0/empty-resolved/reject wrong-tool/
+                                                     not-ok/nil-data/bad-status/missing-categories/skip-
+                                                     malformed/rule_ids-positive-only/sample_titles-non-empty/
+                                                     identity/toolName).
+   AIInboxAutoCategorization.ModelTests.swift   279  model wiring: telemetry-once, gate render axis, gatedOff>
+                                                     error, categorize starts+clears, no-op-while-busy, capture
+                                                     proposal + resolved-empty, applyCategories deduped+sorted
+                                                     forward + no-op-without-ids + disabled-while-busy, scope-
+                                                     change reset (vehicle + severities) + first-snapshot-no-
+                                                     cancel + same-scope-no-reset, stale one-shot + offline
+                                                     no-refresh + suggestDisabled, delta accumulation, paused
+                                                     blocks suggest, cancel/refresh/stop delegation, surface
+                                                     constants.
+   AIInboxAutoCategorization.Tests.swift        200  logic booleans + allRuleIDs dedup/sort + request body
+                                                     (omit-empties / include-present / path-no-/api/v1) + a11y
+                                                     summary (title-only / empty / per-bucket) + i18n facade
+                                                     (parity-key fallbacks, %lld format, table==slug).
+   (12 files; 8 shipped swift [1685] + 3 XCTest [658] + 1 .strings [45]. SAME multi-file decomposition the
+    0014-AICrossRuleConflictDetection tool_result-capturing predecessor and every prior P4 surface use.)
+
+PARITY MAPPING  (web -> Apple platform tokens; no Tailwind ported, no raw hex)
+   useTranslation                            -> InboxCategoryStrings (NSLocalizedString table; web literal as
+                                               value: fallback). 6 parity keys VERBATIM:
+                                               notifications.inbox.aiCategorize.title / .description /
+                                               .suggestButton / .badge / .applyButton / .previewLabel.
+   useAiStream({url:'/ai/alerts/inbox/        -> InboxCategoryRequest.path + InboxCategoryModel +
+     categorize', body, onEvent})              InboxCategorySource SSE seam. Body memo reproduced EXACTLY:
+                                               vehicle_id / window_days emitted only when != null; severities
+                                               / rule_ids only when non-empty (InboxCategoryRequestTests).
+   handleEvent draft_alert_categories        -> InboxCategoryBucket.list(from:) — the tool-name + ok +
+     capture (CategoryBucket[])                status==='ok' + Array.isArray gate, the per-element category/
+                                               count guards, rule_ids>0 filter, sample_titles!=='' filter,
+                                               asserted in AdapterTests + the executed harness.
+   canStart={state!=='paused-confirm'}       -> InboxCategoryLogic.canStart (no scope minimum — distinct from
+                                               0014's ruleCount>=2).
+   handleCategorize / setProposal(null);     -> InboxCategoryModel.categorize() (busy no-op + clear proposal/
+     stream.start()                            text + startStream).
+   allRuleIds (dedup+sorted union)           -> InboxCategoryLogic.allRuleIDs (Set union -> sorted()).
+   handleApply -> onApplyCategories(ids)     -> InboxCategoryModel.applyCategories() forwards the deduped+
+                                               sorted rule-id union to the injected parent (the AI panel never
+                                               writes; NotificationFilterBar remains the sole path).
+   applyDisabled=allRuleIds.length===0||busy -> InboxCategoryLogic.applyDisabled.
+   cleanup effect (cancel + reset on scope   -> InboxCategoryModel.apply(input) scope-change branch over
+     change: vehicleId/windowDays/severities/  (vehicleID, windowDays, severities, ruleIDs).
+     ruleIds)
+   AIFeatureCard / AIBadge / AiOutputPanel   -> InboxCategoryHeader / InboxCategoryHelixBadge /
+                                               InboxCategorySuggestButton / InboxCategoryOutputPanel.
+   "Apply categories as filter" <Button       -> InboxCategoryApplyButton (TSButton .primary, disabled=
+     variant="primary">                        computed) inside InboxCategoryProposalView.
+   proposal chip "{category} · {count}"       -> InboxCategoryChip (emerald statusSuccess tone) in
+                                               InboxCategoryFlowLayout.
+   a11y                                       -> badge/button/chip/output combined labels; suggest hint =
+                                               verb; Dynamic Type via Font.TS; Reduce Motion via symbol-pulse
+                                               gate + TSSkeleton.
+   tokens                                     -> TSSpacing / TSRadius / Color.TS / Font.TS / TSButton /
+                                               TSGlassPanel / TSSkeleton — no Tailwind, no hex.
+
+DISCLOSED PARITY DELTAS (no silent drift — covenant 9)
+   (a) buttonPlacement: the web AIFeatureCard renders the suggest CTA via buttonPlacement='below' (its own
+       trailing row). Reproduced natively so the P4 freshness chip + refresh own the header row. Same data,
+       same composition, Apple-idiomatic placement (mirrors every prior P4 AI surface).
+   (b) resolved-but-empty: the web sets `proposal` only when buckets.length>0 (an all-filtered result shows
+       nothing extra). Natively a valid tool_result with zero surviving buckets is captured as [] and renders
+       the friendly "No categories suggested for the current inbox view." box — the P4 leaf "never a blank
+       box" rule. The decode is otherwise the EXACT web walk; this only adds a friendly empty where the web is
+       silent. Asserted (testEmptyCategoriesArrayIsResolvedNotRejected / testToolResultCapturesResolvedEmpty).
+
+STATES (every one renders — no hidden surface, except the ADR-015 AI-Off gate which renders nothing)
+   gatedOff -> feature off -> EmptyView (web withAiFeature -> null). view.opened deferred until non-gated.
+   gateLoading -> useAiEnabled resolving -> skeleton chrome.
+   ready/idle -> gate on, no proposal -> header + description + Ask-Helix (never blank).
+   streaming -> SSE open -> "Helix is thinking…" + thinking indicator.
+   empty -> tool_result resolved with 0 categories -> friendly "no categories" box (P4).
+   proposal -> tool_result produced buckets -> Apply button + "{category} · {count}" chips.
+   stream error -> SSE ended error -> "Helix error: {message}" in the output panel.
+   gateError -> gate/context fetch failed -> QueryError peer with Retry.
+   stale/offline -> orthogonal connection axis -> freshness chip + banner; one-shot auto-refresh on
+                   live->stale; offline disables the suggest action (no stream possible).
+
+--------------------------------------------------------------------------------
+2. GATES (raw exits)
+--------------------------------------------------------------------------------
+  [GREEN] swiftformat --lint (.swiftformat; my 11 swift files)
+          -> "0/11 files require formatting"                                          FORMAT_EXIT=0
+  [GREEN] swiftlint lint --strict (repo .swiftlint.yml; my 11 swift files)
+          -> "Done linting! Found 0 violations, 0 serious in 11 files"                LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 -Language swift — real per-file scan of all 11 swift files
+          -> "PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0" (0 opt-outs;
+             no TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/"Coming soon")     PLACEHOLDER_EXIT=0
+  [GREEN] EXECUTED Foundation harness (swiftc -swift-version 6 -strict-concurrency=complete; the 4
+          SwiftUI-free core files Adapter/Logic/Model/Source + a driver) — compiled + RAN:
+          -> "HARNESS_PASS=52  HARNESS_FAIL=0"                                        HARNESS_EXIT=0
+          (decode full/minimal/empty-resolved/reject/skip/rule_ids/sample_titles; allRuleIDs dedup-sort;
+           isBusy/canStart/suggestDisabled/applyDisabled; request omit/include; a11y; model wiring:
+           telemetry-once, capture, apply-forward deduped+sorted, scope reset, stale one-shot, resolved-empty.)
+  [GREEN] ISOLATED SwiftPM XCTest (swift test; swift-tools 6.0, macOS 15; the 4 core files as the
+          "TeslaSync" library + my 3 *Tests.swift as @testable test target; one-line harness stand-in for the
+          SwiftUI view's 2 static identity constants, which are verified by the dual-SDK typecheck below)
+          -> "Executed 58 tests, with 0 failures (0 unexpected)"                      SWIFT_TEST_EXIT=0
+  [GREEN] REAL dual-SDK swiftc -typecheck of the 8 SHIPPED surface sources (incl. the #Preview macro file)
+          against the REAL generated apps/design Tokens.swift + the FULL Sources/Design + Sources/Components
+          design system (minus the lone SharedFacade-coupled UnitFormatters.swift, which this surface does
+          not use), -swift-version 6 (= strict-concurrency complete):
+            iOS-18  (-target arm64-apple-ios18.0-simulator -sdk iphonesimulator) -> 0 errors  IOS_TC_EXIT=0
+            macOS-15 (-target arm64-apple-macos15.0         -sdk macosx)          -> 0 errors  MAC_TC_EXIT=0
+          (The iOS + macOS app targets share ONE SwiftUI source group (ADR-002); both SDK paths are green.)
+  [GREEN] i18n parity — every InboxCategoryStrings key used in swift is defined in the .strings table and
+          vice-versa: 23/23 keys, 0 missing, 0 dead; all 6 web-source t() keys present verbatim.  I18N_EXIT=0
+  [GREEN] xcodegen generate (project.yml -> TeslaSync.xcodeproj) -> enumerates all 12 files (8 shipped swift
+          to the app targets, 3 *Tests.swift to the XCTest bundles, 1 .strings), 72 pbxproj refs.  GEN_EXIT=0
+  [GREEN] KMP Shared.xcframework — apps/apple/Scripts/build-shared-xcframework.sh -> Gradle
+          :core:assembleSharedDebugXCFramework "xcframework successfully written out" (DEBUG: ios-arm64 +
+          ios-arm64-simulator + macos-arm64) and STAGED to apps/apple/Frameworks/Shared.xcframework.
+          The RELEASE link (:core:linkReleaseFramework*) is the Kotlin/Native long-pole and did not finish
+          under live parallel-slot Gradle contention (consistent with every prior P4 log); the DEBUG variant
+          is sufficient to drive a real app-target compile below.                     STAGE_DEBUG_EXIT=0
+
+  [GREEN, surface-scoped] REAL app-target iOS-Simulator compile with the DEBUG Shared.xcframework staged:
+          xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator -configuration Debug
+          CODE_SIGNING_ALLOWED=NO build. Framework now RESOLVES (0 "no XCFramework" errors) and the whole-
+          module Swift compile proceeds. Result: 162 raw "error:" lines —
+            -> shared-surfaces errors          = 0
+            -> AIInboxAutoCategorization errors = 0  (zero diagnostics of ANY kind mentioning InboxCategory*)
+          MY SURFACE COMPILES CLEAN IN THE REAL APP TARGET.
+
+  [RED — PRE-EXISTING, UNRELATED, UNOWNED] The same app-target compile's 162 errors are ALL in OTHER agents'
+          parallel surfaces, by directory: TeslaSync/dashboard-widgets/ (96) + TeslaSync/feature-views/ (66),
+          and ALL are cross-surface duplicate public-type-name collisions ("ambiguous for type lookup"):
+            • StateTimelineUpdate (12) / StateTimelineConnection (12) / StateTimelineLoadStatus (9) /
+              StateTimelineModel (6) — defined in BOTH feature-views/StateTimeline.* AND
+              dashboard-widgets/StateTimelineWidget.*.
+            • RecentDrivesUpdate (9) / RecentDrivesConnection (9) / RecentDrivesLoadStatus (9) /
+              RecentDrivesModel (6) — defined in BOTH feature-views/RecentDrivesSection.* AND
+              dashboard-widgets/RecentDrives{List,}Widget.*.
+          PROOF these are pre-existing and NOT mine (covenant 1 no-red-as-green; 3 no-skip-and-assume):
+            (a) `git status --short` lists ONLY my 12 untracked AIInboxAutoCategorization.* files (+ this log).
+            (b) The colliding type names live in OTHER surfaces' files; my surface uses exclusively
+                InboxCategory* / AIInboxAutoCategorization identifiers, each defined in exactly one file —
+                so it CANNOT and does NOT contribute to the ambiguity.
+            (c) Not one of the 162 errors references a shared-surfaces path or InboxCategory* symbol.
+          Fixing them requires editing OTHER surfaces' files (outside this prompt's allowed files) and is
+          owned by the P4/P99 apple-acceptance-gate.
+
+  [RED — pre-existing infra] Full-scheme `xcodebuild -scheme TeslaSync … build test` + macOS `-scheme
+          TeslaSync-macOS build test`: also blocked, independent of this surface, by (i) the unstaged RELEASE
+          KMP Shared.xcframework (apps/apple/Frameworks held only .gitkeep before this run; a `-target` build
+          with no staged framework fails with the single error "There is no XCFramework found at …/Frameworks/
+          Shared.xcframework" BEFORE any Swift compiles), and (ii) macOS development-signing
+          (`security find-identity -p codesigning` -> "0 valid identities found"), and (iii) the same
+          pre-existing StateTimeline*/RecentDrives* collisions above. Deferred to the P4/P99 apple-acceptance-
+          gate on a macos-latest runner with signing identities (the accepted disposition for every prior P4
+          Apple surface).                                                             SCHEME_BUILD=macOS-pending
+
+--------------------------------------------------------------------------------
+3. HONESTY COVENANT (binding)
+--------------------------------------------------------------------------------
+  1  No red-as-green     : the full-scheme iOS/macOS xcodebuild build/test is reported RED / macOS-pending
+                           with the raw blockers (unstaged RELEASE framework, 0 signing identities, 162
+                           pre-existing other-surface collisions). The gates that ARE green (format, lint,
+                           placeholder, executed harness 52/52, SwiftPM 58/58, dual-SDK typecheck 0/0, i18n,
+                           xcodegen, the real surface-scoped app-target compile) are reported as exactly that.
+  2  No scope narrowing  : every web branch reproduced — the withAiFeature gate; the AIFeatureCard header/
+                           badge/description/Ask-Helix button (idle + thinking + computed-disabled); the
+                           draft_alert_categories tool_result -> CategoryBucket[] capture with EVERY typeof
+                           guard; the proposal chips + the "Apply categories as filter" button forwarding the
+                           deduped+sorted allRuleIds; the memoised body's optional-field omission; the
+                           cleanup-effect scope reset; all P4 states (gated/loading/empty/proposal/error/
+                           stale/offline).
+  3  No skip-and-assume  : every gate executed on THIS runner with raw exits pasted; the harness + SwiftPM
+                           tests were compiled and RUN; the KMP DEBUG framework was actually built + staged;
+                           the real app-target compile was actually run and its 162 errors read, bucketed by
+                           directory, and traced to the colliding type names by grep — not assumed.
+  4  No stubs as final   : complete 2388-LOC production surface + 58 XCTest + 52 harness assertions;
+                           placeholder scanner COUNT=0; no TODO/FIXME/XXX/Placeholder/Lorem anywhere.
+  5  No parity shortcut  : the status==='ok' gate, the count>=0 guard, the rule_ids>0 filter, the
+                           sample_titles!=='' filter, the allRuleIds dedup+sort, the optional-field body, the
+                           canStart=!paused rule, the applyDisabled rule, and the scope-change reset are each
+                           unit-asserted against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 multi-file decomposition + "isolated-verified,
+                           full-app gate owned by P99" disposition all honoured (mirrors 0014/0017).
+  8  No commit on red    : the committed artifact (12 AIInboxAutoCategorization.* files + this log) is GREEN
+                           on every gate it OWNS (format/lint/placeholder/harness/SwiftPM/dual-SDK typecheck/
+                           i18n/xcodegen) AND compiles clean in the real app target. The full-scheme RED is
+                           exclusively pre-existing breakage in OTHER surfaces + unstaged-RELEASE-framework +
+                           signing, outside this prompt's allowed files.
+  9  No silent drift     : changes confined to shared-surfaces/AIInboxAutoCategorization.* + this log; the two
+                           parity deltas (buttonPlacement layout, resolved-empty friendly box) are disclosed.
+  10 EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished, Apple-idiomatic AIInboxAutoCategorization shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED GREEN: it type-checks under the app's own Swift 6 strict-concurrency rules on BOTH
+  the iOS-18-simulator and macOS-15 SDKs against the REAL generated design tokens + full Sources/Components
+  design system (0 errors); its pure core executes 52/52 harness assertions; its 58 XCTest pass in an
+  isolated SwiftPM run; swiftformat / swiftlint --strict / placeholder / i18n-parity are all clean; and
+  xcodegen enumerates all 12 files. This run additionally BUILT + STAGED the KMP DEBUG Shared.xcframework and
+  compiled the surface in the REAL iOS app target with ZERO errors attributable to it. The full-scheme
+  iOS/macOS xcodebuild build/test gate is RED / macOS-pending — but exclusively on PRE-EXISTING, UNRELATED,
+  UNOWNED blockers (the unstaged RELEASE KMP framework, 0 macOS signing identities, and 162 StateTimeline*/
+  RecentDrives* cross-surface type-name collisions in OTHER agents' dashboard-widgets + feature-views files),
+  proven by a clean `git status` (only my 12 files), the per-directory error bucketing, and zero
+  shared-surfaces / InboxCategory* diagnostics. Those are owned by the P4/P99 apple-acceptance-gate.
+
+EXIT=0
+STATUS=DONE
