@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose-only app: a minimal framework theme (no AppCompat) that just provides a
+         no-action-bar window with a matching background and transparent system bars.
+         enableEdgeToEdge() handles insets/contrast at runtime. -->
+    <style name="Theme.TeslaSync" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

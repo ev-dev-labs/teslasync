@@ -1,0 +1,6 @@
+# Android program editorconfig (merges with apps/.editorconfig). ktlint reads this.
+[*.{kt,kts}]
+indent_size = 4
+# Compose @Composable functions use PascalCase by convention; exempt them from the
+# standard:function-naming rule (composables App/HomeScaffold/TeslaSyncTheme, previews).
+ktlint_function_naming_ignore_when_annotated_with = Composable

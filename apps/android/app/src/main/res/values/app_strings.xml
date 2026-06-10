@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App-owned strings (not part of the auto-generated i18n translation_* catalog). -->
+<resources>
+    <string name="app_name">TeslaSync</string>
+    <string name="home_title">TeslaSync</string>
+    <string name="welcome_headline">Welcome to TeslaSync</string>
+    <string name="welcome_body">Your Tesla fleet intelligence app is ready.</string>
+    <string name="running_on">Running on %1$s</string>
+</resources>
