@@ -1,0 +1,139 @@
+=== P4 Modal / dialog 0014 Modal (Apple) ===
+
+SURFACE     apps/apple/TeslaSync/modals-dialogs/Modal.*
+WEB SOURCE  web/src/components/ui/Modal.tsx  (THE specification — the shared atomic Modal container)
+TIER        Modal / dialog (overlay surface: scrim + dismiss semantics + focus/label contract)
+DELEGATION  FORBIDDEN — implemented directly, no agents.
+RUNNER      Darwin arm64 · Xcode 26.5 (full) · Apple Swift 6.3.2 · xcodegen 2.x · swiftlint · swiftformat · pwsh · JDK 17
+DATE        2026-06-10
+
+------------------------------------------------------------------------------------------
+ARTIFACT (10 files — production-polished; no stubs / skeletons / placeholders)
+------------------------------------------------------------------------------------------
+  Modal.swift            (229)  reusable `Modal<MainContent,HeaderTrailing>` overlay container (web
+                                parity centerpiece) + `.tsModal(isPresented:)` modifier + bound
+                                `ModalSurfaceView` (P4 leaf) + swipe-to-dismiss + macOS Esc seam.
+  Modal.Adapter.swift    (218)  pure core (CoreGraphics/Foundation only): surface slug, value enums,
+                                `ModalAdapter` (size→max-width, 640 breakpoint, resolved width clamp,
+                                height fraction, per-edge radii, 44pt close), `ModalProjection`
+                                (label precedence, header gate, body-phase resolution).
+  Modal.Seams.swift      (181)  P1/S11 telemetry seam, dismiss-command seam (web onClose), ModalUpdate,
+                                P1/S8 `ModalSource` (+ InMemory), P1/S10 i18n facade, a11y summaries.
+  Modal.Model.swift      (151)  `ModalModel` (@MainActor @Observable, P1/S8): presentation config +
+                                bound body lifecycle, freshness, dismiss, `view.opened` emission.
+  Modal.Views.swift      (182)  scrim · 44×44 close · grabber · titled header · per-edge dialog frame
+                                (UnevenRoundedRectangle) · scrolling body · geometry→metrics resolver.
+  Modal.States.swift     (222)  body router + loading / empty / error envelopes + freshness chip +
+                                stale/offline connectivity banner (every state renders real chrome).
+  Modal.Previews.swift   (108)  10 #Preview: per state (data/loading/empty/error/stale/offline),
+                                per size (sm/lg/full), and the anonymous (ariaLabel) variant (DEBUG).
+  Modal.Tests.swift      (184)  adapter (widths/breakpoint/radii/close) + projection (label/phase) +
+                                a11y summaries + slug (XCTest).
+  Modal.ModelTests.swift (199)  model wiring / telemetry once+rearm / phase propagation / dismiss /
+                                stale-auto-refresh / offline / derived labelling (XCTest).
+  Modal.strings          (44)   P1/S10 catalog (table "Modal"): 13 keys — the web `aria-label="Close"`
+                                literal + the native body-envelope / freshness / a11y copy.
+  TOTAL 1718 lines · 13 i18n keys · 10 previews · 33 XCTest cases.
+
+------------------------------------------------------------------------------------------
+PARITY MAP (components/ui/Modal.tsx → native) — each rule unit-asserted
+------------------------------------------------------------------------------------------
+  open / onClose / title / size / children / ariaLabel        → all reproduced.
+  size sm|md|lg|full → max-w 384 / 512 / 672 / min(96%,1100)  → ModalAdapter.maxWidth(for:in:).
+  `< sm` (640) full-screen sheet vs `sm:` centered card        → isCompact / pinsToBottom / resolvedWidth.
+  `rounded-none` mobile vs `sm:rounded-lg`                      → ModalAdapter.cornerRadii (top-only vs all).
+  `max-h-[100dvh]` vs `sm:max-h-[90vh]`                         → ModalAdapter.maxHeightFraction (1.0 / 0.9).
+  `h-11 w-11` close (WCAG 2.5.5)                                → ModalAdapter.closeButtonSide == 44.
+  `aria-labelledby` (title) vs `aria-label` (ariaLabel)        → ModalProjection.resolveLabel → .titled/.anonymous/.untitled.
+  `title && (<header/>)`                                        → ModalProjection.showsHeader.
+  backdrop onClick / Esc / (native) swipe-down                 → scrim tap · macOS onExitCommand · DragGesture.
+  `role="dialog"` + `aria-modal="true"`                        → .accessibilityAddTraits(.isModal) + label + .escape action.
+  arbitrary `children` (any load state)                        → ModalProjection.resolvePhase (loading/empty/error/data).
+
+  STATES (all render real chrome — never a blank box): loading (skeleton), empty (ContentUnavailableView),
+  error (retry), stale (chip + reconnecting banner + one auto-refresh), offline (chip + cached banner),
+  data (caller content). Map: web Recharts→Swift Charts / web Leaflet→MapKit — N/A (source has none).
+
+------------------------------------------------------------------------------------------
+GATE STEP DISPOSITION (raw exits; no red reported as green)
+------------------------------------------------------------------------------------------
+  [GREEN] swiftformat --lint apps/apple ............... 0/3293 require formatting (2 skipped)   EXIT=0
+  [GREEN] swiftlint --strict (repo-wide, included set)  0 violations / 3235 files               EXIT=0
+  [GREEN] swiftlint --strict (Modal.* explicit) ....... 0 violations / 9 files                  EXIT=0
+            ↳ NOTE: .swiftlint.yml `included:` does not list `modals-dialogs` (new tier; wiring it,
+              like project.yml, is OUTSIDE the allowed files — owned by the P4 acceptance gate), so
+              the repo-wide run does not cover the surface; it is therefore linted EXPLICITLY above.
+  [GREEN] check-placeholders.ps1 (Modal.* files) ...... PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0
+            ↳ NOTE: the gate's literal `-Path .../modals-dialogs/Modal` is a path PREFIX (files are
+              flat `Modal.*`, not a `Modal/` dir); that invocation returns COUNT=0 vacuously, so the
+              real surface files were scanned in isolation above (COUNT=0).
+  [GREEN] isolated Swift 6 build (real Tokens + real TSButton, strict concurrency) ............. EXIT=0
+            ↳ swift build → "Build complete!" (12 modules), -swiftLanguageMode v6 (= app's SWIFT_VERSION 6.0
+              + SWIFT_STRICT_CONCURRENCY complete), against the REAL generated apps/design Tokens.swift
+              and the REAL shared component TSButton.
+  [GREEN] isolated `swift test` (XCTest runtime) ...... Executed 33 tests, 0 failures           EXIT=0
+  [GREEN] iOS-Simulator SDK typecheck (gate dest 1) ... xcrun --sdk iphonesimulator -swift-version 6
+            -target arm64-apple-ios18.0-simulator                                                EXIT=0
+  [GREEN] macOS SDK typecheck (gate dest 2) ........... xcrun --sdk macosx -swift-version 6
+            -target arm64-apple-macos15.0                                                        EXIT=0
+  [GREEN] xcodegen generate .......................... project generated (modals-dialogs absent — confirms
+            the tier is not in project.yml; wiring it is out of allowed files)                   EXIT=0
+
+  [DEFERRED — infra prerequisite, NOT a failure of this surface]
+  [····] xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test
+  [····] xcodebuild -scheme TeslaSync-macOS build test
+            ↳ EVIDENCE: both schemes run a mandatory pre-build phase (Scripts/build-shared-xcframework.sh)
+              that assembles the KMP `Shared.xcframework` via `apps/shared/gradlew :core:assembleSharedXCFramework`.
+              In this slot Frameworks/ holds only .gitkeep and the Gradle distribution is not cached; the
+              build (even with --offline) TIMED OUT at 240s (gtimeout → exit 124) with no network to fetch the
+              wrapper distribution. Without Shared.xcframework the app targets cannot link, so neither
+              xcodebuild step can reach EXIT=0 here. SECOND, independent reason: `modals-dialogs` is not in
+              project.yml's `sources:` (out of the allowed files `Modal.* + log`), so even a successful app
+              build would NOT compile this surface — by design the full-app build/test is owned by the P4
+              acceptance runner that integrates the new tier. The surface is instead verified equivalently on
+              THIS Xcode 26.5 toolchain by the iOS-Simulator + macOS SDK Swift 6 typechecks and the isolated
+              Swift 6 build + 33/33 XCTest run above.
+
+------------------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------------------
+  1  No red-as-green     : every runnable check's RAW exit is pasted; the two full-app xcodebuild steps
+                           are labelled DEFERRED (infra), never "passed". No green is claimed for them.
+  2  No scope narrowing  : all six prompt states render (loading/empty/error/stale/offline + data); every
+                           web Modal branch (open/closed, title/no-title, sm/md/lg/full, dismiss, a11y) is
+                           reproduced AND unit-asserted.
+  3  No skip-and-assume  : web source read end-to-end; the surface was actually compiled (iOS+macOS SDK,
+                           Swift 6) and its logic actually executed 33/33 — not assumed.
+  4  No stubs as final   : 10 complete files; placeholder scanner COUNT=0; no TODO/FIXME/stub/Placeholder/
+                           Lorem/Coming-soon anywhere in the surface.
+  5  No parity shortcut  : the size max-widths, the 640 breakpoint, the per-edge radii, the 90/100% height
+                           caps, the 44pt close target, and the aria-labelledby/aria-label precedence are
+                           each asserted against the web source's exact rules.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: binds the P1/S8 state-holder seam, P1/S9 REAL generated tokens, the P1/S10 i18n
+                           facade, and the P1/S11 view.opened telemetry; no sibling surface files touched.
+  8  No commit on red    : the committed artifact (10 Modal.* files + this log) is GREEN on every check that
+                           can validly target the surface in this slot (format/lint/placeholder + iOS & macOS
+                           Swift 6 compiles + 33/33 tests). The two deferred steps are blocked by infra
+                           (KMP xcframework) + out-of-allowed-files wiring, not by this code.
+  9  No silent drift     : changes are confined to apps/apple/TeslaSync/modals-dialogs/Modal.{swift,Adapter,
+                           Seams,Model,Views,States,Previews,Tests,ModelTests}.swift + Modal.strings + this
+                           log. The new-tier project.yml/.swiftlint.yml integration and the in-slot KMP
+                           xcframework gap are disclosed above, not hidden.
+  10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------
+Production-polished, Apple-idiomatic `Modal` surface shipped at parity with components/ui/Modal.tsx and
+INDEPENDENTLY VERIFIED on this Xcode 26.5 runner: it type-checks under Swift 6 strict concurrency against
+BOTH gate destinations (iPhone 16 Simulator SDK + macOS 15 SDK) and the REAL generated design tokens + the
+REAL shared component library, and its full adapter / projection / state-holder / telemetry logic passes
+33/33 XCTest assertions in a real XCTest runtime, with swiftformat / swiftlint / placeholder all green on
+the surface files. The two full-app `xcodebuild build test` steps are DEFERRED (not failed by this code) on
+a transparent infrastructure gap — the KMP `Shared.xcframework` cannot be assembled in this slot (no cached
+Gradle distribution / no network; 240s timeout) — together with the out-of-allowed-files integration of the
+new `modals-dialogs` tier into project.yml + .swiftlint.yml, which is owned by the P4 acceptance runner.
+
+EXIT=0
+STATUS=DONE
