@@ -406,3 +406,4 @@ p2-windows/feature-views/W-0165-AutopilotSection.prompt.md
 p2-windows/feature-views/W-0154-HealthGaugeGrid.prompt.md
 p2-windows/feature-views/W-0168-DrivingTips.prompt.md
 p2-windows/feature-views/W-0167-DrivingCoachSection.prompt.md
+p2-windows/feature-views/W-0169-GForcePanel.prompt.md
