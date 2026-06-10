@@ -6,6 +6,25 @@ using TeslaSync.App.Core.Units;
 namespace TeslaSync.App.FeatureViews;
 
 /// <summary>
+/// The drivetrain-health verdict a <c>HealthOverview</c> summarises — the native, WinUI-free analogue of the
+/// web <c>overallHealth</c> union (<c>'good' | 'warning' | 'critical'</c>) in
+/// web/src/features/driving/components/drivetrain-health. Drives the panel glow (good→green, warning→cyan,
+/// critical→purple), the status badge and the alert callout. This is the canonical drivetrain-health enum
+/// shared across the health surfaces (HealthOverview + HealthRecommendations) in this namespace.
+/// </summary>
+public enum DrivetrainHealth
+{
+    /// <summary>All drivetrain metrics within nominal range (web <c>'good'</c>).</summary>
+    Good,
+
+    /// <summary>A metric is elevated but not yet critical (web <c>'warning'</c>).</summary>
+    Warning,
+
+    /// <summary>A metric breached its critical threshold (web <c>'critical'</c>).</summary>
+    Critical,
+}
+
+/// <summary>
 /// The mutually-exclusive render branch of the <c>HealthOverview</c> surface — the native union of the states
 /// the P2 feature-view contract requires for the drivetrain-health overview
 /// (web/src/features/driving/components/drivetrain-health/HealthOverview.tsx). The web component is a pure

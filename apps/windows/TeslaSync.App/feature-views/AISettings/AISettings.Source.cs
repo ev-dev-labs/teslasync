@@ -103,7 +103,7 @@ public sealed class AiSettingsSource : IAiSettingsSource
 
         await foreach (var emission in raw.ConfigureAwait(false))
         {
-            yield return AiUsageResultMapper.Map(emission);
+            yield return AiUsageSnapshotResultMapper.Map(emission);
         }
     }
 

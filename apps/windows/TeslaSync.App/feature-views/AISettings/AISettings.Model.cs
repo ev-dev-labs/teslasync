@@ -686,7 +686,7 @@ public static class AiSettingsResultMapper
 /// <c>RepositoryResult&lt;AiUsageTodaySnapshot&gt;</c>, preserving the cache-then-network status while parsing
 /// the snake_case payload. Pure.
 /// </summary>
-public static class AiUsageResultMapper
+public static class AiUsageSnapshotResultMapper
 {
     /// <summary>Map a raw usage emission to a typed snapshot result.</summary>
     public static RepositoryResult<AiUsageTodaySnapshot> Map(RepositoryResult<JsonElement> raw)
