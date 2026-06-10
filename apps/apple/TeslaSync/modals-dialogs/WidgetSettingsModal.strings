@@ -1,0 +1,64 @@
+/*
+  WidgetSettingsModal.strings
+  TeslaSync — P4 modal / dialog · 0027 · WidgetSettingsModal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `WidgetSettingsModal`
+  resolves (table "WidgetSettingsModal") lives here with its English value. The web source
+  (features/dashboard/components/WidgetSettingsModal.tsx) routes its copy through
+  `t('dashboard.settings…')` / `t('common…')`; the native surface mirrors those keys so no English
+  literal lives in Swift. The native-only chrome (dialog title, load / empty / error states, freshness
+  chip + banners) uses `widgetSettings.*` keys. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table so
+  each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  Groups: the web-parity section + option labels (`dashboard.settings.*`); the shared footer actions
+  (`common.*`); and the native dialog chrome + states (`widgetSettings.*`).
+*/
+
+/* --- Web-parity section titles (web `FormSection` titles) --- */
+"dashboard.settings.vehicle" = "Vehicle";
+"dashboard.settings.refreshInterval" = "Refresh Interval";
+"dashboard.settings.timeRange" = "Time Range";
+"dashboard.settings.appearance" = "Appearance";
+"dashboard.settings.showTitle" = "Show widget title";
+
+/* --- Vehicle scope option (web scope `<Select>`) --- */
+"dashboard.settings.allVehicles" = "All Vehicles (first)";
+
+/* --- Refresh cadence options (web refresh `<Select>`) --- */
+"dashboard.settings.default" = "Default";
+"dashboard.settings.5s" = "5 seconds";
+"dashboard.settings.15s" = "15 seconds";
+"dashboard.settings.30s" = "30 seconds";
+"dashboard.settings.60s" = "1 minute";
+
+/* --- Chart time-range options (web time-range `<Select>`) --- */
+"dashboard.settings.24h" = "Last 24 hours";
+"dashboard.settings.7d" = "Last 7 days";
+"dashboard.settings.30d" = "Last 30 days";
+"dashboard.settings.90d" = "Last 90 days";
+
+/* --- Footer actions (web shared `common.*`) --- */
+"common.cancel" = "Cancel";
+"common.save" = "Save";
+
+/* --- Dialog title (web `${def.name} Settings`) + vehicle fallback (web `Vehicle ${id}`) --- */
+"widgetSettings.title" = "{{name}} Settings";
+"widgetSettings.fallbackTitle" = "Widget Settings";
+"widgetSettings.vehicleFallback" = "Vehicle {{id}}";
+"widgetSettings.close" = "Close";
+
+/* --- Dialog states (native widening, engineering guideline #6) --- */
+"widgetSettings.loading" = "Loading widget settings…";
+"widgetSettings.emptyTitle" = "Widget unavailable";
+"widgetSettings.emptyMessage" = "This widget couldn't be found. It may have been removed.";
+"widgetSettings.error" = "Couldn't load widget settings";
+"widgetSettings.retry" = "Retry";
+
+/* --- Freshness chip + banners (ADR-013) --- */
+"widgetSettings.live" = "Live";
+"widgetSettings.stale" = "Stale";
+"widgetSettings.offline" = "Offline";
+"widgetSettings.staleBanner" = "Reconnecting — the vehicle list may be out of date";
+"widgetSettings.offlineBanner" = "Offline — showing the last loaded vehicle list";
+"widgetSettings.reloadError" = "Couldn't refresh the vehicle list";
