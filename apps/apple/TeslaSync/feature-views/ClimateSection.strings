@@ -1,0 +1,46 @@
+/*
+  ClimateSection.strings
+  TeslaSync — P4 feature view · 0291 · ClimateSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ClimateSection` resolves (table "ClimateSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/ClimateSection.tsx — the title, the eight
+  MetricCard labels, the "Level" / "On" / "Off" value words, and the empty message),
+  reusing the web `vehicles.detail.*` / `common.*` namespaces verbatim. The second group
+  backs the native chrome (the P4 leaf freshness / loading / error copy) so the Swift
+  sources hold no English prose literals. The temperature unit symbols ("°C" / "°F") and
+  the raw fan integer / defrost mode are device/data literals carried in code, not
+  translated strings.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"vehicles.detail.climate" = "Climate";
+"common.insideTemp" = "Inside Temp";
+"common.outsideTemp" = "Outside Temp";
+"vehicles.detail.driverSetpoint" = "Driver Setpoint";
+"vehicles.detail.fanSpeed" = "Fan Speed";
+"vehicles.detail.seatHeaterL" = "Seat Heater Left";
+"vehicles.detail.seatHeaterR" = "Seat Heater Right";
+"vehicles.detail.defrost" = "Defrost";
+"vehicles.detail.climateOn" = "Climate On";
+"common.level" = "Level";
+"common.on" = "On";
+"common.off" = "Off";
+"vehicles.detail.noClimateData" = "No climate data available";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"climate.live" = "Live";
+"climate.stale" = "Stale";
+"climate.offline" = "Offline";
+"climate.staleBanner" = "Reconnecting — data may be stale";
+"climate.offlineBanner" = "Offline — showing last known data";
+"climate.refresh" = "Refresh";
+"climate.loadingA11y" = "Loading climate";
+"climate.errorTitle" = "Couldn't load climate";
+"climate.retry" = "Retry";
