@@ -441,3 +441,4 @@ p2-windows/feature-views/W-0226-CommandTile.prompt.md
 p2-windows/feature-views/W-0227-FavoritesBar.prompt.md
 p2-windows/feature-views/W-0232-InputCommandTile.prompt.md
 p2-windows/feature-views/W-0228-FSMHealthPanel.prompt.md
+p2-windows/feature-views/W-0233-LiveControls.prompt.md
