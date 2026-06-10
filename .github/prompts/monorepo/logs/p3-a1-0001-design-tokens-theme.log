@@ -1,0 +1,418 @@
+=== P3/A1/0001 — Design tokens → Material 3 Theme.kt ===
+
+=== PREFLIGHT ===
+Predecessor P3/A0 (android scaffold): STATUS=DONE
+  (.github/prompts/monorepo/logs/p3-a0-0001-android-scaffold.log: EXIT=0 / STATUS=DONE).
+Predecessor P1/S9 (design tokens) + P0/0003 (version lock): present and consumed.
+Runner: Windows_NT; JDK 21 (Android Studio JBR); Node 24; Android SDK platforms 34/35/36,
+  build-tools 36.1.0; Gradle 8.14.5 wrapper. Baseline `:android:assembleDebug` = BUILD SUCCESSFUL
+  before changes (existing hand-seeded A0 theme).
+Working tree before changes: only the hand-seeded A0 theme (Color.kt/Type.kt/Theme.kt) under
+  apps/android plus committed monorepo logs; no apps/design/generated/android yet.
+
+=== SURVEY ===
+Source tokens: apps/design/tokens.json (frozen P1/S9 set) — color(light/dark/highContrast + status),
+  chart(categorical[8] + series[6]), typography(8 roles + weights), spacing(scale[9]), radius[4],
+  elevation(levels[4] + material map), motion(durations[3] + easing[3]).
+Canonical pattern (from P2/W1 Windows): a dedicated per-platform generator reads tokens.json and
+  emits to apps/design/generated/<platform>/**; the app consumes the generated artifacts. The
+  apps/design/generators/*.mjs prototype is vestigial (the real Windows Tokens.xaml does not match
+  gen-fluent.mjs and index.mjs --check is not a passing gate) and is outside the allowed files.
+Version lock: apps/versions.lock.md — Compose BOM 2026.04.01, Material 3 1.4.0, Kotlin 2.4.0,
+  AGP 8.9.2. Honored (no floated versions). detekt was required by apps-android CI
+  (`./gradlew ktlintCheck detekt lint`) but not yet wired in — added at 1.23.8.
+
+=== REASONING ===
+- Generator lives in apps/android/buildSrc (compiled, reusable build logic) so the ~330-line
+  deterministic transform stays out of the app's ktlint/detekt surface. Pure string building →
+  byte-stable output → checkDesignTokensDrift is a true regeneration gate and generate is idempotent.
+- M3 ColorScheme roles are mapped from semantic tokens; translucent glass/border tokens are
+  alpha-flattened over the opaque surface so surfaceVariant/outline are solid colors derived from
+  tokens (no library-baseline brand colors, no hand-picked hexes). HighContrast uses the
+  lightColorScheme builder (white bg / black text). 15 M3 type slots are filled from the 8-role ramp.
+- TeslaSyncTheme defaults to the brand schemes; Material You dynamicColor is opt-in (Android 12+),
+  so brand identity ships by default. highContrast selects the accessibility palette. Status colors
+  flow through LocalStatusColors; the theme-invariant ChartPalette is exposed via TeslaTokens.
+- Generated files are committed under apps/design/generated/android/** (force-added past the broad
+  apps/**/generated/ ignore, mirroring the committed Windows Tokens.xaml; .gitignore is out of scope).
+  They are added to the main Kotlin source set and ktlint-excluded; detekt's default source
+  (src/main|test) never sees them.
+
+=== CHANGES ===
+NEW apps/android/buildSrc/{build.gradle.kts, src/main/kotlin/io/teslasync/android/buildlogic/
+    DesignTokenGenerator.kt} — deterministic tokens.json → Kotlin generator (generate + drift + render).
+NEW apps/design/generated/android/io/teslasync/android/ui/theme/generated/{GeneratedColor,
+    GeneratedType, GeneratedShape, GeneratedDimens, GeneratedMotion}.kt — generated theme layer:
+    Light/Dark/HighContrast ColorScheme, StatusColors (×3 themes), ChartPalette, GeneratedTypography
+    (15 slots), GeneratedShapes + Radius, Spacing + Elevation, MotionDurations + MotionEasing.
+NEW apps/android/config/detekt/detekt.yml — Compose-friendly detekt config (buildUponDefaultConfig).
+EDIT apps/android/gradle/libs.versions.toml — add detekt 1.23.8 version + plugin alias.
+EDIT apps/android/build.gradle.kts — register detekt plugin (apply false).
+EDIT apps/android/app/build.gradle.kts — apply detekt + config; generateDesignTokens /
+    checkDesignTokensDrift tasks; preBuild dependency; main source set += generated dir;
+    ktlint filter excludes the generated layer.
+REWRITE apps/android/app/.../ui/theme/Theme.kt — TeslaSyncTheme(darkTheme, highContrast,
+    dynamicColor=false) consuming generated schemes/typography/shapes + status CompositionLocal.
+NEW apps/android/app/.../ui/theme/ThemeTokens.kt — LocalStatusColors + TeslaTokens accessor.
+NEW apps/android/app/.../ui/theme/ThemeShowcase.kt — showcase composable + 4 @Preview variants
+    (light, dark, high-contrast, dynamic-color-disabled/brand).
+DELETE apps/android/app/.../ui/theme/{Color.kt, Type.kt} — A0 placeholders replaced by the generated layer.
+NEW apps/android/app/src/test/.../ui/theme/GeneratedThemeTest.kt — unit tests: token parsing,
+    light/dark/high-contrast role completeness, typography/shape mapping, chart/status exposure.
+
+=== GATE ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :android:checkDebugAarMetadata
+> Task :android:generateDebugResValues
+> Task :android:mapDebugSourceSetPaths
+> Task :android:generateDebugResources
+
+> Task :android:mergeDebugResources
+F:\github\teslasync-wt\wt-01\apps\android\app\src\main\res\values\strings.xml:1334:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_cells_insight_highSpreadDesc. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-01\apps\android\app\src\main\res\values\strings.xml:1471:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_tip_avoid100. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-01\apps\android\app\src\main\res\values\strings.xml:4957:2: Multiple substitutions specified in non-positional format of string resource string/translation_rateLimitStatus_subtitle. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-01\apps\android\app\src\main\res\values-ar\strings.xml:1334:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_cells_insight_highSpreadDesc. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-01\apps\android\app\src\main\res\values-ar\strings.xml:1471:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_tip_avoid100. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-01\apps\android\app\src\main\res\values-he\strings.xml:1334:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_cells_insight_highSpreadDesc. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-01\apps\android\app\src\main\res\values-he\strings.xml:1471:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_tip_avoid100. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-01\apps\android\app\src\main\res\values-ar\strings.xml:4957:2: Multiple substitutions specified in non-positional format of string resource string/translation_rateLimitStatus_subtitle. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-01\apps\android\app\src\main\res\values-he\strings.xml:4957:2: Multiple substitutions specified in non-positional format of string resource string/translation_rateLimitStatus_subtitle. Did you mean to add the formatted="false" attribute?
+
+> Task :android:packageDebugResources
+> Task :android:createDebugCompatibleScreenManifests
+> Task :android:extractDeepLinksDebug
+> Task :android:parseDebugLocalResources
+> Task :android:processDebugMainManifest
+> Task :android:processDebugManifest
+> Task :android:preDebugUnitTestBuild
+> Task :android:javaPreCompileDebug
+> Task :android:javaPreCompileDebugUnitTest
+> Task :android:processDebugManifestForPackage
+> Task :android:processDebugResources
+> Task :android:compileDebugKotlin
+> Task :android:compileDebugJavaWithJavac NO-SOURCE
+> Task :android:bundleDebugClassesToCompileJar
+> Task :android:bundleDebugClassesToRuntimeJar
+> Task :android:processDebugJavaRes
+> Task :android:compileDebugUnitTestKotlin
+> Task :android:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :android:processDebugUnitTestJavaRes
+> Task :android:testDebugUnitTest
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 36s
+42 actionable tasks: 24 executed, 18 up-to-date
+UNIT_EXIT=0
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :android:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :shared:core:mergeDebugShaders UP-TO-DATE
+> Task :shared:core:compileDebugShaders NO-SOURCE
+> Task :shared:core:debugAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:generateDebugAssets UP-TO-DATE
+> Task :shared:core:mergeDebugAssets UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :shared:core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeDebugNativeLibs NO-SOURCE
+> Task :shared:core:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :android:compileDebugKotlin UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :android:compileDebugJavaWithJavac NO-SOURCE
+> Task :android:mergeDebugShaders
+> Task :android:compileDebugShaders NO-SOURCE
+> Task :android:generateDebugAssets UP-TO-DATE
+> Task :android:mergeDebugAssets
+> Task :android:desugarDebugFileDependencies
+> Task :android:compressDebugAssets
+> Task :android:dexBuilderDebug
+> Task :android:processDebugJavaRes UP-TO-DATE
+> Task :android:mergeDebugJniLibFolders
+> Task :android:checkDebugDuplicateClasses
+> Task :android:mergeDebugNativeLibs
+> Task :android:mergeDebugJavaResource
+> Task :android:mergeDebugGlobalSynthetics
+
+> Task :android:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so.
+
+> Task :android:mergeProjectDexDebug
+> Task :android:validateSigningDebug
+> Task :android:writeDebugAppMetadata
+> Task :android:writeDebugSigningConfigVersions
+> Task :android:mergeLibDexDebug
+> Task :android:mergeExtDexDebug
+> Task :android:packageDebug
+> Task :android:createDebugApkListingFileRedirect
+> Task :android:assembleDebug
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 49s
+60 actionable tasks: 21 executed, 39 up-to-date
+ASM_EXIT=0
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :shared:core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeDebugNativeLibs NO-SOURCE
+> Task :shared:core:stripDebugDebugSymbols NO-SOURCE
+> Task :shared:core:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :android:preDebugAndroidTestBuild SKIPPED
+> Task :android:generateDebugAndroidTestResValues FROM-CACHE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :android:extractProguardFiles
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :android:preDebugUnitTestBuild
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :shared:core:extractDebugAnnotations UP-TO-DATE
+> Task :shared:core:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :shared:core:mergeDebugShaders UP-TO-DATE
+> Task :shared:core:compileDebugShaders NO-SOURCE
+> Task :shared:core:debugAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:generateDebugAssets UP-TO-DATE
+> Task :shared:core:mergeDebugAssets UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :shared:core:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :shared:core:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :shared:core:prepareDebugArtProfile UP-TO-DATE
+> Task :shared:core:prepareLintJarForPublish UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :shared:core:mergeDebugJavaResource UP-TO-DATE
+> Task :android:loadKtlintReporters
+> Task :shared:core:syncDebugLibJars UP-TO-DATE
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:bundleDebugLocalLintAar UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :shared:core:writeDebugLintModelMetadata UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :shared:core:createFullJarDebug UP-TO-DATE
+> Task :shared:core:extractProguardFiles UP-TO-DATE
+> Task :shared:core:generateDebugLintModel UP-TO-DATE
+> Task :shared:core:lintAnalyzeDebug UP-TO-DATE
+> Task :shared:core:preDebugAndroidTestBuild UP-TO-DATE
+> Task :shared:core:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :shared:core:generateDebugAndroidTestLintModel UP-TO-DATE
+> Task :shared:core:preDebugUnitTestBuild UP-TO-DATE
+> Task :shared:core:generateDebugUnitTestLintModel UP-TO-DATE
+> Task :shared:core:lintAnalyzeDebugAndroidTest UP-TO-DATE
+> Task :shared:core:lintAnalyzeDebugUnitTest UP-TO-DATE
+> Task :android:detekt
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :android:compileDebugKotlin UP-TO-DATE
+> Task :android:compileDebugJavaWithJavac NO-SOURCE
+> Task :android:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :android:generateDebugAndroidTestLintModel
+> Task :android:generateDebugLintReportModel
+> Task :android:generateDebugUnitTestLintModel
+> Task :android:runKtlintCheckOverAndroidTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverDebugSourceSet NO-SOURCE
+> Task :android:ktlintDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverReleaseSourceSet NO-SOURCE
+> Task :android:ktlintReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestSourceSet
+> Task :android:ktlintAndroidTestSourceSetCheck
+> Task :android:runKtlintCheckOverTestSourceSet
+> Task :android:runKtlintCheckOverKotlinScripts
+> Task :android:runKtlintCheckOverMainSourceSet
+> Task :android:ktlintTestSourceSetCheck
+> Task :android:ktlintKotlinScriptCheck
+> Task :android:ktlintMainSourceSetCheck
+> Task :android:ktlintCheck
+> Task :android:lintAnalyzeDebugAndroidTest
+> Task :android:lintAnalyzeDebugUnitTest
+> Task :android:lintAnalyzeDebug
+
+> Task :android:lintReportDebug
+Wrote HTML report to file:///F:/github/teslasync-wt/wt-01/apps/android/app/build/reports/lint-results-debug.html
+
+> Task :android:lintDebug
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 43s
+79 actionable tasks: 21 executed, 1 from cache, 57 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+> Task :android:checkDesignTokensDrift
+BUILD SUCCESSFUL in 11s
+DRIFT_EXIT=0
+
+=== RESULT ===
+[PASS] UNIT_EXIT=0  ASM_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0  DRIFT_EXIT=0
+Acceptance:
+ - TeslaSyncTheme exposes complete Material 3 light/dark/high-contrast schemes generated from
+   tokens.json, with Material You dynamic color as an opt-in fallback (default off → brand).
+ - Typography (15 M3 slots), shapes + radii, spacing, tonal elevation, motion durations/easing,
+   per-theme semantic status colors and the brand chart palette all come from the generated
+   Android artifacts under apps/design/generated/android/**.
+ - No hardcoded brand colors/typography in theme consumers (Theme/ThemeTokens/ThemeShowcase read
+   only generated symbols); no placeholder token values (placeholder gate COUNT=0).
+ - Unit tests (:android:testDebugUnitTest) cover token parsing, light/dark/high-contrast role
+   completeness, typography/shape mapping, and chart/status palette exposure — all green.
+ - assembleDebug, Android lint (lintDebug), ktlintCheck, detekt and the placeholder gate are green;
+   checkDesignTokensDrift confirms the committed generated layer matches tokens.json.
+ - Preview/demo composables prove light, dark, dynamic-color-disabled (brand) and high-contrast variants.
+
+=== POST-HARDENING RE-VERIFICATION ===
+Hardened DesignTokenGenerator drift/compare to normalize line endings: *.kt is not pinned to
+eol=lf in .gitattributes (out of scope to edit), so Windows autocrlf=true would otherwise render
+the committed generated layer as CRLF and false-trip the drift check / cause needless rewrites.
+Generated output is byte-identical (LF). Re-ran the full gate:
+[PASS] generateDesignTokens + checkDesignTokensDrift + testDebugUnitTest + assembleDebug +
+       lintDebug + ktlintCheck + detekt => BUILD SUCCESSFUL; placeholder gate PLACEHOLDER_COUNT=0.
+
+=== COMMIT ===
+git add apps/android
+git add -f apps/design/generated/android   # force past broad apps/**/generated/ ignore,
+                                           # mirroring committed apps/design/generated/windows/Tokens.xaml
+git add .github/prompts/monorepo/logs/p3-a1-0001-design-tokens-theme.log
+git commit -m "feat(apps/android): generate Material3 theme from design tokens (P3/A1)"
+
+EXIT=0
+STATUS=DONE
