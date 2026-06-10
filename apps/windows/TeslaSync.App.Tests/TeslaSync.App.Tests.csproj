@@ -420,6 +420,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\AuditPanel\AuditPanel.Model.cs" Link="FeatureViews\AuditPanel\AuditPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AutomationActivityFeed\AutomationActivityFeed.Model.cs" Link="FeatureViews\AutomationActivityFeed\AutomationActivityFeed.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AutomationCard\AutomationCard.Model.cs" Link="FeatureViews\AutomationCard\AutomationCard.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AutopilotSection\AutopilotSection.Model.cs" Link="FeatureViews\AutopilotSection\AutopilotSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AutopilotSection\AutopilotSection.Source.cs" Link="FeatureViews\AutopilotSection\AutopilotSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AutopilotSection\AutopilotSection.ViewModel.cs" Link="FeatureViews\AutopilotSection\AutopilotSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Model.cs" Link="FeatureViews\BackendTool\BackendTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.Source.cs" Link="FeatureViews\BackendTool\BackendTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BackendTool\BackendTool.ViewModel.cs" Link="FeatureViews\BackendTool\BackendTool.ViewModel.cs" />
@@ -700,6 +703,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureSection\TemperatureSection.Source.cs" Link="FeatureViews\TemperatureSection\TemperatureSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureSection\TemperatureSection.ViewModel.cs" Link="FeatureViews\TemperatureSection\TemperatureSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureTrendChart.Model.cs" Link="FeatureViews\TemperatureTrendChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemplateGallery\TemplateGallery.Model.cs" Link="FeatureViews\TemplateGallery\TemplateGallery.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemplateGallery\TemplateGallery.Presets.cs" Link="FeatureViews\TemplateGallery\TemplateGallery.Presets.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.Model.cs" Link="FeatureViews\TeslaApiRefTool\TeslaApiRefTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" Link="FeatureViews\TeslaApiRefTool\TeslaApiRefTool.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" />
