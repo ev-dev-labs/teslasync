@@ -1,0 +1,98 @@
+/*
+  KioskSettingsModal.strings
+  TeslaSync — P4 modal / dialog · 0025 · KioskSettingsModal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `KioskSettingsModal`
+  resolves (table "KioskSettingsModal") lives here with its English value. The web source
+  (features/dashboard/components/KioskSettingsModal.tsx) hardcodes its copy through `t(key, fallback)`
+  and inline option-array labels; the native surface routes every string — including the picker
+  option labels — through a key so no English literal lives in Swift. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table so
+  each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  Groups: dialog chrome + states; the freshness chip / banners; the footer; the form section titles +
+  control labels; the picker option labels (rotation / cursor / dim / clock); the transparency copy +
+  preview + hint; and the accessibility summaries.
+*/
+
+/* --- Dialog chrome + states --- */
+"kiosk.settings" = "Kiosk Settings";
+"kiosk.close" = "Close";
+"kiosk.loading" = "Loading kiosk settings…";
+"kiosk.emptyTitle" = "No dashboards to display";
+"kiosk.emptyMessage" = "Create a dashboard before starting kiosk mode.";
+"kiosk.error" = "Couldn't load kiosk settings";
+"kiosk.retry" = "Retry";
+
+/* --- Freshness chip + banners (ADR-013) --- */
+"kiosk.live" = "Live";
+"kiosk.stale" = "Stale";
+"kiosk.offline" = "Offline";
+"kiosk.staleBanner" = "Reconnecting — these settings may be out of date";
+"kiosk.offlineBanner" = "Offline — showing your last saved kiosk settings";
+"kiosk.reloadError" = "Couldn't refresh your kiosk settings";
+
+/* --- Footer (web Modal footer) --- */
+"common.cancel" = "Cancel";
+"kiosk.enter" = "Enter Kiosk Mode";
+
+/* --- Rotation section (web "Dashboard Rotation" FormSection) --- */
+"kiosk.rotation" = "Dashboard Rotation";
+"kiosk.rotationInterval" = "Rotation Interval";
+"kiosk.dashboardsToRotate" = "Dashboards to Rotate";
+"kiosk.default" = "Default";
+
+/* --- Display section (web "Display" FormSection) --- */
+"kiosk.display" = "Display";
+"kiosk.hideCursor" = "Auto-hide Cursor";
+"kiosk.cursorTimeout" = "Hide After";
+"kiosk.dimAfter" = "Dim Screen After";
+"kiosk.brightness" = "Dimmed Brightness";
+"kiosk.showClock" = "Show Clock";
+"kiosk.clockPosition" = "Clock Position";
+
+/* --- Transparency section (web "Transparency" FormSection) --- */
+"kiosk.transparency" = "Transparency";
+"kiosk.transparencyDesc" = "Adjust widget and background opacity. Higher values are more solid and readable.";
+"kiosk.widgetOpacity" = "Widget Opacity";
+"kiosk.bgOpacity" = "Background Opacity";
+"kiosk.transparent" = "Transparent";
+"kiosk.solid" = "Solid";
+"kiosk.preview" = "Preview — this is how widgets will look";
+"kiosk.hint" = "Kiosk mode enters fullscreen and hides all navigation. Move the mouse or touch the screen to reveal the exit button. Press Esc to exit.";
+
+/* --- Shared percent value (web `${Math.round(n)}%`) --- */
+"kiosk.percentValue" = "{{value}}%";
+
+/* --- Rotation-interval option labels (web `ROTATION_OPTIONS`, seconds) --- */
+"kiosk.rotation.opt.0" = "Off";
+"kiosk.rotation.opt.10" = "10s";
+"kiosk.rotation.opt.15" = "15s";
+"kiosk.rotation.opt.30" = "30s";
+"kiosk.rotation.opt.60" = "1 min";
+"kiosk.rotation.opt.120" = "2 min";
+"kiosk.rotation.opt.300" = "5 min";
+
+/* --- Cursor-timeout option labels (web `CURSOR_TIMEOUT_OPTIONS`, seconds) --- */
+"kiosk.cursor.opt.3" = "3s";
+"kiosk.cursor.opt.5" = "5s";
+"kiosk.cursor.opt.10" = "10s";
+"kiosk.cursor.opt.15" = "15s";
+
+/* --- Dim-after option labels (web `DIM_AFTER_OPTIONS`, minutes) --- */
+"kiosk.dim.opt.0" = "Never";
+"kiosk.dim.opt.5" = "5 min";
+"kiosk.dim.opt.10" = "10 min";
+"kiosk.dim.opt.15" = "15 min";
+"kiosk.dim.opt.30" = "30 min";
+"kiosk.dim.opt.60" = "60 min";
+
+/* --- Clock-position option labels (web `CLOCK_POSITION_OPTIONS`) --- */
+"kiosk.clockPos.topLeft" = "Top Left";
+"kiosk.clockPos.topRight" = "Top Right";
+"kiosk.clockPos.bottomLeft" = "Bottom Left";
+"kiosk.clockPos.bottomRight" = "Bottom Right";
+
+/* --- Accessibility (VoiceOver) --- */
+"kiosk.selected" = "Selected";
+"kiosk.notSelected" = "Not selected";
