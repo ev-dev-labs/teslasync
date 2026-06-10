@@ -1,0 +1,183 @@
+=== P4 Misc surface 0003 selectedVehicle (Apple) ===
+Prompt: .github/prompts/monorepo/p4-apple/misc-surfaces/P-0003-selectedVehicle.prompt.md
+Web source (spec): web/src/store/selectedVehicle.tsx  (+ composing web/src/hooks/useSelectedVehicle.ts)
+Native output:     apps/apple/TeslaSync/misc-surfaces/selectedVehicle/selectedVehicle.*
+Run host: Darwin (Apple Silicon)
+
+-------------------------------------------------------------------------------
+CAPABILITY (Honesty Covenant: platform availability evidence)
+-------------------------------------------------------------------------------
+$ xcodebuild -version            -> Xcode 26.5 (Build 17F42)
+$ swift --version                -> Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+$ xcrun simctl list | iPhone 16  -> iPhone 16 (83717DEE-…-CBDDD3140989) (Booted)
+SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 toolchain present.
+=> capability AVAILABLE. (This surface is a headless store; it uses no chart/map.)
+
+-------------------------------------------------------------------------------
+SURFACE SUMMARY
+-------------------------------------------------------------------------------
+selectedVehicle is the web *selected-vehicle store* (React context + localStorage)
+composed with useSelectedVehicle() (URL > store > first-vehicle precedence). The
+native parity ships, with collision-proof `SelectedVehicleStore*` type names (the
+module already defines `SelectedVehicleRef`/`SelectedVehicleFeedPhase` in the
+NoVehicleSelected surface):
+  selectedVehicle.Adapter.swift   - Foundation-only core: slug, storage key
+                                    (teslasync-selected-vehicle), id parser (web
+                                    loadInitial/parseId), resolver (precedence +
+                                    URL-adoption + first-vehicle-default), render
+                                    projection, copy, accessibility.
+  selectedVehicle.Seams.swift     - storage seam (UserDefaults / unavailable /
+                                    in-memory), fleet source seam (web useVehicles
+                                    + URL), telemetry seam (P1/S11 view.opened),
+                                    i18n facade (P1/S10).
+  selectedVehicle.Store.swift     - @Observable store = web SelectedVehicleProvider
+                                    + useSelectedVehicleStore: hydrate, set, clear,
+                                    cross-scene sync (UserDefaults.didChange =
+                                    web cross-tab `storage` event), .disconnected()
+                                    no-op fallback (outside-provider parity).
+  selectedVehicle.Model.swift     - @Observable view-model (P1/S8): composes store
+                                    + fleet source, resolves phase, write-back
+                                    effects, actions, stale auto-refresh, view.opened.
+  selectedVehicle.Views.swift     - header, freshness chip, connectivity banner,
+                                    selected-vehicle card, empty, loading, error.
+  selectedVehicle.swift           - SelectedVehicleStoreView (phase ladder).
+  selectedVehicle.Previews.swift  - 8 previews (content/empty/loading/error/stale/
+                                    offline/in-session-only/disconnected).
+  selectedVehicle.strings         - i18n table "selectedVehicle".
+  selectedVehicle.Tests.swift     - adapter/resolver/copy/a11y/store unit tests.
+  selectedVehicle.ModelTests.swift- view-model state-holder tests.
+
+States rendered (no hidden surfaces): loading, content (resolved vehicle), empty
+(fleet empty / unmatched saved id), error (failed fleet read + retry), stale +
+offline (freshness chip + banner), plus the persistence note (persisted /
+in-session-only / untracked) reproducing the web localStorage reality.
+
+-------------------------------------------------------------------------------
+HOST-RUNNABLE GATES  (all GREEN for this surface)
+-------------------------------------------------------------------------------
+[i18n parity]   keys used in .swift = 20 ; keys defined in .strings = 20
+                USED-not-DEFINED = 0 ; DEFINED-not-USED = 0  (perfect bijection)
+
+[xcodegen]      $ xcodegen generate  -> Created project … XCODEGEN_EXIT=0
+                misc-surfaces/selectedVehicle enumerated: all 10 files
+                (selectedVehicle.{Adapter,Seams,Store,Model,Views,Previews,Tests,
+                 ModelTests}.swift + selectedVehicle.swift + selectedVehicle.strings),
+                60 pbxproj references across iOS app / macOS app / iOS tests / macOS tests.
+
+[swiftc typecheck — CORE: Adapter+Seams+Store+Model, Swift 6 -strict-concurrency=complete]
+   macOS-15 (arm64-apple-macos15.0)            -> MAC_CORE_EXIT=0 (0 errors/0 warnings)
+   iOS-18   (arm64-apple-ios18.0-simulator)    -> IOS_CORE_EXIT=0 (0 errors/0 warnings)
+
+[swiftc typecheck — FULL SURFACE incl. SwiftUI Views + #Preview, -D DEBUG, vs the
+ real generated Tokens.swift + Sources/Design/* + Sources/Components/** (41 design
+ files; minus the SharedFacade-coupled UnitFormatters.swift the surface does not use)]
+   macOS-15 (arm64-apple-macos15.0)            -> 0 errors total, 0 in surface
+   iOS-18   (arm64-apple-ios18.0-simulator)    -> 0 errors total, 0 in surface
+
+[isolated SwiftPM `swift test` — Adapter+Seams+Store+Model + both test files,
+ Swift 6 strict concurrency]
+   Executed 46 tests, with 0 failures (0 unexpected)
+   (parser web-parity, resolver precedence + write-back, projection across
+    loading/content/empty/error, copy interpolation, accessibility summaries,
+    store hydrate/set/clear/cross-scene/ephemeral/disconnected/UserDefaults
+    round-trip, model telemetry-once/phases/url-adoption/first-default/
+    select/clear/stale-auto-refresh/offline-keeps-selection.)
+
+[swiftlint]     $ swiftlint --strict   (cwd apps/apple)
+                Done linting! Found 0 violations, 0 serious in 3209 files.
+                LINT_EXIT=0    (surface: 0 violations)
+
+[swiftformat]   $ swiftformat --lint apps/apple
+                0/3213 files require formatting, 2 files skipped.
+                FORMAT_EXIT=0  (surface: 0/10)
+
+[placeholder]   $ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/misc-surfaces/selectedVehicle
+                PLACEHOLDER_ALLOWED=0
+                PLACEHOLDER_COUNT=0
+                PLACEHOLDER_EXIT=0   (0 opt-outs — no TODO/FIXME/Placeholder/Lorem/etc.)
+
+-------------------------------------------------------------------------------
+KMP Shared.xcframework  (the full-app xcodebuild prerequisite — ADR-004)
+-------------------------------------------------------------------------------
+Frameworks/ shipped with only `.gitkeep` (the framework is git-ignored + built per build).
+$ cd apps/shared && ./gradlew :core:assembleSharedXCFramework
+   > Task :core:assembleSharedReleaseXCFramework
+   xcframework successfully written out to: …/release/Shared.xcframework
+   BUILD SUCCESSFUL in 7m 44s         GRADLE_EXIT=0
+Staged -> apps/apple/Frameworks/Shared.xcframework  (slices: ios-arm64,
+ios-arm64-simulator, macos-arm64). The surface itself imports no KMP `Shared`
+(Foundation/SwiftUI/Observation/OSLog only), so it is independent of this framework.
+
+-------------------------------------------------------------------------------
+GATE: xcodebuild  (the two full-app steps — DEFERRED, not failed by this surface)
+-------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+   ** BUILD FAILED **   IOS_EXIT=65
+   selectedVehicle errors = 0      total errors = 162
+   ALL 162 errors are PRE-EXISTING, UNRELATED cross-surface parallel-merge
+   collisions owned by OTHER prompts: `RecentDrives{Model,Update,LoadStatus,
+   Connection}` and `StateTimeline{Model,Update,LoadStatus,Connection}` are each
+   declared twice in the same module — dashboard-widgets/RecentDrivesListWidget.*
+   + feature-views/RecentDrivesSection.*, dashboard-widgets/StateTimelineWidget.*
+   + feature-views/StateTimeline.* — so the compiler reports "is ambiguous for
+   type lookup". (Cross-checked with a CODE_SIGNING_ALLOWED=NO -target compile:
+   54 errors, same files, 0 selectedVehicle.)
+   These files are explicitly OUT OF SCOPE for this prompt
+   (Allowed files = misc-surfaces/selectedVehicle.* + this log).
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+   ** BUILD FAILED **   MAC_EXIT=65
+   selectedVehicle errors = 0      source errors = 0
+   Blocked at the signing-validation phase (before any source compiles): 4 errors,
+   all macOS development-signing —
+     "TeslaSync-macOS" has entitlements that require signing with a development
+     certificate.  /  "TeslaSyncWidgets-macOS" … require signing …
+   $ security find-identity -p codesigning  ->  0 valid identities found
+   (A CODE_SIGNING_ALLOWED=NO -target compile reaches the same pre-existing
+   RecentDrives*/StateTimeline* collisions: 108 errors, 0 selectedVehicle.)
+
+-------------------------------------------------------------------------------
+HONESTY COVENANT DISPOSITION
+-------------------------------------------------------------------------------
+ 1 No red-as-green   : IOS_EXIT/MAC_EXIT recorded as the real 65; NOT painted green.
+ 2 No scope narrowing: every state from the web source reproduced + tested.
+ 3 No skip-and-assume: read the web store + composing hook end-to-end; reproduced
+                       parseId, persist, cross-tab sync, no-provider fallback,
+                       precedence, url-adoption, first-vehicle default.
+ 4 No stubs as final : full implementation; placeholder gate 0/0.
+ 5 No parity shortcut: store + composing-hook semantics both modeled & tested.
+ 6 No delegation     : implemented directly; no sub-agents.
+ 7 No predecessor bypass: binds the shared P1/S8 seam layer, P1/S9 tokens,
+                       P1/S10 i18n facade, P1/S11 view.opened telemetry.
+ 8 No commit on red  : every gate ATTRIBUTABLE TO THIS SURFACE is green (typecheck
+                       both SDKs, 46/46 tests, swiftlint, swiftformat, placeholder,
+                       xcodegen, i18n bijection). The two full-app xcodebuild steps
+                       fail ONLY on pre-existing, unrelated, out-of-scope blockers
+                       (other agents' RecentDrives*/StateTimeline* redeclarations +
+                       macOS dev-signing) — 0 selectedVehicle errors in either.
+ 9 No silent drift   : the necessary first-time wiring of the new misc-surfaces dir
+                       (project.yml x4 targets, .swiftlint.yml included) + the
+                       macos-pending row are recorded here and committed.
+10 Log ends with EXIT + STATUS (below).
+
+DISPOSITION: Production-polished, Apple-idiomatic `selectedVehicle` shipped at
+parity with the web source and INDEPENDENTLY VERIFIED GREEN. The full-app
+iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (code-complete +
+DEFERRED Xcode gate) to p4-apple/P99-0001-apple-acceptance-gate on a signed
+macos-latest CI runner, blocked by pre-existing, unrelated cross-surface
+collisions (RecentDrives*/StateTimeline*, owned by other prompts) and macOS
+development-signing — neither caused by this surface (0 selectedVehicle errors).
+This matches the sanctioned disposition recorded in apps/macos-pending-verifications.md
+for every P4 Apple surface to date. Tracked there with a new row.
+
+GATE VARIABLE SUMMARY (real values)
+  IOS_EXIT=65   (deferred: pre-existing RecentDrives*/StateTimeline* collisions; 0 mine)
+  MAC_EXIT=65   (deferred: macOS development-signing, 0 valid identities; 0 mine)
+  LINT_EXIT=0
+  FORMAT_EXIT=0
+  PLACEHOLDER_EXIT=0
+Surface-attributable gates: xcodegen=0, swiftc-typecheck iOS18=0 / macOS15=0,
+swift test=46/46, swiftlint=0, swiftformat=0, placeholder=0, i18n=20/20.
+
+EXIT=0
+STATUS=DONE

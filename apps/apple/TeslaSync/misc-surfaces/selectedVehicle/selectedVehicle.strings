@@ -1,0 +1,51 @@
+/*
+  selectedVehicle.strings
+  TeslaSync — P4 misc surface · 0003 · selectedVehicle (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  selectedVehicle surface resolves (table "selectedVehicle") lives here with its
+  English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The web source (store/selectedVehicle.tsx) is a headless store and extracts no
+  i18n keys; these back the native render envelope (header, resolved-selection
+  card, persistence note, empty state, error retry, loading, freshness chip,
+  connectivity banner) the prompt's state matrix requires.
+*/
+
+/* --- Header --- */
+"selectedVehicle.title" = "Selected vehicle";
+
+/* --- Loading (fleet resolving) --- */
+"selectedVehicle.loading" = "Loading your vehicles…";
+
+/* --- Content (a vehicle is resolved) --- */
+"selectedVehicle.content.title" = "Selected vehicle";
+"selectedVehicle.content.body" = "{{name}} is your focused vehicle across TeslaSync.";
+"selectedVehicle.content.id" = "Vehicle ID";
+"selectedVehicle.content.clear" = "Clear selection";
+
+/* --- Persistence note (web localStorage availability) --- */
+"selectedVehicle.persistence.persisted" = "Saved on this device.";
+"selectedVehicle.persistence.ephemeral" = "Kept for this session only — it won't survive a restart.";
+"selectedVehicle.persistence.disconnected" = "Selection isn't being tracked right now.";
+
+/* --- Empty (no selection / empty fleet) --- */
+"selectedVehicle.empty.title" = "No vehicle selected";
+"selectedVehicle.empty.desc" = "Add a vehicle to your fleet to choose one.";
+"selectedVehicle.empty.select" = "Select {{name}}";
+
+/* --- Error (failed fleet read → retry) --- */
+"selectedVehicle.error.title" = "Couldn't load your vehicles";
+"selectedVehicle.error.body" = "We couldn't load your vehicles. Try again.";
+"selectedVehicle.retry" = "Try again";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"selectedVehicle.live" = "Live";
+"selectedVehicle.stale" = "Stale";
+"selectedVehicle.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"selectedVehicle.staleBanner" = "Reconnecting — this may be out of date";
+"selectedVehicle.offlineBanner" = "Offline — showing your last saved selection";
