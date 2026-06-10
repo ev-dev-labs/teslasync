@@ -1,0 +1,39 @@
+/*
+  SignalSparklinePreview.strings
+  TeslaSync — P4 feature view · 0271 · SignalSparklinePreview (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SignalSparklinePreview` resolves (table "SignalSparklinePreview") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first block is the exact set of human strings the web source renders
+  (features/telemetry/components/SignalSparklinePreview.tsx): the "No samples in last
+  hour" trend-fallback title and the "Non-numeric signal (kind)" chip title. The web
+  uses the English string itself as the key; the native port assigns a stable dotted
+  key carrying that exact English value, so the rendered copy is identical while
+  staying translatable. The remainder backs the native state envelope (loading / error
+  / retry / freshness chip) and the accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"telemetry.signalSparkline.noSamples" = "No samples in last hour";
+"telemetry.signalSparkline.nonNumeric" = "Non-numeric signal (%@)";
+
+/* --- Native state envelope --- */
+"telemetry.signalSparkline.loading" = "Loading signal trend";
+"telemetry.signalSparkline.errorTitle" = "Couldn't load trend";
+"telemetry.signalSparkline.retry" = "Retry";
+
+/* --- Freshness affordance (Live / Stale / Offline) --- */
+"telemetry.signalSparkline.live" = "Live";
+"telemetry.signalSparkline.stale" = "Stale";
+"telemetry.signalSparkline.offline" = "Offline";
+
+/* --- Accessibility --- */
+"telemetry.signalSparkline.a11y.trend" = "trend";
+"telemetry.signalSparkline.a11y.samples" = "samples in the last hour";
+"telemetry.signalSparkline.a11y.noSamples" = "no samples in the last hour";
+"telemetry.signalSparkline.a11y.nonNumeric" = "non-numeric signal";
