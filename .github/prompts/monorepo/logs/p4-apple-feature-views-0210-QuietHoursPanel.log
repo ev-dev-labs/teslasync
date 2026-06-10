@@ -1,0 +1,189 @@
+=== P4 Feature view 0210 QuietHoursPanel (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh present · Gradle (wrapper)
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, Booted) present · macOS 15 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 6m50s; release + debug
+                       XCFrameworks staged to apps/apple/Frameworks/Shared.xcframework — ios-arm64 +
+                       ios-arm64-simulator + macos-arm64).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS-18/macOS-15 simulators present → NOT capability-BLOCKED.
+                       (This surface uses NO charts/maps — Data sources are the quiet-hours list + save/delete
+                       mutation hooks + toast only.)
+
+WEB SOURCE (the specification)
+  web/src/features/settings/components/QuietHoursPanel.tsx — the quiet-hours / Do-Not-Disturb GlassPanel that
+  CRUDs /notifications/quiet-hours. Each row is a local-time window (HH:MM start + end + IANA timezone), a 7-bit
+  weekday mask (Sun=1<<0 … Sat=1<<6), and a bypass-severity allow-list that escapes the gate. Branches:
+    1. Loading  — <GlassPanel> header + <Spinner/> "Loading quiet-hours windows…" (placeholder INSIDE the panel
+                  chrome so the layout doesn't reflow when data arrives).
+    2. Empty    — header + <EmptyState> (Moon glyph + "No quiet-hours windows yet…").
+    3. List     — header + <ul> of rows: enabled/disabled Badge + "23:00 → 07:00 (tz)" summary +
+                  nextWindowChangeLabel hint + Edit/Delete + all-7 weekday chips (on/off) + bypass Badges.
+  The add/edit form (rendered beneath whenever a draft is open) = title (add vs edit) + Enabled Toggle + Start/End
+  <input type=time> + timezone <Select> (Intl zones) + weekday toggle buttons + bypass-severity toggle buttons +
+  inline validationError + Cancel / Update|Create. validateDraft enforces HH:MM (the `HHMM` regex), start≠end,
+  timezone present, weekday mask in (0,127]; the exported pure nextWindowChangeLabel(w, now) emits the next
+  state-change label (wrap / non-wrap branches). Hooks: useQuietHours (GET list), useSaveQuietHours (POST/PATCH),
+  useDeleteQuietHours (DELETE), useToast (success/error after each mutation), useTranslation. (The optional
+  seedDraft/onSeedConsumed AI-advisor prop is a sibling-surface seam, out of scope for this panel.)
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/, all within the prompt's allowed QuietHoursPanel.*)
+  QuietHoursPanel.Adapter.swift   — pure core: surface slug; QuietHours{Phase,LoadStatus,Connection};
+                                    QuietHoursSeverity (SEVERITY_CHOICES order + token→label); QuietHoursWeekday(s)
+                                    (Sun=1<<0…Sat=1<<6, all=127, isOn/toggled); QuietHoursWindowItem (+summary);
+                                    QuietHoursDraft (makeNew/makeEditing); QuietHoursProjection.resolvePhase;
+                                    QuietHoursTimezones (listTimezones port)
+  QuietHoursPanel.Validate.swift  — pure: QuietHoursValidator (HH:MM parse + validateDraft + 6-message map),
+                                    QuietHoursClock (HH:MM↔Date for the pickers), QuietHoursSchedule
+                                    (nextWindowChangeLabel port, localized), QuietHoursAccessibility (VoiceOver)
+  QuietHoursPanel.Seams.swift     — P1/S11 telemetry seam, P1/S10 i18n facade, toast type (useToast), read
+                                    source snapshot + P1/S8 QuietHoursSource protocol, write seam
+                                    (QuietHoursWriter: save/delete + payload + result), OSLog defaults + in-memory source
+  QuietHoursPanel.Model.swift     — @MainActor @Observable QuietHoursModel (state holder): phase / rows /
+                                    connection / draft / validationError / isSaving / deletingID / toast;
+                                    lifecycle + view.opened (once); snapshot apply + phase recompute + stale
+                                    auto-refresh + delete-target pruning + toast raise/dismiss
+  QuietHoursPanel.Editing.swift   — extension: startCreate/startEdit/cancel, toggleWeekday/toggleSeverity,
+                                    controlled bindings (enabled/timezone/start/end), submit (validate→save→toast→
+                                    close→refresh) + delete (removeWindow→toast→refresh)
+  QuietHoursPanel.States.swift    — loading / empty (ContentUnavailableView) / error (+retry) / inline list-error /
+                                    freshness chip / connectivity banner / toast view
+  QuietHoursPanel.Views.swift     — header (moon chip + title + freshness chip + subtitle + "Add window"),
+                                    add button, window list (TSStagger), Text helper
+  QuietHoursPanel.Row.swift       — one window card (enabled badge + summary + next-change + Edit/Delete +
+                                    weekday chips + bypass), row actions, enabled badge, shared chip label
+  QuietHoursPanel.Form.swift      — inline add/edit form: header+Enabled Toggle, Start/End DatePickers, timezone
+                                    Picker(.menu), weekday + severity toggle chips, inline error, Cancel/Update|Create
+  QuietHoursPanel.swift           — the public View: TSFadeIn + GlassPanel-equivalent card, banner when not live,
+                                    always-on header, phase-switched body, draft form, toast overlay, a11y; surfaceSlug
+  QuietHoursPanel.Previews.swift  — #if DEBUG previews: content / empty / loading / error / create-form / edit-form /
+                                    stale / offline (8)
+  QuietHoursPanel.Tests.swift     — pure XCTests: validator (HH:MM + validateDraft + message map) / clock / weekday
+                                    mask / projection / timezone catalog
+  QuietHoursPanel.ScheduleTests.swift — pure XCTests: nextWindowChangeLabel (wrap/non-wrap/disabled/off-today/invalid)
+                                    / severity mapping / summary / accessibility
+  QuietHoursPanel.ModelTests.swift— state-holder XCTests: view.opened once / phases / draft+toggles+bindings /
+                                    validate-blocks-save / create+update+delete flows / failure paths / stale / offline / prune / toast
+  QuietHoursPanel.strings         — P1/S10 catalog (table "QuietHoursPanel"): every web t() key (severity×3,
+                                    weekday×7, title/subtitle/add/loading/empty/enabled/disabled/edit/delete/bypass,
+                                    form×11, error×6, toast×5) + native envelope keys (errors.load/retry/live/stale/
+                                    offline/banners/toast.dismiss/next×4)
+
+  No shared wiring edits were required: project.yml + .swiftlint.yml already include TeslaSync/feature-views;
+  strings are kept per-surface so no master-catalog edit is needed; the surface's public types are all
+  `QuietHours`-suffixed and do NOT collide with the pre-existing `Sources/Notifications/Routing/QuietHours.swift`
+  `struct QuietHours` (verified). Changes are confined to the 15 QuietHoursPanel.* files + this log (no silent drift).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  FadeIn(0.135)           → TSFadeIn(delay: 0.135)         StaggerContainer/Item → TSStaggerContainer/Item
+  GlassPanel              → Color.TS.surface card + TSRadius.lg + Color.TS.border stroke
+  IconBox purple + Moon   → accent chip (0.10 bg / 0.20 ring) + SF "moon.zzz.fill"
+  Heading/HelperText      → Font.TS.panel / Font.TS.caption with textPrimary / textMuted
+  Badge success|neutral   → QuietHoursEnabledBadge (statusSuccess / textMuted pill)
+  Badge warning (bypass)  → QuietHoursChipLabel(tone: statusWarning)
+  Button primary (Add/Create) → accent capsule  ·  secondary (Cancel) → textSecondary capsule  ·  danger (Delete) → statusDanger capsule
+  Toggle                  → SwiftUI Toggle(.switch)        Spinner → ProgressView().controlSize(.small)
+  <input type=time>       → DatePicker(.hourAndMinute) bound via QuietHoursClock (HH:MM↔Date)
+  <Select> timezone       → Picker(.menu) over TimeZone.knownTimeZoneIdentifiers (current pinned first when absent)
+  weekday buttons (purple)→ QuietHoursChipLabel(tone: accent) Buttons (aria-pressed → .isSelected)
+  severity buttons (amber)→ QuietHoursChipLabel(tone: statusWarning) Buttons (aria-pressed → .isSelected)
+  EmptyState              → ContentUnavailableView          useToast → QuietHoursToast + QuietHoursToastView (4s auto-dismiss)
+  validateDraft + HHMM    → QuietHoursValidator (6 localized messages incl. the start↔end `equal` branch)
+  nextWindowChangeLabel   → QuietHoursSchedule.nextChangeLabel (4 localized variants; the web hard-coded literals
+                            are routed through the P1/S10 facade so zero English lives in code)
+  summarizeWindow         → QuietHoursWindowItem.summary ("start → end (tz)")
+  freshness/stale/offline → QuietHoursFreshnessChip + QuietHoursConnectivityBanner + one guarded stale
+                            auto-refresh (ADR-013; prompt "stale chip + auto-refresh", "offline + cached")
+  i18n      : all web keys + native envelope keys resolve via QuietHoursStrings (NSLocalizedString table
+              "QuietHoursPanel"); no hardcoded user-facing English in code.
+  a11y      : decorative glyphs .accessibilityHidden; the panel + each row expose combined VoiceOver labels;
+              every interactive element (Add / Edit / Delete / Cancel / Save / weekday / severity / timezone /
+              Start / End / Retry / toast-dismiss) has an explicit label; weekday + severity toggles expose
+              .isSelected; Dynamic Type via Font.TS; Reduce Motion honored by TSFadeIn/TSStagger.
+  telemetry : view.opened surface="QuietHoursPanel" via the model on first appearance (P1/S11), default OSLog sink.
+
+STATES (every state renders — no blank surfaces)
+  loading · empty · error(+retry) · content(list) · create-form · edit-form · stale(chip+banner+auto-refresh) ·
+  offline(cached+chip) + inline list-error above a populated list. All exercised by previews AND unit tests.
+
+GATES
+  [GREEN]    swiftformat --lint (QuietHoursPanel.* — 14 swift files)        : 0/14 require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict (QuietHoursPanel.* — 14 files)              : 0 violations, 0 serious   (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 — REAL scan of the 14 shipped .swift    : PLACEHOLDER_COUNT=0       (PLACEHOLDER_EXIT=0)
+             (the gate's LITERAL arg `-Path …/feature-views/QuietHoursPanel` is a FILENAME PREFIX, not a path, so
+             the script's `Test-Path` guard returns a vacuous Count=0; the authoritative scan above copies the 14
+             real .swift into a temp dir and scans them — PLACEHOLDER_ALLOWED=0, 0 opt-outs.)
+  [GREEN]    QuietHoursPanel build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode +
+             -strict-concurrency=complete = same as the app), Xcode-26.5 toolchain, compiling the EXACT shipped
+             QuietHoursPanel.* sources (incl. #Preview) against the REAL repo design-system files
+             (apps/design/generated/apple/Tokens.swift + Sources/Components/Motion/Motion.swift). Harness lib
+             module named "TeslaSync" so the co-located `@testable import TeslaSync` tests compile verbatim:
+                 Build complete!  ·  Executed 56 tests, with 0 failures                                  (SWIFT_TEST_EXIT=0)
+             (validator + clock + weekday-mask + projection + timezone + schedule + severity + summary +
+             accessibility + 21 state-holder tests.)
+  [GREEN]    swiftc -typecheck of the 11 shipped surface sources (+ Tokens + Motion), Swift 6 strict concurrency:
+                 -target arm64-apple-ios18.0-simulator   : 0 errors / 0 warnings                         (IOS_TYPECHECK_EXIT=0)
+                 -target arm64-apple-macos15.0            : 0 errors / 0 warnings                         (MAC_TYPECHECK_EXIT=0)
+  [GREEN]    xcodegen generate                                              : enumerates all 15 QuietHoursPanel
+                                                                              files (90 pbxproj references)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                      : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO QuietHoursPanel errors; all blockers pre-exist this change):
+    iOS  : the TeslaSync app-target whole-module batch compile CRASHES the Swift frontend — swift-frontend
+           `llvm::report_fatal_error` → "Command SwiftCompile failed with a nonzero exit code" → "** BUILD FAILED **"
+           (module-name TeslaSync, Objects-normal/arm64/sources-1). The log carries ZERO " error: " lines and ZERO
+           QuietHoursPanel references in any diagnostic — it is a compiler crash during the 2200+-file batch, not a
+           type error. PROVEN pre-existing by a CONTROL build: with all 15 QuietHoursPanel.* files stashed out of the
+           tree + `xcodegen generate` + rebuild, the app target reproduces the IDENTICAL crash
+           (report_fatal_error / SwiftCompile failed / BUILD FAILED in module-name TeslaSync) → CONTROL_BUILD_EXIT=65.
+           grep "QuietHoursPanel.*error:" /tmp/ios-build.log = 0 hits.
+    macOS: fails at GatherProvisioningInputs BEFORE compilation on development SIGNING —
+           "'TeslaSync-macOS' has entitlements that require signing with a development certificate" (also
+           'TeslaSyncWidgets-macOS'), "** BUILD FAILED **" → "** TEST FAILED **". `security find-identity -p
+           codesigning -v` → "0 valid identities found" on this runner. grep "QuietHoursPanel.*error:"
+           /tmp/mac-build.log = 0 hits.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI
+    runner, owned by the P4/P99 Apple acceptance gate (whole-module app-target compile health + signing/archive) —
+    NOT by a single feature-view prompt (task rule: do not fix pre-existing unrelated breakage). The same two
+    deferrals are recorded by predecessor P4 surfaces (e.g. 0197 ActiveSessionsSection, 0262 ScheduledExportsPanel).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with raw evidence + a control build — never reported as passing.
+  2  No scope narrowing : every web branch (loading / empty / list / add-form / edit-form), the validator (all 6
+                          messages), nextWindowChangeLabel (wrap + non-wrap), the weekday mask, the bypass list,
+                          the create/update/delete + toasts are reproduced; the prompt's stale/offline/error states added.
+  3  No skip-and-assume : every host gate executed on THIS runner; raw exits pasted; the iOS crash was not assumed —
+                          it was reproduced WITHOUT the surface (CONTROL_BUILD_EXIT=65) and grepped (0 surface errors).
+  4  No stubs as final  : complete production surface + 56 real tests; placeholder scanner = 0 on the real files.
+  5  No parity shortcut : tokens/typography/badges/toggle/pickers/toast/validation/schedule/a11y/i18n/telemetry/
+                          freshness all mapped + verified.
+  6  No delegation      : implemented directly; no agents (prompt: delegation FORBIDDEN).
+  7  No predecessor bypass: P1/S8 state-holder pattern, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4 core
+                          (TSFadeIn/TSStagger) all consumed.
+  8  No commit on red   : the COMMITTED artifact (QuietHoursPanel.* + this log) is GREEN on every host gate AND on a
+                          real isolated Swift 6 strict-concurrency build+test AND on iOS-18 + macOS-15 typecheck; the
+                          deferred full-app gate is RED only on a pre-existing whole-module compiler crash + macOS
+                          signing this commit neither introduces nor touches (proven by the control build).
+  9  No silent drift    : changes are confined to the 15 QuietHoursPanel.* files + this log (enumerated above); no
+                          project.yml / .swiftlint.yml / master-catalog edits were needed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic QuietHoursPanel shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 56 tests pass under the app's own Swift 6 strict-concurrency rules, against the real
+  design-system, and it type-checks clean on both the iOS-18 simulator and macOS-15 SDKs — with swiftformat /
+  swiftlint / placeholder all green on the shipped files. The full-app iOS-Simulator + macOS xcodebuild gate is
+  DEFERRED (not failed by this code): iOS is blocked by a PRE-EXISTING whole-module swift-frontend compiler crash
+  (reproduced identically with the surface removed → CONTROL_BUILD_EXIT=65) and macOS by development-signing (0 valid
+  codesigning identities) — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE
