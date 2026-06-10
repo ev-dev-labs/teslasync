@@ -1,0 +1,39 @@
+/*
+  ChargingTelemetrySection.strings
+  TeslaSync — P4 feature view · 0290 · ChargingTelemetrySection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargingTelemetrySection` resolves (table "ChargingTelemetrySection") lives here
+  with its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/ChargingTelemetrySection.tsx). The
+  second group backs the native chrome (the P4 leaf freshness chip / connectivity
+  banner / loading / error copy) so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"vehicles.detail.chargingTelemetry" = "Charging Telemetry";
+"vehicles.detail.chargerPower" = "Charger Power";
+"vehicles.detail.voltage" = "Voltage";
+"vehicles.detail.current" = "Current";
+"vehicles.detail.energyAdded" = "Energy Added";
+"vehicles.detail.chargingState" = "Charging State";
+"vehicles.detail.batteryLevel" = "Battery Level";
+"vehicles.detail.chargeRate" = "Charge Rate";
+"vehicles.detail.rangeAdded" = "Range Added";
+"vehicles.detail.noChargingTelemetry" = "No charging telemetry available";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"chargingTelemetry.live" = "Live";
+"chargingTelemetry.stale" = "Stale";
+"chargingTelemetry.offline" = "Offline";
+"chargingTelemetry.staleBanner" = "Reconnecting — data may be stale";
+"chargingTelemetry.offlineBanner" = "Offline — showing last known data";
+"chargingTelemetry.refresh" = "Refresh";
+"chargingTelemetry.loadingA11y" = "Loading charging telemetry";
+"chargingTelemetry.errorTitle" = "Couldn't load charging telemetry";
+"chargingTelemetry.retry" = "Retry";
