@@ -108,6 +108,21 @@
     NotificationRow surface Model link). Do NOT re-concatenate, and never write a literal build-item or
     project start tag inside this comment.
   -->
+    UI-thread-free logic (Model / Source / ViewModel / Catalog / Registry / diagnostics) for each
+    feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and
+    cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources
+    are Compile-linked below (the views themselves are exercised by the app build). The matching test
+    classes live under this project and are picked up by the SDK default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, path-sorted, Include-deduplicated
+    Compile ItemGroup - the union of every WinUI-free logic source on disk under dashboard-widgets/ and
+    feature-views/ (every .cs that does not reference Microsoft.UI; the WinUI view files are excluded).
+    A chain of integration merges had repeatedly re-concatenated this file into multiple Project roots,
+    failing XML load (MSB4025); re-consolidated for P2 feature-views/0182 ComputedMetricEditor into this
+    single canonical root, regenerated directly from the WinUI-free sources on disk (which also restores
+    the ElevationChart and WidgetPicker surfaces their test classes require). Do NOT re-concatenate, and
+    never write a literal build-item or project start tag inside this comment.
+  -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -138,8 +153,7 @@
     </Content>
   </ItemGroup>
 
-  <!-- WinUI-free Model / Source / ViewModel / Projection / Registry sources Compile-linked from
-       TeslaSync.App (path-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (path-sorted, Include-deduplicated). -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -491,6 +505,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.ViewModel.cs" Link="FeatureViews\ClientUtilitiesSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.Model.cs" Link="FeatureViews\ColorConverter\ColorConverter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.ViewModel.cs" Link="FeatureViews\ColorConverter\ColorConverter.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ComputedMetricEditor\ComputedMetricEditor.Model.cs" Link="FeatureViews\ComputedMetricEditor\ComputedMetricEditor.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ComputedMetricEditor\ComputedMetricEditor.Source.cs" Link="FeatureViews\ComputedMetricEditor\ComputedMetricEditor.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ComputedMetricEditor\ComputedMetricEditor.ViewModel.cs" Link="FeatureViews\ComputedMetricEditor\ComputedMetricEditor.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ConditionBuilder\ConditionBuilder.Model.cs" Link="FeatureViews\ConditionBuilder\ConditionBuilder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ConditionBuilder\ConditionBuilder.Source.cs" Link="FeatureViews\ConditionBuilder\ConditionBuilder.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ConditionBuilder\ConditionBuilder.ViewModel.cs" Link="FeatureViews\ConditionBuilder\ConditionBuilder.ViewModel.cs" />
@@ -737,9 +754,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\StatorTempChart.Model.cs" Link="FeatureViews\StatorTempChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatusHeader\StatusHeader.Model.cs" Link="FeatureViews\StatusHeader\StatusHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummarySlide\SummarySlide.Model.cs" Link="FeatureViews\SummarySlide\SummarySlide.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Model.cs" Link="FeatureViews\SummaryStats\SummaryStats.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Source.cs" Link="FeatureViews\SummaryStats\SummaryStats.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.ViewModel.cs" Link="FeatureViews\SummaryStats\SummaryStats.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Model.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Source.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" />
