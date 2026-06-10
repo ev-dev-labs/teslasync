@@ -1,0 +1,119 @@
+=== P2 Feature view 0232 InputCommandTile (Windows) ===
+Runner: Windows_NT 10.0.26200  |  .NET SDK 10.0.300  |  workloads: maui-windows (WinUI 3 / Windows App SDK tooling present)
+Web source (spec): web/src/features/system/components/InputCommandTile.tsx
+Native output:     apps/windows/TeslaSync.App/feature-views/InputCommandTile.cs
+                   apps/windows/TeslaSync.App/feature-views/InputCommandTile.Model.cs
+Tests:             apps/windows/TeslaSync.App.Tests/FeatureViews/InputCommandTileTests.cs
+Tests wiring:      apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj (Compile-link of the WinUI-free Model.cs)
+
+--- DELIVERABLE SUMMARY ---
+Native WinUI 3 parity port of the web InputCommandTile presentational tile:
+  * Glass command card (TsGlassPanel) hosted in a chrome-less Button = the click target -> DialogRequested
+    (web onRequestDialog(def)); suppressed while a dispatch is in flight (web `loading`).
+  * Favorite-toggle star (TsButton, Icon variant) -> FavoriteToggled (web onToggleFavorite); always reachable
+    for keyboard/Narrator (the web hides it behind opacity-0 group-hover, which is not accessible).
+  * Variant -> hover/focus border accent (web hoverStyles: default->cyan, danger->red, success->green).
+  * Icon badge with the command glyph, swapped for a TsSpinner busy ring while in flight (web Loader2).
+  * Label (web t(def.labelKey,...)), optional sublabel (web t(def.sublabelKey,...)), optional last-command
+    status caption with the web tone rule (U+2713 prefix -> success/green, any other non-blank -> failure/red).
+  * Every string via the i18n facade; static key commands.toggleFavorite present in P1/S10 catalog
+    (apps/shared/i18n/catalog/en.json -> translation.commands.toggleFavorite = "Toggle favorite").
+  * PII-safe diagnostics: view.opened / dialog.requested / favorite.toggled, slug=InputCommandTile.
+  * No fetch-driven empty/error/stale/offline branch: the web source's only data source is useTranslation
+    (documented in the Model, matching the sibling ToolCard / HighlightCard / AddWidgetButton presentational ports).
+  * Reduced-motion honoured by construction (no bespoke looping motion; the busy ring is the system progress indicator).
+  * All UI-free logic (branch/tone/accent/automation-name/i18n) in InputCommandTileProjection -> unit-tested headlessly.
+
+--- PRE-EXISTING BLOCKER REPAIRED (tightly coupled to this task) ---
+Baseline `dotnet build apps/windows/TeslaSync.sln -c Release` FAILED before any change:
+  TeslaSync.App.Tests.csproj(929,2): error MSB4025: The project file could not be loaded.
+  There are multiple root elements.
+The test csproj had been re-concatenated by prior merges into TWO <Project> roots with triplicate <Compile>
+items (1471 Compile lines, only 706 unique). This is the test project this surface must extend and which the
+gate's `dotnet test` must load, so repairing it is in-scope.
+Proof the include SET was already correct (only duplication/multi-root was wrong):
+  TOTAL .cs under feature-views+dashboard-widgets = 1000; WinUI-free = 706; existing unique includes = 706;
+  existing-includes-missing-on-disk = 0; WinUI-free-not-in-includes = 0; existing-includes-that-are-WinUI = 0.
+Repair: regenerated ONE <Project> root with a single ordinal-sorted, Include-deduplicated Compile ItemGroup =
+every WinUI-free .cs on disk (those that do not reference Microsoft.UI), + the new InputCommandTile.Model.cs.
+Result: XML_VALID=TRUE, COMPILE_TOTAL=707, COMPILE_UNIQUE=707, DUP_COUNT=0, PROJECT_OPEN=1, PROJECT_CLOSE=1.
+
+============================================================
+GATE RESULTS
+============================================================
+
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    -> Build succeeded.  0 Error(s).  17 Warning(s) (ALL pre-existing in TeslaSync.App.Core:
+       CA1720/CA1716/CA1000/CA1859; none in the new files; TeslaSync.App has TreatWarningsAsErrors=true and
+       produced 0 errors, so the new view/model are warning-clean).
+    BUILD_EXIT=0
+
+[2] dotnet test apps/windows/TeslaSync.sln -c Release
+    Passed!  - Failed: 0, Passed: 14701, Skipped: 0, Total: 14701 - TeslaSync.App.Tests.dll (net10.0)
+    Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+    TEST_EXIT=1
+
+    >>> ALL 147 failures are the W9 out-of-process UI-automation E2E suite (every test
+        [Trait("Category","UIAutomation")]), failing for ONE environmental reason:
+
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+        WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+        WinAppDriver.exe was not found at its standard install paths or on PATH.
+          at WinAppDriverSession.EnsureReady() ... WinAppDriverSession.cs:line 75
+
+        These tests are run via the dedicated harness apps/windows/run-ui-automation.ps1 (P2/W9-0002), which
+        REQUIRES: Developer Mode + Windows App SDK runtime + WinAppDriver 1.2.1+ + a deployed packaged app,
+        and "blocks honestly when any piece is missing". The fixture is documented to FAIL (never silently
+        skip) when the runner is absent. This runner has no WinAppDriver (exe absent; :4723 not listening),
+        so all 147 fail by design. 0 failures reference TeslaSync.App.Tests (this surface's suite).
+
+    Capability probe (this runner): UserInteractive=True, SessionName=Console, winget+choco present,
+        WinAppDriver.exe found=False, listening-on-4723=False. The WinUI 3 / .NET 10 BUILD capability IS
+        present (step [1] built the WinUI 3 surface). The WinAppDriver UI-automation RUNNER capability (needed
+        only for the unrelated W9 E2E suite, not to build/ship this surface) is NOT present on this runner.
+
+[2b] dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"   (isolation evidence)
+    Passed!  - Failed: 0, Passed: 14701, Skipped: 0, Total: 14701 - TeslaSync.App.Tests.dll (net10.0)
+    NONUIA_TEST_EXIT=0
+    -> Everything except the WinAppDriver E2E suite is green, including all InputCommandTile adapter /
+       per-state / accessibility-label / diagnostics tests. The block is isolated entirely to the absent
+       UI-automation runner.
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    -> clean (new files normalized to LF per .editorconfig end_of_line=lf).
+    FORMAT_EXIT=0
+
+[4] ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/InputCommandTile
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+    Explicit per-file scan (InputCommandTile.cs, InputCommandTile.Model.cs, InputCommandTileTests.cs):
+       PLACEHOLDER_COUNT=0 each. No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented/
+       NotImplementedException/// stub/mock in shipped code.
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+[x] Surface renders all states from the web source (ready / in-flight loading / favorite on-off /
+    status none-success-error / sublabel present-absent). No fetch empty/error/stale/offline exists in the
+    web source (useTranslation only) - documented, matching ToolCard/HighlightCard/AddWidgetButton.
+[x] No direct HTTP from the view; presentational tile, model + projection are WinUI-free.
+[x] Every i18n key from source resolves; commands.toggleFavorite present in P1/S10 catalog.
+[x] Accessibility names on both interactive elements (tile + favorite); decorative icon hidden from Narrator;
+    status caption is a polite live region; favorite is a real, always-reachable control.
+[x] Tests: adapter unit test + per-state projection test + a11y-label test + diagnostics test (all green in [2b]).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (step [4]).
+[ ] EXIT=0 / STATUS=DONE  -> NOT reached: the full-solution `dotnet test` cannot be 0 on this runner because
+    the WinAppDriver UI-automation runner is absent (step [2]). Sanctioned BLOCKED outcome per the prompt's
+    capability clause, with the API/runner evidence above.
+
+CONCLUSION: The InputCommandTile surface is COMPLETE and verified - it builds clean (BUILD_EXIT=0), is
+fully format-clean (FORMAT_EXIT=0) and placeholder-clean (PLACEHOLDER_EXIT=0), and its entire unit-test suite
+passes (14701 passed / 0 failed, step [2b]). The full-solution `dotnet test` is red ONLY because the
+pre-existing W9 WinAppDriver UI-automation E2E suite (147 tests, unrelated to this surface) cannot run without
+the WinAppDriver runner, which is not installed on this runner (UiAutomationUnavailableException). This is the
+platform-capability gap the prompt's capability clause and the repo's own run-ui-automation.ps1 harness treat
+as an honest BLOCK.
+
+EXIT=1
+STATUS=BLOCKED
