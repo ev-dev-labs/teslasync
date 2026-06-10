@@ -1,0 +1,58 @@
+/*
+  StateTimeline.strings
+  TeslaSync — P4 feature view · 0235 · StateTimeline (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `StateTimeline` resolves (table "StateTimeline") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/system/components/state-machine/StateTimeline.tsx). Web `{{name}}`
+  interpolations are rendered with the native positional/printf format specifiers
+  (`%lld`, `%@`, `%1$@`) so the formatting stays locale-correct. The remainder back
+  the native state envelope (title, freshness chip, connectivity banner, loading /
+  error chrome, relative-time words) plus the accessibility summaries — keyed here so
+  no English literal lives in native code.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"debugger.window.minutes" = "%lld min";          /* web "{{n}} min"   */
+"debugger.window.hours" = "%lld h";              /* web "{{n}} h"     */
+"debugger.window.day" = "24 h";
+"debugger.timeline.empty" = "No transitions in window";
+"debugger.timeline.lastSeen" = "Last transition %@";        /* web "Last transition {{rel}}"     */
+"debugger.timeline.widenTo" = "Widen window to %@";         /* web "Widen window to {{label}}"   */
+"debugger.timeline.jumpToLast" = "Jump to last transition";
+"debugger.timeline.windowLabel" = "Window: %lld min";       /* web "Window: {{minutes}} min"     */
+"debugger.timeline.tickAria" = "%1$@ to %2$@";              /* web "{{from}} to {{to}}"          */
+
+/* --- Surface title (a11y root) --- */
+"debugger.timeline.title" = "State transition timeline";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"debugger.timeline.live" = "Live";
+"debugger.timeline.stale" = "Stale";
+"debugger.timeline.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"debugger.timeline.staleBanner" = "Reconnecting — the transition timeline may be stale";
+"debugger.timeline.offlineBanner" = "Offline — showing the last loaded transitions";
+
+/* --- Loading / error chrome --- */
+"debugger.timeline.loading" = "Loading transitions";
+"debugger.timeline.errorTitle" = "Couldn't load transitions";
+"debugger.timeline.retry" = "Retry";
+
+/* --- Relative-time words (web formatRelative) --- */
+"debugger.timeline.rel.justNow" = "just now";
+"debugger.timeline.rel.minutes" = "%lldm ago";
+"debugger.timeline.rel.hours" = "%lldh ago";
+"debugger.timeline.rel.days" = "%lldd ago";
+
+/* --- Accessibility summary words --- */
+"debugger.timeline.a11y.transitions" = "transitions";
+"debugger.timeline.a11y.from" = "from";
+"debugger.timeline.a11y.to" = "to";
