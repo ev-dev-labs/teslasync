@@ -1,0 +1,102 @@
+=== P2 Feature view 0049 WindowStatusDetail (Windows) ===
+Artifact: apps/windows/TeslaSync.App/feature-views/WindowStatusDetail.*
+Web source (spec): web/src/features/admin/components/security-access/WindowStatusDetail.tsx (+ ./helpers.ts)
+Honesty Covenant: observed (no red-as-green; the one capability gap + the pre-existing blocker it surfaced are disclosed verbatim below).
+
+--- CAPABILITY CHECK ---
+.NET SDK                : 10.0.300 (PRESENT)
+WinUI 3 / WindowsAppSDK : App TFM net10.0-windows10.0.19041.0 (PRESENT - TeslaSync.App builds, 0 Warning(s)/0 Error(s))
+Fluent Design           : Segoe Fluent + token brushes (PRESENT)
+UI-automation runner    : WinAppDriver / Appium ABSENT - nothing listening on http://127.0.0.1:4723/ and
+                          WinAppDriver.exe not on PATH or at its standard install paths (see TEST step + apps/windows/run-ui-automation.ps1,
+                          which by design exits STATUS=BLOCKED when this runner is absent and "never reports an absent runner as green").
+                          This is the ONLY capability gap; the WinUI 3 + .NET 10 BUILD capability this prompt requires IS present.
+
+--- DELIVERABLE ---
+apps/windows/TeslaSync.App/feature-views/WindowStatusDetail/WindowStatusDetail.Model.cs  (292 lines - WinUI-free WindowState enum, model, projection, diagnostics, registration)
+apps/windows/TeslaSync.App/feature-views/WindowStatusDetail/WindowStatusDetail.cs        (184 lines - WinUI 3 view: SectionTitle + responsive TsGrid of 4 TsGlassPanels, FadeIn entrance)
+apps/windows/TeslaSync.App.Tests/FeatureViews/WindowStatusDetailTests.cs                 (313 lines - 21 [Fact]/[Theory] -> 38 headless cases: parse/projection/states/i18n/a11y/diagnostics)
+
+Parity with the web source (a pure presentational component; the hosting Security & Access page owns all fetching):
+  * Title  -> SectionTitle "Window Status Detail" (web <h2 text-lg font-semibold text-gray-200>), exposed as a level-2 heading.
+  * Layout -> TsFadeIn(delay 150ms == web delay={0.15}) over a responsive TsGrid(Columns=4, Gutter=16, ItemMinWidth=180)
+              reproducing the web `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4` (collapses 4->2->1 by width).
+  * 4 panels in the web WINDOW_KEYS order: fd "Front Driver", fp "Front Passenger", rd "Rear Driver", rp "Rear Passenger".
+  * parseWindowState ported verbatim (asNonEmptyString guard: null/boolean/empty -> Unknown; "closed"/"0" -> Closed;
+    contains "vent" -> Venting; any other non-empty string -> Open). Booleans collapse to Unknown exactly as the web helper.
+  * windowColor / windowTextClass -> token brushes: Closed=Success(green), Venting=Warning(amber), Open=Danger(red),
+    Unknown=TextMuted(gray). Each panel = TsGlassPanel(border=accent/40) + a /20 accent tint fill + bold accent value.
+States rendered (the web source's real branches, reproduced exhaustively):
+  Closed / Venting / Open / Unknown per panel + the no-data surface (a missing `latest` == WindowStatusDetailModel.Empty -> all 4 Unknown).
+  The generic loading/error/stale/offline belong to the parent page (the web component never fetches), documented in the model XML-doc.
+Accessibility: each panel carries a composed Narrator name ("Label: StateText"); decorative inner texts are AccessibilityView.Raw;
+  title is a level-2 heading; TsFadeIn honours the OS reduce-motion setting; TextBlocks honour the system font scale.
+i18n: every string flows through the P1/S10 ILocalizer facade. translation.admin.security.windowDetail IS in the catalog
+  (apps/windows/Strings/en/Resources.resw). The window-label + windowState.* keys are inline-fallback-only - they are absent
+  from BOTH the web catalog (web/src/i18n/en.json) AND the native resw, so the projection resolves them through the same
+  facade with the web's exact English fallbacks, reproducing the web t(key, fallback) behaviour bit-for-bit (no catalog edits).
+Telemetry: view.opened slug=WindowStatusDetail (P1/S11), PII-safe (no window value or vehicle state emitted - asserted in tests).
+
+--- PRE-EXISTING BLOCKER REPAIRED (infra; not the WindowStatusDetail surface) ---
+P1. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was CORRUPT at HEAD - THREE concatenated <Project> roots
+    plus duplicated / mis-nested <Compile> ItemGroups (MSB4025 "multiple root elements", line 623). The project would not
+    load, so `dotnet build` / `dotnet test` / `dotnet format` over the solution all failed before reaching any test. Regenerated
+    as ONE valid root per the file's own INVARIANT: the path-sorted, deduplicated union of all 583 previously-linked WinUI-free
+    sources (cross-checked vs disk: 0 stale links, 0 unlinked WinUI-free sources) + the new WindowStatusDetail.Model.cs link
+    = 584 Compile items. XML now well-formed (1 <Project> root, 0 duplicate includes).
+P2. Repairing P1 let `dotnet format` load the solution for the first time, which surfaced a PRE-EXISTING line-ending violation
+    (.editorconfig end_of_line=lf; .gitattributes has no *.cs rule) committed at HEAD in the WeatherAtCarWidget surface
+    (dashboard-widgets/WeatherAtCarWidget/*.cs x4 + Tests/Widgets/WeatherAtCarWidgetTests.cs) - 5 files, CRLF, unmodified vs HEAD,
+    masked until now by the unloadable csproj. Normalised CRLF->LF (line endings only, no code change) so FORMAT_EXIT=0. The only
+    format rule flagged across the whole solution was ENDOFLINE; no other style fix was applied to any file.
+
+--- GATE (apps/windows/TeslaSync.sln, Release) ---
+check-placeholders (apps/windows/TeslaSync.App/feature-views/WindowStatusDetail):
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+dotnet build apps/windows/TeslaSync.sln -c Release:
+  TeslaSync.TokenGen -> ok ; TeslaSync.Windows.Generated -> ok ; TeslaSync.App.Core -> ok ; TeslaSync.App.Platform -> ok ;
+  TeslaSync.App -> ok ; TeslaSync.App.Tests -> ok ; TeslaSync.App.UITests -> ok
+  0 Error(s). (17 pre-existing CA-suggestion warnings in Core/Generated, which do not set TreatWarningsAsErrors;
+  TeslaSync.App DOES set TreatWarningsAsErrors and built with 0 Warning(s)/0 Error(s).)
+BUILD_EXIT=0
+
+dotnet test apps/windows/TeslaSync.sln -c Release:
+  TeslaSync.App.Tests.dll   (headless) : Passed! - Failed: 0, Passed: 12032, Skipped: 0  (incl. 38 new WindowStatusDetail cases)
+  TeslaSync.App.UITests.dll (E2E)      : Failed! - Failed: 147, Passed: 0
+     Every failure is TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException:
+       "UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+        http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH."
+     0 of these 147 tests belong to WindowStatusDetail (they are ShellNavigation / chrome / a11y E2E specs, every one tagged
+     [Trait("Category","UIAutomation")], gated on the absent UI-automation runner).
+  Cross-check - the whole solution MINUS the absent-runner E2E suite is fully green:
+     dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+       -> Passed! - Failed: 0, Passed: 12032, Skipped: 0   (FILTERED_TEST_EXIT=0)
+TEST_EXIT=1   (solely the environment-gated UIAutomation E2E suite; the headless suite is fully green)
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes:
+  (no changes required after the P2 line-ending normalisation)
+FORMAT_EXIT=0
+
+--- INDEPENDENT SURFACE VERIFICATION ---
+Headless run scoped to this surface: dotnet test --filter FullyQualifiedName~WindowStatusDetailTests
+  -> Passed! - Failed: 0, Passed: 38, Skipped: 0
+WinUI App build (TeslaSync.App, TreatWarningsAsErrors=true) including WindowStatusDetail.cs (the view): 0 Warning(s), 0 Error(s).
+=> The WindowStatusDetail surface is complete and fully verified: it builds in the WinUI app and all 38 of its headless
+   tests pass; the surface contributes ZERO failures to the gate.
+
+--- ACCEPTANCE ---
+[x] Surface renders every state from the web source (Closed/Venting/Open/Unknown per panel + the no-data all-Unknown surface) - all asserted headlessly.
+[x] No direct HTTP from the view; data flows through the model/projection (web parity - the parent owns fetching).
+[x] Every i18n key from source is routed through the P1/S10 facade; the extracted catalog key (admin.security.windowDetail) resolves from the resw; window/state keys mirror the web's inline-fallback behaviour exactly.
+[x] Accessibility: composed Narrator name on every panel + level-2 heading + reduce-motion + system font scale.
+[x] Tests: adapter/projection unit tests + per-state assertions + a11y-name + i18n + diagnostics (38 cases, all green).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[~] EXIT/STATUS: placeholders + build + headless tests + format all green; whole-solution `dotnet test` is EXIT=1 SOLELY because
+    the UIAutomation E2E runner (WinAppDriver/Appium) is absent on this runner - a platform-capability gap, with evidence above and
+    0 affected tests belonging to this surface.
+
+EXIT=1
+STATUS=BLOCKED
