@@ -1,0 +1,40 @@
+/*
+  EnergyChargingPanel.strings
+  TeslaSync — P4 feature view · 0279 · EnergyChargingPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `EnergyChargingPanel` resolves (table "EnergyChargingPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/telemetry-panels/EnergyChargingPanel.tsx). The second
+  group backs the native chrome (the P4 leaf freshness / loading / error copy), so the
+  Swift sources hold no English prose literals. Unit symbols ("V", "A", "kW", "kWh",
+  "%", "km/h", "mph") are SI literals carried in code, not translated strings.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"telemetry.energyCharging" = "Energy & Charging";
+"telemetry.chargerVoltage" = "Charger Voltage";
+"telemetry.chargerCurrent" = "Charger Current";
+"telemetry.chargerPower" = "Charger Power";
+"telemetry.energyAdded" = "Energy Added";
+"telemetry.chargingState" = "Charging State";
+"telemetry.batteryLevel" = "Battery Level";
+"telemetry.chargeRate" = "Charge Rate";
+"telemetry.noChargingTelemetry" = "No charging telemetry available";
+"common.unknown" = "Unknown";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"energyCharging.live" = "Live";
+"energyCharging.stale" = "Stale";
+"energyCharging.offline" = "Offline";
+"energyCharging.staleBanner" = "Reconnecting — data may be stale";
+"energyCharging.offlineBanner" = "Offline — showing last known data";
+"energyCharging.refresh" = "Refresh";
+"energyCharging.loadingA11y" = "Loading charging telemetry";
+"energyCharging.errorTitle" = "Couldn't load charging telemetry";
+"energyCharging.retry" = "Retry";
