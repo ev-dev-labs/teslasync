@@ -383,3 +383,4 @@ p2-windows/feature-views/W-0048-SummaryStatsRow.prompt.md
 p2-windows/feature-views/W-0051-AchievementBadge.prompt.md
 p2-windows/feature-views/W-0046-SecurityStatusCards.prompt.md
 p2-windows/feature-views/W-0081-AutomationActivityFeed.prompt.md
+p2-windows/feature-views/W-0082-AutomationCard.prompt.md
