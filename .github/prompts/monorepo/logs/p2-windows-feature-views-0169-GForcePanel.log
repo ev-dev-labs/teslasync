@@ -1,0 +1,54 @@
+=== P2 Feature view 0169 GForcePanel (Windows) ===
+Platform capability: WinUI 3 (Windows App SDK 2.1.0 / Microsoft.WindowsAppSDK, >= 1.6) + .NET 10 IS
+available on this runner. .NET SDK 10.0.300; the WinUI app (TeslaSync.App,
+net10.0-windows10.0.19041.0, UseWinUI=true, WindowsPackageType=MSIX) compiles its XAML and code
+clean below (STEP 1).
+
+Predecessor repair (tightly coupled, required to run the gate): apps/windows/TeslaSync.App.Tests/
+TeslaSync.App.Tests.csproj had again been left by integration-merge concatenation with TWO <Project>
+roots (MSB4025: 'The project file could not be loaded. There are multiple root elements. Line 755,
+position 2.'), which blocked the entire solution build/test. Consolidated to a single valid project
+root per the file's own invariant comment: the path-sorted, Include-deduplicated union of all 630
+previously linked WinUI-free <Compile> sources preserved (verified every link resolves on disk) plus
+the 3 new GForcePanel.{Model,Source,ViewModel}.cs links (633 total). The WinUI view GForcePanel.cs is
+exercised by the app build, not linked into the headless host.
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+17 Warning(s)
+0 Error(s)
+(Any warnings are pre-existing TeslaSync.App.Core analyzer notices - CA1716/CA1720/CA1000/CA1859 -
+ none in the GForcePanel sources; 0 errors. The GForcePanel surface builds clean.)
+BUILD_EXIT=0
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 236 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 13258, Skipped:     0, Total: 13258, Duration: 10 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests ([Trait(Category,UIAutomation)], the W9-0002 E2E
+suite) which fail fast because WinAppDriver/Appium is not present on this runner (nothing on
+http://127.0.0.1:4723/, WinAppDriver.exe not on PATH). They are shell/navigation tests, out of scope
+for this surface (run separately via apps/windows/run-ui-automation.ps1), carry zero GForcePanel
+references, and do not exercise it. This is the sanctioned W9-0002 environmental deferral recorded in
+apps/environment-pending-verifications.md.
+### STEP 2b: dotnet test --filter Category!=UIAutomation (headless surface-logic gate, W9-0002 separation)
+Passed!  - Failed:     0, Passed: 13258, Skipped:     0, Total: 13258, Duration: 12 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+GForcePanel tests (snapshot JSON parse adapter [number-only, web typeof guard] + combined-magnitude
+sqrt(lat^2+lon^2) + projection [3 tiles, fmtNumber(_,2) values, g unit, em-dash fallbacks, labels,
+a11y automation names] + cache-then-network result mapper + drive-resolving source + generated-
+operation contract pin + registration + diagnostics + loading/loaded/empty/error/stale/offline
+view-model matrix):
+Passed!  - Failed:     0, Passed:    29, Skipped:     0, Total:    29, Duration: 1 s - TeslaSync.App.Tests.dll (net10.0)
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+FORMAT_EXIT=0
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/GForcePanel
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite, evidenced above.)
+EXIT=0
+STATUS=DONE
