@@ -1,0 +1,43 @@
+/*
+  PowertrainPanel.strings
+  TeslaSync — P4 feature view · 0283 · PowertrainPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `PowertrainPanel` resolves (table "PowertrainPanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/telemetry-panels/PowertrainPanel.tsx). The second
+  group backs the native chrome (the P4 leaf freshness / loading / error copy), so the
+  Swift sources hold no English prose literals. Unit symbols ("kW", "Nm", "RPM", "°C",
+  "°F") and the numeric "-300" / "0" / "+300" power-axis markers are SI/scale literals
+  carried in code, not translated strings.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"common.powertrain" = "Powertrain";
+"telemetry.shiftState" = "Shift State";
+"common.unknown" = "Unknown";
+"telemetry.power" = "Power";
+"telemetry.rpmFront" = "Front RPM";
+"telemetry.rpmRear" = "Rear RPM";
+"telemetry.torqueFront" = "Front Torque";
+"telemetry.torqueRear" = "Rear Torque";
+"telemetry.motorTemp" = "Motor Temp (peak)";
+"telemetry.inverterTemp" = "Inverter Temp";
+"telemetry.regen" = "Regen";
+"telemetry.noMotorData" = "No motor data available";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"powertrain.live" = "Live";
+"powertrain.stale" = "Stale";
+"powertrain.offline" = "Offline";
+"powertrain.staleBanner" = "Reconnecting — data may be stale";
+"powertrain.offlineBanner" = "Offline — showing last known data";
+"powertrain.refresh" = "Refresh";
+"powertrain.loadingA11y" = "Loading powertrain telemetry";
+"powertrain.errorTitle" = "Couldn't load powertrain telemetry";
+"powertrain.retry" = "Retry";
