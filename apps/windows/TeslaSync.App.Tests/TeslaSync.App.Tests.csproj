@@ -384,6 +384,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.Model.cs" Link="FeatureViews\AddressInput\AddressInput.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.Source.cs" Link="FeatureViews\AddressInput\AddressInput.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.ViewModel.cs" Link="FeatureViews\AddressInput\AddressInput.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.Model.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.ViewModel.cs" Link="FeatureViews\ActionBuilder\ActionBuilder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AddWidgetButton\AddWidgetButton.Model.cs" Link="FeatureViews\AddWidgetButton\AddWidgetButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AIFeatureToggleList\AIFeatureToggleList.Model.cs" Link="FeatureViews\AIFeatureToggleList\AIFeatureToggleList.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AIFeatureToggleList\AIFeatureToggleList.Registry.cs" Link="FeatureViews\AIFeatureToggleList\AIFeatureToggleList.Registry.cs" />
@@ -578,6 +580,11 @@
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.Model.cs" Link="FeatureViews\NotificationSettings.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.Source.cs" Link="FeatureViews\NotificationSettings.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.ViewModel.cs" Link="FeatureViews\NotificationSettings.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\NoVehicleSelected\NoVehicleSelected.Model.cs" Link="FeatureViews\NoVehicleSelected\NoVehicleSelected.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\NoVehicleSelected\NoVehicleSelected.ViewModel.cs" Link="FeatureViews\NoVehicleSelected\NoVehicleSelected.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OptimizerSection.Model.cs" Link="FeatureViews\OptimizerSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OptimizerSection.Source.cs" Link="FeatureViews\OptimizerSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OptimizerSection.ViewModel.cs" Link="FeatureViews\OptimizerSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Model.cs" Link="FeatureViews\OverviewTab\OverviewTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.Source.cs" Link="FeatureViews\OverviewTab\OverviewTab.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewTab\OverviewTab.ViewModel.cs" Link="FeatureViews\OverviewTab\OverviewTab.ViewModel.cs" />
@@ -703,6 +710,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.ViewModel.cs" Link="FeatureViews\TimeToChargeSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.Model.cs" Link="FeatureViews\TimestampTool\TimestampTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.ViewModel.cs" Link="FeatureViews\TimestampTool\TimestampTool.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TirePressureSection\TirePressureSection.Model.cs" Link="FeatureViews\TirePressureSection\TirePressureSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TirePressureSection\TirePressureSection.Source.cs" Link="FeatureViews\TirePressureSection\TirePressureSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TirePressureSection\TirePressureSection.ViewModel.cs" Link="FeatureViews\TirePressureSection\TirePressureSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TitleSlide\TitleSlide.Model.cs" Link="FeatureViews\TitleSlide\TitleSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ToolCard.Presentation.cs" Link="FeatureViews\ToolCard.Presentation.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TorqueHistoryChart\TorqueHistoryChart.Model.cs" Link="FeatureViews\TorqueHistoryChart\TorqueHistoryChart.Model.cs" />

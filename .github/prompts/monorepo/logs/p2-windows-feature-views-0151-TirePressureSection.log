@@ -1,0 +1,48 @@
+=== P2 Feature view 0151 TirePressureSection (Windows) ===
+Platform capability: WinUI 3 (Windows App SDK 1.6+) + .NET 10 IS available on this runner — the WinUI app
+project (TeslaSync.App, net10.0-windows10.0.19041.0, UseWinUI=true) builds clean below. .NET SDK 10.0.300.
+
+Predecessor repair (tightly coupled, required to run the gate): apps/windows/TeslaSync.App.Tests/
+TeslaSync.App.Tests.csproj had again been left by merge concatenation with TWO <Project> roots (MSB4025:
+"The project file could not be loaded. There are multiple root elements. Line 707, position 2."), which
+blocked the entire solution build/test. Consolidated to a single valid project root: the deduplicated,
+path-sorted union of all 614 existing <Compile> links preserved (verified equal to the WinUI-free
+Model/Source/ViewModel/Registry/Consent/Presentation sources on disk) + the 3 new
+TirePressureSection.{Model,Source,ViewModel}.cs links (617 total). The file's own invariant comment
+mandates exactly this single-root shape.
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    17 Warning(s)
+    0 Error(s)
+(The 17 warnings are pre-existing TeslaSync.App.Core analyzer notices — CA1716/CA1720/CA1000/CA1859 —
+none in the TirePressureSection sources; 0 errors.)
+BUILD_EXIT=0
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 211 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 12935, Skipped:     0, Total: 12935, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite) which
+fail fast because WinAppDriver/Appium is not present on this runner (nothing on http://127.0.0.1:4723/,
+WinAppDriver.exe not on PATH). They are out of scope for this surface (run separately via
+apps/windows/run-ui-automation.ps1), carry zero TirePressureSection references, and do not exercise it.
+This is the sanctioned W9-0002 environmental deferral recorded in apps/environment-pending-verifications.md.
+### STEP 2b: dotnet test --filter Category!=UIAutomation (headless surface-logic gate, W9-0002 separation)
+Passed!  - Failed:     0, Passed: 12935, Skipped:     0, Total: 12935, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+TirePressureSection tests (adapter parse + SI Pa→kPa→display conversion + per-corner min–max tiles +
+hasTirePressure empty gate + result mapper + drive-resolving source + registration + diagnostics +
+a11y automation names + loading/loaded/empty/error/stale/offline view-model matrix + unit re-projection):
+Passed!  - Failed:     0, Passed:    40, Skipped:     0, Total:    40, Duration: 2 s - TeslaSync.App.Tests.dll (net10.0)
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+FORMAT_EXIT=0
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TirePressureSection
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite, evidenced above.)
+EXIT=0
+STATUS=DONE
