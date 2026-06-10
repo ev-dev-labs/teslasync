@@ -331,3 +331,4 @@ p2-windows/feature-views/W-0142-EnergySummaryPanel.prompt.md
 p2-windows/feature-views/W-0146-PowerProfileChart.prompt.md
 p2-windows/feature-views/W-0147-RouteMapSection.prompt.md
 p2-windows/feature-views/W-0149-SpeedHistogramChart.prompt.md
+p2-windows/feature-views/W-0150-TemperatureSection.prompt.md
