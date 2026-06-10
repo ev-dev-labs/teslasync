@@ -339,3 +339,4 @@ p2-windows/feature-views/W-0159-StatorTempChart.prompt.md
 p2-windows/feature-views/W-0160-TemperatureGauges.prompt.md
 p2-windows/feature-views/W-0157-LiveMotorStatus.prompt.md
 p2-windows/feature-views/W-0158-PowerOutputChart.prompt.md
+p2-windows/feature-views/W-0161-TemperatureMetricCards.prompt.md
