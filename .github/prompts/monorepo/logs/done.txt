@@ -417,3 +417,4 @@ p2-windows/feature-views/W-0191-NotificationRow.prompt.md
 p2-windows/feature-views/W-0182-ComputedMetricEditor.prompt.md
 p2-windows/feature-views/W-0198-AdvancedSettings.prompt.md
 p2-windows/feature-views/W-0196-ActiveOrdersSection.prompt.md
+p2-windows/feature-views/W-0201-AIRestorePanel.prompt.md
