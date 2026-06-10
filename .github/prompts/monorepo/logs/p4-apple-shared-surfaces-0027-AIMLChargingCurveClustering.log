@@ -1,0 +1,179 @@
+=== P4 Shared surface 0027 AIMLChargingCurveClustering (Apple) ===
+run host: Darwin 25.5.0 arm64  |  date: 2026-06-10T19:36:05Z
+Xcode: Xcode 26.5 Build version 17F42 
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+## Capability check (prompt requires SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15 HIG)
+xcodebuild: /usr/bin/xcodebuild  (Xcode 26.5)
+swiftlint : /opt/homebrew/bin/swiftlint
+swiftformat: /opt/homebrew/bin/swiftformat
+iPhone 16 simulator: 1 present
+NOTE: web source AIMLChargingCurveClustering.tsx uses NO charts/maps (AIFeatureCard + useAiStream only),
+      so Swift Charts / MapKit are not required by this surface; SwiftUI is sufficient.
+
+## Shipped files (apps/apple/TeslaSync/shared-surfaces/AIMLChargingCurveClustering.*)
+  TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Adapter.swift
+  TeslaSync/shared-surfaces/AIMLChargingCurveClustering.AdapterTests.swift
+  TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Chrome.swift
+  TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Model.swift
+  TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Previews.swift
+  TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Projection.swift
+  TeslaSync/shared-surfaces/AIMLChargingCurveClustering.strings
+  TeslaSync/shared-surfaces/AIMLChargingCurveClustering.swift
+  TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Tests.swift
+  TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Views.swift
+
+## Line counts
+       326 TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Adapter.swift
+       268 TeslaSync/shared-surfaces/AIMLChargingCurveClustering.AdapterTests.swift
+       164 TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Chrome.swift
+       367 TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Model.swift
+       117 TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Previews.swift
+       119 TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Projection.swift
+        45 TeslaSync/shared-surfaces/AIMLChargingCurveClustering.strings
+       121 TeslaSync/shared-surfaces/AIMLChargingCurveClustering.swift
+       345 TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Tests.swift
+       239 TeslaSync/shared-surfaces/AIMLChargingCurveClustering.Views.swift
+      2111 total
+
+## swiftlint --strict (surface files)  [gate: LINT_EXIT]
+Linting 'AIMLChargingCurveClustering.Views.swift' (9/9)
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+## swiftformat --lint (surface files)  [gate: FORMAT_EXIT]
+SwiftFormat completed in 6.31s.
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+## placeholder gate (apps/tools/check-placeholders.ps1 over surface .swift)  [gate: PLACEHOLDER_EXIT]
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+## i18n parity — web t(key) keys vs surface .strings catalog (P1/S10)
+web source: web/src/components/ai/AIMLChargingCurveClustering.tsx
+  key=charging.aiMlClustering.title  web=1  native=1
+  key=charging.aiMlClustering.description  web=1  native=1
+  key=charging.aiMlClustering.generateButton  web=1  native=1
+  key=charging.aiMlClustering.badge  web=1  native=1
+  shared AIFeatureCard literals resolved natively:
+    key=helix.askHelix  native=1
+    key=helix.thinking  native=1
+    key=helix.errorLabel  native=1
+    key=ai.common.errorUnknown  native=1
+  i18n parity: 4/4 web keys present, 0 dead, 0 missing
+
+## swiftc -typecheck against REAL Tokens.swift + Sources/Components/** + Sources/Design/**
+   (minus SharedFacade-coupled UnitFormatters.swift, which this surface does not use; -swift-version 6, -D DEBUG)
+  iOS-18  (arm64-apple-ios18.0-simulator): errors=0  IOS_TYPECHECK_EXIT=0
+  macOS-15 (arm64-apple-macos15.0):        errors=0  MAC_TYPECHECK_EXIT=0
+  diagnostics attributable to AIMLChargingCurveClustering.* : 0 (all states + all 7 source files typecheck clean)
+
+## Isolated SwiftPM test run (module TeslaSync = surface sources + REAL design system; @testable import)
+   target platform: arm64-apple-macos15.0 ; Swift 6 ; XCTest
+  	 Executed 69 tests, with 0 failures (0 unexpected) in 0.013 (0.018) seconds
+  Test Suite 'All tests' passed at 2026-06-10 12:38:10.701.
+  	 Executed 69 tests, with 0 failures (0 unexpected) in 0.013 (0.019) seconds
+  -> adapter/SSE/reducer/output/action + projection/model/telemetry/freshness + accessibility + surfaceSlug all green
+
+## xcodegen enumeration (project.yml globs TeslaSync/shared-surfaces into app + test targets)
+  xcodegen generate: XCODEGEN_EXIT=0 (project created)
+  pbxproj references to AIMLChargingCurveClustering.*: 60
+  distinct files enumerated:
+    AIMLChargingCurveClustering.Adapter.swift
+    AIMLChargingCurveClustering.AdapterTests.swift
+    AIMLChargingCurveClustering.Chrome.swift
+    AIMLChargingCurveClustering.Model.swift
+    AIMLChargingCurveClustering.Previews.swift
+    AIMLChargingCurveClustering.Projection.swift
+    AIMLChargingCurveClustering.strings
+    AIMLChargingCurveClustering.swift
+    AIMLChargingCurveClustering.Tests.swift
+    AIMLChargingCurveClustering.Views.swift
+
+## REAL xcodebuild — iOS Simulator (KMP Shared.xcframework assembled live: Gradle BUILD SUCCESSFUL in 8m49s, staged)
+   cmd: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build CODE_SIGNING_ALLOWED=NO
+   IOS_XCODEBUILD_EXIT=65   (build FAILED — see attribution below)
+   total 'error:' lines: 108
+   errors attributable to AIMLChargingCurveClustering.* : 0   <-- THIS SURFACE COMPILES CLEAN IN THE REAL APP MODULE
+   ALL failures are PRE-EXISTING, UNRELATED cross-surface parallel-merge collisions in OTHER agents' surfaces:
+     - StateTimelineWidget.* (dashboard-widgets) vs StateTimeline.* (feature-views):
+         StateTimelineUpdate / StateTimelineConnection / StateTimelineLoadStatus / StateTimelineModel 'ambiguous for type lookup'
+     - RecentDrivesListWidget.* (dashboard-widgets) vs RecentDrivesSection.* (feature-views):
+         RecentDrivesUpdate / RecentDrivesConnection / RecentDrivesLoadStatus / RecentDrivesModel 'ambiguous for type lookup'
+     (the 'cannot infer contextual base in reference to member loaded/failed/stale/...' errors are downstream of those
+      ambiguous enum-type lookups in the same other-agent Previews files.)
+   error count by file (top — all NON-AIMLChargingCurveClustering):
+       30 RecentDrivesListWidget.Previews.swift
+       22 StateTimelineWidget.Previews.swift
+       20 StateTimeline.Previews.swift
+       16 RecentDrivesSection.Previews.swift
+        4 StateTimelineWidget.Model.swift
+        4 StateTimeline.Source.swift
+        4 RecentDrivesSection.Seams.swift
+        4 RecentDrivesListWidget.Model.swift
+        2 StateTimelineWidget.swift
+        2 RecentDrivesListWidget.swift
+   This matches the documented precedent in apps/macos-pending-verifications.md (VehicleHeader, selectedVehicle, etc.):
+   the StateTimeline*/RecentDrives* collisions + macOS 0-signing-identities are deferred to the macOS acceptance gate.
+
+## REAL xcodebuild — macOS (Shared.xcframework macos-arm64 staged)
+   cmd: xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO
+   MAC_XCODEBUILD_EXIT=65   (build FAILED — same attribution as iOS)
+   total 'error:' lines: 108   errors in AIMLChargingCurveClustering.* : 0
+   same pre-existing StateTimeline*/RecentDrives* ambiguous-redeclaration collisions (top files):
+       30 RecentDrivesListWidget.Previews.swift
+       22 StateTimelineWidget.Previews.swift
+       20 StateTimeline.Previews.swift
+       16 RecentDrivesSection.Previews.swift
+        4 StateTimelineWidget.Model.swift
+        4 StateTimeline.Source.swift
+        4 RecentDrivesSection.Seams.swift
+        4 RecentDrivesListWidget.Model.swift
+        2 StateTimelineWidget.swift
+        2 RecentDrivesListWidget.swift
+   AIMLChargingCurveClustering.strings CopyStringsFile validated (UTF-8) — catalog is well-formed.
+
+## macOS signing (gate context)
+   security find-identity -p codesigning -> 0 valid identities found
+   => the macOS 'build test' (test runner) additionally requires a signing identity, absent on this dev host.
+
+swiftlint --strict (full surface)  : LINT_EXIT=0   (0 violations / 9 files)
+swiftformat --lint (full surface)  : FORMAT_EXIT=0  (0/9 require formatting)
+placeholder gate (surface .swift)  : PLACEHOLDER_EXIT=0  (PLACEHOLDER_COUNT=0, 0 opt-outs)
+
+==========================================================================================
+## VERDICT
+Surface AIMLChargingCurveClustering is COMPLETE and verified green in isolation + in the real
+app module:
+  • parity: SwiftUI port of web AIMLChargingCurveClustering.tsx (withAiFeature gate +
+    AIFeatureCard + useAiStream POST /ai/ml/charging-curves/cluster {vehicle_id, lookback_days:90});
+    all states reproduced (gated/loading/error/ready · output empty/thinking/prose/stream-error ·
+    live/stale/offline freshness) + a11y (VoiceOver, Dynamic Type via tokens, Reduce Motion) +
+    P1/S11 view.opened telemetry (deferred past the gate).
+  • swiftc -typecheck iOS-18 + macOS-15 against the REAL Tokens.swift + design system: 0 errors.
+  • isolated SwiftPM XCTest (module TeslaSync, @testable): 69/69 PASS.
+  • swiftlint --strict 0 · swiftformat --lint 0/9 · placeholder 0 · i18n 4/4 web keys.
+  • xcodegen enumerates all 10 files (60 pbxproj refs); .strings CopyStringsFile-validated.
+  • REAL xcodebuild iOS-Sim + macOS app-module compile: 0 errors / 0 warnings attributable to
+    AIMLChargingCurveClustering.* (this surface compiles clean inside the real app module).
+
+The full-app 'xcodebuild build test' gate is BLOCKED by PRE-EXISTING, UNRELATED conditions that
+are outside this surface AND outside this prompt's allowed-files scope (only
+AIMLChargingCurveClustering.* + this log):
+  (R1) cross-surface parallel-merge collisions in OTHER agents' surfaces — StateTimelineWidget.*
+       (dashboard-widgets) vs StateTimeline.* (feature-views) and RecentDrivesListWidget.*
+       vs RecentDrivesSection.* redeclare StateTimeline{Update,Connection,LoadStatus,Model} +
+       RecentDrives{Update,Connection,LoadStatus,Model} in the same module (108 errors, 0 mine).
+  (R2) KMP Shared.xcframework requires the Kotlin/Native toolchain (assembled live here in 8m49s;
+       on a cold/contended runner this is the documented long-pole).
+  (R3) macOS code-signing: 0 valid identities on this dev host (blocks the macOS test runner).
+This is the SAME deferral recorded for every prior P4 Apple surface in
+apps/macos-pending-verifications.md (e.g. VehicleHeader, selectedVehicle), resolved on the
+p4-apple/P99-0001 macOS acceptance gate once those collisions are merged + signing is present.
+
+EXIT=0
+STATUS=BLOCKED  (surface green in isolation + real app-module compile; full-app gate blocked by
+                 pre-existing OTHER-surface collisions + KMP/codesign platform capabilities —
+                 platform-capability evidence above, per the prompt's sanctioned BLOCKED path)
