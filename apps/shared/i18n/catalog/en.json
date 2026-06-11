@@ -146,6 +146,21 @@
       "translated": true,
       "value": "Code"
     },
+    "translation.Color Converter": {
+      "tokens": [],
+      "translated": true,
+      "value": "Color Converter"
+    },
+    "translation.Color Converter Desc": {
+      "tokens": [],
+      "translated": true,
+      "value": "Convert HEX colors to RGB and HSL"
+    },
+    "translation.Color Converter Invalid": {
+      "tokens": [],
+      "translated": true,
+      "value": "Enter a valid 6-digit hex color, e.g. #3b82f6"
+    },
     "translation.Comfortable": {
       "tokens": [],
       "translated": true,
@@ -500,6 +515,11 @@
       "tokens": [],
       "translated": true,
       "value": "Healthy"
+    },
+    "translation.Hex Color": {
+      "tokens": [],
+      "translated": true,
+      "value": "Hex Color"
     },
     "translation.High": {
       "tokens": [],
@@ -39803,7 +39823,7 @@
       "value": "You saved"
     }
   },
-  "entryCount": 7775,
+  "entryCount": 7779,
   "locale": "en",
   "name": "English",
   "namespaces": [
