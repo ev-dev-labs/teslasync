@@ -486,3 +486,4 @@ p2-windows/feature-views/W-0286-TirePressurePanel.prompt.md
 p2-windows/feature-views/W-0285-TelemetryGrid.prompt.md
 p2-windows/feature-views/W-0288-BatteryRangeCharts.prompt.md
 p2-windows/feature-views/W-0287-VehicleStatePanel.prompt.md
+p2-windows/feature-views/W-0290-ChargingTelemetrySection.prompt.md
