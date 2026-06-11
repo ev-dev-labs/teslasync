@@ -1,0 +1,34 @@
+/*
+  GotoIndicator.strings
+  TeslaSync — P4 shared surface · 0121 · GotoIndicator (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The keys mirror the web source
+  (components/feedback/GotoIndicator.tsx) — the `shortcuts.goto` prompt the web `t()` reads — plus the
+  key-cap glyphs and the visual separator the web hardcodes in JSX (kept here so the native port holds
+  no display literals), the spoken VoiceOver hint, and the native P4 leaf chrome (loading / empty /
+  error / freshness). These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table ("GotoIndicator") so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+*/
+
+/* --- Prompt + chord (web `GotoIndicator.tsx`) --- */
+"shortcuts.goto" = "Go to...";
+"shortcuts.goto.keyGoto" = "g";
+"shortcuts.goto.keyHelp" = "?";
+"shortcuts.goto.separator" = "+";
+"shortcuts.goto.thenConjunction" = "then";
+"shortcuts.goto.a11yHint" = "Press {{keys}} to jump to a section.";
+
+/* --- Loading / empty / error chrome (P4 leaf contract) --- */
+"shortcuts.loadingA11y" = "Loading shortcut";
+"shortcuts.empty" = "No shortcut active";
+"shortcuts.emptyMessage" = "Press the shortcut key and the hint will appear here.";
+"shortcuts.errorTitle" = "Couldn't load the shortcut hint";
+"shortcuts.retry" = "Retry";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"shortcuts.live" = "Live";
+"shortcuts.stale" = "Stale";
+"shortcuts.offline" = "Offline";
+"shortcuts.staleA11y" = "Stale — tap to refresh";
+"shortcuts.offlineA11y" = "Offline — showing the last shortcut hint";
