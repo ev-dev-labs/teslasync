@@ -1053,6 +1053,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIRouteEfficiencySuggestions.Model.cs" Link="SharedSurfaces\AIRouteEfficiencySuggestions.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIRouteEfficiencySuggestions.Source.cs" Link="SharedSurfaces\AIRouteEfficiencySuggestions.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIRouteEfficiencySuggestions.ViewModel.cs" Link="SharedSurfaces\AIRouteEfficiencySuggestions.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.Model.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.Source.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.ViewModel.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Model.cs" Link="SharedSurfaces\AnnouncerRegion.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
