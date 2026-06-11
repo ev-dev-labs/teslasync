@@ -617,3 +617,4 @@ p2-windows/shared-meaningful/W-0114-BrowserCompatBanner.prompt.md
 p2-windows/shared-meaningful/W-0115-CookieConsentBanner.prompt.md
 p2-windows/shared-meaningful/W-0118-EditConflictBanner.prompt.md
 p2-windows/shared-meaningful/W-0119-EmptyStateThreshold.prompt.md
+p2-windows/shared-meaningful/W-0117-DraftRestorePrompt.prompt.md
