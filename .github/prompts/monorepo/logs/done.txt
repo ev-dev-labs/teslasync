@@ -135,3 +135,4 @@ p3-android/A2-0004-feedback-forms-components.prompt.md
 p3-android/A2-0005-maps-motion-components.prompt.md
 p3-android/A3-0001-navigation-shell.prompt.md
 p3-android/A4-0001-auth-oidc-pkce.prompt.md
+p3-android/A5-0001-data-layer-viewmodels.prompt.md
