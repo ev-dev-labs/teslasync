@@ -505,3 +505,4 @@ p2-windows/feature-views/W-0306-VehiclePhotoGallery.prompt.md
 p2-windows/feature-views/W-0305-VehicleHeader.prompt.md
 p2-windows/feature-views/W-0307-VehiclePhotoUpload.prompt.md
 p2-windows/misc-surfaces/W-0003-selectedVehicle.prompt.md
+p2-windows/misc-surfaces/W-0001-TourLauncher.prompt.md
