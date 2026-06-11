@@ -1256,6 +1256,21 @@
       "translated": true,
       "value": "Vin"
     },
+    "translation.Vin Decoder": {
+      "tokens": [],
+      "translated": true,
+      "value": "VIN Decoder"
+    },
+    "translation.Vin Decoder Desc": {
+      "tokens": [],
+      "translated": true,
+      "value": "Decode a Tesla VIN into manufacturer, model, drive, year, and plant"
+    },
+    "translation.Vin Decoder Empty": {
+      "tokens": [],
+      "translated": true,
+      "value": "Enter at least 11 VIN characters to decode"
+    },
     "translation.Visits": {
       "tokens": [],
       "translated": true,
@@ -13356,6 +13371,36 @@
       "tokens": [],
       "translated": true,
       "value": "Compute Sha256"
+    },
+    "translation.devtools.utils.vin_drive": {
+      "tokens": [],
+      "translated": true,
+      "value": "Drive"
+    },
+    "translation.devtools.utils.vin_mfr": {
+      "tokens": [],
+      "translated": true,
+      "value": "Manufacturer"
+    },
+    "translation.devtools.utils.vin_model": {
+      "tokens": [],
+      "translated": true,
+      "value": "Model"
+    },
+    "translation.devtools.utils.vin_plant": {
+      "tokens": [],
+      "translated": true,
+      "value": "Plant"
+    },
+    "translation.devtools.utils.vin_serial": {
+      "tokens": [],
+      "translated": true,
+      "value": "Serial"
+    },
+    "translation.devtools.utils.vin_year": {
+      "tokens": [],
+      "translated": true,
+      "value": "Model Year"
     },
     "translation.diagnostic.checkCount": {
       "forms": {
@@ -39823,7 +39868,7 @@
       "value": "You saved"
     }
   },
-  "entryCount": 7779,
+  "entryCount": 7788,
   "locale": "en",
   "name": "English",
   "namespaces": [

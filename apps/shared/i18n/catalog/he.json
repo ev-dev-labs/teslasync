@@ -1507,6 +1507,24 @@
       "translated": false,
       "value": "Vin"
     },
+    "translation.Vin Decoder": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "VIN Decoder"
+    },
+    "translation.Vin Decoder Desc": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Decode a Tesla VIN into manufacturer, model, drive, year, and plant"
+    },
+    "translation.Vin Decoder Empty": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Enter at least 11 VIN characters to decode"
+    },
     "translation.Visits": {
       "fallbackFrom": "en",
       "tokens": [],
@@ -15978,6 +15996,42 @@
       "tokens": [],
       "translated": false,
       "value": "Compute Sha256"
+    },
+    "translation.devtools.utils.vin_drive": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Drive"
+    },
+    "translation.devtools.utils.vin_mfr": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Manufacturer"
+    },
+    "translation.devtools.utils.vin_model": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Model"
+    },
+    "translation.devtools.utils.vin_plant": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Plant"
+    },
+    "translation.devtools.utils.vin_serial": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Serial"
+    },
+    "translation.devtools.utils.vin_year": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Model Year"
     },
     "translation.diagnostic.checkCount": {
       "fallbackFrom": "en",
@@ -47602,7 +47656,7 @@
       "value": "You saved"
     }
   },
-  "entryCount": 7779,
+  "entryCount": 7788,
   "locale": "he",
   "name": "עברית",
   "namespaces": [

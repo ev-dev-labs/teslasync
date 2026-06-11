@@ -2676,7 +2676,13 @@
     "utils": {
       "base64": "Base64",
       "base64Desc": "Base64Desc",
-      "computeSha256": "Compute Sha256"
+      "computeSha256": "Compute Sha256",
+      "vin_drive": "Drive",
+      "vin_mfr": "Manufacturer",
+      "vin_model": "Model",
+      "vin_plant": "Plant",
+      "vin_serial": "Serial",
+      "vin_year": "Model Year"
     },
     "searchTools": "Search tools...",
     "noToolsFound": "No tools match your search",
@@ -8747,6 +8753,9 @@
   "Color Converter Desc": "Convert HEX colors to RGB and HSL",
   "Color Converter Invalid": "Enter a valid 6-digit hex color, e.g. #3b82f6",
   "Hex Color": "Hex Color",
+  "Vin Decoder": "VIN Decoder",
+  "Vin Decoder Desc": "Decode a Tesla VIN into manufacturer, model, drive, year, and plant",
+  "Vin Decoder Empty": "Enter at least 11 VIN characters to decode",
   "Config": "Config",
   "Authenticated": "Authenticated",
   "Regions": "Regions",

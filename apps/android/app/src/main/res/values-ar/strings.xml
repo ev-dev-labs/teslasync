@@ -298,6 +298,9 @@
   <string name="translation_View">View</string>
   <string name="translation_View_Errors">View Errors</string>
   <string name="translation_Vin">Vin</string>
+  <string name="translation_Vin_Decoder">VIN Decoder</string>
+  <string name="translation_Vin_Decoder_Desc">Decode a Tesla VIN into manufacturer, model, drive, year, and plant</string>
+  <string name="translation_Vin_Decoder_Empty">Enter at least 11 VIN characters to decode</string>
   <string name="translation_Visits">Visits</string>
   <string name="translation_Voltage">Voltage</string>
   <string name="translation_Volume">Volume</string>
@@ -2711,6 +2714,12 @@
   <string name="translation_devtools_utils_base64">Base64</string>
   <string name="translation_devtools_utils_base64Desc">Base64Desc</string>
   <string name="translation_devtools_utils_computeSha256">Compute Sha256</string>
+  <string name="translation_devtools_utils_vin_drive">Drive</string>
+  <string name="translation_devtools_utils_vin_mfr">Manufacturer</string>
+  <string name="translation_devtools_utils_vin_model">Model</string>
+  <string name="translation_devtools_utils_vin_plant">Plant</string>
+  <string name="translation_devtools_utils_vin_serial">Serial</string>
+  <string name="translation_devtools_utils_vin_year">Model Year</string>
   <plurals name="translation_diagnostic_checkCount">
     <item quantity="one">%1$d check</item>
     <item quantity="other">%1$d checks</item>
