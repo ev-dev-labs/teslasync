@@ -1,0 +1,150 @@
+=== P2 Modal / dialog 0006 KeyboardShortcutsModal (Windows) ===
+Prompt:  .github/prompts/monorepo/... P2/modals-dialogs/0006 KeyboardShortcutsModal
+Web spec: web/src/components/feedback/KeyboardShortcutsModal.tsx (THE specification)
+Native:  apps/windows/TeslaSync.App/modals-dialogs/KeyboardShortcutsModal/*
+Host:    Windows_NT, .NET SDK 10.0.300, maui-windows workload present, WinUI 3 (Windows App SDK / WinUI 2.1.0 buildTransitive) — WinUI 3 + .NET 10 capability PRESENT.
+
+--------------------------------------------------------------------------------
+PLATFORM CAPABILITY
+--------------------------------------------------------------------------------
+[OK]   WinUI 3 (Windows App SDK 1.6+) + .NET 10 + Fluent Design System available:
+       the WinUI app (TeslaSync.App, net10.0-windows10.0.19041.0, UseWinUI=true)
+       BUILDS clean including the XAML markup compiler. The surface is shipped, not
+       blocked on the WinUI capability itself.
+[GAP]  WinAppDriver / Appium runner ABSENT on this host: nothing listening on
+       http://127.0.0.1:4723/ and WinAppDriver.exe not found on PATH or standard
+       install paths. The packaged-app UI-automation suite (TeslaSync.App.UITests,
+       147 [Category=UIAutomation] cases) therefore cannot run here. This is the
+       same documented environmental gap as p2-windows/W9-0002-ui-automation and is
+       deferred to a WinAppDriver-provisioned Windows runner (CI windows-latest).
+
+--------------------------------------------------------------------------------
+ARTIFACTS (this surface)
+--------------------------------------------------------------------------------
+  apps/windows/TeslaSync.App/modals-dialogs/KeyboardShortcutsModal/
+    KeyboardShortcutsModal.cs            — WinUI view (TsModal/ContentDialog): search +
+                                           filter pill bar + scrollable grouped kbd list;
+                                           loading / empty / loaded states; Narrator names;
+                                           reduced-motion entrance; system font scale.
+    KeyboardShortcutsModal.Model.cs       — WinUI-free: ShortcutScope, ShortcutDefinition
+                                           (+ route match + AccessibleName), ShortcutGroup,
+                                           ShortcutFilterMode, KeyboardShortcutsState,
+                                           ShortcutProjection (web filteredGroups + GroupRank),
+                                           Registration (slug + i18n keys), Diagnostics.
+    KeyboardShortcutsModal.Source.cs      — WinUI-free: IShortcutRegistry external store
+                                           (web useShortcutRegistry), IRouteContext
+                                           (web useLocation), IShortcutFilterStore
+                                           (web sessionStorage) + token round-trip.
+    KeyboardShortcutsModal.ViewModel.cs   — WinUI-free state holder (web hook composition):
+                                           search, persisted filter mode, projection, states,
+                                           open/close (view.opened diagnostic + search reset).
+  apps/windows/TeslaSync.App.Tests/ModalsDialogs/KeyboardShortcutsModalTests.cs
+                                          — 51 headless cases (adapter/projection, registry,
+                                           route, filter store, VM state matrix, registration,
+                                           i18n keys, diagnostics, accessible name).
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+                                          — RE-CONSOLIDATED to a single canonical <Project>
+                                           root (see NOTE below) + 3 new WinUI-free Compile
+                                           links for this surface.
+  apps/environment-pending-verifications.md
+                                          — deferred-verification row for the 147 WinAppDriver
+                                           UI-automation cases against this surface.
+
+--------------------------------------------------------------------------------
+NOTE — pre-existing Tests-csproj corruption repaired (no silent drift)
+--------------------------------------------------------------------------------
+At baseline, apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj contained
+TWO <Project> root elements (lines 1 and 938) — the .gitattributes merge=union
+re-concatenation the file's own INVARIANT comment warns about — so the whole
+solution failed XML load with:
+  TeslaSync.App.Tests.csproj(938,2): error MSB4025: There are multiple root elements.
+Per the file's documented remediation ("regenerate it directly from the WinUI-free
+sources on disk"), it was re-consolidated into ONE canonical root. The single
+Compile ItemGroup is the case-insensitive path-sorted, Include-deduplicated union of
+every WinUI-free (Microsoft.UI-free) .cs under feature-views/, dashboard-widgets/ and
+modals-dialogs/ (833 pre-existing + 3 new = 836). The set was validated bidirectionally:
+every one of the 833 prior includes exists on disk and is Microsoft.UI-free, and a
+fresh disk scan of WinUI-free sources reproduces exactly the same 833 — so no source
+was dropped or misclassified. PropertyGroup, PackageReference, ProjectReference and the
+3 Content fixture links were preserved verbatim.
+
+--------------------------------------------------------------------------------
+GATE — host-runnable steps (actual exit codes)
+--------------------------------------------------------------------------------
+BUILD   dotnet build apps/windows/TeslaSync.sln -c Release
+        => 0 Warning(s), 0 Error(s).  BUILD_EXIT=0
+        (All 7 projects incl. the WinUI app + XAML markup compiler. Two issues found
+         in the new view and FIXED to reach 0/0: CS1503 Grid.SetColumn(FrameworkElement)
+         and 7x CA1859 concrete-return-type under the App's strict
+         EnableNETAnalyzers + AnalysisMode=Recommended + TreatWarningsAsErrors=true.)
+
+TEST    dotnet test apps/windows/TeslaSync.sln -c Release
+        => TeslaSync.App.Tests.dll : Passed!  Failed: 0, Passed: 17272, Skipped: 0
+                                     (incl. the 51 KeyboardShortcutsModal cases — verified
+                                      via --filter FullyQualifiedName~KeyboardShortcutsModalTests
+                                      => Passed: 51, Failed: 0).
+           TeslaSync.App.UITests.dll: Failed!  Failed: 147, Passed: 0
+                                     — ALL 147 are UiAutomationUnavailableException
+                                       (WinAppDriver/Appium absent; see PLATFORM CAPABILITY).
+        => TEST_EXIT=1  (solely the deferred WinAppDriver suite; headless logic 100% green)
+
+FORMAT  dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+        => whole-solution clean.  FORMAT_EXIT=0
+        (New files were normalized CRLF->LF to satisfy .editorconfig end_of_line=lf.)
+
+PLACE   apps/tools/check-placeholders.ps1 -Path .../modals-dialogs/KeyboardShortcutsModal
+        => PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0.  PLACEHOLDER_EXIT=0
+        (No TODO/stub/mock/placeholder/Lorem in shipped code.)
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA MAPPING
+--------------------------------------------------------------------------------
+[x] Surface renders all web states. The web source's data source is a synchronous
+    in-process registry (useSyncExternalStore over useShortcutRegistry) + useLocation —
+    it composes NO fetch/query/cache/connectivity, so its only render branches are
+    "groups" and the empty copy ("No shortcuts match your search."). Reproduced exactly:
+    Loaded (grouped kbd rows) and Empty, plus an explicit initial Loading (skeleton chrome)
+    tick for the external store's pre-subscription snapshot. error/stale/offline are
+    deliberately ABSENT — they would be fabricated behavior the web source does not have
+    (no network read) — reproduced faithfully, not invented (Honesty Covenant: no silent
+    drift / no parity shortcuts).
+[x] Hooks bind via the shared P1/S8 state-holder layer: KeyboardShortcutsModalViewModel
+    over IShortcutRegistry (useAllShortcuts/useShortcut), IRouteContext (useLocation) and
+    IShortcutFilterStore (sessionStorage). The view performs NO data access.
+[x] Every i18n key from the web source has a matching key in the P1/S10 catalog and is
+    resolved through the ILocalizer facade — verified present in Strings/en/Resources.resw:
+      translation.shortcuts.title           = "Keyboard Shortcuts"
+      translation.shortcuts.filter.all      = "All"
+      translation.shortcuts.filter.global   = "Global"
+      translation.shortcuts.filter.page     = "This page"
+      translation.shortcuts.search          = "Search shortcuts…"
+      translation.shortcuts.empty           = "No shortcuts match your search."
+    (+ translation.common.close for the dialog's Close affordance). No English literal
+    reaches the view tree.
+[x] Accessibility: Narrator name on the dialog, the search box, the filter pill bar, and
+    every shortcut row ("<description>: <key> + <key>" via ShortcutDefinition.AccessibleName,
+    asserted headlessly). Reduced-motion honored (MotionPreference gates the entrance
+    transition); system font/text scale honored (no fixed text heights; effective-pixel sizing).
+[x] Telemetry: view.opened emitted with surface slug "KeyboardShortcutsModal" on open
+    (P1/S11 diagnostics contract), PII-safe (slug only).
+[x] Tests: adapter/projection unit + per-state (loading/loaded/empty) + a11y label +
+    diagnostics + registry/route/filter-store + i18n keys = 51 facts, all green.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate clean).
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+The KeyboardShortcutsModal surface is implemented to production parity with the web
+source and independently verified on this host: BUILD_EXIT=0 (WinUI app + XAML compiler),
+FORMAT_EXIT=0 (whole solution), PLACEHOLDER_EXIT=0, and the entire headless logic suite
+17272/17272 green including all 51 new KeyboardShortcutsModal cases. The acceptance
+gate's aggregate TEST step cannot reach 0 ONLY because the WinAppDriver/Appium runner is
+absent on this host, so the 147 packaged-app UI-automation cases cannot execute — a
+documented platform-capability gap (same as W9-0002) now recorded in
+apps/environment-pending-verifications.md for a WinAppDriver-provisioned runner.
+Per the prompt's capability clause and Honesty Covenant rule 1 (no red-as-green), this
+is reported as BLOCKED on that single environmental gap rather than a falsely-green DONE.
+The deliverable (code + tests) is complete, committed, and every host-runnable gate is green.
+
+EXIT=1
+STATUS=BLOCKED
