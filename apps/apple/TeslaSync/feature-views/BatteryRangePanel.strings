@@ -1,0 +1,35 @@
+/*
+  BatteryRangePanel.strings
+  TeslaSync — P4 feature view · 0289 · BatteryRangePanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `BatteryRangePanel`
+  resolves (table "BatteryRangePanel") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/BatteryRangePanel.tsx). The second group backs the
+  native-only chrome (loading / empty / error / retry / freshness) the Apple HIG states contract
+  requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"common.battery" = "Battery";
+"vehicles.detail.ratedRange" = "Rated Range";
+"vehicles.detail.idealRange" = "Ideal Range";
+"common.charging" = "Charging";
+"common.notCharging" = "Not Charging";
+"vehicles.detail.fullIn" = "Full in";
+
+/* --- Native chrome: states + freshness + accessibility --- */
+"vehicles.battery.loadingA11y" = "Loading battery and range";
+"vehicles.battery.noData" = "No battery data available";
+"vehicles.battery.errorTitle" = "Couldn't load battery status";
+"vehicles.battery.retry" = "Retry";
+"vehicles.battery.refresh" = "Refresh";
+"vehicles.battery.live" = "Live";
+"vehicles.battery.stale" = "Stale";
+"vehicles.battery.offline" = "Offline";
+"vehicles.battery.staleBanner" = "Reconnecting — battery status may be stale";
+"vehicles.battery.offlineBanner" = "Offline — showing last known battery status";
