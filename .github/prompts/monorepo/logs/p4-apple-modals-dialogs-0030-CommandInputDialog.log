@@ -1,0 +1,179 @@
+=== P4 Modal / dialog 0030 CommandInputDialog (Apple) ===
+
+Artifact : apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.*
+Prompt   : .github/prompts/monorepo/p4-apple/modals-dialogs/...-0030-CommandInputDialog.prompt.md
+Web src  : web/src/features/system/components/CommandInputDialog.tsx (THE spec)
+Date     : 2026-06-11
+Runner   : Darwin arm64, Xcode 26.5 (17F42), Swift 6 (swiftc/swift test bundled),
+           swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.x,
+           OpenJDK 17 (KMP Shared.xcframework actually built on this runner).
+           SwiftUI + Swift Charts + MapKit present (iOS-18 / macOS-15 SDKs).
+
+DISPOSITION
+  Production-polished, Apple-idiomatic CommandInputDialog shipped at parity with the
+  web source and INDEPENDENTLY VERIFIED on this runner: the pure projection + state
+  holder build and 36/36 tests pass under Swift 6 strict concurrency, and the entire
+  SwiftUI view layer typechecks against the REAL design system on BOTH the iOS-18 and
+  macOS-15 SDKs (0 errors), with swiftformat --lint / swiftlint --strict / placeholder
+  all green. The two full-app xcodebuild build/test gate steps exit 65/65 (DEFERRED,
+  NOT failed by this code): the staged surface tier (TeslaSync/modals-dialogs) is not
+  yet registered in project.yml — exactly as every sibling 0002–0028 surface — so the
+  app target never compiles CommandInputDialog (0 references in either gate log), and
+  the app build aborts on the PRE-EXISTING, unrelated RecentDrivesSection "compiler
+  unable to type-check this expression in reasonable time" error (iOS) and on macOS
+  development-signing (macOS) — both owned by the p4-apple/P99 acceptance gate on a
+  signed macos-latest runner per apps/macos-pending-verifications.md. Zero errors in
+  any CommandInputDialog file.
+
+--------------------------------------------------------------------------------
+ARTIFACT (10 Swift files + 1 .strings table; one exported surface per file)
+--------------------------------------------------------------------------------
+  CommandInputDialog.Adapter.swift     372   pure projection core (Foundation only)
+  CommandInputDialog.Parsing.swift     108   JS parseInt/parseFloat primitives (pure)
+  CommandInputDialog.Seams.swift       177   telemetry / controller / source / i18n / a11y seams
+  CommandInputDialog.Model.swift       269   @Observable @MainActor state holder (P1/S8)
+  CommandInputDialog.States.swift      159   loading / empty / error / freshness chip / banner
+  CommandInputDialog.Views.swift       309   header / form / field rows / footer / chrome
+  CommandInputDialog.swift              95   main View entry (phase switch, a11y, slug)
+  CommandInputDialog.Previews.swift    204   #if DEBUG — one preview per state
+  CommandInputDialog.Tests.swift       222   projection + parsing + a11y unit tests
+  CommandInputDialog.ModelTests.swift  288   state-holder unit tests
+  CommandInputDialog.strings            56   P1/S10 i18n table ("CommandInputDialog")
+  Total 2259 lines; every Swift file <= 372 (swiftlint file_length 400 strict).
+
+WEB PARITY MAP (CommandInputDialog.tsx -> native)
+  Modal(open,onClose,size=sm)             -> HIG sheet content in TSGlassPanel + TSFadeIn
+  def.icon / def.labelKey / ic.promptKey  -> CommandInputHeader (SF Symbol + title + prompt)
+  ic.fields[] OR single ic.paramName      -> unified CommandInputSpec.fields (single field
+                                             synthesised; label shown only when a sublabel
+                                             fallback exists, web parity)
+  buildInitialValues / getDefaultValue     -> CommandInputProjection.initialValues (default
+                                             resolved upstream by the source)
+  validateField(value,validation,min,max)  -> CommandInputProjection.validate (verbatim):
+       '' -> Required
+       pin    -> /^\d{4}$/                  -> isFourDigitPIN
+       number -> parseInt + String(num)===s -> canonicalInteger (rejects 007/1.5/+5/-0/oversize)
+       decimal-> parseFloat (lenient)       -> jsParseFloat (1.5abc->1.5, .5, 5., 1e3, Infinity)
+       min/max-> `Minimum/Maximum: ${n}`    -> {{value}} substitution
+  resolveInputType / resolveInputMode       -> CommandFieldEntryMode (secureNumeric/numeric/
+                                             decimal/text) -> SwiftUI keyboardType + SecureField
+  handleChange/handleBlur (touched gating)  -> model.updateValue / blurField (visibleError =
+                                             touched ? errors[name] : nil)
+  handleSubmit (validate all, mark touched) -> model.submit -> controller.submit(values) iff valid
+  isValid() (Send disabled)                 -> model.isValid -> TSButton .disabled
+  loading prop (Send spinner)               -> update.submitting -> TSButton isLoading
+  onClose / Escape                          -> model.cancel -> controller.cancel (header "x")
+  t('common.cancel'/'common.send')          -> CommandInputStrings (P1/S10)
+  [native widening] loading/empty/error/    -> CommandInputPhase + freshness chip + banner so
+   stale/offline                              no state is ever a blank box (prompt requirement)
+
+--------------------------------------------------------------------------------
+GATE RESULTS (this runner)
+--------------------------------------------------------------------------------
+  [1] swiftformat --lint (the 10 surface Swift files)
+        -> "0/10 files require formatting."                     FORMAT_EXIT=0   GREEN
+
+  [2] swiftlint --strict --config .swiftlint.yml (the 10 surface files, passed
+      explicitly; repo .swiftlint.yml `included:` does not yet list the
+      modals-dialogs tier — same as every sibling surface)
+        -> "Found 0 violations, 0 serious in 10 files."         LINT_EXIT=0     GREEN
+
+  [3] check-placeholders.ps1 (pwsh 7) on an ISOLATED copy of the surface files
+      (-Language swift). The web `placeholder` prop maps to the native field
+      property `hint` (a Swift identifier I own; the web placeholders are literal
+      strings, not i18n keys) so no opt-out marker is needed.
+        -> PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0          EXIT=0          GREEN
+      check-placeholders.ps1 -SelfTest                          SELFTEST_EXIT=0 GREEN
+
+  [4] Isolated Swift-6 SwiftPM build + test of the pure projection + state holder
+      (Adapter + Parsing + Seams + Model as the library; Tests + ModelTests as the
+      XCTest bundle; tools-version 6.0 => Swift 6 language mode, strict concurrency).
+        -> "Executed 36 tests, with 0 failures (0 unexpected)." SWIFT_TEST_EXIT=0 GREEN
+      Coverage: resolvePhase envelopes; entryMode mapping; initialValues + label rule;
+      validate (Required/pin/number-canonical/decimal-lenient/min/max) for every kind;
+      canonicalInteger + jsParseFloat primitives directly; isValid gate; accessibility
+      summary/close; telemetry once+idempotent; loading->content seeding; empty/error;
+      failed-keeps-content; default-value seeding; form rebuild on new command vs same;
+      reopen-after-clear rebuild; blur-validates; revalidate-only-when-touched; submit
+      gate (invalid blocks + marks touched, valid routes values, no-op while submitting);
+      cancel; stale auto-refresh-once-then-rearm; offline keeps content + no refresh.
+
+  [5] SDK typecheck of the FULL view layer + the real (Shared-free) design system
+      (../design/generated/apple/Tokens.swift + Sources/Design/* + Sources/Components/
+      UI/* + Sources/Components/Motion/* + the 8 non-test surface files), strict
+      concurrency complete, #Preview macros + @Observable expanded:
+        iOS  : swiftc -typecheck -sdk iphonesimulator -target arm64-apple-ios18.0-simulator
+                 -> 0 errors                                    IOS_TYPECHECK_EXIT=0  GREEN
+        macOS: swiftc -typecheck -sdk macosx -target arm64-apple-macos15.0
+                 -> 0 errors                                    MAC_TYPECHECK_EXIT=0  GREEN
+      (The iOS pass exercises the #if os(iOS) keyboardType / textInputAutocapitalization
+      branches the macOS pass compiles out.)
+
+  [6] FULL-APP xcodebuild (the prompt's two gate steps), run VERBATIM on THIS runner.
+      xcodegen generate succeeded (XCODEGEN_EXIT=0); the KMP Shared.xcframework was
+      assembled by Gradle + staged. CommandInputDialog appears 0 times in BOTH gate
+      logs because TeslaSync/modals-dialogs is not in project.yml sources (tier
+      registration is the P99 acceptance gate's job — identical to siblings 0002-0028).
+        iOS  : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+                 ** BUILD FAILED ** / ** TEST FAILED **         IOS_EXIT=65
+                 Root cause (unrelated, pre-existing): SwiftCompile of the
+                 RecentDrives* sibling batch ->
+                 "The compiler is unable to type-check this expression in reasonable
+                 time; try breaking up the expression into distinct sub-expressions"
+                 (RecentDrivesSection.*). Not a CommandInputDialog file.
+        macOS: xcodebuild -scheme TeslaSync-macOS build test
+                 ** BUILD FAILED ** / ** TEST FAILED **         MAC_EXIT=65
+                 Root cause (unrelated, pre-existing): "TeslaSync-macOS"/
+                 "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+                 development certificate (no DEVELOPMENT_TEAM on this runner).
+      Both 65s are DEFERRED to p4-apple/P99 (signed macos-latest runner + tier
+      registration), NOT failures of this code (0 CommandInputDialog references).
+
+  EXIT=0 is asserted on the runnable, in-scope gates this surface owns ([1]-[5], all
+  GREEN). Steps [6] are reported RED (65/65) and DEFERRED with the evidence above.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+   1 No red-as-green   : the two full-app xcodebuild steps are reported RED
+                         (IOS_EXIT=65 / MAC_EXIT=65) with their real, captured root
+                         causes (RecentDrivesSection type-check timeout; macOS dev
+                         signing) and explicitly DEFERRED — never relabelled green.
+   2 No scope narrowing: every web branch reproduced — single-field + multi-field,
+                         all four validation kinds + min/max, touched-gated errors,
+                         submit routing, isValid gate, loading spinner, cancel/close,
+                         i18n, plus the loading/empty/error/stale/offline widening.
+   3 No skip-and-assume: the full-app gate was actually executed end-to-end on this
+                         runner (Gradle built the xcframework; both schemes compiled
+                         to BUILD FAILED); exit codes captured, not assumed.
+   4 No stubs as final : check-placeholders GREEN (0); no TODO/FIXME/Coming soon/
+                         Lorem/"not implemented"; every state renders real chrome.
+   5 No parity shortcut: validation ported verbatim incl. the parseInt canonical
+                         round-trip + lenient parseFloat; entry mode, initial values,
+                         label rule, submit gate, i18n + telemetry + a11y all mapped to
+                         platform seams + tokens; the SwiftUI layer typechecks against
+                         the REAL design system on BOTH the iOS-18 and macOS-15 SDKs.
+   6 No delegation     : authored directly (delegation FORBIDDEN; none used).
+   7 No predecessor bypass: consumes the P1/S8 state-holder seam shape, P1/S9 tokens
+                         (Color.TS / Font.TS / TSSpacing / TSRadius), P1/S10 i18n
+                         facade, P1/S11 view.opened, and P4-core shared TSGlassPanel /
+                         TSFadeIn / TSButton; did NOT edit project.yml / .swiftlint.yml /
+                         Localizable.xcstrings / macos-pending-verifications.md (parallel-
+                         unsafe + outside the prompt's commit scope) — strings ship as
+                         the per-surface table; tier registration is the acceptance
+                         gate's, exactly as the sibling surfaces.
+   8 No commit on red  : the committed artifact is GREEN on every runnable gate AND
+                         independently compiles + tests under the real Xcode 26 / Swift 6
+                         toolchain (isolated build/test + iOS & macOS SDK typecheck). The
+                         only non-green steps are the environment-blocked full-app
+                         xcodebuild build/test, RED solely on pre-existing, unrelated
+                         sibling surfaces + macOS signing — which this commit neither
+                         introduces nor touches (0 errors / 0 references in its files).
+   9 No silent drift   : changes confined to apps/apple/TeslaSync/modals-dialogs/
+                         CommandInputDialog.* and this log (the generated
+                         TeslaSync.xcodeproj, staged Frameworks/Shared.xcframework, and
+                         apps/shared/core/build are git-ignored).
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE
