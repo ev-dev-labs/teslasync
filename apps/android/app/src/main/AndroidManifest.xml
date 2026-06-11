@@ -92,6 +92,58 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="general" />
+
+        <!-- Home-screen widgets (P3/A8, ADR-009/013). Each Glance receiver is the AppWidget provider
+             the launcher binds to; refresh is driven by WorkManager (the providers set
+             updatePeriodMillis=0), never by a held SSE stream. exported=true is required so the
+             AppWidget framework can deliver APPWIDGET_UPDATE broadcasts. -->
+        <receiver
+            android:name=".widgets.VehicleStatusWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_vehicle_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_vehicle_status_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widgets.ChargingWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_charging_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_charging_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widgets.QuickStatsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_quickstats_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_quick_stats_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widgets.AlertsWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_alerts_title">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_alerts_info" />
+        </receiver>
     </application>
 
 </manifest>

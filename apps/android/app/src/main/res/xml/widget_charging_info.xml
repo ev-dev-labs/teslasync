@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Charging widget provider (P3/A8). Refresh via WorkManager (updatePeriodMillis=0). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_charging_description"
+    android:initialLayout="@layout/widget_loading"
+    android:minHeight="110dp"
+    android:minWidth="110dp"
+    android:previewImage="@mipmap/ic_launcher"
+    android:previewLayout="@layout/widget_preview_charging"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="2"
+    android:targetCellWidth="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

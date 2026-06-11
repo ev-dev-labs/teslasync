@@ -38,6 +38,16 @@ appAuth = "0.11.1"
 # intentionally NOT applied here — credential provisioning (google-services.json) is P5/H5-0001 scope;
 # the FCM token surface degrades gracefully until the default FirebaseApp is configured.
 firebaseBom = "34.14.1"
+# Jetpack Glance — Compose-style home-screen app widgets (P3/A8, ADR-002 native UI). Not part of the
+# Compose BOM (ships under androidx.glance with its own Compose-runtime alignment), so it carries its
+# own pin. 1.1.1 is the current stable line; it supplies glance-appwidget (GlanceAppWidget + receiver +
+# WorkManager-backed update path) and glance-material3 (GlanceTheme + dynamic-color ColorProviders).
+# Major bumps require a superseding ADR; Renovate keeps patch versions current.
+glance = "1.1.1"
+# WorkManager — responsible, OS-throttle-friendly background refresh for the home-screen widgets
+# (P3/A8, ADR-009: widgets refresh via WorkManager, never a held SSE stream). 2.10.0 is the current
+# stable line; work-runtime-ktx adds the CoroutineWorker + KTX builders. Major bumps require an ADR.
+androidxWork = "2.10.0"
 # SQLDelight runtime — referenced by the app only to construct the shared-core offline cache
 # (LocalCache(DriverFactory(context).createDriver()), ADR-013); the driver itself lives in :core.
 # Pinned to the same version the shared core uses (apps/shared/gradle/libs.versions.toml).
@@ -104,6 +114,13 @@ appauth = { module = "net.openid:appauth", version.ref = "appAuth" }
 # firebase-common transitively (all com.google.* → the Google Maven repo per settings.gradle.kts).
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
+# Jetpack Glance — home-screen app widgets (P3/A8). glance-appwidget brings the GlanceAppWidget /
+# GlanceAppWidgetReceiver / Glance state APIs; glance-material3 brings GlanceTheme + the dynamic-color
+# ColorProviders the widget theme maps the generated design tokens onto.
+androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
+androidx-glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "glance" }
+# WorkManager (KTX) — CoroutineWorker + unique periodic/one-time enqueue for the widget refresh (P3/A8).
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "androidxWork" }
 # SQLDelight runtime — names SqlDriver so the app can build the shared-core LocalCache (ADR-013).
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
 # Coroutines — Android dispatchers for the auth state holder + redirect bridge.

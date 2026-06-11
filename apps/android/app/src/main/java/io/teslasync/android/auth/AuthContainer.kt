@@ -7,6 +7,7 @@ import io.teslasync.android.data.live.LiveFeed
 import io.teslasync.android.data.live.LiveSessionStore
 import io.teslasync.android.navigation.OnboardingGate
 import io.teslasync.android.push.PushContainer
+import io.teslasync.android.widgets.WidgetContainer
 import io.teslasync.shared.core.auth.AndroidKeystoreTokenStore
 import io.teslasync.shared.core.auth.AuthService
 import io.teslasync.shared.core.auth.AuthState
@@ -140,6 +141,25 @@ class AuthContainer(
 
     /** The shared, resilient API client whose only auth seam is the auth token provider. */
     val apiHttpClient: ApiHttpClient get() = apiClient
+
+    /**
+     * The home-screen widgets DI graph (P3/A8, ADR-009/013): the shared cache-then-network repositories
+     * over the SAME single [apiClient] (so a widget refresh carries the bearer + 401 refresh) and the
+     * SAME offline cache the app writes (so widgets show exactly what the app last cached). Exposes the
+     * cache/freshness [reader][WidgetContainer.reader] and the WorkManager-driven
+     * [refresher][WidgetContainer.refresher]; reached by the widget receivers / refresh worker through
+     * the application. Lazy — only built once a widget is actually placed on a home screen.
+     */
+    val widgets: WidgetContainer by lazy {
+        WidgetContainer(
+            context = appContext,
+            api = apiClient,
+            cacheStore = localCache.store,
+            selectedVehicleStore = data.selectedVehicleStore,
+            unitFormatter = data.unitFormatter,
+            logger = diagnostics.logger,
+        )
+    }
 
     /** Starts the auth + onboarding observers. Idempotent; call once from the app shell. */
     fun start() {

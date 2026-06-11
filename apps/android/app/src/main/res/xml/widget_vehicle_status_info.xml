@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vehicle-status widget provider (P3/A8). updatePeriodMillis=0: refresh is driven by WorkManager,
+     not the launcher. previewLayout (API 31+) shows a representative layout in the picker; previewImage
+     is the pre-31 fallback. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_vehicle_description"
+    android:initialLayout="@layout/widget_loading"
+    android:minHeight="110dp"
+    android:minWidth="110dp"
+    android:previewImage="@mipmap/ic_launcher"
+    android:previewLayout="@layout/widget_preview_vehicle_status"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="2"
+    android:targetCellWidth="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />
