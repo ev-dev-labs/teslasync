@@ -604,3 +604,4 @@ p2-windows/shared-meaningful/W-0093-KpiOverviewCard.prompt.md
 p2-windows/shared-meaningful/W-0094-LiveIndicator.prompt.md
 p2-windows/shared-meaningful/W-0097-PlaybackSpeedMenu.prompt.md
 p2-windows/shared-meaningful/W-0103-ScoreBadge.prompt.md
+p2-windows/shared-meaningful/W-0098-PollingEngine.prompt.md
