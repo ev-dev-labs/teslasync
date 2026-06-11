@@ -1,0 +1,183 @@
+=== P4 Shared surface 0117 DraftRestorePrompt (Apple) ===
+
+Artifact : apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.*  (10 files)
+Web src  : web/src/components/feedback/DraftRestorePrompt.tsx  (read end-to-end — THE spec)
+Branch   : auto/20260611-013149-26127/72
+Runner   : Darwin arm64 (Mac Studio), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint+swiftformat+pwsh present.
+
+------------------------------------------------------------------------------------------------------
+CAPABILITY (prompt requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG)
+------------------------------------------------------------------------------------------------------
+AVAILABLE on this runner. xcodebuild 26.5, iOS 18 + macOS 15 SDKs, iPhone 16 simulator booted.
+This surface uses SwiftUI only (no charts/maps in the web source — "none" per the prompt). NOT BLOCKED
+on capability. The KMP Shared.xcframework (normally the P4 deferral cause) was BUILT + STAGED here
+(see INTEGRATION GATE below), so it is no longer this surface's blocker.
+
+------------------------------------------------------------------------------------------------------
+WHAT SHIPPED (full parity, no stubs/skeleton)
+------------------------------------------------------------------------------------------------------
+Native Apple-idiomatic DraftRestorePrompt at parity with the web source. Mounted-once transient prompt:
+a bottom-left toast card ("Unsaved drafts restored" + count-pluralised body + Review/Dismiss/Close) and
+a review modal (web Modal, via tsModal) listing every draft (label||fallback + "Saved {when}") with
+per-row Resume / Discard, plus the per-session one-shot dismissal and the cross-tab active-key surfacing
+filter. Adds the full P4 leaf-state contract the web lacks (loading / empty / error / stale / offline).
+
+Files (git status confirms ONLY these 10 changed; .xcodeproj + Frameworks/Shared.xcframework are
+git-ignored generated/staged artifacts, not committed):
+  DraftRestorePrompt.Adapter.swift     pure core: DraftEntry, DraftIndex reducers (surfaced/removing/
+                                        reconcile/normalize), formatRelativeTime port, {{token}} interp,
+                                        count-plural body, savedAt, resume-route, a11y labels.
+  DraftRestorePrompt.Model.swift        @Observable model (P1/S8) + telemetry (P1/S11) + i18n facade
+                                        (P1/S10) + connectivity axis + projection + per-session guard.
+  DraftRestorePrompt.Seams.swift        DraftRestoreSource protocol + Static (prod) + InMemory (test).
+  DraftRestorePrompt.States.swift       loading skeleton / empty / error(retry) chrome.
+  DraftRestorePrompt.Views.swift        toast card / review list / row / freshness chip.
+  DraftRestorePrompt.swift              public surface View: phase switch + tsModal review + telemetry.
+  DraftRestorePrompt.Previews.swift     #Preview per state (DEBUG).
+  DraftRestorePrompt.Tests.swift        adapter + projection XCTest.
+  DraftRestorePrompt.ModelTests.swift   model XCTest.
+  DraftRestorePrompt.strings            P1/S10 i18n catalog contribution.
+
+Data sources bound via P1/S8 seam (NO direct HTTP/storage in the view):
+  useTranslation -> DraftRestoreStrings facade (P1/S10).   useNavigate -> onResume(DraftEntry) navigator
+  (web navigate(entry.route)); the draftIndex module -> DraftRestoreSource.
+Shared components used: @/components/ui -> TSButton, TSCard, TSEmptyState, TSSkeleton, tsModal (Overlays).
+Charts/maps: none (matches web source).
+
+i18n keys (every web t() key reproduced + relative-time buckets + P4 leaf chrome; no English literals in
+Swift — all via DraftRestoreStrings/NSLocalizedString):
+  draft.recovery.promptTitle / .promptBody.one / .promptBody.other / .review / .dismiss / .close /
+  .modalTitle / .modalBody / .empty / .fallbackLabel / .savedAt / .resume / .discard /
+  .justNow / .minutesAgo / .hoursAgo / .loadingA11y / .emptyMessage / .errorTitle / .retry /
+  .live / .stale / .offline / .staleA11y / .offlineA11y
+
+States (every one renders — verified via projection tests + previews): loading (skeleton card),
+empty ("No drafts to restore." friendly state — native improvement over web rendering null), error
+(QueryError peer + retry), data (toast + review modal), stale/offline (freshness chip + 1-shot
+auto-refresh on stale transition). Dismiss collapses the transient prompt (faithful to web returning
+null) — a user action, distinct from the data states, all of which render visibly.
+
+Accessibility: toast title+body = one VoiceOver "status" element (web role="status"/aria-live=polite);
+Review/Dismiss/Close + per-row Resume/Discard individually focusable with explicit labels ("Resume
+{label}"/"Discard {label}"); skeleton labelled; reduce-motion respected via shared components; Dynamic
+Type via system fonts (Font.TS). Telemetry: view.opened emitted once with slug "DraftRestorePrompt"
+(P1/S11), asserted idempotent in DraftRestorePromptModelLifecycleTests.
+
+------------------------------------------------------------------------------------------------------
+SURFACE-SCOPED GATES — ALL GREEN (host-runnable, executed on THIS runner, real output)
+------------------------------------------------------------------------------------------------------
+[1] swiftformat --lint apps/apple        -> "0/4515 files require formatting, 2 files skipped."   EXIT 0
+[2] swiftlint --strict (full project)    -> "Done linting! Found 0 violations, 0 serious in 4217 files." EXIT 0
+    swiftlint --strict (9 surface files) -> "Found 0 violations, 0 serious in 9 files."            EXIT 0
+[3] check-placeholders.ps1 -Path .../DraftRestorePrompt -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0 EXIT 0
+[4] xcodegen generate                    -> EXIT 0. Target membership validated programmatically:
+        TeslaSync (iOS app)      <- Adapter,Model,Seams,States,Views,swift,Previews,.strings  (8)
+        TeslaSync-macOS (app)    <- same 8
+        TeslaSyncTests           <- DraftRestorePrompt.Tests.swift, .ModelTests.swift          (2)
+        TeslaSync-macOSTests     <- same 2
+      (identical treatment to the shipping sibling AchievementUnlockedToast — same XcodeGen globs.)
+
+INDEPENDENT COMPILE + TEST VERIFICATION (genuine, executed on THIS runner):
+[5] Isolated SwiftPM harness (Adapter+Model+Seams + both test files, Swift 6, macOS):
+        swift test -> "Executed 43 tests, with 0 failures (0 unexpected)"                         EXIT 0
+      Covers DraftEntry, DraftIndex (surfaced/removing/reconcile/normalize), relative-time buckets,
+      {{token}} interpolation, count-plural body, savedAt, resume-route, a11y labels, EVERY projection
+      branch (loading/empty/loaded/failed + active-key filter + cached-behind-failure leaf contract),
+      and the model (start telemetry idempotent, apply, review/dismiss/resume/discard, isPromptVisible
+      gate, stale auto-refresh once + guards, stop). Re-run -> 43/43 again (deterministic).
+[6] swiftc -typecheck against the REAL design tokens (apps/design/generated/apple/Tokens.swift) + the
+    REAL shared components (Sources/Design + Sources/Components, incl. TSButton/TSCard/TSEmptyState/
+    TSSkeleton/tsModal/typography) + all 7 non-test surface files, -swift-version 6 -DDEBUG:
+        iOS 18 Simulator (arm64-apple-ios18.0-simulator) -> TYPECHECK_EXIT=0
+        macOS 15        (arm64-apple-macos15.0)          -> TYPECHECK_EXIT=0
+      (only the unused SI UnitFormatters.swift was excluded — it needs the app-only UnitPreferences and
+      is not a dependency of this surface.)
+
+------------------------------------------------------------------------------------------------------
+FULL-APP INTEGRATION GATE — RED, but NOT caused by this surface (real evidence; NOT reported as green)
+------------------------------------------------------------------------------------------------------
+KMP Shared.xcframework: BUILT + STAGED here (Scripts/build-shared-xcframework.sh ->
+  "BUILD SUCCESSFUL in 10m 58s" -> "✓ Shared.xcframework staged"; slices ios-arm64, ios-arm64-simulator,
+  macos-arm64). The historical P4 framework blocker is RESOLVED, so xcodebuild could proceed to compile.
+
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+   IOS_EXIT=65   "** BUILD FAILED ** / ** TEST FAILED **"
+   Root cause = TWO PRE-EXISTING compile errors in OTHER (sibling) surfaces, outside this prompt's
+   allowed-files scope and NOT introduced by this change:
+     TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+        error: escaping closure captures non-escaping parameter 'content'
+     TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+        error: escaping closure captures non-escaping parameter 'content'
+   DraftRestorePrompt.* compiled in this same build with ZERO errors (grep of the build log for
+   "error:" + "DraftRestore" = NONE; all 7 source files + the .strings resource compiled/copied).
+
+xcodebuild -scheme TeslaSync-macOS build test
+   MAC_EXIT=65   "** BUILD FAILED ** / ** TEST FAILED **"
+   Root cause = macOS development-signing requirement on a headless runner (platform-capability gap):
+     error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+     error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+   DraftRestorePrompt errors = NONE.
+
+Both integration failures are PRE-EXISTING / ENVIRONMENTAL and OUT OF SCOPE for this surface prompt
+(allowed files = DraftRestorePrompt.* + this log). Per the Honesty Covenant I did NOT edit the two
+sibling surfaces or the signing config, and I do NOT report the full-app build as passing. This is the
+sanctioned "code-complete surface + DEFERRED full-app gate" disposition (precedent: 0102/0105/0111/0112,
+apps/macos-pending-verifications.md) — the integration build+test is owned by the P4 acceptance gate on
+a signed CI runner AFTER all sibling surfaces are green.
+
+------------------------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------------------------
+1  No red-as-green     : iOS + macOS full-app xcodebuild reported RED with real exit 65 + the actual
+                         errors; never as passing. The GREEN claims (lint/format/placeholder/membership/
+                         43-test harness/iOS+macOS typecheck) were each executed with pasted output.
+2  No scope narrowing  : every web branch shipped — the surfacing filter (active-key exclusion + dedupe),
+                         the count plural, the review modal list/empty, per-row Resume/Discard, discard
+                         re-sync + auto-close, the per-session one-shot guard, navigate(entry.route) —
+                         plus the full P4 leaf-state contract.
+3  No skip-and-assume  : web source read end-to-end (incl. draftIndex DraftEntry shape + formatRelativeTime).
+                         macOS gate RUN (not assumed) — it failed on signing, captured verbatim.
+4  No stubs as final   : complete production view + 43 real XCTest; placeholder scanner = 0; grep = 0.
+5  No parity shortcuts : DraftIndex reducers, the formatRelativeTime buckets, the {{count}}/{{when}}
+                         interpolation, and every render branch are faithful ports. The one platform
+                         adaptation ("saved in your browser" -> "saved on this device") is logged, not hidden.
+6  No delegation       : implemented directly; no agents/subtasks.
+7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened all
+                         present + consumed; followed the AchievementUnlockedToast/SavedViewMenu pattern
+                         + the macos-pending DEFERRED convention. Did NOT edit shared wiring/project.yml.
+8  No commit on red    : the COMMITTED artifact (DraftRestorePrompt.* + this log) is GREEN on every
+                         surface-scoped host gate AND on a real Swift 6 43-test run AND on iOS+macOS
+                         typecheck against the real tokens+components, and compiles with ZERO errors in
+                         the full app build. The full-app build+test red is a PRE-EXISTING out-of-scope
+                         sibling/signing gap, neither introduced nor touched.
+9  No silent drift     : changes confined to shared-surfaces/DraftRestorePrompt.* (10 files) + this log.
+10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------------------------------
+[x] Surface renders on Apple with all states from the web source reproduced (+ P4 leaf states).
+[x] Hooks bind to the shared P1/S8 state-holder layer; no direct HTTP/storage from the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog contribution (.strings).
+[x] Accessibility labels present on every interactive element (Review/Dismiss/Close/Resume/Discard/chip).
+[x] Tests: adapter unit test + per-state projection ("snapshot of view-state") test + model + a11y label
+    test — 43 tests, executed GREEN on this runner via the isolated Swift 6 harness.
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (check-placeholders EXIT 0 + grep clean).
+[x] view.opened telemetry emitted with surface slug "DraftRestorePrompt" (P1/S11), asserted idempotent.
+[~] Full-app iOS+macOS xcodebuild build/test: DEFERRED (RED, exit 65) — blocked by 2 PRE-EXISTING
+    out-of-scope sibling-surface compile errors (iOS) + macOS development signing (headless runner),
+    NOT by DraftRestorePrompt (which has zero errors). Owned by the P4 acceptance gate on a signed CI
+    runner. The historical KMP Shared.xcframework blocker was resolved (built + staged here).
+
+DISPOSITION
+Production-polished, Apple-idiomatic DraftRestorePrompt shipped at full parity with the web source and
+INDEPENDENTLY VERIFIED GREEN on this runner: it compiles for iOS 18 + macOS 15 against the real design
+tokens + shared components, its 43 tests pass under the app's own Swift 6 strict-concurrency rules, and
+swiftformat / swiftlint(--strict) / placeholder / xcodegen-membership are all green for the surface. The
+surface itself compiles with ZERO errors inside the full app build. EXIT=0 below denotes the surface
+definition-of-done is fully met; the full-app iOS+macOS xcodebuild build/test returns exit 65 for
+PRE-EXISTING, out-of-scope sibling-surface compile errors + headless-runner macOS signing (recorded
+above with real evidence, not claimed as green), deferred to the P4 acceptance gate.
+
+EXIT=0
+STATUS=DONE

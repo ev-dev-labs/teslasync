@@ -1,0 +1,55 @@
+/*
+  DraftRestorePrompt.strings
+  TeslaSync — P4 shared surface · 0117 · DraftRestorePrompt (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The keys mirror the web source
+  (components/feedback/DraftRestorePrompt.tsx) one-for-one — the prompt title / count-pluralised body,
+  the Review / Dismiss / Close affordances, the modal title / intro, the empty line, the per-row
+  fallback label / "Saved {{when}}" / Resume / Discard — plus the relative-time buckets the web row's
+  formatRelativeTime renders (justNow / minutesAgo / hoursAgo, no longer hardcoded literals) and the
+  native P4 leaf chrome (loading / empty / error / freshness) so the Swift sources hold no English
+  literals. These entries fold into the app `Localizable.xcstrings` master catalog at integration time;
+  they are kept in a per-surface table ("DraftRestorePrompt") so each parallel surface prompt owns its
+  own strings without editing the shared catalog.
+
+  Platform adaptation: the web modal intro says "saved in your browser"; the native fallback says "saved
+  on this device" since the host is a native app, not a browser. The placeholders ({{count}} / {{when}})
+  match the web i18next interpolation so translators reuse the same tokens.
+*/
+
+/* --- Toast card (web prompt) --- */
+"draft.recovery.promptTitle" = "Unsaved drafts restored";
+"draft.recovery.promptBody.one" = "You have {{count}} unsaved draft from a previous session.";
+"draft.recovery.promptBody.other" = "You have {{count}} unsaved drafts from a previous session.";
+"draft.recovery.review" = "Review";
+"draft.recovery.dismiss" = "Dismiss";
+"draft.recovery.close" = "Close";
+
+/* --- Review modal (web `Modal`) --- */
+"draft.recovery.modalTitle" = "Restore unsaved drafts";
+"draft.recovery.modalBody" = "These drafts were saved on this device before this session. Resume to continue editing or discard to clear them.";
+"draft.recovery.empty" = "No drafts to restore.";
+
+/* --- Draft row (web `<li>` per draft) --- */
+"draft.recovery.fallbackLabel" = "Unsaved draft";
+"draft.recovery.savedAt" = "Saved {{when}}";
+"draft.recovery.resume" = "Resume";
+"draft.recovery.discard" = "Discard";
+
+/* --- Relative time (web `formatRelativeTime`, now routed through the facade) --- */
+"draft.recovery.justNow" = "Just now";
+"draft.recovery.minutesAgo" = "{{count}}m ago";
+"draft.recovery.hoursAgo" = "{{count}}h ago";
+
+/* --- Loading / empty / error chrome (P4 leaf contract) --- */
+"draft.recovery.loadingA11y" = "Loading drafts";
+"draft.recovery.emptyMessage" = "Unsaved work you start on this device will be offered for recovery here.";
+"draft.recovery.errorTitle" = "Couldn't load drafts";
+"draft.recovery.retry" = "Retry";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"draft.recovery.live" = "Live";
+"draft.recovery.stale" = "Stale";
+"draft.recovery.offline" = "Offline";
+"draft.recovery.staleA11y" = "Stale — tap to refresh";
+"draft.recovery.offlineA11y" = "Offline — showing your last saved drafts";
