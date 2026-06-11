@@ -1,0 +1,40 @@
+/*
+  ClimatePanel.strings
+  TeslaSync — P4 feature view · 0278 · ClimatePanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `ClimatePanel`
+  resolves (table "ClimatePanel") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/telemetry-panels/ClimatePanel.tsx). The second group backs the
+  native-only chrome (loading / error / retry / freshness) the Apple HIG states contract requires.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"common.climate" = "Climate";
+"common.insideTemp" = "Cabin";
+"common.outsideTemp" = "Outside";
+"telemetry.driverSetpoint" = "Driver Setpoint";
+"telemetry.passengerSetpoint" = "Passenger Setpoint";
+"telemetry.hvacState" = "HVAC State";
+"telemetry.fanSpeed" = "Fan Speed";
+"telemetry.defrost" = "Defrost";
+"telemetry.climate" = "Climate";
+"telemetry.precondition" = "Precondition";
+"common.on" = "On";
+"common.off" = "Off";
+"telemetry.noClimateData" = "No climate data available";
+
+/* --- Native chrome: states + freshness + accessibility --- */
+"telemetry.climate.loadingA11y" = "Loading climate status";
+"telemetry.climate.errorTitle" = "Couldn't load climate data";
+"telemetry.climate.retry" = "Retry";
+"telemetry.climate.refresh" = "Refresh";
+"telemetry.climate.live" = "Live";
+"telemetry.climate.stale" = "Stale";
+"telemetry.climate.offline" = "Offline";
+"telemetry.climate.staleBanner" = "Reconnecting — climate status may be stale";
+"telemetry.climate.offlineBanner" = "Offline — showing last known climate status";
