@@ -989,8 +989,26 @@
     items, failing XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk.
     Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag
     inside this comment.
-  -->
+    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each
+    feature-view, dashboard-widget, modal-dialog and misc-surface. The WinUI app (TeslaSync.App) targets a
+    WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free
+    sources are Compile-linked into the single ItemGroup below (the Link mirrors each source's real location
+    under FeatureViews\, Widgets\, ModalsDialogs\ or MiscSurfaces\); the WinUI view files themselves are
+    exercised by the app build. The matching test classes live under this project and are picked up by the
+    SDK default-compile glob. The Content links copy the units-golden, Package.appxmanifest and
+    widget-template fixtures the tests read out of the test output directory.
 
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
+    Include-deduplicated Compile ItemGroup — the union of every WinUI-free (Microsoft.UI-free) .cs on disk
+    under dashboard-widgets/, feature-views/, modals-dialogs/ and misc-surfaces/ (the bare WinUI view files,
+    and the WinUI-referencing ResponseViewer.Snippet.cs, are excluded). This file carries the .gitattributes
+    merge=union strategy, so a chain of integration merges can re-concatenate it into multiple Project roots
+    plus duplicate Compile items, failing XML load (MSB4025 / MSB4067 / NETSDK1022); re-consolidated for P2
+    modals-dialogs/0015 Popover into this single canonical root, regenerated from the WinUI-free sources on
+    disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start
+    tag inside this comment.
+  -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -1585,6 +1603,7 @@
   <ItemGroup>
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
+  <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
@@ -1896,27 +1915,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\AISettings\AISettings.Model.cs" Link="FeatureViews\AISettings\AISettings.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AISettings\AISettings.Source.cs" Link="FeatureViews\AISettings\AISettings.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AISettings\AISettings.ViewModel.cs" Link="FeatureViews\AISettings\AISettings.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AIUsageCard\AIUsageCard.Model.cs" Link="FeatureViews\AIUsageCard\AIUsageCard.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AIUsageCard\AIUsageCard.Source.cs" Link="FeatureViews\AIUsageCard\AIUsageCard.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AIUsageCard\AIUsageCard.ViewModel.cs" Link="FeatureViews\AIUsageCard\AIUsageCard.ViewModel.cs" />
-    <!-- Flat AiUsageCard.* (the AiUsageDetail* / AiUsageOverview surface) — distinct from the AIUsageCard\ subdir surface above; both compile side by side in the app. AiUsageDetailCardTests binds these. -->
-    <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.Model.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.Source.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" Link="FeatureViews\AcDcStatsPanel\AcDcStatsPanel.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AccordionSection.Model.cs" Link="FeatureViews\AccordionSection.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AchievementBadge.Model.cs" Link="FeatureViews\AchievementBadge.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.Model.cs" Link="FeatureViews\ActionBuilder.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.ViewModel.cs" Link="FeatureViews\ActionBuilder.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ActiveOrdersSection\ActiveOrdersSection.Model.cs" Link="FeatureViews\ActiveOrdersSection\ActiveOrdersSection.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ActiveOrdersSection\ActiveOrdersSection.Source.cs" Link="FeatureViews\ActiveOrdersSection\ActiveOrdersSection.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\ActiveOrdersSection\ActiveOrdersSection.ViewModel.cs" Link="FeatureViews\ActiveOrdersSection\ActiveOrdersSection.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AddWidgetButton\AddWidgetButton.Model.cs" Link="FeatureViews\AddWidgetButton\AddWidgetButton.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.Model.cs" Link="FeatureViews\AddressInput\AddressInput.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.Source.cs" Link="FeatureViews\AddressInput\AddressInput.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AddressInput\AddressInput.ViewModel.cs" Link="FeatureViews\AddressInput\AddressInput.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AdvancedSettings.Model.cs" Link="FeatureViews\AdvancedSettings.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AdvancedSettings.Source.cs" Link="FeatureViews\AdvancedSettings.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\AdvancedSettings.ViewModel.cs" Link="FeatureViews\AdvancedSettings.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AiUsageCard.Model.cs" Link="FeatureViews\AiUsageCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AiUsageCard.Source.cs" Link="FeatureViews\AiUsageCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AiUsageCard.ViewModel.cs" Link="FeatureViews\AiUsageCard.ViewModel.cs" />
@@ -2170,7 +2168,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\LiveStatusPill\LiveStatusPill.Model.cs" Link="FeatureViews\LiveStatusPill\LiveStatusPill.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetry\LiveTelemetry.Model.cs" Link="FeatureViews\LiveTelemetry\LiveTelemetry.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" Link="FeatureViews\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetry\LiveTelemetry.Model.cs" Link="FeatureViews\LiveTelemetry\LiveTelemetry.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.Model.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.Source.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.ViewModel.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.ViewModel.cs" />
@@ -2407,10 +2404,10 @@
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.Model.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.ViewModel.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\VehicleConfigSection\VehicleConfigSection.Model.cs" Link="FeatureViews\VehicleConfigSection\VehicleConfigSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.Model.cs" Link="FeatureViews\VehicleCard\VehicleCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.Source.cs" Link="FeatureViews\VehicleCard\VehicleCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.ViewModel.cs" Link="FeatureViews\VehicleCard\VehicleCard.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleConfigSection\VehicleConfigSection.Model.cs" Link="FeatureViews\VehicleConfigSection\VehicleConfigSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Model.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Source.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.ViewModel.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.ViewModel.cs" />
@@ -2494,6 +2491,13 @@
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.ViewModel.cs" Link="MiscSurfaces\selectedVehicle.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\AddAnnotationPopover.Model.cs" Link="ModalsDialogs\AddAnnotationPopover.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\AddAnnotationPopover.ViewModel.cs" Link="ModalsDialogs\AddAnnotationPopover.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.Catalog.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.Catalog.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.Model.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.Source.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.Source.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.ViewModel.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\FeedbackModal.Model.cs" Link="ModalsDialogs\FeedbackModal.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\FeedbackModal.Source.cs" Link="ModalsDialogs\FeedbackModal.Source.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\FeedbackModal.ViewModel.cs" Link="ModalsDialogs\FeedbackModal.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\JobProgressDrawer\JobProgressDrawer.Model.cs" Link="ModalsDialogs\JobProgressDrawer\JobProgressDrawer.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\JobProgressDrawer\JobProgressDrawer.Source.cs" Link="ModalsDialogs\JobProgressDrawer\JobProgressDrawer.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\JobProgressDrawer\JobProgressDrawer.ViewModel.cs" Link="ModalsDialogs\JobProgressDrawer\JobProgressDrawer.ViewModel.cs" />
@@ -2515,6 +2519,9 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.ViewModel.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\Drawer\Drawer.Model.cs" Link="ModalsDialogs\Drawer\Drawer.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\Drawer\Drawer.ViewModel.cs" Link="ModalsDialogs\Drawer\Drawer.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\JobProgressDrawer\JobProgressDrawer.ViewModel.cs" Link="ModalsDialogs\JobProgressDrawer\JobProgressDrawer.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\Popover\Popover.Model.cs" Link="ModalsDialogs\Popover\Popover.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\Popover\Popover.ViewModel.cs" Link="ModalsDialogs\Popover\Popover.ViewModel.cs" />
   </ItemGroup>
 </Project>
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Model.cs" Link="MiscSurfaces\selectedVehicle.Model.cs" />
