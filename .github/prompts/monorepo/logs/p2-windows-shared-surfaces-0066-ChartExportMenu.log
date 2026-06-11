@@ -1,0 +1,114 @@
+=== P2 Shared surface 0066 ChartExportMenu (Windows) ===
+runner: .NET 10.0.300 (SDKs: 9.0.314, 10.0.300); host=ATUL-THINK-I9; date=2026-06-11T09:16:55-07:00
+web source: web/src/components/charts/ChartExportMenu.tsx
+native output: apps/windows/TeslaSync.App/shared-surfaces/ChartExportMenu.{Model,Source,ViewModel,cs}
+workloads present: maui-windows 10.0.20 (Windows App SDK / WinUI 3 build+unit-test capability AVAILABLE).
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+TeslaSync.TokenGen -> ...\TeslaSync.TokenGen.dll
+Generated -> ...\TeslaSync.Windows.Generated.dll
+TeslaSync.App.Core -> ...\TeslaSync.App.Core.dll
+TeslaSync.App.Platform -> ...\TeslaSync.App.Platform.dll
+TeslaSync.App.UITests -> ...\TeslaSync.App.UITests.dll
+TeslaSync.App.Tests -> ...\TeslaSync.App.Tests.dll
+TeslaSync.App -> ...\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+Build succeeded.
+    0 Error(s)
+The only warnings are 17 PRE-EXISTING CA analyzer warnings in TeslaSync.App.Core (CA1716/CA1720/CA1859/
+CA1000 on LiveEvent / LoadState / RepositoryResult / SseEventDecoder / GeneratedApiClient) — unrelated to
+this surface and present at HEAD before this change. The ChartExportMenu surface compiles 0 warnings / 0
+errors. (First build attempt failed CA1716 because the toast seam declared a member named 'Error', which the
+TeslaSync.App project escalates to an error; refactored the seam to a single severity-parameterised Show(...)
+method — same behaviour, analyzer-clean.)
+BUILD_EXIT=0
+
+--- STEP 2: dotnet test apps/windows/TeslaSync.sln -c Release ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 444 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 19522, Skipped:     0, Total: 19522, Duration: 7 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=1
+
+  All 147 UITests fail identically, BEFORE any assertion, with:
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+    was not found at its standard install paths or on PATH.
+    at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() ...WinAppDriverSession.cs:line 75
+  This is an environment capability gap (no interactive UI-automation runner on this host), NOT a code defect,
+  and is independent of this change — this surface adds no UITests and touches no UITest file. It is identical
+  to the accepted predecessors 0045 / 0056, which recorded the same UiAutomationUnavailableException.
+
+--- STEP 2b: dotnet test apps/windows/TeslaSync.App.Tests (isolated headless, no UI-automation runner needed) ---
+Passed!  - Failed:     0, Passed: 19522, Skipped:     0, Total: 19522, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+  Of these, the 55 ChartExportMenu tests (filtered run) all pass:
+  Passed!  - Failed:     0, Passed:    55, Skipped:     0, Total:    55 - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TESTS_EXIT=0
+
+--- STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+(full-solution verify; the 4 surface files + the test file were initially CRLF and were normalised to LF /
+UTF-8-no-BOM per .editorconfig end_of_line=lf, then re-verified)
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/ChartExportMenu ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  NOTE: the literal gate path has no extension and matches no file/dir on disk (the surface ships as flat files
+  ChartExportMenu.* under shared-surfaces/, the established pattern), so the literal invocation scans nothing.
+  SUPPLEMENTAL direct per-file scan of all 5 shipped/test files (ChartExportMenu.cs / .Model.cs / .Source.cs /
+  .ViewModel.cs and ChartExportMenuTests.cs) each returns PLACEHOLDER_COUNT=0 / EXIT=0 — genuinely clean: no
+  TODO / FIXME / XXX / Coming soon / Placeholder / Lorem / "not implemented" / NotImplementedException / "// stub".
+
+--- PRE-EXISTING BREAKAGE REPAIRED (so BUILD_EXIT=0 / FORMAT_EXIT=0 were reachable at all) ---
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed corrupted at HEAD (221f5fb33): the
+.gitattributes merge=union strategy had re-concatenated it into TWO <Project> opens / THREE </Project> closes
+plus an orphaned trailing Compile fragment (lines 2206-2255) — multiple XML roots, MSB4025/MSB4067, so the whole
+Windows solution failed to load before any compile. No single root held the complete WinUI-free Compile-link
+union: root#1 (950) lacked AISpeedProfileInsights / AIStateMachineDebuggerNarrator; root#2 (938) and the
+fragment (38) each held different partial subsets. VERIFIED the intended set: the union of all three roots = 968
+== every Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/
+and shared-surfaces/ (zero diff in either direction). Regenerated the file as exactly ONE Project root from the
+case-insensitive ordinal-sorted, Include-deduplicated union of those WinUI-free sources PLUS this surface's 3
+new WinUI-free links (971 total), LF / UTF-8-no-BOM. Verified: <Project> roots=1, XML loads, and all 19522
+headless tests pass (zero regression). This restores the file's own documented INVARIANT.
+
+--- WHAT WAS BUILT ---
+Native WinUI 3 parity port of the web ChartExportMenu overflow menu, MVVM across the 4 canonical files:
+  - ChartExportMenu.Model.cs    : ChartExportMenuRegistration (slug + 9 i18n keys/fallbacks, translation.* prefix),
+                                  ChartExportClipboardOutcome / ChartExportMenuItemKind / ChartExportToastSeverity
+                                  enums, ChartExportToastIntent projection, PII-safe ChartExportMenuDiagnostics.
+  - ChartExportMenu.Source.cs   : IChartExportToast (P1/S8 optional-toast seam, web useOptionalToast) + inert
+                                  NoOpChartExportToast; IChartExportActions (web callback props) + delegate-backed
+                                  ChartExportActions + inert NoOpChartExportActions.
+  - ChartExportMenu.ViewModel.cs: state holder — controlled IsOpen gated by IsDisabled (IsMenuVisible = open &&
+                                  !disabled), IsBusy disabling image items only (CSV unaffected), conditional
+                                  HasCsv, disabled-vs-enabled trigger label, and handleCopy outcome->toast routing.
+  - ChartExportMenu.cs          : ContentControl composing a TsButton (Subtle/Small, Download glyph) + native
+                                  MenuFlyout (Fluent light-dismiss + Escape = the web outside-click/Esc handlers);
+                                  rebuilds CSV?/PNG/SVG/Copy items from VM state; emits view.opened once on Loaded.
+
+--- ACCEPTANCE CRITERIA ---
+  [x] Surface renders all states the web source actually has: closed (trigger only), open (flyout), disabled
+      (trigger inert + "Chart not ready to export" label, cannot open), busy (PNG/SVG/Copy disabled, CSV stays
+      enabled), and the 3 copy outcomes (copied->success, fallback->info "downloaded instead", failed->error).
+      The web source is a presentational menu over injected callbacks + an in-process toast channel — it does NO
+      data fetch, so it has no loading/error/stale/offline network chrome to reproduce; this is documented in the
+      view XML doc (same precedent as VisuallyHidden 0003) rather than inventing states the source lacks.
+  [x] Hooks bind via shared P1/S8 state holders: IChartExportToast (web useOptionalToast, null-safe via
+      NoOpChartExportToast) + IChartExportActions; the view performs no I/O. Localizer = P1/S10 ILocalizer.
+  [x] Every i18n key from source resolves through the P1/S10 facade with the web second-arg fallback verbatim:
+      chart.export.{disabledTooltip,menuLabel,csv,png,svg,copy,copySuccess,copyFallback,copyFailed} (the em dash
+      in copyFallback is U+2014, asserted). A RecordingLocalizer test proves every label/message flows through it.
+  [x] Accessibility: transparent Raw wrapper; trigger TsButton carries a Narrator name (menu label, or "not
+      ready" while disabled) + tooltip and exposes the flyout's expand/collapse (haspopup); each MenuFlyoutItem
+      carries its localized accessible name; decorative item icons are AccessibilityView.Raw; Group automation peer.
+  [x] Tests: adapter (outcome->toast intent) + per-state holder flags (closed/open/disabled/busy/CSV) + a11y
+      label projection + optional-toast null-safety + seam impls + diagnostics + ctor guards = 55 headless tests,
+      all green.
+  [x] No TODO/stub/mock/placeholder/Lorem/NotImplementedException in shipped code (supplemental scan = 0).
+  [ ] EXIT=0 NOT reachable: dotnet test on the solution runs TeslaSync.App.UITests, which require the
+      WinAppDriver/Appium UI-automation runner (interactive Windows App SDK UI capability) that is ABSENT on this
+      runner. Per the prompt's capability clause -> STATUS=BLOCKED with API evidence (UiAutomationUnavailableException
+      above), identical to accepted predecessors 0045 / 0056. The surface itself is complete: it builds clean,
+      formats clean, is placeholder-clean, and all 55 of its headless tests (and all 19522 in the suite) pass.
+
+EXIT=1
+STATUS=BLOCKED
