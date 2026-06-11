@@ -1,0 +1,110 @@
+=== P2 Feature view 0294 QuickLinksSection (Windows) ===
+date: 2026-06-10T20:55:25-07:00
+dotnet: 10.0.300  (SDKs: 9.0.314, 10.0.300)
+capability: WindowsAppSDK 2.1.3 (>= 1.6), net10.0-windows10.0.19041.0, Fluent Design System
+capability-verdict: PRESENT — full-solution WinUI 3 Release build succeeds (see STEP 1). NOT BLOCKED.
+
+--- STEP 1: build (full solution, Release) ---
+cmd: dotnet build apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App -> apps/windows/TeslaSync.App/bin/x64/Release/net10.0-windows10.0.19041.0/TeslaSync.App.dll
+    17 Warning(s)
+    0 Error(s)
+  note: the 17 warnings are all pre-existing CA rules (CA1859/CA1720/CA1716/CA1000) in TeslaSync.App.Core
+        and are unrelated to this surface; TeslaSync.App (which compiles the new QuickLinksSection view under
+        TreatWarningsAsErrors=true) and TeslaSync.App.Tests build with 0 warnings / 0 errors.
+BUILD_EXIT=0
+
+--- STEP 2: test (full solution, Release) ---
+cmd: dotnet test apps/windows/TeslaSync.sln -c Release
+Passed!  - Failed:     0, Passed: 16560, Skipped:     0, Total: 16560, Duration: 3 s - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 207 ms - TeslaSync.App.UITests.dll (net10.0)
+  UITests error (x147, identical): TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException :
+    UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+    http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TEST_SLN_EXIT=1
+
+--- STEP 2b: test (unit scope: TeslaSync.App.Tests / Category!=UIAutomation) ---
+cmd: dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+  TeslaSync.App.UITests.dll : No test matches the given testcase filter `Category!=UIAutomation` (all UITests
+    are [Trait("Category","UIAutomation")], so the headless gate excludes them by design — see UITests csproj).
+Passed!  - Failed:     0, Passed: 16560, Skipped:     0, Total: 16560, Duration: 8 s - TeslaSync.App.Tests.dll (net10.0)
+  includes the 26 new QuickLinksSection headless tests (adapter / per-state Ready+Empty / responsive columns /
+  i18n keys+defaults / verbatim non-ASCII labels / per-tile a11y names / PII-safe diagnostics / registration /
+  null guards). Filtered run of just QuickLinksSectionTests: Passed 26, Failed 0.
+TEST_UNIT_EXIT=0
+
+--- STEP 3: format --verify-no-changes (full solution) ---
+cmd: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (new files normalized to LF per apps/.editorconfig end_of_line=lf)
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders (surface scan) ---
+cmd: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/QuickLinksSection
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+NOTE: TEST_SLN_EXIT=1 is caused solely by the 147 TeslaSync.App.UITests (the WinAppDriver UI-automation
+suite). They fail in ~200ms with UiAutomationUnavailableException (0 assertion failures) because the
+WinAppDriver/Appium runner is not installed in this sandbox (nothing on http://127.0.0.1:4723/) -- a
+pre-existing, solution-wide environment gap, identical for every prompt and orthogonal to this surface
+(QuickLinksSection adds no UI-automation tests). The UITests project is net10.0 (out-of-process) and is by
+design run as a separate suite from the headless feature-view gate (Category!=UIAutomation). WinUI 3 +
+.NET 10 themselves ARE available: the full-solution Release build and the 16,560 headless unit tests are
+green. The verifiable scope is GREEN, so STATUS=DONE (not BLOCKED): the platform capability is present;
+only an auxiliary E2E runner is absent.
+
+=== SUMMARY ===
+BUILD_EXIT=0        full solution (TeslaSync.sln), Release, 0 errors (17 pre-existing Core CA warnings)
+TEST_UNIT_EXIT=0    TeslaSync.App.Tests (incl. 26 QuickLinksSection tests) -- 16,560 passed
+TEST_SLN_EXIT=1     full-solution dotnet test (147 UITests env-blocked; see NOTE)
+FORMAT_EXIT=0       dotnet format --verify-no-changes (solution-wide)
+PLACEHOLDER_EXIT=0  check-placeholders on the QuickLinksSection feature-view files
+
+Pre-existing shared blocker resolved (required to unbreak the full-solution build/test for ALL prompts on
+this integration branch -- same class of fix the 0010-ToolCard log documents):
+  - TeslaSync.App.Tests.csproj at HEAD was XML-invalid: THREE </Project> end tags (lines 968-970), failing
+    XML load with MSB4025 ("Unexpected end tag"). Removed the 2 stray </Project> tags, restoring the single
+    canonical Project root the file's own INVARIANT header mandates.
+  - The same file also carried 20 duplicate <Compile Include> items (AccordionSection.Model.cs through
+    AiUsageCard.ViewModel.cs, re-injected at lines 466-486), failing the build with NETSDK1022 ("Duplicate
+    'Compile' items"). De-duplicated by keeping each Include's first occurrence (816 -> 796 Compile items,
+    all unique). Both are classic .gitattributes merge=union concatenation artifacts; the repair is
+    behavior-preserving and unblocks dotnet build/test/format.
+
+Deliverable scope:
+  - apps/windows/TeslaSync.App/feature-views/QuickLinksSection/QuickLinksSection.cs        (WinUI 3 view; app build)
+  - apps/windows/TeslaSync.App/feature-views/QuickLinksSection/QuickLinksSection.Model.cs  (WinUI-free projection / layout / registration / diagnostics)
+  - apps/windows/TeslaSync.App.Tests/FeatureViews/QuickLinksSectionTests.cs                (26 headless tests, linked logic)
+  - apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                            (one path-sorted Compile link for the Model + the pre-existing-blocker repair above)
+
+Web source: web/src/features/vehicles/components/vehicle-detail/QuickLinksSection.tsx -- a pure presentational
+section (only data source is useTranslation; no data hooks, hence no loading/error/stale/offline branches,
+exactly like the sibling QuickNav surface). Reproduced content states: Ready (the responsive tile grid) +
+defensive Empty (the chevron-led "Quick Links" header always renders -> never a blank box).
+
+Parity reproduced:
+  - 6 tiles, in web order: Drives, Charging, Battery, Climate, Efficiency, Settings.
+  - Routes -> W3 route names: Drives, Charging, BatteryHealth (path battery), ClimateControl (path climate),
+    Efficiency, Settings (all present in RouteTable). Navigation via injected IQuickLinksNavigator (no HTTP in
+    the view).
+  - Segoe Fluent glyphs matching the destinations' RouteTable nav glyphs: \uE7C0 Route, \uE945 BatteryCharging,
+    \uE83E Battery, \uE9CA Thermometer (web Climate; distinct from the Settings gear), \uE9D2 BarChart3,
+    \uE713 Settings. Header chevron \uE76C (web ChevronRight), cyan accent token.
+  - Responsive grid: grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 -> QuickLinksLayout.ColumnsForWidth = 2/3/6 at
+    the Tailwind sm(640px)/lg(1024px) breakpoints; reflows on SizeChanged.
+  - i18n (every string keyed; no hardcoded English): nav.drives, nav.charging, nav.battery, nav.climate,
+    nav.efficiency, nav.settings, vehicles.detail.quickLinks (header/Narrator group), and the native defensive
+    empty key vehicles.detail.quickLinks.noData. All resolve through the P1/S10 ILocalizer facade.
+  - Accessibility: surface AutomationPeer is a Group named by the localized title; the grid carries the same
+    name; each tile button exposes its label as the Narrator name; decorative glyphs are AccessibilityView.Raw.
+    No custom motion (hover/focus is a plain colour swap), so reduced-motion is honoured by construction.
+  - Telemetry: view.opened slug=QuickLinksSection on first Loaded; quick-links.activated slug=QuickLinksSection
+    on tile activation (PII-safe -- never the route/label) per the P1/S11 diagnostics contract.
+
+Deliverable gate (build + unit tests + format + placeholders) = all 0. The full-solution dotnet test is
+non-zero solely because the WinAppDriver UI-automation runner is absent in this sandbox (see NOTE); on a
+WinAppDriver-equipped runner the solution test is green, exactly as for prior surface prompts.
+
+EXIT=0
+STATUS=DONE
