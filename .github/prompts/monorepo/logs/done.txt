@@ -211,3 +211,4 @@ p3-android/dashboard-widgets/A-0070-OdometerCounterWidget.prompt.md
 p3-android/dashboard-widgets/A-0071-OnboardingChecklistWidget.prompt.md
 p3-android/dashboard-widgets/A-0075-QuickNavWidget.prompt.md
 p3-android/dashboard-widgets/A-0076-RangeBarWidget.prompt.md
+p3-android/dashboard-widgets/A-0074-ProjectedRangeWidget.prompt.md
