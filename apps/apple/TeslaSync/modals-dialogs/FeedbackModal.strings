@@ -1,0 +1,70 @@
+/*
+  FeedbackModal.strings
+  TeslaSync — P4 modal/dialog · 0004 · FeedbackModal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  FeedbackModal resolves (table "FeedbackModal") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (components/feedback/FeedbackModal.tsx). The remainder backs the native state
+  envelope (context loading / empty / error retry, freshness chip, connectivity
+  banner), the header close affordance, and the native field-validation messages
+  (the parity of the zod min/max issues), plus the {{0}} / {{count}} placeholders
+  that the i18n facade substitutes.
+*/
+
+/* --- Web source keys (FeedbackModal.tsx) --- */
+"feedback.title" = "Report a bug / Send feedback";
+"feedback.category.bug" = "Bug report";
+"feedback.category.feature" = "Feature request";
+"feedback.category.other" = "Other / question";
+"feedback.form.category.label" = "What kind of feedback?";
+"feedback.form.title.label" = "Title";
+"feedback.form.title.placeholder" = "Short summary (e.g. \"Battery widget shows NaN\")";
+"feedback.form.body.label" = "Details";
+"feedback.form.body.placeholder" = "What happened? What did you expect to happen? Steps to reproduce help a lot.";
+"feedback.context.title" = "Auto-attached context";
+"feedback.context.page" = "Page";
+"feedback.context.appVersion" = "App version";
+"feedback.context.unknown" = "unknown";
+"feedback.context.userAgent" = "Browser";
+"feedback.form.includeErrors" = "Attach recent errors ({{count}})";
+"feedback.form.includeErrorsHint" = "Includes the most recent uncaught errors from this session. Helps reproduce the bug.";
+"feedback.form.includeConsole" = "Attach recent console messages";
+"feedback.form.includeConsoleHint" = "Privacy: console output may include URLs and data you saw. Off by default.";
+"feedback.submitError" = "Failed to submit feedback. Please try again.";
+"common.cancel" = "Cancel";
+"feedback.form.submitting" = "Submitting…";
+"feedback.form.submit" = "Send feedback";
+
+/* --- Header close (accessibility) --- */
+"feedback.closeAria" = "Close";
+
+/* --- Auto-context panel: loading (web Spinner / skeleton) --- */
+"feedback.context.loading" = "Gathering diagnostics…";
+
+/* --- Auto-context panel: empty (resolved with nothing to attach) --- */
+"feedback.context.empty" = "No diagnostic context available";
+
+/* --- Auto-context panel: error + retry (web QueryError) --- */
+"feedback.context.errorTitle" = "Couldn't gather diagnostics.";
+"feedback.context.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"feedback.live" = "Live";
+"feedback.stale" = "Stale";
+"feedback.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"feedback.staleBanner" = "Reconnecting — attached diagnostics may be out of date";
+"feedback.offlineBanner" = "Offline — your feedback will send when you reconnect";
+
+/* --- Field validation (parity of the zod min/max; {{0}} = the bound) --- */
+"feedback.validation.titleMin" = "Title must be at least {{0}} characters";
+"feedback.validation.titleMax" = "Title must be at most {{0}} characters";
+"feedback.validation.bodyMin" = "Details must be at least {{0}} characters";
+"feedback.validation.bodyMax" = "Details must be at most {{0}} characters";
