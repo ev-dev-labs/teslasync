@@ -1,0 +1,106 @@
+=== P3 Dashboard widget 0020 ChargeStatusLiveWidget (Android) ===
+Run: 2026-06-11T04:20:54.3248036-07:00
+Module path note: prompt gate says ':app:'; settings.gradle.kts maps the module to ':android'
+(project(':android').projectDir = file('app')). Running real ':android:' tasks, as sibling log 0006 did.
+
+----- :android:assembleRelease -----
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 24s
+70 actionable tasks: 2 executed, 68 up-to-date
+BUILD_EXIT=0
+
+----- :android:testReleaseUnitTest --tests '...chargestatuslive.*' (THIS surface) -----
+
+BUILD SUCCESSFUL in 37s
+
+SURFACE_TEST_EXIT=0  (ChargeStatusLiveProjectionTest=19 + ChargeStatusLiveWidgetViewModelTest=8 = 27 tests, 0 failures)
+
+----- :android:ktlintCheck :android:detekt -----
+
+BUILD SUCCESSFUL in 32s
+
+LINT_EXIT=0
+
+----- :android:testReleaseUnitTest (FULL module, for transparency) -----
+
+BatteryCellsWidgetTest > viewModel_loadedExposesContent FAILED
+BatteryCellsWidgetTest > viewModel_presentEmptyBodyStaysContentWithEmptyGrid FAILED
+BatteryCellsWidgetTest > viewModel_nullSummaryRendersOuterEmpty FAILED
+BatteryCellsWidgetTest > viewModel_hardErrorRendersErrorWithRetry FAILED
+BatteryCellsWidgetTest > viewModel_errorWithCacheStaysStaleOffline FAILED
+707 tests completed, 5 failed
+> Task :android:testReleaseUnitTest FAILED
+FAILURE: Build failed with an exception.
+Execution failed for task ':android:testReleaseUnitTest'.
+BUILD FAILED in 42s
+
+MODULE_TEST_EXIT=1
+
+----- check-placeholders.ps1 (THIS surface dir) -----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+MODULE_TEST_EXIT=1 IS PRE-EXISTING AND NOT THIS SURFACE (proof below)
+--------------------------------------------------------------------------------
+The 5 failing tests are ALL in BatteryCellsWidgetTest (sibling surface 0010), none in
+chargestatuslive. They are out of this artifact's allowed files
+(allowed = com/teslasync/dashboard-widgets/ChargeStatusLiveWidget.* + this log).
+
+Proof they pre-date and are independent of this change:
+  1. git status shows ONLY 3 new untracked dirs (my widget + 2 test dirs); zero tracked
+     files modified (git diff --name-only is empty). Additive change cannot alter a
+     different package's assertions.
+  2. With my 3 dirs temporarily moved aside, `:android:testReleaseUnitTest
+     --tests *BatteryCellsWidgetTest` still FAILS the same 5 -> baseline defect.
+  3. Failure is `expected:<Content> but was:<Loading>` — a known flaky pattern of
+     UnconfinedTestDispatcher + SharingStarted.WhileSubscribed stateIn in
+     BatteryCellsWidgetViewModel's async (flatMapLatest) source. ChargeStatusLive uses
+     the same UiState plumbing but its 27 unit tests pass deterministically.
+  4. BatteryCells (log 0010) was itself committed STATUS=BLOCKED with BUILD_EXIT=1 /
+     TEST_EXIT=1 ("shared:core missing P1/S2 generated client") — i.e. its tests were
+     never green-gated. Now that P1/S2 exists and the build works, its latent flaky
+     unit tests + its UI test compile error (BatteryCellsWidgetUiTest.kt:7 unresolved
+     'assertExists') surface. Both are BatteryCells defects, not ChargeStatusLive.
+
+androidTest compile: the module-wide compileDebugAndroidTestKotlin is blocked ONLY by
+the pre-existing BatteryCellsWidgetUiTest.kt 'assertExists' error. With that one sibling
+file moved aside, ChargeStatusLiveWidgetUiTest.kt compiles cleanly (verified; only a
+benign createComposeRule v2-deprecation warning, identical to sibling 0006).
+
+THIS SURFACE GATE (ChargeStatusLiveWidget):
+  BUILD_EXIT=0  SURFACE_TEST_EXIT=0 (27/27)  LINT_EXIT=0 (ktlint+detekt)  PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+PARITY SUMMARY vs web/src/features/dashboard/widgets/ChargeStatusLiveWidget.tsx
+--------------------------------------------------------------------------------
+Data (shared P1/S8 state-holders; no HTTP in the view):
+  useVehicles + useVehicleState -> VehiclesStore.vehicleState(id) (VehicleStateEnvelope, primary)
+  useChargingSessionsPaginated(id,{limit:1}) -> ChargingStore.sessionsPaginated(id,1) (supplementary)
+  vehicle id <- activeVehicleId StateFlow<Long?> (SelectedVehicleStore) / explicit override
+  useUnits -> UnitFormatter.prefs (UnitPref) collected at the render boundary
+Conversions (SI in, display out — matches web exactly):
+  charger_power -> raw kW, 1 decimal " kW" (web AnimatedNumber, no conversion)
+  total_energy_added_wh -> convertEnergyFromSI kWh, 1 decimal (web hard-codes kWh)
+  charge_rate -> convertDistanceFromSI(units.distance), 0 decimals, "{unit}/h"
+  time_to_full_charge -> formatTime "Hh Mm" (no carry, em-dash <=0)
+  voltage/current -> em-dash (web hard-codes null); battery_level -> "{n}%"
+States (all rendered, none hidden): loading skeleton / hard error + retry / empty
+  "No charge data" (no vehicle state) / content / stale + offline (cached kept visible).
+Views: compact charging hero, compact idle hero, full charging (badge+battery, animated
+  kW, Voltage/Current/Time Left/Added grid, +Rate/Battery when isTall), full idle
+  ("Not Charging" + battery + optional Last Session box). isCompact=cols<=1&&rows<=1; isTall=rows>=2.
+i18n (all resolve from P1/S10 R.string.translation_widget_*): chargeStatusLive, noChargeData,
+  notCharging, charging, voltage, amps, timeRemaining, energyAdded, chargeRate, batteryLevel,
+  lastSession; chrome: common_{refresh,loading,offline,retry}, error_serverError_*, freshness_*.
+Registry: id="charge-status-live", category="charging", default 2x2, min 1x2, max 3x40 (web registry/charging.ts).
+Diagnostics: view.opened emitted once with surface slug "ChargeStatusLiveWidget" (P1/S11), PII-free.
+Accessibility: per-cell + compact-hero folded contentDescription, power readout folded name,
+  refresh IconButton labelled, loading-surface labelled, MaterialTheme tokens (dark/light/dynamic).
+Tests: ProjectionTest(19) + ViewModelTest(8) unit (src/test) + WidgetUiTest(8 states/a11y, src/androidTest).
+
+EXIT=0
+STATUS=DONE
