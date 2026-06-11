@@ -141,10 +141,6 @@
   </ItemGroup>
 
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union). -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -515,6 +511,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\BatteryHealthSection.Model.cs" Link="FeatureViews\BatteryHealthSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryLevelChart.Model.cs" Link="FeatureViews\BatteryLevelChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryPill\BatteryPill.Model.cs" Link="FeatureViews\BatteryPill\BatteryPill.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryRangePanel\BatteryRangePanel.Model.cs" Link="FeatureViews\BatteryRangePanel\BatteryRangePanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryRangePanel\BatteryRangePanel.Source.cs" Link="FeatureViews\BatteryRangePanel\BatteryRangePanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryRangePanel\BatteryRangePanel.ViewModel.cs" Link="FeatureViews\BatteryRangePanel\BatteryRangePanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryTab\BatteryTab.Model.cs" Link="FeatureViews\BatteryTab\BatteryTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BrowserPushChannelCard\BrowserPushChannelCard.Model.cs" Link="FeatureViews\BrowserPushChannelCard\BrowserPushChannelCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BrowserPushChannelCard\BrowserPushChannelCard.Source.cs" Link="FeatureViews\BrowserPushChannelCard\BrowserPushChannelCard.Source.cs" />
@@ -1913,5 +1912,6 @@
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
   </ItemGroup>
 
+</Project>
 </Project>
 </Project>
