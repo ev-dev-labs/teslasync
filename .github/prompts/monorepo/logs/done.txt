@@ -582,3 +582,4 @@ p2-windows/shared-meaningful/W-0069-ChartTimeRangeContext.prompt.md
 p2-windows/shared-meaningful/W-0072-MetricSwitcherChart.prompt.md
 p2-windows/shared-meaningful/W-0071-ElevationProfile.prompt.md
 p2-windows/shared-meaningful/W-0073-SmallMultiplesChart.prompt.md
+p2-windows/shared-meaningful/W-0070-ChartTooltip.prompt.md
