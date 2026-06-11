@@ -537,3 +537,4 @@ p2-windows/shared-meaningful/W-0002-RouteAnnouncer.prompt.md
 p2-windows/modals-dialogs/W-0030-CommandInputDialog.prompt.md
 p2-windows/shared-meaningful/W-0003-VisuallyHidden.prompt.md
 p2-windows/shared-meaningful/W-0004-AIAlertTuningSuggestions.prompt.md
+p2-windows/shared-meaningful/W-0008-AIBatteryHealthForecastNarrative.prompt.md
