@@ -11,15 +11,6 @@
     default-compile glob. The Content links copy the units-golden, Package.appxmanifest and widget-template
     fixtures the tests read out of the test output directory.
 
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
-    dashboard-widget, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a
-    WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free
-    (Microsoft.UI-free) sources are Compile-linked into the single ItemGroup below (the Link mirrors each
-    source's real location under Widgets\, FeatureViews\, MiscSurfaces\, ModalsDialogs\ or SharedSurfaces\);
-    the bare WinUI view files are excluded and exercised by the app build. The matching test classes live under
-    this project and are picked up by the SDK default-compile glob. The Content links copy the units-golden,
-    Package.appxmanifest and widget-template fixtures the tests read out of the test output directory.
-
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal-sorted,
     Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk under
     dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI view
@@ -84,6 +75,8 @@
     failing XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk.
     Re-consolidated for P2 shared-surfaces/0051 AISuggestNewGeofences into this single canonical root (plus
     the new AISuggestNewGeofences Model / Source / ViewModel links). Do NOT re-concatenate into multiple
+    shared-surfaces/0056 AITripPostcardShareCardImageGeneration into this single canonical root (plus the new
+    AITripPostcardShareCardImageGeneration Model / Source / ViewModel links). Do NOT re-concatenate into multiple
     roots, and never write a literal build-item or project start tag inside this comment.
   -->
 
@@ -1062,12 +1055,18 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.Model.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.Source.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.ViewModel.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISafetySettingExplainer.Model.cs" Link="SharedSurfaces\AISafetySettingExplainer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISafetySettingExplainer.Source.cs" Link="SharedSurfaces\AISafetySettingExplainer.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISafetySettingExplainer.ViewModel.cs" Link="SharedSurfaces\AISafetySettingExplainer.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISignalExplorerNlFilter.Model.cs" Link="SharedSurfaces\AISignalExplorerNlFilter.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISignalExplorerNlFilter.Source.cs" Link="SharedSurfaces\AISignalExplorerNlFilter.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISignalExplorerNlFilter.ViewModel.cs" Link="SharedSurfaces\AISignalExplorerNlFilter.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPostcardShareCardImageGeneration.Model.cs" Link="SharedSurfaces\AITripPostcardShareCardImageGeneration.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPostcardShareCardImageGeneration.Source.cs" Link="SharedSurfaces\AITripPostcardShareCardImageGeneration.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPostcardShareCardImageGeneration.ViewModel.cs" Link="SharedSurfaces\AITripPostcardShareCardImageGeneration.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Model.cs" Link="SharedSurfaces\AnnouncerRegion.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AILearnedAnomalyBaselines.Model.cs" Link="SharedSurfaces\AILearnedAnomalyBaselines.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AILearnedAnomalyBaselines.Source.cs" Link="SharedSurfaces\AILearnedAnomalyBaselines.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AILearnedAnomalyBaselines.ViewModel.cs" Link="SharedSurfaces\AILearnedAnomalyBaselines.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.Model.cs" Link="SharedSurfaces\VisuallyHidden.Model.cs" />
