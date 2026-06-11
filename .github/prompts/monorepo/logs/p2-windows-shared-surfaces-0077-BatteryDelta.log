@@ -1,0 +1,110 @@
+=== P2 Shared surface 0077 BatteryDelta (Windows) ===
+date: 2026-06-11T09:33:26-07:00
+dotnet: 10.0.300
+runner: net10.0 SDK present; Microsoft.WindowsAppSDK 2.1.3 (WinUI 3) restored; Microsoft.WindowsDesktop.App 10.0.8; OS Windows_NT
+
+--- Scope / parity ---
+Surface = native WinUI 3 port of web/src/components/data-display/BatteryDelta.tsx: a compact, purely
+presentational battery state-of-charge change. New code (apps/windows/TeslaSync.App/shared-surfaces/):
+  - BatteryDelta.Model.cs (WinUI-free): BatteryDeltaRegistration (slug + the shared \uE83F battery glyph),
+    BatteryDeltaVariant (Compact|Pair), BatteryDeltaTone (Positive|Negative|Neutral), BatteryDeltaModel
+    (startPct/endPct/showIcon/variant props), BatteryDeltaDisplay, BatteryDeltaProjection (the web logic), and
+    PII-safe BatteryDeltaDiagnostics (view.opened slug=BatteryDelta).
+  - BatteryDelta.cs: a ContentControl that renders the inline icon+text row and binds to the projection.
+  - TeslaSync.App.Tests/SharedSurfaces/BatteryDeltaTests.cs: 34 headless tests (adapter/projection per state,
+    sign/dash/arrow code points, number stringification, tone->brush map, a11y name, diagnostics, guards).
+Parity decisions (web source is THE spec):
+  - hasData requires both endpoints non-null AND finite; otherwise the muted em dash (U+2014) + aria
+    t('battery.delta.unknown','Battery delta unknown'). Both branches always render.
+  - delta = endPct-startPct; sign '+' / U+2212 minus (NOT a hyphen) / ''; magnitude = |delta|.
+  - tone: rise => emerald (TsColorSuccessBrush), drop => amber (TsColorWarningBrush; a drained battery is the
+    NORMAL drive outcome, so amber, never red), zero/no-data => muted (TsColorTextMutedBrush). The generic
+    Core DeltaLogic was deliberately NOT reused: its Negative maps to danger/red and it is direction-aware.
+  - compact = (delta==0 ? em dash : {sign}{magnitude}%); pair = {startPct}% -> {endPct}% (U+2192 arrow).
+  - numbers reproduce the web raw template literal ${n} (shortest round-trippable invariant form, e.g. 78 stays
+    "78", 12.5 stays "12.5"); verified double.ToString(InvariantCulture) == JS Number.toString for these values.
+  - aria t('battery.delta.aria','Battery {{from}}% to {{to}}%') interpolated in code (react-i18next runtime).
+    Both i18n keys are inline i18next defaults in the web source (absent from the shared catalog), so the exact
+    keys + English fallbacks resolve through the P1/S10 ILocalizer facade (PassthroughLocalizer in tests).
+  - colour split mirrors the web: data branch tones only the TEXT (icon inherits the ambient currentColor); the
+    no-data branch mutes both. Icon is AccessibilityView.Raw (web aria-hidden); the surface carries the single
+    composed aria-label; tabular-nums has no TextBlock-level WinUI equivalent (visual-only, documented).
+No async data source (parent row owns fetching) => no loading/error/stale/offline chrome, same precedent as
+shared-surfaces/0003 VisuallyHidden and feature-views BatteryPill (both prop-driven presentational surfaces).
+
+--- Pre-existing blocker repaired to make the gate runnable (documented, not silent) ---
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed-corrupted by its .gitattributes
+merge=union strategy: 3 concatenated <Project> roots (opens at L1/L1149, closes at L1148/L2408/L2495) with
+Compile items + an ItemGroup after the second root close => invalid XML (content after the root element) =>
+MSB4025/MSB4067 load failure => the whole solution build/test was red at baseline (git showed the file
+unmodified vs HEAD, so the corruption is committed on this branch). Its own header documents the remedy:
+"regenerate it directly from the WinUI-free sources on disk" as ONE root with a single case-insensitive
+ordinal path-sorted, Include-deduplicated Compile union. Regenerated: union of all 996 curated Compile links
+(every include verified under dashboard-widgets/feature-views/misc-surfaces/modals-dialogs/shared-surfaces; root1
+alone was missing 28 entries, so a truncation would have lost surfaces) + the new SharedSurfaces\BatteryDelta.Model.cs
+link = 997 unique, 0 duplicates, single <Project>/<ItemGroup> pair, on-disk XML validates. PropertyGroup +
+PackageReference (3) + ProjectReference (2) + Content (3) preserved verbatim. Same remediation as the accepted
+shared-surfaces/0003 VisuallyHidden gate. New surface .cs files were authored with CRLF and converted to LF to
+satisfy the repo .editorconfig (end_of_line = lf); see FORMAT step.
+
+=== STEP 1: dotnet build TeslaSync.sln -c Release ===
+  Build succeeded.
+    0 Error(s)
+(17 warnings, all pre-existing in TeslaSync.App.Core: CA1720/CA1716/CA1000/CA1859 — none in the new files; the
+WinUI app builds with TreatWarningsAsErrors=true, so BatteryDelta.cs/.Model.cs are warning-clean.)
+BUILD_EXIT=0
+
+=== STEP 2: dotnet test TeslaSync.sln -c Release ===
+[full suite, includes environment-gated UIAutomation E2E]
+  Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 269 ms - TeslaSync.App.UITests.dll (net10.0)
+  Passed!  - Failed:     0, Passed: 19972, Skipped:     0, Total: 19972, Duration: 26 s - TeslaSync.App.Tests.dll (net10.0)
+  full_suite_exit=1
+  representative failure: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+[headless suite, Category!=UIAutomation -- the surface-validating suite; UITests csproj documents running the two suites independently]
+  Passed!  - Failed:     0, Passed: 19972, Skipped:     0, Total: 19972, Duration: 24 s - TeslaSync.App.Tests.dll (net10.0)
+  (of which BatteryDeltaTests: Passed 34, Failed 0)
+TEST_EXIT=0
+
+=== STEP 3: dotnet format TeslaSync.sln --verify-no-changes ===
+First pass flagged the 3 new files only (ENDOFLINE: CRLF -> LF, per .editorconfig end_of_line = lf); converted
+to LF and re-verified. Second pass: format issue lines: 0 (BatteryDelta issues: 0).
+FORMAT_EXIT=0
+
+=== STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/BatteryDelta ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+note: BatteryDelta is a flat-file surface (BatteryDelta.cs + BatteryDelta.Model.cs, matching the prompt's
+BatteryDelta.* and the AreaChartWrapper/VisuallyHidden precedent), so the gate's literal -Path matches no
+directory. To avoid a vacuous pass, the scan was ALSO run against each actual file:
+  BatteryDelta.cs            PLACEHOLDER_COUNT=0 ALLOWED=0
+  BatteryDelta.Model.cs      PLACEHOLDER_COUNT=0 ALLOWED=0
+  BatteryDeltaTests.cs       PLACEHOLDER_COUNT=0 ALLOWED=0
+  belt-and-suspenders grep (TODO|FIXME|XXX|Coming soon|Placeholder|Lorem|not implemented|NotImplementedException|// stub|\bmock\b): 0 hits
+
+--- UIAutomation E2E capability note ---
+TeslaSync.App.UITests (Category=UIAutomation, 147 tests) drives the PACKAGED app out-of-process over the W3C
+WebDriver protocol via WinAppDriver/Appium. This runner has no WinAppDriver/Appium listener (port 4723) and no
+deployed MSIX, so the suite fails fast BY DESIGN (the csproj + WinAppDriverSession state it is never silently
+skipped). These are repo-wide app-shell E2E tests, NOT part of this surface (this surface adds ZERO UIAutomation
+tests; its required adapter/per-state/a11y tests are the 34 headless tests above). The required surface
+capability (WinUI 3 / WindowsAppSDK 2.1.3 / .NET 10) IS present: the solution builds Release-clean and the
+headless suite is fully green. Per the UITests csproj, the headless and UIAutomation suites run independently;
+the headless result is the surface gate. The 147 UIAutomation failures are an environment/runner-infra gap, not
+a defect, and match the accepted shared-surfaces/0003 VisuallyHidden gate.
+
+--- Acceptance criteria ---
+[x] Surface renders all web-source states: data (compact +/-, pair) and no-data (muted em dash); both always render.
+[x] Hooks bind via P1/S8 + P1/S10: the only web hook is useTranslation -> ILocalizer facade; the view does no HTTP.
+[x] i18n: every web key (battery.delta.unknown, battery.delta.aria) resolves through ILocalizer with the exact
+    keys + English fallbacks; {{from}}/{{to}} interpolated; no English literals reach the UI un-keyed.
+[x] Accessibility: composed aria-label set as the surface AutomationProperties.Name in both branches; decorative
+    icon + visible text are AccessibilityView.Raw so Narrator reads only the announcement (web aria-label parity).
+[x] Tests: adapter projection per state + sign/dash/arrow code points + number formatting + tone->brush map +
+    a11y name + diagnostics + arg guards (34 tests, all pass).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[x] Telemetry: view.opened slug=BatteryDelta via BatteryDeltaDiagnostics on Loaded (once).
+
+SUMMARY: BUILD_EXIT=0 TEST_EXIT(headless)=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0 (full-suite incl. env-gated UIAutomation=1)
+EXIT=0
+STATUS=DONE
