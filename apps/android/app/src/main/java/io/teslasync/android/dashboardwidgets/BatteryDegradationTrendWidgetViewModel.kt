@@ -94,14 +94,20 @@ internal fun batteryDegradationResource(
     degradation: (String) -> Flow<Resource<JsonElement>>,
 ): Flow<Resource<BatteryDegradationSnapshot>> =
     vehicles.flatMapLatest { vehiclesRes ->
-        when (val id = resolveVehicleId(explicitVehicleId, vehiclesRes.cached)) {
+        when (val id = resolveDegradationVehicleId(explicitVehicleId, vehiclesRes.cached)) {
             null -> flowOf(vehiclesRes.toNoVehicleSnapshot())
             else -> degradation(id.toString()).map { it.toDegradationSnapshot() }
         }
     }
 
-/** The explicit id, else the first enrolled vehicle's id (web `vehicleId ?? vehicles?.[0]?.id ?? null`). */
-internal fun resolveVehicleId(
+/**
+ * The explicit id, else the first enrolled vehicle's id (web `vehicleId ?? vehicles?.[0]?.id ?? null`).
+ *
+ * Named distinctly from the sibling `dashboardwidgets` helpers (e.g. ChargeHistory's `resolveVehicleId`,
+ * which returns a `0L`-sentinel `Long`) because two top-level functions with the same signature in one
+ * package are conflicting overloads; this one keeps its `null`-sentinel `Long?` contract.
+ */
+internal fun resolveDegradationVehicleId(
     explicitVehicleId: Long?,
     vehicles: List<Vehicle>?,
 ): Long? = explicitVehicleId ?: vehicles?.firstOrNull()?.id

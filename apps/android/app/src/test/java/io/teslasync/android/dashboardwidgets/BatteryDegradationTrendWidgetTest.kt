@@ -181,10 +181,10 @@ class BatteryDegradationTrendWidgetTest {
     // ── id resolution (web `vehicleId ?? vehicles?.[0]?.id`) ─────────────────────
     @Test
     fun resolveVehicleIdPrefersExplicitThenFirstVehicle() {
-        assertEquals(7L, resolveVehicleId(7L, listOf(vehicle(3), vehicle(9))))
-        assertEquals(3L, resolveVehicleId(null, listOf(vehicle(3), vehicle(9))))
-        assertNull(resolveVehicleId(null, emptyList()))
-        assertNull(resolveVehicleId(null, null))
+        assertEquals(7L, resolveDegradationVehicleId(7L, listOf(vehicle(3), vehicle(9))))
+        assertEquals(3L, resolveDegradationVehicleId(null, listOf(vehicle(3), vehicle(9))))
+        assertNull(resolveDegradationVehicleId(null, emptyList()))
+        assertNull(resolveDegradationVehicleId(null, null))
     }
 
     // ── two-store adapter (cache-then-network combine) ──────────────────────────

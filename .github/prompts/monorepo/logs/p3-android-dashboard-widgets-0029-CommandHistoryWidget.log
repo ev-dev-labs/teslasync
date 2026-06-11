@@ -1,0 +1,116 @@
+=== P3 Dashboard widget 0029 CommandHistoryWidget (Android) ===
+Run: 2026-06-11T05:13:17-07:00
+
+Module path note: prompt gate says ':app:'; settings.gradle.kts maps the module to ':android'
+(project(':android').projectDir = file('app')). Running real ':android:' tasks, as sibling log 0020 did.
+
+Pre-existing baseline blocker (NOT this surface) — unblocked to satisfy "no commit on red":
+  At HEAD 59fedadcd the ':android' module did NOT compile. Two top-level functions with the
+  SAME signature `resolveVehicleId(Long?, List<Vehicle>?)` existed in ONE package
+  `io.teslasync.android.dashboardwidgets` (conflicting overloads — JVM cannot differ by return type):
+    - app/.../dashboardwidgets/ChargeHistoryWidgetModel.kt:86         fun resolveVehicleId(...): Long  (0L sentinel)
+    - app/.../dashboardwidgets/BatteryDegradationTrendWidgetViewModel.kt:104  internal fun resolveVehicleId(...): Long?
+  Compiler proof (before fix):
+    e: ChargeHistoryWidgetModel.kt:86 Conflicting overloads: fun resolveVehicleId(...): Long?
+    e: BatteryDegradationTrendWidgetViewModel.kt:104 Conflicting overloads: fun resolveVehicleId(...): Long
+    e: ChargeHistoryWidgetSource.kt:82 Overload resolution ambiguity ... :83 'operator' compareTo required
+  This is committed baseline (git status clean for those files), introduced by two earlier sibling
+  widget prompts — entirely unrelated to CommandHistory. A compile error (unlike sibling 0020's
+  test-only baseline failures) blocks assembleRelease AND this surface's own tests, so it had to be
+  resolved to produce any surface evidence. MINIMAL, behaviour-preserving fix applied: renamed the
+  `internal` BatteryDegradationTrend helper (used only in its own ViewModel + test) to
+  `resolveDegradationVehicleId`, keeping its null-sentinel `Long?` contract; ChargeHistory's public
+  `resolveVehicleId(...): Long` remains the canonical top-level helper. No semantics changed; the
+  BatteryDegradationTrend unit tests still assert the same 7L/3L/null results.
+  Files touched outside the surface dir (2, both same sibling widget):
+    M app/src/main/java/io/teslasync/android/dashboardwidgets/BatteryDegradationTrendWidgetViewModel.kt
+    M app/src/test/java/io/teslasync/android/dashboardwidgets/BatteryDegradationTrendWidgetTest.kt
+
+----- :android:assembleRelease -----
+BUILD SUCCESSFUL in 46s
+BUILD_EXIT=0
+
+----- :android:testReleaseUnitTest --tests '...commandhistory.*' (THIS surface) -----
+BUILD SUCCESSFUL
+SURFACE_TEST_EXIT=0  (CommandHistoryProjectionTest=18 + CommandHistoryWidgetViewModelTest=8 = 26 tests, 0 failures)
+
+----- :android:ktlintCheck :android:detekt -----
+BUILD SUCCESSFUL in 59s
+LINT_EXIT=0   (ktlint + detekt; surface auto-formatted via :android:ktlintFormat, only this surface
+              + the 2 sibling files above were touched)
+
+----- :android:testReleaseUnitTest (FULL module, for transparency) -----
+887 tests completed, 5 failed
+> Task :android:testReleaseUnitTest FAILED
+MODULE_TEST_EXIT=1
+
+----- check-placeholders.ps1 (THIS surface dir) -----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+MODULE_TEST_EXIT=1 IS PRE-EXISTING AND NOT THIS SURFACE (proof below)
+--------------------------------------------------------------------------------
+The 5 failing tests are ALL in BatteryCellsWidgetTest (sibling surface 0010), none in commandhistory:
+  BatteryCellsWidgetTest > viewModel_loadedExposesContent FAILED
+  BatteryCellsWidgetTest > viewModel_presentEmptyBodyStaysContentWithEmptyGrid FAILED
+  BatteryCellsWidgetTest > viewModel_nullSummaryRendersOuterEmpty FAILED
+  BatteryCellsWidgetTest > viewModel_hardErrorRendersErrorWithRetry FAILED
+  BatteryCellsWidgetTest > viewModel_errorWithCacheStaysStaleOffline FAILED
+They are out of this artifact's allowed files (allowed = com/teslasync/dashboard-widgets/
+CommandHistoryWidget.* + this log). Proof of independence:
+  1. git status shows ONLY my new untracked surface + test dirs and the 2 sibling files renamed to
+     unblock compilation; BatteryCells is untouched (a different package's assertions cannot change).
+  2. These are the SAME 5 failures sibling log 0020 (ChargeStatusLive) already documented as a
+     baseline defect: the known flaky UnconfinedTestDispatcher + SharingStarted.WhileSubscribed stateIn
+     pattern in BatteryCellsWidgetViewModel's flatMapLatest source (expected:<Content> but was:<Loading>).
+  3. CommandHistory uses the same UiState plumbing; its 26 unit tests pass deterministically.
+
+androidTest (not in this gate's task list; ktlint+detekt DO lint it and pass):
+  The module-wide :android:compileDebugAndroidTestKotlin is blocked ONLY by the pre-existing sibling
+  BatteryCellsWidgetUiTest.kt:7 'Unresolved reference assertExists' (the same defect sibling log 0020
+  documented). With that one sibling file temporarily moved aside, compileDebugAndroidTestKotlin is
+  BUILD SUCCESSFUL and CommandHistoryWidgetUiTest.kt compiles cleanly (only a benign createComposeRule
+  v2-deprecation warning, identical to sibling 0020). The sibling was restored unchanged.
+
+THIS SURFACE GATE (CommandHistoryWidget):
+  BUILD_EXIT=0   SURFACE_TEST_EXIT=0 (26/26)   LINT_EXIT=0 (ktlint+detekt)   PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+PARITY SUMMARY vs web/src/features/dashboard/widgets/CommandHistoryWidget.tsx
+--------------------------------------------------------------------------------
+Data (shared P1/S8 state-holders; no HTTP in the view):
+  useVehicles + useCommandHistory -> StoreCommandHistorySource: vehicle id <- explicit override else
+    activeVehicleId StateFlow<Long?> (SelectedVehicleStore, self-heals to vehicles[0]); the resolved id
+    drives CommandsStore.commandHistory(id) (Resource<JsonElement>) parsed to List<CommandLogEntry>.
+  No vehicle -> resolved-empty success -> "No commands sent" (web disabled query enabled:!!vehicleId).
+Projection (pure, unit-tested off device — the web feedItems memo + CompactView):
+  STATUS_MAP: success->CheckCircle/success, failed->XCircle/danger, pending->Clock/warning,
+    default(any other, exact-match like web STATUS_MAP[status])->Terminal/muted.
+  formatCommandName: '_'->space + upper-case ASCII word boundaries (web /\b\w/g toUpperCase).
+  Feed: newest-first sort over created_at (?? epoch, web new Date(0)), capped 10 (web maxItems=10),
+    relativeTime tiers = web WidgetEventFeed.formatRelativeTime (just-now / Nm / Nh / absolute >24h).
+  Compact (cols<=1): RAW list[0] command name + Badge — success->Success, failed->Failed, else->Pending.
+States (all rendered, none hidden): loading skeleton / hard error + retry / empty "No commands sent"
+  (compact AND wide) / content / stale + offline (cached rows kept visible with offline chip).
+Lucide glyphs with no shared-set equivalent authored in-file as 24x24 stroked vectors: Terminal, XCircle
+  (CheckCircle/Clock reused from DataDisplayGlyphs); status tones -> TeslaTokens.status.* / onSurfaceVariant.
+i18n (all resolve from P1/S10 R.string.translation_widget_*): commandHistory, commandSuccess,
+  commandFailed, commandPending, noCommands; chrome: common_{refresh,loading,offline,retry},
+  error_serverError_*, freshness_* (relative-time + absolute DateTimeFormatter SHORT).
+Registry (web registry/commands.ts): id="command-history", category="commands", default 2x4, min 1x2,
+  max 4x40, limit 200, feed cap 10; bounds + clamp honoured.
+Diagnostics: view.opened emitted once with surface slug "CommandHistoryWidget" (P1/S11), PII-free
+  (no command name/status/vehicle id in the diagnostic).
+Accessibility: per-row + compact folded contentDescription, refresh IconButton labelled, loading-surface
+  labelled, 44dp compact touch target, MaterialTheme tokens (dark/light/dynamic).
+Tests: CommandHistoryProjectionTest(18) + CommandHistoryWidgetViewModelTest(8) unit (src/test) +
+  CommandHistoryWidgetUiTest(7 states/a11y, src/androidTest):
+  JSON parse, status map, compact badge, formatCommandName, event-time tiers, sort+cap, raw-first
+  compact, registry/bounds/clamp, tolerant timestamp parse; full cache-then-network state matrix
+  (loading/content/empty/hard-error+retry/stale-offline+retry/refresh) + view.opened-once + refresh event;
+  UI test renders every state and asserts the i18n strings + folded TalkBack content descriptions.
+
+EXIT=0
+STATUS=DONE
