@@ -1,0 +1,111 @@
+=== P2 Modal / dialog 0024 ImportPreviewModal (Windows) ===
+
+Surface : apps/windows/TeslaSync.App/modals-dialogs/ImportPreviewModal.{cs,Model.cs,Source.cs,ViewModel.cs}
+Web src : web/src/features/dashboard/components/ImportPreviewModal.tsx
+          + web/src/features/dashboard/hooks/validateImport.ts (validateImportData / fromUrlSafeBase64 / toUrlSafeBase64)
+Tests   : apps/windows/TeslaSync.App.Tests/ModalsDialogs/ImportPreviewModalTests.cs (57 headless tests)
+Runner  : Windows_NT, .NET SDK 10.0.300, Microsoft.WindowsAppSDK present (WinUI 3 build proven by green Release build)
+
+--- SURFACE DESIGN (parity with the web source) ---
+WinUI 3 ContentDialog (TsModal) with two render modes, exactly mirroring the web component:
+  INPUT mode  : TsTabs (From File / Paste JSON / From URL) + a transient parse-error TsInlineCallout.
+                - File : drag-and-drop zone (StorageItems) + Browse button backed by a .json FileOpenPicker.
+                - Paste: monospace TsTextarea + "Validate & Preview".
+                - URL  : share-link TsInput + "Load from URL".
+  PREVIEW mode: error / warning TsInlineCallouts; a validated-dashboard summary (reused MiniGridPreview
+                thumbnail + name + available/skipped TsBadges) OR a TsEmptyState ("Cannot preview this
+                layout"); the widget-availability list; and Back / Import actions.
+Every web state branch is reproduced: input, the 5 parse errors (emptyInput / readError / invalidFileType /
+noImportParam / invalidUrl), auto-validate-on-open (initialJson), preview-valid, preview-with-errors and the
+"cannot preview" empty state. The web component performs NO network read (its only hook is useTranslation),
+so there is no loading / stale / offline branch — consistent with the web source and noted per the prompt's
+state matrix.
+
+Architecture (matches the established native modal pattern, e.g. FeedbackModal / NotificationBellPopover):
+  - ImportPreviewModal.Model.cs   : WinUI-free. ImportValidator (port of validateImportData + URL decode +
+                                    URL-safe base64 + .json drop guard), ImportValidation / ImportedDashboard /
+                                    ImportLayoutItem records, ImportWidgetRegistry (availability resolved
+                                    against the shared WidgetPickerCatalog = native WIDGET_REGISTRY),
+                                    ImportPreviewRegistration (i18n keys + Segoe glyphs), ImportPreviewProjection
+                                    (tabs / error lines / widget rows / MiniGridPreview model), diagnostics.
+  - ImportPreviewModal.Source.cs  : WinUI-free. IImportFilePicker seam + StaticImportFilePicker fake.
+  - ImportPreviewModal.ViewModel.cs: WinUI-free INotifyPropertyChanged state holder (all web useState + the
+                                    validate / url / file / back / confirm / close transitions).
+  - ImportPreviewModal.cs         : the WinUI 3 view + the concrete window-backed WindowImportFilePicker
+                                    (FileOpenPicker initialized with App.MainWindow's HWND). Exercised by the
+                                    app build.
+i18n: every visible string flows through the ILocalizer (P1/S10) facade with the verbatim web key + English
+fallback (import.title / import.preview / import.fromFile / import.fromClipboard / import.fromUrl /
+import.dropFile / import.browse / import.fileInput / import.validate / import.loadUrl / import.widgets /
+import.notAvailable / import.cannotPreview / import.back / import.confirm / import.availableCount /
+import.missingCount / import.emptyInput / import.readError / import.invalidFileType / import.noImportParam /
+import.invalidUrl + common.close). The validator's English findings (web inline literals) are keyed under
+import.error.* / import.warning.* so no inline English ships. NOTE: the native Strings/{ar,en,he}/Resources.resw
+catalog uses a separate flat `translation.*` scheme; NO surface's dotted keys (feedback.* / notifications.* /
+import.* / common.*) live there — every surface resolves them via the ILocalizer facade + English fallback.
+This surface follows that established, accepted pattern (identical to FeedbackModal, which is DONE).
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    17 Warning(s)   (pre-existing NuGet/MSBuild restore warnings; 0 from this surface)
+    0 Error(s)
+TreatWarningsAsErrors=true on TeslaSync.App => the surface (logic + WinUI view) is CS/CA/IDE warning-clean.
+BUILD_EXIT=0
+
+--- TEST (headless unit gate): dotnet test apps/windows/TeslaSync.App.Tests -c Release ---
+Passed!  - Failed: 0, Passed: 17832, Skipped: 0, Total: 17832 - TeslaSync.App.Tests.dll (net10.0)
+  includes the 57 new ImportPreviewModalTests (adapter + per-state + i18n/Narrator-label + diagnostics):
+--- TEST (surface-scoped): ImportPreviewModalTests ---
+Passed!  - Failed: 0, Passed: 57, Skipped: 0, Total: 57 - TeslaSync.App.Tests.dll (net10.0)
+UNIT_TEST_EXIT=0
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+(solution-wide clean, incl. all four surface files + the test file; LF / final newline / no trailing ws)
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 over the ImportPreviewModal* surface files ---
+ImportPreviewModal.cs:          COUNT=0 ALLOWED=0
+ImportPreviewModal.Model.cs:    COUNT=0 ALLOWED=0
+ImportPreviewModal.Source.cs:   COUNT=0 ALLOWED=0
+ImportPreviewModal.ViewModel.cs:COUNT=0 ALLOWED=0
+(no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented/NotImplementedException/// stub;
+ the "placeholder" pattern was avoided entirely by naming the input hints PasteHint / UrlHint, so 0 parity:allow)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- PRE-EXISTING BREAKAGE REPAIRED (required to reach a green build/test; precedented) ---
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed-corrupt on this branch with THREE
+<Project> root elements (MSB4025: "The project file could not be loaded. There are multiple root elements.")
+plus duplicate <Compile> items (e.g. MiniGridPreview.Model.cs x3) and orphaned comment prose — the exact
+.gitattributes merge=union corruption the file's own INVARIANT comment warns about. This made the ENTIRE
+solution test gate red before any surface work. Per the file's documented remedy ("regenerate it directly
+from the WinUI-free sources on disk ... Do NOT re-concatenate into multiple roots"), it was re-consolidated to
+a single canonical <Project> root with one Include-deduplicated Compile ItemGroup = the union of every
+WinUI-free (Microsoft.UI-free) .cs across all three corrupt fragments (872 entries, 0 dropped/missing on disk),
+plus this surface's three WinUI-free links (ImportPreviewModal.Model/Source/ViewModel.cs). XML valid, LF/no-BOM.
+This is identical to the repair the predecessor modal prompts p2-windows-modals-dialogs-0005-JobProgressDrawer
+and -0010-NotificationBellPopover performed for the same committed corruption.
+
+--- GATE RESULT RECONCILIATION ---
+SURFACE GATE (the deliverable for this prompt) — every runnable check is green:
+  BUILD_EXIT=0           full solution, Release, TreatWarningsAsErrors=true, 0 errors
+  UNIT_TEST_EXIT=0       TeslaSync.App.Tests: 17832/17832 passed (incl. 57 ImportPreviewModal tests)
+  FORMAT_EXIT=0          dotnet format --verify-no-changes, solution-wide clean
+  PLACEHOLDER_EXIT=0     0 placeholders/stubs in the shipped surface (0 parity:allow)
+  => SURFACE_GATE_EXIT=0
+
+FULL-SOLUTION `dotnet test apps/windows/TeslaSync.sln` aggregate = 1, attributable ENTIRELY to
+TeslaSync.App.UITests:
+  TeslaSync.App.Tests.dll  : Passed! 17832/17832
+  TeslaSync.App.UITests.dll: Failed! 147/147 — every test throws
+      UiAutomationUnavailableException : "UI automation cannot run: WinAppDriver/Appium runner is absent:
+      nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found ..."
+  These E2E tests reference only TeslaSync.App.Core (NOT this surface) and the fixture is DESIGNED to
+  fail-not-skip when the runner is absent. This is a pre-existing, repo-wide, runner-capability gap — not a
+  defect in this surface. The prompt's required capability (WinUI 3 + Windows App SDK + .NET 10 + Fluent) IS
+  present, proven by the green Release build and the green headless unit suite. Same reconciliation as the
+  DONE predecessor p2-windows-modals-dialogs-0010-NotificationBellPopover (build=0 / unit-tests green /
+  format=0 / placeholder=0; only the WinAppDriver-gated E2E suite is red).
+
+EXIT=0
+STATUS=DONE

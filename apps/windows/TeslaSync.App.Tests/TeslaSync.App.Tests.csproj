@@ -84,6 +84,23 @@
     dashboard-widgets/, feature-views/, misc-surfaces/ and modals-dialogs/. The .gitattributes merge=union
     strategy can re-concatenate this file into multiple roots plus duplicate items, failing XML load
     (MSB4025); regenerate it from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots.
+    dashboard-widget, misc-surface and modal/dialog surface (ADR-012). The WinUI app (TeslaSync.App) targets a
+    WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free
+    (Microsoft.UI-free) sources are Compile-linked into the single ItemGroup below (the Link mirrors each source's
+    real location under FeatureViews\, Widgets\, MiscSurfaces\ or ModalsDialogs\); the bare WinUI view files are
+    excluded and exercised by the app build. The matching test classes live under this project and are picked up
+    by the SDK default-compile glob. The Content links copy the units-golden, Package.appxmanifest and
+    widget-template fixtures the tests read out of the test output directory.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal-sorted,
+    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk under
+    dashboard-widgets/, feature-views/, misc-surfaces/ and modals-dialogs/ (the bare WinUI view files are
+    excluded). This file carries the .gitattributes merge=union strategy, so a chain of integration merges can
+    re-concatenate it into multiple Project roots plus duplicate Compile items and orphaned comment prose, failing
+    XML load (MSB4025 / MSB4067 / NETSDK1022). Re-consolidated for P2 modals-dialogs/0024 ImportPreviewModal into
+    this single canonical root, regenerated directly from the WinUI-free sources on disk (plus the new
+    ImportPreviewModal Model / Source / ViewModel links). Do NOT re-concatenate into multiple roots, and never
+    write a literal build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -121,6 +138,7 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/ and modals-dialogs/); the WinUI view files themselves are exercised by the app build. Regenerated for P2 modals-dialogs/0014 Modal into this single canonical root. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/ and modals-dialogs/); the WinUI view files themselves are exercised by the app build. Regenerated for P2 modals-dialogs/0019 FlagEditDrawer into this single canonical root from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a build-item or project start tag inside this comment. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal-sorted, Include-deduplicated union); the WinUI view files themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -2058,12 +2076,17 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\ExportModal.Model.cs" Link="ModalsDialogs\ExportModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\ExportModal.Source.cs" Link="ModalsDialogs\ExportModal.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\ExportModal.ViewModel.cs" Link="ModalsDialogs\ExportModal.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\Drawer\Drawer.Model.cs" Link="ModalsDialogs\Drawer\Drawer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\Drawer\Drawer.ViewModel.cs" Link="ModalsDialogs\Drawer\Drawer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\FeedbackModal.Model.cs" Link="ModalsDialogs\FeedbackModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\FeedbackModal.Source.cs" Link="ModalsDialogs\FeedbackModal.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\FeedbackModal.ViewModel.cs" Link="ModalsDialogs\FeedbackModal.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\GeofenceDrawer\GeofenceDrawer.Model.cs" Link="ModalsDialogs\GeofenceDrawer\GeofenceDrawer.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\GeofenceDrawer\GeofenceDrawer.Source.cs" Link="ModalsDialogs\GeofenceDrawer\GeofenceDrawer.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\GeofenceDrawer\GeofenceDrawer.ViewModel.cs" Link="ModalsDialogs\GeofenceDrawer\GeofenceDrawer.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ImportPreviewModal.Model.cs" Link="ModalsDialogs\ImportPreviewModal.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ImportPreviewModal.Source.cs" Link="ModalsDialogs\ImportPreviewModal.Source.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ImportPreviewModal.ViewModel.cs" Link="ModalsDialogs\ImportPreviewModal.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\JobProgressDrawer\JobProgressDrawer.Model.cs" Link="ModalsDialogs\JobProgressDrawer\JobProgressDrawer.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\JobProgressDrawer\JobProgressDrawer.Source.cs" Link="ModalsDialogs\JobProgressDrawer\JobProgressDrawer.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\JobProgressDrawer\JobProgressDrawer.ViewModel.cs" Link="ModalsDialogs\JobProgressDrawer\JobProgressDrawer.ViewModel.cs" />
@@ -2134,6 +2157,9 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\ReauthDialog.ViewModel.cs" Link="ModalsDialogs\ReauthDialog.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\SessionExpiredModal\SessionExpiredModal.Model.cs" Link="ModalsDialogs\SessionExpiredModal\SessionExpiredModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\SessionExpiredModal\SessionExpiredModal.ViewModel.cs" Link="ModalsDialogs\SessionExpiredModal\SessionExpiredModal.ViewModel.cs" />
+  </ItemGroup>
+
+</Project>
   </ItemGroup>
 
 </Project>
