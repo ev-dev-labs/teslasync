@@ -582,6 +582,14 @@
   <string name="translation_admin_security_unlocked">Unlocked</string>
   <string name="translation_admin_security_unsecure">Unsecure</string>
   <string name="translation_admin_security_windowDetail">Window Status Detail</string>
+  <string name="translation_admin_security_windowState_closed">Closed</string>
+  <string name="translation_admin_security_windowState_open">Open</string>
+  <string name="translation_admin_security_windowState_unknown">Unknown</string>
+  <string name="translation_admin_security_windowState_venting">Venting</string>
+  <string name="translation_admin_security_window_fd">Front Driver</string>
+  <string name="translation_admin_security_window_fp">Front Passenger</string>
+  <string name="translation_admin_security_window_rd">Rear Driver</string>
+  <string name="translation_admin_security_window_rp">Rear Passenger</string>
   <string name="translation_admin_systemStatus_clientPerformance_collecting">Collecting</string>
   <string name="translation_admin_systemStatus_clientPerformance_description">Web Vitals (LCP, INP, CLS, FCP, TTFB) are collected from real browser sessions and exported as Prometheus histograms (teslasync_web_vitals_value).</string>
   <string name="translation_admin_systemStatus_clientPerformance_metricsList">LCP · INP · CLS · FCP · TTFB</string>
