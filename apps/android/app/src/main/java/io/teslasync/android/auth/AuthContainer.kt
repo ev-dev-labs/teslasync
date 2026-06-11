@@ -2,6 +2,7 @@ package io.teslasync.android.auth
 
 import android.content.Context
 import io.teslasync.android.BuildConfig
+import io.teslasync.android.data.DataContainer
 import io.teslasync.android.navigation.OnboardingGate
 import io.teslasync.shared.core.auth.AndroidKeystoreTokenStore
 import io.teslasync.shared.core.auth.AuthService
@@ -9,6 +10,7 @@ import io.teslasync.shared.core.auth.KtorTokenEndpointClient
 import io.teslasync.shared.core.cache.DriverFactory
 import io.teslasync.shared.core.cache.LocalCache
 import io.teslasync.shared.core.data.repo.HttpOnboardingRepository
+import io.teslasync.shared.core.diagnostics.Diagnostics
 import io.teslasync.shared.core.net.ApiHttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,12 +50,32 @@ class AuthContainer(
     private val onboardingRepository = HttpOnboardingRepository(apiClient, localCache.store)
     private val onboardingGateController = OnboardingGateController(onboardingRepository, session.state, scope)
 
+    /** Consent-gated, PII-redacting diagnostics (ADR-016); its logger is the only sanctioned logger. */
+    private val diagnostics = Diagnostics.create()
+
+    /**
+     * The data-layer DI graph (ADR-013): the shared repositories + state holders bound to
+     * lifecycle-aware ViewModels. Reached by the Compose tree via `LocalDataContainer`, it reuses the
+     * same single [apiClient] (so 401 refresh stays centralised) and the offline cache cleared on
+     * sign-out.
+     */
+    val data: DataContainer =
+        DataContainer(
+            api = apiClient,
+            cacheStore = localCache.store,
+            scope = scope,
+            logger = diagnostics.logger,
+        )
+
     /** The global auth state holder bound to the Compose UI. */
     val authController: AuthController =
         AuthController(
             session = session,
             scope = scope,
-            onSignedOut = { localCache.logout() },
+            onSignedOut = {
+                localCache.logout()
+                data.selectedVehicleStore.clear()
+            },
         )
 
     /** The navigation shell's onboarding-gate seam, backed by the live onboarding status. */

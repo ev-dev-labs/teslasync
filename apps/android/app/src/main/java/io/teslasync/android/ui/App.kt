@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import io.teslasync.android.auth.AuthContainer
 import io.teslasync.android.auth.AuthScaffold
 import io.teslasync.android.auth.LocalAuthController
+import io.teslasync.android.data.LocalDataContainer
 import io.teslasync.android.navigation.TeslaSyncApp
 import io.teslasync.android.ui.theme.TeslaSyncTheme
 
@@ -26,7 +27,10 @@ fun App(
     container: AuthContainer,
 ) {
     TeslaSyncTheme {
-        CompositionLocalProvider(LocalAuthController provides container.authController) {
+        CompositionLocalProvider(
+            LocalAuthController provides container.authController,
+            LocalDataContainer provides container.data,
+        ) {
             AuthScaffold(controller = container.authController) {
                 TeslaSyncApp(windowSizeClass = windowSizeClass, gate = container.onboardingGate)
             }
