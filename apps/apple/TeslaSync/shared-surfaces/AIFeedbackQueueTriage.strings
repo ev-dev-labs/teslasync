@@ -1,0 +1,45 @@
+/*
+  AIFeedbackQueueTriage.strings
+  TeslaSync — P4 shared surface · 0019 · AIFeedbackQueueTriage (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `AIFeedbackQueueTriage`
+  resolves (table "AIFeedbackQueueTriage") lives here with its web English value. These entries fold
+  into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the shared
+  catalog.
+
+  The first group is the parity set extracted from the web source
+  (web/src/components/ai/AIFeedbackQueueTriage.tsx + the shared AIFeatureCard / AiOutputPanel /
+  AIThinkingIndicator literals it composes). The second group backs the native P4 leaf chrome (the
+  freshness / connectivity / loading / error copy) so the Swift sources hold no English prose.
+*/
+
+/* --- Parity: the web source's t(key, default) calls --- */
+"feedbackTriage.aiAdvisor.title" = "Helix triage advisor";
+"feedbackTriage.aiAdvisor.description" = "Get a proposed status, category, and priority label for this feedback row. The advisor reads only the redacted envelope (id, category, title, body excerpt, page route, app version, status, created_at) — never the reporter email, IP, console tail, or recent errors. The proposal is informational; your existing manual controls above remain the only way to save changes.";
+"feedbackTriage.aiAdvisor.button" = "Suggest triage";
+"feedbackTriage.aiAdvisor.badge" = "Helix";
+
+/* --- Parity: shared AIFeatureCard / AiOutputPanel / AIThinkingIndicator literals --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Output panel: friendly empty hints (P4 "never a blank box") --- */
+"feedbackTriage.aiAdvisor.output.a11yTitle" = "Triage proposal";
+"feedbackTriage.aiAdvisor.output.emptyHint" = "No proposal yet — ask Helix to suggest a status, category, and priority for this feedback row.";
+"feedbackTriage.aiAdvisor.output.noFeedbackHint" = "Select a feedback row to ask Helix for a triage proposal.";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"feedbackTriage.aiAdvisor.live" = "Live";
+"feedbackTriage.aiAdvisor.stale" = "Stale";
+"feedbackTriage.aiAdvisor.offline" = "Offline";
+"feedbackTriage.aiAdvisor.staleBanner" = "Reconnecting — Helix may be stale";
+"feedbackTriage.aiAdvisor.offlineBanner" = "Offline — showing the last known proposal";
+"feedbackTriage.aiAdvisor.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error states --- */
+"feedbackTriage.aiAdvisor.loadingA11y" = "Loading triage advisor";
+"feedbackTriage.aiAdvisor.errorTitle" = "Couldn't load Helix";
+"feedbackTriage.aiAdvisor.retry" = "Retry";
