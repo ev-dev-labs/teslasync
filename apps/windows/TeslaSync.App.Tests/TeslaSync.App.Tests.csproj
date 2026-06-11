@@ -224,6 +224,7 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets, feature-views, misc-surfaces, modals-dialogs and shared-surfaces); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0089 Temperature into this single canonical Project root. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0088 Speed. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build, and the test classes are picked up by the SDK default-compile glob. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0094 LiveIndicator into this single canonical Project root from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -1209,41 +1210,10 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AreaChartWrapper.Model.cs" Link="SharedSurfaces\AreaChartWrapper.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.Model.cs" Link="SharedSurfaces\ChartExportMenu.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.Source.cs" Link="SharedSurfaces\ChartExportMenu.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.ViewModel.cs" Link="SharedSurfaces\ChartExportMenu.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AreaChartWrapper.Model.cs" Link="SharedSurfaces\AreaChartWrapper.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.Model.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.Source.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.ViewModel.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.Model.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.Source.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.ViewModel.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPostcardShareCardImageGeneration.Model.cs" Link="SharedSurfaces\AITripPostcardShareCardImageGeneration.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPostcardShareCardImageGeneration.Source.cs" Link="SharedSurfaces\AITripPostcardShareCardImageGeneration.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPostcardShareCardImageGeneration.ViewModel.cs" Link="SharedSurfaces\AITripPostcardShareCardImageGeneration.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVampireDrainExplanation.Model.cs" Link="SharedSurfaces\AIVampireDrainExplanation.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVampireDrainExplanation.Source.cs" Link="SharedSurfaces\AIVampireDrainExplanation.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVampireDrainExplanation.ViewModel.cs" Link="SharedSurfaces\AIVampireDrainExplanation.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVehiclePaintPreview.Model.cs" Link="SharedSurfaces\AIVehiclePaintPreview.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVehiclePaintPreview.Source.cs" Link="SharedSurfaces\AIVehiclePaintPreview.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVehiclePaintPreview.ViewModel.cs" Link="SharedSurfaces\AIVehiclePaintPreview.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVoiceMode.Model.cs" Link="SharedSurfaces\AIVoiceMode.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVoiceMode.Source.cs" Link="SharedSurfaces\AIVoiceMode.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVoiceMode.ViewModel.cs" Link="SharedSurfaces\AIVoiceMode.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.Model.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.Source.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.ViewModel.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIYearReviewNarration.Model.cs" Link="SharedSurfaces\AIYearReviewNarration.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIYearReviewNarration.Source.cs" Link="SharedSurfaces\AIYearReviewNarration.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AIYearReviewNarration.ViewModel.cs" Link="SharedSurfaces\AIYearReviewNarration.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AnnotationList\AnnotationList.Model.cs" Link="SharedSurfaces\AnnotationList\AnnotationList.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AnnotationList\AnnotationList.Source.cs" Link="SharedSurfaces\AnnotationList\AnnotationList.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AnnotationList\AnnotationList.ViewModel.cs" Link="SharedSurfaces\AnnotationList\AnnotationList.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Model.cs" Link="SharedSurfaces\AnnouncerRegion.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\AreaChartWrapper.Model.cs" Link="SharedSurfaces\AreaChartWrapper.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Avatar\Avatar.Model.cs" Link="SharedSurfaces\Avatar\Avatar.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Avatar\Avatar.Source.cs" Link="SharedSurfaces\Avatar\Avatar.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Avatar\Avatar.ViewModel.cs" Link="SharedSurfaces\Avatar\Avatar.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\BatteryDelta.Model.cs" Link="SharedSurfaces\BatteryDelta.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BulkActionsToolbar.Model.cs" Link="SharedSurfaces\BulkActionsToolbar.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BulkActionsToolbar.Source.cs" Link="SharedSurfaces\BulkActionsToolbar.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BulkActionsToolbar.ViewModel.cs" Link="SharedSurfaces\BulkActionsToolbar.ViewModel.cs" />
@@ -1320,6 +1290,12 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.Model.cs" Link="SharedSurfaces\ChartTimeRangeContext.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.Source.cs" Link="SharedSurfaces\ChartTimeRangeContext.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.ViewModel.cs" Link="SharedSurfaces\ChartTimeRangeContext.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Model.cs" Link="SharedSurfaces\ChartTooltip.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Source.cs" Link="SharedSurfaces\ChartTooltip.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.ViewModel.cs" Link="SharedSurfaces\ChartTooltip.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Model.cs" Link="SharedSurfaces\DataFreshness.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Source.cs" Link="SharedSurfaces\DataFreshness.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.ViewModel.cs" Link="SharedSurfaces\DataFreshness.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DateGroupedList\DateGroupedList.Model.cs" Link="SharedSurfaces\DateGroupedList\DateGroupedList.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DateGroupedList\DateGroupedList.Source.cs" Link="SharedSurfaces\DateGroupedList\DateGroupedList.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DateGroupedList\DateGroupedList.ViewModel.cs" Link="SharedSurfaces\DateGroupedList\DateGroupedList.ViewModel.cs" />
@@ -1378,6 +1354,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ElevationProfile.Model.cs" Link="SharedSurfaces\ElevationProfile.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ElevationProfile.Source.cs" Link="SharedSurfaces\ElevationProfile.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ElevationProfile.ViewModel.cs" Link="SharedSurfaces\ElevationProfile.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Model.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Source.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.ViewModel.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" />
