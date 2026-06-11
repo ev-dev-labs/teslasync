@@ -553,3 +553,4 @@ p2-windows/shared-meaningful/W-0033-AINLGrafanaPanel.prompt.md
 p2-windows/shared-meaningful/W-0043-AIRangePrediction.prompt.md
 p2-windows/shared-meaningful/W-0041-AIQuietHoursSuggestion.prompt.md
 p2-windows/shared-meaningful/W-0042-AIRAGHelp.prompt.md
+p2-windows/shared-meaningful/W-0044-AIRouteEfficiencySuggestions.prompt.md
