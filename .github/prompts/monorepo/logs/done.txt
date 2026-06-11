@@ -560,3 +560,4 @@ p2-windows/shared-meaningful/W-0048-AISoftwareUpdateChangelogSummarizer.prompt.m
 p2-windows/shared-meaningful/W-0047-AISmartChargeScheduleSuggestion.prompt.md
 p2-windows/shared-meaningful/W-0050-AIStateMachineDebuggerNarrator.prompt.md
 p2-windows/shared-meaningful/W-0049-AISpeedProfileInsights.prompt.md
+p2-windows/shared-meaningful/W-0052-AITCONarration.prompt.md
