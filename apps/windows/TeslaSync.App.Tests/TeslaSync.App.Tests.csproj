@@ -10,93 +10,26 @@
     Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are
     excluded and exercised by the app build, and the test classes are picked up by the SDK default-compile
     glob. The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures.
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
+    logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each dashboard-widget,
+    feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI TFM
+    and cannot be project-referenced from a plain net10.0 test host, so each surface's Microsoft.UI-free sources are
+    Compile-linked into the single ItemGroup below (the Link mirrors each source's real location under Widgets,
+    FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are excluded and
+    exercised by the app build. The matching test classes live under this project and are picked up by the SDK
+    default-compile glob. The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures
+    the tests read out of the test output directory.
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
     Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk under
-    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file
-    carries the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it
-    into multiple Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); regenerate
-    it directly from the WinUI-free sources on disk. Regenerated into this single canonical Project root for
-    P2 shared-surfaces/0098 PollingEngine. Do NOT re-concatenate into multiple roots, and never write a
-    literal build-item or project start tag inside this comment.
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each
-    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
-    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so
-    each surface's WinUI-free (Microsoft.UI-free) sources are Compile-linked into the single ItemGroup below
-    (the Link mirrors each source's real location under Widgets\, FeatureViews\, MiscSurfaces\,
-    ModalsDialogs\ or SharedSurfaces\); the bare WinUI view files are excluded and exercised by the app
-    build. The matching test classes live under this project and are picked up by the SDK default-compile
-    glob. The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures the
-    tests read out of the test output directory.
-
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
-    logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each dashboard-widget,
-    feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
-    TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's Microsoft.UI-free
-    sources are Compile-linked into the single ItemGroup below (the Link mirrors each source's real location
-    under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are
-    excluded and exercised by the app build. The matching test classes live under this project and are picked
-    up by the SDK default-compile glob. The Content links copy the units-golden, Package.appxmanifest and
-    widget-template fixtures the tests read out of the test output directory.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
-    Include-deduplicated Compile item group - the union of every Microsoft.UI-free .cs on disk under
-    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI
-    view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
-    integration merges can re-concatenate it into multiple Project roots plus duplicate Compile items, failing
-    XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Regenerated for
-    P2 shared-surfaces/0108 TimeStamp into this single canonical root (repairing a merge=union multi-root
-    corruption, plus the new TimeStamp Model / Source / ViewModel links). Do NOT re-concatenate into multiple
-    roots, and never write a literal build-item or project start tag inside this comment.
-  -->
-
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
-    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
-    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host,
-    so each surface's Microsoft.UI-free sources are Compile-linked into the single ItemGroup below (the
-    Link mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or
-    SharedSurfaces); the bare WinUI view files are excluded and exercised by the app build. The matching
-    test classes live under this project and are picked up by the SDK default-compile glob. The Content
-    links copy the units-golden, Package.appxmanifest and widget-template fixtures the tests read.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
-    path-sorted, Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free)
-    .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and
-    shared-surfaces/. This file carries the .gitattributes merge=union strategy, so a chain of integration
-    merges can re-concatenate it into multiple Project roots plus duplicate Compile items, failing XML load
-    (MSB4025 / MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk. Do
-    NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
-    this comment. Regenerated into this single canonical Project root for P2 shared-surfaces/0104
-    ServiceStatus (repairing a merge=union multi-root corruption) from the WinUI-free sources on disk.
-    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
-    logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each dashboard-widget,
-    feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
-    TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's Microsoft.UI-free
-    sources are Compile-linked into the single ItemGroup below (the Link mirrors each source's real location
-    under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are
-    excluded and exercised by the app build. The matching test classes live under this project and are picked
-    up by the SDK default-compile glob. The Content links copy the units-golden, Package.appxmanifest and
-    widget-template fixtures the tests read out of the test output directory.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
-    Include-deduplicated Compile item group — the union of every Microsoft.UI-free .cs on disk under
     dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI view
-    files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of integration
-    merges can re-concatenate it into multiple Project roots plus duplicate Compile items, failing XML load
+    files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of integration merges
+    can re-concatenate it into multiple Project roots plus duplicate Compile items, failing XML load
     (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Regenerated into this single
-    canonical Project root for P2 shared-surfaces/0106 TeslaCarViz (repairing a merge=union multi-root corruption)
-    from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal
-    build-item or project start tag inside this comment.
-    path-sorted, Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk
-    under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare
-    WinUI view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
-    integration merges can re-concatenate it into multiple roots plus duplicate items, failing XML load
-    (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Regenerated into this
-    single canonical Project root for P2 shared-surfaces/0114 BrowserCompatBanner (repairing a merge=union
-    multi-root corruption) from the WinUI-free sources on disk, plus the new BrowserCompatBanner Model /
-    Source / ViewModel links. Do NOT re-concatenate into multiple roots.
+    canonical Project root for P2 shared-surfaces/0125 InstallPrompt (repairing a merge=union multi-root
+    corruption) from the WinUI-free sources on disk, plus the new InstallPrompt Model / Source / ViewModel links.
+    Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
+    this comment.
   -->
 
     (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Re-consolidated for P2
@@ -158,20 +91,6 @@
     </Content>
   </ItemGroup>
 
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0062 withAiFeature. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0059 AIVoiceMode. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0067 ChartHiddenSeriesContext into this single canonical Project root. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0065 ChartContainer. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build, and the test classes are picked up by the SDK default-compile glob. Regenerated for P2 shared-surfaces/0069 ChartTimeRangeContext into this single canonical Project root from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
-  <!-- WinUI-free logic sources compiled in from TeslaSync.App (case-insensitive ordinal path-sorted, include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0072 MetricSwitcherChart. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0078 BulkActionsToolbar. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets, feature-views, misc-surfaces, modals-dialogs and shared-surfaces); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0076 Avatar. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build, and the test classes are picked up by the SDK default-compile glob. Regenerated into a single canonical Project root for P2 shared-surfaces/0079 DataFreshness (repairing a merge=union multi-root corruption) from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Re-consolidated for P2 shared-surfaces/0080 DateGroupedList into this single canonical Project root from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0086 Pressure. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0084 DateTime. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets, feature-views, misc-surfaces, modals-dialogs and shared-surfaces); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0089 Temperature into this single canonical Project root. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0088 Speed. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build, and the test classes are picked up by the SDK default-compile glob. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0094 LiveIndicator into this single canonical Project root from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0098 PollingEngine. -->
@@ -1189,6 +1108,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Model.cs" Link="SharedSurfaces\ChartTooltip.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Source.cs" Link="SharedSurfaces\ChartTooltip.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.ViewModel.cs" Link="SharedSurfaces\ChartTooltip.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.Model.cs" Link="SharedSurfaces\CookieConsentBanner.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.Source.cs" Link="SharedSurfaces\CookieConsentBanner.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.ViewModel.cs" Link="SharedSurfaces\CookieConsentBanner.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Model.cs" Link="SharedSurfaces\DataFreshness.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Source.cs" Link="SharedSurfaces\DataFreshness.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.ViewModel.cs" Link="SharedSurfaces\DataFreshness.ViewModel.cs" />
@@ -1221,6 +1143,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.ViewModel.cs" Link="SharedSurfaces\FreshnessIndicator.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.Model.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.ViewModel.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.Model.cs" Link="SharedSurfaces\InstallPrompt.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.Source.cs" Link="SharedSurfaces\InstallPrompt.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.ViewModel.cs" Link="SharedSurfaces\InstallPrompt.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Model.cs" Link="SharedSurfaces\KpiOverviewCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Source.cs" Link="SharedSurfaces\KpiOverviewCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.ViewModel.cs" Link="SharedSurfaces\KpiOverviewCard.ViewModel.cs" />
@@ -1230,59 +1155,6 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\PollingEngine\PollingEngine.Model.cs" Link="SharedSurfaces\PollingEngine\PollingEngine.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\PollingEngine\PollingEngine.Source.cs" Link="SharedSurfaces\PollingEngine\PollingEngine.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\PollingEngine\PollingEngine.ViewModel.cs" Link="SharedSurfaces\PollingEngine\PollingEngine.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\Pressure.Model.cs" Link="SharedSurfaces\Pressure.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\Pressure.Source.cs" Link="SharedSurfaces\Pressure.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\Pressure.ViewModel.cs" Link="SharedSurfaces\Pressure.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.Model.cs" Link="SharedSurfaces\ChartTimeRangeContext.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.Source.cs" Link="SharedSurfaces\ChartTimeRangeContext.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.ViewModel.cs" Link="SharedSurfaces\ChartTimeRangeContext.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Model.cs" Link="SharedSurfaces\ChartTooltip.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Source.cs" Link="SharedSurfaces\ChartTooltip.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.ViewModel.cs" Link="SharedSurfaces\ChartTooltip.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Model.cs" Link="SharedSurfaces\DataFreshness.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Source.cs" Link="SharedSurfaces\DataFreshness.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.ViewModel.cs" Link="SharedSurfaces\DataFreshness.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ElevationProfile.Model.cs" Link="SharedSurfaces\ElevationProfile.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ElevationProfile.Source.cs" Link="SharedSurfaces\ElevationProfile.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ElevationProfile.ViewModel.cs" Link="SharedSurfaces\ElevationProfile.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Model.cs" Link="SharedSurfaces\FreshnessIndicator.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Source.cs" Link="SharedSurfaces\FreshnessIndicator.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.ViewModel.cs" Link="SharedSurfaces\FreshnessIndicator.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.Model.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.ViewModel.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Model.cs" Link="SharedSurfaces\KpiOverviewCard.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Source.cs" Link="SharedSurfaces\KpiOverviewCard.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.ViewModel.cs" Link="SharedSurfaces\KpiOverviewCard.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Model.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Source.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.ViewModel.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Model.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Source.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.ViewModel.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Model.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Source.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.ViewModel.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Model.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Source.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.ViewModel.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.Model.cs" Link="SharedSurfaces\PlaybackSpeedMenu.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.Source.cs" Link="SharedSurfaces\PlaybackSpeedMenu.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.ViewModel.cs" Link="SharedSurfaces\PlaybackSpeedMenu.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.Model.cs" Link="SharedSurfaces\PlaybackSpeedMenu.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.Source.cs" Link="SharedSurfaces\PlaybackSpeedMenu.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.ViewModel.cs" Link="SharedSurfaces\PlaybackSpeedMenu.ViewModel.cs" />
@@ -1336,9 +1208,6 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\UsageCard.Model.cs" Link="SharedSurfaces\UsageCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UsageCard.Source.cs" Link="SharedSurfaces\UsageCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UsageCard.ViewModel.cs" Link="SharedSurfaces\UsageCard.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.Model.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.Source.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.ViewModel.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UserCell\UserCell.Model.cs" Link="SharedSurfaces\UserCell\UserCell.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UserCell\UserCell.ViewModel.cs" Link="SharedSurfaces\UserCell\UserCell.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.Model.cs" Link="SharedSurfaces\VisuallyHidden.Model.cs" />
