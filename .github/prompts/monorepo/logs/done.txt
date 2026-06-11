@@ -293,3 +293,4 @@ p3-android/feature-views/A-0040-RequestBuilder.prompt.md
 p3-android/feature-views/A-0038-RateLimitStatusPanel.prompt.md
 p3-android/feature-views/A-0042-EventHistoryTable.prompt.md
 p3-android/feature-views/A-0047-SentryModeChart.prompt.md
+p3-android/feature-views/A-0048-SummaryStatsRow.prompt.md
