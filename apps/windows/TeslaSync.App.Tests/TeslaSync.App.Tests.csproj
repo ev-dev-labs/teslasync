@@ -474,6 +474,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\BackupActionsCard\BackupActionsCard.ViewModel.cs" Link="FeatureViews\BackupActionsCard\BackupActionsCard.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.Model.cs" Link="FeatureViews\Base64Tool\Base64Tool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\Base64Tool\Base64Tool.ViewModel.cs" Link="FeatureViews\Base64Tool\Base64Tool.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryComparison\BatteryComparison.Model.cs" Link="FeatureViews\BatteryComparison\BatteryComparison.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryComparison\BatteryComparison.Source.cs" Link="FeatureViews\BatteryComparison\BatteryComparison.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryComparison\BatteryComparison.ViewModel.cs" Link="FeatureViews\BatteryComparison\BatteryComparison.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryHealthSection.Model.cs" Link="FeatureViews\BatteryHealthSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryLevelChart.Model.cs" Link="FeatureViews\BatteryLevelChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryPill\BatteryPill.Model.cs" Link="FeatureViews\BatteryPill\BatteryPill.Model.cs" />
@@ -913,4 +916,5 @@
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
   </ItemGroup>
 
+</Project>
 </Project>
