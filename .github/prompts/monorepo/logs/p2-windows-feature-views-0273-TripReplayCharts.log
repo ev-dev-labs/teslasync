@@ -1,0 +1,104 @@
+=== P2 Feature view 0273 TripReplayCharts (Windows) ===
+Capability: WinUI 3 (Windows App SDK) + .NET 10 present and exercised — the WinUI app project
+(TeslaSync.App, UseWinUI=true) builds clean in Release including the new TripReplayCharts WinUI view
+(TripReplayCharts.cs + TripReplayCharts.Timeline.cs). .NET 10.0.300 SDK + Microsoft.WindowsDesktop.App
+10.0.8 are installed. STATUS is DONE, not BLOCKED.
+
+Surface: apps/windows/TeslaSync.App/feature-views/TripReplayCharts/
+           TripReplayCharts.{Model,Source,ViewModel}.cs   (WinUI-free; Compile-linked into the test host)
+           TripReplayCharts.cs                            (WinUI 3 view: chrome + state matrix)
+           TripReplayCharts.Timeline.cs                   (WinUI 3 interactive dual-axis area chart)
+Tests:   apps/windows/TeslaSync.App.Tests/FeatureViews/TripReplayChartsTests.cs (45 tests)
+Web spec: web/src/features/trips/components/TripReplayCharts.tsx (THE specification)
+
+Parity notes (web -> native):
+  - Recharts AreaChart -> code-built Canvas renderer: a speed Area on the left axis (token
+    TsChartSpeedBrush = web CHART_COLORS[0] cyan) + a power Area on the right axis in kW (token
+    TsChartPowerBrush = web CHART_COLORS[1] violet), each pre-normalized to its own ratio so it occupies
+    the full vertical range exactly as the web's two YAxis do (speed anchored at 0; power across
+    min..max so regen stays visible), fillOpacity 0.2.
+  - Persistent playhead <ReferenceLine x={cursorTime} stroke="#00b4d8" strokeWidth={2}
+    strokeDasharray="4 2" /> -> a dashed TsColorInfoBrush line at the current replay index, repositioned
+    without rebuilding the area geometry.
+  - Interaction: web useSyncedCursor (onMouseMove writes activeLabel) + the chart onClick + the
+    ChartCursorBridge (useSyncedReferenceLineX -> onSeekToIndex) are reproduced through the shared
+    ChartCursorSyncGroup (P1/S8): pointer move / tap / Left|Right|Home|End keys broadcast the hovered
+    sample's `time`; the view-model bridges that group to nearestIndexByTime -> advances CurrentIndex
+    (the playhead) and raises SeekToIndexRequested (web onSeekToIndex). A host drives the playhead back
+    via SeekTo(int) (web currentIndex). lastForwardedRef de-bounce preserved (one forward per index).
+  - timelineData projection: X = minutes since the first sample (web (ts - t0)/60_000, toFixed(3));
+    speed convertSpeedFromSI to the user's unit; power kept verbatim in kW (web `power ?? 0`).
+  - Empty gate data.length > 0 (web); ALL 6 states rendered (loading / loaded / empty / error / stale /
+    offline) since the native feature-view owns its cache-then-network drive-telemetry read.
+  - i18n (ILocalizer): every web key reproduced — replay.timeline.title ("Speed & Power Timeline"),
+    .subtitle ("Click to seek replay position"), .aria ("Trip replay speed and power timeline area
+    chart"), .speed ("Speed"), .power ("Power"), .noData ("No telemetry data available") + .summary and
+    the self-fetch chrome (.errorTitle/.refresh/.error*, common.loading/retry/stale/offline). No English
+    literals in native code.
+  - Data bound through the shared P1/S8 state-holder (ITripReplayChartsSource cache-then-network over
+    get_api_v1_drives + get_api_v1_drives_driveID_telemetry); the view performs no HTTP. Diagnostics emit
+    "view.opened slug=TripReplayCharts" (P1/S11).
+  - Accessibility: chart is a focusable Image-role peer with a spoken AutomationName (sample count),
+    arrow/Home/End keyboard seeking, Narrator names on the legend + freshness/refresh chrome; axis swatches
+    marked AccessibilityView.Raw.
+
+CSProj repair (pre-existing, coupled to this task — blocks the whole solution build/test):
+  TeslaSync.App.Tests.csproj had TWO <Project> roots (MSB4025: "multiple root elements, Line 823") — the
+  recurring .gitattributes merge=union concatenation its own INVARIANT comment warns about. The two roots
+  had diverged (root 1: 760 Compile links incl. IncidentForm/InfrastructureSection/LiveStatusPill/
+  OperationsSection/ServiceHealthSection/SignalCompareControls/StatusPageSkeleton/SubscribeCard/
+  TeslaApiUsageCard; root 2: 744, the only unique ones being TelemetryPipelineCard.{Model,Source,ViewModel}).
+  Consolidated to a single valid project root: the deduplicated, path-sorted UNION of every WinUI-free
+  link from both roots (763) + the 3 new TripReplayCharts.{Model,Source,ViewModel}.cs links = 766. Net vs
+  the corrupted file: +3 TripReplayCharts links, +3 TelemetryPipelineCard links recovered, 0 real links
+  removed, second root dropped. XML now loads (single root, single </Project>).
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    17 Warning(s)   (all pre-existing in TeslaSync.App.Core: CA1716/CA1720/CA1000/CA1859; 0 in new code)
+    0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 218 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 15952, Skipped:     0, Total: 15952, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite) which
+fail fast — never silently skip, per their README — because WinAppDriver/Appium is not present on this
+runner. They are out of scope for this surface (run separately via apps/windows/run-ui-automation.ps1) and
+do not exercise TripReplayCharts.
+
+### STEP 2b: dotnet test --filter Category!=UIAutomation (headless surface-logic gate, W9-0002 separation)
+Passed!  - Failed:     0, Passed: 15952, Skipped:     0, Total: 15952, Duration: 15 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+TripReplayCharts tests: Passed!  - Failed: 0, Passed: 45, Skipped: 0, Total: 45 - TeslaSync.App.Tests.dll (net10.0)
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+(initial run flagged only end-of-line markers on the 6 newly created .cs files — the create tooling wrote
+CRLF; all normalized to LF to match the repo .editorconfig. Re-run clean; no style/analyzer changes.)
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TripReplayCharts
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+Defensive per-file scan (incl. the test file, which the prefix path does not reach):
+  TripReplayCharts.cs:          PLACEHOLDER_COUNT=0
+  TripReplayCharts.Model.cs:    PLACEHOLDER_COUNT=0
+  TripReplayCharts.Source.cs:   PLACEHOLDER_COUNT=0
+  TripReplayCharts.ViewModel.cs:PLACEHOLDER_COUNT=0
+  TripReplayCharts.Timeline.cs: PLACEHOLDER_COUNT=0
+  TripReplayChartsTests.cs:     PLACEHOLDER_COUNT=0
+PER_FILE_PLACEHOLDER_TOTAL=0   (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0 (15952 pass, incl 45 TripReplayCharts)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite — WinAppDriver
+ absent on this runner — evidenced in STEP 2a; it does not exercise TripReplayCharts. WinUI 3 + .NET 10
+ build capability IS present and exercised, so STATUS=DONE not BLOCKED.)
+
+EXIT=0
+STATUS=DONE
