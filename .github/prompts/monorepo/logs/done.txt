@@ -195,3 +195,4 @@ p3-android/dashboard-widgets/A-0056-LivePowerFlowWidget.prompt.md
 p3-android/dashboard-widgets/A-0058-LiveSignalsWidget.prompt.md
 p3-android/dashboard-widgets/A-0060-LocationMapWidget.prompt.md
 p3-android/dashboard-widgets/A-0059-LocationFavoritesWidget.prompt.md
+p3-android/dashboard-widgets/A-0057-LiveSignalSparklinesWidget.prompt.md
