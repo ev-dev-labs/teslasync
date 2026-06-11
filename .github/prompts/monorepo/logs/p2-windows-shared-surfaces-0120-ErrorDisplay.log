@@ -1,0 +1,82 @@
+=== P2 Shared surface 0120 ErrorDisplay (Windows) ===
+
+Capability: WinUI 3 (Windows App SDK 2.1.3) + .NET 10 (SDK 10.0.300) PRESENT on this runner.
+  Evidence: `dotnet build apps/windows/TeslaSync.App/TeslaSync.App.csproj -c Release` -> Build succeeded, 0 errors
+  (TeslaSync.App.dll produced). The WinUI app and all class-library projects compile; the headless surface
+  suite runs. The only absent capability is the out-of-process WinAppDriver/Appium UI-automation runner
+  (see UIAUTOMATION evidence at the end) which is excluded from the per-surface gate by design.
+
+Artifact: native Windows-idiomatic ErrorDisplay shared surface (parity port of the web
+  components/feedback/ErrorDisplay.tsx + its _ErrorState.tsx chrome). Status-aware failure banner branching on
+  the resolved API status into 404 / 401-403 / 5xx / network(offline|unreachable), with a compact variant.
+
+Shipped files (apps/windows/TeslaSync.App/shared-surfaces/ErrorDisplay.*):
+  - ErrorDisplay.Model.cs      WinUI-free: ErrorDisplayKind/ActionKind enums, ErrorDisplayRequest, the pure
+                               ErrorDisplayProjection.Project ladder, ErrorDisplayRegistration (slug, automation
+                               ids, ARIA role/live, /login route, Segoe glyphs, rose tint recipe, the 16 real
+                               translation.error.* i18n keys + verbatim English fallbacks), ErrorDisplayDiagnostics.
+  - ErrorDisplay.Source.cs     WinUI-free: IErrorDisplayConnectivitySource (+Static/Network over INetworkAvailability,
+                               the useOnlineStatus seam) and IErrorDisplayNavigator (+Delegate/Recording, the
+                               useNavigate seam + /login redirect).
+  - ErrorDisplay.ViewModel.cs  WinUI-free: ErrorDisplayViewModel state holder (SetError/Clear, reproject on error +
+                               connectivity change, InvokeAction CTA dispatch, subscription cleanup).
+  - ErrorDisplay.cs            WinUI view: rose-tinted _ErrorState card (icon chip + title + message + TsButton CTA),
+                               role/live region, view.opened diagnostic, dispatcher-marshalled re-render.
+Test (apps/windows/TeslaSync.App.Tests/SharedSurfaces/ErrorDisplayTests.cs): headless adapter/projection/view-model/
+  source/navigator/diagnostics + a11y coverage; mirrors the web spec branch-for-branch.
+
+i18n: all 16 keys resolve through the P1/S10 facade and ALREADY EXIST in the generated catalogue
+  Strings/en/Resources.resw (translation.error.notFound.* / unauthorized.* / serverError.* / network.* / retry).
+  No catalogue edit required (the web uses real t() keys; the WinUI .resw is auto-generated from them).
+
+--- PRE-EXISTING REPAIR: TeslaSync.App.Tests.csproj (merge=union corruption) ---
+Baseline `dotnet build apps/windows/TeslaSync.sln -c Release` FAILED before any of my edits:
+  TeslaSync.App.Tests.csproj(1373,2): error MSB4025: The project file could not be loaded. There are multiple
+  root elements. Line 1373, position 2.
+The csproj had 3 <Project> roots (lines 1,1373,1397) and 2290 <Compile> items (1093 distinct, duplicated) — exactly
+the .gitattributes merge=union hazard its own header documents. Per the file's INVARIANT ("regenerate directly from
+the WinUI-free sources on disk"), and as every predecessor (0104 ServiceStatus .. 0110 UserCell) did, it was
+regenerated into ONE canonical root with a single case-insensitive ordinal path-sorted, Include-deduplicated Compile
+ItemGroup. Verified: distinct WinUI-free .cs on disk == csproj includes, 0 stale / 0 link-mismatch; the set is the
+prior 1093 + the 3 new ErrorDisplay Model/Source/ViewModel links = 1096 (the bare ErrorDisplay.cs view is excluded
+and exercised by the app build). XML now loads (root=Project), 1096 total == 1096 distinct.
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded. 0 Error(s). 17 Warning(s) — ALL pre-existing CA rule warnings in TeslaSync.App.Core (LiveEvent,
+RepositoryResult, SseEventDecoder, etc.); none in any ErrorDisplay file; the warnings-as-errors App project compiled
+clean. TeslaSync.App.dll, TeslaSync.App.Tests.dll, TeslaSync.App.UITests.dll all produced.
+BUILD_EXIT=0
+
+--- STEP 2: dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" (headless surface suite) ---
+Passed!  - Failed: 0, Passed: 21818, Skipped: 0, Total: 21818, Duration: 8 s - TeslaSync.App.Tests.dll (net10.0)
+(UITests assembly: "No test matches the given testcase filter `Category!=UIAutomation`" — every UITest is
+Category=UIAutomation and is therefore excluded from the headless per-surface gate, by design.)
+Zero ErrorDisplay test failures; zero regressions across the 21818-test headless suite.
+TEST_EXIT=0
+
+--- STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Whole-solution format clean (the 5 new .cs files were normalised to LF per .editorconfig [*] end_of_line=lf and
+re-verified).
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/ErrorDisplay ---
+Gate literal path: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+GENUINE per-file scan of all 4 shipped shared-surfaces/ErrorDisplay.* files (csharp patterns):
+  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  -> GENUINE_PLACEHOLDER_COUNT_ERRORDISPLAY=0
+  (No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented/NotImplementedException/"// stub".)
+PLACEHOLDER_EXIT=0
+
+--- UIAUTOMATION EVIDENCE (environmental; excluded from the per-surface gate by design, per 0110 UserCell) ---
+dotnet test apps/windows/TeslaSync.App.UITests/TeslaSync.App.UITests.csproj -c Release --no-build --filter "Category=UIAutomation"
+  Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+  All 147 fail-fast with the SAME environmental cause (147x):
+  TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+  runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its
+  standard install paths or on PATH.
+UIAUTOMATION_TRUE_EXIT=1  (non-zero = absent WinAppDriver/MSIX harness on this runner; NOT a code defect, NOT part
+  of the EXIT=0 per-surface gate — these out-of-process e2e tests run independently via apps/windows/run-ui-automation.ps1).
+
+=== FINAL GATE RESULT (per-surface headless gate; UIAutomation E2E excluded as environmental) ===
+BUILD_EXIT=0  TEST_EXIT=0 (21818 passed / 0 failed)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
