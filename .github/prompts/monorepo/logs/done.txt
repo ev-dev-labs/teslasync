@@ -568,3 +568,4 @@ p2-windows/shared-meaningful/W-0053-AIThinkingIndicator.prompt.md
 p2-windows/shared-meaningful/W-0056-AITripPostcardShareCardImageGeneration.prompt.md
 p2-windows/shared-meaningful/W-0057-AIVampireDrainExplanation.prompt.md
 p2-windows/shared-meaningful/W-0058-AIVehiclePaintPreview.prompt.md
+p2-windows/shared-meaningful/W-0060-AIWatchFaceNLResponse.prompt.md
