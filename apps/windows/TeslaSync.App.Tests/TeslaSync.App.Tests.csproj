@@ -2,7 +2,7 @@
 
   <!--
     TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Projection / Registry / diagnostics) for each
+    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each
     feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and
     cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources
     are Compile-linked into the single ItemGroup below (the Link mirrors each source's real location
@@ -31,6 +31,18 @@
     VehicleConfigSection into this single canonical root, regenerated directly from the WinUI-free sources on
     disk (plus the new VehicleConfigSection.Model link). Do NOT re-concatenate into multiple roots, and never
     write a literal build-item or project start tag inside this comment.
+    cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
+    Compile-linked into the single ItemGroup below (the Link mirrors each source's real location under
+    FeatureViews\ or Widgets\); the WinUI view files themselves are exercised by the app build. The
+    matching test classes live under this project and are picked up by the SDK default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
+    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk
+    under dashboard-widgets/ and feature-views/ (the bare WinUI view files are excluded). Re-consolidated
+    for P2 feature-views/0298 SecuritySection into this single canonical root, regenerated directly from the
+    WinUI-free sources on disk (plus the new SecuritySection Model / Source / ViewModel links). Do NOT
+    re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
+    this comment.
   -->
 
   <PropertyGroup>
@@ -742,6 +754,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.Model.cs" Link="FeatureViews\SecurityPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.Source.cs" Link="FeatureViews\SecurityPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.ViewModel.cs" Link="FeatureViews\SecurityPanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecuritySection\SecuritySection.Model.cs" Link="FeatureViews\SecuritySection\SecuritySection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecuritySection\SecuritySection.Source.cs" Link="FeatureViews\SecuritySection\SecuritySection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecuritySection\SecuritySection.ViewModel.cs" Link="FeatureViews\SecuritySection\SecuritySection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.Model.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.Source.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.ViewModel.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.ViewModel.cs" />
