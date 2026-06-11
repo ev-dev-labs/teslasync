@@ -503,3 +503,4 @@ p2-windows/feature-views/W-0304-VehicleGauges.prompt.md
 p2-windows/feature-views/W-0303-VehicleCharts.prompt.md
 p2-windows/feature-views/W-0306-VehiclePhotoGallery.prompt.md
 p2-windows/feature-views/W-0305-VehicleHeader.prompt.md
+p2-windows/feature-views/W-0307-VehiclePhotoUpload.prompt.md
