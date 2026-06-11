@@ -1,0 +1,26 @@
+/*
+  ChartTimeRangeContext.strings
+  TeslaSync — P4 shared surface · 0069 · ChartTimeRangeContext (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/charts/ChartTimeRangeContext.tsx + components/charts/cursorSync.ts) is an anonymous,
+  transparent coordination primitive — it carries no user-facing copy of its own (it only broadcasts
+  a syncId/syncMethod and stores the persistent cursor x value), so there are no verbatim web string
+  keys to mirror. The only entries here back the DEBUG-only sample charts used by the previews +
+  the view-composition tests; they are never shipped. Production callers wrap their own
+  already-localized charts.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they
+  are kept in a per-surface table ("ChartTimeRangeContext") so each parallel surface prompt owns its
+  own strings.
+*/
+
+/* --- DEBUG sample charts (previews + tests only; not shipped) --- */
+"chartTimeRange.sample.chart.aria" = "Synced sample line chart";
+"chartTimeRange.sample.cursor.none" = "No shared cursor";
+"chartTimeRange.sample.cursor.at" = "Shared cursor at sample %d";
+"chartTimeRange.sample.axis.x" = "Sample";
+"chartTimeRange.sample.axis.y" = "Value";
+"chartTimeRange.sample.series.battery" = "Battery (synced)";
+"chartTimeRange.sample.series.power" = "Power (synced)";
+"chartTimeRange.sample.series.standalone" = "Standalone (no provider)";
