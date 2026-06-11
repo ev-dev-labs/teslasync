@@ -171,3 +171,4 @@ p3-android/dashboard-widgets/A-0024-ChargingSessionDetailWidget.prompt.md
 p3-android/dashboard-widgets/A-0030-CommandQuickActionsWidget.prompt.md
 p3-android/dashboard-widgets/A-0029-CommandHistoryWidget.prompt.md
 p3-android/dashboard-widgets/A-0028-ClimateStatusWidget.prompt.md
+p3-android/dashboard-widgets/A-0031-CostBreakdownWidget.prompt.md
