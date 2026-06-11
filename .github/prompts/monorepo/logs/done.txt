@@ -500,3 +500,4 @@ p2-windows/feature-views/W-0299-TirePressureSection.prompt.md
 p2-windows/feature-views/W-0301-VehicleHeader.prompt.md
 p2-windows/feature-views/W-0302-VehicleCard.prompt.md
 p2-windows/feature-views/W-0304-VehicleGauges.prompt.md
+p2-windows/feature-views/W-0303-VehicleCharts.prompt.md
