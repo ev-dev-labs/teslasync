@@ -1,4 +1,4 @@
-namespace TeslaSync.App.SharedSurfaces;
+namespace TeslaSync.App.SharedSurfaces.VisuallyHiddenSurface;
 
 /// <summary>
 /// A live-region listener — one per mounted announcer region (the native analogue of the web

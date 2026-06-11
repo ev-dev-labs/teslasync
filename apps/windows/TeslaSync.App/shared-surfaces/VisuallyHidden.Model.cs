@@ -1,4 +1,11 @@
-namespace TeslaSync.App.SharedSurfaces;
+// Integration-merge collision repair: the AnnouncerRegion (P2/0001) and VisuallyHidden (P2/0003)
+// shared-surfaces each declared AnnouncerPriority / AnnouncerListener / AnnouncerRegionViewModel in the flat
+// TeslaSync.App.SharedSurfaces namespace. Each built green on its own branch; combined on the integration
+// branch they collide (CS0101). VisuallyHidden's types are referenced only within this surface's own files
+// (the Shell uses RouteAnnouncer + the atomic TsAnnouncerRegion, not these), so this surface is moved into a
+// per-surface sub-namespace — the same isolation pattern the feature-view surfaces use — which resolves the
+// collision without changing behavior. No other namespace owns these names after the move.
+namespace TeslaSync.App.SharedSurfaces.VisuallyHiddenSurface;
 
 /// <summary>
 /// Canonical metadata for the VisuallyHidden announcer surface — the native analogue of the
