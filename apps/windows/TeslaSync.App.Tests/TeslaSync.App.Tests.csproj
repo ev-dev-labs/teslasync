@@ -881,6 +881,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsRow.Model.cs" Link="FeatureViews\SummaryStatsRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Model.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Source.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.ViewModel.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryPipelineCard.Model.cs" Link="FeatureViews\TelemetryPipelineCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryPipelineCard.Source.cs" Link="FeatureViews\TelemetryPipelineCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryPipelineCard.ViewModel.cs" Link="FeatureViews\TelemetryPipelineCard.ViewModel.cs" />
@@ -967,6 +970,5 @@
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
   </ItemGroup>
 
-</Project>
 </Project>
 </Project>
