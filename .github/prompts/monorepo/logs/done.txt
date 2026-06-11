@@ -515,3 +515,4 @@ p2-windows/modals-dialogs/W-0009-SessionExpiringModal.prompt.md
 p2-windows/modals-dialogs/W-0008-SessionExpiredModal.prompt.md
 p2-windows/modals-dialogs/W-0007-ReauthDialog.prompt.md
 p2-windows/modals-dialogs/W-0012-ConfirmDialog.prompt.md
+p2-windows/modals-dialogs/W-0011-GeofenceDrawer.prompt.md
