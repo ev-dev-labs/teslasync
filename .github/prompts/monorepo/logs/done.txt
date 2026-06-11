@@ -468,3 +468,4 @@ p2-windows/feature-views/W-0257-TeslaApiUsageCard.prompt.md
 p2-windows/feature-views/W-0256-TelemetryPipelineCard.prompt.md
 p2-windows/feature-views/W-0267-SignalCompareControls.prompt.md
 p2-windows/feature-views/W-0266-SignalChartPanel.prompt.md
+p2-windows/feature-views/W-0270-SignalSelector.prompt.md
