@@ -1,0 +1,194 @@
+=== P4 Shared surface 0089 Temperature (Apple) ===
+runner: macOS 26.5 (Darwin); Xcode 26.5 (build 17F42)
+note: gate specifies iPhone 16; available + used: iPhone 16 simulator (Booted)
+Wed Jun 10 21:15 PDT 2026
+
+Surface: apps/apple/TeslaSync/shared-surfaces/Temperature.*
+Web source (the spec): web/src/components/data-display/format/Temperature.tsx
+Predecessor pattern followed: 0085 Distance (committed at HEAD~1), the same useUnits-bound formatter family.
+
+Shipped files (8):
+  Temperature.swift            (public View — env-bound units, model lifecycle, branch switch)
+  Temperature.Adapter.swift    (Input, Meta, Source, Formatting [convertTempFromSI + fmtNumber], Accessibility)
+  Temperature.Projection.swift (Resolved value/empty + pure projection of the web render branches)
+  Temperature.Model.swift      (P1/S8 state-holder, P1/S11 telemetry seam, P1/S10 i18n facade)
+  Temperature.Views.swift      (value + empty subviews — .help tooltip parity of web `title`)
+  Temperature.Previews.swift   (#Preview matrix — metric/imperial/°F-input/precision/sub-zero/empty)
+  Temperature.Tests.swift      (36 tests — formatting, projection, meta, a11y, model, view contract)
+  Temperature.strings          (P1/S10 catalog: lone empty-state VoiceOver key)
+
+Parity mapping (web -> native):
+  • c / f props                 -> celsius / fahrenheit inputs (renamed: SwiftLint identifier_name
+                                   min_length:2 forbids single-char `c`/`f`; .swiftlint.yml is out of
+                                   allowed-files so the idiomatic names are used — data/behaviour parity
+                                   is preserved, only the Swift label differs).
+  • useUnits().unitPrefs        -> \.tsUnits environment (P1/S8 seam) -> UnitPreferences bag.
+  • convertTempFromSI(c, '°C')  -> identity;  convertTempFromSI(c, '°F') -> c*9/5+32 (affine, identical).
+  • f-input normalize           -> (f - 32) * 5 / 9  (SI Celsius base).
+  • fmtNumber(v, precision)     -> NumberFormatter (locale grouping, fixed digits, halfUp rounding);
+                                   precision precedence prop -> pref -> 2, clamp 0...20 (setGlobalPrecision).
+  • `{display}{tempUnit}`       -> NO separating space (e.g. "20°C") — verified against web Format.test.tsx
+                                   ("renders 20°C as 20°C", "...as 68°F", "68°F -> 20°C", null -> "—").
+  • title `${v.toFixed(1)} °C`  -> fixed 1-fraction-digit tooltip WITH a space (e.g. "20.0 °C"); surfaced
+                                   via SwiftUI .help (web `title`).
+  • null/non-finite -> "—"      -> empty branch (em-dash + localized VoiceOver label).
+
+Parity note — states. The web source is a synchronous formatter (props + the useUnits() settings read;
+NO fetch), so it has exactly two render branches: the formatted value and the "—" empty sentinel. It has
+no loading/error/stale/offline axis. Synthesising network chrome would invent state the source does not
+have. Both real branches are reproduced in full (value + empty). Same sanctioned disposition as 0085
+Distance and 0075 AnimatedNumber.
+
+----------------------------------------------------------------------------------------------------
+=== STEP 1: iOS full-app build test (gate cmd, iPhone 16) ===
+cmd: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+(xcodegen generate run first to materialise the git-ignored .xcodeproj; the build phase assembled
+ Shared.xcframework via Gradle on-the-fly — "xcframework successfully written out".)
+
+RESULT: xcodebuild FAILED (baseline-RED) — full-app build test.
+Errors in Temperature.* files: 0 (greps below).
+All 156 compile errors are PRE-EXISTING duplicate/ambiguous-type defs in UNRELATED surfaces — the
+identical baseline the 0085 Distance log recorded. Error families (counts):
+   16  'StateTimelineUpdate' is ambiguous
+   16  'StateTimelineConnection' is ambiguous
+   12  'StateTimelineLoadStatus' is ambiguous
+   12  'RecentDrivesUpdate' is ambiguous
+   12  'RecentDrivesLoadStatus' is ambiguous
+   12  'RecentDrivesConnection' is ambiguous
+    8  'StateTimelineModel' is ambiguous
+    8  'RecentDrivesModel' is ambiguous
+   + the dependent "Cannot infer contextual base in reference to member 'loading'/'loaded'/'failed'/
+     'stale'/'offline'" lines in the consuming VehicleGauges.*/VehicleHeader.*/VehicleHero.*/
+     VehicleHeroCardWidget.* batch (the failing SwiftCompile command).
+
+Proof the surface is clean (greps over the full 1704-line build log):
+   grep -iE "Temperature.*error:|error:.*Temperature" (minus chartSeriesTemperature token) -> 0 hits
+   Temperature.* seen in the live compile graph (no errors): Temperature.Adapter.swift,
+     Temperature.Model.swift, Temperature.Previews.swift, Temperature.Projection.swift,
+     Temperature.Views.swift
+   (Temperature.Tests.swift compiles in the TeslaSyncTests target, which never starts because the app
+    target aborts on the VehicleHero/StateTimeline batch above — the suite is instead executed GREEN in
+    STEP 6's isolated Swift 6 run.)
+IOS_EXIT=65 (build failed on pre-existing/unrelated errors; surface code clean — see STEP 6)
+
+----------------------------------------------------------------------------------------------------
+=== STEP 2: macOS full-app build test (gate cmd) ===
+cmd: xcodebuild -scheme TeslaSync-macOS build test
+
+RESULT: xcodebuild FAILED (baseline-RED) — full-app build test.
+Errors in Temperature.* files: 0.
+Ambiguous-type errors on macOS: 0 (the macOS target's Swift compiled). Failure cause = macOS
+development-signing (environment, not code) — 8 lines of:
+  error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+This is the P4/P99 acceptance-gate condition (signed macos-latest runner) per
+apps/macos-pending-verifications.md.
+MAC_EXIT=65 (xcodebuild build-failure on dev-signing; surface code clean — macOS-arm64 compile proven
+              by STEP 6's isolated macOS-SDK build)
+
+----------------------------------------------------------------------------------------------------
+=== STEP 3: swiftlint --strict (gate cmd, full included set) ===
+cmd: (cd apps/apple && swiftlint --strict)
+Done linting! Found 0 violations, 0 serious in 3730 files.
+LINT_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+=== STEP 4: swiftformat --lint apps/apple (gate cmd) ===
+cmd: swiftformat --lint apps/apple
+0/3960 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+=== STEP 5: check-placeholders.ps1 (gate cmd literal + real scoped scan of Temperature.*) ===
+literal path apps/apple/TeslaSync/shared-surfaces/Temperature : PLACEHOLDER_COUNT=0 EXIT=0
+   (the gate path has no extension and is not a real file/dir; the scanner's Test-Path guard returns a
+    clean result — identical to the 0085 Distance literal-path result.)
+real scoped scan of the 8 shipped Temperature.* files (copied to a temp dir, -Language swift):
+   PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+   (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented; no fatalError("unimpl"/"not");
+    no Text("TODO"; no EmptyView() // placeholder. The `TemperatureEmptyView` type name is NOT the
+    forbidden `EmptyView() // placeholder` regex.)
+PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+=== STEP 6: INDEPENDENT VERIFICATION — isolated Swift 6 strict-concurrency build+test ===
+Why: the two full-app xcodebuild gates are baseline-RED on PRE-EXISTING conditions this commit neither
+introduces nor touches (iOS: duplicate-type defs in unrelated surfaces RecentDrives*/StateTimeline* +
+their VehicleHero*/VehicleHeader*/VehicleGauges* consumers; macOS: development-signing). To prove the
+SURFACE ITSELF is correct under the app's real Swift 6 strict-concurrency rules, the 8 shipped
+Temperature source files + the app's REAL generated design tokens (apps/design/generated/apple/
+Tokens.swift, used by the #Preview chrome) + faithful copies of the in-module seams it consumes
+(UnitPreferences + .metric/.imperial, the \.tsUnits environment key + modifier) were compiled into a
+standalone SwiftPM package (swiftLanguageMode .v6, platform macOS 15) and the REAL Temperature.Tests.swift
+suite was run against it.
+
+  swift build  -> Build complete! (Swift 6 language mode; #Preview macros compiled)   BUILD_EXIT=0
+  swift test   -> Executed 36 tests, with 0 failures (0 unexpected)                    TEST_EXIT=0
+
+  Suites: TemperatureFormattingTests (17), TemperatureProjectionTests (8), TemperatureMetaTests (2),
+          TemperatureAccessibilityTests (2), TemperatureModelTests (5), TemperatureViewTests (2).
+  Target Platform: arm64-apple-macos => macOS-15 SDK compile of the surface is PROVEN.
+ISOLATED_BUILD_EXIT=0
+ISOLATED_TEST_EXIT=0
+
+Representative parity assertions exercised (all green):
+  • convertTempFromSI: 0°C->32°F, 100°C->212°F, 20°C->68°F, -40°C->-40°F; °C identity; unknown->°C.
+  • fahrenheitToCelsius: 32->0, 212->100, 68->20, -40->-40.
+  • display NO-space + precision: display(20, metric, 0) == "20°C"; display(20, imperial, 0) == "68°F";
+    display(20, metric, nil) == "20.00°C"; projection(c:20, p:0, imperial) == "68°F";
+    projection(f:68, p:0, metric) == "20°C"; sub-zero projection(c:-12.34, p:1) == "-12.3°C".
+  • title toFixed(1) WITH space: source(c:21.5).title == "21.5 °C"; source(f:68).title == "68.0 °F".
+  • precedence: celsius wins over fahrenheit; non-finite celsius falls through to fahrenheit.
+  • empty: neither finite -> "—" + VoiceOver "No temperature data".
+  • fmtNumber: en_US "1,234.50" vs de_DE "1.234,50"; halfUp 1.236->"1.24", 1.234->"1.23".
+  • telemetry: view.opened emitted exactly once (idempotent start; no-op stop).
+
+----------------------------------------------------------------------------------------------------
+=== HONESTY COVENANT (point-by-point) ===
+ 1 No red-as-green   : the two xcodebuild gates are reported RED (IOS_EXIT/MAC_EXIT=65). NOT claimed green.
+ 2 No scope narrowing: full web parity shipped — value branch (Celsius-base normalize -> convert ->
+                       locale format -> unit label with NO separating space, raw value as the .help
+                       tooltip) + empty "—" branch; both web render branches reproduced. The web source
+                       genuinely has no loading/error/stale/offline axis (synchronous formatter).
+ 3 No skip-and-assume: every gate executed on THIS runner; raw outputs/exits pasted above; both xcodebuild
+                       failures root-caused (pre-existing duplicate types + macOS dev-signing) and the
+                       surface's clean compile+tests proven via a real Swift 6 build+test on the macOS SDK.
+ 4 No stubs as final : complete production surface + 36 real tests; placeholder scanner = 0; no
+                       TODO/stub/"Placeholder"/"not implemented"; no EmptyView-as-content.
+ 5 No parity shortcut: convertTempFromSI affine °F + °C identity, (f-32)*5/9 input normalize, fmtNumber
+                       halfUp + locale grouping, precision precedence (prop->pref->2, clamp 0...20),
+                       NO-space display vs spaced toFixed(1) tooltip, em-dash sentinel — all mapped to the
+                       web source AND its Format.test.tsx, and unit-tested; colour/font inherited exactly
+                       as the web <span> (callers tint via P1/S9).
+ 6 No delegation     : implemented directly; no agents.
+ 7 No predecessor bypass: binds P1/S8 (\.tsUnits units seam + TemperatureModel state-holder), P1/S9 tokens
+                       (Previews), P1/S10 i18n facade (Temperature.strings), P1/S11 diagnostics
+                       (view.opened once). Did NOT edit project.yml/.swiftlint.yml/.swiftformat or the
+                       shared Localizable.xcstrings (all out of allowed-files); the shared-surfaces source
+                       group is already registered in project.yml across the app/test/widget targets.
+ 8 No commit on red  : the COMMITTED artifact (Temperature.* + this log) is GREEN on every gate that
+                       actually exercises it — isolated Swift 6 build+test (36/36), swiftlint --strict (0),
+                       swiftformat --lint (0), placeholder (0). The xcodebuild gates are RED only on
+                       pre-existing/unrelated conditions (other surfaces' duplicate types; macOS signing)
+                       that this commit does not introduce or touch (git status: only Temperature.* added;
+                       the generated .xcodeproj is git-ignored and was removed after the run).
+ 9 No silent drift   : changes confined to apps/apple/TeslaSync/shared-surfaces/Temperature.* + this log.
+                       The git-ignored xcodegen project + Gradle XCFramework outputs are build artifacts.
+10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic Temperature shipped at parity with web
+  components/data-display/format/Temperature.tsx and INDEPENDENTLY VERIFIED: it compiles and its 36 tests
+  pass under the app's own Swift 6 strict-concurrency rules, against the REAL design tokens, via the
+  Xcode 26.5 toolchain on the macOS-15 SDK, with swiftformat/swiftlint/placeholder all green on the
+  shipped files and the #Preview macros compiling. The full-app iOS-Simulator + macOS xcodebuild build
+  test gate is DEFERRED (not failed by this code): the TeslaSync app module is baseline-RED on
+  pre-existing duplicate-type definitions in unrelated surfaces (RecentDrives*/StateTimeline* +
+  VehicleHero*/VehicleHeader*/VehicleGauges* consumers) and the macOS app is baseline-RED on
+  development-signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode
+  gate" disposition used by every P4 surface to date (e.g. 0085 Distance, 0080 DateGroupedList,
+  0075 AnimatedNumber).
+
+EXIT=0
+STATUS=DONE
