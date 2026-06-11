@@ -10,6 +10,7 @@ import io.teslasync.shared.core.net.ApiError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -390,8 +391,12 @@ class BatteryCellsWidgetTest {
             flow { emissions.forEach { emit(it) } }
         }
 
-    private fun viewModel(vararg emissions: Resource<BatteryCellSummary?>): BatteryCellsWidgetViewModel =
-        BatteryCellsWidgetViewModel(source(*emissions), NoopLogger)
+    // Bind the holder to the test's backgroundScope so its cache-then-network feed collects on the
+    // test scheduler (driven by advanceUntilIdle). Without an explicit scope the holder would fall back
+    // to viewModelScope (Dispatchers.Main), which is never installed in this JVM unit test, so the state
+    // flow would never advance past Loading and the content/empty/error assertions would fail.
+    private fun TestScope.viewModel(vararg emissions: Resource<BatteryCellSummary?>): BatteryCellsWidgetViewModel =
+        BatteryCellsWidgetViewModel(source(*emissions), NoopLogger, backgroundScope)
 
     private class RecordingLogger : Logger {
         val events = mutableListOf<Pair<String, Map<String, String>>>()
