@@ -1,0 +1,31 @@
+/*
+  OfflineBanner.strings
+  TeslaSync — P4 shared surface · 0130 · OfflineBanner (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The first two keys mirror the web source
+  (components/feedback/OfflineBanner.tsx) one-for-one — the "You're offline" title and the
+  "Showing cached data…" reassurance the web `<AlertBanner>` carries — and the rest are the native P4
+  leaf chrome (loading / online / error) and the connectivity-reading freshness axis (offline / stale
+  chips + their VoiceOver labels), kept here so the native port holds no English literals. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("OfflineBanner") so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+*/
+
+/* --- Banner copy (web `OfflineBanner.tsx`) --- */
+"pwa.offline.title" = "You're offline";
+"pwa.offline.banner" = "Showing cached data. New requests will retry when you reconnect.";
+
+/* --- Online / loading / error chrome (P4 leaf contract) --- */
+"pwa.offline.loadingA11y" = "Checking your connection";
+"pwa.offline.online.title" = "You're connected";
+"pwa.offline.online.message" = "You're online and seeing live data. This notice appears only when your connection drops.";
+"pwa.offline.errorTitle" = "Couldn't check your connection";
+"pwa.offline.retry" = "Retry";
+
+/* --- Freshness (P4 connectivity-reading axis) --- */
+"pwa.offline.chip.offline" = "Offline";
+"pwa.offline.chip.stale" = "Stale";
+"pwa.offline.offlineA11y" = "Offline — showing cached data";
+"pwa.offline.staleA11y" = "Connection check is stale — tap to recheck";
+"pwa.offline.staleNote" = "Rechecking your connection.";
