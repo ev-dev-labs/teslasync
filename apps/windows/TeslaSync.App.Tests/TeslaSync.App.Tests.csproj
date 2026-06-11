@@ -18,6 +18,19 @@
     multiple Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); regenerate
     it directly from the WinUI-free sources on disk. Do NOT re-concatenate, and never write a literal
     build-item or project start tag inside this comment.
+    TeslaSync.App.Tests - WinUI-free logic test project (ADR-012).
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted,
+    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk
+    under feature-views/ and dashboard-widgets/ (the bare WinUI view files are excluded). The matching test
+    classes live under this project and are picked up by the SDK default-compile glob. The Content links copy
+    the units-golden, Package.appxmanifest and widget-template fixtures the packaging / units-golden / widget
+    tests read out of the test output directory. This file carries the .gitattributes "merge=union" strategy,
+    so a chain of integration merges had repeatedly re-concatenated it into multiple Project roots plus
+    duplicate Compile items, failing XML load (MSB4025 / MSB4067). Re-consolidated for P2 feature-views/0300
+    VehicleConfigSection into this single canonical root, regenerated directly from the WinUI-free sources on
+    disk (plus the new VehicleConfigSection.Model link). Do NOT re-concatenate into multiple roots, and never
+    write a literal build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -405,6 +418,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\BatteryHealthSection.Model.cs" Link="FeatureViews\BatteryHealthSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryLevelChart.Model.cs" Link="FeatureViews\BatteryLevelChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryPill\BatteryPill.Model.cs" Link="FeatureViews\BatteryPill\BatteryPill.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryRangeCharts\BatteryRangeCharts.Model.cs" Link="FeatureViews\BatteryRangeCharts\BatteryRangeCharts.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryRangeCharts\BatteryRangeCharts.Source.cs" Link="FeatureViews\BatteryRangeCharts\BatteryRangeCharts.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BatteryRangeCharts\BatteryRangeCharts.ViewModel.cs" Link="FeatureViews\BatteryRangeCharts\BatteryRangeCharts.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryRangePanel\BatteryRangePanel.Model.cs" Link="FeatureViews\BatteryRangePanel\BatteryRangePanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryRangePanel\BatteryRangePanel.Source.cs" Link="FeatureViews\BatteryRangePanel\BatteryRangePanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryRangePanel\BatteryRangePanel.ViewModel.cs" Link="FeatureViews\BatteryRangePanel\BatteryRangePanel.ViewModel.cs" />
@@ -854,6 +870,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.Model.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.ViewModel.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleConfigSection\VehicleConfigSection.Model.cs" Link="FeatureViews\VehicleConfigSection\VehicleConfigSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.Model.cs" Link="FeatureViews\VehicleHero\VehicleHero.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.Source.cs" Link="FeatureViews\VehicleHero\VehicleHero.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.ViewModel.cs" Link="FeatureViews\VehicleHero\VehicleHero.ViewModel.cs" />
