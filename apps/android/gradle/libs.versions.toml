@@ -68,6 +68,10 @@ androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtim
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "androidxLifecycle" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
+# Lifecycle Process — ProcessLifecycleOwner for the app-wide foreground/background signal that gates the
+# live SSE stream (P3/A6, ADR-009). Same androidxLifecycle pin; its androidx.startup initializer registers
+# the owner before Application.onCreate, so ProcessLifecycleOwner.get() is safe there.
+androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "androidxLifecycle" }
 # Compose — versions come from the BOM (declared without version.ref).
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 compose-ui = { module = "androidx.compose.ui:ui" }
