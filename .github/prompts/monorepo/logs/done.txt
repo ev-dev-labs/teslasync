@@ -285,3 +285,4 @@ p3-android/feature-views/A-0035-XRayHeader.prompt.md
 p3-android/feature-views/A-0036-LiveSignalsTable.prompt.md
 p3-android/feature-views/A-0041-ResponseViewer.prompt.md
 p3-android/feature-views/A-0037-QueueStatusPanel.prompt.md
+p3-android/feature-views/A-0043-EventTimeline.prompt.md
