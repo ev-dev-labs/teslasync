@@ -1,0 +1,42 @@
+/*
+  LiveStateIndicators.strings
+  TeslaSync — P4 feature view · 0292 · LiveStateIndicators (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `LiveStateIndicators` resolves (table "LiveStateIndicators") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  The first group is the chip copy the web source renders through `t(key, default)`
+  (the source passes the same `common.*` keys + English defaults to react-i18next; the
+  native port routes every one through the facade so the Swift sources hold no English
+  prose). The second group backs the native chrome (the P4 leaf freshness / loading /
+  error copy + the surface accessibility label). The locale-formatted speed value and
+  the unit symbols (km/h, mph) are SI/scale literals carried in code, not translated
+  strings.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"common.speed" = "Speed";
+"common.locked" = "Locked";
+"common.unlocked" = "Unlocked";
+"common.sentry" = "Sentry";
+"common.active" = "Active";
+"common.off" = "Off";
+"common.climate" = "Climate";
+"common.on" = "On";
+"common.charging" = "Charging";
+"common.notCharging" = "Not Charging";
+
+/* --- Native chrome: P4 leaf freshness / loading / error / a11y --- */
+"liveState.live" = "Live";
+"liveState.stale" = "Stale";
+"liveState.offline" = "Offline";
+"liveState.staleBanner" = "Reconnecting — data may be stale";
+"liveState.offlineBanner" = "Showing last known data";
+"liveState.loadingA11y" = "Loading live state";
+"liveState.noData" = "No live state available";
+"liveState.errorTitle" = "Couldn't load live state";
+"liveState.retry" = "Retry";
+"liveState.a11yLabel" = "Live state indicators";
