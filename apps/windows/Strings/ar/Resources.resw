@@ -23787,4 +23787,21 @@
   <data name="translation.telemetry.signalSparkline.stale" xml:space="preserve">
     <value>Stale</value>
   </data>
-</root>
+  <data name="translation.common.connecting" xml:space="preserve">
+    <value>Connecting</value>
+  </data>
+  <data name="translation.common.live" xml:space="preserve">
+    <value>Live</value>
+  </data>
+  <data name="translation.common.stale" xml:space="preserve">
+    <value>Stale</value>
+  </data>
+  <data name="translation.telemetry.liveError" xml:space="preserve">
+    <value>Couldn't load live telemetry</value>
+  </data>
+  <data name="translation.telemetry.noLiveData" xml:space="preserve">
+    <value>No live telemetry available</value>
+  </data>
+  <data name="translation.telemetry.vehicleState" xml:space="preserve">
+    <value>Vehicle State</value>
+  </data></root>
