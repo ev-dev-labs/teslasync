@@ -275,3 +275,4 @@ p3-android/feature-views/A-0024-UuidGenerator.prompt.md
 p3-android/feature-views/A-0028-StatusHeader.prompt.md
 p3-android/feature-views/A-0031-FlagsTable.prompt.md
 p3-android/feature-views/A-0027-EntriesTable.prompt.md
+p3-android/feature-views/A-0030-ChangesPanel.prompt.md
