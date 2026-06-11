@@ -247,3 +247,4 @@ p3-android/dashboard-widgets/A-0110-VehicleUpgradesWidget.prompt.md
 p3-android/dashboard-widgets/A-0114-WatchSummaryWidget.prompt.md
 p3-android/dashboard-widgets/A-0111-VersionInfoWidget.prompt.md
 p3-android/dashboard-widgets/A-0116-WeeklyDigestWidget.prompt.md
+p3-android/dashboard-widgets/A-0113-WarrantyStatusWidget.prompt.md
