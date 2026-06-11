@@ -132,3 +132,4 @@ p3-android/A2-0001-ui-components.prompt.md
 p3-android/A2-0002-chart-components.prompt.md
 p3-android/A2-0003-data-display-components.prompt.md
 p3-android/A2-0004-feedback-forms-components.prompt.md
+p3-android/A2-0005-maps-motion-components.prompt.md
