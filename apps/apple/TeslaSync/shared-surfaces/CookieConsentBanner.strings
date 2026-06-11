@@ -1,0 +1,42 @@
+/*
+  CookieConsentBanner.strings
+  TeslaSync — P4 shared surface · 0115 · CookieConsentBanner (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The keys mirror the web source
+  (components/feedback/CookieConsentBanner.tsx) one-for-one — the title, the GDPR body, the
+  Manage / Hide disclosure, the two informed-consent categories + the "Always on" badge, and the two
+  actions — plus the native P4 leaf chrome (the freshness status chip + retry, the disclosure
+  accessibility value) so the Swift sources hold no English literals. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a per-surface table
+  ("CookieConsentBanner") so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+*/
+
+/* --- Banner header (web `consent.banner.title` / `consent.banner.body`) --- */
+"consent.banner.title" = "Cookies & analytics";
+"consent.banner.body" = "TeslaSync uses strictly necessary storage to keep you signed in and to remember your preferences. With your consent, we also collect anonymous performance and error reports to improve the app. You can change your mind any time in Settings → Privacy.";
+
+/* --- Disclosure toggle (web `consent.banner.manage` / `consent.banner.hideDetails`) --- */
+"consent.banner.manage" = "Manage preferences";
+"consent.banner.hideDetails" = "Hide details";
+
+/* --- Informed-consent categories (web details `<li>`s) --- */
+"consent.category.essential.title" = "Strictly necessary";
+"consent.category.essential.body" = "Authentication, session, theme, and saved drafts. Required for the app to work and exempt from consent under the ePrivacy directive.";
+"consent.category.alwaysOn" = "Always on";
+"consent.category.analytics.title" = "Performance & error reporting";
+"consent.category.analytics.body" = "Anonymous Core Web Vitals (page-load timings) and uncaught error reports sent to this TeslaSync instance to help operators diagnose issues. No third parties involved.";
+
+/* --- Actions (web `consent.banner.accept` / `consent.banner.decline`) --- */
+"consent.banner.accept" = "Accept all";
+"consent.banner.decline" = "Decline non-essential";
+
+/* --- Disclosure accessibility value (web `aria-expanded`) --- */
+"consent.disclosure.expanded" = "Expanded";
+"consent.disclosure.collapsed" = "Collapsed";
+
+/* --- P4 freshness status chip (offline / error / stale + retry) --- */
+"consent.status.offline" = "Offline — showing the last known consent policy";
+"consent.status.error" = "Couldn't check the deployment's consent policy";
+"consent.status.stale" = "Refreshing the consent policy…";
+"consent.status.retry" = "Retry";
