@@ -466,3 +466,4 @@ p2-windows/feature-views/W-0253-SLOTrackingCard.prompt.md
 p2-windows/feature-views/W-0255-SubscribeCard.prompt.md
 p2-windows/feature-views/W-0257-TeslaApiUsageCard.prompt.md
 p2-windows/feature-views/W-0256-TelemetryPipelineCard.prompt.md
+p2-windows/feature-views/W-0267-SignalCompareControls.prompt.md
