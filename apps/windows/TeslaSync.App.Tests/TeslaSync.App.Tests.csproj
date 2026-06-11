@@ -93,30 +93,20 @@
     tests read out of the test output directory.
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each
+    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
+    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so
+    each surface's WinUI-free (Microsoft.UI-free) sources are Compile-linked into the single Compile item
+    group below (the Link mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces,
+    ModalsDialogs or SharedSurfaces); the bare WinUI view files are excluded and exercised by the app build.
+    The matching test classes live under this project and are picked up by the SDK default-compile glob. The
+    Content links copy the units-golden, manifest and widget-template fixtures the tests read from the output.
+
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal-sorted,
     Include-deduplicated Compile item group - the union of every WinUI-free (Microsoft.UI-free) .cs on disk
     under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare
-    WinUI view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
-    integration merges can re-concatenate it into multiple Project roots plus duplicate Compile items,
-    failing XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk.
-    Re-consolidated for P2 shared-surfaces/0051 AISuggestNewGeofences into this single canonical root (plus
-    the new AISuggestNewGeofences Model / Source / ViewModel links). Do NOT re-concatenate into multiple
-    shared-surfaces/0056 AITripPostcardShareCardImageGeneration into this single canonical root (plus the new
-    AITripPostcardShareCardImageGeneration Model / Source / ViewModel links). Do NOT re-concatenate into multiple
-    roots, and never write a literal build-item or project start tag inside this comment.
-    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal path-sorted, Include-deduplicated
-    Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk under dashboard-widgets/,
-    feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI view files are excluded).
-    This file carries the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate
-    it into multiple Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); regenerate
-    it directly from the WinUI-free sources on disk. Re-consolidated for P2 shared-surfaces/0060
-    AIWatchFaceNLResponse into this single canonical root (plus the new AIWatchFaceNLResponse Model / Source /
-    ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal build-item or project
-    start tag inside this comment.
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk under
-    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI
-    view files are excluded). This file is marked merge=union, so a chain of integration merges can
+    WinUI view files are excluded). This file is marked merge=union, so a chain of integration merges can
     re-concatenate it into multiple Project roots plus duplicate Compile items, failing XML load (MSB4025 /
     MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk. Do NOT
     re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this
@@ -173,6 +163,10 @@
     Source / ViewModel links).
     Re-consolidated for P2 shared-surfaces/0073 SmallMultiplesChart into this single canonical root. Do NOT
     re-concatenate into multiple roots, and never write a literal build-item or project start tag here.
+    MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk. Re-consolidated
+    for P2 shared-surfaces/0070 ChartTooltip into this single canonical root (plus the new ChartTooltip
+    Model / Source / ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal
+    build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -2549,6 +2543,15 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.Model.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.Source.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.ViewModel.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Model.cs" Link="SharedSurfaces\AnnouncerRegion.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Model.cs" Link="SharedSurfaces\ChartTooltip.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Source.cs" Link="SharedSurfaces\ChartTooltip.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.ViewModel.cs" Link="SharedSurfaces\ChartTooltip.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SmallMultiplesChart.Model.cs" Link="SharedSurfaces\SmallMultiplesChart.Model.cs" />
