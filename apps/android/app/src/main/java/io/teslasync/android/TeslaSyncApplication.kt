@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.ProcessLifecycleOwner
 import io.teslasync.android.auth.AuthContainer
 import io.teslasync.android.data.live.AppLifecycleSseBinder
+import io.teslasync.android.settings.SettingsPageHost
+import io.teslasync.android.shortcuts.ShortcutPublisher
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -32,5 +34,15 @@ class TeslaSyncApplication : Application() {
         // (not lazily) so registration follows auth even when the process is started by an FCM
         // delivery rather than by the user opening the app.
         container.push.start()
+
+        // Device-local settings (P3/A8): load the persisted theme/language/diagnostics preferences so
+        // the app root applies them on first composition and the diagnostics consent (ADR-016) is honored.
+        container.appSettings.start()
+
+        // Register the native settings screen for the /settings route and publish the launcher
+        // shortcuts (P3/A8). Both are idempotent; publishing on every start keeps the shortcut set
+        // fresh (e.g. after a per-app language change re-localizes the labels).
+        SettingsPageHost.register()
+        ShortcutPublisher(this).publish()
     }
 }
