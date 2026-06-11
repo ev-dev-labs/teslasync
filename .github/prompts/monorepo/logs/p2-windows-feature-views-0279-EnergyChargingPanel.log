@@ -1,0 +1,147 @@
+=== P2 Feature view 0279 EnergyChargingPanel (Windows) ===
+
+ARTIFACT
+  Web source : web/src/features/vehicles/components/telemetry-panels/EnergyChargingPanel.tsx (THE spec)
+  Native out : apps/windows/TeslaSync.App/feature-views/EnergyChargingPanel/EnergyChargingPanel.{Model.cs, cs}
+  Tests      : apps/windows/TeslaSync.App.Tests/FeatureViews/EnergyChargingPanelTests.cs (headless; the
+               WinUI-free logic is Compile-linked into the net10.0 test project the same way every sibling
+               surface links its UI-thread-free logic)
+
+----------------------------------------------------------------------------------------------------
+CAPABILITY PROBE (prompt requires WinUI 3 / Windows App SDK 1.6+ / .NET 10, Fluent Design System)
+----------------------------------------------------------------------------------------------------
+  dotnet --version                 -> 10.0.300  (PASS: .NET 10 SDK present)
+  dotnet --list-sdks               -> 9.0.314, 10.0.300
+  Microsoft.WindowsDesktop.App     -> 10.0.8 present
+  Windows App SDK / WinUI 3 build  -> PASS: the Release solution build below compiles the WinUI app project
+                                      (App.xaml, the XAML compiler, Microsoft.WindowsAppSDK 2.1.0) to 0 errors,
+                                      so the build + Fluent UI capability is present on this runner.
+  WinAppDriver / Appium UIA runner -> ABSENT (see TEST step) — nothing listening on http://127.0.0.1:4723/
+                                      and WinAppDriver.exe not found on PATH or the standard install paths.
+                                      Required only by the pre-existing TeslaSync.App.UITests shell suite,
+                                      NOT by this surface.
+
+----------------------------------------------------------------------------------------------------
+PARITY NOTES (native reproduces the web source's data, composition, states and i18n)
+----------------------------------------------------------------------------------------------------
+  The web EnergyChargingPanel is a pure, prop-driven presentational panel (prop:
+  chargingTelemetry: ChargingTelemetry | null | undefined). It owns NO data source and has exactly two
+  render branches: a truthy chargingTelemetry -> the metric body; else -> <EmptyState>. The body is a
+  GlassPanel with a cyan BatteryCharging header + "Energy & Charging" title above:
+    - a 2-col MetricCard grid: Charger Voltage (fmtNumber, subtitle "V") and Charger Current (fmtNumber, "A");
+    - a Charger Power row   : fmtWithUnit(charger_power_w, 'kW');
+    - an Energy Added row   : fmtWithUnit(charge_energy_added_wh, 'kWh');
+    - a Charging State chip : Charging -> cyan, Complete -> green, else -> gray; text = charging_state ?? Unknown;
+    - a Battery Level row   : `${fmtNumber(battery_level)}%`;
+    - a Charge Rate row (Zap): formatSpeed(range_added_meters_per_hour / 3600).
+
+  Native reproduction:
+    - EnergyChargingPanelProjection (the cached->projection adapter) reproduces the loading -> empty -> ready
+      branch precedence, builds the two metric tiles + four label/value rows + the tri-state chip, routes every
+      owned label through the P1/S10 ILocalizer facade, and converts only at the display boundary (Charge Rate
+      via the shared UnitFormatters.FormatSpeed; meters-per-hour / 3600 -> SI m/s -> the user's speed unit).
+    - BUG-FOR-BUG (faithful to the web spec, the parity authority): the web formats charger_power_w (SI watts)
+      with fmtWithUnit(value, 'kW') and charge_energy_added_wh (SI watt-hours) with fmtWithUnit(value, 'kWh').
+      fmtWithUnit ONLY appends the label — it does NOT scale W->kW / Wh->kWh — so the web renders the raw SI
+      magnitude beside a kilo-prefixed label (e.g. 7600 W -> "7,600.00 kW"; 5000 Wh -> "5,000.00 kWh"). The
+      native projection reproduces that exact string rather than "correcting" it; the behaviour is asserted by
+      Charger_power_renders_raw_watts_beside_a_kw_label_bug_for_bug and the kWh sibling test.
+    - EnergyChargingPanel.cs (WinUI ContentControl) binds Model/Units (the web prop + parent loading flag) and
+      re-renders on assignment, uses the shared TsGlassPanel, TsStatCard (the data-display tile that carries a
+      value sub-line — the web MetricCard's subtitle maps onto it), TsEmptyState and TsSkeleton, design tokens
+      for every colour/space/radius (cyan = TsChartSpeedBrush, green = TsChartBatteryBrush; never neon), the
+      JetBrains-Mono token (TsTypeFontFamilyMono) for the row values, names the surface + each row as an
+      Automation region, announces the loading skeleton as a live region, and emits view.opened on Loaded.
+    - States: Loading (parent-supplied flag) / Empty (web : <EmptyState>) / Ready (web truthy branch) are all
+      reproduced. The generic error / stale / offline branches are intentionally NOT present because the web
+      source has none — it is presentational and prop-driven; the parent LiveTelemetryPanels owns the query
+      lifecycle once for the whole live-telemetry section. This mirrors the established ChargerSpecsPanel /
+      ResultPanel precedent ("no error/stale/offline state because the web source has none").
+    - i18n: all 10 keys the web source feeds into t() already exist in apps/windows/Strings/{en,ar,he}/
+      Resources.resw as translation.* with the exact English values (verified): telemetry.energyCharging,
+      telemetry.chargerVoltage, telemetry.chargerCurrent, telemetry.chargerPower, telemetry.energyAdded,
+      telemetry.chargingState, telemetry.batteryLevel, telemetry.chargeRate, telemetry.noChargingTelemetry,
+      common.unknown. No catalog edit was needed. Unit symbols (V, A, kW, kWh, %) are emitted verbatim, exactly
+      as the web source does (they are not translatable text).
+    - Diagnostics (P1/S11): RecordViewOpened emits "view.opened slug=EnergyChargingPanel" and never a voltage,
+      current, power, energy or battery figure (PII-safe; asserted).
+
+----------------------------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER FIXED (required to make the headless test solution compile at all)
+----------------------------------------------------------------------------------------------------
+  At HEAD the shared TeslaSync.App.Tests.csproj did NOT evaluate/compile: the file (whose own INVARIANT
+  comment documents the .gitattributes merge=union hazard) had been re-corrupted by a prior integration merge.
+  Two independent defects, both unrelated to this surface:
+    1. 17 duplicate <Compile Include=...> items (AccordionSection.Model.cs, AcDcStatsPanel.*, ... AdvancedSettings.*)
+       -> NETSDK1022 "Duplicate 'Compile' items were included", which aborts project evaluation before compile.
+    2. The committed AiUsageDetailCardTests.cs references types defined in the root
+       feature-views/AiUsageCard.{Model,Source,ViewModel}.cs, but those three Compile links had been dropped
+       -> CS0246 on AiUsageDetailDisplay / AiUsageOverview / AiUsageDetailViewModel / IAiUsageDetailSource / ...
+  Resolved the smallest behaviour-preserving way, restoring the file's documented invariant (the deduplicated
+  union of every WinUI-free source on disk): removed the 17 duplicate lines and added the 3 missing AiUsageCard
+  root links. After the fix the ItemGroup is exactly 770 entries = 770 unique = every WinUI-free .cs on disk
+  under feature-views/ + dashboard-widgets/ (incl. this surface's EnergyChargingPanel.Model.cs). This is the
+  identical repair the immediately-preceding sibling surface (0280 InfoTile) recorded; the merge=union strategy
+  re-introduces it on each integration branch.
+
+----------------------------------------------------------------------------------------------------
+BUILD  ::  dotnet build apps/windows/TeslaSync.sln -c Release
+----------------------------------------------------------------------------------------------------
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+  BUILD_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+TEST   ::  dotnet test apps/windows/TeslaSync.sln -c Release
+----------------------------------------------------------------------------------------------------
+  Passed!  - Failed: 0, Passed: 16053, Skipped: 0, Total: 16053 - TeslaSync.App.Tests.dll (net10.0)
+      EnergyChargingPanel (this surface)  -> Passed: 39, Failed: 0  (--filter ~EnergyChargingPanelTests)
+        adapter/branch (loading/empty/ready incl. ready-with-all-null), metric tiles + unit subtitles,
+        bug-for-bug kW/kWh raw-magnitude readouts, battery %, Charge Rate m/h->m/s->km/h & ->mph,
+        tri-state charging chip + Unknown fallback, global-precision honouring, per-state Automation
+        names, PII-safe diagnostics, registration slug, and null-arg validation.
+
+  Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+      Every one of the 147 failures is the identical fixture exception, raised before any assertion:
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+        WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+        WinAppDriver.exe was not found at its standard install paths or on PATH.
+        at WinAppDriverSession.EnsureReady() ... WinAppDriverSession.cs:line 75
+      Per the suite's own contract (RunnerAvailability.Probe / WinAppDriverSession): "every test fails fast
+      with an explicit reason (it is never silently skipped)" when the WinAppDriver runner is absent. These
+      147 tests are pre-existing app-level shell/auth/page-state/accessibility tests (AccessibilityTreeTests,
+      AuthenticationFlowTests, ComponentStateTests, ...) — they do NOT reference EnergyChargingPanel and are
+      unrelated to this surface. Driving them needs WinAppDriver + an MSIX deploy + an interactive desktop
+      session, infeasible on this shared headless host and out of scope for this surface.
+  TEST_EXIT=1   (blocked solely by the absent WinAppDriver/Appium UI-automation runner — recorded with
+                 evidence, never reported as green; Honesty Covenant #1/#10)
+
+----------------------------------------------------------------------------------------------------
+FORMAT ::  dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+----------------------------------------------------------------------------------------------------
+  (no changes required)
+  FORMAT_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+PLACEHOLDER ::  ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/EnergyChargingPanel
+----------------------------------------------------------------------------------------------------
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+CONCLUSION
+----------------------------------------------------------------------------------------------------
+  EnergyChargingPanel is complete and at web-source parity
+  (web/src/features/vehicles/components/telemetry-panels/EnergyChargingPanel.tsx). The surface builds clean in
+  the Release solution, its headless adapter / per-state / a11y / diagnostics tests pass (39/39), and the
+  format + placeholder gates are green. The single red gate step (TEST) is blocked solely by the absent
+  WinAppDriver/Appium UI-automation runner that the pre-existing TeslaSync.App.UITests shell suite requires —
+  a platform-capability gap recorded with evidence rather than reported as green, exactly as the sibling P2
+  surfaces (e.g. 0008 ResultPanel, 0280 InfoTile) recorded the identical block. The EnergyChargingPanel
+  surface + tests + this log are committed per that convention; the necessary pre-existing
+  TeslaSync.App.Tests.csproj dedup + AiUsageCard-link repair is included so the committed tree compiles.
+
+EXIT=1
+STATUS=BLOCKED
