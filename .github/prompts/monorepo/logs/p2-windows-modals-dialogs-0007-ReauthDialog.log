@@ -1,0 +1,44 @@
+=== P2 Modal / dialog 0007 ReauthDialog (Windows) ===
+
+Capability: WinUI 3 (Microsoft.WindowsAppSDK 2.1.3) + .NET 10 (SDK 10.0.300) PRESENT on runner;
+  full Release build of apps/windows/TeslaSync.sln succeeds (see BUILD below) => not BLOCKED.
+Predecessor fix (required to unblock the shared gate): TeslaSync.App.Tests.csproj had been
+  corrupted by its documented merge=union strategy into multiple <Project> roots (MSB4025).
+  Regenerated to ONE root; Compile items = Include-deduplicated union (836) == the WinUI-free
+  (.cs without Microsoft.UI) sources on disk, plus the 3 new ReauthDialog WinUI-free files.
+Test step runs the headless unit suite (Category!=UIAutomation): the TeslaSync.App.UITests suite
+  requires environment-provided WinAppDriver + a deployed MSIX (absent on this runner) and is, by
+  the repo's own W9-0002 design (apps/windows/TeslaSync.App.UITests/*.csproj), run independently.
+
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-07\apps\windows\Generated\bin\Debug\net10.0\Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:02:10.75
+BUILD_EXIT=0
+Test run for D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed: 17292, Skipped:     0, Total: 17292, Duration: 12 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+All gate steps returned 0 (BUILD/TEST/FORMAT/PLACEHOLDER). Headless unit suite: 17292 passed, 0 failed (incl. 42 ReauthDialog tests).
+EXIT=0
+STATUS=DONE

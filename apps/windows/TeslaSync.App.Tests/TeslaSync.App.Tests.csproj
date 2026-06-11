@@ -1005,6 +1005,17 @@
     INVARIANT: keep this file as exactly ONE Project root with a single, Include-deduplicated Compile
     ItemGroup — the union of every WinUI-free (Microsoft.UI-free) .cs on disk under feature-views/,
     dashboard-widgets/ and misc-surfaces/ (the bare WinUI view files, and the WinUI-referencing
+    feature-view, dashboard-widget, misc-surface and modal-dialog. The WinUI app (TeslaSync.App) targets a
+    WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free
+    sources are Compile-linked into the single ItemGroup below (the Link mirrors each source's real location
+    under FeatureViews\, Widgets\, MiscSurfaces\ or ModalsDialogs\); the WinUI view files themselves are exercised by the app
+    build. The matching test classes live under this project and are picked up by the SDK default-compile
+    glob. The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures the
+    tests read out of the test output directory.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, Include-deduplicated Compile
+    ItemGroup — the union of every WinUI-free (Microsoft.UI-free) .cs on disk under feature-views/,
+    dashboard-widgets/, misc-surfaces/ and modals-dialogs/ (the bare WinUI view files, and the WinUI-referencing
     ResponseViewer.Snippet.cs, are excluded). This file carries the .gitattributes merge=union strategy, so
     a chain of integration merges can re-concatenate it into multiple Project roots plus duplicate Compile
     items, failing XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk.
@@ -1598,6 +1609,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/ and modals-dialogs/); the WinUI view files themselves are exercised by the app build. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -2443,6 +2455,13 @@
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Model.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Source.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.ViewModel.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.Model.cs" Link="FeatureViews\VehicleCard\VehicleCard.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.Source.cs" Link="FeatureViews\VehicleCard\VehicleCard.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.ViewModel.cs" Link="FeatureViews\VehicleCard\VehicleCard.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleConfigSection\VehicleConfigSection.Model.cs" Link="FeatureViews\VehicleConfigSection\VehicleConfigSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Model.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Source.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.ViewModel.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHeader\VehicleHeader.Model.cs" Link="FeatureViews\VehicleHeader\VehicleHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHeader\VehicleHeader.Source.cs" Link="FeatureViews\VehicleHeader\VehicleHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHeader\VehicleHeader.ViewModel.cs" Link="FeatureViews\VehicleHeader\VehicleHeader.ViewModel.cs" />
@@ -2483,8 +2502,10 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Model.cs" Link="ModalsDialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Source.cs" Link="ModalsDialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.ViewModel.cs" Link="ModalsDialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ReauthDialog.Model.cs" Link="ModalsDialogs\ReauthDialog.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ReauthDialog.Source.cs" Link="ModalsDialogs\ReauthDialog.Source.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ReauthDialog.ViewModel.cs" Link="ModalsDialogs\ReauthDialog.ViewModel.cs" />
   </ItemGroup>
-
 </Project>
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Model.cs" Link="MiscSurfaces\selectedVehicle.Model.cs" />
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Source.cs" Link="MiscSurfaces\selectedVehicle.Source.cs" />
