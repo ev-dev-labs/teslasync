@@ -1,0 +1,81 @@
+/*
+  PollingEngine.strings
+  TeslaSync — P4 shared surface · 0098 · PollingEngine (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The keys mirror the web source
+  (web/src/components/data-display/PollingEngine.tsx): the `t(...)` keys are reproduced verbatim
+  (`polling.pollsSaved`, `polling.savedAmount`, `polling.pollsMade`, `polling.creditLeft`,
+  `polling.fleetTelemetry`, `polling.idleDetection`, `polling.prediction`, `polling.sleep`), and the
+  strings the web hardcoded (the title, the "Active" badge, the section heading, the row detail
+  labels, the prediction lines, the empty message) plus the native P4 leaf chrome (loading /
+  error / retry / freshness / banners) are added so the Swift sources hold no English literals. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("PollingEngine") so each parallel surface prompt owns its own strings.
+*/
+
+/* --- Header (web title + "Active" badge) --- */
+"polling.title" = "Adaptive Polling Engine";
+"polling.active" = "Active";
+
+/* --- Savings card metrics (web `t(...)` keys, verbatim) --- */
+"polling.pollsSaved" = "Polls Saved";
+"polling.savedAmount" = "$ Saved";
+"polling.pollsMade" = "Polls Made";
+"polling.creditLeft" = "Credit Left";
+
+/* --- Savings breakdown categories (web `t(...)` keys, verbatim) --- */
+"polling.fleetTelemetry" = "Fleet Telemetry";
+"polling.idleDetection" = "Idle Detection";
+"polling.prediction" = "Prediction";
+"polling.sleep" = "Sleep";
+
+/* --- Vehicle activity list (web hardcoded → localized) --- */
+"polling.vehicleActivity" = "Vehicle Activity";
+"polling.empty" = "No vehicles tracked yet. Polling engine will activate on first poll.";
+"polling.nextLabel" = "Next:";
+
+/* --- Expanded vehicle detail (web hardcoded → localized) --- */
+"polling.intervalLabel" = "Interval:";
+"polling.consecIdleLabel" = "Consecutive idle:";
+"polling.batteryLabel" = "Battery:";
+"polling.predictionSummary" = "Prediction: %1$@ in %2$@ (%3$d%% conf)";
+"polling.basedOn" = "Based on: %@";
+
+/* --- Duration formatting (web `formatDuration`) --- */
+"polling.now" = "now";
+"polling.durationSeconds" = "%ds";
+"polling.durationMinutes" = "%dm";
+"polling.durationHoursMinutes" = "%1$dh %2$dm";
+
+/* --- Activity words (web prints the raw activity token in the chip) --- */
+"polling.activity.active" = "active";
+"polling.activity.critical" = "critical";
+"polling.activity.moderate" = "moderate";
+"polling.activity.low" = "low";
+"polling.activity.idle" = "idle";
+"polling.activity.sleeping" = "sleeping";
+
+/* --- Profile labels (web `profileLabel`) --- */
+"polling.profile.driving" = "Driving";
+"polling.profile.charging" = "Charging";
+"polling.profile.idle" = "Idle";
+"polling.profile.sleeping" = "Sleeping";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"polling.live" = "Live";
+"polling.stale" = "Stale";
+"polling.offline" = "Offline";
+"polling.refresh" = "Refresh";
+"polling.staleBanner" = "Reconnecting — polling data may be stale";
+"polling.offlineBanner" = "Offline — showing the last known polling state";
+
+/* --- Loading chrome (native P4 leaf state) --- */
+"polling.loadingA11y" = "Loading polling engine";
+
+/* --- Error chrome (native P4 leaf state — status read failed) --- */
+"polling.errorTitle" = "Couldn't load polling status";
+"polling.retry" = "Retry";
+
+/* --- Row expand / collapse hints (VoiceOver) --- */
+"polling.expandHint" = "Expand details";
+"polling.collapseHint" = "Collapse details";
