@@ -1215,6 +1215,15 @@
     merges can re-concatenate it into multiple Project roots plus duplicate Compile items, failing XML load
     (MSB4025 / MSB4067). Regenerated for P2 shared-surfaces/0046 AISignalExplorerNlFilter from the WinUI-free
     sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal path-sorted, Include-deduplicated
+    Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk under dashboard-widgets/,
+    feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI view files are excluded).
+    This file carries the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate
+    it into multiple Project roots plus duplicate Compile items and orphaned comment prose, failing XML load
+    (MSB4025 / MSB4067). Re-consolidated for P2 shared-surfaces/0058 AIVehiclePaintPreview into this single
+    canonical root from the WinUI-free sources on disk (plus the new AIVehiclePaintPreview Model / Source /
+    ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal build-item or project
     start tag inside this comment.
   -->
 
@@ -1269,6 +1278,10 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the WinUI view files themselves are exercised by the app build. Re-consolidated for P2 shared-surfaces/0020 AIGeofenceAwareAutomationSuggestions into this single canonical root from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal-sorted, Include-deduplicated union under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0046 AISignalExplorerNlFilter. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated
+       union of every Microsoft.UI-free Model/Source/ViewModel source on disk under dashboard-widgets/,
+       feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are
+       exercised by the app build, and the test classes are picked up by the SDK default-compile glob. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -2188,6 +2201,12 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AINLGrafanaPanel.Model.cs" Link="SharedSurfaces\AINLGrafanaPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AINLGrafanaPanel.Source.cs" Link="SharedSurfaces\AINLGrafanaPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AINLGrafanaPanel.ViewModel.cs" Link="SharedSurfaces\AINLGrafanaPanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIRAGHelp.Model.cs" Link="SharedSurfaces\AIRAGHelp.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIRAGHelp.Source.cs" Link="SharedSurfaces\AIRAGHelp.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIRAGHelp.ViewModel.cs" Link="SharedSurfaces\AIRAGHelp.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIRouteEfficiencySuggestions.Model.cs" Link="SharedSurfaces\AIRouteEfficiencySuggestions.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIRouteEfficiencySuggestions.Source.cs" Link="SharedSurfaces\AIRouteEfficiencySuggestions.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIRouteEfficiencySuggestions.ViewModel.cs" Link="SharedSurfaces\AIRouteEfficiencySuggestions.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AISafetySettingExplainer.Model.cs" Link="SharedSurfaces\AISafetySettingExplainer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AISafetySettingExplainer.Source.cs" Link="SharedSurfaces\AISafetySettingExplainer.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AISafetySettingExplainer.ViewModel.cs" Link="SharedSurfaces\AISafetySettingExplainer.ViewModel.cs" />
@@ -2197,6 +2216,15 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AISpeedProfileInsights.Model.cs" Link="SharedSurfaces\AISpeedProfileInsights.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AISpeedProfileInsights.Source.cs" Link="SharedSurfaces\AISpeedProfileInsights.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AISpeedProfileInsights.ViewModel.cs" Link="SharedSurfaces\AISpeedProfileInsights.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISignalExplorerNlFilter.Model.cs" Link="SharedSurfaces\AISignalExplorerNlFilter.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISignalExplorerNlFilter.Source.cs" Link="SharedSurfaces\AISignalExplorerNlFilter.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISignalExplorerNlFilter.ViewModel.cs" Link="SharedSurfaces\AISignalExplorerNlFilter.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISmartChargeScheduleSuggestion.Model.cs" Link="SharedSurfaces\AISmartChargeScheduleSuggestion.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISmartChargeScheduleSuggestion.Source.cs" Link="SharedSurfaces\AISmartChargeScheduleSuggestion.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISmartChargeScheduleSuggestion.ViewModel.cs" Link="SharedSurfaces\AISmartChargeScheduleSuggestion.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVehiclePaintPreview.Model.cs" Link="SharedSurfaces\AIVehiclePaintPreview.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVehiclePaintPreview.Source.cs" Link="SharedSurfaces\AIVehiclePaintPreview.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVehiclePaintPreview.ViewModel.cs" Link="SharedSurfaces\AIVehiclePaintPreview.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Model.cs" Link="SharedSurfaces\AnnouncerRegion.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
