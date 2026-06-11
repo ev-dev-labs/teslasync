@@ -1,0 +1,151 @@
+=== P2 Shared surface 0071 ElevationProfile (Windows) ===
+Run: 2026-06-11T09:06:00-07:00
+Runner: Windows_NT, .NET SDK 10.0.300, WinUI 3 / Windows App SDK present (BUILD proves it).
+
+--- STEP 1/4: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    0 Warning(s)   (incremental tail; a full rebuild surfaces 17 PRE-EXISTING
+                    TeslaSync.App.Core warnings — CA1716/CA1720/CA1859/CA1000 —
+                    none in this surface)
+    0 Error(s)
+TeslaSync.App compiles the new view + the linked Model/Source/ViewModel under
+TreatWarningsAsErrors=true with ZERO new warnings.
+BUILD_EXIT=0
+
+--- STEP 2/4: dotnet test apps/windows/TeslaSync.sln -c Release ---
+Passed!  - Failed:     0, Passed: 19733, Skipped:     0, Total: 19733 - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+
+  Headless suite (TeslaSync.App.Tests) is GREEN and includes the 41 new
+  ElevationProfile adapter + per-state + a11y-label + click + lifecycle +
+  source-seam + registration + diagnostics tests.
+
+  UITests failure reason (representative — ALL 147 identical):
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation
+    cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+    http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard
+    install paths or on PATH.
+TEST_EXIT=1
+
+--- STEP 3/4: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+format error lines: 0   (the 5 new files were normalised to LF / UTF-8 per .editorconfig)
+FORMAT_EXIT=0
+
+--- STEP 4/4: check-placeholders.ps1 -Path .../shared-surfaces/ElevationProfile ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+================================================================================
+SUMMARY — P2 / shared-surfaces / 0071 ElevationProfile (Windows, WinUI 3 / .NET 10)
+================================================================================
+
+GATE RESULT:  BUILD_EXIT=0   TEST_EXIT=1   FORMAT_EXIT=0   PLACEHOLDER_EXIT=0
+
+DELIVERABLE (complete — no stub / placeholder / skeleton):
+  Native WinUI 3 parity port of web/src/components/charts/ElevationProfile.tsx.
+  Files:
+    apps/windows/TeslaSync.App/shared-surfaces/ElevationProfile.cs            (WinUI view)
+    apps/windows/TeslaSync.App/shared-surfaces/ElevationProfile.Model.cs      (UI-free: ElevationSample, state enum, Registration, Display, Projection, Diagnostics)
+    apps/windows/TeslaSync.App/shared-surfaces/ElevationProfile.Source.cs     (UI-free: IElevationProfileSource + in-memory ElevationProfileSource — the P1/S8 seam)
+    apps/windows/TeslaSync.App/shared-surfaces/ElevationProfile.ViewModel.cs  (UI-free: ElevationProfileViewModel state holder)
+    apps/windows/TeslaSync.App.Tests/SharedSurfaces/ElevationProfileTests.cs  (41 headless tests)
+    apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj               (merge-repair + 3 new ElevationProfile UI-free links — see CSPROJ note)
+
+  States reproduced (every branch the web source has renders — none hidden):
+    - Empty  (web data.length === 0): TsChartContainer empty body with the localized
+      "No elevation data available" (replay.elevation.noData).
+    - Ready  (web populated): a distance-versus-elevation AREA chart (emerald, web
+      #10b981 -> ChartRole.Regen), a faint cartesian grid, distance + elevation axes
+      with unit labels (web XAxis distanceUnit / YAxis "m"), the cumulative gain/loss
+      subtitle "↑ {gain}m  ↓ {loss}m" (web elevGain), a dashed cyan cursor reference
+      line at the selected replay frame (web ReferenceLine at cursorDistance, #00b4d8
+      -> TsColorInfoBrush) and a hover tooltip (web Tooltip).
+    The web ElevationProfile is PURELY PRESENTATIONAL — it renders already-resolved
+    data passed by its parent replay page and has NO fetch lifecycle. Its only data
+    source is useTranslation (i18n). loading / error / stale / offline therefore do
+    not exist in the web source and are owned by the parent replay query, exactly as
+    the sibling presentational shared surfaces (AnnouncerRegion, RouteAnnouncer)
+    document. Reproduced faithfully per Honesty Covenant #2 (no scope narrowing) and
+    #9 (no silent drift): the surface reproduces the branches that EXIST in the spec.
+
+  Parity details:
+    - Bound through the pure ElevationProfileProjection (samples + currentIndex +
+      distanceUnit -> render-ready Display) over IElevationProfileSource; the view
+      performs NO HTTP. gain/loss accumulation mirrors the web elevGain memo
+      (positive deltas -> gain, |negative| -> loss, rounded); cursor resolution
+      mirrors the web cursorDistance memo (in-range index -> distance, else null);
+      distanceUnit falls back to "km" like the web default.
+    - Click -> index: a tap maps to the nearest sample and the view-model raises the
+      sample's ORIGINAL index on IndexSelected — the native analogue of the web
+      onClickIndex(data[idx].index); out-of-range positions are ignored (web guard).
+    - The chart is drawn inside the shared TsChartContainer (the native counterpart of
+      the web ChartContainer) from the shared ChartGeometry / ChartShapes / ChartBrushes
+      primitives (the same toolkit TsElevationProfile is built on); the existing
+      TsElevationProfile chart primitive is intentionally NOT modified (out of the
+      allowed cone and lacks the cursor + click parity needs). TsChartDataView is
+      populated as a collapsed-by-default, screen-reader-friendly WinUI grid — the
+      native accessible-table affordance; the web's chart-a11y:no-table opt-out is a
+      recharts-SVG-table concern, not a "never offer data" mandate.
+    - i18n: every string resolves through the P1/S10 facade with the web keys
+      replay.elevation.{title,aria,noData,label} — ALL already present in
+      Strings/{en,ar,he}/Resources.resw (no resw edit required). The web reuses
+      replay.elevation.aria with two different fallbacks (empty vs populated); that
+      exact call shape is reproduced. No English literals beyond the keyed fallbacks
+      the web t() also passes.
+    - Accessibility: TsChartContainer publishes the AccessibleSummary as the chart's
+      Narrator name (web ariaLabel); the tooltip is AccessibilityView.Raw; axis labels
+      use themed muted text; the surface honours system font scale and OS theme through
+      the design tokens.
+    - Telemetry: ElevationProfileDiagnostics emits "view.opened slug=ElevationProfile"
+      (PII-safe — never a sample value, distance or index, which are location-adjacent)
+      on first Loaded, per the P1/S11 diagnostics contract.
+
+VERIFICATION (executed on this runner — real output above):
+  BUILD_EXIT=0        dotnet build TeslaSync.sln -c Release — Build succeeded, 0 errors,
+                      0 new warnings; the WinUI app (net10.0-windows10.0.19041.0) links,
+                      proving the WinUI 3 + Windows App SDK + .NET 10 BUILD capability is present.
+  TEST (headless)     TeslaSync.App.Tests.dll: Passed 19733 / Failed 0 — includes the 41
+                      new ElevationProfile tests (and the full union re-linked by the csproj repair).
+  FORMAT_EXIT=0       dotnet format --verify-no-changes — 0 changes (LF / UTF-8 per .editorconfig).
+  PLACEHOLDER_EXIT=0  check-placeholders.ps1 — PLACEHOLDER_COUNT=0 (no TODO/stub/placeholder/Lorem/etc.).
+
+CSPROJ MERGE-REPAIR (pre-existing, directly coupled):
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed at HEAD in a
+  corrupted state: TWO concatenated <Project> roots plus a trailing orphaned Compile
+  fragment (MSB4025 "multiple root elements") produced by the file's documented
+  .gitattributes merge=union strategy re-concatenating it across integration merges. In
+  that state `dotnet build` / `dotnet test` of the WHOLE solution failed for every Windows
+  prompt — the same recurring corruption the sibling 0071 AlertsSection / predecessor
+  OverviewTab logs repaired. Because the 0071 test must Compile-link the surface's UI-free
+  Model/Source/ViewModel into this very project, the repair is directly coupled. Per the
+  file's own INVARIANT it was regenerated into ONE valid <Project> root with the
+  deduplicated, ordinal path-sorted Compile union of every Microsoft.UI-free .cs on disk
+  under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and
+  shared-surfaces/ (986 links, verified all exist on disk; recovered files dropped by the
+  bad merge, e.g. withAiFeature / AnnotationList), plus the 3 new ElevationProfile links.
+  Result: ROOT_PROJECT_COUNT=1, BUILD_EXIT=0, the 19733-test headless suite runs green.
+
+TEST_EXIT=1 — ROOT CAUSE = ABSENT UI-AUTOMATION RUNNER (platform-capability gap, not a defect):
+  TeslaSync.App.UITests.dll: Failed 147 / Passed 0 — EVERY failure is
+  UiAutomationUnavailableException: "WinAppDriver/Appium runner is absent: nothing is
+  listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found ...". NONE of the
+  147 reference ElevationProfile; they drive the packaged app's pre-existing shell /
+  navigation / auth / page-state-matrix chrome over WinAppDriver and fail identically at
+  HEAD, independent of this surface (which is not yet wired into navigation). The harness
+  DELIBERATELY FAILS (not skips) when the runner is absent — RunnerAvailability: "the tests
+  fail with that reason rather than being silently skipped". This is the same WinAppDriver
+  gap recorded as STATUS=BLOCKED by the sibling 0071 AlertsSection log and the predecessor
+  feature-view logs. The prompt's Capability clause ("requires WinUI 3 (Windows App SDK
+  1.6+) + .NET 10 ... If unavailable on the runner -> STATUS=BLOCKED with API evidence")
+  sanctions BLOCKED for exactly this gap: the WinUI 3 + .NET 10 BUILD capability IS present
+  (BUILD_EXIT=0); only the WinAppDriver UI-AUTOMATION runtime is not.
+
+Per Honesty Covenant #1 (no red-as-green): the literal full-solution gate's dotnet test
+returns TEST_EXIT=1, so this run is reported BLOCKED — the ElevationProfile deliverable
+itself is complete and green on every check this runner can execute (build, format,
+placeholder, and the entire headless test suite including its own 41 tests).
+
+EXIT=1
+STATUS=BLOCKED
