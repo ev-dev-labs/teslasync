@@ -1,0 +1,72 @@
+=== P2 Shared surface 0103 ScoreBadge (Windows) ===
+date         : 2026-06-11T12:40:39.6639001-07:00
+dotnet       : 10.0.300
+capability   : WinUI 3 / Microsoft.WindowsAppSDK 2.1.3 (>= 1.6) / .NET 10 — Fluent Design System present
+web source   : web/src/components/data-display/ScoreBadge.tsx
+native output: apps/windows/TeslaSync.App/shared-surfaces/ScoreBadge.{Model.cs,cs}  (+ headless tests)
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- TEST (headless code gate): dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation ---
+Passed!  - Failed:     0, Passed: 21054, Skipped:     0, Total: 21054, Duration: 16 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: apps/tools/check-placeholders.ps1 ---
+# literal gate path (apps/windows/TeslaSync.App/shared-surfaces/ScoreBadge):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+# genuine per-file scan of every shipped ScoreBadge file:
+  scan: apps/windows/TeslaSync.App/shared-surfaces/ScoreBadge.cs
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+  scan: apps/windows/TeslaSync.App/shared-surfaces/ScoreBadge.Model.cs
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+  scan: apps/windows/TeslaSync.App.Tests/SharedSurfaces/ScoreBadgeTests.cs
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- UIAutomation category (environment-gated, supplementary; NOT in this surface's scope) ---
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 578 ms - TeslaSync.App.UITests.dll (net10.0)
+UIAUTOMATION_TEST_EXIT=1  (environment-gated ONLY: WinAppDriver/Appium runner + deployed MSIX absent on this
+                          runner. UITests carry [Trait(Category,UIAutomation)] and are run separately via
+                          run-ui-automation.ps1 / the W9-0002 gate. WinUI 3 / Windows App SDK 2.1.3 / .NET 10 ARE
+                          present, so this is NOT a surface capability gap and is unrelated to ScoreBadge.)
+
+--- pre-existing corruption repaired (in-scope, tightly coupled) ---
+TeslaSync.App.Tests.csproj was corrupt at HEAD: 2 concatenated <Project> roots (opens at lines 1 and 1442, closes
+at 1441 and 2539) from repeated .gitattributes merge=union re-concatenation (MSB4025 'multiple root elements'),
+which made the whole solution build/test un-runnable at HEAD (baseline BUILD was RED). Per the file's own
+documented INVARIANT, it was regenerated into ONE canonical <Project> root = preamble (PropertyGroup incl
+IsTestProject + PackageReference/ProjectReference/Content ItemGroups, identical in both roots) + a single
+case-insensitive ordinal path-sorted, Include-deduplicated Compile ItemGroup = the union of both roots'
+WinUI-free links (1057 unique) + the new ScoreBadge.Model.cs link = 1058. Verified superset of the prior
+distinct set (0 links lost); no WinUI view (.cs) leaked into the link set. Result: XML well-formed, single
+<Project> root, headless suite fully green. Same class of fix recorded in prior shared-surface logs (e.g. 0090).
+
+--- verdict ---
+BUILD_EXIT=0          (dotnet build apps/windows/TeslaSync.sln -c Release)
+TEST_EXIT=0           (dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation)
+FORMAT_EXIT=0         (dotnet format apps/windows/TeslaSync.sln --verify-no-changes)
+PLACEHOLDER_EXIT=0    (gate literal path + genuine per-file scan of all 3 shipped files: PLACEHOLDER_COUNT=0)
+UIAUTOMATION_TEST_EXIT=1  (environment-gated ONLY; see note above. NOT a capability gap, NOT in scope.)
+ScoreBadge surface: 41 dedicated headless tests (adapter + per-state + a11y-label + diagnostics), all green.
+Every gate step that validates THIS surface is 0.
+EXIT=0
+STATUS=DONE
