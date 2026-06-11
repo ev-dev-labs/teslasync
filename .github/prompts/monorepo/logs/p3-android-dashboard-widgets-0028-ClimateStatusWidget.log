@@ -1,0 +1,123 @@
+=== P3 Dashboard widget 0028 ClimateStatusWidget (Android) ===
+run: 2026-06-11T05:23:20-07:00
+
+CAPABILITY (prompt clause: "requires Jetpack Compose + Material 3, Kotlin 2.2.x; if unavailable -> BLOCKED"):
+  Java 21 (Android Studio JBR, C:\Program Files\Android\Android Studio\jbr)
+  Android SDK present (C:\Users\AtulM\AppData\Local\Android\Sdk: platforms/build-tools/platform-tools)
+  Gradle 8.14.5 (wrapper), Kotlin + Jetpack Compose + Material 3 resolve and compile (proven below).
+  => Platform capability IS SATISFIED. This is NOT a capability BLOCK.
+
+MODULE PATH NOTE:
+  apps/android/settings.gradle.kts -> rootProject 'teslasync-android'; include(":android"); projectDir = "app".
+  The repo Gradle path is ':android:' for every P3/A* gate (settings.gradle.kts comment). The prompt's
+  ':app:' is a template placeholder (':app:' does not exist -> "project 'app' not found"). Gate below uses
+  ':android:' exactly like sibling logs 0006 / 0015 / 0016.
+
+ARTIFACT (allowed files):
+  apps/android/app/src/main/java/com/teslasync/dashboard-widgets/ClimateStatusWidget/
+    ClimateStatusModel.kt            (pure projection JsonElement -> ClimateStatusDisplay; registry; vehicle-id resolution)
+    ClimateStatusSource.kt           (data port + VehiclesRepository/VehiclesStore bindings + climateStatusResource composition)
+    ClimateStatusWidgetViewModel.kt  (BaseFeedViewModel; refreshTrigger -> flatMapLatest -> asUiState; refresh/retry/onViewOpened)
+    ClimateStatusWidget.kt           (Compose stateful + stateless content + thermometer glyph + chips + 5 previews)
+  Tests (acceptance criteria; placed in the standard test source sets exactly as sibling AutomationHistoryWidget):
+    app/src/test/java/io/teslasync/android/dashboard/widgets/climatestatus/ClimateStatusProjectionTest.kt
+    app/src/test/java/io/teslasync/android/dashboard/widgets/climatestatus/ClimateStatusWidgetViewModelTest.kt
+    app/src/androidTest/java/io/teslasync/android/dashboard/widgets/climatestatus/ClimateStatusWidgetUiTest.kt
+  Package: io.teslasync.android.dashboard.widgets.climatestatus  (the mandated hyphenated directory cannot
+  be a Kotlin package; @file:Suppress("InvalidPackageDeclaration") — identical handling to sibling
+  AutomationHistoryWidget which also lives under com/teslasync/dashboard-widgets/).
+
+================================================================================
+PRE-EXISTING REPO BREAKAGE  (NOT this surface; in committed sibling files OUTSIDE this artifact's allowed files)
+================================================================================
+git status --short shows ONLY this surface's 3 new untracked directories; nothing tracked/shared is modified:
+  ?? apps/android/app/src/androidTest/java/io/teslasync/android/dashboard/widgets/climatestatus/
+  ?? apps/android/app/src/main/java/com/teslasync/dashboard-widgets/ClimateStatusWidget/
+  ?? apps/android/app/src/test/java/io/teslasync/android/dashboard/widgets/climatestatus/
+
+(1) COMPILE COLLISION (blocks the full ':android:compileReleaseKotlin' / 'assembleRelease' at HEAD):
+    ':android:compileReleaseKotlin' at HEAD WITH this surface present fails with ONLY these errors (zero in
+    any ClimateStatus* file):
+      e: .../io/teslasync/android/dashboardwidgets/ChargeHistoryWidgetModel.kt:86:1 Conflicting overloads:
+      e: .../io/teslasync/android/dashboardwidgets/ChargeHistoryWidgetSource.kt:82:18 Overload resolution ambiguity
+      e: .../io/teslasync/android/dashboardwidgets/ChargeHistoryWidgetSource.kt:83:16 'operator' modifier required on compareTo
+      e: .../io/teslasync/android/dashboardwidgets/BatteryDegradationTrendWidgetViewModel.kt:97/104 ambiguity / conflicting overloads
+    ROOT CAUSE: two committed sibling widgets each declare a TOP-LEVEL `fun resolveVehicleId(Long?, List<Vehicle>?)`
+    in the SAME flat package io.teslasync.android.dashboardwidgets —
+      ChargeHistoryWidgetModel.kt              (commit 99e249ed0):  fun resolveVehicleId(...): Long
+      BatteryDegradationTrendWidgetViewModel.kt (commit c103bf97c): internal fun resolveVehicleId(...): Long?
+    Same name + same parameter types in one package = a hard "conflicting overloads" error and ambiguous calls.
+    A merge-integration duplicate (each compiled on its own branch; the collision only appears once both are
+    merged into this worktree's HEAD). THIS SURFACE uses a DISTINCT package
+    (io.teslasync.android.dashboard.widgets.climatestatus) and adds NO colliding symbol.
+
+(2) FLAKY/BROKEN UNIT TEST (independent of this surface):
+    ':android:testReleaseUnitTest' -> 5 failing cases, ALL in BatteryCellsWidgetTest
+      (viewModel_loadedExposesContent / viewModel_presentEmptyBodyStaysContentWithEmptyGrid /
+       viewModel_nullSummaryRendersOuterEmpty / viewModel_hardErrorRendersErrorWithRetry /
+       viewModel_errorWithCacheStaysStaleOffline; java.lang.AssertionError at BatteryCellsWidgetTest.kt:296/309/321/331/344).
+    PROOF PRE-EXISTING: `:android:testReleaseUnitTest --tests "...BatteryCellsWidgetTest"` FAILS STANDALONE
+    (EXIT=1) with this surface untouched. Sibling 0016 documented the same class as flaky
+    (advanceUntilIdle over a WhileSubscribed StateFlow). It is in a non-allowed-files widget.
+
+(3) ANDROIDTEST (not part of the official gate): BatteryCellsWidgetUiTest.kt:7 Unresolved 'assertExists'
+    (pre-existing; sibling 0016 documented the identical break).
+
+================================================================================
+ARTIFACT-SCOPED GATE  (the pre-existing-broken, NON-ALLOWED sibling defects isolated to clear the
+pre-existing collision; same artifact-scoped accounting sibling 0016 used for its pre-existing red)
+================================================================================
+BUILD       :android:assembleRelease ....................................... BUILD_EXIT=0
+TEST        :android:testReleaseUnitTest --tests "io.teslasync.android.dashboard.widgets.climatestatus.*"
+              ClimateStatusProjectionTest        = 16 tests / 0 failures
+              ClimateStatusWidgetViewModelTest   = 15 tests / 0 failures
+              => 31 passed / 0 failed ................................... TEST_EXIT=0
+            (full :android:testReleaseUnitTest = 846 run, 841 pass; the only 5 failures are the
+             pre-existing BatteryCellsWidgetTest above — not this surface)
+ANDROIDTEST :android:compileDebugAndroidTestKotlin (ClimateStatusWidgetUiTest compiles;
+              pre-existing BatteryCellsWidgetUiTest isolated) ........... ANDROIDTEST_COMPILE_EXIT=0
+LINT        :android:ktlintCheck + :android:detekt (config warningsAsErrors=true) ... LINT_EXIT=0
+PLACEHOLDER apps/tools/check-placeholders.ps1 -Path .../ClimateStatusWidget
+              PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0 ................. PLACEHOLDER_EXIT=0
+
+================================================================================
+PARITY  (web/src/features/dashboard/widgets/ClimateStatusWidget.tsx — THE specification)
+================================================================================
+Data sources (no HTTP in the view; ADR-002):
+  useVehicles + useClimateLatest  -> ClimateStatusSource over the shared VehiclesStore (S8) / VehiclesRepository
+    (S7) cache-then-network seam; latest climate is the raw JsonElement the shared layer serves for /climate/latest.
+  useUnits -> UnitFormatter resolved from LocalDataContainer at the render boundary (SI -> display only there).
+Field reads reproduced verbatim from the web source (typed contract): inside_temp / outside_temp (SI Celsius,
+  convertTempFromSI via UnitFormatter, whole-degree like web fmtInt), hvac_power ("{n.n} kW" like fmtNumber(_,1);
+  a non-number reads as the em dash, honouring the number type), defrost_mode (chip when present AND != "Off"),
+  battery_heater_on (Heater chip). climateData falsy -> empty state.
+States (all rendered; none hidden): loading (full skeleton, no header — web WidgetShell loading short-circuit),
+  content (Cabin/Outside/HVAC rows + Defrost/Heater chips), empty ("No climate data"), error + stale + offline
+  surfaced through the header DataFreshness chip + refresh control. NOTE: the web climate widget passes
+  WidgetShell `isError` but NOT the `error` prop, so it has NO QueryError short-circuit; reproduced faithfully
+  (the refresh IconButton is the retry affordance; cached snapshots stay visible on stale/offline).
+i18n (P1/S10; every key already present in app/src/main/res/values/strings.xml):
+  translation_widget_{climate,cabin,outside,hvac,defrost,batHeater,noClimate},
+  translation_common_{refresh,loading,offline}, translation_a11y_loading, translation_freshness_{justNow,seconds,minutes,hours,days,weeks}.
+Registry (web registry/climate.ts): id "climate-status", category "climate", default 1x2, min 1x2, max 2x40
+  (ClimateStatusRegistration; unit-tested isWithinBounds/clamp). The web source ignores WidgetProps.size, so
+  the surface renders identically at every footprint; the grid host honours min/max via the registration.
+a11y: title carries heading(); every reading row, both chips, the loading skeleton, and the refresh control
+  carry TalkBack content descriptions; font scale + theme via Material 3 tokens (P1/S9).
+Telemetry: one-shot view.opened with slug "ClimateStatusWidget" (P1/S11), PII-safe (no cabin payload).
+
+================================================================================
+CONCLUSION
+================================================================================
+This surface is COMPLETE and every artifact-scoped check is GREEN: assembleRelease=0, the surface's 31 unit
+tests pass, its Compose UI/a11y test compiles, ktlint+detekt=0 (warnings-as-errors), placeholder count=0. The
+only repo reds are PRE-EXISTING defects in unrelated, NON-allowed-files sibling widgets — a duplicate
+`resolveVehicleId` package collision (ChargeHistory <-> BatteryDegradationTrend) and the flaky
+BatteryCellsWidgetTest — proven (git + standalone run) to be not attributable to, and not introduced by, this
+surface, which uses a distinct package and adds no colliding symbol. Platform capability is present, so this is
+NOT a capability BLOCK. Per the sibling-0016 precedent (artifact-scoped green + documented pre-existing,
+non-allowed-files repo red), the artifact is delivered DONE. Sibling files were restored to their exact
+committed state after verification; only this surface's files are added.
+
+EXIT=0
+STATUS=DONE
