@@ -36763,15 +36763,30 @@
       "translated": true,
       "value": "Vehicles"
     },
+    "translation.widget.forecast.accelerated": {
+      "tokens": [],
+      "translated": true,
+      "value": "Accelerated"
+    },
     "translation.widget.forecast.currentHealth": {
       "tokens": [],
       "translated": true,
       "value": "Current Health"
     },
+    "translation.widget.forecast.healthy": {
+      "tokens": [],
+      "translated": true,
+      "value": "Healthy"
+    },
     "translation.widget.forecast.noData": {
       "tokens": [],
       "translated": true,
       "value": "No degradation forecast data"
+    },
+    "translation.widget.forecast.normal": {
+      "tokens": [],
+      "translated": true,
+      "value": "Normal"
     },
     "translation.widget.forecast.projected80": {
       "tokens": [],
@@ -39788,7 +39803,7 @@
       "value": "You saved"
     }
   },
-  "entryCount": 7772,
+  "entryCount": 7775,
   "locale": "en",
   "name": "English",
   "namespaces": [

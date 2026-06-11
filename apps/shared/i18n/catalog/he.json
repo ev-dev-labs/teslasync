@@ -43942,17 +43942,35 @@
       "translated": false,
       "value": "Vehicles"
     },
+    "translation.widget.forecast.accelerated": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Accelerated"
+    },
     "translation.widget.forecast.currentHealth": {
       "fallbackFrom": "en",
       "tokens": [],
       "translated": false,
       "value": "Current Health"
     },
+    "translation.widget.forecast.healthy": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Healthy"
+    },
     "translation.widget.forecast.noData": {
       "fallbackFrom": "en",
       "tokens": [],
       "translated": false,
       "value": "No degradation forecast data"
+    },
+    "translation.widget.forecast.normal": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Normal"
     },
     "translation.widget.forecast.projected80": {
       "fallbackFrom": "en",
@@ -47560,7 +47578,7 @@
       "value": "You saved"
     }
   },
-  "entryCount": 7772,
+  "entryCount": 7775,
   "locale": "he",
   "name": "עברית",
   "namespaces": [
