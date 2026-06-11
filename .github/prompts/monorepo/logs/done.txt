@@ -563,3 +563,4 @@ p2-windows/shared-meaningful/W-0049-AISpeedProfileInsights.prompt.md
 p2-windows/shared-meaningful/W-0052-AITCONarration.prompt.md
 p2-windows/shared-meaningful/W-0051-AISuggestNewGeofences.prompt.md
 p2-windows/shared-meaningful/W-0054-AITirePressureTrendReasoning.prompt.md
+p2-windows/shared-meaningful/W-0055-AITripPlannerLLMAgent.prompt.md
