@@ -291,3 +291,4 @@ p3-android/feature-views/A-0044-LiveVehicleState.prompt.md
 p3-android/feature-views/A-0045-SecurityStatistics.prompt.md
 p3-android/feature-views/A-0040-RequestBuilder.prompt.md
 p3-android/feature-views/A-0038-RateLimitStatusPanel.prompt.md
+p3-android/feature-views/A-0042-EventHistoryTable.prompt.md
