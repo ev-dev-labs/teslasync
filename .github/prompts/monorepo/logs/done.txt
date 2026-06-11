@@ -488,3 +488,4 @@ p2-windows/feature-views/W-0288-BatteryRangeCharts.prompt.md
 p2-windows/feature-views/W-0287-VehicleStatePanel.prompt.md
 p2-windows/feature-views/W-0290-ChargingTelemetrySection.prompt.md
 p2-windows/feature-views/W-0289-BatteryRangePanel.prompt.md
+p2-windows/feature-views/W-0292-LiveStateIndicators.prompt.md
