@@ -480,3 +480,4 @@ p2-windows/feature-views/W-0280-InfoTile.prompt.md
 p2-windows/feature-views/W-0276-FleetSummary.prompt.md
 p2-windows/feature-views/W-0279-EnergyChargingPanel.prompt.md
 p2-windows/feature-views/W-0281-LiveTelemetryPanels.prompt.md
+p2-windows/feature-views/W-0282-MediaNavigationPanel.prompt.md
