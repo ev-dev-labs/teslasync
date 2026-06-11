@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
 }
@@ -202,6 +203,11 @@ dependencies {
     implementation(libs.maps.compose)
     // OIDC PKCE sign-in via Chrome Custom Tabs + redirect receiver (P3/A4, ADR-008).
     implementation(libs.appauth)
+    // Firebase Cloud Messaging — background push transport (P3/A6, ADR-009). The BoM pins the
+    // firebase-messaging version; the google-services plugin is intentionally not applied (credential
+    // provisioning is P5/H5-0001 scope), so the token surface degrades gracefully until configured.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
     // Coroutines (Android dispatchers) for the auth state holder + redirect bridge.
     implementation(libs.kotlinx.coroutines.android)
     // SQLDelight runtime — to construct the shared-core offline cache (clear-on-signout, ADR-013).

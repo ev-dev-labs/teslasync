@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Runtime notification permission (Android 13+, P3/A6, ADR-009). On API < 33 it is granted at
+         install time; on 33+ the app requests it at runtime (NotificationPermissionEffect). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Package visibility (Android 11+) so AppAuth can discover a browser / Custom Tabs provider
          for the OIDC authorize round-trip (P3/A4, ADR-008). -->
     <queries>
@@ -36,6 +40,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.TeslaSync">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -68,6 +73,25 @@
             android:exported="false"
             android:launchMode="singleTop"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- FCM background push transport (P3/A6, ADR-009). Firebase delivers token refreshes and
+             messages to this service; it forwards them to the headless push pipeline. The default
+             notification icon/color/channel are used by the system when a notification-style message
+             arrives while the app is backgrounded. The default FirebaseApp is configured by the
+             google-services resources provisioned in P5/H5-0001; until then the token surface no-ops. -->
+        <service
+            android:name=".messaging.TeslaSyncMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="general" />
     </application>
 
 </manifest>

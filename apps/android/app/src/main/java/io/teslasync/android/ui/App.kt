@@ -1,9 +1,13 @@
 package io.teslasync.android.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -12,6 +16,10 @@ import io.teslasync.android.auth.AuthScaffold
 import io.teslasync.android.auth.LocalAuthController
 import io.teslasync.android.data.LocalDataContainer
 import io.teslasync.android.navigation.TeslaSyncApp
+import io.teslasync.android.notifications.ForegroundNotificationBanner
+import io.teslasync.android.notifications.LocalDeepLinkRouter
+import io.teslasync.android.notifications.LocalForegroundBannerSink
+import io.teslasync.android.notifications.NotificationPermissionEffect
 import io.teslasync.android.ui.theme.TeslaSyncTheme
 
 /**
@@ -26,13 +34,26 @@ fun App(
     windowSizeClass: WindowSizeClass,
     container: AuthContainer,
 ) {
+    val push = container.push
     TeslaSyncTheme {
         CompositionLocalProvider(
             LocalAuthController provides container.authController,
             LocalDataContainer provides container.data,
+            LocalDeepLinkRouter provides push.deepLinkRouter,
+            LocalForegroundBannerSink provides push.bannerSink,
         ) {
             AuthScaffold(controller = container.authController) {
-                TeslaSyncApp(windowSizeClass = windowSizeClass, gate = container.onboardingGate)
+                Box(modifier = Modifier.fillMaxSize()) {
+                    TeslaSyncApp(windowSizeClass = windowSizeClass, gate = container.onboardingGate)
+                    // Request the runtime notification permission (Android 13+) once signed in, and
+                    // overlay foreground push banners (ADR-009: foreground in-app, background OS).
+                    NotificationPermissionEffect()
+                    ForegroundNotificationBanner(
+                        sink = push.bannerSink,
+                        onOpen = { uri -> push.deepLinkRouter.request(uri) },
+                        modifier = Modifier.align(Alignment.TopCenter),
+                    )
+                }
             }
         }
     }
