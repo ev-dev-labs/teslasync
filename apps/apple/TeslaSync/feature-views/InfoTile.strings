@@ -1,0 +1,23 @@
+/*
+  InfoTile.strings
+  TeslaSync — P4 feature view · 0280 · InfoTile (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web `InfoTile`
+  (features/vehicles/components/telemetry-panels/InfoTile.tsx) takes its icon, label,
+  value, color, and sub as already-resolved props from the parent, so it declares no
+  i18n keys of its own — its only English literals are the boolean words "Yes"/"No"
+  (hardcoded in the source) and, for the native "never blank" rule, an em dash shown
+  for blank values. Those are routed through the same NSLocalizedString facade the rest of
+  the app uses (table "InfoTile") so the Swift view holds no hardcoded literals. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time;
+  they are kept in a per-surface table so each parallel surface prompt owns its own
+  strings without editing the shared catalog. The label / value / sub passed in by the
+  parent are localized at the call site and are not redeclared here.
+*/
+
+/* --- Value words extracted from the web source (boolean display) --- */
+"infoTile.value.yes" = "Yes";
+"infoTile.value.no" = "No";
+
+/* --- Native chrome: em dash shown for a blank value (web renders a blank line) --- */
+"infoTile.value.empty" = "—";
