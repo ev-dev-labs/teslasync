@@ -263,3 +263,4 @@ p3-android/feature-views/A-0013-ColorConverter.prompt.md
 p3-android/feature-views/A-0015-HashCalculator.prompt.md
 p3-android/feature-views/A-0016-HttpStatusTool.prompt.md
 p3-android/feature-views/A-0014-CronParser.prompt.md
+p3-android/feature-views/A-0022-UnixPermissionTool.prompt.md
