@@ -558,3 +558,4 @@ p2-windows/shared-meaningful/W-0045-AISafetySettingExplainer.prompt.md
 p2-windows/shared-meaningful/W-0046-AISignalExplorerNlFilter.prompt.md
 p2-windows/shared-meaningful/W-0048-AISoftwareUpdateChangelogSummarizer.prompt.md
 p2-windows/shared-meaningful/W-0047-AISmartChargeScheduleSuggestion.prompt.md
+p2-windows/shared-meaningful/W-0050-AIStateMachineDebuggerNarrator.prompt.md
