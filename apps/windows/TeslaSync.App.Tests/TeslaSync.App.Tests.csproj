@@ -55,6 +55,7 @@
   </ItemGroup>
 
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. Re-consolidated for P2 modals-dialogs/0003 ChangelogModal into this single canonical root, regenerated from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -869,6 +870,10 @@
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHeader\VehicleHeader.Source.cs" Link="FeatureViews\VehicleHeader\VehicleHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHeader\VehicleHeader.ViewModel.cs" Link="FeatureViews\VehicleHeader\VehicleHeader.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleConfigSection\VehicleConfigSection.Model.cs" Link="FeatureViews\VehicleConfigSection\VehicleConfigSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleConfigSection\VehicleConfigSection.Model.cs" Link="FeatureViews\VehicleConfigSection\VehicleConfigSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Model.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Source.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.ViewModel.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.Model.cs" Link="FeatureViews\VehicleHero\VehicleHero.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.Source.cs" Link="FeatureViews\VehicleHero\VehicleHero.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.ViewModel.cs" Link="FeatureViews\VehicleHero\VehicleHero.ViewModel.cs" />
@@ -2386,6 +2391,13 @@
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Model.cs" Link="MiscSurfaces\selectedVehicle.Model.cs" />
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Source.cs" Link="MiscSurfaces\selectedVehicle.Source.cs" />
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.ViewModel.cs" Link="MiscSurfaces\selectedVehicle.ViewModel.cs" />
+  </ItemGroup>
+
+</Project>
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.Catalog.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.Catalog.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.Model.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.Source.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.Source.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.ViewModel.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
