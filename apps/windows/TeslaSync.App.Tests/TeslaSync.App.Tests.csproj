@@ -1056,6 +1056,12 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.Model.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.Source.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.ViewModel.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISafetySettingExplainer.Model.cs" Link="SharedSurfaces\AISafetySettingExplainer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISafetySettingExplainer.Source.cs" Link="SharedSurfaces\AISafetySettingExplainer.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISafetySettingExplainer.ViewModel.cs" Link="SharedSurfaces\AISafetySettingExplainer.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.Model.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.Source.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.ViewModel.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Model.cs" Link="SharedSurfaces\AnnouncerRegion.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
