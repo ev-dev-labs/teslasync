@@ -157,3 +157,4 @@ p3-android/dashboard-widgets/A-0011-BatteryDegradationForecastWidget.prompt.md
 p3-android/dashboard-widgets/A-0013-BatteryGaugeWidget.prompt.md
 p3-android/dashboard-widgets/A-0014-BatteryHealthAnalyticsWidget.prompt.md
 p3-android/dashboard-widgets/A-0012-BatteryDegradationTrendWidget.prompt.md
+p3-android/dashboard-widgets/A-0015-BatteryRadialGaugeWidget.prompt.md
