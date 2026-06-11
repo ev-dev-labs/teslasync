@@ -288,3 +288,4 @@ p3-android/feature-views/A-0037-QueueStatusPanel.prompt.md
 p3-android/feature-views/A-0043-EventTimeline.prompt.md
 p3-android/feature-views/A-0039-RedisDiagnosticEmptyState.prompt.md
 p3-android/feature-views/A-0044-LiveVehicleState.prompt.md
+p3-android/feature-views/A-0045-SecurityStatistics.prompt.md
