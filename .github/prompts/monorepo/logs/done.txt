@@ -549,3 +549,4 @@ p2-windows/shared-meaningful/W-0023-AILearnedAnomalyBaselines.prompt.md
 p2-windows/shared-meaningful/W-0021-AIInboxAutoCategorization.prompt.md
 p2-windows/shared-meaningful/W-0030-AINLAutomationBuilder.prompt.md
 p2-windows/shared-meaningful/W-0029-AINLAlertBuilder.prompt.md
+p2-windows/shared-meaningful/W-0033-AINLGrafanaPanel.prompt.md
