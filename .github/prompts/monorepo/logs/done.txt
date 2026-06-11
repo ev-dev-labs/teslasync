@@ -147,3 +147,4 @@ p3-android/dashboard-widgets/A-0007-AutomationStatusWidget.prompt.md
 p3-android/dashboard-widgets/A-0008-BackupHistoryWidget.prompt.md
 p3-android/dashboard-widgets/A-0001-AlertFeedWidget.prompt.md
 p3-android/dashboard-widgets/A-0002-AnalyticsSummaryWidget.prompt.md
+p3-android/dashboard-widgets/A-0003-AnomalyDetectorWidget.prompt.md
