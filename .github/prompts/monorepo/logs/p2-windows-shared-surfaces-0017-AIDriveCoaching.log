@@ -1,0 +1,101 @@
+=== P2 Shared surface 0017 AIDriveCoaching (Windows) ===
+Web source: web/src/components/ai/AIDriveCoaching.tsx
+Native output: apps/windows/TeslaSync.App/shared-surfaces/AIDriveCoaching.*
+
+--- CAPABILITY (present) ---
+.NET SDK 10.0.300 installed; maui-windows workload present (WindowsAppSDK toolchain available).
+The required platform (WinUI 3 / Windows App SDK / .NET 10) IS available on this runner.
+
+--- GATE (exact prompt commands, whole solution) ---
+BUILD_EXIT=1      dotnet build apps/windows/TeslaSync.sln -c Release
+TEST_EXIT=1       dotnet test  apps/windows/TeslaSync.sln -c Release   (gated by BUILD; full suite also needs WinAppDriver)
+FORMAT_EXIT=0     dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+PLACEHOLDER_EXIT=0 check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/AIDriveCoaching
+
+--- BUILD/TEST blocker = PRE-EXISTING corruption in OTHER surfaces (NOT this surface) ---
+The Release build fails in BOTH the production app project AND the test project with errors that
+belong to predecessor surfaces committed at HEAD, with ZERO errors from any AIDriveCoaching file:
+
+  VisuallyHidden.ViewModel.cs(17,21): error CS0101: namespace 'TeslaSync.App.SharedSurfaces' already
+      contains a definition for 'AnnouncerRegionViewModel'   [TeslaSync.App.csproj AND TeslaSync.App.Tests.csproj]
+  VisuallyHidden.Model.cs(21,13):     error CS0101: ... already contains a definition for 'AnnouncerPriority'
+  VisuallyHidden.Source.cs(8,22):     error CS0101: ... already contains a definition for 'AnnouncerListener'
+  VisuallyHidden.ViewModel.cs(41,17): error CS0111: 'AnnouncerRegionViewModel' already defines 'Dispose'
+  WidgetSettingsModalTests.cs(28,43): error CS0104: 'WidgetCategory' is an ambiguous reference between
+      'TeslaSync.App.FeatureViews.WidgetCategory' and 'TeslaSync.App.ModalsDialogs.WidgetCategory'
+
+Root cause: shared-surfaces/0003 VisuallyHidden (commit 85b2db57e) re-declares the announcer types that
+shared-surfaces/0001 AnnouncerRegion (commit fcfa97246) already owns in the same namespace
+TeslaSync.App.SharedSurfaces -> CS0101/CS0111. The 0003 log claims BUILD_EXIT=0, which is not reproducible:
+the duplicate type definitions break BOTH TeslaSync.App and TeslaSync.App.Tests at HEAD. A second pre-existing
+defect (two WidgetCategory enums + an ambiguous reference in WidgetSettingsModalTests) breaks the test compile.
+Both defects are committed at HEAD, are OUTSIDE this surface's allowed file set, and are owned by their own
+prompts. Per "Out of Scope: Other surfaces in the same feature (each has its own prompt)" they were not modified.
+
+--- TEST CSPROJ REPAIR (necessary, done) ---
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was corrupted into MULTIPLE <Project> roots
+(MSB4025: "multiple root elements", line 1014) so the project could not load at all and the whole solution
+test step failed before compilation. The file documents its own fix ("keep this file as exactly ONE root with a
+single, path-sorted, Include-deduplicated Compile ItemGroup = the union of every WinUI-free .cs under
+dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/; regenerate it directly
+from the WinUI-free sources on disk"). Regenerated deterministically from disk: the WinUI-free partition was
+validated (911 existing links == 911 Microsoft.UI-free files on disk, zero drift) and now totals 914 links
+(+3 AIDriveCoaching logic files); AIDriveCoaching.cs (the WinUI view) is correctly excluded (Microsoft.UI) and
+exercised by the app build. Valid single-root XML confirmed.
+
+--- THIS SURFACE: fully implemented and independently verified ---
+Files (all LF, utf-8, no BOM):
+  shared-surfaces/AIDriveCoaching.Model.cs      events + SSE adapter (toTypedEvent port) + registration + projection + diagnostics
+  shared-surfaces/AIDriveCoaching.Source.cs     IAiFeatureGate (withAiFeature/useAiEnabled seam) + IAiCoachTransport + HttpClient POST SSE transport
+  shared-surfaces/AIDriveCoaching.ViewModel.cs  AiDriveCoachingViewModel (native useAiStream lifecycle + gate)
+  shared-surfaces/AIDriveCoaching.cs            WinUI view: AIFeatureCard scaffold; renders every web state
+  TeslaSync.App.Tests/SharedSurfaces/AIDriveCoachingTests.cs   40 tests
+
+VERIFY-1 strict app compile: the Release build of TeslaSync.App + TeslaSync.App.Tests emitted ZERO compiler or
+  analyzer diagnostics for any AIDriveCoaching file (TreatWarningsAsErrors=true, AnalysisMode=Recommended,
+  GenerateDocumentationFile on). The only build errors are the pre-existing VisuallyHidden/WidgetSettingsModal
+  ones listed above.
+VERIFY-2 isolated build+test (proves the surface in isolation of the broken predecessors): a throwaway net10.0
+  project referencing TeslaSync.App.Core + Generated and compiling ONLY the 3 AIDriveCoaching WinUI-free files +
+  the test file ->
+     Passed!  - Failed: 0, Passed: 40, Skipped: 0, Total: 40
+  Covers: SSE adapter (delta/tool_call/tool_result/confirm_request/done/error incl. structured limit fields +
+  invalid/unknown/malformed/empty drops), VM lifecycle (idle->streaming->done, delta accumulation, split-chunk
+  reassembly, error+limit capture, confirm pause, http-failure->error code, cancel->idle, restart reset),
+  gate open/closed, canStart, projection (web fallbacks + key resolution + "Ask Helix . Generate coaching"
+  accessible name), and diagnostics (view.opened slug=AIDriveCoaching).
+VERIFY-3 format: dotnet format whitespace (whole solution) EXIT=0; dotnet format --verify-no-changes (whole
+  solution) EXIT=0 -> my files are format-clean and add zero drift.
+VERIFY-4 placeholder: zero banned tokens (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented/
+  NotImplementedException/"// stub") in the 4 surface files; PLACEHOLDER_COUNT=0.
+
+--- WinAppDriver E2E note (the established sibling blocker) ---
+Even with a clean build, the full `dotnet test apps/windows/TeslaSync.sln` includes the TeslaSync.App.UITests
+WinAppDriver/Appium suite, which the adjacent sibling surfaces (0001 AnnouncerRegion, 0002 RouteAnnouncer, and
+several modals-dialogs surfaces) log as TEST_EXIT=1 / STATUS=BLOCKED because no WinAppDriver runtime is available
+on this non-interactive runner. This surface adds no UIAutomation tests; its headless tests pass (VERIFY-2).
+
+--- Acceptance criteria ---
+[x] Surface renders all web-source states (gate-off collapse; idle CTA; streaming thinking-skeleton + live region;
+    done streamed text; error QueryError + retry; confirm pause). Offline/off-mode collapse into the error+retry
+    surface, matching the web hook's stream_http_* -> error -> baseline fallback (on-demand SSE has no aging cache).
+[x] Hooks bind via the P1/S8 state-holder layer (IAiCoachTransport + IAiFeatureGate over AiDriveCoachingViewModel);
+    the view performs no HTTP.
+[x] Every i18n key resolves through the P1/S10 ILocalizer facade; no English literals in the view (fallbacks live
+    in the registration constants). Keys: driveDetail.aiCoaching.{title,description,generateButton,badge,error,
+    retry}, helix.{askHelix,thinking}.
+[x] Accessibility labels on every interactive element (button accessible name "Ask Helix . Generate coaching";
+    badge name; thinking/streamed-text polite live regions; gate-off wrapper AccessibilityView.Raw); reduced-motion
+    honoured on the thinking skeleton.
+[x] Tests: adapter unit tests + per-state VM tests + projection/a11y-label test + diagnostics test (40 total, all pass).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[ ] EXIT=0 NOT reached: blocked by pre-existing CS0101/CS0111 (VisuallyHidden 0003) + CS0104 (WidgetSettingsModal)
+    in other surfaces, and by the WinAppDriver capability gap for the full dotnet test. This surface is complete and
+    clean on every dimension it owns.
+
+SUMMARY: AIDriveCoaching surface COMPLETE + verified (BUILD-clean for this surface, 40/40 headless tests pass,
+FORMAT_EXIT=0, PLACEHOLDER_EXIT=0). Whole-solution BUILD_EXIT=1 / TEST_EXIT=1 are caused exclusively by
+pre-existing committed build defects in predecessor surfaces (VisuallyHidden 0003 duplicate types; WidgetSettingsModal
+WidgetCategory ambiguity) plus the WinAppDriver E2E gap, all outside this surface's allowed file set.
+EXIT=1
+STATUS=BLOCKED
