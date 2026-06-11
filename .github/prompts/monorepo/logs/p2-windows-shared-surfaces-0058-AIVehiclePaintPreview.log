@@ -1,0 +1,138 @@
+=== P2 Shared surface 0058 AIVehiclePaintPreview (Windows) ===
+Web source:    web/src/components/ai/AIVehiclePaintPreview.tsx
+Native output: apps/windows/TeslaSync.App/shared-surfaces/AIVehiclePaintPreview.*
+Generated:     deterministic gate run (commands + exit codes below are the real, current results)
+
+--- CAPABILITY ---
+PRESENT  : WinUI 3 / Windows App SDK + .NET 10 (Fluent Design). Evidence:
+           - dotnet --info => .NET SDK 10.0.300; maui-windows workload present (WindowsAppSDK toolchain).
+           - TeslaSync.App.csproj: net10.0-windows10.0.19041.0, UseWinUI=true, Microsoft.WindowsAppSDK ref.
+           - Whole-solution Release BUILD succeeds (0 errors) and 19,145 headless tests pass.
+MISSING  : the WinAppDriver/Appium UI-automation RUNTIME (a live UIA driver driving the packaged MSIX app on
+           an interactive desktop session). Nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+           is absent from the standard install paths and PATH (probed). The TeslaSync.App.UITests suite is
+           designed to FAIL (not skip) when the runner is absent (Drivers/RunnerAvailability.cs documents this),
+           so the whole-solution `dotnet test` gate cannot reach 0 on this non-interactive runner.
+           => Per this prompt's capability clause: STATUS=BLOCKED with API evidence (below).
+
+--- GATE (exact prompt commands, whole solution) ---
+BUILD_EXIT=0        dotnet build  apps/windows/TeslaSync.sln -c Release            (Build succeeded, 0 errors)
+TEST_EXIT=1         dotnet test   apps/windows/TeslaSync.sln -c Release            (see split below)
+FORMAT_EXIT=0       dotnet format apps/windows/TeslaSync.sln --verify-no-changes   (no drift)
+PLACEHOLDER_EXIT=0  apps/tools/check-placeholders.ps1 -Path .../AIVehiclePaintPreview  (PLACEHOLDER_COUNT=0)
+
+--- TEST_EXIT=1 split (the WinAppDriver capability gap is the ONLY cause) ---
+  TeslaSync.App.Tests.dll   : Passed!  - Failed: 0, Passed: 19145, Skipped: 0, Total: 19145   (headless xUnit)
+  TeslaSync.App.UITests.dll : Failed!  - Failed: 147, Passed: 0,   Skipped: 0, Total: 147     (WinAppDriver E2E)
+  Every one of the 147 UITests fails with the same capability fault, e.g.:
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+    was not found at its standard install paths or on PATH.
+  This surface adds ZERO UI-automation tests; it is exercised by the headless TeslaSync.App.Tests suite, which
+  passes in full. The 147 failures are the pre-existing, environment-level sibling blocker logged identically by
+  0001 AnnouncerRegion, 0002 RouteAnnouncer, 0017 AIDriveCoaching and 0045 AISafetySettingExplainer.
+
+--- PRE-EXISTING BREAKAGE REPAIRED (so BUILD_EXIT=0 / the test step could run at all) ---
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed at HEAD corrupted into MULTIPLE
+<Project> roots (MSB4025: "The project file could not be loaded. There are multiple root elements." at line
+1032), so the project could not load and the whole-solution build/test failed before compiling anything. The
+file carries the .gitattributes merge=union strategy and documents its own fix: "keep this file as exactly ONE
+Project root with a single, ordinal path-sorted, Include-deduplicated Compile ItemGroup - the union of every
+WinUI-free (Microsoft.UI-free) .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/,
+modals-dialogs/ and shared-surfaces/ ... regenerate it directly from the WinUI-free sources on disk."
+Re-consolidated into ONE canonical root, regenerated from the existing links:
+  - 944 existing unique Compile links extracted and verified against disk: 0 stale (every link resolves to a
+    real file) and 0 missing (every WinUI-free Model/Source/ViewModel on disk is linked) -> zero drift.
+  - + 3 new AIVehiclePaintPreview.{Model,Source,ViewModel}.cs links = 947 total, ordinal path-sorted.
+  - AIVehiclePaintPreview.cs (the WinUI view, references Microsoft.UI) is correctly EXCLUDED and exercised by
+    the app build; valid single-root XML confirmed; all 19,145 sibling+new headless tests still pass (no surface
+    dropped). This repair is mechanical and required by the file's own invariant; no surface code was modified.
+
+--- THIS SURFACE: fully implemented and independently verified ---
+Files (all LF, utf-8, no BOM):
+  shared-surfaces/AIVehiclePaintPreview.Model.cs      enums + SSE-frame adapter (toTypedEvent/parseSSEFrame port)
+                                                      + AiPaintPreviewRequest (numericVehicleId/body/urlPath
+                                                      adapter) + registration + projection + diagnostics
+  shared-surfaces/AIVehiclePaintPreview.Source.cs     IAiPaintPreviewTransport + HttpClient POST-SSE transport
+                                                      (per-vehicle URL + {}/{"style_hint":"…"} body)
+  shared-surfaces/AIVehiclePaintPreview.ViewModel.cs  AiVehiclePaintPreviewViewModel (native useAiStream
+                                                      lifecycle + gate + canStart/emptyHint + offline classify)
+  shared-surfaces/AIVehiclePaintPreview.cs            WinUI view: AIFeatureCard scaffold; renders every web state
+  TeslaSync.App.Tests/SharedSurfaces/AIVehiclePaintPreviewTests.cs   53 headless tests
+
+VERIFY-1 strict app compile: the Release build of TeslaSync.App + TeslaSync.App.Tests emitted ZERO compiler or
+  analyzer diagnostics for any AIVehiclePaintPreview file (TreatWarningsAsErrors=true, AnalysisMode=Recommended).
+  The only build warnings are pre-existing CA* warnings inside TeslaSync.App.Core (unrelated, non-error).
+VERIFY-2 surface tests: dotnet test TeslaSync.App.Tests --filter FullyQualifiedName~AIVehiclePaintPreview =>
+  Passed!  - Failed: 0, Passed: 53, Skipped: 0, Total: 53.
+  Covers: SSE adapter (delta/tool_call/tool_result/confirm_request/done/error incl. structured limit fields +
+  invalid/unknown/malformed/empty drops); the request adapter (numericVehicleId -> /ai/vehicles/{id}/paint-
+  preview/draft, /ai/vehicles/0/... fallback for null/0/negative, body {} vs {"style_hint":"<trimmed>"},
+  blank/whitespace hint omitted); VM lifecycle (idle->streaming->done, delta accumulation, split-chunk
+  reassembly, error+limit capture, confirm pause, http-failure->error code, connectivity->offline,
+  IOException->offline, cancel->idle, restart reset); canStart/emptyHint from haveInputs; the VM passes the
+  effective vehicleId + trimmed style hint to the transport; gate open/closed; projection (web fallbacks + every
+  catalog key + "Ask Helix . Preview paint color" accessible name + privacy/propose-only description contract);
+  a11y label present; diagnostics (view.opened slug=AIVehiclePaintPreview, no PII leak).
+VERIFY-3 whole headless suite: dotnet test TeslaSync.App.Tests => 19,145 passed / 0 failed -> the csproj repair
+  preserved every sibling surface's tests.
+VERIFY-4 format: dotnet format --verify-no-changes (whole solution) EXIT=0 -> my files add zero drift (LF EOL).
+VERIFY-5 placeholder: check-placeholders.ps1 over the surface dir => PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0,
+  EXIT=0 (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented/NotImplementedException/// stub).
+
+--- PARITY with web/src/components/ai/AIVehiclePaintPreview.tsx ---
+- withAiFeature('vehicle-paint-preview') gate: off -> the view collapses to nothing (Visibility.Collapsed,
+  AutomationId cleared, AccessibilityView.Raw), the native analogue of the HOC returning null; on -> the card
+  renders with RootAutomationId "ai-feature-vehicle-paint-preview-root" (matches the web data-testid).
+- Data + SSE lifecycle via the shared P1/S8 state-holder seam (IAiPaintPreviewTransport, the native useAiStream
+  over POST /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft); the view performs no HTTP.
+- The InnerSection derivation is reproduced exactly by AiPaintPreviewRequest: numericVehicleId, the optional
+  trimmed style_hint body, the urlPath (positive id vs the 0 fallback), and haveInputs -> canStart.
+- AIFeatureCard scaffold (inline placement, as the web source): glass panel header (PanelTitle + Helix badge +
+  long propose-only/privacy description), the universal "Ask Helix" action on the right (disabled until a
+  vehicle is resolved or while streaming), and the streamed-output region. The emptyHint (noVehicleHint) renders
+  beneath the description when !canStart (web `!canStart && emptyHint`). PROPOSE-ONLY contract preserved: onEvent
+  is a no-op; the output renders stream.text; Helix never applies a paint.
+- States rendered (every one the web AiOutputPanel has): loading (reduced-motion thinking skeleton, polite live
+  region); streaming text (live region); done; empty/ready (output hidden until a run -> header + description +
+  action always shown, never a blank box) + the no-vehicle empty hint; error (QueryError + Retry) and
+  connectivity-aware offline (offline message in the same QueryError). stale: N/A and documented -- an on-demand
+  SSE draft has no cached result to age and the web source has no stale branch (matches the AIDriveCoaching /
+  AISafetySettingExplainer precedent for cache-free on-demand surfaces).
+- i18n: every label resolves through the P1/S10 ILocalizer facade; no English literals in the view (fallbacks
+  live in the registration constants). Surface keys present verbatim in Strings/en/Resources.resw:
+  vehicles.aiPaintPreview.{title,description,button,badge,noVehicleHint}; plus the shared helix.{askHelix,
+  thinking,errorLabel}, ai.common.errorUnknown and common.{offline,retry}.
+- Accessibility: Narrator names on the card (Group automation peer), the action button
+  ("Ask Helix . Preview paint color", with the per-feature verb as tooltip + ButtonAutomationId), and the badge;
+  the thinking skeleton honours the OS reduce-motion preference; the streamed-output/error region is a live
+  region so narration/errors are announced.
+- Telemetry: emits view.opened slug=AIVehiclePaintPreview once on first show, via AIVehiclePaintPreviewDiagnostics
+  (PII-safe; never logs the image prompt, the vehicle id, or the style hint).
+
+--- Acceptance criteria ---
+[x] Surface renders all web-source states (gate-off collapse; idle CTA + no-vehicle empty hint; streaming
+    thinking-skeleton + live region; streamed image-prompt text; error QueryError + retry; connectivity-aware
+    offline; confirm pause). Off-mode/offline collapse into the error+retry surface, matching the web hook's
+    stream_http_* -> error -> baseline fallback (on-demand SSE has no aging cache).
+[x] Hooks bind via the P1/S8 state-holder layer (IAiPaintPreviewTransport + IAiFeatureGate over
+    AiVehiclePaintPreviewViewModel); the view performs no HTTP.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (Strings/en/Resources.resw) and resolves
+    through the ILocalizer facade.
+[x] Accessibility labels present on every interactive element; reduced-motion honoured.
+[x] Tests: adapter unit tests (SSE parser + request adapter) + per-state VM tests + projection/a11y-label test
+    + diagnostics test (53 total, all pass).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[ ] EXIT=0 NOT reached: the whole-solution `dotnet test` gate is blocked solely by the WinAppDriver
+    UI-automation capability gap (147 TeslaSync.App.UITests fail by design with UiAutomationUnavailableException;
+    this surface adds no such tests). Every dimension this surface owns is green: BUILD_EXIT=0, FORMAT_EXIT=0,
+    PLACEHOLDER_EXIT=0, and 53/53 surface + 19,145/19,145 headless tests pass.
+
+SUMMARY: AIVehiclePaintPreview surface COMPLETE + verified (BUILD-clean, 53/53 surface + 19,145/19,145 headless
+tests pass, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0). Whole-solution TEST_EXIT=1 is caused exclusively by the
+pre-existing WinAppDriver/Appium UI-automation capability gap (147 UITests fail without a runner), which is
+outside this surface's scope. The committed test csproj corruption (multiple <Project> roots, MSB4025) was
+re-consolidated to a single canonical root per the file's own invariant.
+
+EXIT=1
+STATUS=BLOCKED
