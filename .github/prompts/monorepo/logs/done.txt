@@ -174,3 +174,4 @@ p3-android/dashboard-widgets/A-0028-ClimateStatusWidget.prompt.md
 p3-android/dashboard-widgets/A-0031-CostBreakdownWidget.prompt.md
 p3-android/dashboard-widgets/A-0034-DestinationETAWidget.prompt.md
 p3-android/dashboard-widgets/A-0038-DriveEfficiencyChartWidget.prompt.md
+p3-android/dashboard-widgets/A-0039-DriveScoreGaugeWidget.prompt.md
