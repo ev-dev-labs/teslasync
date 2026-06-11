@@ -1,0 +1,1296 @@
+=== P2 Shared surface 0002 RouteAnnouncer (Windows) ===
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-03\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:14.29
+BUILD_EXIT=0
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generated -> D:\repos\teslasync-wt2\wt-03\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+Test run for D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+Test run for D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:03.41]     TeslaSync.App.UITests.Tests.AccessibilityTreeTests.AccessibleNames_PrimaryNavigationItemsExposeNames [FAIL]
+[xUnit.net 00:00:03.41]     TeslaSync.App.UITests.Tests.AccessibilityTreeTests.FocusOrder_TabTraversalReachesAKeyboardFocusableControl [FAIL]
+[xUnit.net 00:00:03.42]     TeslaSync.App.UITests.Tests.AccessibilityTreeTests.ControlTypes_ShellChromeReportsInteractiveRoles [FAIL]
+[xUnit.net 00:00:03.42]     TeslaSync.App.UITests.Tests.AccessibilityTreeTests.KeyboardOnlyPath_NavigatesWithoutAPointer [FAIL]
+[xUnit.net 00:00:03.42]     TeslaSync.App.UITests.Tests.AccessibilityTreeTests.HighContrast_ShellRemainsNavigableUnderHighContrast [FAIL]
+[xUnit.net 00:00:03.42]     TeslaSync.App.UITests.Tests.AuthenticationFlowTests.SignOut_ClearsSessionAndRegatesProtectedRoutes [FAIL]
+[xUnit.net 00:00:03.42]     TeslaSync.App.UITests.Tests.AuthenticationFlowTests.SignIn_FakeCallbackEstablishesSessionAndClearsBanner [FAIL]
+[xUnit.net 00:00:03.42]     TeslaSync.App.UITests.Tests.AuthenticationFlowTests.SignedOut_ProtectedRouteRedirectsToOnboardingAndShowsReauthBanner [FAIL]
+[xUnit.net 00:00:03.42]     TeslaSync.App.UITests.Tests.AuthenticationFlowTests.TokenRefreshFailure_SurfacesTheReauthBanner [FAIL]
+  Failed TeslaSync.App.UITests.Tests.AccessibilityTreeTests.AccessibleNames_PrimaryNavigationItemsExposeNames [3 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.AccessibilityTreeTests.FocusOrder_TabTraversalReachesAKeyboardFocusableControl [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.AccessibilityTreeTests.ControlTypes_ShellChromeReportsInteractiveRoles [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.AccessibilityTreeTests.KeyboardOnlyPath_NavigatesWithoutAPointer [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.AccessibilityTreeTests.HighContrast_ShellRemainsNavigableUnderHighContrast [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.AuthenticationFlowTests.SignOut_ClearsSessionAndRegatesProtectedRoutes [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.AuthenticationFlowTests.SignIn_FakeCallbackEstablishesSessionAndClearsBanner [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.AuthenticationFlowTests.SignedOut_ProtectedRouteRedirectsToOnboardingAndShowsReauthBanner [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.AuthenticationFlowTests.TokenRefreshFailure_SurfacesTheReauthBanner [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.43]     TeslaSync.App.UITests.Tests.ComponentStateTests.InfoBar_ReauthBannerPresentsAnActionableState [FAIL]
+[xUnit.net 00:00:03.43]     TeslaSync.App.UITests.Tests.ComponentStateTests.CommandPalette_AutoSuggestBoxAcceptsTextAndClears [FAIL]
+[xUnit.net 00:00:03.43]     TeslaSync.App.UITests.Tests.ComponentStateTests.NavigationItems_ExposeAccessibleNames [FAIL]
+[xUnit.net 00:00:03.43]     TeslaSync.App.UITests.Tests.ComponentStateTests.ComponentParity_EveryRequiredComponentIsLiveOrLedgered [FAIL]
+[xUnit.net 00:00:03.43]     TeslaSync.App.UITests.Tests.ComponentStateTests.Button_ThemeToggleReportsButtonControlTypeAndIsInvokable [FAIL]
+[xUnit.net 00:00:03.43]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.43]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.43]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "success") [FAIL]
+[xUnit.net 00:00:03.43]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "empty") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.ComponentStateTests.InfoBar_ReauthBannerPresentsAnActionableState [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ComponentStateTests.CommandPalette_AutoSuggestBoxAcceptsTextAndClears [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ComponentStateTests.NavigationItems_ExposeAccessibleNames [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ComponentStateTests.ComponentParity_EveryRequiredComponentIsLiveOrLedgered [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ComponentStateTests.Button_ThemeToggleReportsButtonControlTypeAndIsInvokable [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "refreshing") [1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "error") [FAIL]
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "loading") [FAIL]
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "success") [FAIL]
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "success") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "error") [FAIL]
+[xUnit.net 00:00:03.44]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "error") [FAIL]
+[xUnit.net 00:00:03.45]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.45]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "loading") [FAIL]
+[xUnit.net 00:00:03.45]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "loading") [FAIL]
+[xUnit.net 00:00:03.45]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.45]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "success") [FAIL]
+[xUnit.net 00:00:03.45]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "error") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "loading") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "empty") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "loading") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "success") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "loading") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "live-stale") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "success") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "loading") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "empty") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "loading") [FAIL]
+[xUnit.net 00:00:03.46]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "empty") [FAIL]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "loading") [FAIL]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "success") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "loading") [< 1 ms]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "empty") [FAIL]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "success") [FAIL]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "refreshing") [FAIL]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "success") [< 1 ms]
+  Error Message:
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "empty") [FAIL]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "refreshing") [FAIL]
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.47]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "empty") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "error") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "success") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "success") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "success") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "empty") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "live-stale") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "loading") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "success") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "empty") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.48]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "refreshing") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "empty") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "empty") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "error") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "empty") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "error") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "empty") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "loading") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "refreshing") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "error") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "error") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.49]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "empty") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "error") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "cached-offline") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "error") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "error") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "loading") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "empty") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "refreshing") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Automations, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Notifications, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "refreshing") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "loading") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "empty") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.50]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "loading") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "error") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "success") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "success") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: AdminDevTools, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Analytics, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "loading") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "success") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "error") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "error") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "empty") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "cached-offline") [FAIL]
+[xUnit.net 00:00:03.51]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "cached-offline") [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Charging, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: DashboardExplore, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Vehicles, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TripsDriving, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: TelemetrySignals, state: "empty") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: MapsLocation, state: "cached-offline") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.52]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "success") [FAIL]
+[xUnit.net 00:00:03.52]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "loading") [FAIL]
+[xUnit.net 00:00:03.52]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "error") [FAIL]
+[xUnit.net 00:00:03.52]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "live-stale") [FAIL]
+[xUnit.net 00:00:03.52]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "success") [FAIL]
+[xUnit.net 00:00:03.52]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "loading") [FAIL]
+[xUnit.net 00:00:03.52]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "error") [FAIL]
+[xUnit.net 00:00:03.52]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.ErrorState_UnknownDeepPathResolvesToTheNotFoundRoute [FAIL]
+[xUnit.net 00:00:03.52]     TeslaSync.App.UITests.Tests.PageStateMatrixTests.SuccessState_RepresentativeRouteSurfacesItsCanonicalDeepLink [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Sharing, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SystemOps, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: Diagnostics, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: SettingsAccountIntegrations, state: "live-stale") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: PowerUser, state: "success") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: BatteryEnergy, state: "loading") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.RepresentativeRoute_RendersOrLedgersEveryState(group: VehicleSystems, state: "error") [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.ErrorState_UnknownDeepPathResolvesToTheNotFoundRoute [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PageStateMatrixTests.SuccessState_RepresentativeRouteSurfacesItsCanonicalDeepLink [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.52]     TeslaSync.App.UITests.Tests.PlatformPolishTests.SettingsPersistence_WindowStateRoundTripsWithinTheSession [FAIL]
+[xUnit.net 00:00:03.53]     TeslaSync.App.UITests.Tests.PlatformPolishTests.TaskbarStatus_ShellStatusBarReflectsRouteState [FAIL]
+[xUnit.net 00:00:03.53]     TeslaSync.App.UITests.Tests.PlatformPolishTests.ToastActivation_DeepLinkRoutesToTheExpectedPage [FAIL]
+[xUnit.net 00:00:03.53]     TeslaSync.App.UITests.Tests.PlatformPolishTests.JumpList_DeepLinkRoutesToTheExpectedPage [FAIL]
+[xUnit.net 00:00:03.53]     TeslaSync.App.UITests.Tests.ShellNavigationTests.Launch_RendersTitleBarNavigationContentAndStatusChrome [FAIL]
+[xUnit.net 00:00:03.53]     TeslaSync.App.UITests.Tests.ShellNavigationTests.ThemeSwitch_TogglesWithoutDisruptingTheShell [FAIL]
+[xUnit.net 00:00:03.53]     TeslaSync.App.UITests.Tests.ShellNavigationTests.DeepLink_PendingRouteViewSurfacesTheCanonicalCustomSchemeUri [FAIL]
+[xUnit.net 00:00:03.53]     TeslaSync.App.UITests.Tests.ShellNavigationTests.KeyboardNavigation_MovesFocusToAnActionableControl [FAIL]
+[xUnit.net 00:00:03.53]     TeslaSync.App.UITests.Tests.ShellNavigationTests.TitleBarAndResize_KeepShellChromeIntact [FAIL]
+  Failed TeslaSync.App.UITests.Tests.PlatformPolishTests.SettingsPersistence_WindowStateRoundTripsWithinTheSession [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PlatformPolishTests.TaskbarStatus_ShellStatusBarReflectsRouteState [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PlatformPolishTests.ToastActivation_DeepLinkRoutesToTheExpectedPage [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.PlatformPolishTests.JumpList_DeepLinkRoutesToTheExpectedPage [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ShellNavigationTests.Launch_RendersTitleBarNavigationContentAndStatusChrome [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ShellNavigationTests.ThemeSwitch_TogglesWithoutDisruptingTheShell [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ShellNavigationTests.DeepLink_PendingRouteViewSurfacesTheCanonicalCustomSchemeUri [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ShellNavigationTests.KeyboardNavigation_MovesFocusToAnActionableControl [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ShellNavigationTests.TitleBarAndResize_KeepShellChromeIntact [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:03.53]     TeslaSync.App.UITests.Tests.ShellNavigationTests.BackForward_RestoresThePreviousRouteThroughKeyboardAccelerators [FAIL]
+[xUnit.net 00:00:03.53]     TeslaSync.App.UITests.Tests.ShellNavigationTests.NavigationView_RendersAHeaderForEveryNonEmptyRouteGroup [FAIL]
+[xUnit.net 00:00:03.53]     TeslaSync.App.UITests.Tests.ShellNavigationTests.CommandPalette_SearchSurfacesSuggestionsAndNavigates [FAIL]
+  Failed TeslaSync.App.UITests.Tests.ShellNavigationTests.BackForward_RestoresThePreviousRouteThroughKeyboardAccelerators [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ShellNavigationTests.NavigationView_RendersAHeaderForEveryNonEmptyRouteGroup [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ShellNavigationTests.CommandPalette_SearchSurfacesSuggestionsAndNavigates [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 124 ms - TeslaSync.App.UITests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed: 18100, Skipped:     0, Total: 18100, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=1
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== RESULT SUMMARY (sub-gate exit codes, verbatim from above) ===
+BUILD_EXIT=0        (TeslaSync.sln, Release; WinUI app + all projects; 0 warnings / 0 errors)
+TEST_EXIT=1         (see breakdown below)
+FORMAT_EXIT=0       (dotnet format --verify-no-changes: clean)
+PLACEHOLDER_EXIT=0  (check-placeholders on shared-surfaces/RouteAnnouncer: PLACEHOLDER_COUNT=0)
+
+=== TEST_EXIT=1 BREAKDOWN ===
+TeslaSync.App.Tests.dll  (headless, plain net10.0 — where this surface's logic is verified):
+    Passed! - Failed: 0, Passed: 18100, Skipped: 0, Total: 18100.
+    Includes the 20 RouteAnnouncer tests (verified in isolation: --filter ~RouteAnnouncer => Passed 20/20):
+      projection (ZWS rotation, empty-title clear, counter wrap), first-paint suppression,
+      deferred read, custom delay, same-title re-announce, region clear, debounce/cancel,
+      counter cycle, a11y (polite live-region content carries the page title), PII-safe
+      diagnostics (view.opened / route.announced / route.cleared; never the title or path),
+      idempotent Start, Dispose, and null-arg validation.
+TeslaSync.App.UITests.dll (WinAppDriver/Appium UI automation):
+    Failed! - Failed: 147, Passed: 0 — EVERY test throws, before any assertion:
+      TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException :
+      "UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+       http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths
+       or on PATH."
+    These are PRE-EXISTING shell-level UI-automation tests (ShellNavigationTests, etc.); this
+    surface adds NONE. By design the fixture FAILS (never skips) when the runner is absent
+    (WinAppDriverSession.InitializeAsync / EnsureReady).
+
+=== CAPABILITY EVIDENCE (UI-automation runner absent on this runner) ===
+UserInteractive=True
+C:\Program Files\Windows Application Driver\WinAppDriver.exe        exists=False
+C:\Program Files (x86)\Windows Application Driver\WinAppDriver.exe  exists=False
+WinAppDriver on PATH=False ; WinAppDriver process=False ; 127.0.0.1:4723 listening=False
+Per the Windows acceptance-gate convention (.github/prompts/monorepo/p2-windows/
+W99-0001-windows-acceptance-gate.prompt.md, capability note): "requires Windows + .NET 10 SDK
++ Windows App SDK 1.6+, UI automation runner, and MSIX signing capability; if any runner/
+signing capability is absent, gate must end STATUS=BLOCKED with exact reason." The WinUI 3 /
+.NET 10 capability IS present (the app and all projects build in Release); the UI-automation
+RUNNER (WinAppDriver/Appium) is the missing capability. UI automation also requires the app
+deployed as MSIX and an automation session, which this non-interactive runner cannot provide.
+
+=== DELIVERABLE (this prompt's scope — COMPLETE, no stubs) ===
+Web source: web/src/components/a11y/RouteAnnouncer.tsx (SPA route-change announcer).
+apps/windows/TeslaSync.App/shared-surfaces/RouteAnnouncer/
+  - RouteAnnouncer.Model.cs      (WinUI-free): IRouteLocationSource (useLocation seam),
+                                   IPageTitleSource (document.title seam), IAnnounceScheduler
+                                   (setTimeout/clearTimeout seam), RouteAnnouncerRegistration
+                                   (slug/priority/cycle/delay), RouteAnnouncerProjection.Next
+                                   (pure ZWS rotation) + AnnouncementStep, PII-safe
+                                   RouteAnnouncerDiagnostics.
+  - RouteAnnouncer.ViewModel.cs   (WinUI-free): state holder — first-paint suppression,
+                                   deferred title read, debounce, counter rotation, diagnostics.
+  - RouteAnnouncer.cs             (WinUI view, app-only): composes the atomic polite
+                                   TsAnnouncerRegion (web <VisuallyHidden liveRegion
+                                   priority="polite">), a DispatcherQueueTimer scheduler, and
+                                   marshals announcements to the UI thread.
+apps/windows/TeslaSync.App.Tests/SharedSurfaces/RouteAnnouncerTests.cs (20 headless xUnit tests).
+States reproduced from the web source (no data fetch => the generic loading/error/stale/offline
+chrome does not exist in this anonymous a11y surface, mirroring the TourLauncher precedent):
+empty region (first paint / title-less destination) and an active announcement.
+
+=== PRE-EXISTING BLOCKERS CLEARED (required to make BUILD/TEST runnable; documented for transparency) ===
+1) apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was XML-corrupt (MSB4025): the
+   .gitattributes merge=union strategy had concatenated THREE <Project> roots plus a stray
+   unclosed <ItemGroup>, and the surviving root was ALSO missing 50 WinUI-free sources (e.g.
+   TourLauncher.*). The project could not even load, so the BASELINE was already red (this masked
+   the app-project errors below). Per the file's own INVARIANT ("regenerate it directly from the
+   WinUI-free sources on disk"), the single Compile union was regenerated from disk (885 prior +
+   the 2 new RouteAnnouncer WinUI-free files = 887; the 1 WinUI view file correctly excluded).
+2) apps/windows/TeslaSync.App/modals-dialogs/{FlagEditDrawer,EntryDrawer}.cs had 4x CS0266: a
+   pre-existing name collision where ModalsDialogs.DrawerSide (intentionally declared by the
+   Drawer surface) shadowed Components.UI.DrawerSide for the TsDrawer.Side assignment. The app
+   assembly failed to compile, which cascaded into 83 XAML "Unknown type" errors (WMC1509/WMC0001/
+   WMC9999). Fixed surgically + behaviour-preservingly by fully qualifying Components.UI.DrawerSide
+   at the 2 consumer sites. RouteAnnouncer's own files compiled clean from the start (0 warnings,
+   under TreatWarningsAsErrors + Recommended analyzers).
+
+=== CONCLUSION ===
+The RouteAnnouncer surface is fully and faithfully implemented and every CODE-LEVEL gate is green
+(BUILD=0, headless TEST=0 incl. 20/20 RouteAnnouncer tests, FORMAT=0, PLACEHOLDER=0). The composite
+gate is red solely because the solution-wide `dotnet test` runs the pre-existing WinAppDriver-based
+UI-automation suite, and the UI-automation runner is absent on this runner. Per the repo's own
+acceptance-gate convention this is a capability BLOCK, reported here with exact evidence rather than
+claimed green.
+
+EXIT=1
+STATUS=BLOCKED

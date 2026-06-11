@@ -30,7 +30,7 @@ public sealed partial class FlagEditDrawer : ContentControl, IDisposable
     private readonly FlagEditDrawerViewModel _viewModel;
     private readonly DispatcherQueue? _dispatcher;
 
-    private readonly TsDrawer _drawer = new() { Side = DrawerSide.Right, PaneWidth = 460 };
+    private readonly TsDrawer _drawer = new() { Side = Components.UI.DrawerSide.Right, PaneWidth = 460 };
     private readonly Grid _root = new() { RowSpacing = 16, MinWidth = 360, Padding = new Thickness(20) };
     private readonly PanelTitle _title = new();
     private readonly TsInput _keyBox = new();
