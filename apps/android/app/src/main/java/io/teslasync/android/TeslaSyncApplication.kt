@@ -26,5 +26,11 @@ class TeslaSyncApplication : Application() {
                 store = container.data.liveSessionStore,
                 lifecycle = ProcessLifecycleOwner.get().lifecycle,
             ).also { it.bind() }
+
+        // Create the OS notification channels and bind FCM device registration to the auth state
+        // machine (ADR-009): a sign-in registers this device, a sign-out unregisters it. Done here
+        // (not lazily) so registration follows auth even when the process is started by an FCM
+        // delivery rather than by the user opening the app.
+        container.push.start()
     }
 }

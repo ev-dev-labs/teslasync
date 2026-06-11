@@ -31,6 +31,13 @@ mapsCompose = "6.6.0"
 # 0.11.1 is the current stable line; it contributes the redirect-receiver activity (bound to the
 # appAuthRedirectScheme manifest placeholder) and pulls androidx.browser transitively.
 appAuth = "0.11.1"
+# Firebase Android BoM (ADR-009 push, ADR-012 version lock). Governs com.google.firebase:* artifact
+# versions so firebase-messaging is declared without an explicit version (the same BoM-governed pattern
+# as the Compose BOM). 34.14.1 is the locked baseline verified on Google Maven; major bumps require a
+# superseding ADR, Renovate keeps patch versions current. The google-services Gradle plugin is
+# intentionally NOT applied here — credential provisioning (google-services.json) is P5/H5-0001 scope;
+# the FCM token surface degrades gracefully until the default FirebaseApp is configured.
+firebaseBom = "34.14.1"
 # SQLDelight runtime — referenced by the app only to construct the shared-core offline cache
 # (LocalCache(DriverFactory(context).createDriver()), ADR-013); the driver itself lives in :core.
 # Pinned to the same version the shared core uses (apps/shared/gradle/libs.versions.toml).
@@ -92,6 +99,11 @@ vico-compose-m3 = { module = "com.patrykandpatrick.vico:compose-m3", version.ref
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 # AppAuth — OAuth 2.0 / OIDC Authorization-Code + PKCE (Chrome Custom Tabs + redirect receiver).
 appauth = { module = "net.openid:appauth", version.ref = "appAuth" }
+# Firebase Cloud Messaging — device push transport (ADR-009). Version comes from the Firebase BoM
+# (declared without version.ref, like the Compose BOM artifacts). Pulls play-services-tasks +
+# firebase-common transitively (all com.google.* → the Google Maven repo per settings.gradle.kts).
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 # SQLDelight runtime — names SqlDriver so the app can build the shared-core LocalCache (ADR-013).
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
 # Coroutines — Android dispatchers for the auth state holder + redirect bridge.
@@ -110,5 +122,9 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# kotlinx.serialization compiler plugin — generates serializers for the app's @Serializable wire models
+# (the FCM device-registration request/response, ADR-009). Pinned to the Kotlin version, mirroring the
+# shared core's plugin so the app and :core resolve one serialization toolchain (ADR-012 version lock).
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

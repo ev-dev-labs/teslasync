@@ -1,5 +1,7 @@
 package io.teslasync.android.navigation
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,13 +37,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import io.teslasync.android.R
 import io.teslasync.android.components.ui.Icon
 import io.teslasync.android.components.ui.TeslaGlyphs
+import io.teslasync.android.notifications.LocalDeepLinkRouter
 import io.teslasync.android.ui.theme.generated.Spacing
 import kotlinx.coroutines.launch
 
@@ -74,6 +79,10 @@ fun AppScaffold(
 
     // A4 hook point: an authenticated first-run session is routed to onboarding before its target.
     LaunchedRouteToOnboarding(gate, navController)
+
+    // Notification-tap deep links (ADR-009): a tapped push feeds its teslasync://app/... URI through
+    // the DeepLinkRouter into this graph once the signed-in shell exists.
+    NotificationDeepLinkHandler(navController)
 
     // Predictive/legacy back closes the modal drawer first; route pops are handled by the NavHost.
     BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
@@ -147,6 +156,19 @@ private fun LaunchedRouteToOnboarding(
         if (gate.isOnboardingRequired()) {
             navController.navigate(Destinations.require("onboarding").route) { launchSingleTop = true }
         }
+    }
+}
+
+@Composable
+private fun NotificationDeepLinkHandler(navController: NavHostController) {
+    val router = LocalDeepLinkRouter.current ?: return
+    val context = LocalContext.current
+    val pending by router.links.collectAsStateWithLifecycle()
+    LaunchedEffect(pending) {
+        val uri = pending ?: return@LaunchedEffect
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).setPackage(context.packageName)
+        navController.handleDeepLink(intent)
+        router.consume()
     }
 }
 

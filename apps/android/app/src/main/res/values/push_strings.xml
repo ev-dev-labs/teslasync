@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Push / notification-channel strings (app-owned; not part of the auto-generated i18n catalog). -->
+<resources>
+    <string name="push_channel_critical_alerts_name">Critical alerts</string>
+    <string name="push_channel_critical_alerts_description">Urgent battery, security and safety alerts, and sign-in prompts.</string>
+    <string name="push_channel_vehicle_events_name">Vehicle events</string>
+    <string name="push_channel_vehicle_events_description">Drive, charge, park and sleep state changes for your vehicles.</string>
+    <string name="push_channel_charging_name">Charging</string>
+    <string name="push_channel_charging_description">Charging started, target reached and session-complete updates.</string>
+    <string name="push_channel_automation_name">Automations</string>
+    <string name="push_channel_automation_description">Outcomes of your automation rules.</string>
+    <string name="push_channel_maintenance_name">Maintenance</string>
+    <string name="push_channel_maintenance_description">Service reminders and software-update notices.</string>
+    <string name="push_channel_system_name">System</string>
+    <string name="push_channel_system_description">Service incidents and the results of vehicle commands.</string>
+    <string name="push_channel_general_name">General</string>
+    <string name="push_channel_general_description">Other notifications from TeslaSync.</string>
+</resources>

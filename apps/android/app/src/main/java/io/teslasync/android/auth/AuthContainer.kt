@@ -6,6 +6,7 @@ import io.teslasync.android.data.DataContainer
 import io.teslasync.android.data.live.LiveFeed
 import io.teslasync.android.data.live.LiveSessionStore
 import io.teslasync.android.navigation.OnboardingGate
+import io.teslasync.android.push.PushContainer
 import io.teslasync.shared.core.auth.AndroidKeystoreTokenStore
 import io.teslasync.shared.core.auth.AuthService
 import io.teslasync.shared.core.auth.AuthState
@@ -119,6 +120,23 @@ class AuthContainer(
 
     /** The navigation shell's onboarding-gate seam, backed by the live onboarding status. */
     val onboardingGate: OnboardingGate = OnboardingGate { onboardingGateController.required.value }
+
+    /**
+     * The push pipeline DI graph (ADR-009): FCM device registration tied to the auth state machine plus
+     * the notification channels/dispatcher/banner. It reuses the same single [apiClient] (so the
+     * device-registration call carries the bearer + 401 refresh) and the shared redacting logger.
+     * `TeslaSyncApplication` creates the channels and starts the registration coordinator; the FCM
+     * service and the Compose shell reach it through the application.
+     */
+    val push: PushContainer by lazy {
+        PushContainer(
+            context = appContext,
+            api = apiClient,
+            authState = session.state,
+            scope = scope,
+            logger = diagnostics.logger,
+        )
+    }
 
     /** The shared, resilient API client whose only auth seam is the auth token provider. */
     val apiHttpClient: ApiHttpClient get() = apiClient
