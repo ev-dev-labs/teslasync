@@ -14,7 +14,7 @@ namespace TeslaSync.App.SharedSurfaces;
 /// assistive technology to re-announce duplicates. <see cref="Dispose"/> unsubscribes (the web effect
 /// cleanup). The view performs no I/O of its own; it binds to this holder.
 /// </summary>
-public sealed class AnnouncerRegionViewModel : INotifyPropertyChanged, IDisposable
+public sealed class VisuallyHiddenAnnouncerViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IDisposable _subscription;
     private string _politeMessage = string.Empty;
@@ -22,7 +22,7 @@ public sealed class AnnouncerRegionViewModel : INotifyPropertyChanged, IDisposab
     private bool _disposed;
 
     /// <summary>Creates the holder and subscribes it to <paramref name="announcer"/> (the web mount effect).</summary>
-    public AnnouncerRegionViewModel(IAnnouncer announcer)
+    public VisuallyHiddenAnnouncerViewModel(IAnnouncer announcer)
     {
         ArgumentNullException.ThrowIfNull(announcer);
         _subscription = announcer.Subscribe(OnAnnounced);
@@ -50,10 +50,10 @@ public sealed class AnnouncerRegionViewModel : INotifyPropertyChanged, IDisposab
         GC.SuppressFinalize(this);
     }
 
-    private void OnAnnounced(string message, AnnouncerPriority priority)
+    private void OnAnnounced(string message, VisuallyHiddenAnnouncerPriority priority)
     {
         // web AnnouncerRegion: assertive -> setAssertive(message); else setPolite(message).
-        if (priority == AnnouncerPriority.Assertive)
+        if (priority == VisuallyHiddenAnnouncerPriority.Assertive)
         {
             _assertiveMessage = message;
             Raise(nameof(AssertiveMessage));
