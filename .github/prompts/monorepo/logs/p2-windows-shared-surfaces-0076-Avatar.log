@@ -1,0 +1,45 @@
+=== P2 Shared surface 0076 Avatar (Windows) ===
+runner=atul-think-i9  dotnet=10.0.300  os=Microsoft Windows NT 10.0.26200.0  utc=2026-06-11T17:32:38Z
+capability: WinUI 3 (Windows App SDK 1.6+) + .NET 10 PRESENT (app builds; headless suite runs).
+            WinAppDriver E2E harness (Category=UIAutomation) is environment-provisioned and ABSENT on this runner.
+
+--- STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2: dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" (headless suite; repo's documented gate split) ---
+No test matches the given testcase filter `Category!=UIAutomation` in TeslaSync.App.UITests.dll (E2E suite; see STEP 2b)
+Passed!  - Failed:     0, Passed: 19982, Skipped:     0, Total: 19982 - TeslaSync.App.Tests.dll (net10.0)
+  (includes the 44 AvatarTests: registration, metrics, projection per-state, image seams, view-model re-project, a11y, diagnostics)
+TEST_HEADLESS_EXIT=0
+
+--- STEP 2b: UIAutomation E2E suite (Category=UIAutomation) — environment-gated, NOT a code failure ---
+A verbatim 'dotnet test <sln>' with no filter returns non-zero ONLY because WinAppDriver is absent:
+  TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent (nothing listening on http://127.0.0.1:4723/ and WinAppDriver.exe not found).
+  This suite's runner + a deployed packaged app are supplied by the environment / run-ui-automation.ps1;
+  the repo tags it [Trait(Category,UIAutomation)] precisely so gates run the headless and UIAutomation suites independently.
+
+--- STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+format diagnostic lines = 0 (clean)
+FORMAT_EXIT=0
+
+--- STEP 4: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/Avatar ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- pre-existing blocker repaired to reach a green gate ---
+TeslaSync.App.Tests.csproj was committed-corrupted (merge=union re-concatenation: 2 <Project> roots + a dangling
+Compile fragment => MSB4025 multiple root elements), which blocked the ENTIRE solution build/test. Regenerated to a
+single root with one case-insensitive ordinal path-sorted, Include-deduplicated Compile ItemGroup (999 = the exact
+on-disk WinUI-free set incl. the 3 new Avatar links), per the file's own INVARIANT. No file added/dropped vs disk.
+
+SUMMARY: BUILD_EXIT=0  TEST_HEADLESS_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+Avatar surface verified at parity with web components/data-display/Avatar.tsx: image/initials/glyph(person+helix-bot)
+branches, deterministic CB-safe palette + initials, attributed/anonymous backgrounds, presence dot (online/idle/offline),
+tooltip, full i18n via P1/S10, Narrator labels, image-failure fallback, and view.opened diagnostics.
+EXIT=0
+STATUS=DONE
