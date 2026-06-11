@@ -1,0 +1,39 @@
+/*
+  BatteryComparison.strings
+  TeslaSync — P4 feature view · 0275 · BatteryComparison (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `BatteryComparison` resolves (table "BatteryComparison") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact key extracted from the web source
+  (features/vehicles/components/BatteryComparison.tsx). The remainder back the native
+  state envelope (freshness chip, connectivity banner, loading / empty / error chrome)
+  and the accessibility summaries.
+*/
+
+/* --- Key from the web source (parity) --- */
+"fleet.batteryStatus" = "Fleet Battery Status";
+"common.noData" = "No data available";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"fleet.battery.live" = "Live";
+"fleet.battery.stale" = "Stale";
+"fleet.battery.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"fleet.battery.staleBanner" = "Reconnecting — battery levels may be stale";
+"fleet.battery.offlineBanner" = "Offline — showing the last loaded battery levels";
+
+/* --- Loading / empty / error chrome --- */
+"fleet.battery.loading" = "Loading battery levels";
+"fleet.battery.emptyTitle" = "No battery data";
+"fleet.battery.emptyHint" = "Battery levels will appear here once your vehicles report their state.";
+"fleet.battery.errorTitle" = "Couldn't load battery levels";
+"fleet.battery.retry" = "Retry";
+
+/* --- Accessibility summaries --- */
+"fleet.battery.vehiclesNoun" = "vehicles";
