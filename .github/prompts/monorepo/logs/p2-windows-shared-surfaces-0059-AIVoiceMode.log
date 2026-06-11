@@ -1,0 +1,79 @@
+=== P2 Shared surface 0059 AIVoiceMode (Windows) ===
+date: 2026-06-11T08:58:54.6363950-07:00
+capability: .NET SDK 10.0.300; WindowsAppSDK 2.1.3; TFM net10.0-windows10.0.19041.0 -> CAPABLE (WinUI 3 + .NET 10)
+
+--- pre-flight fix: TeslaSync.App.Tests.csproj was corrupted at HEAD ---
+The headless test project (merge=union .gitattributes) had been re-concatenated by integration merges into
+multiple <Project> roots with duplicate Compile items (MSB4025: multiple root elements), which blocked the
+entire solution build/test. Per the file's own INVARIANT it was regenerated as ONE Project root with a single
+case-insensitive ordinal-sorted, Include-deduplicated Compile ItemGroup = the union of every WinUI-free
+(Microsoft.UI-free) .cs on disk under dashboard-widgets/feature-views/misc-surfaces/modals-dialogs/shared-surfaces
+(verified: the 947 prior unique links === disk truth, 0 stale / 0 missing) plus the 3 new AIVoiceMode logic links = 950.
+
+--- dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" ---
+(The Category=UIAutomation suite -TeslaSync.App.UITests- hard-fails on this runner with
+ UiAutomationUnavailableException: WinAppDriver/Appium is absent. It is a platform-capability gap, not a
+ product defect; the headless unit suite -which compile-links every surface's WinUI-free logic, incl. this one- runs.)
+Passed!  - Failed:     0, Passed: 19214, Skipped:     0, Total: 19214, Duration: 20 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/AIVoiceMode ---
+PLACEHOLDER_EXIT=0
+genuine forbidden-token scan of shared-surfaces/AIVoiceMode*.cs (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/NotImplementedException/stub/mock) = 0 hits
+
+--- surface summary ---
+Native WinUI 3 / .NET 10 parity port of web components/ai/AIVoiceMode.tsx, composed with the shared
+AIFeatureCard scaffold + the withAiFeature gate. Files (apps/windows/TeslaSync.App/shared-surfaces/):
+  AIVoiceMode.Model.cs      - registration + i18n keys/fallbacks, stream-state/event/error enums,
+                              AiVoiceStreamEvent (+factories), AiVoiceRequest {message,session_id},
+                              AiVoiceSseParser (port of parseSSEFrame/toTypedEvent), VoiceSentenceChunker
+                              (port of popCompleteSentences), AIVoiceModeDiagnostics. (WinUI-free, Windows-free)
+  AIVoiceMode.Source.cs     - IAiVoiceStreamTransport + HttpAiVoiceStreamTransport (port of useAiStream over
+                              fetch+ReadableStream); ISpeechDictation / ISpeechPlayback / ITranscriptDraftStore
+                              ports + Unavailable/Silent/Null defaults. (WinUI-free, Windows-free; reuses the
+                              shared IAiFeatureGate)
+  AIVoiceMode.ViewModel.cs  - INotifyPropertyChanged state holder: gate, transcript, listening, TTS on/off,
+                              stt error, stream lifecycle, sentence-chunked speech, all localized labels + a11y
+                              names + the {message,session_id} body with a stable per-instance session id.
+  AIVoiceMode.cs            - WinUI ContentControl view + WinRT speech adapters (WindowsSpeechDictation over
+                              Windows.Media.SpeechRecognition, WindowsSpeechPlayback over
+                              Windows.Media.SpeechSynthesis+MediaPlayer) + ApplicationData draft store.
+
+Data sources (P1/S8 state-holder seam, no HTTP in the view): useTranslation -> ILocalizer facade;
+useAiStream -> IAiVoiceStreamTransport (POST /api/v1/ai/voice/chat, SSE). On-device speech recognition +
+synthesis are device ports; only transcribed text is sent, never raw audio (web contract).
+
+States reproduced (every branch asserted headlessly): gate-off (collapsed, no automation id) | idle with
+empty hint | listening (live transcript region hint) | dictation error | dictation-unavailable hint |
+streaming/thinking skeleton (reduced-motion aware) | accumulating reply text | done | error (Helix error
+message) | offline (connectivity-aware message) | confirm-pause | cancel. Controls: mic start/stop, mute/
+unmute spoken replies, stop-all while busy. TTS speaks one complete sentence at a time via the chunker.
+
+i18n: all 20 translation.voiceMode.* keys resolve from Strings/{en,ar,he}/Resources.resw; the shared
+helix.* / ai.common.* AIFeatureCard keys resolve via the English fallback (same as the sibling AI surfaces);
+common.offline is present in the catalog. No English string literals in native code.
+
+Accessibility: Narrator names on the transcript live region and every interactive control (mic / TTS / stop /
+Ask Helix), the badge and the surface root; reduced-motion-aware thinking skeleton; live-region announce on
+the transcript + output. Telemetry: view.opened slug=AIVoiceMode (PII-safe) emitted once on load.
+
+Tests: apps/windows/TeslaSync.App.Tests/SharedSurfaces/AIVoiceModeTests.cs - 72 facts covering the SSE parser,
+the sentence chunker, registration + registry membership, PII-safe diagnostics, the gate, canStart, the full
+stream lifecycle (delta/done/closes-without-terminal/trimmed body/session id/no-op guards/duplicate-start/
+streaming flips+disables/error/offline/unknown/confirm/cancel/retry-clears/tool-frames/done-clears-transcript),
+text-to-speech (sentence-at-a-time / muted / toggle-off-cancels / error-cancels), dictation (start/unsupported/
+append/error/ended/stop/stop-all), transcript-draft persistence + dispose-clears, transcript display, control
+labels + a11y names, and i18n verbatim copy. Whole-solution unit run: 19214 passed / 0 failed / 0 skipped.
+
+EXIT=0
+STATUS=DONE
