@@ -19,6 +19,11 @@
     into this single canonical root, regenerated directly from the WinUI-free sources on disk plus the new
     SignalCompareControls.Model link. Do NOT re-concatenate, and never write a literal build-item or
     project start tag inside this comment.
+    Include-deduplicated Compile ItemGroup. A chain of integration merges had repeatedly re-concatenated
+    this file into multiple roots, duplicate Compile items and broken XML comments (failing XML load as
+    MSB4025 / MSB4067); re-consolidated for P2 feature-views/0257 TeslaApiUsageCard into this single
+    canonical root. Do NOT re-concatenate, and never write a literal build-item or project start tag
+    inside this comment.
   -->
 
   <PropertyGroup>
@@ -711,6 +716,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\SettingsSearch\SettingsSearch.Source.cs" Link="FeatureViews\SettingsSearch\SettingsSearch.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SettingsSearch\SettingsSearch.ViewModel.cs" Link="FeatureViews\SettingsSearch\SettingsSearch.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalCompareControls\SignalCompareControls.Model.cs" Link="FeatureViews\SignalCompareControls\SignalCompareControls.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SignalChartPanel.Model.cs" Link="FeatureViews\SignalChartPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SlideRenderer\SlideRenderer.Model.cs" Link="FeatureViews\SlideRenderer\SlideRenderer.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SnapshotInspector\SnapshotInspector.Model.cs" Link="FeatureViews\SnapshotInspector\SnapshotInspector.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SocChart\SocChart.Model.cs" Link="FeatureViews\SocChart\SocChart.Model.cs" />
