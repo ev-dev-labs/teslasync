@@ -571,3 +571,4 @@ p2-windows/shared-meaningful/W-0058-AIVehiclePaintPreview.prompt.md
 p2-windows/shared-meaningful/W-0060-AIWatchFaceNLResponse.prompt.md
 p2-windows/shared-meaningful/W-0062-withAiFeature.prompt.md
 p2-windows/shared-meaningful/W-0063-AnnotationList.prompt.md
+p2-windows/shared-meaningful/W-0061-AIYearReviewNarration.prompt.md
