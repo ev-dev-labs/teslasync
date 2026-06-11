@@ -576,3 +576,4 @@ p2-windows/shared-meaningful/W-0059-AIVoiceMode.prompt.md
 p2-windows/shared-meaningful/W-0066-ChartExportMenu.prompt.md
 p2-windows/shared-meaningful/W-0064-AreaChartWrapper.prompt.md
 p2-windows/shared-meaningful/W-0067-ChartHiddenSeriesContext.prompt.md
+p2-windows/shared-meaningful/W-0068-ChartLegend.prompt.md
