@@ -1,0 +1,133 @@
+=== P2 Shared surface 0062 withAiFeature (Windows) ===
+Date: 2026-06-11
+Branch: auto/p/p2-windows__shared-meaningful__W-0062-withAiFeature.prompt.md
+Web source (spec): web/src/components/ai/withAiFeature.tsx (+ web/src/hooks/useAiEnabled.ts,
+                   web/src/components/ai/withAiFeature.test.tsx)
+Native output: apps/windows/TeslaSync.App/shared-surfaces/withAiFeature.{cs,Model.cs,Source.cs,ViewModel.cs}
+Tests:         apps/windows/TeslaSync.App.Tests/SharedSurfaces/WithAiFeatureTests.cs
+ADR refs:      ADR-002 (WinUI shell), ADR-005, ADR-009, ADR-015 (AI-Off Contract)
+
+--------------------------------------------------------------------------------------------------
+SURFACE
+--------------------------------------------------------------------------------------------------
+withAiFeature is the web AI-Off Contract higher-order component (ADR-015): a visibility gate that
+renders an inner AI surface ONLY when the gated feature is enabled end-to-end (useAiEnabled), throws
+at the wrapping call for an unknown feature id, and otherwise renders null so no AI surface leaks
+while AI is off. It is ANONYMOUS: the web source has no titles, labels, i18n keys, charts, maps,
+data hooks beyond useAiEnabled, and NO loading/empty/error/stale/offline branches — only the two
+states enabled (render inner inside a data-ai-feature / data-testid marker wrapper) and disabled
+(render nothing). The native port reproduces exactly those two branches; fabricating loading/error/
+stale/offline chrome the web source lacks would be parity drift, so (per the VisuallyHidden /
+AnnouncerRegion anonymous-surface precedent) none was invented. Evidence in the doc-comments.
+
+Native decomposition (flat TeslaSync.App.SharedSurfaces namespace; reuses the shared IAiFeatureGate):
+  - withAiFeature.Model.cs     WithAiFeatureRegistration (Slug "withAiFeature", RootAutomationId
+                               "ai-feature-<id>-root" = web meta.uiTestIds[0], IsRegisteredFeature
+                               registry guard, UnknownFeatureMessage) + WithAiFeatureDiagnostics.
+  - withAiFeature.Source.cs    AiEnabledEvaluator — native port of useAiEnabled (registry membership
+                               AND IAiFeatureGate.IsEnabled; fail-closed on null gate / blank id /
+                               unknown id). Reuses the shared gate (no redeclare).
+  - withAiFeature.ViewModel.cs WithAiFeatureViewModel — throws on unknown/blank id at construction
+                               (web throw-at-wrapping), live IsGateOpen, RootAutomationId, WrapperName
+                               (= web displayName "withAiFeature(<id>, <inner>)"), Refresh().
+  - withAiFeature.cs           WithAiFeature : ContentControl — transparent marker host; gate-open ->
+                               Visible + AutomationId marker + inner content; gate-closed -> Collapsed
+                               + null content + no marker (web returns null). Wrap(...) factory mirrors
+                               the HOC call. Emits view.opened once on Loaded. Group automation peer
+                               (nameless, transparent — web bare <div> has no role).
+
+--------------------------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER REPAIRED (tightly coupled to this task)
+--------------------------------------------------------------------------------------------------
+The committed apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj did NOT load:
+  error MSB4025: The project file could not be loaded. There are multiple root elements. Line 1070.
+Cause (documented in the file's own header): the .gitattributes merge=union strategy re-concatenated
+it into TWO <Project> roots during integration merges. Neither root was complete (each had surfaces
+the other lacked; intra-root duplicate Compile items too). This made the whole-solution build red at
+baseline — independent of withAiFeature, but it gates `dotnet build`/`dotnet test` and this surface's
+WinUI-free sources must be Compile-linked there, so it was repaired per the file's own invariant:
+regenerated as exactly ONE <Project> root with a single case-insensitive ordinal path-sorted,
+Include-deduplicated Compile ItemGroup = the union of every WinUI-free (Microsoft.UI-free) .cs on disk
+under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (bare
+WinUI view files excluded). Validated: that disk set (956 before this surface, 959 after = +3 new
+WinUI-free withAiFeature sources; withAiFeature.cs view correctly excluded) exactly equals the union
+of both old roots' Compile entries (zero stale links, zero misclassifications). LF / no-BOM, valid
+single-root XML, 959 Compile nodes.
+
+--------------------------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------------------------
+dotnet build  apps/windows/TeslaSync.sln -c Release
+    -> BUILD succeeded. 0 Error(s). TeslaSync.App (WinUI app, TreatWarningsAsErrors=true) compiled the
+       withAiFeature view + 3 headless sources warning-clean; TeslaSync.App.Tests compiled with the
+       repaired csproj. (17 pre-existing CA warnings in TeslaSync.App.Core only — not this surface.)
+    -> BUILD_EXIT=0
+
+dotnet test   apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+    -> Passed!  Failed: 0, Passed: 19317, Skipped: 0, Total: 19317  (TeslaSync.App.Tests.dll)
+       Includes all 29 WithAiFeatureTests cases (registration, marker convention, registry guard,
+       diagnostics, AiEnabledEvaluator adapter, gate open/closed, live re-eval, throw-on-unknown/blank/
+       null, projections, Refresh).
+    -> TEST_EXIT=0
+    The `[Trait("Category","UIAutomation")]` filter is the documented W9-0002 headless-gate contract
+    (TeslaSync.App.UITests.csproj: "Every test carries [Trait(\"Category\",\"UIAutomation\")] so the
+    W9-0002 gate can run the headless [suite]"); the WinAppDriver E2E suite is run separately via
+    apps/windows/run-ui-automation.ps1. Same convention as the shipped sibling log
+    p2-windows-shared-surfaces-0050-AIStateMachineDebuggerNarrator (STATUS=DONE).
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    -> FORMAT_EXIT=0  (clean; only a benign "warnings were encountered while loading the workspace" note)
+
+./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/withAiFeature
+    -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+    Genuine authoritative isolated scan of the 5 new files (canonical placeholder-patterns.json,
+    -Language csharp): PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0. No TODO/FIXME/stub/mock/placeholder/
+    Lorem/NotImplementedException in shipped code.
+
+--------------------------------------------------------------------------------------------------
+FULL-SOLUTION dotnet test (UNFILTERED) — recorded with evidence, NOT reported as green
+--------------------------------------------------------------------------------------------------
+dotnet test apps/windows/TeslaSync.sln -c Release   (verbatim, no filter):
+    TeslaSync.App.Tests  -> Passed!  Failed: 0,   Passed: 19317  (headless, incl. this surface)
+    TeslaSync.App.UITests-> Failed!  Failed: 147,  Passed: 0,  Duration 242 ms
+Every one of the 147 UITest failures is the SAME environmental error (zero from this surface):
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+This is BY DESIGN: RunnerAvailability ("the tests fail with that reason rather than being silently
+skipped") + WinAppDriverSession ("the suite is never silently skipped"). The UIAutomation suite drives
+the PACKAGED app out-of-process over WinAppDriver and is environment-supplied / run via
+run-ui-automation.ps1; it is a platform-capability gap of THIS non-interactive runner, not a defect in
+this surface. No UITests were added or modified by this prompt.
+
+--------------------------------------------------------------------------------------------------
+CAPABILITY (per prompt capability clause)
+--------------------------------------------------------------------------------------------------
+The REQUIRED capability — WinUI 3 (Windows App SDK) + .NET 10 (SDK 10.0.300), Fluent Design System —
+is AVAILABLE on this runner: the Release solution, including the WinUI app project TeslaSync.App and
+this surface's WinUI view withAiFeature.cs, builds with 0 errors. The required platform capability is
+present; STATUS is DONE. (The separately-provisioned WinAppDriver E2E UI-automation runtime is the
+only thing absent, and it is contractually excluded from this headless gate, recorded above.)
+
+--------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------------------------
+[x] Surface renders all states the web source has (gate-open -> inner inside marker host;
+    gate-closed -> nothing). No invented loading/empty/error/stale/offline branches (web source has none).
+[x] Hooks bind via the shared P1/S8 state-holder layer (IAiFeatureGate through WithAiFeatureViewModel /
+    AiEnabledEvaluator); the view never reads the gate directly; no direct HTTP.
+[x] i18n: web source is anonymous (zero t() calls / i18n keys); none invented. (P1/S10 facade unused by design.)
+[x] Accessibility: transparent group host; the root marker (ai-feature-<id>-root) is the AutomationId
+    tooling/Narrator keys on when open and is dropped when closed. No interactive element of its own to label.
+[x] Tests: adapter unit test (AiEnabledEvaluator) + per-state ViewModel tests (gate open/closed, the
+    surface's two states) + accessibility-marker test (RootAutomationId). 29/29 green.
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0 on all 5 files).
+[x] Telemetry: view.opened slug=withAiFeature emitted once on Loaded via PII-safe WithAiFeatureDiagnostics.
+[x] EXIT=0 / STATUS=DONE (headless gate; WinAppDriver E2E deferred to a provisioned runner with evidence).
+
+BUILD_EXIT=0
+TEST_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
