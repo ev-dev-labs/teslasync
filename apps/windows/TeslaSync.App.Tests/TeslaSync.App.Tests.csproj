@@ -117,6 +117,20 @@
     analysis (NETSDK1022); regenerated for P2 feature-views/0249 LiveStatusPill directly from the WinUI-free
     sources on disk (plus the new LiveStatusPill surface link). Do NOT re-concatenate, and never write a
     literal build-item or project start tag inside this comment.
+    feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and cannot
+    be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
+    Compile-linked in the single ItemGroup below (the Link mirrors each source's real location under
+    FeatureViews\ or Widgets\); the WinUI views themselves are exercised by the app build. The matching test
+    classes live under this project and are picked up by the SDK default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted, Include-deduplicated
+    Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) source on disk under
+    dashboard-widgets/ and feature-views/. This file carries the .gitattributes merge=union strategy, so a
+    chain of integration merges had repeatedly re-concatenated it into multiple Project roots plus duplicate
+    Compile items and orphaned prose, failing XML load (MSB4025/MSB4067/NETSDK1022); re-consolidated for P2
+    feature-views/0250 OperationsSection into this single canonical root, regenerated directly from the
+    WinUI-free sources on disk (plus the new OperationsSection surface). Do NOT re-concatenate, and never
+    write a literal build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -154,6 +168,8 @@
   </ItemGroup>
 
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union). -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union);
+       the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -711,6 +727,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.Model.cs" Link="FeatureViews\NotificationSettings.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.Source.cs" Link="FeatureViews\NotificationSettings.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.ViewModel.cs" Link="FeatureViews\NotificationSettings.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OperationsSection.Model.cs" Link="FeatureViews\OperationsSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OperationsSection.Source.cs" Link="FeatureViews\OperationsSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OperationsSection.ViewModel.cs" Link="FeatureViews\OperationsSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OptimizerSection.Model.cs" Link="FeatureViews\OptimizerSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OptimizerSection.Source.cs" Link="FeatureViews\OptimizerSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OptimizerSection.ViewModel.cs" Link="FeatureViews\OptimizerSection.ViewModel.cs" />
