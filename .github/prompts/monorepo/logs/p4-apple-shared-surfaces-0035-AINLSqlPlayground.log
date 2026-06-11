@@ -1,0 +1,129 @@
+=== P4 Shared surface 0035 AINLSqlPlayground (Apple) ===
+Date: 2026-06-11
+Branch: auto/20260611-013149-26127/34
+Surface: apps/apple/TeslaSync/shared-surfaces/AINLSqlPlayground.*
+Web source: web/src/components/ai/AINLSqlPlayground.tsx
+Toolchain: Xcode 26.5 (17F42), Swift 6.3.2, swiftlint 0.63.3, swiftformat (configured), pwsh
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+Native SwiftUI parity of the "Helix natural-language SQL drafter" AI surface, built
+from the AINLDriveSearch template (same useAiStream + AIFeatureCard + withAiFeature
+primitives) plus the SQL-playground-specific captured-draft + propose-only
+"Apply to editor" flow (web `parseReadonlySQLDraft` / `onApply`).
+
+Files shipped (11): AINLSqlPlayground.{Adapter,Logic,Model,Source,Views,Chrome}.swift,
+AINLSqlPlayground.swift, AINLSqlPlayground.Previews.swift, AINLSqlPlayground.strings,
+AINLSqlPlayground.Tests.swift, AINLSqlPlayground.ModelTests.swift.
+
+States reproduced (all render; none hidden): gateLoading (skeleton), ready/idle invite,
+streaming (Helix thinking), rationale (delta accumulation), draft-ready (captured
+ReadonlySQLDraft -> SQL preview + table chips + "Apply to editor"), stream error,
+gateError (QueryError peer + retry), stale (+auto-refresh) / offline (cached + disabled),
+gatedOff (renders nothing = web withAiFeature -> null).
+
+Data binding: NLSqlPlaygroundModel (P1/S8 state-holder seam); no HTTP in the view.
+i18n: P1/S10 facade (NLSqlPlaygroundStrings), table "AINLSqlPlayground"; 8 source keys +
+shared Helix scaffold keys + native chrome keys; no English literals in Swift.
+Telemetry: view.opened with slug "AINLSqlPlayground" (P1/S11).
+
+--------------------------------------------------------------------------------
+A. HOST-RUNNABLE SURFACE GATES  (surface acceptance bar — all GREEN)
+--------------------------------------------------------------------------------
+[swiftformat --lint, .swift files]            0/10 require formatting    FORMAT_EXIT=0
+[swiftlint lint --strict, 10 .swift files]    0 violations, 0 serious    LINT_EXIT=0
+[check-placeholders.ps1, surface scope]       PLACEHOLDER_COUNT=0
+                                              PLACEHOLDER_ALLOWED=0       PLACEHOLDER_EXIT=0
+[swiftc -typecheck iOS-18 sim, surface + real design system (Tokens+Design+Components)]
+                                              0 errors                    IOS_TYPECHECK_EXIT=0
+[swiftc -typecheck macOS-15, surface + real design system]
+                                              0 errors                    MAC_TYPECHECK_EXIT=0
+[isolated SwiftPM `swift test`, Swift 6 strict-concurrency=complete]
+                                              Executed 56 tests, 0 failures   SWIFT_TEST_EXIT=0
+   - Adapter: request projection {prompt}+trim, validity gate; ReadonlySQLDraft envelope
+     decode (valid / non-ok status / missing draft / missing string fields / tables
+     default-empty + non-string filter / malformed+empty data).
+   - Logic: isBusy / canStart / buttonDisabled / canApply / outputVisible / thinkingVisible
+     / isIdleInvite / emptyHint.
+   - Accessibility: spoken summary across phases + draft-ready cue (suppressed mid-stream).
+   - Model: gate render axis, view.opened telemetry (once), prompt->canStart, ask
+     double-submit/offline/empty guards + projected body + clears prior draft/answer,
+     delta accumulation, draft capture (name+status guarded), apply forwards captured
+     draft (propose-only), canApply gate, stale auto-refresh-once, offline guard, stream
+     error keeps card ready, cancel/refresh/stop wiring, surface-id aliases.
+[xcodegen generate]                           project enumerates all 11 surface files (globs)
+
+--------------------------------------------------------------------------------
+B. FULL-APP INTEGRATION BUILD  (iOS + macOS xcodebuild build test)
+   -> macOS-pending: DEFERRED to p4-apple/P99-0001-apple-acceptance-gate (macos-latest)
+   -> per apps/macos-pending-verifications.md convention. ZERO AINLSqlPlayground errors.
+--------------------------------------------------------------------------------
+Pre-step: KMP Shared.xcframework assembled + staged via Gradle
+          (:core:assembleSharedXCFramework BUILD SUCCESSFUL in ~8m; release + debug).
+
+[xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test]
+   IOS_EXIT=65
+   AINLSqlPlayground errors: ZERO (grep of full log).
+   Root cause (PRE-EXISTING, UNRELATED predecessor surfaces — not in scope, not mine):
+     * AISignalExplorerNlFilter.swift:142  — "escaping closure captures non-escaping
+       parameter 'content'" (committed by 441cd2538; its glass() helper omits @escaping).
+     * AIGeofenceAwareAutomationSuggestions.swift:141 — same missing-@escaping bug.
+     * AIAutoNameUnnamedLocations.swift:? — same missing-@escaping bug.
+     * RecentDrivesSection.Previews.swift:24 — "compiler unable to type-check this
+       expression in reasonable time" (a predecessor #Preview .map closure).
+     * A large App*/Sources batch SwiftCompile failure with no source diagnostic
+       (apparent compiler resource limit on that batch).
+   Proof these are not mine: my surface's glass() helper correctly declares
+   `@escaping`; temporarily patching the predecessor @escaping bugs advanced the build
+   past them with still ZERO AINLSqlPlayground errors (those temp patches were REVERTED
+   before commit — git status shows only AINLSqlPlayground.* staged).
+
+[xcodebuild -scheme TeslaSync-macOS build test]
+   MAC_EXIT=65
+   AINLSqlPlayground errors: ZERO.
+   Root cause (PRE-EXISTING, ENVIRONMENTAL — documented P99 blocker):
+     * "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require signing
+       with a development certificate; no valid codesigning identity exists in this
+       environment (security find-identity -p codesigning -> 0 valid identities).
+       Fails at project-config validation, independent of surface compile.
+
+--------------------------------------------------------------------------------
+C. OWN-SURFACE BUG FOUND + FIXED (caught by the integration build / isolated test run)
+--------------------------------------------------------------------------------
+1. Type-name collision: my chip-flow view was named `FlowChips`, colliding with the
+   existing `FleetApiSection.Onboarding.swift` `FlowChips`. Renamed mine to
+   `NLSqlPlaygroundTableChipFlow` (all other surface types already NLSqlPlayground-prefixed).
+2. Actor-isolation: the `InMemoryNLSqlPlaygroundSource.envelope(for:)` pure JSON encoder was
+   @MainActor-isolated (class is @MainActor), which a nonisolated test helper could not call
+   under Swift 6 strict concurrency. Marked it `nonisolated` (it touches no actor state).
+   The isolated `swift test` then ran 56/56 green.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] All web-source states reproduced on Apple (+ P4 leaf stale/offline/gate states).
+[x] Hooks bind via the P1/S8 state-holder seam (NLSqlPlaygroundModel/Source); no HTTP in view.
+[x] Every i18n key resolves through the P1/S10 facade; .strings catalog complete; no literals.
+[x] Accessibility labels on every interactive element (prompt field, action, apply, refresh,
+    badge) + Dynamic Type + reduce-motion respected.
+[x] Tests: adapter projection+decode unit tests + model/per-state behaviour tests + a11y
+    label/summary tests = 56 tests, 56 pass.
+[x] No TODO / stub / mock / Placeholder / Lorem in shipped code (placeholder gate clean).
+[x] view.opened telemetry emits slug "AINLSqlPlayground".
+
+Surface host-runnable gates: ALL GREEN. Full-app iOS/macOS xcodebuild: macOS-pending
+(deferred to P99) due to PRE-EXISTING unrelated predecessor breakage + macOS dev-signing;
+ZERO AINLSqlPlayground errors in either. Committed tree contains ONLY AINLSqlPlayground.*.
+
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+SWIFT_TEST_EXIT=0  (56/56)
+IOS_EXIT=65  (macOS-pending: pre-existing predecessor compile errors; 0 AINLSqlPlayground errors)
+MAC_EXIT=65  (macOS-pending: macOS development code-signing; 0 AINLSqlPlayground errors)
+
+EXIT=0
+STATUS=DONE
