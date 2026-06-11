@@ -1,0 +1,74 @@
+=== P3 Dashboard widget 0046 EnergyFlowWidget (Android) ===
+Run: 2026-06-11T07:00:57.1638072-07:00
+Module path note: prompt gate says ':app:'; settings.gradle.kts maps the module to ':android'
+(project(':android').projectDir = file('app')). Running real ':android:' tasks, as sibling log 0020 did.
+
+----- :android:assembleRelease -----
+
+BUILD SUCCESSFUL in 58s
+70 actionable tasks: 7 executed, 63 up-to-date
+BUILD_EXIT=0
+
+----- :android:testReleaseUnitTest --tests '...energyflow.*' (THIS surface) -----
+
+BUILD SUCCESSFUL in 43s
+45 actionable tasks: 5 executed, 40 up-to-date
+SURFACE_TEST_EXIT=0  (EnergyFlowProjectionTest=19 + EnergyFlowWidgetViewModelTest=9 = 28 tests, 0 failures)
+
+----- :android:ktlintCheck :android:detekt -----
+
+BUILD SUCCESSFUL in 32s
+13 actionable tasks: 2 executed, 11 up-to-date
+LINT_EXIT=0
+
+----- :android:testReleaseUnitTest (FULL module, for transparency) -----
+
+BUILD SUCCESSFUL in 31s
+45 actionable tasks: 3 executed, 42 up-to-date
+FULL_TEST_EXIT=0
+
+----- check-placeholders.ps1 (EnergyFlowWidget surface) -----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+----- Surface summary -----
+Parity port of web/src/features/dashboard/widgets/EnergyFlowWidget.tsx (+ shared/WidgetFlowDiagram.tsx).
+Files (pkg io.teslasync.android.dashboard.widgets.energyflow; dir com/teslasync/dashboard-widgets/EnergyFlowWidget):
+  EnergyFlowModel.kt   - pure projection (nodes/arrows), registration, formatters (no Compose/HTTP).
+  EnergyFlowSource.kt  - S7 VehiclesRepository + S8 VehiclesStore ports + energyFlowResource combiner.
+  EnergyFlowWidgetViewModel.kt - BaseFeedViewModel -> UiState<VehicleStateEnvelope>; refresh + view.opened.
+  EnergyFlowWidget.kt  - Compose surface: WidgetShell chrome + native flow diagram (Layout + drawBehind).
+Data (web hooks -> shared P1/S8 state holders; no HTTP in the view):
+  useVehicles      -> VehiclesStore.vehicles()       (resolves default vehicle, web vehicles?.[0]?.id)
+  useVehicleState  -> VehiclesStore.vehicleState(id) (Resource<VehicleStateEnvelope>, web {state,live})
+  id = vehicleId ?? vehicles?.[0]?.id ?? 0 (energyFlowResource); no vehicle -> empty (web enabled:id>0).
+Reads (verbatim, exactly as web reads them - power is kW here, no SI conversion, like ChargeStatusLive):
+  power -> isConsuming/isRegen/absPower; charger_power -> kW; battery_level -> "{n}%"; is_charging.
+Diagram (web WidgetFlowDiagram): Battery node (left, emerald), Motor node (right, purple; label
+  Consuming/Regenerating/Standby by power sign), Charger node (top, amber) while charging. Arrows:
+  Battery->Motor (cyan, active when consuming), Motor->Battery (emerald, active when regen),
+  Charger->Battery (amber, active while charging). Stroke width scales by |value|/max (web strokeForValue,
+  1..4 units); active arrows march an animated dash + arrowhead, honoring reduced motion (static when off);
+  node value is an AnimatedNumber count-up (web AnimatedNumber decimals=1).
+States (all rendered, none hidden): loading skeleton chrome / empty "No energy data available"
+  (no vehicle state) / content diagram / stale+offline (cached diagram kept visible) / error surfaced
+  via the header freshness chip + refresh affordance over the empty body (web passes no WidgetShell.error).
+i18n (all resolve from P1/S10 R.string.translation_widget_*): energyFlow, battery, consuming,
+  regenerating, standby, charger, noEnergyData; chrome: common_{loading,offline,refresh}, a11y_loading,
+  freshness_*. No English literals in code.
+Registry: id="energy-flow", category="battery", default 2x4, min 2x4, max 4x40, slug "EnergyFlowWidget"
+  (web registry/battery.ts). isWithinBounds/clamp honor the same constraints.
+Diagnostics: view.opened emitted once with surface slug "EnergyFlowWidget" (P1/S11), PII-free (no power/
+  battery/vehicle id).
+Accessibility: each node carries a folded TalkBack description ("Battery, 72%" / "Consuming, 24.6 kW" /
+  "Standby, -" / "Charger, 11.0 kW"); refresh IconButton labelled; loading surface labelled; title heading;
+  MaterialTheme/design tokens (dark/light/high-contrast); animation respects reduced motion.
+Tests: EnergyFlowProjectionTest(19) + EnergyFlowWidgetViewModelTest(9) unit (src/test, in gate) +
+  EnergyFlowWidgetUiTest(9 states/a11y, src/androidTest, connected test - outside the offline gate).
+Note: pre-existing unrelated androidTest files (BatteryCellsWidgetUiTest, DriveEfficiencyChartWidgetUiTest)
+  fail to compile (assertExists/assertDoesNotExist) - not in this surface's scope and not in the gate
+  (assembleRelease + testReleaseUnitTest + ktlint + detekt do not compile androidTest).
+EXIT=0
+STATUS=DONE
