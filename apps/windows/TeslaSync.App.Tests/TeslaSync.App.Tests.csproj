@@ -19,6 +19,24 @@
     modals-dialogs/0017 AcknowledgeAlertDialog into this single canonical root (plus the new AcknowledgeAlertDialog
     Model / ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal
     build-item or project start tag inside this comment.
+    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each
+    feature-view, dashboard-widget, misc-surface and modal/dialog surface. The WinUI app (TeslaSync.App)
+    targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's
+    WinUI-free sources are Compile-linked into the single ItemGroup below (the Link mirrors each source's
+    real location under FeatureViews\, Widgets\, MiscSurfaces\ or ModalsDialogs\); the WinUI view files
+    themselves are exercised by the app build. The matching test classes live under this project and are
+    picked up by the SDK default-compile glob. The Content links copy the units-golden, Package.appxmanifest
+    and widget-template fixtures the tests read out of the test output directory.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
+    Include-deduplicated Compile ItemGroup — the union of every WinUI-free (Microsoft.UI-free) .cs on disk
+    under dashboard-widgets/, feature-views/, misc-surfaces/ and modals-dialogs/ (the bare WinUI view files
+    are excluded). This file carries the .gitattributes merge=union strategy, so a chain of integration
+    merges can re-concatenate it into multiple Project roots plus duplicate Compile items, failing XML load
+    (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Do NOT re-concatenate
+    into multiple roots, and never write a literal build-item or project start tag inside this comment.
+    Re-consolidated for P2 modals-dialogs/0018 EntryDrawer into this single canonical root.
   -->
 
   <PropertyGroup>
@@ -2543,6 +2561,8 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\JobProgressDrawer\JobProgressDrawer.ViewModel.cs" Link="ModalsDialogs\JobProgressDrawer\JobProgressDrawer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\Modal\Modal.Model.cs" Link="ModalsDialogs\Modal\Modal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\Modal\Modal.ViewModel.cs" Link="ModalsDialogs\Modal\Modal.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\EntryDrawer\EntryDrawer.Model.cs" Link="ModalsDialogs\EntryDrawer\EntryDrawer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\EntryDrawer\EntryDrawer.ViewModel.cs" Link="ModalsDialogs\EntryDrawer\EntryDrawer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\FeedbackModal.Model.cs" Link="ModalsDialogs\FeedbackModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\FeedbackModal.Source.cs" Link="ModalsDialogs\FeedbackModal.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\FeedbackModal.ViewModel.cs" Link="ModalsDialogs\FeedbackModal.ViewModel.cs" />
@@ -2552,9 +2572,6 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Model.cs" Link="ModalsDialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Source.cs" Link="ModalsDialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.ViewModel.cs" Link="ModalsDialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.ViewModel.cs" />
-  </ItemGroup>
-
-</Project>
     <Compile Include="..\TeslaSync.App\modals-dialogs\SessionExpiredModal\SessionExpiredModal.Model.cs" Link="ModalsDialogs\SessionExpiredModal\SessionExpiredModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\SessionExpiredModal\SessionExpiredModal.ViewModel.cs" Link="ModalsDialogs\SessionExpiredModal\SessionExpiredModal.ViewModel.cs" />
   </ItemGroup>
