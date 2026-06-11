@@ -6,8 +6,8 @@
     feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
     TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free
     (Microsoft.UI-free) sources are Compile-linked into the single ItemGroup below (the Link mirrors each
-    source's real location under Widgets\, FeatureViews\, MiscSurfaces\, ModalsDialogs\ or SharedSurfaces\); the
-    bare WinUI view files are excluded and exercised by the app build. The matching test classes live under this
+    source's real location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare
+    WinUI view files are excluded and exercised by the app build. The matching test classes live under this
     project and are picked up by the SDK default-compile glob. The Content links copy the units-golden,
     Package.appxmanifest and widget-template fixtures the tests read out of the test output directory.
 
@@ -168,6 +168,14 @@
     XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Regenerated for
     P2 shared-surfaces/0078 BulkActionsToolbar into this single canonical root. Do NOT re-concatenate into
     multiple roots, and never write a literal build-item or project start tag inside this comment.
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
+    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk under
+    dashboard-widgets, feature-views, misc-surfaces, modals-dialogs and shared-surfaces (the bare WinUI view
+    files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of integration
+    merges can re-concatenate it into multiple Project roots plus duplicate Compile items, failing XML load
+    (MSB4025 / MSB4067); regenerated from the WinUI-free sources on disk for P2 shared-surfaces/0076 Avatar. Do
+    NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
+    this comment.
   -->
 
   <PropertyGroup>
@@ -209,6 +217,7 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build, and the test classes are picked up by the SDK default-compile glob. Regenerated for P2 shared-surfaces/0069 ChartTimeRangeContext into this single canonical Project root from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <!-- WinUI-free logic sources compiled in from TeslaSync.App (case-insensitive ordinal path-sorted, include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0072 MetricSwitcherChart. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0078 BulkActionsToolbar. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets, feature-views, misc-surfaces, modals-dialogs and shared-surfaces); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0076 Avatar. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -2566,6 +2575,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Model.cs" Link="SharedSurfaces\ChartTooltip.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Source.cs" Link="SharedSurfaces\ChartTooltip.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.ViewModel.cs" Link="SharedSurfaces\ChartTooltip.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Avatar\Avatar.Model.cs" Link="SharedSurfaces\Avatar\Avatar.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Avatar\Avatar.Source.cs" Link="SharedSurfaces\Avatar\Avatar.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Avatar\Avatar.ViewModel.cs" Link="SharedSurfaces\Avatar\Avatar.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.Model.cs" Link="SharedSurfaces\ChartExportMenu.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.Source.cs" Link="SharedSurfaces\ChartExportMenu.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.ViewModel.cs" Link="SharedSurfaces\ChartExportMenu.ViewModel.cs" />
