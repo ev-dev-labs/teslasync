@@ -1,0 +1,56 @@
+/*
+  CommandInputDialog.strings
+  TeslaSync — P4 modal/dialog · 0030 · CommandInputDialog (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  CommandInputDialog resolves (table "CommandInputDialog") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The command title / prompt / field labels are NOT defined here: they are part of
+  the command catalog (web `def.labelKey` / `inputConfig.promptKey` /
+  `field.labelKey`), supplied to the surface as key + fallback by the bound source
+  and resolved against the shared catalog. This table owns the dialog chrome: the
+  Cancel / Send actions extracted from the web source, the per-field validation
+  messages (the web `validateField` literals, routed through i18n so no English is
+  hardcoded), the native state envelope (loading / empty / error retry / freshness
+  chip / connectivity banner), and the VoiceOver close label. `{{value}}` is the
+  marker the projection substitutes with the formatted min/max bound (web
+  `Minimum: ${min}` / `Maximum: ${max}`).
+*/
+
+/* --- Web source keys (CommandInputDialog.tsx footer) --- */
+"common.cancel" = "Cancel";
+"common.send" = "Send";
+
+/* --- Field validation (web validateField literals) --- */
+"commands.input.errors.required" = "Required";
+"commands.input.errors.pin" = "Enter a 4-digit PIN";
+"commands.input.errors.wholeNumber" = "Enter a whole number";
+"commands.input.errors.number" = "Enter a valid number";
+"commands.input.errors.min" = "Minimum: {{value}}";
+"commands.input.errors.max" = "Maximum: {{value}}";
+
+/* --- Loading (web Spinner) --- */
+"commands.input.state.loading" = "Preparing command…";
+
+/* --- Empty (no command selected) --- */
+"commands.input.state.empty" = "No command selected";
+
+/* --- Error + retry (web QueryError) --- */
+"commands.input.state.error" = "Couldn't load this command.";
+"commands.input.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"commands.input.live" = "Live";
+"commands.input.stale" = "Stale";
+"commands.input.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"commands.input.staleBanner" = "Reconnecting — the command may need to be re-sent";
+"commands.input.offlineBanner" = "Offline — reconnect to send this command";
+
+/* --- VoiceOver builders --- */
+"commands.input.a11y.close" = "Close";
