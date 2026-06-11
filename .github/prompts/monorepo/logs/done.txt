@@ -279,3 +279,4 @@ p3-android/feature-views/A-0030-ChangesPanel.prompt.md
 p3-android/feature-views/A-0029-EndpointSidebar.prompt.md
 p3-android/feature-views/A-0032-XRayBucketChart.prompt.md
 p3-android/feature-views/A-0033-XRayControls.prompt.md
+p3-android/feature-views/A-0025-VinDecoder.prompt.md
