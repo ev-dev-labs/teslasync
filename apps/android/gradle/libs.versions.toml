@@ -12,6 +12,10 @@ agp = "8.9.2"
 androidxCoreKtx = "1.15.0"
 androidxActivity = "1.9.3"
 androidxLifecycle = "2.8.7"
+# Navigation-Compose — typed route graph, deep links, predictive back (P3/A3). Not part of
+# the Compose BOM (it ships under androidx.navigation), so it carries its own version pin.
+# 2.9.8 is the latest stable line compatible with the BOM-resolved Compose 1.9 / material3 1.4.
+androidxNavigation = "2.9.8"
 # Compose Bill of Materials — pins every androidx.compose.* artifact version.
 composeBom = "2026.04.01"
 # Vico — Compose-native charting (ADR-012 lock, apps/versions.lock.md). Major bumps
@@ -49,6 +53,12 @@ compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 compose-material3 = { module = "androidx.compose.material3:material3" }
+# Material 3 WindowSizeClass — adaptive compact/medium/expanded navigation (P3/A3). Version
+# governed by the Compose BOM (declared without version.ref, like the other material3 artifacts).
+# Alias avoids the word "class" (a reserved Gradle catalog accessor segment).
+compose-material3-window-size = { module = "androidx.compose.material3:material3-window-size-class" }
+# Navigation-Compose — NavHost, typed routes, deep links, predictive-back integration.
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "androidxNavigation" }
 # Vico charts — Compose-native cartesian charts + Material 3 theme bridge.
 vico-compose = { module = "com.patrykandpatrick.vico:compose", version.ref = "vico" }
 vico-compose-m3 = { module = "com.patrykandpatrick.vico:compose-m3", version.ref = "vico" }

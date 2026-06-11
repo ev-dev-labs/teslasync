@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Navigation shell chrome strings (app-owned; not part of the generated i18n catalog). -->
+<resources>
+    <string name="nav_back">Back</string>
+    <string name="nav_menu_open">Open navigation menu</string>
+    <string name="nav_menu_close">Close navigation menu</string>
+    <string name="nav_more">More</string>
+    <string name="nav_search_action">Search</string>
+    <string name="nav_drawer_title">TeslaSync</string>
+    <string name="nav_primary_label">Primary navigation</string>
+    <string name="nav_route_announcement">%1$s screen</string>
+    <string name="nav_not_found_body">We couldn\'t find the page you were looking for.</string>
+    <string name="nav_not_found_path">Requested path: %1$s</string>
+    <string name="nav_go_home">Go to dashboard</string>
+</resources>

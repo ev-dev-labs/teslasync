@@ -10,8 +10,10 @@ import org.junit.runner.RunWith
 
 /**
  * Instrumented launch test: the single Activity starts, sets Compose content, and renders the
- * themed home shell. Requires a connected device/emulator (run via connectedDebugAndroidTest);
- * it is not part of the A0 gate, which has no device.
+ * adaptive navigation shell. The start destination (Dashboard) has no A7 page host in this
+ * foundation, so it resolves to the shared not-found screen — asserting its body proves the
+ * NavHost wired up and rendered. Requires a connected device/emulator (connectedDebugAndroidTest);
+ * it is not part of the A3 gate, which has no device.
  */
 @RunWith(AndroidJUnit4::class)
 class LaunchTest {
@@ -19,8 +21,8 @@ class LaunchTest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun activityLaunchesAndRendersHome() {
-        val headline = composeRule.activity.getString(R.string.welcome_headline)
-        composeRule.onNodeWithText(headline).assertIsDisplayed()
+    fun activityLaunchesAndRendersShell() {
+        val notFoundBody = composeRule.activity.getString(R.string.nav_not_found_body)
+        composeRule.onNodeWithText(notFoundBody, substring = true).assertIsDisplayed()
     }
 }

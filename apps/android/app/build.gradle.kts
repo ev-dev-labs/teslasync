@@ -159,6 +159,8 @@ dependencies {
     implementation(libs.compose.ui.graphics)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.compose.material3)
+    implementation(libs.compose.material3.window.size)
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
     implementation(libs.maps.compose)
