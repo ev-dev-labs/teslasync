@@ -1,0 +1,38 @@
+/*
+  InstallPrompt.strings
+  TeslaSync — P4 shared surface · 0125 · InstallPrompt (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The prompt keys mirror the web source
+  (components/feedback/InstallPrompt.tsx) verbatim — installPrompt.title / .subtitle / .install /
+  .dismiss — and the native P4 leaf chrome (loading / empty per-kind / error / freshness) rounds out
+  the surface so the Swift sources hold no English literals. These entries fold into the app
+  Localizable.xcstrings master catalog at integration time; they are kept in a per-surface table
+  ("InstallPrompt") so each parallel surface prompt owns its own strings without editing the shared
+  catalog.
+*/
+
+/* --- Prompt (web `installPrompt.*`) --- */
+"installPrompt.title" = "Install TeslaSync";
+"installPrompt.subtitle" = "Add to home screen for native experience";
+"installPrompt.install" = "Install";
+"installPrompt.dismiss" = "Dismiss install prompt";
+
+/* --- Empty card (web standalone / wasDismissedRecently / no beforeinstallprompt, P4 leaf contract) --- */
+"installPrompt.empty.installed.title" = "TeslaSync is installed";
+"installPrompt.empty.installed.message" = "You're all set — TeslaSync is ready for quick, native access.";
+"installPrompt.empty.dismissed.title" = "Install reminder hidden";
+"installPrompt.empty.dismissed.message" = "We won't show the install prompt again for a couple of weeks. You can add TeslaSync any time from the share menu.";
+"installPrompt.empty.unavailable.title" = "Install isn't available yet";
+"installPrompt.empty.unavailable.message" = "There's nothing to install on this device right now. The prompt appears when a quick-install option becomes available.";
+
+/* --- Loading / error chrome (P4 leaf contract) --- */
+"installPrompt.loadingA11y" = "Checking install options";
+"installPrompt.errorTitle" = "Couldn't check install options";
+"installPrompt.retry" = "Retry";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"installPrompt.live" = "Live";
+"installPrompt.stale" = "Stale";
+"installPrompt.offline" = "Offline";
+"installPrompt.staleA11y" = "Stale — tap to re-check install options";
+"installPrompt.offlineA11y" = "Offline — showing the last install check";
