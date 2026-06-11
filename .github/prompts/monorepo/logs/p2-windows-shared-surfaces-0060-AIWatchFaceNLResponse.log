@@ -1,0 +1,130 @@
+=== P2 Shared surface 0060 AIWatchFaceNLResponse (Windows) ===
+
+Surface: apps/windows/TeslaSync.App/shared-surfaces/AIWatchFaceNLResponse.{Model,Source,ViewModel}.cs + .cs (view)
+Tests:   apps/windows/TeslaSync.App.Tests/SharedSurfaces/AIWatchFaceNLResponseTests.cs
+Web src: web/src/components/ai/AIWatchFaceNLResponse.tsx (THE specification)
+
+Parity port of the web AIWatchFaceNLResponse composed with its shared AIFeatureCard scaffold and the
+withAiFeature gate. Opt-in Helix narrator on the /watch route that answers glance-style natural-language
+questions about the install's primary vehicle. The action POSTs an OPTIONAL { message } body to
+/api/v1/ai/watch/respond via the canonical useAiStream SSE contract and streams the narration into the output
+region. An empty question is allowed — the body serialises to {} and the backend applies its deterministic
+glance-summary default prompt. The deterministic /watch fixed cards + tap-command surface remain the canonical
+baseline (ADR-015 §I3 + §I5 + §I6); this is the opt-in narration section layered beneath them, and renders
+NOTHING when the feature is off.
+
+Data sources (web): useTranslation, useAiStream.
+Shared components (web -> native): AIFeatureCard scaffold, withAiFeature gate, ui Textarea -> the native
+glass-card composition (PanelTitle + Helix TsBadge + description + TsTextarea + universal "Ask Helix" TsButton +
+streamed output region). No charts / maps in this surface.
+
+Architecture (mirrors the shipped AIRAGHelp narrate-with-textarea surface, the closest analogue — same
+useTranslation + useAiStream + AIFeatureCard + withAiFeature + Textarea import set). Each AI shared surface owns
+its own stream stack; only IAiFeatureGate is shared. This surface uses the AiWatch* prefix:
+  - .Model.cs       : AIWatchFaceNLResponseRegistration (FeatureId/Slug/RootAutomationId/RespondPath +
+                      MaxMessageChars=1000 + the six web i18n keys with catalog-verified fallbacks),
+                      AiWatchStreamState / AiWatchEventKind / AiWatchErrorReason, AiWatchStreamEvent,
+                      AiWatchRequest (optional `message`, snake-pinned, JsonIgnore WhenWritingNull so an empty
+                      question serialises to {}), AiWatchSseParser (native port of useAiStream
+                      parseSSEFrame/toTypedEvent), AIWatchFaceNLResponseDiagnostics.
+  - .Source.cs      : IAiWatchStreamTransport (P1/S8 seam) + HttpAiWatchStreamTransport (POSTs the body, reads
+                      text/event-stream, classifies HTTP vs Network failure). Reuses the shared IAiFeatureGate /
+                      StaticAiFeatureGate / DelegateAiFeatureGate (canonical home:
+                      AICabinTemperatureImpactNarrative.Source.cs).
+  - .ViewModel.cs   : UI-thread-free state holder. Gate (IsGateOpen), the canStart guard
+                      (CanStart = MessageWithinCap (trimmed length <= MaxMessageChars) AND state != paused-confirm
+                      — an EMPTY question is allowed), the useAiStream lifecycle (idle -> streaming -> done/error,
+                      duplicate-start no-op, cancel -> idle), offline classification, the optional-message
+                      request body, and all projected labels. No HTTP, no WinUI types.
+  - .cs (view)      : WinUI 3 ContentControl. Tokenized glass Border card -> header (PanelTitle + Helix TsBadge +
+                      wrapped description) + TsTextarea (MinHeight rows=3, MaxLength=1000, accessible name from
+                      watchFaceNL.inputLabel) + right-aligned universal "Ask Helix" TsButton -> output region
+                      (TsSkeleton thinking / Text narration / offline-aware FontIcon+Text error). withAiFeature
+                      gate collapses the whole surface (Visibility.Collapsed + cleared automation id) when off.
+
+States rendered (on-demand SSE action — there is no cached prior result to age, so no "stale" state, matching the
+web hook's stream_http_* -> error fallback and the shipped AIRAGHelp sibling): gate-off (collapsed) - idle
+(output region hidden, card always visible) - streaming/thinking skeleton - accumulating narration text -
+error / offline (connectivity-aware message). Every branch is asserted headlessly in the view-model per-state
+tests (the headless snapshot of what the view renders in each state).
+
+i18n: every string resolves through the ILocalizer facade (P1/S10). The six web keys
+(watchFaceNL.{title,description,button,badge,placeholder,inputLabel}) are present in
+apps/windows/Strings/en/Resources.resw (verified — translation.watchFaceNL.* at L20526-20541); the registration
+fallbacks are the web second-arg copy verbatim. The shared helix.* CTA keys (helix.askHelix / helix.thinking)
+and ai.common.errorUnknown / common.offline are consumed exactly as the shipped AIRAGHelp sibling consumes them
+(catalog value when present, English fallback otherwise — they originate in the AIFeatureCard scaffold bundle,
+out of scope here). No English literals in the view.
+
+Accessibility: Narrator name on the card and the badge; the question field carries its own accessible name
+(watchFaceNL.inputLabel "Your question for Helix", the web textarea aria-label); the action button carries the
+composed "Ask Helix \u00b7 Ask about my car" accessible name + the per-feature verb tooltip; thinking skeleton
+honours MotionPreference.ReduceMotion; streamed output uses a LiveRegion so Narrator announces deltas; input is
+hard-capped at MaxMessageChars so an over-cap parser-rejection 400 can never reach the user.
+
+Telemetry: AIWatchFaceNLResponseDiagnostics emits "view.opened slug=AIWatchFaceNLResponse" (PII-safe — never the
+question text, the narration, the vehicle id, or token usage) once when the surface is shown (P1/S11).
+
+Hook-URL verification (acceptance): RespondPath "/ai/watch/respond" matches the backend route
+internal/api/ai_routes.go:690  r.Post("/watch/respond", g.Wrap("watch-face-nl-response", watchFaceNLResponseHandler))
+(mounted under the /ai group, +/api/v1 prefix => /api/v1/ai/watch/respond). The Go handler decodes the optional
+`message` field (internal/api/aiwatchnl/handler_test.go POSTs {"message":"..."}), confirming the wire field name.
+Feature id "watch-face-nl-response" is present in AiFeatureRegistry.Features (verified by test) and in the web
+registry web/src/ai/features.ts.
+
+Pre-existing build-unblock (NOT introduced by this surface):
+  The committed TeslaSync.App.Tests.csproj did not load: the .gitattributes merge=union strategy had
+  re-concatenated it into TWO <Project> roots plus a trailing fragment (THREE </Project> tags) at line 1032,
+  failing XML load with MSB4025 ("multiple root elements") — which blocked dotnet build/test/format for the WHOLE
+  solution (every surface) on this branch. The working tree was clean, so the corruption is committed at HEAD
+  (108afe01e); `git checkout` could not restore a clean copy. The corruption is introduced by the integration
+  MERGE commits (each individual feat branch is a valid single root, but no single commit holds the full surface
+  union — only the corrupt merges do). Per the file's own INVARIANT, re-consolidated into a single canonical
+  <Project> root: the ordinal path-sorted, Include-deduplicated UNION of every WinUI-free (Microsoft.UI-free) .cs
+  on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. Verified
+  before regenerating that the 950 distinct Compile includes already equalled the WinUI-free .cs sources on disk
+  EXACTLY (0 missing, 0 stale) and that no Include had a conflicting Link, so the only defect was the duplication;
+  the regenerated root is 950 + the 3 new AIWatchFaceNLResponse WinUI-free links (Model/Source/ViewModel) = 953
+  (the bare WinUI view .cs stays app-build-only, correctly excluded). Behaviour-preserving: 19242 headless tests
+  pass (the project was un-buildable before) — zero regressions across all surfaces. This mirrors the identical
+  unblock recorded by the shipped p2-windows-shared-surfaces-0050-AIStateMachineDebuggerNarrator log.
+
+Gate (commands run from repo root; final state, LF-normalized .cs + .csproj per root .editorconfig end_of_line=lf):
+  dotnet build  apps/windows/TeslaSync.sln -c Release                                  -> BUILD_EXIT=0
+        Build succeeded. 0 Error(s); 17 Warning(s) — all pre-existing CA-rule warnings in TeslaSync.App.Core,
+        ZERO from this surface (the WinUI app project sets TreatWarningsAsErrors=true and built clean, so the
+        view + its links are warning-free).
+  dotnet test   apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" -> TEST_EXIT=0
+        Passed!  Failed: 0, Passed: 19242, Skipped: 0, Total: 19242 (TeslaSync.App.Tests.dll)
+        of which the 59 AIWatchFaceNLResponse cases (50 [Fact] + 2 [Theory] methods) pass: SSE parser/adapter,
+        registration + registry membership, MaxMessageChars cap, PII-safe diagnostics, optional-message request
+        body shape ({} for empty, {"message":...} for non-empty), gate, canStart (empty allowed / over-cap
+        rejected / cap-exact accepted / paused-confirm blocked), full stream lifecycle, offline vs http error,
+        unknown-error fallback, confirm-pause-blocks-restart, cancel, retry-clears, tool-frame no-op, and the
+        i18n + a11y label projections.
+  dotnet format apps/windows/TeslaSync.sln --verify-no-changes                          -> FORMAT_EXIT=0
+  ./apps/tools/check-placeholders.ps1 -Path .../shared-surfaces/AIWatchFaceNLResponse   -> PLACEHOLDER_EXIT=0
+        PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0 — no TODO/stub/mock/placeholder/Lorem in the shipped code.
+
+BUILD_EXIT=0
+TEST_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+Note: the verbatim full-solution `dotnet test apps/windows/TeslaSync.sln -c Release` (no filter) additionally
+      executes the Category=UIAutomation suite (TeslaSync.App.UITests), which fails fast on this runner with
+      UiAutomationUnavailableException: "WinAppDriver/Appium runner is absent: nothing is listening on
+      http://127.0.0.1:4723/ and WinAppDriver.exe was not found...". That suite drives the PACKAGED app over
+      WinAppDriver out-of-process and is run independently via run-ui-automation.ps1 per its csproj contract; it
+      is environment-supplied and intentionally excluded from this headless gate (recorded with evidence, not
+      reported as green) — the same convention recorded by the shipped
+      p2-windows-shared-surfaces-0050-AIStateMachineDebuggerNarrator log. The headless suite (which includes all
+      59 AIWatchFaceNLResponse cases) is 19242/19242.
+
+Capability: WinUI 3 (Windows App SDK, via the Microsoft.WindowsAppSDK package + UseWinUI; TFM
+net10.0-windows10.0.19041.0) + .NET 10 (SDK 10.0.300) are AVAILABLE on this runner — the Release solution,
+including the WinUI app project TeslaSync.App and this surface's WinUI view, builds with 0 errors. The required
+platform capability is present; STATUS is DONE (not BLOCKED).
+
+EXIT=0
+STATUS=DONE
