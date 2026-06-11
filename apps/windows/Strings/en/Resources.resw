@@ -777,6 +777,9 @@
   <data name="translation.a11y.dataFreshness" xml:space="preserve">
     <value>Data freshness: {0}</value>
   </data>
+  <data name="translation.a11y.freshnessIndicator" xml:space="preserve">
+    <value>Data freshness: {0}, {1}</value>
+  </data>
   <data name="translation.a11y.dismissNotification" xml:space="preserve">
     <value>Dismiss notification</value>
   </data>
@@ -10709,6 +10712,9 @@
   </data>
   <data name="translation.freshness.seconds" xml:space="preserve">
     <value>{0}s ago</value>
+  </data>
+  <data name="translation.freshness.unknown" xml:space="preserve">
+    <value>—</value>
   </data>
   <data name="translation.freshness.updating" xml:space="preserve">
     <value>updating…</value>
