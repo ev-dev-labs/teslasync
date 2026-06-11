@@ -181,6 +181,7 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0059 AIVoiceMode. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0067 ChartHiddenSeriesContext into this single canonical Project root. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0065 ChartContainer. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build, and the test classes are picked up by the SDK default-compile glob. Regenerated for P2 shared-surfaces/0069 ChartTimeRangeContext into this single canonical Project root from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -2452,6 +2453,30 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIStateMachineDebuggerNarrator.Model.cs" Link="SharedSurfaces\AIStateMachineDebuggerNarrator.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIStateMachineDebuggerNarrator.Source.cs" Link="SharedSurfaces\AIStateMachineDebuggerNarrator.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIStateMachineDebuggerNarrator.ViewModel.cs" Link="SharedSurfaces\AIStateMachineDebuggerNarrator.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISuggestNewGeofences.Model.cs" Link="SharedSurfaces\AISuggestNewGeofences.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISuggestNewGeofences.Source.cs" Link="SharedSurfaces\AISuggestNewGeofences.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISuggestNewGeofences.ViewModel.cs" Link="SharedSurfaces\AISuggestNewGeofences.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITCONarration.Model.cs" Link="SharedSurfaces\AITCONarration.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITCONarration.Source.cs" Link="SharedSurfaces\AITCONarration.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITCONarration.ViewModel.cs" Link="SharedSurfaces\AITCONarration.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIThinkingIndicator.Model.cs" Link="SharedSurfaces\AIThinkingIndicator.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIThinkingIndicator.Source.cs" Link="SharedSurfaces\AIThinkingIndicator.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIThinkingIndicator.ViewModel.cs" Link="SharedSurfaces\AIThinkingIndicator.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.Model.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.Source.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITirePressureTrendReasoning.ViewModel.cs" Link="SharedSurfaces\AITirePressureTrendReasoning.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.Model.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.Source.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPlannerLLMAgent.ViewModel.cs" Link="SharedSurfaces\AITripPlannerLLMAgent.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPostcardShareCardImageGeneration.Model.cs" Link="SharedSurfaces\AITripPostcardShareCardImageGeneration.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPostcardShareCardImageGeneration.Source.cs" Link="SharedSurfaces\AITripPostcardShareCardImageGeneration.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AITripPostcardShareCardImageGeneration.ViewModel.cs" Link="SharedSurfaces\AITripPostcardShareCardImageGeneration.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVampireDrainExplanation.Model.cs" Link="SharedSurfaces\AIVampireDrainExplanation.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVampireDrainExplanation.Source.cs" Link="SharedSurfaces\AIVampireDrainExplanation.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVampireDrainExplanation.ViewModel.cs" Link="SharedSurfaces\AIVampireDrainExplanation.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVehiclePaintPreview.Model.cs" Link="SharedSurfaces\AIVehiclePaintPreview.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVehiclePaintPreview.Source.cs" Link="SharedSurfaces\AIVehiclePaintPreview.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVehiclePaintPreview.ViewModel.cs" Link="SharedSurfaces\AIVehiclePaintPreview.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.Model.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.Source.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.ViewModel.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.ViewModel.cs" />
@@ -2492,6 +2517,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.Model.cs" Link="SharedSurfaces\ChartContainer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.Source.cs" Link="SharedSurfaces\ChartContainer.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.ViewModel.cs" Link="SharedSurfaces\ChartContainer.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.Model.cs" Link="SharedSurfaces\ChartTimeRangeContext.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.Source.cs" Link="SharedSurfaces\ChartTimeRangeContext.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.ViewModel.cs" Link="SharedSurfaces\ChartTimeRangeContext.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.Model.cs" Link="SharedSurfaces\VisuallyHidden.Model.cs" />
