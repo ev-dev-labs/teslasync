@@ -1,0 +1,47 @@
+/*
+  SecuritySection.strings
+  TeslaSync — P4 feature view · 0298 · SecuritySection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `SecuritySection` resolves (table "SecuritySection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/SecuritySection.tsx — the title, the four
+  MetricCard labels, the Yes / No / Active / Off / Closed value words, the pluralizable
+  "{{count}} open" windows caption, and the empty message), reusing the web
+  `vehicles.detail.*` / `common.*` namespaces verbatim. The "{{count}}" token is the
+  i18next interpolation placeholder, substituted at render time by
+  `SecuritySectionStrings.windowsOpen(_:)`. The second group backs the native chrome (the
+  P4 leaf freshness / loading / error copy) so the Swift sources hold no English prose
+  literals. The raw `door_state` string is device/data text carried through unchanged, not
+  a translated string.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"vehicles.detail.security" = "Security";
+"common.locked" = "Locked";
+"common.yes" = "Yes";
+"common.no" = "No";
+"common.sentry" = "Sentry";
+"common.active" = "Active";
+"common.off" = "Off";
+"vehicles.detail.doors" = "Doors";
+"common.closed" = "Closed";
+"vehicles.detail.windows" = "Windows";
+"vehicles.detail.windowsOpen" = "{{count}} open";
+"vehicles.detail.noSecurityData" = "No security data available";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"security.live" = "Live";
+"security.stale" = "Stale";
+"security.offline" = "Offline";
+"security.staleBanner" = "Reconnecting — data may be stale";
+"security.offlineBanner" = "Offline — showing last known data";
+"security.refresh" = "Refresh";
+"security.loadingA11y" = "Loading security";
+"security.errorTitle" = "Couldn't load security";
+"security.retry" = "Retry";
