@@ -6267,6 +6267,9 @@
   <data name="translation.common.outsideTemp" xml:space="preserve">
     <value>Outside</value>
   </data>
+  <data name="translation.common.panel" xml:space="preserve">
+    <value>Panel</value>
+  </data>
   <data name="translation.common.parked" xml:space="preserve">
     <value>Parked</value>
   </data>

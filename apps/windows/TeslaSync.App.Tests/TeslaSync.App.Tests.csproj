@@ -926,37 +926,18 @@
     Compile-linked into the single ItemGroup below (the Link mirrors each source's real location under
     FeatureViews\ or Widgets\); the WinUI view files themselves are exercised by the app build. The
     matching test classes live under this project and are picked up by the SDK default-compile glob.
+    FeatureViews\, Widgets\ or MiscSurfaces\); the WinUI view files themselves are exercised by the app
+    build. The matching test classes live under this project and are picked up by the SDK default-compile
+    glob. The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures the
+    tests read out of the test output directory.
 
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) logic
-    source on disk under dashboard-widgets/ and feature-views/ (the bare WinUI view files are excluded).
-    This file carries the .gitattributes merge=union strategy, so a chain of integration merges had
-    repeatedly re-concatenated it into multiple Project roots plus duplicate Compile items and orphaned
-    comment prose, failing XML load (MSB4025 / MSB4067 / NETSDK1022); re-consolidated for P2
-    feature-views/0299 TirePressureSection into this single canonical root. Do NOT re-concatenate into
-    multiple roots, and never write a literal build-item or project start tag inside this comment.
-    matching test classes live under this project and are picked up by the SDK default-compile glob.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk
-    under dashboard-widgets/ and feature-views/ (the bare WinUI view files are excluded). Re-consolidated
-    for P2 feature-views/0298 SecuritySection into this single canonical root, regenerated directly from the
-    WinUI-free sources on disk (plus the new SecuritySection Model / Source / ViewModel links). Do NOT
-    re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
-    this comment.
-    feature-view, dashboard-widget and modal/dialog surface. The WinUI app (TeslaSync.App) targets a
-    WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's
-    WinUI-free sources are Compile-linked into the single ItemGroup below (the Link mirrors each
-    source's real location under FeatureViews\, Widgets\ or ModalsDialogs\); the WinUI view files
-    themselves are exercised by the app build. The matching test classes live under this project and
-    are picked up by the SDK default-compile glob.
-
-    INVARIANT: keep this file as exactly ONE root with a single, case-insensitive path-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on
-    disk under feature-views/, dashboard-widgets/ and modals-dialogs/ (the bare WinUI view files are
-    excluded). The .gitattributes merge=union strategy can re-concatenate this file into multiple roots
-    plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); regenerate it directly from the
-    WinUI-free sources on disk. Do NOT re-concatenate, and never write a literal build-item start tag
+    INVARIANT: keep this file as exactly ONE Project root with a single, Include-deduplicated Compile
+    ItemGroup — the union of every WinUI-free (Microsoft.UI-free) .cs on disk under feature-views/,
+    dashboard-widgets/ and misc-surfaces/ (the bare WinUI view files, and the WinUI-referencing
+    ResponseViewer.Snippet.cs, are excluded). This file carries the .gitattributes merge=union strategy, so
+    a chain of integration merges can re-concatenate it into multiple Project roots plus duplicate Compile
+    items, failing XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk.
+    Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag
     inside this comment.
     The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures the
     packaging / units-golden / widget tests read out of the test output directory.
@@ -1067,6 +1048,8 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/ and misc-surfaces/); the WinUI view files themselves are exercised by the app build. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. Re-consolidated for P2 modals-dialogs/0003 ChangelogModal into this single canonical root, regenerated from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -2487,6 +2470,13 @@
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Model.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Source.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.ViewModel.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.Model.cs" Link="FeatureViews\VehicleCard\VehicleCard.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.Source.cs" Link="FeatureViews\VehicleCard\VehicleCard.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.ViewModel.cs" Link="FeatureViews\VehicleCard\VehicleCard.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleConfigSection\VehicleConfigSection.Model.cs" Link="FeatureViews\VehicleConfigSection\VehicleConfigSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Model.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Source.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.ViewModel.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHeader\VehicleHeader.Model.cs" Link="FeatureViews\VehicleHeader\VehicleHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHeader\VehicleHeader.Source.cs" Link="FeatureViews\VehicleHeader\VehicleHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHeader\VehicleHeader.ViewModel.cs" Link="FeatureViews\VehicleHeader\VehicleHeader.ViewModel.cs" />
@@ -2519,6 +2509,9 @@
     <Compile Include="..\TeslaSync.App\misc-surfaces\TourLauncher\TourLauncher.Catalog.cs" Link="MiscSurfaces\TourLauncher\TourLauncher.Catalog.cs" />
     <Compile Include="..\TeslaSync.App\misc-surfaces\TourLauncher\TourLauncher.Model.cs" Link="MiscSurfaces\TourLauncher\TourLauncher.Model.cs" />
     <Compile Include="..\TeslaSync.App\misc-surfaces\TourLauncher\TourLauncher.ViewModel.cs" Link="MiscSurfaces\TourLauncher\TourLauncher.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Model.cs" Link="MiscSurfaces\selectedVehicle.Model.cs" />
+    <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Source.cs" Link="MiscSurfaces\selectedVehicle.Source.cs" />
+    <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.ViewModel.cs" Link="MiscSurfaces\selectedVehicle.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\AddAnnotationPopover.Model.cs" Link="ModalsDialogs\AddAnnotationPopover.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\AddAnnotationPopover.ViewModel.cs" Link="ModalsDialogs\AddAnnotationPopover.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\JobProgressDrawer\JobProgressDrawer.Model.cs" Link="ModalsDialogs\JobProgressDrawer\JobProgressDrawer.Model.cs" />
@@ -2536,6 +2529,12 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\NotificationBellPopover.Model.cs" Link="ModalsDialogs\NotificationBellPopover.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\NotificationBellPopover.Source.cs" Link="ModalsDialogs\NotificationBellPopover.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\NotificationBellPopover.ViewModel.cs" Link="ModalsDialogs\NotificationBellPopover.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.Catalog.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.Catalog.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.Model.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.Source.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.Source.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\ChangelogModal\ChangelogModal.ViewModel.cs" Link="ModalsDialogs\ChangelogModal\ChangelogModal.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\Drawer\Drawer.Model.cs" Link="ModalsDialogs\Drawer\Drawer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\Drawer\Drawer.ViewModel.cs" Link="ModalsDialogs\Drawer\Drawer.ViewModel.cs" />
   </ItemGroup>
 </Project>
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Model.cs" Link="MiscSurfaces\selectedVehicle.Model.cs" />
