@@ -1,0 +1,133 @@
+=== P4 Shared surface 0095 MetricCard (Apple) ===
+Artifact  : apps/apple/TeslaSync/shared-surfaces/MetricCard.*
+Web source: web/src/components/data-display/MetricCard.tsx
+Runner    : macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2; swiftlint + swiftformat + pwsh + xcodegen present.
+            Capability (SwiftUI / Swift Charts / MapKit, iOS 18 sim SDK 26.5, macOS 15 SDK 26.5) AVAILABLE
+            → NOT BLOCKED on capability. KMP Shared.xcframework built green (Gradle BUILD SUCCESSFUL, staged).
+
+────────────────────────────────────────────────────────────────────────
+WHAT SHIPPED (9 files, all within the allowed MetricCard.* scope)
+  MetricCard.Adapter.swift      — Foundation pure core: MetricCardSurface slug; MetricCardColor
+                                   (NeonColor parity: cyan/green/red/purple/amber/blue, default cyan);
+                                   MetricCardValue (.number/.text) + JS `${value}` stringify
+                                   (MetricCardNumber) + `Number(value)` finite coercion; MetricCardChange
+                                   (legacy pill); MetricCardDelta (+ Direction/Display/Size enums, current
+                                   omitted) ; MetricCardHelp (+ MetricCardLearnMore, resolvedBody);
+                                   MetricCardInputs (props value type, Equatable for .onChange).
+  MetricCard.Projection.swift   — pure port of the web render body + the inline `<Delta>` logic:
+                                   MetricCardTone / MetricCardDeltaArrow / MetricCardTrend, the
+                                   change projector ("↑/↓ value"), the delta projector (loading / empty
+                                   em-dash / value with arrow+tone+percent/absolute/both, previous==0 → "—",
+                                   hideArrow, current fallback), MetricCardDeltaFormat (en-US fixed grouping
+                                   + formatAbsolute affix rules), MetricCardProjector (value + trend select;
+                                   delta wins over the legacy pill).
+  MetricCard.Model.swift        — P1/S10 i18n facade (MetricCardStrings: metricCard.help.ariaLabel,
+                                   common.learnMore, delta.title, delta.noComparison), P1/S11 telemetry seam
+                                   (MetricCardTelemetry + OSLogMetricCardTelemetry), P1/S8 state holder
+                                   MetricCardModel (@MainActor @Observable, once-only view.opened, props
+                                   update guard, combined value a11y label + help / delta labels).
+  MetricCard.swift              — the public SwiftUI surface (value:MetricCardValue / Double / String inits +
+                                   injected-model init), .onAppear/.onDisappear/.onChange lifecycle, surfaceSlug.
+  MetricCard.Views.swift        — color/tone/arrow → design-token projections; label row + help "?" button
+                                   (popover w/ body + Learn-more Link, compact-adaptation popover); bold value;
+                                   muted subtitle; change pill; delta footer (skeleton/em-dash/value); colored
+                                   icon box; MetricCardContentView (glass container, top row, hover border,
+                                   reduce-motion-gated, VoiceOver wiring: value spoken as one combined element,
+                                   help its own labelled button, decorative glyphs hidden).
+  MetricCard.Previews.swift     — six accent colors, text vs number value, change pill (up/down), delta footer
+                                   (percent/absolute/both/empty/loading), subtitle + help.
+  MetricCard.strings            — the four composed-source i18n keys (positional %1$@/%2$@) w/ web fallbacks.
+  MetricCard.AdapterTests.swift — pure-core coverage: number fmt, value display+finite coercion, color, fixed/
+                                   absolute fmt, change pill, delta (loading/empty/rise/drop/zero/neutral/
+                                   previous-0/absolute/both/hideArrow/current-override), card trend selection.
+  MetricCard.Tests.swift        — model (view.opened once + stop/start, update+guard, value/help/delta a11y),
+                                   view composition (every init + trend arm + token projections), strings facade.
+
+────────────────────────────────────────────────────────────────────────
+FAITHFUL-PARITY NOTE (states)
+  The web MetricCard is a PURE presentational component: props → <div>, no fetch, no React-Query cache, no
+  Promise. It therefore has NO error / stale / offline branch — there is nothing to load, fail, age, or lose
+  connectivity to. Inventing such chrome would fabricate states the source does not have and contradict the
+  web spec, so this surface reproduces ONLY the source's REAL branches — exactly as the sibling presentational
+  primitives BatteryDelta (0077), TimeMarker (0074), and ChartTimeRangeContext (0069) did. The real branches:
+    • value     — always rendered (the headline number / string).
+    • subtitle  — present or absent.
+    • trend     — the legacy change pill (web `change && !delta`), the richer delta, or neither.
+    • delta     — itself carries the web `<Delta>` LOADING (skeleton) and EMPTY (missing-comparison em-dash)
+                  sub-states, which faithfully map the prompt's "loading" / "empty" state requirements.
+    • help      — the optional "?" tooltip next to the label (present only when its body resolves).
+    • icon      — the optional colored glyph box; color — one of six accents (default cyan).
+  Composition seam: the web card composes the `<Delta>` and `<HelpTooltip>` ATOMIC components (owned by the
+  component-library bundle, out of scope) and the allowed-files rule scopes this prompt to MetricCard.*, so
+  their RENDERING is reproduced inline here. Unit-label resolution (mi/km/kWh/currency) and arbitrary i18n-key
+  lookup are the units / i18n facade's job (web `useUnits()` / `t(key)`), so the delta carries already-resolved
+  affixes and the help carries already-resolved copy — the same boundary the web hooks draw.
+
+────────────────────────────────────────────────────────────────────────
+IN-SCOPE VERIFICATION (every check within this surface's allowed scope — GREEN)
+  • swiftc -typecheck (iOS 18 sim SDK 26.5, -swift-version 6, -strict-concurrency=complete):
+      6 MetricCard production files (Adapter/Projection/Model/Views/MetricCard/Previews, incl. #Preview macros)
+      + real DesignTokens (Color.TS/Font.TS/TSSpacing/TSRadius) + TSDesign (TSAnimation) → 0 errors / 0 warnings.
+  • swift test  (isolated SwiftPM pkg "MetricCardKit", macOS, Swift 6, strict concurrency complete):
+      ALL 41 MetricCard tests PASS, 0 failures (Adapter pure-core + Model lifecycle + Views composition +
+      Strings facade). Real production + test sources compiled against the real DesignTokens.
+  • swiftlint  --strict (tree-wide, as gate)  → Found 0 violations, 0 serious in 3764 files. LINT_EXIT=0
+  • swiftformat --lint apps/apple (as gate)   → 0/3994 files require formatting (3 skipped). FORMAT_EXIT=0
+  • check-placeholders.ps1 (gate path + a REAL -Language swift scan of all 8 actual MetricCard.*.swift files):
+      PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0. PLACEHOLDER_EXIT=0
+  • xcodegen generate → all 9 MetricCard files enumerated into the iOS/macOS app + XCTest targets. XCODEGEN_EXIT=0
+
+────────────────────────────────────────────────────────────────────────
+GATE COMMAND RESULTS (verbatim from the prompt's gate)
+  IOS_EXIT=65        xcodebuild -scheme TeslaSync build test
+                     (destination 'platform=iOS Simulator,name=iPhone 17 Pro'; the gate's literal
+                      'iPhone 16' is not installed on this runner — iPhone 17 family only.)
+  MAC_EXIT=65        xcodebuild -scheme TeslaSync-macOS build test
+  LINT_EXIT=0        swiftlint --strict            → 0 violations / 3764 files.
+  FORMAT_EXIT=0      swiftformat --lint apps/apple  → 0/3994 files require formatting.
+  PLACEHOLDER_EXIT=0 check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/MetricCard
+                     (the literal scoped path is a flat-file prefix → "nothing to scan = clean = 0";
+                      a REAL scan of the 8 actual MetricCard.*.swift files also returns COUNT=0.)
+
+────────────────────────────────────────────────────────────────────────
+FULL-APP GATE ANALYSIS — IOS_EXIT=65 and MAC_EXIT=65 are PRE-EXISTING / OUT-OF-SCOPE
+  IOS_EXIT=65 (build failed before tests ran): 108 error: lines, ALL in SIBLING surfaces, NONE in MetricCard
+    (`grep "error:" | grep -i MetricCard` → 0). The error-bearing files are exactly four:
+      dashboard-widgets/RecentDrivesListWidget.*  +  feature-views/RecentDrivesSection.*
+        — 'RecentDrivesModel|Update|LoadStatus|Connection' "ambiguous for type lookup": each is declared
+          `public final class/…` in BOTH files (two-site duplicate-type collision).
+      dashboard-widgets/StateTimelineWidget.*     +  feature-views/StateTimeline.*
+        — 'StateTimelineModel|Update|LoadStatus|Connection' same two-site collision; the remaining
+          "cannot infer contextual base in reference to member 'loaded/failed/stale/offline/loading/live'"
+          + "'nil' requires a contextual type" all cascade from those ambiguous enums.
+  MAC_EXIT=65 (same root cause): 163 error: lines, ALL in the SAME four sibling surfaces, 0 in MetricCard.
+
+  PROOF it is PRE-EXISTING (not caused by these 9 files):
+    • `git status --short` shows ONLY the 9 untracked MetricCard.* files — this surface is purely additive
+      and modifies no existing file.
+    • BASELINE iOS build with all 9 MetricCard files MOVED OUT and the project regenerated (MetricCard absent
+      from the pbxproj): BASELINE_IOS_EXIT=65 with an IDENTICAL error count (108) in the IDENTICAL four
+      surfaces. The duplicate-type ambiguities exist with or without this surface.
+    • MetricCard introduces only uniquely-named `MetricCard*` types and so cannot cause an "ambiguous type"
+      error in unrelated sibling files.
+    • Independently, all 6 MetricCard production files type-check against the real iOS 18 SDK and ALL 41
+      MetricCard tests pass under Swift 6 strict concurrency in an isolated SwiftPM package (above).
+  The allowed-files scope (MetricCard.* + this log) forbids editing the colliding sibling Model files.
+
+────────────────────────────────────────────────────────────────────────
+DISPOSITION
+  Production-polished, Apple-idiomatic MetricCard shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED on this runner: the production files type-check against the real iOS 18 SDK under Swift 6
+  -strict-concurrency=complete with 0 errors using the real design system (Color.TS / Font.TS / TSSpacing /
+  TSRadius); ALL 41 unit/composition/facade tests pass (swift test, 0 failures); swiftlint --strict and
+  swiftformat --lint are GREEN on the surface AND tree-wide (3764 / 3994 files); check-placeholders is GREEN
+  on every file; xcodegen enumerates all 9 files. The full-app iOS-Simulator + macOS `xcodebuild build test`
+  gates are RED (IOS_EXIT=65 / MAC_EXIT=65) for PRE-EXISTING, OUT-OF-SCOPE reasons — sibling-slot
+  RecentDrives* / StateTimeline* duplicate-type collisions, PROVEN pre-existing via an identical clean-baseline
+  build (BASELINE_IOS_EXIT=65, 108 identical errors) — to which this surface contributes ZERO errors. Per the
+  established shared-surface precedent (BatteryDelta 0077, TimeMarker 0074, ChartTimeRangeContext 0069, and
+  apps/macos-pending-verifications.md), these two full-app gates are DEFERRED to the P4 acceptance gate once
+  the sibling duplicate-type collisions are resolved; every gate within this surface's scope is 0.
+
+EXIT=0
+STATUS=DONE
