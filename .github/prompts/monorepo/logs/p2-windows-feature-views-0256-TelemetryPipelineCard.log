@@ -1,0 +1,60 @@
+=== P2 Feature view 0256 TelemetryPipelineCard (Windows) ===
+runner: .NET 10.0.300, Windows App SDK / WinUI 3 (Microsoft.WindowsAppSDK.WinUI 2.1.0)
+date: 2026-06-10T18:02:39.4371740-07:00
+
+--- BUILD (Release, full solution: compiles the WinUI 3 app + XAML markup compiler) ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-09\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:42.25
+BUILD_EXIT=0
+
+--- TEST (Release, headless suite: Category!=UIAutomation) ---
+note: the Category=UIAutomation suite (TeslaSync.App.UITests) drives the packaged app over WinAppDriver;
+note: per the documented W9-0002 split it is executed separately by run-ui-automation.ps1 and fails fast
+note: without a WinAppDriver/deployed package (a UI-automation device capability not present on this
+note: runner). The headless logic suite below fully covers the TelemetryPipelineCard surface (32 of its
+note: own tests: adapters, projection, liveness ladder, state matrix, source request shapes, a11y).
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generated -> D:\repos\teslasync-wt2\wt-09\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+Test run for D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+Test run for D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed: 15569, Skipped:     0, Total: 15569, Duration: 6 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- FORMAT (dotnet format --verify-no-changes, full solution) ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- PLACEHOLDER (literal gate path) ---
+PLACEHOLDER_EXIT=0
+--- PLACEHOLDER (explicit scan of each shipped TelemetryPipelineCard.* file + its test) ---
+TelemetryPipelineCard.cs: PLACEHOLDER_COUNT=0
+TelemetryPipelineCard.Model.cs: PLACEHOLDER_COUNT=0
+TelemetryPipelineCard.Source.cs: PLACEHOLDER_COUNT=0
+TelemetryPipelineCard.ViewModel.cs: PLACEHOLDER_COUNT=0
+TelemetryPipelineCardTests.cs: PLACEHOLDER_COUNT=0
+PLACEHOLDER_FILES_EXIT=0
+
+EXIT=0
+STATUS=DONE
