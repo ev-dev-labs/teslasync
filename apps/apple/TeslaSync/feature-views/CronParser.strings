@@ -1,0 +1,57 @@
+/*
+  CronParser.strings
+  TeslaSync — P4 feature view · 0014 · CronParser (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  CronParser resolves (table "CronParser") lives here with its web `t(key, default)`
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog
+  at integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/admin/components/devtools/tools/CronParser.tsx). The "description fragments"
+  group localizes the schedule sentence that the web helper (describeCron) emits as
+  hardcoded English — assembled here so the native surface holds no English literals.
+  The remainder back the native-only chrome (empty state, no-runs note, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"Cron Parser" = "Cron Parser";
+"Cron Parser Desc" = "Parse and explain cron expressions, and preview upcoming run times.";
+"Cron Expression" = "Cron Expression";
+"Description" = "Description";
+"Next Runs" = "Next Runs";
+"Every Minute" = "Every Minute";
+"Every Hour" = "Every Hour";
+"Every Day" = "Every Day";
+"Every Week" = "Every Week";
+"Every Month" = "Every Month";
+
+/* --- Description fragments (port of describeCron's hardcoded English) --- */
+"cron.desc.invalid" = "Invalid cron expression";
+"cron.desc.everyMinute" = "Every minute";
+"cron.desc.atMinuteOfHour" = "At minute %@ of every hour";
+"cron.desc.atTime" = "At %@:%@";
+"cron.desc.everyMinuteOfHour" = "Every minute of hour %@";
+"cron.desc.onDay" = "on day %@";
+"cron.desc.inMonth" = "in month %@";
+"cron.desc.onWeekday" = "on %@";
+
+/* --- Weekday abbreviations (web `days` array) --- */
+"cron.day.sun" = "Sun";
+"cron.day.mon" = "Mon";
+"cron.day.tue" = "Tue";
+"cron.day.wed" = "Wed";
+"cron.day.thu" = "Thu";
+"cron.day.fri" = "Fri";
+"cron.day.sat" = "Sat";
+
+/* --- Native chrome: empty state + no-runs note --- */
+"cron.empty.title" = "No schedule yet";
+"cron.empty.hint" = "Enter a five-field cron expression above to see its description and next runs.";
+"cron.noRuns" = "No upcoming runs in the next year";
+
+/* --- Accessibility: VoiceOver labels + hints --- */
+"a11y.cron.empty" = "Enter a cron expression to see its schedule";
+"a11y.cron.run" = "Run %@: %@";
+"a11y.cron.presetHint" = "Fills the expression field";

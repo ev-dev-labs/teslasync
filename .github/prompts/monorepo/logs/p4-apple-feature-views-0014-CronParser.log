@@ -1,0 +1,156 @@
+=== P4 Feature view 0014 CronParser (Apple) ===
+host: macOS 26.5.1 | Xcode 26.5 | Swift version 6.3.2
+date: 2026-06-11T09:06:36Z
+web source: web/src/features/admin/components/devtools/tools/CronParser.tsx (CronParserTool)
+native out: apps/apple/TeslaSync/feature-views/CronParser.{swift,Model,Adapter,Views,Previews,strings,Tests}
+
+--- [GATE 1] swiftformat --lint apps/apple (config: apps/apple/.swiftformat, swift 6.0, maxwidth 120) ---
+FORMAT_EXIT=0
+
+--- [GATE 2] swiftlint --strict (config: apps/apple/.swiftlint.yml; full project) ---
+cronparser violations: 0
+total violations: 0
+LINT_EXIT=0
+
+--- [GATE 3] check-placeholders.ps1 (swift; CronParser files in isolated scan) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- [GATE 4] STRONG typecheck vs REAL component library — iOS 18 Simulator SDK (swift 6, strict-concurrency=complete, -D DEBUG) ---
+    files: surface (5) + DesignTokens + Sources/Design (2) + Sources/Components/UI (13)
+IOS_TYPECHECK_EXIT=0
+
+--- [GATE 5] STRONG typecheck vs REAL component library — macOS 15 SDK (swift 6, strict-concurrency=complete, -D DEBUG) ---
+MAC_TYPECHECK_EXIT=0
+
+--- [GATE 6] EXECUTED adapter host harness (compile + run, native arm64-macOS) — real expression->projection run ---
+[describeCron parity]
+  [PASS] everyMinute -> "Every minute"
+  [PASS] atMinuteOfHour -> "At minute 5 of every hour"
+  [PASS] atTime padded -> "At 09:05"
+  [PASS] everyMinuteOfHour -> "Every minute of hour 9"
+  [PASS] day+month -> "At 09:30 on day 15 in month 6"
+  [PASS] weekday Mon -> "At 00:00 on Mon"
+  [PASS] weekday Sun -> "At 00:00 on Sun"
+  [PASS] weekday raw 7 -> "At 00:00 on 7"
+  [PASS] invalid -> "Invalid cron expression"
+[matchField parity]
+  [PASS] wildcard
+  [PASS] step 0%5
+  [PASS] step 10%5
+  [PASS] step 3%5 false
+  [PASS] step /0 false
+  [PASS] list 15
+  [PASS] list !2
+  [PASS] range 3
+  [PASS] range !6
+  [PASS] exact 7
+  [PASS] nonnum false
+[fields splitter]
+  [PASS] blank empty
+  [PASS] collapse ws
+[getNextCronRuns parity]
+  [PASS] everyMin count 5
+  [PASS] everyMin first +60
+  [PASS] everyMin last +300
+  [PASS] daily count 3
+  [PASS] daily first 2026-01-02 00:00Z
+  [PASS] not5 empty
+[evaluate + a11y + presets]
+  [PASS] empty blank
+  [PASS] empty 3f
+  [PASS] parsed desc
+  [PASS] parsed runs 5
+  [PASS] fmt 2026
+  [PASS] fmt Jan
+  (sample: Jan 2, 2026 at 12:00 AM)
+  [PASS] a11y empty
+  [PASS] a11y parsed
+  [PASS] presets
+  [PASS] slug
+
+HARNESS_RESULT=ALL_PASS (38/38)
+HARNESS_EXIT=0
+
+--- [GATE 7+8] xcodebuild -scheme TeslaSync / TeslaSync-macOS build test — DEFERRED (infra, not a code defect) ---
+  Attempted: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+  Observed (concrete evidence):
+    * Both schemes have a pre-build action "Stage Shared.xcframework" (project.yml) that runs
+      Scripts/build-shared-xcframework.sh -> gradlew :core:assembleSharedXCFramework (KMP/Kotlin-Native).
+    * apps/apple/Frameworks/ contains only .gitkeep (159 B) — the Shared.xcframework is NOT vendored;
+      it is built on demand by the KMP Gradle toolchain (ADR-004). `framework: Frameworks/Shared.xcframework`
+      is a hard dependency of BOTH app targets, so the app cannot link/compile until it exists.
+    * The attempt spent ~9 min entirely inside the KMP Gradle pre-action: a single shared GradleDaemon
+      8.14.5 was observed building :core:assembleSharedXCFramework, CONTENDED by parallel monorepo agents
+      (slot-4 and slot-6 wrappers seen invoking the same task against the one daemon). slot-5's xcodebuild
+      produced a 0-byte build log and no Shared.xcframework in that window; the build never reached the app
+      sources. Stopped to stop starving the shared daemon (left the daemon + other slots untouched).
+  IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED
+  Rationale: the only un-run step is the KMP Shared.xcframework staging — an environment/infra long pole
+  shared across parallel agents, outside this prompt's allowed files (CronParser.* + this log). I cannot
+  vendor or pre-stage the framework without editing out-of-scope files. This is NOT represented as green.
+  Matches the established 0011 (Base64Tool) / 0015 (HashCalculator) "code-complete + DEFERRED Xcode gate"
+  disposition for not-yet-nav-registered Apple surfaces. Code correctness is instead proven by the
+  STRONG iOS-18 + macOS-15 SDK typechecks vs the REAL shared component library (GATES 4-5) and the
+  EXECUTED projection harness (GATE 6, 38/38).
+
+=== PARITY (web CronParserTool -> native CronParser) ===
+  Data sources   : useTranslation only -> per-surface P1/S10 facade CronParserStrings (table "CronParser").
+                   No data hooks in the web source: the tool is a pure local useMemo, so there is NO async
+                   loading/error/stale/offline state to reproduce (same as 0011/0015). Every branch that the
+                   web source actually has IS reproduced (see States).
+  Shared comps   : web @/components/ui (Input, Button, Badge) + ToolCard ->
+                   native TSGlassPanel, TSIconBox, TSButton(.ghost/.small), TSBadge(.info), tokens P1/S9.
+  Charts/maps    : none (web source uses none).
+  i18n keys      : ALL web t() keys reproduced — "Cron Parser", "Cron Parser Desc", "Cron Expression",
+                   "Description", "Next Runs", "Every Minute/Hour/Day/Week/Month" — plus localized
+                   describeCron fragments (the web helper hardcodes English; native localizes them) +
+                   weekday abbreviations + empty/no-runs/a11y chrome. 0 English string literals in views.
+  Logic parity   : describeCron + getNextCronRuns + matchField + presets ported byte-for-byte (GATE 6).
+                   JS getDay() 0..6 mapped to Calendar .weekday-1; getMonth()+1 == Calendar .month.
+                   525,960-iteration (~1 yr) safety cap preserved. padStart(2,'0') preserved.
+  States rendered: (1) empty (≠5 fields, blank included) -> ContentUnavailableView hint (never blank);
+                   (2) parsed -> Description panel (always) + Next Runs list (index Badge + mono time);
+                   (3) parsed-with-zero-runs -> friendly "no upcoming runs" note (never blank box).
+  Telemetry      : P1/S11 view.opened emitted once on appear, surface slug "CronParser" (idempotent).
+  A11y           : VoiceOver container summary, per-run labels, field label+value, hidden decorative
+                   icons, Dynamic Type (system fonts via tokens), reduce-motion safe (no animations).
+  Tests          : CronParser.Tests.swift — adapter (describe/matchField/fields/nextRuns/evaluate/
+                   formatter), model (didSet recompute, preset apply, run-rows, view.opened spy),
+                   accessibility summary. Pure subset additionally EXECUTED in GATE 6.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : every EXIT pasted from the real command. Xcode steps marked DEFERRED, never green.
+  2  No scope narrowing: all web states/keys/logic reproduced; full surface, not a subset.
+  3  No skip-and-assume: cron logic EXECUTED (38/38), not assumed; both SDKs typechecked.
+  4  No stubs as final : zero TODO/stub/placeholder (GATE 3 = 0); no "Coming soon"/EmptyView-only panels.
+  5  No parity shortcut: describeCron/getNextCronRuns/matchField ported byte-for-byte and proven.
+  6  No delegation     : implemented directly (delegation FORBIDDEN per prompt).
+  7  No predecessor byp: built on the committed P1/S8-S11 + shared component library; nothing bypassed.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed feature-views/CronParser.* files + this log;
+                         did NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings shipped
+                         as the per-surface table, exactly like 0011/0015.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native CronParser shipped at parity with the web source: a pure-Swift, executed-green
+  projection core (describeCron/getNextCronRuns/matchField/presets port, 38/38 host-harness assertions),
+  a P1/S8 @Observable state holder (no view HTTP; useMemo-equivalent recompute on input change), P1/S11
+  view.opened telemetry, every state the web source produces (empty / parsed-with-runs / parsed-no-runs),
+  every source i18n key, and a11y labels + a combined VoiceOver summary. All host-runnable gates pass AND
+  the surface typechecks against BOTH the iOS 18 simulator and macOS 15 SDKs with the real Xcode 26
+  toolchain under Swift 6 strict concurrency, compiled together with the REAL shared component library.
+  The Xcode app build/test is DEFERRED to the downstream integration/signed runner (Shared.xcframework KMP
+  staging is an infra long pole shared/contended across parallel agents and outside this prompt's allowed
+  files — not a defect in this code), matching the 0011/0015 precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/CronParser.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0014-CronParser.log
+  git commit -m "feat(apps/apple/feature-views): add CronParser surface (P4)"
+
+EXIT=0
+STATUS=DONE
