@@ -1,0 +1,170 @@
+=== P4 Shared surface 0068 ChartLegend (Apple) ===
+Web source : web/src/components/charts/ChartLegend.tsx
+Native out : apps/apple/TeslaSync/shared-surfaces/ChartLegend.*
+Runner     : macOS 26 (Darwin 25.5.0) · Xcode 26.5 (17F42) · Swift 6.3.2 · xcodegen 2.45.4 · swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh 7.6.2 · OpenJDK (gradle/konan caches warm)
+
+────────────────────────────────────────────────────────────────────────
+CAPABILITY (prompt: "requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG;
+if unavailable → BLOCKED"). AVAILABLE on this runner — the Apple toolchain is present and was
+exercised end to end (xcodegen generate, swiftc typecheck against the macOS SDK under Swift 6 strict
+concurrency, a compiled+RUN logic harness, the Kotlin/Native Shared.xcframework built via Gradle, and
+full iOS-Simulator + macOS xcodebuild build test). The web source declares "Charts / maps used:
+(none)" — it is a Recharts <Legend> wrapper, not a chart — so this surface uses SwiftUI only; Swift
+Charts / MapKit are not required here.
+
+────────────────────────────────────────────────────────────────────────
+ARTIFACT (9 files, all ChartLegend.* — the only files this prompt may touch)
+  ChartLegend.swift             — the shared surface View (phase switch + faithful empty-payload withdraw)
+  ChartLegend.Adapter.swift     — pure core: item (Recharts payload-entry subset), availability,
+                                   connectivity, interactivity (web resolved==null), empty policy,
+                                   alignment (web `align`), meta slug, #rrggbb decoder, the pure
+                                   useChartHiddenSeries set algebra, VoiceOver builders
+  ChartLegend.Projection.swift  — pure input→resolved projection (loading/error/empty/withdrawn/
+                                   populated + interactive/passive entry mapping + freshness +
+                                   presentsContent), localized
+  ChartLegend.Model.swift       — P1/S8 source seam (Live+InMemory), @Observable @MainActor model
+                                   (start/stop/refresh; OWNS the hidden set = native useChartHiddenSeries;
+                                   toggle/reset forwarding to host; one-shot stale auto-refresh;
+                                   once-only view.opened P1/S11), P1/S10 i18n facade
+  ChartLegend.Views.swift       — swatch / entry (dim+strike+toggle / passive static) / wrapping
+                                   FlowLayout (web `align`) / freshness chip / loading skeleton /
+                                   empty / error subviews (P1/S9 tokens only)
+  ChartLegend.Previews.swift    — #Preview per state (loading/error/empty/withdrawn/interactive/
+                                   with-hidden/passive/stale/offline)
+  ChartLegend.strings           — i18n table "ChartLegend": native P4 leaf chrome + VoiceOver
+                                   scaffolding (the web <Legend> is anonymous — NO web-verbatim t() keys)
+  ChartLegend.AdapterTests.swift — pure-core unit tests (decoder, hidden algebra, a11y, input, meta)
+  ChartLegend.Tests.swift       — projection per-state + model + toggle + a11y + view-composition tests
+
+PARITY (web → native, faithful + complete)
+  • Recharts <Legend> entries → per-series swatch + verbatim value label (web renders `{value}`).
+  • Toggle source useChartHiddenSeries (HiddenSeriesState | null) → the model OWNS the hidden set;
+    `toggle(key)` flips it (web `resolved.toggle`), forwards to the host (URL/localStorage persistence),
+    and `reset()` clears it (web HiddenSeriesState.reset).
+  • Hidden entry → dimmed (opacity 0.4) + strikethrough, aria-pressed=isHidden → spoken accessibility
+    value "Hidden"/"Shown" + toggle hint.
+  • web `resolved == null` → the `.passive` interactivity branch: static labels, no toggle, no dimming.
+  • web `pickKey` (dataKey → payload.dataKey → value) → host supplies each entry's stable `id`
+    (dataKey) + display `label` (value).
+  • web `align` → ChartLegendAlignment over a wrapping Swift `Layout`; `verticalAlign`/`wrapperStyle`
+    are Recharts layout pass-throughs = the embedding view's concern for a standalone surface.
+  • P4 leaf axes added over the web body: loading skeleton, QueryError-peer retry, friendly empty
+    state (default) / empty-payload withdraw collapse, stale chip + one-shot auto-refresh, offline
+    chip. Every state renders — never a blank box.
+
+────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+  1  No red-as-green     : every exit code below is the REAL captured value. The two full-app
+                           xcodebuild gates are RED (65) and are reported as such with file:line
+                           root-cause evidence; they are NOT claimed to pass.
+  2  No scope narrowing  : all web render branches reproduced (interactive + passive + empty-payload
+                           collapse) PLUS the full P4 leaf state set (loading/error/empty/stale/
+                           offline). No state dropped.
+  3  No skip-and-assume  : web ChartLegend.tsx + useHiddenSeries.ts + ChartHiddenSeriesContext.tsx
+                           read end to end; the toggle/dim/passive/pickKey semantics taken verbatim.
+                           The web <Legend> has NO t() calls (anonymous) — no web key invented.
+  4  No stubs as final   : check-placeholders PLACEHOLDER_COUNT=0 (literal gate path AND a real scan
+                           of the 8 .swift files); no TODO/FIXME/stub/mock/placeholder/Lorem shipped.
+  5  No parity shortcuts : interactive dim + passive static + freshness + empty + error all
+                           implemented; a11y value encodes the hidden state the colour-only swatch
+                           conveys visually; swatch hex parity decoded + tested.
+  6  No delegation       : implemented directly; no sub-agents / background delegation of the work.
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius/
+                           TSChartPalette + TSButton/TSSkeleton/TSFadeIn), P1/S10 i18n facade, P1/S11
+                           view.opened telemetry all honoured; types prefixed `ChartLegend*` to avoid
+                           collision with the atomic TSChartLegend / OverviewChartLegend in the single
+                           app module (collision scan = 0).
+  8  No commit on red    : the committed artifact is GREEN on every gate within this surface's
+                           allowed-files scope (format, lint --strict, placeholder, compiled+RUN
+                           71/71 harness, full Views+Previews typecheck against the REAL design system
+                           on both #if DEBUG branches, test-body API typecheck, xcodegen, Gradle
+                           Shared.xcframework). The full-app iOS/macOS xcodebuild gates are RED for
+                           PRE-EXISTING, out-of-scope reasons (proof below) — this surface contributes
+                           ZERO errors to either, verified by grep over both build logs.
+  9  No silent drift     : only the 9 ChartLegend.* files are new (git status verified — nothing else
+                           modified). project.yml / .swiftlint.yml already glob shared-surfaces (no
+                           edit). xcodeproj + Frameworks/Shared.xcframework are git-ignored build
+                           artifacts (git check-ignore confirmed).
+  10 EXIT/STATUS below.
+
+────────────────────────────────────────────────────────────────────────
+GATE COMMANDS / EXITS (real, captured)
+  swiftformat --lint (8 surface files) ............... FORMAT_EXIT=0   (0/8 require formatting)
+  swiftlint --strict (8 surface files) ............... LINT_EXIT=0     (0 violations, 0 serious)
+  check-placeholders.ps1 -Path …/ChartLegend ......... PLACEHOLDER_EXIT=0  (literal gate path)
+  check-placeholders.ps1 (real scan of 8 .swift) ..... PLACEHOLDER_COUNT=0 (meaningful verification)
+  isolated logic harness (swiftc -swift-version 6
+     -strict-concurrency=complete, then RUN) ......... HARNESS_BUILD_EXIT=0  HARNESS_RUN_EXIT=0
+                                                        HARNESS_CHECKS=71  HARNESS_FAILURES=0
+                                                        (Adapter+Projection pure branches + the
+                                                        @MainActor model: toggle/reset/view.opened/
+                                                        stale auto-refresh, all RUN-proven)
+  Views+surface typecheck vs REAL design system ...... TYPECHECK_SHIP_EXIT=0   (no DEBUG)
+  Views+Previews typecheck vs REAL design system ..... TYPECHECK_DEBUG_EXIT=0  (-D DEBUG)
+     (swiftc -typecheck, macOS 15 target, Swift 6 strict concurrency; the real Tokens + TSDesign +
+      TSMaterial + TSButton + TSCard + TSBadge + Typography + TSSkeleton + TSFadeIn closure)
+  test-body API typecheck (tests + surface) .......... surface-API errors = 0
+     (with the real XCTest framework the only errors are the XCTAssert* assertion functions, which
+      resolve only inside an XCTest bundle — the deferred TeslaSyncTests target; shimming those
+      assertions makes the test bodies typecheck with 0 errors → every test reference to the
+      ChartLegend API is valid)
+  xcodegen generate .................................. XCODEGEN_EXIT=0   (ChartLegend → 54 pbxproj
+                                                        refs across TeslaSync + TeslaSync-macOS + the
+                                                        TeslaSyncTests / TeslaSync-macOSTests bundles)
+  Shared.xcframework via Gradle (Kotlin/Native) ...... GRADLE_EXIT=0   (BUILD SUCCESSFUL in 6m36s;
+                                                        debug+release XCFrameworks written; staged to
+                                                        Frameworks/)
+  xcodebuild iOS (build test, iPhone 16) ............. IOS_EXIT=65  [DEFERRED — see below]
+  xcodebuild macOS (build test) ...................... MAC_EXIT=65  [DEFERRED — see below]
+
+DEFERRED FULL-APP GATES — ROOT CAUSE (pre-existing, out of this surface's allowed-files scope)
+  IOS_EXIT=65: the app module has DUPLICATE type declarations in two sibling surface slots, each
+      manifesting as "ambiguous for type lookup":
+        StateTimelineModel       @ TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:104
+                                 AND TeslaSync/feature-views/StateTimeline.Model.swift:64
+        StateTimelineConnection  @ TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift
+                                 AND TeslaSync/feature-views/StateTimeline.Adapter.swift
+        RecentDrivesModel        @ TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:181
+                                 AND TeslaSync/feature-views/RecentDrivesSection.Model.swift:23
+        RecentDrivesConnection   @ TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift
+                                 AND TeslaSync/feature-views/RecentDrivesSection.Adapter.swift
+      (and the {LoadStatus,Update} peers likewise). 162 total error: lines — 120 "ambiguous for type
+      lookup" + 42 cascades ("cannot infer contextual base in reference to member 'live'/'stale'/
+      'loading'/'failed'/…", "'nil' requires a contextual type") — across the RecentDrives*/
+      StateTimeline* widgets + sections. The 10 distinct files carrying errors are ALL
+      RecentDrives*/StateTimeline* (RecentDrivesListWidget.{Model,Previews,swift},
+      RecentDrivesSection.{Previews,Seams}, StateTimeline.{Previews,Source}, StateTimelineWidget.
+      {Model,Previews,swift}). These files are BASELINE (git status: untracked = only the 9
+      ChartLegend.* files). `grep -iE "error:.*ChartLegend|ChartLegend.*error:"` over the full iOS
+      build log returns 0, and NO ChartLegend file appears among the files-with-errors — this surface
+      contributes ZERO errors. Fixing the sibling duplicates is out of scope (this prompt may touch
+      only ChartLegend.*). Deferred to the P4 acceptance gate per the established shared-surface
+      precedent (see p4-apple-shared-surfaces-0063-AnnotationList.log, same root cause).
+  MAC_EXIT=65: the macOS targets (TeslaSync-macOS, TeslaSyncWidgets-macOS) declare entitlements that
+      "require signing with a development certificate"; the runner has no dev-signing identity, so the
+      build-for-test is rejected at signing in ~15s — before/independent of compilation (0 "ambiguous"
+      lines reached the macOS log; 0 ChartLegend errors). Runner-infrastructure limitation, not a code
+      defect. The same ChartLegend sources type-check clean against the macOS 15 target in the
+      swiftc -typecheck gate above.
+
+────────────────────────────────────────────────────────────────────────
+DISPOSITION
+Production-polished, Apple-idiomatic ChartLegend shipped at parity with the web source and
+INDEPENDENTLY VERIFIED on this runner: its pure adapter/projection/model/telemetry/toggle/
+auto-refresh/accessibility/colour-parity logic is RUN-proven by 71/71 isolated assertions under
+Swift 6 strict concurrency; its SwiftUI Views + Previews type-check against the REAL design system
+(Color.TS, TSChartPalette, TSButton, TSCard, TSSkeleton, TSFadeIn, Typography, …) on both #if DEBUG
+branches against the macOS 15 target; the test bodies type-check against the surface API with 0
+errors; swiftformat / swiftlint --strict / placeholder are all green on the surface; xcodegen
+enumerates all 9 files into the TeslaSync + TeslaSync-macOS app and test targets; and the
+Kotlin/Native Shared.xcframework the app links was built from source (GRADLE_EXIT=0). The full-app
+iOS-Simulator + macOS `xcodebuild build test` gates are RED (IOS_EXIT=65 / MAC_EXIT=65) for
+PRE-EXISTING, out-of-scope reasons — the sibling-slot StateTimeline*/RecentDrives* duplicate-type
+ambiguities (iOS) and the absent macOS development-signing certificate (macOS) — to which this
+surface contributes ZERO errors (verified by grep over both build logs: 0 ChartLegend error lines,
+0 ChartLegend files among the files-with-errors). Per the established shared-surface precedent these
+two gates are DEFERRED to the P4 acceptance gate on a signed macos-latest runner with the sibling
+duplicate-type fix; every gate within this surface's allowed-files scope is 0.
+
+EXIT=0
+STATUS=DONE
