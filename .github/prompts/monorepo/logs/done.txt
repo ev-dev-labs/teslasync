@@ -229,3 +229,4 @@ p3-android/dashboard-widgets/A-0091-SoftwareUpdateHistoryWidget.prompt.md
 p3-android/dashboard-widgets/A-0089-SignalLogWidget.prompt.md
 p3-android/dashboard-widgets/A-0093-SolarProductionWidget.prompt.md
 p3-android/dashboard-widgets/A-0092-SoftwareUpdateStatusWidget.prompt.md
+p3-android/dashboard-widgets/A-0094-SpeedHeatmapWidget.prompt.md
