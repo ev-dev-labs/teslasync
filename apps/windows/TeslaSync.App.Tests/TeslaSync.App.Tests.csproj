@@ -651,6 +651,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\HealthRecommendations\HealthRecommendations.Model.cs" Link="FeatureViews\HealthRecommendations\HealthRecommendations.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HealthRecommendations\HealthRecommendations.Source.cs" Link="FeatureViews\HealthRecommendations\HealthRecommendations.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HealthRecommendations\HealthRecommendations.ViewModel.cs" Link="FeatureViews\HealthRecommendations\HealthRecommendations.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MediaNavigationPanel\MediaNavigationPanel.Model.cs" Link="FeatureViews\MediaNavigationPanel\MediaNavigationPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MediaNavigationPanel\MediaNavigationPanel.Source.cs" Link="FeatureViews\MediaNavigationPanel\MediaNavigationPanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MediaNavigationPanel\MediaNavigationPanel.ViewModel.cs" Link="FeatureViews\MediaNavigationPanel\MediaNavigationPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\helpers\Helpers.Source.cs" Link="FeatureViews\helpers\Helpers.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\Charging\HeroGauges.Model.cs" Link="FeatureViews\HeroGauges\Charging\HeroGauges.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\Charging\HeroGauges.Source.cs" Link="FeatureViews\HeroGauges\Charging\HeroGauges.Source.cs" />
