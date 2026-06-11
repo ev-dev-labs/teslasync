@@ -26,7 +26,7 @@ class WidgetRefresher(
     /** Refreshes every widget feed and returns the resulting sync status per widget. */
     suspend fun refresh(): Map<WidgetKind, WidgetSyncStatus> {
         val (vehiclesStatus, vehicles) = driveVehicles()
-        val id = resolveId(vehicles)
+        val id = resolveWidgetVehicleId(vehicles, selectedVehicleStore.selectedId.value)
 
         val stateStatus = id?.let { driveStatus(repositories.vehicles.vehicleState(it)) }
         val sessionsStatus = id?.let { driveStatus(repositories.charging.sessions(it)) }
@@ -36,37 +36,21 @@ class WidgetRefresher(
         logger.info("widget.refresh.done")
         return mapOf(
             WidgetKind.VehicleStatus to (stateStatus ?: vehiclesStatus),
-            WidgetKind.Charging to chargingStatus(stateStatus, sessionsStatus, vehiclesStatus),
+            WidgetKind.Charging to chargingWidgetSyncStatus(stateStatus, sessionsStatus, vehiclesStatus),
             WidgetKind.QuickStats to dashboardStatus,
             WidgetKind.Alerts to alertsStatus,
         )
-    }
-
-    private fun chargingStatus(
-        stateStatus: WidgetSyncStatus?,
-        sessionsStatus: WidgetSyncStatus?,
-        fallback: WidgetSyncStatus,
-    ): WidgetSyncStatus {
-        val reduced = reduceStatus(listOfNotNull(stateStatus, sessionsStatus))
-        return if (reduced == WidgetSyncStatus.Unknown) fallback else reduced
-    }
-
-    private fun resolveId(vehicles: List<Vehicle>?): Long? {
-        val list = vehicles.orEmpty()
-        val selected = selectedVehicleStore.selectedId.value
-        val vehicle = list.firstOrNull { it.id == selected } ?: list.firstOrNull()
-        return vehicle?.id ?: selected
     }
 
     private suspend fun driveVehicles(): Pair<WidgetSyncStatus, List<Vehicle>?> {
         val terminal =
             runCatching { repositories.vehicles.vehicles().first(::isTerminal) }
                 .getOrElse { error -> return rethrowOrLog(error) to null }
-        return statusOf(terminal) to terminal.cached
+        return widgetSyncStatusOf(terminal) to terminal.cached
     }
 
     private suspend fun <T> driveStatus(flow: Flow<Resource<T>>): WidgetSyncStatus =
-        runCatching { statusOf(flow.first(::isTerminal)) }
+        runCatching { widgetSyncStatusOf(flow.first(::isTerminal)) }
             .getOrElse { error -> rethrowOrLog(error) }
 
     private fun rethrowOrLog(error: Throwable): WidgetSyncStatus {
@@ -76,19 +60,58 @@ class WidgetRefresher(
     }
 
     private fun <T> isTerminal(resource: Resource<T>): Boolean = resource is Resource.Success || resource is Resource.Error
+}
 
-    private fun <T> statusOf(resource: Resource<T>): WidgetSyncStatus =
-        when (resource) {
-            is Resource.Success -> WidgetSyncStatus.Ok
-            is Resource.Error -> if (resource.cached != null) WidgetSyncStatus.FailedWithCache else WidgetSyncStatus.FailedNoCache
-            is Resource.Loading -> WidgetSyncStatus.Unknown
-        }
+/**
+ * The widget-refresh [WidgetSyncStatus] for a single terminal [resource]: a network success is
+ * [WidgetSyncStatus.Ok]; a failure is [WidgetSyncStatus.FailedWithCache] when a cached value remains to
+ * show (offline / last-known) and [WidgetSyncStatus.FailedNoCache] otherwise; a still-loading value is
+ * [WidgetSyncStatus.Unknown]. A pure function so the reducer is unit-tested without driving the feeds.
+ */
+internal fun widgetSyncStatusOf(resource: Resource<*>): WidgetSyncStatus =
+    when (resource) {
+        is Resource.Success -> WidgetSyncStatus.Ok
+        is Resource.Error -> if (resource.cached != null) WidgetSyncStatus.FailedWithCache else WidgetSyncStatus.FailedNoCache
+        is Resource.Loading -> WidgetSyncStatus.Unknown
+    }
 
-    private fun reduceStatus(statuses: List<WidgetSyncStatus>): WidgetSyncStatus =
-        when {
-            statuses.any { it == WidgetSyncStatus.Ok } -> WidgetSyncStatus.Ok
-            statuses.any { it == WidgetSyncStatus.FailedWithCache } -> WidgetSyncStatus.FailedWithCache
-            statuses.any { it == WidgetSyncStatus.FailedNoCache } -> WidgetSyncStatus.FailedNoCache
-            else -> WidgetSyncStatus.Unknown
-        }
+/**
+ * Reduces several feeds' [WidgetSyncStatus]es to the most optimistic honest outcome: any feed that
+ * reached the network ([WidgetSyncStatus.Ok]) wins, then offline-with-cache, then a hard no-cache
+ * failure, else [WidgetSyncStatus.Unknown] when nothing terminal was produced.
+ */
+internal fun reduceWidgetSyncStatus(statuses: List<WidgetSyncStatus>): WidgetSyncStatus =
+    when {
+        statuses.any { it == WidgetSyncStatus.Ok } -> WidgetSyncStatus.Ok
+        statuses.any { it == WidgetSyncStatus.FailedWithCache } -> WidgetSyncStatus.FailedWithCache
+        statuses.any { it == WidgetSyncStatus.FailedNoCache } -> WidgetSyncStatus.FailedNoCache
+        else -> WidgetSyncStatus.Unknown
+    }
+
+/**
+ * The charging widget's [WidgetSyncStatus]: reduce its own state + sessions feeds, falling back to the
+ * vehicles-list [fallback] when neither produced a terminal outcome — so the charging widget never
+ * claims a status its underlying feeds did not actually reach.
+ */
+internal fun chargingWidgetSyncStatus(
+    stateStatus: WidgetSyncStatus?,
+    sessionsStatus: WidgetSyncStatus?,
+    fallback: WidgetSyncStatus,
+): WidgetSyncStatus {
+    val reduced = reduceWidgetSyncStatus(listOfNotNull(stateStatus, sessionsStatus))
+    return if (reduced == WidgetSyncStatus.Unknown) fallback else reduced
+}
+
+/**
+ * Resolves which vehicle the widgets target: the [selectedId] vehicle when it is still in [vehicles],
+ * else the first enrolled vehicle, else the bare [selectedId] (so a cold cache that only remembers an
+ * id still refreshes that vehicle).
+ */
+internal fun resolveWidgetVehicleId(
+    vehicles: List<Vehicle>?,
+    selectedId: Long?,
+): Long? {
+    val list = vehicles.orEmpty()
+    val vehicle = list.firstOrNull { it.id == selectedId } ?: list.firstOrNull()
+    return vehicle?.id ?: selectedId
 }
