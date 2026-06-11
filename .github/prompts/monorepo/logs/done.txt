@@ -482,3 +482,4 @@ p2-windows/feature-views/W-0279-EnergyChargingPanel.prompt.md
 p2-windows/feature-views/W-0281-LiveTelemetryPanels.prompt.md
 p2-windows/feature-views/W-0282-MediaNavigationPanel.prompt.md
 p2-windows/feature-views/W-0284-SecurityPanel.prompt.md
+p2-windows/feature-views/W-0286-TirePressurePanel.prompt.md
