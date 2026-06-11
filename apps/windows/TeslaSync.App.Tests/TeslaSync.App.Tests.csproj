@@ -117,55 +117,16 @@
     source's real location under Widgets\, FeatureViews\, MiscSurfaces\, ModalsDialogs\ or SharedSurfaces\);
     the bare WinUI view files are excluded and exercised by the app build. The matching test classes live under
     this project and are picked up by the SDK default-compile glob.
+    (the Link mirrors each source's real location under Widgets\, FeatureViews\, MiscSurfaces\, ModalsDialogs\
+    or SharedSurfaces\); the bare WinUI view files are excluded and exercised by the app build. The matching
+    test classes live under this project and are picked up by the SDK default-compile glob. The Content links
+    copy the units-golden, Package.appxmanifest and widget-template fixtures the tests read out of the test
+    output directory.
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
-    Include-deduplicated Compile item group - the union of every Microsoft.UI-free .cs on disk under
-    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file carries a
-    .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it into multiple
-    Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); regenerate it directly from
-    the Microsoft.UI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal
-    build-item or project start tag inside this comment.
-    shared-surfaces/0066 ChartExportMenu into this single canonical root (plus the new ChartExportMenu Model /
-    Source / ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal build-item or
-    project start tag inside this comment.
-    integration merges can re-concatenate it into multiple Project roots plus duplicate items, failing XML
-    load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Regenerated for P2
-    shared-surfaces/0064 AreaChartWrapper into this single canonical root (plus the new
-    AreaChartWrapper.Model.cs link). Do NOT re-concatenate into multiple roots, and never write a literal
-    build-item or project start tag inside this comment.
-    shared-surfaces/0065 ChartContainer into this single canonical root (plus the new ChartContainer Model /
-    Source / ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal build-item or
-    project start tag inside this comment.
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for
-    each feature-view, dashboard-widget, misc-surface, modal/dialog and shared-surface. The WinUI app
-    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test
-    host, so each surface's WinUI-free (Microsoft.UI-free) sources are compiled in through links in
-    the single item group below (the Link mirrors each source's real location under Widgets\,
-    FeatureViews\, MiscSurfaces\, ModalsDialogs\ or SharedSurfaces\); the bare WinUI view files are
-    excluded and exercised by the app build. The matching test classes live under this project and are
-    picked up by the SDK default-compile glob. The Content links copy the units-golden,
-    Package.appxmanifest and widget-template fixtures the tests read out of the test output directory.
-
-    INVARIANT: keep this file as exactly ONE project root with a single, case-insensitive ordinal
-    path-sorted, include-deduplicated source group - the union of every WinUI-free (Microsoft.UI-free)
-    .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and
-    shared-surfaces/ (the bare WinUI view files are excluded). This file carries a .gitattributes
-    merge=union strategy, so a chain of integration merges can re-concatenate it into multiple project
-    roots plus duplicate items, failing XML load (MSB4025 / MSB4067); regenerate it directly from the
-    WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal
-    build-item or project start tag inside this comment. Re-consolidated for P2 shared-surfaces/0072
-    MetricSwitcherChart into this single canonical root (plus the new MetricSwitcherChart Model /
-    Source / ViewModel links).
-    Re-consolidated for P2 shared-surfaces/0073 SmallMultiplesChart into this single canonical root. Do NOT
-    re-concatenate into multiple roots, and never write a literal build-item or project start tag here.
-    MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk. Re-consolidated
-    for P2 shared-surfaces/0070 ChartTooltip into this single canonical root (plus the new ChartTooltip
-    Model / Source / ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal
-    build-item or project start tag inside this comment.
-    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk
-    under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare
-    WinUI view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
+    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk under
+    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI
+    view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
     integration merges can re-concatenate it into multiple Project roots plus duplicate Compile items, failing
     XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Regenerated for
     P2 shared-surfaces/0078 BulkActionsToolbar into this single canonical root. Do NOT re-concatenate into
@@ -195,6 +156,9 @@
     or SharedSurfaces\); the bare WinUI view files are excluded and exercised by the app build. The test
     classes live under this project and are picked up by the SDK default-compile glob. The Content links
     copy the units-golden, Package.appxmanifest and widget-template fixtures the tests read.
+    P2 shared-surfaces/0088 Speed into this single canonical root. Do NOT re-concatenate into multiple roots,
+    and never write a literal build-item or project start tag inside this comment.
+  -->
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
     Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk under
@@ -249,6 +213,7 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0086 Pressure. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0084 DateTime. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets, feature-views, misc-surfaces, modals-dialogs and shared-surfaces); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0089 Temperature into this single canonical Project root. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0088 Speed. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -1410,6 +1375,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\Temperature\Temperature.Model.cs" Link="SharedSurfaces\Temperature\Temperature.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Temperature\Temperature.Source.cs" Link="SharedSurfaces\Temperature\Temperature.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Temperature\Temperature.ViewModel.cs" Link="SharedSurfaces\Temperature\Temperature.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Speed.Model.cs" Link="SharedSurfaces\Speed.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Speed.Source.cs" Link="SharedSurfaces\Speed.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Speed.ViewModel.cs" Link="SharedSurfaces\Speed.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.Model.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.Source.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.ViewModel.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.ViewModel.cs" />
