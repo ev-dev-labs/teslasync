@@ -272,3 +272,4 @@ p3-android/feature-views/A-0021-TimestampTool.prompt.md
 p3-android/feature-views/A-0023-UrlEncoder.prompt.md
 p3-android/feature-views/A-0026-AuditPanel.prompt.md
 p3-android/feature-views/A-0024-UuidGenerator.prompt.md
+p3-android/feature-views/A-0028-StatusHeader.prompt.md
