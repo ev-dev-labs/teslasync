@@ -620,3 +620,4 @@ p2-windows/shared-meaningful/W-0119-EmptyStateThreshold.prompt.md
 p2-windows/shared-meaningful/W-0117-DraftRestorePrompt.prompt.md
 p2-windows/shared-meaningful/W-0120-ErrorDisplay.prompt.md
 p2-windows/shared-meaningful/W-0125-InstallPrompt.prompt.md
+p2-windows/shared-meaningful/W-0124-InlineCallout.prompt.md
