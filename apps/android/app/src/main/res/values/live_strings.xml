@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Live-data (SSE) connection surface strings (app-owned; not part of the auto-generated i18n catalog). -->
+<resources>
+    <string name="live_status_connected">Live</string>
+    <string name="live_status_reconnecting">Reconnecting…</string>
+    <string name="live_status_offline">Offline</string>
+    <string name="live_status_unknown">Connecting…</string>
+    <string name="live_indicator_description">Live data connection status</string>
+</resources>

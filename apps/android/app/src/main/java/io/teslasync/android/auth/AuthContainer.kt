@@ -3,18 +3,27 @@ package io.teslasync.android.auth
 import android.content.Context
 import io.teslasync.android.BuildConfig
 import io.teslasync.android.data.DataContainer
+import io.teslasync.android.data.live.LiveFeed
+import io.teslasync.android.data.live.LiveSessionStore
 import io.teslasync.android.navigation.OnboardingGate
 import io.teslasync.shared.core.auth.AndroidKeystoreTokenStore
 import io.teslasync.shared.core.auth.AuthService
+import io.teslasync.shared.core.auth.AuthState
 import io.teslasync.shared.core.auth.KtorTokenEndpointClient
 import io.teslasync.shared.core.cache.DriverFactory
 import io.teslasync.shared.core.cache.LocalCache
 import io.teslasync.shared.core.data.repo.HttpOnboardingRepository
 import io.teslasync.shared.core.diagnostics.Diagnostics
 import io.teslasync.shared.core.net.ApiHttpClient
+import io.teslasync.shared.core.net.sse.KtorSseTransport
+import io.teslasync.shared.core.net.sse.SseClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 
 /**
  * Manual dependency container for the auth + networking graph (ADR-008 / ADR-013). Built once per
@@ -50,14 +59,43 @@ class AuthContainer(
     private val onboardingRepository = HttpOnboardingRepository(apiClient, localCache.store)
     private val onboardingGateController = OnboardingGateController(onboardingRepository, session.state, scope)
 
+    // The shared SSE live pipe (ADR-009), over the SAME auth token provider as the REST client so every
+    // (re)connection carries the current bearer and a reconnect after a refresh picks up the new token.
+    private val sseTransport = KtorSseTransport(BuildConfig.API_BASE_URL, session.asTokenProvider())
+    private val sseClient = SseClient(sseTransport)
+
+    // Whether the session may stream live data: SignedIn, or transparently Refreshing (a refresh must NOT
+    // drop the stream). This gates AND re-auths the live subscription with no per-page token code: a fresh
+    // sign-in / re-auth flips this back true and the store reopens the stream with the new credential.
+    private val authenticated: StateFlow<Boolean> =
+        session.state
+            .map(::canStream)
+            .stateIn(scope, SharingStarted.Eagerly, canStream(session.state.value))
+
     /** Consent-gated, PII-redacting diagnostics (ADR-016); its logger is the only sanctioned logger. */
     private val diagnostics = Diagnostics.create()
+
+    /**
+     * The app-scoped live-data pipeline holder (ADR-009): binds the shared [sseClient] to the app
+     * foreground + the [authenticated] gate, with [reconnect][LiveSessionStore.reconnect] nudging a
+     * token refresh. Built in the auth graph (it needs the session); `TeslaSyncApplication` binds it to
+     * `ProcessLifecycleOwner` and `LiveViewModel` projects it per page.
+     */
+    private val liveSessionStore =
+        LiveSessionStore(
+            feed = LiveFeed(sseClient),
+            authenticated = authenticated,
+            scope = scope,
+            logger = diagnostics.logger,
+            onReauth = { session.asTokenProvider().token() },
+        )
 
     /**
      * The data-layer DI graph (ADR-013): the shared repositories + state holders bound to
      * lifecycle-aware ViewModels. Reached by the Compose tree via `LocalDataContainer`, it reuses the
      * same single [apiClient] (so 401 refresh stays centralised) and the offline cache cleared on
-     * sign-out.
+     * sign-out. It also exposes the live-data pipeline holder (ADR-009) for `LiveViewModel` + the
+     * process-lifecycle binder.
      */
     val data: DataContainer =
         DataContainer(
@@ -65,6 +103,7 @@ class AuthContainer(
             cacheStore = localCache.store,
             scope = scope,
             logger = diagnostics.logger,
+            liveSessionStore = liveSessionStore,
         )
 
     /** The global auth state holder bound to the Compose UI. */
@@ -89,4 +128,7 @@ class AuthContainer(
         authController.start()
         onboardingGateController.start()
     }
+
+    /** Whether [state] may hold a live SSE stream: a valid (or transparently refreshing) session. */
+    private fun canStream(state: AuthState): Boolean = state is AuthState.SignedIn || state is AuthState.Refreshing
 }

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.teslasync.android.data.dashboard.DashboardViewModel
+import io.teslasync.android.data.live.LiveSessionStore
+import io.teslasync.android.data.live.LiveViewModel
 import io.teslasync.android.data.vehicles.VehicleDetailViewModel
 import io.teslasync.android.data.vehicles.VehiclesListViewModel
 import io.teslasync.shared.core.cache.CacheStore
@@ -38,6 +40,9 @@ import kotlinx.coroutines.flow.stateIn
  * @param cacheStore the shared offline cache store (cleared on sign-out by the auth graph).
  * @param scope the app-scoped coroutine scope the shared feeds and observers run in.
  * @param logger the single sanctioned redacting logger (ADR-016) handed to every ViewModel.
+ * @param liveSessionStore the app-scoped live-data pipeline holder (ADR-009), built in the auth graph
+ *   over the shared SSE client + auth gate; `LiveViewModel` projects it per page and
+ *   `TeslaSyncApplication` binds it to the process foreground lifecycle.
  * @param clock wall-clock seam for cache freshness; injectable for tests.
  */
 class DataContainer(
@@ -45,6 +50,7 @@ class DataContainer(
     cacheStore: CacheStore,
     private val scope: CoroutineScope,
     val logger: Logger,
+    val liveSessionStore: LiveSessionStore,
     clock: Clock = SystemClock,
 ) {
     // S7 repositories — HTTP-backed, cache-then-network, over the shared resilient client + offline cache.
@@ -83,6 +89,7 @@ class DataContainer(
             initializer { VehiclesListViewModel(vehiclesStore, selectedVehicleStore, logger) }
             initializer { VehicleDetailViewModel(vehiclesStore, selectedVehicleStore, logger) }
             initializer { DashboardViewModel(dashboardStore, logger) }
+            initializer { LiveViewModel(liveSessionStore, selectedVehicleStore, logger) }
         }
 
     private companion object {
