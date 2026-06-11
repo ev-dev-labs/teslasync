@@ -1,0 +1,429 @@
+=== P3/A3/0001 navigation shell — adaptive Navigation-Compose graph matching web/src/App.tsx ===
+
+STEP 1 — Survey of web/src/App.tsx route groups (source of truth).
+
+Two top-level chrome contexts:
+  * STANDALONE (rendered OUTSIDE <Layout> — no sidebar/nav chrome):
+      quick-stats, glance, year-review/:year, s/:token (shared drive, public),
+      watch (API-key auth), onboarding
+  * FULL (rendered INSIDE <Layout> — sidebar/header/bottom-tab chrome): everything else,
+      including the catch-all 404 (NotFound) which renders with chrome.
+
+Route groups (taxonomy mirrored into NavGroup), canonical pages per group:
+  Dashboard        : Dashboard(/), QuickStats(/quick-stats), Glance(/glance), Explore(/explore)
+  Vehicles         : Vehicles(/vehicles), VehicleDetail(/vehicles/:id),
+                     VehicleAccess(/vehicles/:id/access), DigitalTwin(/digital-twin)
+  Charging         : Charging(/charging), ChargeDetail(/charging/:id), ChargingCurve(/charging-curve),
+                     ChargingHeatmap(/charging-heatmap), CostAnalysis(/cost-analysis),
+                     TeslaChargingHistory(/tesla-charging-history),
+                     TeslaChargingSessions(/tesla-charging-sessions), SmartCharge(/smart-charge),
+                     Powershare(/powershare)
+  Trips & Drives   : Trips(/trips), TripDetail(/trips/:id), Drives(/drives), DriveDetail(/drives/:id),
+                     TripReplay(/drives/:id/replay), DriveScore(/drive-score),
+                     DrivingDynamics(/driving-dynamics), DrivetrainHealth(/drivetrain-health),
+                     Efficiency(/efficiency), SpeedProfile(/speed-profile),
+                     RegenEfficiency(/regen-efficiency), RouteEfficiency(/route-efficiency),
+                     TripPlanner(/trip-planner)
+  Battery & Energy : Energy(/energy), BatteryHealth(/battery), BatteryCells(/battery-cells),
+                     BatteryDegradation(/battery-degradation), EnergyFlow(/energy-flow),
+                     PowerFlowDashboard(/power-flow), EnergyProducts(/energy-products),
+                     VampireDrain(/vampire-drain), ProjectedRange(/projected-range),
+                     SleepEfficiency(/sleep-efficiency)
+  Analytics & Stats: Analytics(/analytics), Statistics(/statistics), PeriodCompare(/period-compare),
+                     Mileage(/mileage), TrueCostOwnership(/tco), WeeklyDigest(/weekly-digest),
+                     Timeline(/timeline), FleetCompare(/vehicle-comparison),
+                     LifetimeStats(/lifetime-stats), YearReview(/year-review/:year)
+  Maps & Location  : LiveMap(/live), Locations(/locations), Geofences(/geofences),
+                     NavigationRoute(/navigation), TemperatureImpact(/temperature-impact)
+  Vehicle Systems  : ClimateControl(/climate-control), TirePressure(/tire-pressure),
+                     Maintenance(/maintenance), SoftwareUpdates(/software-updates),
+                     SafetySettings(/safety-settings), GuardMode(/guard-mode), MediaPlayer(/media-player)
+  Automations      : Automations(/automations), AutomationList(/automations/list),
+                     AutomationBuilder(/automations/new, /automations/:id/edit)
+  Notifications    : Inbox(/notifications/inbox), Archived(/notifications/archived),
+                     AlertsList(/notifications/alerts), Channels(/notifications/channels),
+                     Webhooks(/notifications/webhooks), BrowserNotifications(/notifications/browser),
+                     QuietHours(/notifications/quiet-hours), AlertRules(/notifications/rules),
+                     AlertStudio(/notifications/studio), NotificationsAudit(/notifications/audit)
+  Telemetry/Signals: SignalsWorkspace(/signals), SignalExplorer(/signal-explorer),
+                     SignalLogViewer(/signal-log), LiveSignalMonitor(/live-monitor),
+                     SignalDiff(/signal-diff), SignalGapDetector(/signal-gaps),
+                     MQTTInspector(/mqtt-inspector)
+  Diagnostics      : AnomalyDashboard(/anomaly-detection)
+  Admin & DevTools : DevTools(/dev-tools), APIKeys(/api-keys), ApiLogs(/api-logs), FleetAPI(/fleet-api),
+                     TeslaFeatureFlags(/tesla-features), TeslaRegion(/tesla-region),
+                     TeslaOrders(/tesla-orders), GasPriceAutoPoll(/gas-price),
+                     SecurityAccess(/security-access), BackupRestore(/backup),
+                     ApiPlayground(/api-playground), RedisSignalViewer(/redis-signals),
+                     FeedbackQueue(/admin/feedback), FleetTelemetryCoverage(/admin/telemetry/coverage),
+                     DLQInspector(/admin/dlq), FeatureFlagsAdmin(/admin/flags),
+                     IngestXRay(/admin/ingest-xray), LiveSignalInspector(/admin/live-signals),
+                     SchemaDrift(/admin/schema-drift), SlowQueries(/admin/slow-queries),
+                     VehicleCost(/admin/vehicle-cost), DiskForecast(/admin/disk-forecast),
+                     SecretRotation(/admin/secret-rotation), AuditLog(/admin/audit-log),
+                     GDPRExport(/admin/gdpr-exports)
+  Power User       : SqlPlayground(/power/sql), GrafanaPanel(/power/grafana), Dashboards(/power/dashboards)
+  System & Ops     : SystemStatus(/system-status), IncidentTimeline(/system-status/incidents/:id),
+                     StatusApiDocs(/docs/status-api), DataExport(/data-export), Exports(/exports),
+                     DataRepair(/data-repair), DBHealth(/db-health), StateMachineDebugger(/state-debugger),
+                     Commands(/commands), CommandHistory(/command-history), Chatbot(/chatbot),
+                     Roadmap(/roadmap), TeslaAccount(/tesla-account), MyActivity(/me/activity)
+  Settings/Account : Settings(/settings), SafetyPage(/settings/safety), TwoFactorAuth(/account/2fa),
+                     ActiveSessions(/account/sessions), Privacy(/account/privacy), Helix(/integrations/helix)
+  Onboarding       : Onboarding(/onboarding) [standalone]
+  Search           : Search(/search)
+  Sharing          : SharedDrive(/s/:token) [standalone, public], SharingTrips(/sharing/trips)
+  Watch            : WatchFace(/watch) [standalone]
+  Not Found        : NotFound(catch-all *)
+
+Alias / redirect paths captured (alias -> canonical):
+  /battery/health -> BatteryHealth ; /charging/curves -> ChargingCurve ; /charging/costs -> CostAnalysis
+  /charging/schedule -> SmartCharge ; /charging/vampire-drain -> VampireDrain ; /climate -> ClimateControl
+  /vehicle-systems/software -> SoftwareUpdates ; /analytics/range -> ProjectedRange
+  /analytics/anomalies -> AnomalyDashboard ; /analytics/tco -> TrueCostOwnership
+  /compare -> PeriodCompare ; /analytics/compare -> PeriodCompare ; /analytics/lifetime -> LifetimeStats
+  /admin -> SystemStatus ; /alerts -> AlertsList ; /alert-studio -> AlertStudio
+  /alert-rules -> AlertRules ; /notifications -> Inbox
+
+Primary (bottom-bar) destinations mirror web BottomTabBar (MOBILE_GUIDELINES top-5):
+  Dashboard(/), Drives(/drives), Charging(/charging), Battery(/battery), LiveMap(/live)
+
+Decision: NotFound is a real shared screen. A7 page content is OUT OF SCOPE; the foundation
+registers full metadata for every route + alias and resolves any route without a registered
+A7 page host to the real NotFound screen (no fabricated/placeholder page bodies).
+
+=== GATE 2026-06-10T18:31:22.1116678-07:00 ===
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== GATE 2026-06-10T18:31:47.3377308-07:00 ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :android:preDebugUnitTestBuild
+> Task :android:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :android:compileDebugKotlin
+> Task :android:compileDebugJavaWithJavac NO-SOURCE
+> Task :android:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :android:bundleDebugClassesToRuntimeJar
+> Task :android:processDebugJavaRes UP-TO-DATE
+> Task :android:compileDebugUnitTestKotlin
+> Task :android:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :android:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :android:testDebugUnitTest
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 28s
+42 actionable tasks: 6 executed, 36 up-to-date
+UNIT_EXIT=0
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :android:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :android:mergeDebugShaders UP-TO-DATE
+> Task :shared:core:mergeDebugShaders UP-TO-DATE
+> Task :shared:core:compileDebugShaders NO-SOURCE
+> Task :shared:core:debugAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:generateDebugAssets UP-TO-DATE
+> Task :shared:core:mergeDebugAssets UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :shared:core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeDebugNativeLibs NO-SOURCE
+> Task :shared:core:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :android:compileDebugKotlin UP-TO-DATE
+> Task :android:compileDebugJavaWithJavac NO-SOURCE
+> Task :android:compileDebugShaders NO-SOURCE
+> Task :android:generateDebugAssets UP-TO-DATE
+> Task :android:mergeDebugAssets UP-TO-DATE
+> Task :android:compressDebugAssets UP-TO-DATE
+> Task :android:desugarDebugFileDependencies UP-TO-DATE
+> Task :android:dexBuilderDebug
+> Task :android:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :android:processDebugJavaRes UP-TO-DATE
+> Task :android:mergeDebugJavaResource UP-TO-DATE
+> Task :android:checkDebugDuplicateClasses UP-TO-DATE
+> Task :android:mergeExtDexDebug UP-TO-DATE
+> Task :android:mergeLibDexDebug UP-TO-DATE
+> Task :android:mergeDebugJniLibFolders UP-TO-DATE
+> Task :android:mergeDebugNativeLibs UP-TO-DATE
+> Task :android:stripDebugDebugSymbols UP-TO-DATE
+> Task :android:validateSigningDebug UP-TO-DATE
+> Task :android:writeDebugAppMetadata UP-TO-DATE
+> Task :android:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :android:mergeProjectDexDebug
+> Task :android:packageDebug
+> Task :android:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :android:assembleDebug
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 21s
+60 actionable tasks: 5 executed, 55 up-to-date
+ASM_EXIT=0
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :shared:core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeDebugNativeLibs NO-SOURCE
+> Task :shared:core:stripDebugDebugSymbols NO-SOURCE
+> Task :shared:core:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :android:preDebugAndroidTestBuild SKIPPED
+> Task :android:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :android:extractProguardFiles UP-TO-DATE
+> Task :android:preDebugUnitTestBuild
+> Task :android:loadKtlintReporters UP-TO-DATE
+> Task :android:runKtlintCheckOverAndroidTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestSourceSet UP-TO-DATE
+> Task :android:ktlintAndroidTestSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverDebugSourceSet NO-SOURCE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :android:ktlintDebugSourceSetCheck SKIPPED
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :android:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :android:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :android:runKtlintCheckOverReleaseSourceSet NO-SOURCE
+> Task :android:ktlintReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesDebugSourceSet NO-SOURCE
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :android:ktlintTestFixturesDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestReleaseSourceSetCheck SKIPPED
+> Task :shared:core:extractDebugAnnotations UP-TO-DATE
+> Task :shared:core:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :android:runKtlintCheckOverTestSourceSet UP-TO-DATE
+> Task :shared:core:mergeDebugShaders UP-TO-DATE
+> Task :shared:core:compileDebugShaders NO-SOURCE
+> Task :shared:core:debugAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:generateDebugAssets UP-TO-DATE
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :shared:core:mergeDebugAssets UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :shared:core:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :shared:core:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :shared:core:prepareDebugArtProfile UP-TO-DATE
+> Task :shared:core:prepareLintJarForPublish UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :shared:core:mergeDebugJavaResource UP-TO-DATE
+> Task :shared:core:syncDebugLibJars UP-TO-DATE
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:bundleDebugLocalLintAar UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :shared:core:writeDebugLintModelMetadata UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :shared:core:createFullJarDebug UP-TO-DATE
+> Task :shared:core:extractProguardFiles UP-TO-DATE
+> Task :shared:core:generateDebugLintModel UP-TO-DATE
+> Task :shared:core:lintAnalyzeDebug UP-TO-DATE
+> Task :shared:core:preDebugAndroidTestBuild UP-TO-DATE
+> Task :shared:core:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :shared:core:generateDebugAndroidTestLintModel UP-TO-DATE
+> Task :shared:core:preDebugUnitTestBuild UP-TO-DATE
+> Task :shared:core:generateDebugUnitTestLintModel UP-TO-DATE
+> Task :shared:core:lintAnalyzeDebugAndroidTest UP-TO-DATE
+> Task :shared:core:lintAnalyzeDebugUnitTest UP-TO-DATE
+> Task :android:detekt
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :android:compileDebugKotlin UP-TO-DATE
+> Task :android:compileDebugJavaWithJavac NO-SOURCE
+> Task :android:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :android:generateDebugAndroidTestLintModel UP-TO-DATE
+> Task :android:generateDebugLintReportModel
+> Task :android:generateDebugUnitTestLintModel UP-TO-DATE
+> Task :android:lintAnalyzeDebugAndroidTest UP-TO-DATE
+> Task :android:runKtlintCheckOverMainSourceSet
+> Task :android:lintAnalyzeDebugUnitTest UP-TO-DATE
+> Task :android:ktlintMainSourceSetCheck
+> Task :android:ktlintCheck
+> Task :android:lintAnalyzeDebug
+> Task :android:lintReportDebug UP-TO-DATE
+> Task :android:lintDebug
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 5s
+79 actionable tasks: 8 executed, 71 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== RESULT SUMMARY ===
+Navigation shell delivered under apps/android/app/src/main/java/io/teslasync/android/navigation/:
+  Framework-free (JVM-tested): NavGroup, Destinations (137 canonical pages), RouteTable
+    (18 aliases, deep-link derivation, path match, bar/rail/drawer sets), AdaptiveNav.
+  Compose shell: AppScaffold (compact NavigationBar / medium NavigationRail / expanded
+    PermanentDrawer via WindowSizeClass + a modal drawer for the full taxonomy), TeslaSyncNavHost
+    (every route + alias registered with deep links; host or shared NotFoundScreen), TeslaSyncApp,
+    RouteAnnouncer (a11y live region), ListDetailScaffold (tablet/foldable two-pane), NavScrollState
+    (scroll restoration), PageHosts (A7 seam), OnboardingGate (A4 seam), NavGlyphs/NavIcons,
+    NavigationGallery (@Preview compact/medium/expanded x light/dark/high-contrast), NotFoundScreen.
+  Wiring: MainActivity (calculateWindowSizeClass), ui/App, AndroidManifest (enableOnBackInvokedCallback
+    + https/teslasync deep-link intent filters), build.gradle.kts + libs.versions.toml
+    (navigation-compose 2.9.8 + material3-window-size-class), nav_strings.xml + nav_shell_strings.xml.
+
+Unit tests (testDebugUnitTest): navigation suite 31 tests, 0 failures / 0 errors / 0 skipped
+  RouteTableTest=14 (resolves all 137 web paths + 18 aliases, deep links, args, normalize,
+    unknown->notFound, bar/rail/drawer), DestinationsTest=11, AdaptiveNavTest=4, NavIconsTest=2.
+
+GATE: UNIT_EXIT=0  ASM_EXIT=0  LINT_EXIT=0 (lintDebug+ktlintCheck+detekt)  PLACEHOLDER_EXIT=0
+Out of scope (per prompt): A7 page content, auth token flow, live SSE, push, widgets, Wear.
+
+EXIT=0
+STATUS=DONE
