@@ -226,3 +226,4 @@ p3-android/dashboard-widgets/A-0087-SignalCatalogWidget.prompt.md
 p3-android/dashboard-widgets/A-0088-SignalHealthWidget.prompt.md
 p3-android/dashboard-widgets/A-0090-SleepEfficiencyWidget.prompt.md
 p3-android/dashboard-widgets/A-0091-SoftwareUpdateHistoryWidget.prompt.md
+p3-android/dashboard-widgets/A-0089-SignalLogWidget.prompt.md
