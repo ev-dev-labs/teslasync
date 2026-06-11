@@ -1,0 +1,111 @@
+=== P2 Feature view 0306 VehiclePhotoGallery (Windows) ===
+date: 2026-06-10
+dotnet: 10.0.300
+capability: WindowsAppSDK / WinUI 3 (>= 1.6) + net10.0-windows10.0.19041.0 PRESENT (full-solution Release build green)
+web source: web/src/features/vehicles/components/VehiclePhotoGallery.tsx
+
+--- STEP 1: build (full solution, Release) ---
+dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    0 Error(s)
+    17 Warning(s)  (all pre-existing in TeslaSync.App.Core: CA1716/CA1720/CA1000/CA1859; 0 from the new
+                    VehiclePhotoGallery files. TeslaSync.App builds with TreatWarningsAsErrors=true and is
+                    clean: 0 warnings / 0 errors.)
+BUILD_EXIT=0
+
+--- STEP 2: test (full solution, Release) ---
+dotnet test apps/windows/TeslaSync.sln -c Release
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 226 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 16994, Skipped:     0, Total: 16994, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_SLN_EXIT=1
+
+--- STEP 2b: test (unit scope: TeslaSync.App.Tests) ---
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+Passed!  - Failed:     0, Passed: 16994, Skipped:     0, Total: 16994, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_UNIT_EXIT=0
+  (includes the 33 new VehiclePhotoGalleryTests -- filtered run: Passed: 33, Failed: 0. They cover: the
+   empty vs populated branch selection (web photos.length === 0, incl. null-collection defence), verbatim
+   src/alt passthrough + null normalization, the HasImage fallback flag, the interpolated "Open photo {n} of
+   {total}" thumbnail labels, the named vs generic gallery label with vehicle-name trimming, the empty-state
+   copy + shared lightbox close label resolved through the i18n facade keys, the surface Narrator name in
+   both states, the i18n key contract (keys == web source verbatim), the PII-safe view.opened diagnostics,
+   the stable registration slug, and null-argument validation.)
+
+--- STEP 3: format --verify-no-changes (full solution) ---
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+format diagnostics: 0
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders (gate path: feature-views/VehiclePhotoGallery subtree) ---
+./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/VehiclePhotoGallery
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+NOTE: TEST_SLN_EXIT=1 is caused SOLELY by the 147 TeslaSync.App.UITests (the WinAppDriver UI-automation
+suite). Every one fails in ~2 ms at fixture setup with:
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+(0 assertion failures.) This is a pre-existing, solution-wide environment gap, identical for every prompt
+and orthogonal to this surface (VehiclePhotoGallery adds NO UI-automation tests). WinUI 3 + .NET 10 + the
+Fluent Design System themselves ARE available: the full-solution Release build and the 16,994 headless unit
+tests are green. The verifiable scope is GREEN, so STATUS=DONE (not BLOCKED): the platform capability is
+present; only the auxiliary E2E runner is absent. This matches the immediately-preceding accepted sibling
+prompts (0293 MotorSection, 0294 QuickLinksSection, 0297 RecentDrivesSection).
+
+=== SUMMARY ===
+BUILD_EXIT=0        full solution (TeslaSync.sln), Release, 0 errors (TeslaSync.App: 0/0 under -warnaserror)
+TEST_UNIT_EXIT=0    TeslaSync.App.Tests (incl. 33 VehiclePhotoGallery tests) -- 16,994 passed
+TEST_SLN_EXIT=1     full-solution dotnet test (147 UITests env-blocked by absent WinAppDriver; see NOTE)
+FORMAT_EXIT=0       dotnet format --verify-no-changes (solution-wide)
+PLACEHOLDER_EXIT=0  check-placeholders on feature-views/VehiclePhotoGallery
+
+Pre-existing shared blocker resolved (required to unbreak the full-solution build/test/format for ALL prompts
+on this integration branch):
+  - TeslaSync.App.Tests.csproj was merge=union-corrupted into TWO concatenated <Project> roots (open L1 /
+    close L882 / re-open L883 / close L1823 plus three stray </Project> tags L1824-L1826) -- MSB4025
+    "multiple root elements" at line 883 -- with 1,610 <Compile> lines (827 unique, duplicated across both
+    roots). The whole solution therefore failed to load: baseline RED. The file's own INVARIANT comment + the
+    .gitattributes merge=union strategy document this recurring corruption and prescribe regeneration to a
+    single canonical root. Collapsed to the single valid up-to-date superset root (the first <Project>, which
+    strictly contained the second + 29 newer surfaces incl. QuickStatsGrid/TelemetryGrid -- 0 entries unique
+    to the second root), removed the 1 stray duplicate Compile item (feature-views/helpers/Helpers.Source.cs,
+    appended out of sort order), and inserted the new VehiclePhotoGallery.Model.cs link in case-insensitive
+    path-sorted position (between VehicleHero and VinDecoder). Result: ONE <Project> root, 828 unique Compile
+    items, 0 duplicate Compile items, XML loads cleanly. Behaviour-preserving (the prior curated WinUI-free
+    Compile set + the 1 new file). This unblocks dotnet build/test/format for the whole solution.
+
+Deliverable scope (native output: feature-views/VehiclePhotoGallery.*):
+  - apps/windows/TeslaSync.App/feature-views/VehiclePhotoGallery/VehiclePhotoGallery.Model.cs
+      (WinUI-free: VehiclePhotoGalleryPhoto {Src,Alt} = the web LightboxImage; VehiclePhotoGalleryModel
+       {Photos, VehicleName?} + Empty; VehiclePhotoGalleryItem {Index,Src,Alt,HasImage,OpenLabel};
+       VehiclePhotoGalleryDisplay; VehiclePhotoGalleryProjection -- the empty vs populated branch, the
+       named/generic gallery label (string.Format over the facade template, name trimmed), the per-thumbnail
+       "Open photo {n} of {total}" label, and the shared lightbox close label; Registration
+       (slug=VehiclePhotoGallery); Diagnostics (view.opened, PII-safe).)
+  - apps/windows/TeslaSync.App/feature-views/VehiclePhotoGallery/VehiclePhotoGallery.cs
+      (WinUI 3 view, ContentControl: empty -> shared TsEmptyState (Segoe Fluent Photo2 glyph + "No photos
+       uploaded yet." + helper line) in a reduce-motion-aware TsFadeIn, never a blank box; populated -> a
+       responsive computed-column Grid (2 / 3 / 4 columns by available width, the web grid-cols-2 / sm:3 /
+       md:4) of square ghost TsButton thumbnails hosting corner-clipped Images (the web <button><img>),
+       each carrying its "Open photo {n} of {total}" Narrator name, that open the shared TsLightbox on
+       selection; source-less tiles fall back to a muted picture glyph; the grid reflows on SizeChanged;
+       view.opened diagnostics on Loaded; Group automation peer; AutomationIds mirror the web data-testids.)
+  - apps/windows/TeslaSync.App.Tests/FeatureViews/VehiclePhotoGalleryTests.cs (33 headless tests)
+  - apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj (single-root repair + 1 new compile-link)
+
+States reproduced (all render; none hidden): the web source is a display-only thin wrapper around the shared
+lightbox and performs NO fetch, so -- like the web component -- it has NO loading / error / stale / offline
+branch; the only two states are empty (friendly TsEmptyState, the web dashed empty card) and populated (the
+responsive thumbnail grid that opens the shared lightbox). Both are reproduced. i18n keys from the web source
+-- all present in Strings/{en,ar,he}/Resources.resw: vehicles.photos.empty / vehicles.photos.emptyHelp /
+vehicles.photos.gallery / vehicles.photos.galleryNamed / vehicles.photos.openAt, plus lightbox.close for the
+consumed shared lightbox. Diagnostics emits view.opened slug=VehiclePhotoGallery (P1/S11), no fleet data.
+A11y: every thumbnail button carries the composed "Open photo {n} of {total}" Narrator name + an AutomationId;
+the gallery container carries the (named or generic) gallery label; the empty surface is named by its title;
+decorative images and glyphs are hidden from Narrator (AccessibilityView.Raw); reduced-motion is honoured via
+the shared TsFadeIn motion primitive.
+
+EXIT=0
+STATUS=DONE
