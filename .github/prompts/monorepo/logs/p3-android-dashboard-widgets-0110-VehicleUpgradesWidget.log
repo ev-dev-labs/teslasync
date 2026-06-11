@@ -1,0 +1,310 @@
+=== P3 Dashboard widget 0110 VehicleUpgradesWidget (Android) ===
+Capability: Jetpack Compose + Material 3, Kotlin (repo pins 2.x; prompt floor 2.2.x) -- AVAILABLE
+  (JDK 21 JetBrains JBR at %JAVA_HOME%, Android SDK at %LOCALAPPDATA%\Android\Sdk, gradlew 8.14.5).
+  :android:assembleRelease produces a Release APK (gate below), so the platform capability is present --
+  this gate is NOT a platform-capability block. NOTE: the Gradle module path is ':android' (settings.gradle.kts
+  include(":android"); projectDir = app/), so the prompt gate's ':app:'/'ktlintCheck'/'detekt' are addressed as
+  ':android:assembleRelease', ':android:testReleaseUnitTest', ':android:ktlintCheck', ':android:detekt'. The
+  unit-test scope is artifact-isolated to '*vehicleupgrades*' (the shared androidTest source set is not
+  host-run; no emulator), matching the P3/0097 Subscriptions precedent.
+
+P3 core prerequisites reused: A1 theme/tokens (TeslaTokens/Spacing), shared component library
+  (ui: Badge/BodyText/Caption/Icon/IconButton/MetricValue/MetricLabel/PanelTitle; feedback:
+  EmptyState/ErrorDisplay/Skeleton/FeedbackGlyphs; datadisplay: DataFreshness/DataDisplayGlyphs; motion: FadeIn),
+  S7/S8 data layer (VehiclesRepository/VehiclesStore -> vehicles + vehicleUpgrades; DrivingRepository/DrivingStore
+  -> drives; SharingRepository/SharingStore -> shareLinks), S10 i18n catalog, S11 diagnostics Logger
+  (view.opened), S8 BaseFeedViewModel/UiState/Resource cache-then-network contract.
+
+Web source: web/src/features/dashboard/widgets/VehicleUpgradesWidget.tsx (THE spec). Native output:
+  apps/android/app/src/main/java/com/teslasync/dashboard-widgets/VehicleUpgradesWidget/
+    VehicleUpgradesModel.kt             (pure asString/isEligible/parseUpgrades/daysUntil/parseDateMillis/
+                                         formatExpiryDate/activeShareLinks/nearestExpiry + projection +
+                                         registration; no Compose/Android/HTTP)
+    VehicleUpgradesSource.kt            (data port + S7 repo / S8 store adapters + upgrades-primary three-feed
+                                         composition: vehicleUpgradesResource + mergeUpgrades + drives->shareLinks chain)
+    VehicleUpgradesWidgetViewModel.kt   (resolves first vehicle -> upgrades(+drives->shareLinks) onto UiState)
+    VehicleUpgradesWidget.kt            (Compose: WidgetShell-equiv header + compact count tile + standard
+                                         upgrades list + share-links section; ArrowUpCircle/Link2 glyphs; previews)
+Tests: src/test/.../vehicleupgrades/{VehicleUpgradesProjectionTest(17), VehicleUpgradesWidgetViewModelTest(12),
+       VehicleUpgradesSourceTest(11)}; src/androidTest/.../vehicleupgrades/VehicleUpgradesWidgetUiTest(7).
+
+Parity (web -> native):
+  - Registry: id 'vehicle-upgrades', category 'vehicle', default 2x4, min 1x2, max 4x40 (VehicleUpgradesRegistration).
+  - States: loading skeleton; hard error + retry (ONLY when the per-vehicle UPGRADES feed errors w/ no cache, web
+    isError from useVehicleUpgrades); content; empty (no upgrades AND no share links => friendly inline empties
+    "All upgrades applied" + "No active share links"); stale/offline cached + freshness chip + auto-refresh; a
+    vehicles-list error degrades to a cached empty (web disables the upgrades query when no id resolves).
+  - Upgrades-primary contract: shellProps loading/updatedAt/isFetching/isStale/isError/onRefresh all flow from
+    useVehicleUpgrades; the useDrives -> useShareLinks chain only enriches the share-links section and never gates
+    the surface (verified: upgradesAreContentEvenWhileDrivesNeverResolve).
+  - Compact (size.cols<=1): ArrowUpCircle glyph + eligible-upgrade count + "available", else "Up to date" badge.
+  - Standard (>1 col): title "Upgrades & Sharing" + ArrowUpCircle; available-upgrades list (name; $price chip;
+    optional description; eligibility caption when isWide (cols>=3); Eligible/Not-eligible badge) or the centered
+    "All upgrades applied" row; divider; share-links section (Active links count + Nearest expiry warning chip) or
+    the "No active share links" empty state.
+  - parseUpgrades: data.upgrades array (name<-name/title, price<-price/cost, description<-description/summary,
+    eligible = value !== false) else top-level object keys; asString / isEligible coercions reproduced.
+  - daysUntil = Math.ceil((expiry-now)/86400000); activeShareLinks (no-expiry/future/unparseable kept, past
+    dropped); nearestExpiry = soonest future-dated active link; fmtDate -> MMM d, yyyy else em-dash.
+  - i18n: 11 chrome keys resolve from S10 (translation_widget_upgrades_{title,available,upToDate,upgradesHeading,
+    eligible,notEligible,allApplied,shareLinksHeading,activeLinks,nearestExpiry,noShareLinks}); already shipped in
+    res/values/strings.xml, so no catalog edit. The web's hardcoded 'Unknown Upgrade' parse fallback (not a t()
+    call on web) stays a model default.
+  - a11y: refresh IconButton labelled; each upgrade row, the compact hero, and each share-links summary row fold
+    into one TalkBack phrase; section headings marked heading().
+  - Telemetry: view.opened emitted once with surface slug 'VehicleUpgradesWidget' (P1/S11), carrying no payload.
+
+=== GATE (':android:', artifact-isolated unit scope) ===
+--- ./gradlew :android:assembleRelease ---
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :shared:core:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeReleaseNativeLibs NO-SOURCE
+> Task :shared:core:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :shared:core:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:generateReleaseResources UP-TO-DATE
+> Task :shared:core:packageReleaseResources UP-TO-DATE
+> Task :shared:core:parseReleaseLocalResources UP-TO-DATE
+> Task :shared:core:generateReleaseRFile UP-TO-DATE
+> Task :android:mergeReleaseNativeLibs UP-TO-DATE
+> Task :android:stripReleaseDebugSymbols UP-TO-DATE
+> Task :android:extractReleaseNativeSymbolTables UP-TO-DATE
+> Task :android:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :android:checkReleaseDuplicateClasses UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileRelease UP-TO-DATE
+> Task :android:generateReleaseBuildConfig UP-TO-DATE
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :android:generateReleaseResValues UP-TO-DATE
+> Task :android:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :android:generateReleaseResources UP-TO-DATE
+> Task :android:mergeReleaseResources UP-TO-DATE
+> Task :android:packageReleaseResources UP-TO-DATE
+> Task :android:parseReleaseLocalResources UP-TO-DATE
+> Task :android:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksRelease UP-TO-DATE
+> Task :android:javaPreCompileRelease UP-TO-DATE
+> Task :android:desugarReleaseFileDependencies UP-TO-DATE
+> Task :android:mergeReleaseStartupProfile UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :shared:core:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:processReleaseManifest UP-TO-DATE
+> Task :shared:core:compileReleaseLibraryResources UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :shared:core:prepareReleaseArtProfile UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :shared:core:mergeReleaseShaders UP-TO-DATE
+> Task :shared:core:compileReleaseShaders NO-SOURCE
+> Task :shared:core:generateReleaseAssets UP-TO-DATE
+> Task :shared:core:releaseAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:mergeReleaseAssets UP-TO-DATE
+> Task :shared:core:processReleaseJavaRes UP-TO-DATE
+> Task :android:mergeExtDexRelease UP-TO-DATE
+> Task :android:checkReleaseAarMetadata UP-TO-DATE
+> Task :android:processReleaseMainManifest UP-TO-DATE
+> Task :android:processReleaseManifest UP-TO-DATE
+> Task :android:processReleaseManifestForPackage UP-TO-DATE
+> Task :android:processReleaseResources UP-TO-DATE
+> Task :android:compileReleaseKotlin UP-TO-DATE
+> Task :android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :android:dexBuilderRelease UP-TO-DATE
+> Task :android:mergeDexRelease UP-TO-DATE
+> Task :android:mergeReleaseArtProfile UP-TO-DATE
+> Task :android:mergeReleaseGlobalSynthetics UP-TO-DATE
+> Task :android:compileReleaseArtProfile UP-TO-DATE
+> Task :android:mergeReleaseShaders UP-TO-DATE
+> Task :android:compileReleaseShaders NO-SOURCE
+> Task :android:generateReleaseAssets UP-TO-DATE
+> Task :android:mergeReleaseAssets UP-TO-DATE
+> Task :android:compressReleaseAssets UP-TO-DATE
+> Task :android:extractReleaseVersionControlInfo UP-TO-DATE
+> Task :android:processReleaseJavaRes UP-TO-DATE
+> Task :android:mergeReleaseJavaResource UP-TO-DATE
+> Task :android:optimizeReleaseResources UP-TO-DATE
+> Task :android:collectReleaseDependencies UP-TO-DATE
+> Task :android:sdkReleaseDependencyData UP-TO-DATE
+> Task :android:writeReleaseAppMetadata UP-TO-DATE
+> Task :android:writeReleaseSigningConfigVersions UP-TO-DATE
+> Task :android:packageRelease UP-TO-DATE
+> Task :android:createReleaseApkListingFileRedirect UP-TO-DATE
+> Task :android:assembleRelease UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-08/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 37s
+70 actionable tasks: 2 executed, 68 up-to-date
+BUILD_EXIT=0
+--- ./gradlew :android:testReleaseUnitTest --tests "io.teslasync.android.dashboard.widgets.vehicleupgrades.*" ---
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :shared:core:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:generateReleaseResources UP-TO-DATE
+> Task :shared:core:packageReleaseResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:processReleaseManifest UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:parseReleaseLocalResources UP-TO-DATE
+> Task :shared:core:generateReleaseRFile UP-TO-DATE
+> Task :shared:core:compileReleaseLibraryResources UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :android:generateReleaseBuildConfig UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkReleaseAarMetadata UP-TO-DATE
+> Task :android:generateReleaseResValues UP-TO-DATE
+> Task :android:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :android:generateReleaseResources UP-TO-DATE
+> Task :android:mergeReleaseResources UP-TO-DATE
+> Task :android:packageReleaseResources UP-TO-DATE
+> Task :android:parseReleaseLocalResources UP-TO-DATE
+> Task :android:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileRelease UP-TO-DATE
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :android:processReleaseMainManifest UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :android:processReleaseManifest UP-TO-DATE
+> Task :android:processReleaseManifestForPackage UP-TO-DATE
+> Task :shared:core:processReleaseJavaRes UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :android:processReleaseResources UP-TO-DATE
+> Task :android:compileReleaseKotlin UP-TO-DATE
+> Task :android:javaPreCompileRelease UP-TO-DATE
+> Task :android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :android:bundleReleaseClassesToRuntimeJar UP-TO-DATE
+> Task :android:bundleReleaseClassesToCompileJar UP-TO-DATE
+> Task :android:compileReleaseUnitTestKotlin UP-TO-DATE
+> Task :android:preReleaseUnitTestBuild
+> Task :android:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :android:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :android:processReleaseJavaRes UP-TO-DATE
+> Task :android:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :android:testReleaseUnitTest UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-08/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 37s
+45 actionable tasks: 2 executed, 43 up-to-date
+TEST_EXIT=0
+--- ./gradlew :android:ktlintCheck :android:detekt ---
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :android:loadKtlintReporters UP-TO-DATE
+> Task :android:runKtlintCheckOverAndroidTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestSourceSet UP-TO-DATE
+> Task :android:ktlintAndroidTestSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverDebugSourceSet NO-SOURCE
+> Task :android:ktlintDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :android:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverMainSourceSet UP-TO-DATE
+> Task :android:ktlintMainSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverReleaseSourceSet NO-SOURCE
+> Task :android:ktlintReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestSourceSet UP-TO-DATE
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :android:ktlintCheck UP-TO-DATE
+> Task :android:detekt UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-08/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 33s
+13 actionable tasks: 13 up-to-date
+LINT_EXIT=0
+--- check-placeholders.ps1 (widget dir) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+Artifact gate (':android:', artifact-isolated unit scope):
+  assembleRelease=0  testReleaseUnitTest(vehicleupgrades scope: 40 tests = 17 projection + 12 view-model + 11 source)=0
+  ktlintCheck+detekt=0  check-placeholders=0  -> all 0.
+Unit tests: VehicleUpgradesProjectionTest=17 passed, VehicleUpgradesWidgetViewModelTest=12 passed,
+  VehicleUpgradesSourceTest=11 passed (0 failures, 0 skipped).
+UI/a11y: VehicleUpgradesWidgetUiTest=7 (instrumented; authored against resolved Compose-test APIs; not host-run
+  here -- no emulator + the shared androidTest source set is not assembled by the host gate, same deferral as the
+  P3/0097 precedent; the offline testReleaseUnitTest gate covers the projection + state logic).
+Acceptance: all states reproduced (loading/content/empty/error+retry/stale-offline/compact-hero); hooks bound via
+  shared S7/S8 VehicleUpgradesSource (no HTTP in view); upgrades-primary -- the useDrives->useShareLinks chain never
+  gates the surface; 11 chrome i18n keys resolved from S10 (already in strings.xml); refresh + every upgrade row +
+  compact hero + share-link summary rows carry a11y labels; adapter/projection + view-model + source + UI tests
+  authored; no stub/placeholder/TODO/mock in shipped code. Registry id 'vehicle-upgrades', 2x4 / 1x2 / 4x40.
+EXIT=0
+STATUS=DONE
