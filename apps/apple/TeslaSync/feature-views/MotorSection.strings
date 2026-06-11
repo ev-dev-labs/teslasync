@@ -1,0 +1,43 @@
+/*
+  MotorSection.strings
+  TeslaSync — P4 feature view · 0293 · MotorSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `MotorSection` resolves (table "MotorSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/MotorSection.tsx — the "Powertrain" title,
+  the eight MetricCard labels, and the empty message), reusing the web
+  `vehicles.detail.*` namespace verbatim. The second group backs the native chrome (the
+  P4 leaf freshness / loading / error copy) so the Swift sources hold no English prose
+  literals. The unit suffixes ("V" / "A" / "Nm") and the temperature symbols ("°C" / "°F")
+  are device/data literals carried in code, not translated strings (matching the web,
+  where they are template literals, not `t()` calls).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"vehicles.detail.motor" = "Powertrain";
+"vehicles.detail.shiftState" = "Shift State";
+"vehicles.detail.packVoltage" = "Pack Voltage";
+"vehicles.detail.motorCurrentFront" = "Motor Current (F)";
+"vehicles.detail.torqueFront" = "Front Torque";
+"vehicles.detail.torqueRear" = "Rear Torque";
+"vehicles.detail.rpmFront" = "Front RPM";
+"vehicles.detail.rpmRear" = "Rear RPM";
+"vehicles.detail.motorTemp" = "Motor Temp (peak)";
+"vehicles.detail.noMotorData" = "No motor data available";
+
+/* --- Native chrome: P4 leaf freshness / loading / error --- */
+"motor.live" = "Live";
+"motor.stale" = "Stale";
+"motor.offline" = "Offline";
+"motor.staleBanner" = "Reconnecting — data may be stale";
+"motor.offlineBanner" = "Offline — showing last known data";
+"motor.refresh" = "Refresh";
+"motor.loadingA11y" = "Loading powertrain";
+"motor.errorTitle" = "Couldn't load powertrain";
+"motor.retry" = "Retry";
