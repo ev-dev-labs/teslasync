@@ -144,3 +144,4 @@ p3-android/A8-0003-wear-os-companion.prompt.md
 p3-android/A9-0001-unit-tests.prompt.md
 p3-android/A9-0002-instrumented-compose-ui-tests.prompt.md
 p3-android/dashboard-widgets/A-0007-AutomationStatusWidget.prompt.md
+p3-android/dashboard-widgets/A-0008-BackupHistoryWidget.prompt.md
