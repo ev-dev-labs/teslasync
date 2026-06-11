@@ -107,19 +107,21 @@
     feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
     TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free
     (Microsoft.UI-free) sources are Compile-linked into the single ItemGroup below (the Link mirrors each
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each
+    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App)
+    targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's
+    Microsoft.UI-free sources are Compile-linked into the single Compile item group below (the Link mirrors each
     source's real location under Widgets\, FeatureViews\, MiscSurfaces\, ModalsDialogs\ or SharedSurfaces\);
     the bare WinUI view files are excluded and exercised by the app build. The matching test classes live under
-    this project and are picked up by the SDK default-compile glob. The Content links copy the units-golden,
-    Package.appxmanifest and widget-template fixtures the tests read out of the test output directory.
+    this project and are picked up by the SDK default-compile glob.
 
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk under
-    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI
-    view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
-    integration merges can re-concatenate it into multiple Project roots plus duplicate Compile items, failing
-    XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Re-consolidated
-    for P2 shared-surfaces/0063 AnnotationList into this single canonical root (plus the new AnnotationList
-    Model / Source / ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
+    Include-deduplicated Compile item group - the union of every Microsoft.UI-free .cs on disk under
+    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file carries a
+    .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it into multiple
+    Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); regenerate it directly from
+    the Microsoft.UI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal
     build-item or project start tag inside this comment.
     shared-surfaces/0066 ChartExportMenu into this single canonical root (plus the new ChartExportMenu Model /
     Source / ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal build-item or
@@ -2545,6 +2547,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\SmallMultiplesChart.Model.cs" Link="SharedSurfaces\SmallMultiplesChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SmallMultiplesChart.Source.cs" Link="SharedSurfaces\SmallMultiplesChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SmallMultiplesChart.ViewModel.cs" Link="SharedSurfaces\SmallMultiplesChart.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.Model.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.Source.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.ViewModel.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.Model.cs" Link="SharedSurfaces\VisuallyHidden.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.Source.cs" Link="SharedSurfaces\VisuallyHidden.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.ViewModel.cs" Link="SharedSurfaces\VisuallyHidden.ViewModel.cs" />
