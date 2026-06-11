@@ -244,3 +244,4 @@ p3-android/dashboard-widgets/A-0106-VehicleAccessWidget.prompt.md
 p3-android/dashboard-widgets/A-0105-VampireDrainWidget.prompt.md
 p3-android/dashboard-widgets/A-0109-VehicleSpecsWidget.prompt.md
 p3-android/dashboard-widgets/A-0110-VehicleUpgradesWidget.prompt.md
+p3-android/dashboard-widgets/A-0114-WatchSummaryWidget.prompt.md
