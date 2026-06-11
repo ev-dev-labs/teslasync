@@ -1,22 +1,22 @@
 {
   "baseLocale": "en",
-  "entryCount": 7772,
+  "entryCount": 7775,
   "generatedFrom": "web/src/i18n",
   "locales": [
     {
       "direction": "ltr",
-      "effectiveKeyCount": 7772,
+      "effectiveKeyCount": 7775,
       "fallbackCount": 0,
       "locale": "en",
       "name": "English",
-      "sourceKeyCount": 7772,
+      "sourceKeyCount": 7775,
       "status": "base",
-      "translatedCount": 7772
+      "translatedCount": 7775
     },
     {
       "direction": "rtl",
-      "effectiveKeyCount": 7772,
-      "fallbackCount": 7772,
+      "effectiveKeyCount": 7775,
+      "fallbackCount": 7775,
       "locale": "ar",
       "name": "العربية",
       "sourceKeyCount": 0,
@@ -25,8 +25,8 @@
     },
     {
       "direction": "rtl",
-      "effectiveKeyCount": 7772,
-      "fallbackCount": 7772,
+      "effectiveKeyCount": 7775,
+      "fallbackCount": 7775,
       "locale": "he",
       "name": "עברית",
       "sourceKeyCount": 0,

@@ -5143,7 +5143,10 @@
       "currentHealth": "Current Health",
       "riskFactors": "Risk Factors",
       "recommendations": "Recommendations",
-      "noData": "No degradation forecast data"
+      "noData": "No degradation forecast data",
+      "healthy": "Healthy",
+      "normal": "Normal",
+      "accelerated": "Accelerated"
     },
     "mo": "mo",
     "soh": "SoH",
