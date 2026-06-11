@@ -1,0 +1,59 @@
+/*
+  TirePressurePanel.strings
+  TeslaSync — P4 feature view · 0286 · TirePressurePanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TirePressurePanel` resolves (table "TirePressurePanel") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact key extracted from the web source
+  (features/vehicles/components/telemetry-panels/TirePressurePanel.tsx). The web leaf
+  hardcodes the remaining display text (the corner short codes, the no-data sentence, and
+  the summary words); those are localized here with the web English as the value so no
+  English literal lives in Swift. The final groups back the native state envelope
+  (no-value dash, freshness chip, connectivity banner, loading / error chrome) the web
+  leaf delegates to its parent page.
+*/
+
+/* --- Key from the web source (parity) --- */
+"common.tirePressure" = "Tire Pressure";
+
+/* --- Tile short codes (web literal 'FL'/'FR'/'RL'/'RR') --- */
+"tirePanel.cornerFl" = "FL";
+"tirePanel.cornerFr" = "FR";
+"tirePanel.cornerRl" = "RL";
+"tirePanel.cornerRr" = "RR";
+
+/* --- Spoken corner names (VoiceOver — short codes read poorly letter-by-letter) --- */
+"tirePanel.cornerFlLong" = "Front Left";
+"tirePanel.cornerFrLong" = "Front Right";
+"tirePanel.cornerRlLong" = "Rear Left";
+"tirePanel.cornerRrLong" = "Rear Right";
+
+/* --- Overall status chip (web '✓ All Normal' / '✗ Attention Needed' / '⚠ Check Pressure') --- */
+"tirePanel.allNormal" = "All Normal";
+"tirePanel.attention" = "Attention Needed";
+"tirePanel.checkPressure" = "Check Pressure";
+
+/* --- Empty state (web 'No tire pressure data available') --- */
+"tirePanel.noData" = "No tire pressure data available";
+
+/* --- Per-corner no-value dash (web `formatPressure` '—' empty display) --- */
+"tirePanel.noValue" = "—";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"tirePanel.live" = "Live";
+"tirePanel.stale" = "Stale";
+"tirePanel.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"tirePanel.staleBanner" = "Reconnecting — tire pressure may be stale";
+"tirePanel.offlineBanner" = "Offline — showing last known tire pressure";
+
+/* --- Loading / error chrome --- */
+"tirePanel.loading" = "Loading tire pressure";
+"tirePanel.errorTitle" = "Couldn't load tire pressure";
+"tirePanel.retry" = "Retry";
