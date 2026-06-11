@@ -544,3 +544,4 @@ p2-windows/shared-meaningful/W-0016-AIDigestNarration.prompt.md
 p2-windows/shared-meaningful/W-0018-AIFeatureCard.prompt.md
 p2-windows/shared-meaningful/W-0017-AIDriveCoaching.prompt.md
 p2-windows/shared-meaningful/W-0019-AIFeedbackQueueTriage.prompt.md
+p2-windows/shared-meaningful/W-0020-AIGeofenceAwareAutomationSuggestions.prompt.md
