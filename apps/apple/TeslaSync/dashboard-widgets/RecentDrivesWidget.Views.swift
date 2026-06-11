@@ -64,7 +64,7 @@ struct RecentDrivesWidgetDriveRowView: View {
 
 /// The stale/offline banner shown above the list when the bound source is not live, so cached rows
 /// are clearly labeled (web freshness-indicator intent).
-struct RecentDrivesConnectivityBanner: View {
+struct RecentDrivesWidgetRecentDrivesConnectivityBanner: View {
     let connection: RecentDrivesWidgetConnection
 
     var body: some View {

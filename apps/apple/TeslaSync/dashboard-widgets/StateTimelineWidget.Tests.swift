@@ -6,14 +6,14 @@
 //    • Adapter (cached → projection) — `StateTimelineBuilder` parity with the
 //      web StateTimelineWidget.tsx derive block (buildSegments + TimelineStripe)
 //      and the `fmtNumber` / `fmtInt` / `fmtDuration` formatters.
-//    • State holder — `StateTimelineModel` phase resolution across loading /
+//    • State holder — `STWModel` phase resolution across loading /
 //      empty / error / content, plus the P1/S11 `view.opened` telemetry +
 //      source wiring and the compact/wide thresholds.
 //    • Registry — canonical `state-timeline` metadata + size clamping.
 //    • Accessibility — the VoiceOver distribution summary content.
 //
 //  These run in the TeslaSync(/-macOS) XCTest targets. They have no network and
-//  no real store: the model is driven by `InMemoryStateTimelineSource`.
+//  no real store: the model is driven by `STWInMemoryStateTimelineSource`.
 //
 
 import XCTest
@@ -85,27 +85,33 @@ import XCTest
 
 // MARK: - Adapter: formatting + kind parsing
 
-@MainActor final class StateTimelineFormatTests: XCTestCase {
+@MainActor final class STWFormatTests: XCTestCase {
     func testDecimalAndIntegerGroupAndRound() {
-        XCTAssertEqual(StateTimelineFormat.decimal(25.806, fractionDigits: 1), "25.8")
-        XCTAssertEqual(StateTimelineFormat.decimal(25.85, fractionDigits: 1), "25.9")
-        XCTAssertEqual(StateTimelineFormat.integer(25.806), "26")
-        XCTAssertEqual(StateTimelineFormat.integer(1234), "1,234")
+        XCTAssertEqual(STWFormat.decimal(25.806, fractionDigits: 1), "25.8")
+        XCTAssertEqual(STWFormat.decimal(25.85, fractionDigits: 1), "25.9")
+        XCTAssertEqual(STWFormat.integer(25.806), "26")
+        XCTAssertEqual(STWFormat.integer(1234), "1,234")
     }
 
     func testDurationPartsMatchWebFloorAndRound() {
-        XCTAssertEqual(StateTimelineFormat.durationParts(125).hours, 2)
-        XCTAssertEqual(StateTimelineFormat.durationParts(125).minutes, 5)
-        XCTAssertEqual(StateTimelineFormat.durationParts(45).hours, 0)
-        XCTAssertEqual(StateTimelineFormat.durationParts(45).minutes, 45)
-        XCTAssertEqual(StateTimelineFormat.durationParts(600).hours, 10)
-        XCTAssertEqual(StateTimelineFormat.durationParts(600).minutes, 0)
+        XCTAssertEqual(STWFormat.durationParts(125).hours, 2)
+        XCTAssertEqual(STWFormat.durationParts(125).minutes, 5)
+        XCTAssertEqual(STWFormat.durationParts(45).hours, 0)
+        XCTAssertEqual(STWFormat.durationParts(45).minutes, 45)
+        XCTAssertEqual(STWFormat.durationParts(600).hours, 10)
+        XCTAssertEqual(STWFormat.durationParts(600).minutes, 0)
     }
 
     func testDurationComposesLikeWeb() {
-        XCTAssertEqual(StateTimelineFormat.duration(125, hourSuffix: "h", minuteSuffix: "m"), "2h 5m")
-        XCTAssertEqual(StateTimelineFormat.duration(45, hourSuffix: "h", minuteSuffix: "m"), "45m")
-        XCTAssertEqual(StateTimelineFormat.duration(600, hourSuffix: "h", minuteSuffix: "m"), "10h 0m")
+        XCTAssertEqual(
+            STWFormat.duration(125, hourSuffix: "h", minuteSuffix: "m"),
+            "2h 5m"
+        )
+        XCTAssertEqual(STWFormat.duration(45, hourSuffix: "h", minuteSuffix: "m"), "45m")
+        XCTAssertEqual(
+            STWFormat.duration(600, hourSuffix: "h", minuteSuffix: "m"),
+            "10h 0m"
+        )
     }
 
     func testStateKindParsingLowercasesAndTrims() {
@@ -128,11 +134,11 @@ import XCTest
 
 @MainActor final class StateTimelineModelTests: XCTestCase {
     private func makeModel(
-        _ update: StateTimelineUpdate,
-        telemetry: StateTimelineTelemetry = OSLogStateTimelineTelemetry()
-    ) -> (StateTimelineModel, InMemoryStateTimelineSource) {
-        let source = InMemoryStateTimelineSource(initial: update)
-        let model = StateTimelineModel(source: source, telemetry: telemetry)
+        _ update: STWUpdate,
+        telemetry: STWTelemetry = STWOSLogStateTimelineTelemetry()
+    ) -> (STWModel, STWInMemoryStateTimelineSource) {
+        let source = STWInMemoryStateTimelineSource(initial: update)
+        let model = STWModel(source: source, telemetry: telemetry)
         return (model, source)
     }
 
@@ -141,36 +147,39 @@ import XCTest
     }
 
     func testLoadingWithoutDataShowsLoading() {
-        let (model, _) = makeModel(StateTimelineUpdate(status: .loading))
+        let (model, _) = makeModel(STWUpdate(status: .loading))
         model.start()
         XCTAssertEqual(model.phase, .loading)
     }
 
     func testLoadedWithoutDataShowsEmpty() {
-        let (model, _) = makeModel(StateTimelineUpdate(status: .loaded))
+        let (model, _) = makeModel(STWUpdate(status: .loaded))
         model.start()
         XCTAssertEqual(model.phase, .empty)
     }
 
     func testFailedWithoutCacheShowsError() {
-        let (model, _) = makeModel(StateTimelineUpdate(status: .failed("boom")))
+        let (model, _) = makeModel(STWUpdate(status: .failed("boom")))
         model.start()
         XCTAssertEqual(model.phase, .error("boom"))
     }
 
     func testDataPresentShowsContentEvenWhileFetchingOrFailed() {
-        let (loading, _) = makeModel(StateTimelineUpdate(status: .loading, summary: sampleSummary))
+        let (loading, _) = makeModel(STWUpdate(status: .loading, summary: sampleSummary))
         loading.start()
         XCTAssertEqual(loading.phase, .content)
 
-        let (failed, _) = makeModel(StateTimelineUpdate(status: .failed("net"), summary: sampleSummary))
+        let (failed, _) = makeModel(STWUpdate(
+            status: .failed("net"),
+            summary: sampleSummary
+        ))
         failed.start()
         XCTAssertEqual(failed.phase, .content)
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
         let spy = SpyStateTimelineTelemetry()
-        let (model, source) = makeModel(StateTimelineUpdate(status: .loading), telemetry: spy)
+        let (model, source) = makeModel(STWUpdate(status: .loading), telemetry: spy)
         model.start()
         model.start()
         XCTAssertEqual(spy.surfaces, [StateTimelineWidget.surfaceSlug])
@@ -178,7 +187,7 @@ import XCTest
     }
 
     func testRefreshDelegatesToSource() {
-        let (model, source) = makeModel(StateTimelineUpdate(status: .loaded))
+        let (model, source) = makeModel(STWUpdate(status: .loaded))
         model.start()
         model.refresh()
         model.refresh()
@@ -186,10 +195,10 @@ import XCTest
     }
 
     func testConnectionAndProjectionTrackUpdates() {
-        let (model, source) = makeModel(StateTimelineUpdate(status: .loading))
+        let (model, source) = makeModel(STWUpdate(status: .loading))
         model.start()
         source.push(
-            StateTimelineUpdate(
+            STWUpdate(
                 status: .loaded,
                 connection: .offline,
                 vehicle: StateTimelineVehicleRef(id: 3, displayName: "Cybertruck"),
@@ -205,10 +214,10 @@ import XCTest
     }
 
     func testCompactAndWideThresholds() {
-        XCTAssertTrue(StateTimelineModel.isCompact(for: DashboardWidgetSize(cols: 1, rows: 2)))
-        XCTAssertFalse(StateTimelineModel.isCompact(for: DashboardWidgetSize(cols: 2, rows: 4)))
-        XCTAssertFalse(StateTimelineModel.isWide(for: DashboardWidgetSize(cols: 2, rows: 4)))
-        XCTAssertTrue(StateTimelineModel.isWide(for: DashboardWidgetSize(cols: 3, rows: 4)))
+        XCTAssertTrue(STWModel.isCompact(for: DashboardWidgetSize(cols: 1, rows: 2)))
+        XCTAssertFalse(STWModel.isCompact(for: DashboardWidgetSize(cols: 2, rows: 4)))
+        XCTAssertFalse(STWModel.isWide(for: DashboardWidgetSize(cols: 2, rows: 4)))
+        XCTAssertTrue(STWModel.isWide(for: DashboardWidgetSize(cols: 3, rows: 4)))
     }
 }
 
@@ -243,7 +252,7 @@ import XCTest
 
 // MARK: - Accessibility summary content
 
-@MainActor final class StateTimelineAccessibilityTests: XCTestCase {
+@MainActor final class STWAccessibilityTests: XCTestCase {
     func testSummaryIncludesEveryStateLabelAndPercent() {
         let projection = StateTimelineBuilder.project(
             summary: [
@@ -252,7 +261,7 @@ import XCTest
             ],
             transitions: []
         )
-        let summary = StateTimelineAccessibility.summary(for: projection)
+        let summary = STWAccessibility.summary(for: projection)
         XCTAssertTrue(summary.contains("Driving"))
         XCTAssertTrue(summary.contains("Charging"))
         XCTAssertTrue(summary.contains("60.0%"))
@@ -261,14 +270,14 @@ import XCTest
 
     func testSummaryIsEmptyWithoutSegments() {
         let projection = StateTimelineBuilder.project(summary: [], transitions: [])
-        XCTAssertTrue(StateTimelineAccessibility.summary(for: projection).isEmpty)
+        XCTAssertTrue(STWAccessibility.summary(for: projection).isEmpty)
     }
 }
 
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class SpyStateTimelineTelemetry: StateTimelineTelemetry, @unchecked Sendable {
+private final class SpyStateTimelineTelemetry: STWTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)

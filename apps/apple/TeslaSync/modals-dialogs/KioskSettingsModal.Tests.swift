@@ -194,7 +194,7 @@ final class KioskSettingsProjectionTests: XCTestCase {
         XCTAssertEqual(KioskCatalog.rotationOptions.map(\.value), [0, 10, 15, 30, 60, 120, 300])
         XCTAssertEqual(KioskCatalog.cursorTimeoutOptions.map(\.value), [3, 5, 10, 15])
         XCTAssertEqual(KioskCatalog.dimAfterOptions.map(\.value), [0, 5, 10, 15, 30, 60])
-        XCTAssertEqual(KioskClockPosition.allCases.map(\.rawValue), [
+        XCTAssertEqual(KioskSettingsModalKioskClockPosition.allCases.map(\.rawValue), [
             "top-left", "top-right", "bottom-left", "bottom-right"
         ])
         XCTAssertEqual(KioskCatalog.widgetOpacityBounds.step, 5)

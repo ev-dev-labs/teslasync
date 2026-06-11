@@ -13,9 +13,9 @@ import SwiftUI
 
 #if DEBUG
     @MainActor
-    private func previewModel(_ update: StateTimelineUpdate) -> StateTimelineModel {
-        let source = InMemoryStateTimelineSource(initial: update)
-        let model = StateTimelineModel(source: source)
+    private func previewModel(_ update: STWUpdate) -> STWModel {
+        let source = STWInMemoryStateTimelineSource(initial: update)
+        let model = STWModel(source: source)
         model.start()
         return model
     }
@@ -41,10 +41,10 @@ import SwiftUI
     ]
 
     private func contentUpdate(
-        connection: StateTimelineConnection = .live,
-        status: StateTimelineLoadStatus = .loaded
-    ) -> StateTimelineUpdate {
-        StateTimelineUpdate(
+        connection: STWConnection = .live,
+        status: STWLoadStatus = .loaded
+    ) -> STWUpdate {
+        STWUpdate(
             status: status,
             connection: connection,
             vehicle: previewVehicle,
@@ -87,24 +87,26 @@ import SwiftUI
     }
 
     #Preview("Loading") {
-        StateTimelineWidget(model: previewModel(StateTimelineUpdate(status: .loading)))
+        StateTimelineWidget(model: previewModel(STWUpdate(status: .loading)))
             .frame(width: 320, height: 300)
             .padding()
             .background(Color.TS.bg)
     }
 
     #Preview("Empty") {
-        StateTimelineWidget(model: previewModel(StateTimelineUpdate(status: .loaded)))
+        StateTimelineWidget(model: previewModel(STWUpdate(status: .loaded)))
             .frame(width: 320, height: 300)
             .padding()
             .background(Color.TS.bg)
     }
 
     #Preview("Error") {
-        StateTimelineWidget(model: previewModel(StateTimelineUpdate(status: .failed("Network unavailable"))))
-            .frame(width: 320, height: 300)
-            .padding()
-            .background(Color.TS.bg)
+        StateTimelineWidget(
+            model: previewModel(STWUpdate(status: .failed("Network unavailable")))
+        )
+        .frame(width: 320, height: 300)
+        .padding()
+        .background(Color.TS.bg)
     }
 
     #Preview("Stale (cached)") {

@@ -3,7 +3,7 @@
 //  TeslaSync — P4 dashboard widget · 0078 · RecentDrivesListWidget (Apple)
 //
 //  The composable Recent Drives List dashboard surface — SwiftUI parity of
-//  features/dashboard/widgets/RecentDrivesListWidget.tsx. Binds through RecentDrivesModel
+//  features/dashboard/widgets/RecentDrivesListWidget.tsx. Binds through RDListModel
 //  (no networking in the view); renders every state and the responsive narrow/wide list.
 //
 
@@ -12,7 +12,7 @@ import SwiftUI
 
 // MARK: - i18n facade SwiftUI helper (P1/S10)
 
-public extension RecentDrivesStrings {
+public extension RDListStrings {
     /// SwiftUI `Text` for a key with the web English fallback. Kept here (not in the model
     /// file) so the model/adapter stay SwiftUI-free.
     static func text(_ key: String, _ fallback: String) -> Text {
@@ -25,22 +25,22 @@ public extension RecentDrivesStrings {
 /// The composable Recent Drives List dashboard widget — the SwiftUI parity of
 /// `features/dashboard/widgets/RecentDrivesListWidget.tsx`. Renders every state from the web
 /// source (loading / empty / error / stale / offline / content) and the responsive narrow/wide
-/// list inside a glass widget shell, binding through `RecentDrivesModel` (P1/S8). No networking
+/// list inside a glass widget shell, binding through `RDListModel` (P1/S8). No networking
 /// lives here; navigation is delegated to the injected `onViewAll` / `onOpenDrive` callbacks.
 public struct RecentDrivesListWidget: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
-    public static let surfaceSlug = RecentDrivesSurface.slug
+    public static let surfaceSlug = RDListSurface.slug
 
     /// Canonical registry metadata (registry/driving.ts → "recent-drives-list").
-    public static let registration = RecentDrivesSurface.registration
+    public static let registration = RDListSurface.registration
 
-    @State private var model: RecentDrivesModel
+    @State private var model: RDListModel
     private let size: DashboardWidgetSize
     private let onViewAll: (() -> Void)?
     private let onOpenDrive: ((Int) -> Void)?
 
     public init(
-        model: RecentDrivesModel,
+        model: RDListModel,
         size: DashboardWidgetSize = RecentDrivesListWidget.registration.defaultSize,
         onViewAll: (() -> Void)? = nil,
         onOpenDrive: ((Int) -> Void)? = nil
@@ -61,7 +61,7 @@ public struct RecentDrivesListWidget: View {
 
     /// The size-dependent projection, derived per render from the model's cached drives —
     /// the native parity of the web `useMemo(() => drives ?? [], [drives])` + row mapping.
-    private var projection: RecentDrivesProjection {
+    private var projection: RDListProjection {
         RecentDrivesProjector.project(
             drives: model.drives,
             units: model.units,
@@ -102,7 +102,7 @@ extension RecentDrivesListWidget {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.TS.accent)
                 .accessibilityHidden(true)
-            RecentDrivesStrings.text("widget.recentDrivesList", "Recent Drives")
+            RDListStrings.text("widget.recentDrivesList", "Recent Drives")
                 .font(Font.TS.label)
                 .textCase(.uppercase)
                 .tracking(0.6)
@@ -137,12 +137,15 @@ extension RecentDrivesListWidget {
 
     private var freshnessLabel: String {
         if model.isFetching {
-            return RecentDrivesStrings.string("widget.recentDrivesList.updating", "Updating")
+            return RDListStrings.string("widget.recentDrivesList.updating", "Updating")
         }
         switch model.connection {
-        case .live: return RecentDrivesStrings.string("widget.recentDrivesList.live", "Live")
-        case .stale: return RecentDrivesStrings.string("widget.recentDrivesList.stale", "Stale")
-        case .offline: return RecentDrivesStrings.string("widget.recentDrivesList.offline", "Offline")
+        case .live: return RDListStrings.string("widget.recentDrivesList.live", "Live")
+        case .stale: return RDListStrings.string("widget.recentDrivesList.stale", "Stale")
+        case .offline: return RDListStrings.string(
+                "widget.recentDrivesList.offline",
+                "Offline"
+            )
         }
     }
 
@@ -154,7 +157,10 @@ extension RecentDrivesListWidget {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.TS.textMuted)
-        .accessibilityLabel(RecentDrivesStrings.text("widget.recentDrivesList.refresh", "Refresh"))
+        .accessibilityLabel(RDListStrings.text(
+            "widget.recentDrivesList.refresh",
+            "Refresh"
+        ))
     }
 
     private var viewAllButton: some View {
@@ -162,13 +168,16 @@ extension RecentDrivesListWidget {
             onViewAll?()
         } label: {
             HStack(spacing: 2) {
-                RecentDrivesStrings.text("widget.viewAll", "View all").font(Font.TS.caption)
+                RDListStrings.text("widget.viewAll", "View all").font(Font.TS.caption)
                 Image(systemName: "arrow.up.right").font(.system(size: 9, weight: .semibold))
             }
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.TS.textMuted)
-        .accessibilityLabel(RecentDrivesStrings.text("widget.recentDrivesList.viewAllA11y", "View all drives"))
+        .accessibilityLabel(RDListStrings.text(
+            "widget.recentDrivesList.viewAllA11y",
+            "View all drives"
+        ))
     }
 }
 
@@ -194,19 +203,22 @@ extension RecentDrivesListWidget {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .accessibilityElement()
             .accessibilityLabel(
-                RecentDrivesStrings.text("widget.recentDrivesList.loading", "Loading recent drives")
+                RDListStrings.text(
+                    "widget.recentDrivesList.loading",
+                    "Loading recent drives"
+                )
             )
     }
 
     private var emptyState: some View {
         ContentUnavailableView {
             Label {
-                RecentDrivesStrings.text("widget.noDrivesList", "No recent drives recorded")
+                RDListStrings.text("widget.noDrivesList", "No recent drives recorded")
             } icon: {
                 Image(systemName: "road.lanes")
             }
         } description: {
-            RecentDrivesStrings.text(
+            RDListStrings.text(
                 "widget.recentDrivesList.emptyHint",
                 "Completed drives will appear here once your vehicle reports them."
             )
@@ -219,10 +231,13 @@ extension RecentDrivesListWidget {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 26))
                 .foregroundStyle(Color.TS.statusDanger)
-            RecentDrivesStrings.text("widget.recentDrivesList.errorTitle", "Couldn't load recent drives")
-                .font(Font.TS.panel)
-                .foregroundStyle(Color.TS.textPrimary)
-                .multilineTextAlignment(.center)
+            RDListStrings.text(
+                "widget.recentDrivesList.errorTitle",
+                "Couldn't load recent drives"
+            )
+            .font(Font.TS.panel)
+            .foregroundStyle(Color.TS.textPrimary)
+            .multilineTextAlignment(.center)
             if !message.isEmpty {
                 Text(verbatim: message)
                     .font(Font.TS.caption)
@@ -232,7 +247,7 @@ extension RecentDrivesListWidget {
             Button {
                 model.refresh()
             } label: {
-                RecentDrivesStrings.text("widget.recentDrivesList.retry", "Retry")
+                RDListStrings.text("widget.recentDrivesList.retry", "Retry")
                     .font(Font.TS.caption)
                     .fontWeight(.semibold)
                     .padding(.horizontal, TSSpacing.md)
@@ -264,7 +279,7 @@ extension RecentDrivesListWidget {
         return HStack(spacing: TSSpacing.xs) {
             Image(systemName: isOffline ? "wifi.slash" : "clock.arrow.circlepath")
                 .font(.system(size: 10, weight: .semibold))
-            RecentDrivesStrings.text(key, fallback).font(Font.TS.caption)
+            RDListStrings.text(key, fallback).font(Font.TS.caption)
         }
         .foregroundStyle(tone)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -288,6 +303,7 @@ extension RecentDrivesListWidget {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(verbatim: RecentDrivesAccessibility.listSummary(for: projection)))
+        .accessibilityLabel(Text(verbatim: RDListAccessibility
+                .listSummary(for: projection)))
     }
 }

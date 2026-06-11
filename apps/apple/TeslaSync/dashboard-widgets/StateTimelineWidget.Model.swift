@@ -20,12 +20,12 @@ import SwiftUI
 /// implementation logs via `os.Logger`; the production app injects an adapter
 /// that forwards to the shared core `Telemetry.track(.screenView(screen:…))`
 /// (ADR-016 §5), which is consent-gated and redacted there.
-public protocol StateTimelineTelemetry: Sendable {
+public protocol STWTelemetry: Sendable {
     func viewOpened(surface: String)
 }
 
 /// `os.Logger`-backed default that records the surface open as a `screen_view`.
-public struct OSLogStateTimelineTelemetry: StateTimelineTelemetry {
+public struct STWOSLogStateTimelineTelemetry: STWTelemetry {
     private let logger: Logger
 
     public init() {
@@ -41,7 +41,7 @@ public struct OSLogStateTimelineTelemetry: StateTimelineTelemetry {
 
 /// The load lifecycle for the widget's data, mirroring the shared
 /// `LoadableState` cases the production source projects from `Resource<T>`.
-public enum StateTimelineLoadStatus: Sendable, Equatable {
+public enum STWLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case empty
@@ -49,26 +49,26 @@ public enum StateTimelineLoadStatus: Sendable, Equatable {
 }
 
 /// Live-stream freshness, mirroring `LiveConnectionState` (ADR-013).
-public enum StateTimelineConnection: Sendable, Equatable {
+public enum STWConnection: Sendable, Equatable {
     case live
     case stale
     case offline
 }
 
-/// One coalesced snapshot pushed by a `StateTimelineSource`: the cached summary
+/// One coalesced snapshot pushed by a `STWSource`: the cached summary
 /// + timeline rows plus their load/connection status. The model turns this into
 /// the display projection.
-public struct StateTimelineUpdate: Sendable, Equatable {
-    public var status: StateTimelineLoadStatus
-    public var connection: StateTimelineConnection
+public struct STWUpdate: Sendable, Equatable {
+    public var status: STWLoadStatus
+    public var connection: STWConnection
     public var vehicle: StateTimelineVehicleRef?
     public var summary: [StateSummaryEntry]
     public var transitions: [StateTransitionEntry]
     public var updatedAt: Date?
 
     public init(
-        status: StateTimelineLoadStatus = .loading,
-        connection: StateTimelineConnection = .live,
+        status: STWLoadStatus = .loading,
+        connection: STWConnection = .live,
         vehicle: StateTimelineVehicleRef? = nil,
         summary: [StateSummaryEntry] = [],
         transitions: [StateTransitionEntry] = [],
@@ -86,22 +86,22 @@ public struct StateTimelineUpdate: Sendable, Equatable {
 /// The seam the view binds through. The production app implements this over the
 /// shared P1/S8 state holders (`StateHolderModel<LoadableState<…>>` over the KMP
 /// analytics store — the `useStateSummary` + `useTimeline` queries); previews and
-/// tests use `InMemoryStateTimelineSource`. The view never talks to the network.
+/// tests use `STWInMemoryStateTimelineSource`. The view never talks to the network.
 @MainActor
-public protocol StateTimelineSource: AnyObject {
+public protocol STWSource: AnyObject {
     /// Set by the model; invoked on the main actor for every coalesced snapshot.
-    var onUpdate: (@MainActor (StateTimelineUpdate) -> Void)? { get set }
+    var onUpdate: (@MainActor (STWUpdate) -> Void)? { get set }
     func start()
     func stop()
     func refresh()
 }
 
-/// The widget's observable view-model. Subscribes to a `StateTimelineSource`,
-/// recomputes the `StateTimelineProjection` via `StateTimelineBuilder`, and
+/// The widget's observable view-model. Subscribes to a `STWSource`,
+/// recomputes the `STWProjection` via `StateTimelineBuilder`, and
 /// exposes a render `Phase` + freshness for SwiftUI to switch over.
 @MainActor
 @Observable
-public final class StateTimelineModel {
+public final class STWModel {
     /// The mutually-exclusive render branches (web shell loading / empty / shown).
     public enum Phase: Equatable {
         case loading
@@ -111,18 +111,18 @@ public final class StateTimelineModel {
     }
 
     public private(set) var phase: Phase = .loading
-    public private(set) var connection: StateTimelineConnection = .live
-    public private(set) var projection = StateTimelineProjection(segments: [], stripe: [])
+    public private(set) var connection: STWConnection = .live
+    public private(set) var projection = STWProjection(segments: [], stripe: [])
     public private(set) var vehicle: StateTimelineVehicleRef?
     public private(set) var updatedAt: Date?
 
-    @ObservationIgnored private let source: any StateTimelineSource
-    @ObservationIgnored private let telemetry: any StateTimelineTelemetry
+    @ObservationIgnored private let source: any STWSource
+    @ObservationIgnored private let telemetry: any STWTelemetry
     @ObservationIgnored private var started = false
 
     public init(
-        source: any StateTimelineSource,
-        telemetry: any StateTimelineTelemetry = OSLogStateTimelineTelemetry()
+        source: any STWSource,
+        telemetry: any STWTelemetry = STWOSLogStateTimelineTelemetry()
     ) {
         self.source = source
         self.telemetry = telemetry
@@ -159,7 +159,7 @@ public final class StateTimelineModel {
         size.cols >= 3
     }
 
-    private func apply(_ update: StateTimelineUpdate) {
+    private func apply(_ update: STWUpdate) {
         connection = update.connection
         vehicle = update.vehicle
         updatedAt = update.updatedAt
@@ -170,7 +170,7 @@ public final class StateTimelineModel {
     /// Resolves the render phase. The web shows the skeleton only on the initial
     /// fetch and the empty state when there are no segments; whenever data is
     /// known the content renders (cached values stay visible behind refresh/errors).
-    private static func resolvePhase(_ status: StateTimelineLoadStatus, hasData: Bool) -> Phase {
+    private static func resolvePhase(_ status: STWLoadStatus, hasData: Bool) -> Phase {
         switch status {
         case .loading:
             hasData ? .content : .loading
@@ -186,15 +186,15 @@ public final class StateTimelineModel {
 
 /// In-memory source for previews + unit/UI tests. Drive it with `push(_:)`.
 @MainActor
-public final class InMemoryStateTimelineSource: StateTimelineSource {
-    public var onUpdate: (@MainActor (StateTimelineUpdate) -> Void)?
+public final class STWInMemoryStateTimelineSource: STWSource {
+    public var onUpdate: (@MainActor (STWUpdate) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
     public private(set) var refreshCount = 0
 
-    private let initial: StateTimelineUpdate?
+    private let initial: STWUpdate?
 
-    public init(initial: StateTimelineUpdate? = nil) {
+    public init(initial: STWUpdate? = nil) {
         self.initial = initial
     }
 
@@ -212,7 +212,7 @@ public final class InMemoryStateTimelineSource: StateTimelineSource {
     }
 
     /// Pushes a snapshot to the bound model (test/preview affordance).
-    public func push(_ update: StateTimelineUpdate) {
+    public func push(_ update: STWUpdate) {
         onUpdate?(update)
     }
 }
@@ -223,7 +223,7 @@ public final class InMemoryStateTimelineSource: StateTimelineSource {
 /// view holds no hardcoded literals. Keys live in the "StateTimelineWidget"
 /// table, folded into the app `Localizable.xcstrings` catalog at integration
 /// time so each parallel surface owns its own strings.
-public enum StateTimelineStrings {
+public enum STWStrings {
     public static let table = "StateTimelineWidget"
 
     public static func string(_ key: String, _ fallback: String) -> String {
@@ -242,7 +242,7 @@ public enum StateTimelineStrings {
     /// The localized `{h}h {m}m` / `{m}m` duration (web `fmtDuration`), resolving
     /// the `h` / `m` suffixes through the catalog.
     public static func duration(_ totalMin: Double) -> String {
-        StateTimelineFormat.duration(
+        STWFormat.duration(
             totalMin,
             hourSuffix: string("widget.stateTimeline.hr", "h"),
             minuteSuffix: string("widget.stateTimeline.min", "m")
@@ -254,13 +254,13 @@ public enum StateTimelineStrings {
 
 /// Builds the VoiceOver value spoken for the distribution bar / list. Pure +
 /// public so the a11y content can be unit-tested without rendering the view.
-public enum StateTimelineAccessibility {
-    public static func summary(for projection: StateTimelineProjection) -> String {
+public enum STWAccessibility {
+    public static func summary(for projection: STWProjection) -> String {
         projection.segments
             .map { segment in
-                let label = StateTimelineStrings.stateLabel(segment)
-                let pct = StateTimelineFormat.decimal(segment.pct, fractionDigits: 1)
-                return "\(label) \(pct)%, \(StateTimelineStrings.duration(segment.totalMin))"
+                let label = STWStrings.stateLabel(segment)
+                let pct = STWFormat.decimal(segment.pct, fractionDigits: 1)
+                return "\(label) \(pct)%, \(STWStrings.duration(segment.totalMin))"
             }
             .joined(separator: ". ")
     }

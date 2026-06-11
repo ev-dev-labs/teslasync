@@ -176,7 +176,7 @@ public struct RecentDriveRow: Identifiable, Equatable {
 /// The fully-projected widget content: the capped + projected rows and whether the address
 /// column is shown (the web `isWide` branch). Computed by the view from the model's cached
 /// drives + display prefs, mirroring the web `useMemo` derive.
-public struct RecentDrivesProjection: Equatable {
+public struct RDListProjection: Equatable {
     public let rows: [RecentDriveRow]
     public let showsAddresses: Bool
 
@@ -190,7 +190,7 @@ public struct RecentDrivesProjection: Equatable {
     }
 }
 
-/// Pure projector: `[RecentDriveDTO]` + `RecentDrivesUnitPrefs` → `RecentDrivesProjection`.
+/// Pure projector: `[RecentDriveDTO]` + `RecentDrivesUnitPrefs` → `RDListProjection`.
 /// Every value is computed with the exact same arithmetic + formatting as the web widget.
 public enum RecentDrivesProjector {
     /// The web row-derivation, applied to each cached drive (capped at `limit`).
@@ -199,10 +199,10 @@ public enum RecentDrivesProjector {
         units: RecentDrivesUnitPrefs,
         limit: Int,
         showsAddresses: Bool
-    ) -> RecentDrivesProjection {
+    ) -> RDListProjection {
         let capped = limit > 0 ? Array(drives.prefix(limit)) : []
         let rows = capped.map { projectRow($0, units: units, showsAddresses: showsAddresses) }
-        return RecentDrivesProjection(rows: rows, showsAddresses: showsAddresses)
+        return RDListProjection(rows: rows, showsAddresses: showsAddresses)
     }
 
     private static func projectRow(
@@ -258,7 +258,7 @@ public enum RecentDrivesProjector {
             accessibilityLabel: ""
         )
         return row.withAccessibilityLabel(
-            RecentDrivesAccessibility.rowLabel(for: row, showsAddresses: showsAddresses)
+            RDListAccessibility.rowLabel(for: row, showsAddresses: showsAddresses)
         )
     }
 }
@@ -267,21 +267,21 @@ public enum RecentDrivesProjector {
 
 /// Builds the VoiceOver labels for the list and its rows. Pure + public so the a11y content
 /// can be unit-tested without rendering the view.
-public enum RecentDrivesAccessibility {
+public enum RDListAccessibility {
     /// One spoken sentence describing a single drive row, e.g.
     /// "12.0 km, 31m, Battery 82% to 75%, 7% used, from … to …, Jun 7". Derived from the
     /// already-projected row so the field set stays the single source of truth.
     public static func rowLabel(for row: RecentDriveRow, showsAddresses: Bool) -> String {
-        let battery = RecentDrivesStrings.string("widget.recentDrivesList.a11yBattery", "Battery")
-        let toWord = RecentDrivesStrings.string("widget.recentDrivesList.a11yTo", "to")
+        let battery = RDListStrings.string("widget.recentDrivesList.a11yBattery", "Battery")
+        let toWord = RDListStrings.string("widget.recentDrivesList.a11yTo", "to")
         let spokenSoc = row.socText.replacingOccurrences(of: "→", with: toWord)
         var parts = ["\(row.distanceText) \(row.distanceUnit)", row.durationText, "\(battery) \(spokenSoc)"]
         if let batteryUsedText = row.batteryUsedText {
-            let used = RecentDrivesStrings.string("widget.recentDrivesList.a11yUsed", "used")
+            let used = RDListStrings.string("widget.recentDrivesList.a11yUsed", "used")
             parts.append("\(batteryUsedText) \(used)")
         }
         if showsAddresses {
-            let from = RecentDrivesStrings.string("widget.recentDrivesList.a11yFrom", "from")
+            let from = RDListStrings.string("widget.recentDrivesList.a11yFrom", "from")
             parts.append("\(from) \(row.startAddress) \(toWord) \(row.endAddress)")
         }
         parts.append(row.dateText)
@@ -289,9 +289,9 @@ public enum RecentDrivesAccessibility {
     }
 
     /// The list container summary, e.g. "Recent Drives, 7 drives".
-    public static func listSummary(for projection: RecentDrivesProjection) -> String {
-        let title = RecentDrivesStrings.string("widget.recentDrivesList", "Recent Drives")
-        let count = RecentDrivesStrings.format(
+    public static func listSummary(for projection: RDListProjection) -> String {
+        let title = RDListStrings.string("widget.recentDrivesList", "Recent Drives")
+        let count = RDListStrings.format(
             "widget.recentDrivesList.a11yCount",
             "%lld drives",
             projection.rows.count

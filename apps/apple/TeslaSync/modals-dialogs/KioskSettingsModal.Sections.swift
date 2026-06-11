@@ -85,12 +85,12 @@ struct KioskOptionPicker: View {
     }
 }
 
-/// The clock-position menu picker (web clock-position `<Select>`), over the `KioskClockPosition`
+/// The clock-position menu picker (web clock-position `<Select>`), over the `KioskSettingsModalKioskClockPosition`
 /// cases.
 struct KioskClockPositionPicker: View {
     let label: String
     let localize: (String, String) -> String
-    @Binding var value: KioskClockPosition
+    @Binding var value: KioskSettingsModalKioskClockPosition
 
     var body: some View {
         HStack(spacing: TSSpacing.md) {
@@ -99,7 +99,7 @@ struct KioskClockPositionPicker: View {
                 .foregroundStyle(Color.TS.textSecondary)
             Spacer(minLength: TSSpacing.sm)
             Picker(selection: $value) {
-                ForEach(KioskClockPosition.allCases) { position in
+                ForEach(KioskSettingsModalKioskClockPosition.allCases) { position in
                     Text(verbatim: localize(position.labelKey, position.labelFallback)).tag(position)
                 }
             } label: {
@@ -327,7 +327,7 @@ struct KioskDisplaySection: View {
         }
     }
 
-    private var clockBinding: Binding<KioskClockPosition> {
+    private var clockBinding: Binding<KioskSettingsModalKioskClockPosition> {
         Binding(get: { model.config.clockPosition }, set: { model.setClockPosition($0) })
     }
 }

@@ -8,13 +8,13 @@
 //      truncateAddress, start→end SoC, battery used gating, formatDateShort).
 //    • Format helpers — fmtNumber/fmtInt rounding, jsNumber, duration + date shapes.
 //    • Layout — `driveLimit` 5/7/10 + `isWide` parity with the web `size` math.
-//    • State holder — `RecentDrivesModel` phase resolution across loading / empty / error /
+//    • State holder — `RDListModel` phase resolution across loading / empty / error /
 //      content, plus the P1/S11 `view.opened` telemetry, refresh + stale auto-refresh wiring.
 //    • Registry — canonical `recent-drives-list` metadata + size clamping.
 //    • Accessibility — the per-row VoiceOver label + the list summary content.
 //
 //  These run in the TeslaSync(/-macOS) XCTest targets. They have no network and no real store:
-//  the model is driven by `InMemoryRecentDrivesSource`.
+//  the model is driven by `RDListInMemoryRecentDrivesSource`.
 //
 
 import XCTest
@@ -245,15 +245,21 @@ enum RecentDrivesFixtures {
 
 // MARK: - State holder: phases + telemetry + source wiring
 
-@MainActor final class RecentDrivesPhaseTests: XCTestCase {
+@MainActor final class RDListPhaseTests: XCTestCase {
     func testResolvePhaseMatrix() {
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .loading, hasRows: false), .loading)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .loading, hasRows: true), .content)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .empty, hasRows: false), .empty)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .empty, hasRows: true), .empty)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .loaded, hasRows: false), .empty)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .loaded, hasRows: true), .content)
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .failed("x"), hasRows: false), .error("x"))
-        XCTAssertEqual(RecentDrivesModel.resolvePhase(status: .failed("x"), hasRows: true), .content)
+        XCTAssertEqual(RDListModel.resolvePhase(status: .loading, hasRows: false), .loading)
+        XCTAssertEqual(RDListModel.resolvePhase(status: .loading, hasRows: true), .content)
+        XCTAssertEqual(RDListModel.resolvePhase(status: .empty, hasRows: false), .empty)
+        XCTAssertEqual(RDListModel.resolvePhase(status: .empty, hasRows: true), .empty)
+        XCTAssertEqual(RDListModel.resolvePhase(status: .loaded, hasRows: false), .empty)
+        XCTAssertEqual(RDListModel.resolvePhase(status: .loaded, hasRows: true), .content)
+        XCTAssertEqual(
+            RDListModel.resolvePhase(status: .failed("x"), hasRows: false),
+            .error("x")
+        )
+        XCTAssertEqual(
+            RDListModel.resolvePhase(status: .failed("x"), hasRows: true),
+            .content
+        )
     }
 }

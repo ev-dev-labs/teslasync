@@ -72,7 +72,7 @@ struct StateTimelineStripe: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: TSSpacing.xs) {
-            StateTimelineStrings.text("widget.stateTimeline.timeline", "24h Timeline")
+            STWStrings.text("widget.stateTimeline.timeline", "24h Timeline")
                 .font(Font.TS.caption)
                 .textCase(.uppercase)
                 .tracking(0.6)
@@ -86,7 +86,10 @@ struct StateTimelineStripe: View {
             )
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(StateTimelineStrings.text("widget.stateTimeline.timeline", "24h Timeline"))
+        .accessibilityLabel(STWStrings.text(
+            "widget.stateTimeline.timeline",
+            "24h Timeline"
+        ))
     }
 }
 
@@ -104,17 +107,17 @@ struct StateRow: View {
                 Circle()
                     .fill(StateTimelinePalette.color(for: segment.kind))
                     .frame(width: 10, height: 10)
-                Text(verbatim: StateTimelineStrings.stateLabel(segment))
+                Text(verbatim: STWStrings.stateLabel(segment))
                     .font(Font.TS.bodySm)
                     .foregroundStyle(Color.TS.textPrimary)
                     .lineLimit(1)
             }
             Spacer(minLength: TSSpacing.sm)
-            Text(verbatim: StateTimelineStrings.duration(segment.totalMin))
+            Text(verbatim: STWStrings.duration(segment.totalMin))
                 .font(Font.TS.caption)
                 .monospacedDigit()
                 .foregroundStyle(Color.TS.textSecondary)
-            TSBadge("\(StateTimelineFormat.decimal(segment.pct, fractionDigits: 1))%")
+            TSBadge("\(STWFormat.decimal(segment.pct, fractionDigits: 1))%")
         }
         .frame(minHeight: 44)
         .accessibilityElement(children: .ignore)
@@ -122,9 +125,9 @@ struct StateRow: View {
     }
 
     private var rowA11yLabel: Text {
-        let label = StateTimelineStrings.stateLabel(segment)
-        let pct = StateTimelineFormat.decimal(segment.pct, fractionDigits: 1)
-        let duration = StateTimelineStrings.duration(segment.totalMin)
+        let label = STWStrings.stateLabel(segment)
+        let pct = STWFormat.decimal(segment.pct, fractionDigits: 1)
+        let duration = STWStrings.duration(segment.totalMin)
         return Text(verbatim: "\(label), \(pct)%, \(duration)")
     }
 }
@@ -141,18 +144,20 @@ struct StateLegendChip: View {
             Circle()
                 .fill(StateTimelinePalette.color(for: segment.kind))
                 .frame(width: 8, height: 8)
-            Text(verbatim: StateTimelineStrings.stateLabel(segment))
+            Text(verbatim: STWStrings.stateLabel(segment))
                 .font(Font.TS.caption)
                 .foregroundStyle(Color.TS.textSecondary)
                 .lineLimit(1)
-            Text(verbatim: "\(StateTimelineFormat.integer(segment.pct))%")
+            Text(verbatim: "\(STWFormat.integer(segment.pct))%")
                 .font(Font.TS.caption)
                 .monospacedDigit()
                 .foregroundStyle(Color.TS.textMuted)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
-            Text(verbatim: "\(StateTimelineStrings.stateLabel(segment)) \(StateTimelineFormat.integer(segment.pct))%")
+            Text(
+                verbatim: "\(STWStrings.stateLabel(segment)) \(STWFormat.integer(segment.pct))%"
+            )
         )
     }
 }

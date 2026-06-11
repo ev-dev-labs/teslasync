@@ -4,7 +4,7 @@
 //
 //  The composable State Timeline dashboard surface — SwiftUI parity of
 //  features/dashboard/widgets/StateTimelineWidget.tsx. Binds through
-//  StateTimelineModel (no networking in the view) and renders every state:
+//  STWModel (no networking in the view) and renders every state:
 //  loading / empty / error / stale / offline / content, across the compact
 //  (legend dots), standard (state list), and wide (+ 24h stripe) layouts.
 //
@@ -17,7 +17,7 @@ import SwiftUI
 /// The composable State Timeline dashboard widget. Renders the vehicle-state
 /// distribution (driving / charging / asleep / idle / offline) as a stacked bar
 /// plus a legend or list — and, when wide, a 24h transition stripe — inside a
-/// glass widget shell, binding through `StateTimelineModel` (P1/S8). No
+/// glass widget shell, binding through `STWModel` (P1/S8). No
 /// networking lives here.
 public struct StateTimelineWidget: View {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
@@ -34,12 +34,12 @@ public struct StateTimelineWidget: View {
         maxSize: DashboardWidgetSize(cols: 4, rows: 40)
     )
 
-    @State private var model: StateTimelineModel
+    @State private var model: STWModel
     private let size: DashboardWidgetSize
     private let onOpen: (() -> Void)?
 
     public init(
-        model: StateTimelineModel,
+        model: STWModel,
         size: DashboardWidgetSize = StateTimelineWidget.registration.defaultSize,
         onOpen: (() -> Void)? = nil
     ) {
@@ -49,11 +49,11 @@ public struct StateTimelineWidget: View {
     }
 
     private var isCompact: Bool {
-        StateTimelineModel.isCompact(for: size)
+        STWModel.isCompact(for: size)
     }
 
     private var isWide: Bool {
-        StateTimelineModel.isWide(for: size)
+        STWModel.isWide(for: size)
     }
 
     public var body: some View {
@@ -85,7 +85,7 @@ extension StateTimelineWidget {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(StateTimelinePalette.driving)
                     .accessibilityHidden(true)
-                StateTimelineStrings.text("widget.stateTimeline.title", "State Timeline")
+                STWStrings.text("widget.stateTimeline.title", "State Timeline")
                     .font(Font.TS.label)
                     .textCase(.uppercase)
                     .tracking(0.6)
@@ -104,13 +104,13 @@ extension StateTimelineWidget {
         switch model.connection {
         case .live:
             tone = Color.TS.statusSuccess
-            label = StateTimelineStrings.string("widget.stateTimeline.live", "Live")
+            label = STWStrings.string("widget.stateTimeline.live", "Live")
         case .stale:
             tone = Color.TS.statusWarning
-            label = StateTimelineStrings.string("widget.stateTimeline.stale", "Stale")
+            label = STWStrings.string("widget.stateTimeline.stale", "Stale")
         case .offline:
             tone = Color.TS.textMuted
-            label = StateTimelineStrings.string("widget.stateTimeline.offline", "Offline")
+            label = STWStrings.string("widget.stateTimeline.offline", "Offline")
         }
         return HStack(spacing: 4) {
             Circle().fill(tone).frame(width: 6, height: 6)
@@ -128,7 +128,7 @@ extension StateTimelineWidget {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.TS.textMuted)
-        .accessibilityLabel(StateTimelineStrings.text("widget.stateTimeline.refresh", "Refresh"))
+        .accessibilityLabel(STWStrings.text("widget.stateTimeline.refresh", "Refresh"))
     }
 
     private var openButton: some View {
@@ -136,13 +136,16 @@ extension StateTimelineWidget {
             onOpen?()
         } label: {
             HStack(spacing: 2) {
-                StateTimelineStrings.text("widget.stateTimeline.open", "Open").font(Font.TS.caption)
+                STWStrings.text("widget.stateTimeline.open", "Open").font(Font.TS.caption)
                 Image(systemName: "arrow.up.right").font(.system(size: 9, weight: .semibold))
             }
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.TS.textMuted)
-        .accessibilityLabel(StateTimelineStrings.text("widget.stateTimeline.openA11y", "Open the timeline page"))
+        .accessibilityLabel(STWStrings.text(
+            "widget.stateTimeline.openA11y",
+            "Open the timeline page"
+        ))
     }
 }
 
@@ -172,13 +175,16 @@ extension StateTimelineWidget {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .accessibilityElement()
-        .accessibilityLabel(StateTimelineStrings.text("widget.stateTimeline.loading", "Loading state timeline"))
+        .accessibilityLabel(STWStrings.text(
+            "widget.stateTimeline.loading",
+            "Loading state timeline"
+        ))
     }
 
     private var emptyState: some View {
         ContentUnavailableView {
             Label {
-                StateTimelineStrings.text("widget.stateTimeline.noData", "No state data available")
+                STWStrings.text("widget.stateTimeline.noData", "No state data available")
             } icon: {
                 Image(systemName: "clock")
             }
@@ -191,10 +197,13 @@ extension StateTimelineWidget {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 26))
                 .foregroundStyle(Color.TS.statusDanger)
-            StateTimelineStrings.text("widget.stateTimeline.errorTitle", "Couldn't load state timeline")
-                .font(Font.TS.panel)
-                .foregroundStyle(Color.TS.textPrimary)
-                .multilineTextAlignment(.center)
+            STWStrings.text(
+                "widget.stateTimeline.errorTitle",
+                "Couldn't load state timeline"
+            )
+            .font(Font.TS.panel)
+            .foregroundStyle(Color.TS.textPrimary)
+            .multilineTextAlignment(.center)
             if !message.isEmpty {
                 Text(verbatim: message)
                     .font(Font.TS.caption)
@@ -204,7 +213,7 @@ extension StateTimelineWidget {
             Button {
                 model.refresh()
             } label: {
-                StateTimelineStrings.text("widget.stateTimeline.retry", "Retry")
+                STWStrings.text("widget.stateTimeline.retry", "Retry")
                     .font(Font.TS.caption)
                     .fontWeight(.semibold)
                     .padding(.horizontal, TSSpacing.md)
@@ -237,7 +246,8 @@ extension StateTimelineWidget {
         }
         .frame(maxWidth: .infinity, alignment: .top)
         .accessibilityElement(children: .contain)
-        .accessibilityValue(Text(verbatim: StateTimelineAccessibility.summary(for: model.projection)))
+        .accessibilityValue(Text(verbatim: STWAccessibility
+                .summary(for: model.projection)))
     }
 
     private var compactLegend: some View {
@@ -272,7 +282,7 @@ extension StateTimelineWidget {
         return HStack(spacing: TSSpacing.xs) {
             Image(systemName: isOffline ? "wifi.slash" : "clock.arrow.circlepath")
                 .font(.system(size: 10, weight: .semibold))
-            StateTimelineStrings.text(key, fallback).font(Font.TS.caption)
+            STWStrings.text(key, fallback).font(Font.TS.caption)
         }
         .foregroundStyle(tone)
         .frame(maxWidth: .infinity, alignment: .leading)

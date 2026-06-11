@@ -17,7 +17,7 @@
 //  Web parity notes:
 //    • `KioskConfig` (useKioskMode.ts) → `KioskConfig` (same 10 fields, same defaults).
 //    • `ROTATION_OPTIONS` / `CURSOR_TIMEOUT_OPTIONS` / `DIM_AFTER_OPTIONS` → `KioskCatalog` catalogs.
-//    • `CLOCK_POSITION_OPTIONS` → `KioskClockPosition` (raw values kept as the web `top-left` … ids).
+//    • `CLOCK_POSITION_OPTIONS` → `KioskSettingsModalKioskClockPosition` (raw values kept as the web `top-left` … ids).
 //    • `SavedDashboard` (the rotate list) → `KioskDashboard` (the id + name + isDefault subset used).
 //    • the presentational dialog is widened with loading / empty / error / freshness envelopes so no
 //      state is ever a blank box (engineering guideline #6), matching the prior modals-dialogs tier.
@@ -38,7 +38,7 @@ public enum KioskSettingsSurface {
 /// Where the kiosk clock overlay is pinned (web `config.clockPosition`). Raw values match the web
 /// string ids verbatim so a round-trip through the persisted config is lossless; the labels resolve
 /// through P1/S10.
-public enum KioskClockPosition: String, Sendable, Equatable, CaseIterable, Identifiable {
+public enum KioskSettingsModalKioskClockPosition: String, Sendable, Equatable, CaseIterable, Identifiable {
     case topLeft = "top-left"
     case topRight = "top-right"
     case bottomLeft = "bottom-left"
@@ -109,7 +109,7 @@ public struct KioskConfig: Sendable, Equatable {
     /// Whether the clock overlay is shown. Web `showClock`.
     public var showClock: Bool
     /// Where the clock overlay is pinned. Web `clockPosition`.
-    public var clockPosition: KioskClockPosition
+    public var clockPosition: KioskSettingsModalKioskClockPosition
     /// Widget-panel opacity as a 0.3…1 fraction (transparent → solid). Web `widgetOpacity`.
     public var widgetOpacity: Double
     /// Page-background opacity as a 0…1 fraction (transparent → solid). Web `backgroundOpacity`.
@@ -123,7 +123,7 @@ public struct KioskConfig: Sendable, Equatable {
         dimAfter: Int,
         dimLevel: Double,
         showClock: Bool,
-        clockPosition: KioskClockPosition,
+        clockPosition: KioskSettingsModalKioskClockPosition,
         widgetOpacity: Double,
         backgroundOpacity: Double
     ) {

@@ -143,7 +143,7 @@ public struct StateStripeSegment: Sendable, Equatable, Identifiable {
 /// segments plus the (possibly empty) 24h stripe. `hasData` mirrors the web
 /// `hasData = segments.length > 0` gate that switches the content vs the
 /// empty state.
-public struct StateTimelineProjection: Sendable, Equatable {
+public struct STWProjection: Sendable, Equatable {
     public var segments: [StateSegment]
     public var stripe: [StateStripeSegment]
 
@@ -163,7 +163,7 @@ public struct StateTimelineProjection: Sendable, Equatable {
 /// `fmtInt(v)` (`toLocaleString` with fixed fraction digits + grouping) and
 /// `fmtDuration(totalMin, t)` (`{h}h {m}m` / `{m}m`). Ties round half-up to
 /// match the JS default; the web global locale default is `en-US`.
-public enum StateTimelineFormat {
+public enum STWFormat {
     /// Fixed-fraction decimal with grouping (web `fmtNumber`).
     public static func decimal(
         _ value: Double,

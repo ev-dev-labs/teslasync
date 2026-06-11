@@ -11,9 +11,9 @@ import SwiftUI
 
 #if DEBUG
     @MainActor
-    private func recentDrivesPreviewModel(_ update: RecentDrivesUpdate) -> RecentDrivesModel {
-        let source = InMemoryRecentDrivesSource(initial: update)
-        let model = RecentDrivesModel(source: source)
+    private func recentDrivesPreviewModel(_ update: RDListUpdate) -> RDListModel {
+        let source = RDListInMemoryRecentDrivesSource(initial: update)
+        let model = RDListModel(source: source)
         model.start()
         return model
     }
@@ -70,7 +70,7 @@ import SwiftUI
     #Preview("Standard (2×4)") {
         RecentDrivesListWidget(
             model: recentDrivesPreviewModel(
-                RecentDrivesUpdate(
+                RDListUpdate(
                     status: .loaded,
                     connection: .live,
                     drives: recentDrivesSample,
@@ -90,7 +90,7 @@ import SwiftUI
     #Preview("Wide (4×4)") {
         RecentDrivesListWidget(
             model: recentDrivesPreviewModel(
-                RecentDrivesUpdate(
+                RDListUpdate(
                     status: .loaded,
                     connection: .live,
                     drives: recentDrivesSample,
@@ -109,7 +109,7 @@ import SwiftUI
 
     #Preview("Loading") {
         RecentDrivesListWidget(
-            model: recentDrivesPreviewModel(RecentDrivesUpdate(status: .loading, drives: nil)),
+            model: recentDrivesPreviewModel(RDListUpdate(status: .loading, drives: nil)),
             size: DashboardWidgetSize(cols: 2, rows: 4)
         )
         .frame(width: 280, height: 360)
@@ -119,7 +119,7 @@ import SwiftUI
 
     #Preview("Empty") {
         RecentDrivesListWidget(
-            model: recentDrivesPreviewModel(RecentDrivesUpdate(status: .loaded, drives: [])),
+            model: recentDrivesPreviewModel(RDListUpdate(status: .loaded, drives: [])),
             size: DashboardWidgetSize(cols: 2, rows: 4)
         )
         .frame(width: 280, height: 360)
@@ -130,7 +130,7 @@ import SwiftUI
     #Preview("Error") {
         RecentDrivesListWidget(
             model: recentDrivesPreviewModel(
-                RecentDrivesUpdate(status: .failed("Network unavailable"), drives: nil)
+                RDListUpdate(status: .failed("Network unavailable"), drives: nil)
             ),
             size: DashboardWidgetSize(cols: 2, rows: 4)
         )
@@ -142,7 +142,7 @@ import SwiftUI
     #Preview("Stale (cached)") {
         RecentDrivesListWidget(
             model: recentDrivesPreviewModel(
-                RecentDrivesUpdate(
+                RDListUpdate(
                     status: .loaded,
                     connection: .stale,
                     isFetching: true,
@@ -163,7 +163,7 @@ import SwiftUI
     #Preview("Offline (cached)") {
         RecentDrivesListWidget(
             model: recentDrivesPreviewModel(
-                RecentDrivesUpdate(
+                RDListUpdate(
                     status: .loaded,
                     connection: .offline,
                     drives: recentDrivesSample,

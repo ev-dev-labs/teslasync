@@ -205,7 +205,7 @@ extension RecentDrivesWidget {
     private var loadedList: some View {
         VStack(alignment: .leading, spacing: TSSpacing.sm) {
             if model.connection != .live {
-                RecentDrivesConnectivityBanner(connection: model.connection)
+                RecentDrivesWidgetRecentDrivesConnectivityBanner(connection: model.connection)
             }
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: TSSpacing.xs) {

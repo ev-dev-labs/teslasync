@@ -201,7 +201,7 @@ public final class KioskSettingsModel {
     }
 
     /// Sets the clock-overlay corner (web clock-position `<Select>`).
-    public func setClockPosition(_ position: KioskClockPosition) {
+    public func setClockPosition(_ position: KioskSettingsModalKioskClockPosition) {
         update { $0.clockPosition = position }
     }
 

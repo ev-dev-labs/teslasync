@@ -14,7 +14,7 @@ import Foundation
 // MARK: - StateTimelineBuilder (port of the web widget's derive block)
 
 /// Pure functions that turn the cached `/vehicle-states/summary` +
-/// `/vehicle-states/timeline` snapshots into the display `StateTimelineProjection`.
+/// `/vehicle-states/timeline` snapshots into the display `STWProjection`.
 /// A 1:1 port of the web source so both platforms show identical percentages.
 public enum StateTimelineBuilder {
     /// The web drops 24h-stripe slices narrower than this (`if (pct < 0.5) return null`).
@@ -73,8 +73,8 @@ public enum StateTimelineBuilder {
     public static func project(
         summary: [StateSummaryEntry],
         transitions: [StateTransitionEntry]
-    ) -> StateTimelineProjection {
-        StateTimelineProjection(
+    ) -> STWProjection {
+        STWProjection(
             segments: buildSegments(summary),
             stripe: buildStripe(transitions)
         )

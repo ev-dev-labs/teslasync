@@ -19,14 +19,14 @@ import OSLog
 /// implementation logs via `os.Logger`; the production app injects an adapter that
 /// forwards to the shared core `Telemetry.track(.screenView(screen:…))` (ADR-016 §5),
 /// which is consent-gated and redacted there.
-public protocol RecentDrivesTelemetry: Sendable {
+public protocol RDListTelemetry: Sendable {
     func viewOpened(surface: String)
 }
 
 /// `os.Logger`-backed default that records the surface open as a `screen_view`.
 /// Bridges 1:1 to the shared `Telemetry.track(.screenView(screen: surface, …))` at the
 /// composition root.
-public struct OSLogRecentDrivesTelemetry: RecentDrivesTelemetry {
+public struct RDListOSLogRecentDrivesTelemetry: RDListTelemetry {
     private let logger: Logger
 
     public init() {
@@ -42,7 +42,7 @@ public struct OSLogRecentDrivesTelemetry: RecentDrivesTelemetry {
 
 /// The load lifecycle for the widget's data, mirroring the shared `LoadableState`
 /// cases the production source projects from `Resource<[Drive]>`.
-public enum RecentDrivesLoadStatus: Sendable, Equatable {
+public enum RDListLoadStatus: Sendable, Equatable {
     case loading
     case loaded
     case empty
@@ -51,7 +51,7 @@ public enum RecentDrivesLoadStatus: Sendable, Equatable {
 
 /// Freshness of the underlying query, mirroring `LiveConnectionState` (ADR-013) and the
 /// web `DataFreshness` chip the `WidgetShell` renders from `isFetching` / `isStale`.
-public enum RecentDrivesConnection: Sendable, Equatable {
+public enum RDListConnection: Sendable, Equatable {
     case live
     case stale
     case offline
@@ -132,19 +132,19 @@ public struct RecentDrivesUnitPrefs: Sendable, Equatable {
     }
 }
 
-/// One coalesced snapshot pushed by a `RecentDrivesSource`: the cached drives + display
+/// One coalesced snapshot pushed by a `RDListSource`: the cached drives + display
 /// prefs plus their load/connection status. The model turns this into the projection.
-public struct RecentDrivesUpdate: Sendable, Equatable {
-    public var status: RecentDrivesLoadStatus
-    public var connection: RecentDrivesConnection
+public struct RDListUpdate: Sendable, Equatable {
+    public var status: RDListLoadStatus
+    public var connection: RDListConnection
     public var isFetching: Bool
     public var drives: [RecentDriveDTO]?
     public var units: RecentDrivesUnitPrefs
     public var updatedAt: Date?
 
     public init(
-        status: RecentDrivesLoadStatus = .loading,
-        connection: RecentDrivesConnection = .live,
+        status: RDListLoadStatus = .loading,
+        connection: RDListConnection = .live,
         isFetching: Bool = false,
         drives: [RecentDriveDTO]? = nil,
         units: RecentDrivesUnitPrefs = RecentDrivesUnitPrefs(),
@@ -161,24 +161,24 @@ public struct RecentDrivesUpdate: Sendable, Equatable {
 
 /// The seam the view binds through. The production app implements this over the shared P1/S8
 /// state holders (`StateHolderModel<LoadableState<[Drive]>>` from the KMP `DrivingStore` +
-/// `VehicleStore` + `SettingsStore`); previews and tests use `InMemoryRecentDrivesSource`.
+/// `VehicleStore` + `SettingsStore`); previews and tests use `RDListInMemoryRecentDrivesSource`.
 /// The view never talks to the network directly.
 @MainActor
-public protocol RecentDrivesSource: AnyObject {
+public protocol RDListSource: AnyObject {
     /// Set by the model; invoked on the main actor for every coalesced snapshot.
-    var onUpdate: (@MainActor (RecentDrivesUpdate) -> Void)? { get set }
+    var onUpdate: (@MainActor (RDListUpdate) -> Void)? { get set }
     func start()
     func stop()
     func refresh()
 }
 
-/// The widget's observable view-model. Subscribes to a `RecentDrivesSource`, exposes the
+/// The widget's observable view-model. Subscribes to a `RDListSource`, exposes the
 /// cached drives + display prefs and a render `Phase` + freshness for SwiftUI to switch over.
 /// The size-dependent projection (limit + address columns) is computed by the view via
 /// `RecentDrivesProjector`, mirroring the web `useMemo` derive from `drives` + `size`.
 @MainActor
 @Observable
-public final class RecentDrivesModel {
+public final class RDListModel {
     /// The mutually-exclusive render branches (web shell loading / error + body empty / list).
     public enum Phase: Equatable {
         case loading
@@ -188,19 +188,19 @@ public final class RecentDrivesModel {
     }
 
     public private(set) var phase: Phase = .loading
-    public private(set) var connection: RecentDrivesConnection = .live
+    public private(set) var connection: RDListConnection = .live
     public private(set) var isFetching = false
     public private(set) var drives: [RecentDriveDTO] = []
     public private(set) var units = RecentDrivesUnitPrefs()
     public private(set) var updatedAt: Date?
 
-    @ObservationIgnored private let source: any RecentDrivesSource
-    @ObservationIgnored private let telemetry: any RecentDrivesTelemetry
+    @ObservationIgnored private let source: any RDListSource
+    @ObservationIgnored private let telemetry: any RDListTelemetry
     @ObservationIgnored private var started = false
 
     public init(
-        source: any RecentDrivesSource,
-        telemetry: any RecentDrivesTelemetry = OSLogRecentDrivesTelemetry()
+        source: any RDListSource,
+        telemetry: any RDListTelemetry = RDListOSLogRecentDrivesTelemetry()
     ) {
         self.source = source
         self.telemetry = telemetry
@@ -211,7 +211,7 @@ public final class RecentDrivesModel {
     public func start() {
         guard !started else { return }
         started = true
-        telemetry.viewOpened(surface: RecentDrivesSurface.slug)
+        telemetry.viewOpened(surface: RDListSurface.slug)
         source.start()
     }
 
@@ -234,7 +234,7 @@ public final class RecentDrivesModel {
         source.refresh()
     }
 
-    private func apply(_ update: RecentDrivesUpdate) {
+    private func apply(_ update: RDListUpdate) {
         connection = update.connection
         isFetching = update.isFetching
         units = update.units
@@ -250,7 +250,10 @@ public final class RecentDrivesModel {
     ///
     /// `nonisolated` because it is pure (touches no actor state); this lets the freshness/phase
     /// logic be unit-tested from a non-isolated context under Swift 6 strict concurrency.
-    public nonisolated static func resolvePhase(status: RecentDrivesLoadStatus, hasRows: Bool) -> Phase {
+    public nonisolated static func resolvePhase(
+        status: RDListLoadStatus,
+        hasRows: Bool
+    ) -> Phase {
         switch status {
         case .loading:
             hasRows ? .content : .loading
@@ -266,15 +269,15 @@ public final class RecentDrivesModel {
 
 /// In-memory source for previews + unit/UI tests. Drive it with `push(_:)`.
 @MainActor
-public final class InMemoryRecentDrivesSource: RecentDrivesSource {
-    public var onUpdate: (@MainActor (RecentDrivesUpdate) -> Void)?
+public final class RDListInMemoryRecentDrivesSource: RDListSource {
+    public var onUpdate: (@MainActor (RDListUpdate) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
     public private(set) var refreshCount = 0
 
-    private let initial: RecentDrivesUpdate?
+    private let initial: RDListUpdate?
 
-    public init(initial: RecentDrivesUpdate? = nil) {
+    public init(initial: RDListUpdate? = nil) {
         self.initial = initial
     }
 
@@ -292,7 +295,7 @@ public final class InMemoryRecentDrivesSource: RecentDrivesSource {
     }
 
     /// Pushes a snapshot to the bound model (test/preview affordance).
-    public func push(_ update: RecentDrivesUpdate) {
+    public func push(_ update: RDListUpdate) {
         onUpdate?(update)
     }
 }
@@ -302,7 +305,7 @@ public final class InMemoryRecentDrivesSource: RecentDrivesSource {
 /// Diagnostics slug + canonical dashboard registration for this surface, kept out of the
 /// SwiftUI view so the model/adapter compile and test without SwiftUI. `RecentDrivesListWidget`
 /// re-exposes these as `surfaceSlug` / `registration` for API parity with the other surfaces.
-public enum RecentDrivesSurface {
+public enum RDListSurface {
     /// Diagnostics surface slug (P1/S11 `view.opened`).
     public static let slug = "RecentDrivesListWidget"
 
@@ -325,7 +328,7 @@ public enum RecentDrivesSurface {
 /// `Localizable.xcstrings` catalog at integration time. `string` is Foundation-only so the
 /// adapter's accessibility summary can use it; the SwiftUI `text(_:_:)` helper lives in the
 /// view file.
-public enum RecentDrivesStrings {
+public enum RDListStrings {
     public static let table = "RecentDrivesListWidget"
 
     public static func string(_ key: String, _ fallback: String) -> String {

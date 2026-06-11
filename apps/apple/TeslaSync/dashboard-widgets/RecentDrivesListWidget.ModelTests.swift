@@ -4,8 +4,8 @@
 //
 //  State-holder, registry and accessibility coverage for the RecentDrivesListWidget surface
 //  (split from RecentDrivesListWidget.Tests.swift to keep each file within the lint envelope):
-//    • `RecentDrivesModel` phase wiring + P1/S11 `view.opened` telemetry + refresh / stale
-//      auto-refresh, driven by `InMemoryRecentDrivesSource`.
+//    • `RDListModel` phase wiring + P1/S11 `view.opened` telemetry + refresh / stale
+//      auto-refresh, driven by `RDListInMemoryRecentDrivesSource`.
 //    • Canonical `recent-drives-list` registry metadata + size clamping.
 //    • The per-row VoiceOver label + list summary content.
 //
@@ -16,37 +16,37 @@
 import XCTest
 @testable import TeslaSync
 
-@MainActor final class RecentDrivesModelTests: XCTestCase {
+@MainActor final class RDListModelTests: XCTestCase {
     private func makeModel(
-        _ update: RecentDrivesUpdate,
-        telemetry: RecentDrivesTelemetry = OSLogRecentDrivesTelemetry()
-    ) -> (RecentDrivesModel, InMemoryRecentDrivesSource) {
-        let source = InMemoryRecentDrivesSource(initial: update)
-        let model = RecentDrivesModel(source: source, telemetry: telemetry)
+        _ update: RDListUpdate,
+        telemetry: RDListTelemetry = RDListOSLogRecentDrivesTelemetry()
+    ) -> (RDListModel, RDListInMemoryRecentDrivesSource) {
+        let source = RDListInMemoryRecentDrivesSource(initial: update)
+        let model = RDListModel(source: source, telemetry: telemetry)
         return (model, source)
     }
 
     func testLoadingWithoutDataShowsLoading() {
-        let (model, _) = makeModel(RecentDrivesUpdate(status: .loading, drives: nil))
+        let (model, _) = makeModel(RDListUpdate(status: .loading, drives: nil))
         model.start()
         XCTAssertEqual(model.phase, .loading)
     }
 
     func testLoadedWithoutRowsShowsEmpty() {
-        let (model, _) = makeModel(RecentDrivesUpdate(status: .loaded, drives: []))
+        let (model, _) = makeModel(RDListUpdate(status: .loaded, drives: []))
         model.start()
         XCTAssertEqual(model.phase, .empty)
     }
 
     func testFailedWithoutCacheShowsError() {
-        let (model, _) = makeModel(RecentDrivesUpdate(status: .failed("boom"), drives: nil))
+        let (model, _) = makeModel(RDListUpdate(status: .failed("boom"), drives: nil))
         model.start()
         XCTAssertEqual(model.phase, .error("boom"))
     }
 
     func testRowsPresentShowContentEvenWhileFailed() {
         let (model, _) = makeModel(
-            RecentDrivesUpdate(status: .failed("net"), drives: [RecentDrivesFixtures.driveA])
+            RDListUpdate(status: .failed("net"), drives: [RecentDrivesFixtures.driveA])
         )
         model.start()
         XCTAssertEqual(model.phase, .content)
@@ -54,8 +54,11 @@ import XCTest
     }
 
     func testStartEmitsViewOpenedTelemetryOnce() {
-        let spy = RecentDrivesListWidgetSpyRecentDrivesTelemetry()
-        let (model, source) = makeModel(RecentDrivesUpdate(status: .loading, drives: nil), telemetry: spy)
+        let spy = RDListSpyRecentDrivesTelemetry()
+        let (model, source) = makeModel(
+            RDListUpdate(status: .loading, drives: nil),
+            telemetry: spy
+        )
         model.start()
         model.start()
         XCTAssertEqual(spy.surfaces, [RecentDrivesListWidget.surfaceSlug])
@@ -63,7 +66,7 @@ import XCTest
     }
 
     func testRefreshDelegatesToSource() {
-        let (model, source) = makeModel(RecentDrivesUpdate(status: .loaded, drives: []))
+        let (model, source) = makeModel(RDListUpdate(status: .loaded, drives: []))
         model.start()
         model.refresh()
         model.refresh()
@@ -72,26 +75,36 @@ import XCTest
 
     func testAutoRefreshOnlyWhenStaleAndNotFetching() {
         let rows = [RecentDrivesFixtures.driveA]
-        let (model, source) = makeModel(RecentDrivesUpdate(status: .loaded, drives: rows))
+        let (model, source) = makeModel(RDListUpdate(status: .loaded, drives: rows))
         model.start()
 
         model.autoRefreshIfStale() // live → no refresh
         XCTAssertEqual(source.refreshCount, 0)
 
-        source.push(RecentDrivesUpdate(status: .loaded, connection: .stale, isFetching: true, drives: rows))
+        source.push(RDListUpdate(
+            status: .loaded,
+            connection: .stale,
+            isFetching: true,
+            drives: rows
+        ))
         model.autoRefreshIfStale() // stale but fetching → no refresh
         XCTAssertEqual(source.refreshCount, 0)
 
-        source.push(RecentDrivesUpdate(status: .loaded, connection: .stale, isFetching: false, drives: rows))
+        source.push(RDListUpdate(
+            status: .loaded,
+            connection: .stale,
+            isFetching: false,
+            drives: rows
+        ))
         model.autoRefreshIfStale() // stale + idle → refresh
         XCTAssertEqual(source.refreshCount, 1)
     }
 
     func testConnectionAndRowsTrackUpdates() {
-        let (model, source) = makeModel(RecentDrivesUpdate(status: .loading, drives: nil))
+        let (model, source) = makeModel(RDListUpdate(status: .loading, drives: nil))
         model.start()
         source.push(
-            RecentDrivesUpdate(
+            RDListUpdate(
                 status: .loaded,
                 connection: .offline,
                 drives: RecentDrivesFixtures.all,
@@ -135,7 +148,7 @@ import XCTest
 
 // MARK: - Accessibility content
 
-@MainActor final class RecentDrivesAccessibilityTests: XCTestCase {
+@MainActor final class RDListAccessibilityTests: XCTestCase {
     func testRowLabelIncludesEveryFieldWhenWide() {
         let projection = RecentDrivesProjector.project(
             drives: [RecentDrivesFixtures.driveA],
@@ -182,14 +195,17 @@ import XCTest
             limit: 7,
             showsAddresses: true
         )
-        XCTAssertEqual(RecentDrivesAccessibility.listSummary(for: projection), "Recent Drives, 2 drives")
+        XCTAssertEqual(
+            RDListAccessibility.listSummary(for: projection),
+            "Recent Drives, 2 drives"
+        )
     }
 }
 
 // MARK: - Test doubles
 
 /// Records `viewOpened` surfaces so the telemetry contract can be asserted.
-private final class RecentDrivesListWidgetSpyRecentDrivesTelemetry: RecentDrivesTelemetry, @unchecked Sendable {
+private final class RDListSpyRecentDrivesTelemetry: RDListTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
     func viewOpened(surface: String) {
         surfaces.append(surface)
