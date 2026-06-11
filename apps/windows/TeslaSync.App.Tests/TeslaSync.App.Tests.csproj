@@ -102,6 +102,12 @@
     chain of integration merges had repeatedly re-concatenated it into multiple Project roots plus duplicate
     Compile items and orphaned comment prose, failing XML load (MSB4025/MSB4067); re-consolidated for P2
     feature-views/0239 BackendStatusSection into this single canonical root. Do NOT re-concatenate, and
+    Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) source on disk under feature-views/
+    and dashboard-widgets/ (the WinUI view files are excluded). This file carries the .gitattributes
+    "merge=union" strategy, so a chain of integration merges had repeatedly re-concatenated it into multiple
+    Project roots plus duplicate Compile items and orphaned comment prose, failing XML load (MSB4025). It was
+    re-consolidated for P2 feature-views/0255 SubscribeCard by regenerating the Compile ItemGroup directly from
+    the WinUI-free sources on disk (which adds the new SubscribeCard.Model link). Do NOT re-concatenate, and
     never write a literal build-item or project start tag inside this comment.
     Compile ItemGroup - the union of every WinUI-free logic source on disk under dashboard-widgets/ and
     feature-views/ (every .cs that does not reference Microsoft.UI; the bare WinUI view files are excluded).
@@ -185,6 +191,8 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union);
        the WinUI views themselves are exercised by the app build. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union);
+       the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -854,6 +862,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\StatorTempChart.Model.cs" Link="FeatureViews\StatorTempChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatusHeader\StatusHeader.Model.cs" Link="FeatureViews\StatusHeader\StatusHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatusPageSkeleton\StatusPageSkeleton.Model.cs" Link="FeatureViews\StatusPageSkeleton\StatusPageSkeleton.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SubscribeCard\SubscribeCard.Model.cs" Link="FeatureViews\SubscribeCard\SubscribeCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SuggestedPrompts.Model.cs" Link="FeatureViews\SuggestedPrompts.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SuggestedPrompts.ViewModel.cs" Link="FeatureViews\SuggestedPrompts.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummarySlide\SummarySlide.Model.cs" Link="FeatureViews\SummarySlide\SummarySlide.Model.cs" />
