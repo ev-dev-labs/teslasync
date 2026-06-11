@@ -20,6 +20,9 @@
     Package.appxmanifest and widget-template fixtures the tests read out of the test output directory.
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal-sorted,
+    default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
     Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk under
     dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI view
     files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of integration
@@ -137,6 +140,9 @@
     shared-surfaces/0064 AreaChartWrapper into this single canonical root (plus the new
     AreaChartWrapper.Model.cs link). Do NOT re-concatenate into multiple roots, and never write a literal
     build-item or project start tag inside this comment.
+    shared-surfaces/0065 ChartContainer into this single canonical root (plus the new ChartContainer Model /
+    Source / ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal build-item or
+    project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -174,6 +180,7 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0062 withAiFeature. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0059 AIVoiceMode. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0067 ChartHiddenSeriesContext into this single canonical Project root. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0065 ChartContainer. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -2482,6 +2489,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartHiddenSeriesContext.Model.cs" Link="SharedSurfaces\ChartHiddenSeriesContext.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartHiddenSeriesContext.Source.cs" Link="SharedSurfaces\ChartHiddenSeriesContext.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartHiddenSeriesContext.ViewModel.cs" Link="SharedSurfaces\ChartHiddenSeriesContext.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.Model.cs" Link="SharedSurfaces\ChartContainer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.Source.cs" Link="SharedSurfaces\ChartContainer.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.ViewModel.cs" Link="SharedSurfaces\ChartContainer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.Model.cs" Link="SharedSurfaces\VisuallyHidden.Model.cs" />
