@@ -79,6 +79,8 @@
     (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so
     each surface's WinUI-free (Microsoft.UI-free) sources are Compile-linked into the single Compile item
     group below (the Link mirrors each source's real location under Widgets\, FeatureViews\, MiscSurfaces\,
+    each surface's WinUI-free (Microsoft.UI-free) sources are compile-linked into the single item group
+    below (the Link mirrors each source's real location under Widgets\, FeatureViews\, MiscSurfaces\,
     ModalsDialogs\ or SharedSurfaces\); the bare WinUI view files are excluded and exercised by the app
     build. The matching test classes live under this project and are picked up by the SDK default-compile glob.
     The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures the tests read
@@ -176,6 +178,14 @@
     (MSB4025 / MSB4067); regenerated from the WinUI-free sources on disk for P2 shared-surfaces/0076 Avatar. Do
     NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
     this comment.
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
+    path-sorted, Include-deduplicated compile item group - the union of every WinUI-free (Microsoft.UI-free)
+    logic .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and
+    shared-surfaces/ (the bare WinUI view files are excluded). This file carries the .gitattributes
+    merge=union strategy, so a chain of integration merges can re-concatenate it into multiple Project roots
+    plus duplicate items, failing XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free
+    sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or
+    project start tag inside this comment. Regenerated for P2 shared-surfaces/0081 Delta.
   -->
 
   <PropertyGroup>
@@ -2563,6 +2573,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIVoiceMode.Model.cs" Link="SharedSurfaces\AIVoiceMode.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIVoiceMode.Source.cs" Link="SharedSurfaces\AIVoiceMode.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIVoiceMode.ViewModel.cs" Link="SharedSurfaces\AIVoiceMode.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVoiceMode.Model.cs" Link="SharedSurfaces\AIVoiceMode.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVoiceMode.Source.cs" Link="SharedSurfaces\AIVoiceMode.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIVoiceMode.ViewModel.cs" Link="SharedSurfaces\AIVoiceMode.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.Model.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.Source.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIWatchFaceNLResponse.ViewModel.cs" Link="SharedSurfaces\AIWatchFaceNLResponse.ViewModel.cs" />
@@ -2591,6 +2604,12 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\DateGroupedList\DateGroupedList.Model.cs" Link="SharedSurfaces\DateGroupedList\DateGroupedList.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DateGroupedList\DateGroupedList.Source.cs" Link="SharedSurfaces\DateGroupedList\DateGroupedList.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DateGroupedList\DateGroupedList.ViewModel.cs" Link="SharedSurfaces\DateGroupedList\DateGroupedList.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Delta.Model.cs" Link="SharedSurfaces\Delta.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Delta.Source.cs" Link="SharedSurfaces\Delta.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Delta.ViewModel.cs" Link="SharedSurfaces\Delta.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ElevationProfile.Model.cs" Link="SharedSurfaces\ElevationProfile.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ElevationProfile.Source.cs" Link="SharedSurfaces\ElevationProfile.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ElevationProfile.ViewModel.cs" Link="SharedSurfaces\ElevationProfile.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" />
