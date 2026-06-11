@@ -97,6 +97,12 @@
     build-item or project start tag inside this comment.
   -->
 
+    (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Re-consolidated for P2
+    shared-surfaces/0091 HistoryListRow into this single canonical root (plus the new HistoryListRow Model /
+    ViewModel links, repairing a merge=union multi-root corruption). Do NOT re-concatenate into multiple roots,
+    and never write a literal build item or project start tag inside this comment. Re-consolidated for P2
+    shared-surfaces/0109 UsageCard into this single canonical root from the WinUI-free sources on disk.
+  -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -1283,6 +1289,12 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Model.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Source.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.ViewModel.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.Model.cs" Link="SharedSurfaces\PlaybackSpeedMenu.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.Source.cs" Link="SharedSurfaces\PlaybackSpeedMenu.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.ViewModel.cs" Link="SharedSurfaces\PlaybackSpeedMenu.ViewModel.cs" />
@@ -1317,6 +1329,12 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimeStamp\TimeStamp.Model.cs" Link="SharedSurfaces\TimeStamp\TimeStamp.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimeStamp\TimeStamp.Source.cs" Link="SharedSurfaces\TimeStamp\TimeStamp.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimeStamp\TimeStamp.ViewModel.cs" Link="SharedSurfaces\TimeStamp\TimeStamp.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.Model.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.Source.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.ViewModel.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\UsageCard.Model.cs" Link="SharedSurfaces\UsageCard.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\UsageCard.Source.cs" Link="SharedSurfaces\UsageCard.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\UsageCard.ViewModel.cs" Link="SharedSurfaces\UsageCard.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.Model.cs" Link="SharedSurfaces\VisuallyHidden.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.Source.cs" Link="SharedSurfaces\VisuallyHidden.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.ViewModel.cs" Link="SharedSurfaces\VisuallyHidden.ViewModel.cs" />
