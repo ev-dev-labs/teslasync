@@ -1,0 +1,71 @@
+=== P2 Feature view 0288 BatteryRangeCharts (Windows) ===
+
+Surface: apps/windows/TeslaSync.App/feature-views/BatteryRangeCharts/
+Web source (spec): web/src/features/vehicles/components/vehicle-detail/BatteryRangeCharts.tsx
+Capability: WinUI 3 (Windows App SDK) + .NET 10 present on runner — SDK 10.0.300, runtime 10.0.8,
+net10.0-windows10.0.19041.0 builds clean. NOT a platform-capability block.
+
+Files shipped (parity port of the web feature component, no stubs/placeholders):
+  BatteryRangeCharts.Model.cs      — state enum, DriveDistanceSample + BatteryRangeChartsData snapshot
+                                     (FromParts), BatteryBarDatum/DriveTrendPoint/Display, projection
+                                     (SI->display, batteryColor tier), registration, PII-safe diagnostics.
+  BatteryRangeCharts.Source.cs     — IBatteryRangeChartsSource + repository-backed source: primary/explicit
+                                     vehicle resolution, concurrent GET /vehicles/{id}/state + GET /drives,
+                                     cache-then-network via the shared engine. No HTTP in the view.
+  BatteryRangeCharts.ViewModel.cs  — UI-thread-free state holder: loading/loaded/empty/error/stale/offline
+                                     matrix + unit re-projection.
+  BatteryRangeCharts.cs            — WinUI view: responsive two-panel grid (web grid-cols-1 lg:grid-cols-2),
+                                     Battery-Overview panel (threshold-tinted radial gauge via
+                                     ChartBrushes.ForStatus, Battery/Range animated stat cards, Current/
+                                     Remaining bar chart) + Drive-Distance-Trend panel (distance+duration
+                                     area chart with legend / friendly empty state). All states rendered,
+                                     i18n facade for every string, Narrator names on every element.
+Test: apps/windows/TeslaSync.App.Tests/FeatureViews/BatteryRangeChartsTests.cs (47 tests):
+  adapter parse, projection (bars/tier/range/trend/empty gate/units), VM state matrix, combined source
+  (primary+explicit vehicle, no-vehicle short-circuit, no-drives-still-loaded, drive-list-failure tolerated),
+  registration, diagnostics (view.opened slug=BatteryRangeCharts), accessibility automation names.
+
+PRE-EXISTING BLOCKER REPAIRED (same defect documented in sibling 0287 DriveOverviewChart log):
+TeslaSync.App.Tests.csproj had again been left by .gitattributes merge=union concatenation with multiple
+</Project> roots (3) plus 17 duplicate <Compile> links, failing XML load (MSB4025: "Unexpected end tag"),
+which blocked the entire solution build/test. Re-consolidated per the file's own INVARIANT to a single valid
+project root: the deduplicated, path-sorted union of all 787 existing WinUI-free <Compile> links preserved
+(17 duplicate entries dropped) + the 3 new BatteryRangeCharts.{Model,Source,ViewModel}.cs links = 790 total;
+the 2 stray trailing </Project> end tags removed. The WinUI view file (BatteryRangeCharts.cs) is intentionally
+NOT linked here — it is exercised by the app build, matching every sibling surface.
+
+### STEP 1: dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+### STEP 2a: dotnet test apps/windows/TeslaSync.sln -c Release (literal whole-solution)
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 263 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 16414, Skipped:     0, Total: 16414, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the only failures are TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite) which fail
+fast because WinAppDriver/Appium is not present on this runner. They are out of scope for this surface (run
+separately via apps/windows/run-ui-automation.ps1), carry no BatteryRangeCharts E2E test, and do not exercise
+this surface — identical handling to sibling 0287 DriveOverviewChart.
+
+### STEP 2b: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation (headless surface-logic gate, W9-0002 separation)
+Passed!  - Failed:     0, Passed: 16414, Skipped:     0, Total: 16414, Duration: 14 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+BatteryRangeCharts tests: Passed!  - Failed:     0, Passed:    47, Skipped:     0, Total:    47, Duration: 1 s - TeslaSync.App.Tests.dll (net10.0)
+
+### STEP 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+FORMAT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/BatteryRangeCharts
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite, evidenced above.)
+EXIT=0
+STATUS=DONE
