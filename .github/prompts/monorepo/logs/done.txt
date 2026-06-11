@@ -222,3 +222,4 @@ p3-android/dashboard-widgets/A-0083-SafetyFeaturesWidget.prompt.md
 p3-android/dashboard-widgets/A-0086-SentryEventLogWidget.prompt.md
 p3-android/dashboard-widgets/A-0082-RouteEfficiencyWidget.prompt.md
 p3-android/dashboard-widgets/A-0084-SafetyHistoryWidget.prompt.md
+p3-android/dashboard-widgets/A-0087-SignalCatalogWidget.prompt.md
