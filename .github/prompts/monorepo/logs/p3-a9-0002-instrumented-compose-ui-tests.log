@@ -1,0 +1,616 @@
+================================================================================
+P3 / A9 / 0002 — Android instrumented + Compose UI test gate
+================================================================================
+ADR refs: ADR-002 (native UI), ADR-004 (KMP core/SI), ADR-005 (design tokens),
+ADR-008 (OIDC public client), ADR-009 (live/push/widgets), ADR-010 (testing
+gates), ADR-011 (definition of done), ADR-013 (cache-then-network), ADR-015
+(a11y), ADR-016 (redacted logs).
+Delegation: FORBIDDEN — authored directly, no sub-agents.
+Device: a connected emulator (Pixel_3a_API_34) was available, so the device gate
+was actually run (connectedDebugAndroidTest), not skipped — DONE, not BLOCKED.
+
+STEP 1 — SURVEY OF EXISTING androidTest + A7 PAGE LEDGER (state coverage matrix)
+--------------------------------------------------------------------------------
+Existing androidTest authored by A1..A8 but NEVER executed on a device before:
+A9-0001's gate was ":android:testDebugUnitTest" only (no connected step). A9-0002
+is the FIRST connectedDebugAndroidTest run, so two latent bugs in predecessor
+instrumented tests surfaced and were fixed (STEP 3b) — required for a green device
+gate (covenant 1 "no red-as-green", 8 "no commit on red").
+
+Existing androidTest:
+  LaunchTest .............................. single-Activity launch.
+  components/ui/ComponentInteractionTest .. UI primitives.
+  components/charts/ChartInteractionTest .. container states, legend, annotation.
+  components/maps/MapsInteractionTest ..... layer switcher + accessible summary.
+  components/motion/MotionInteractionTest . reduced-motion final-state assertions.
+  settings/SettingsInteractionTest ........ theme / haptics / diagnostics writes.
+  shortcuts/ShortcutPublisherInstrumentedTest .. ranked dynamic shortcuts.
+  auth/AndroidKeystoreTokenStoreInstrumentedTest .. secure token store.
+
+Device-only gaps A9-0001 deferred to here, now closed: data-display, feedback,
+forms families; adaptive navigation shell (layouts + deep links + announce); the
+A4 auth gate surfaces; live-status/stale surfaces; and the generated A7 page state
+contracts.
+
+A7 page ledger: A7 pages attach content through navigation/PageHosts and are not
+wired yet (the start destination resolves to the shared not-found screen). The web
+spec they implement is the canonical parity manifest: apps/parity/parity-manifest
+.json has 153 units of kind "page", each declaring its web-canonical data states
+(loading=116, empty=111, success=133, error=85 across the 153). Every page renders
+the SAME contract: a shared-core Resource projected onto data/UiState via
+data/ResourceUiState.toUiState (loading / empty / content / error + the explicit
+stale "offline / last known" refinement). The page slice of the manifest
+(id / title / states) is extracted verbatim into the androidTest asset
+app/src/androidTest/assets/parity/android-page-ledger.json (153 units), so the
+contract test is data-driven over the real ledger ids, not a sample.
+
+State coverage matrix (instrumented, this prompt):
+  family / surface          states asserted on device
+  ----------------------    -------------------------------------------------
+  data-display              stat/metric/bar value+label, timeline, KV pairs,
+                            status badge, live pill (connected/offline) + dot
+                            (a11y), score badge a11y summary.
+  feedback                  empty(+action), error(+retry), spinner a11y label,
+                            skeleton, offline + live-stale banners(+action),
+                            alert banner, query-error offline disabled-retry.
+  forms                     search typed text, sort direction toggle, form-field
+                            label/helper, tag add.
+  navigation shell          compact bottom-bar / medium rail / expanded permanent
+                            drawer (by NavTestTags seam), un-hosted page → shared
+                            not-found, polite route announcement, bottom-bar
+                            selection navigates, custom-scheme deep link resolves
+                            into the back stack.
+  auth gate (A4)            signed-out, authorizing, authenticated (gated shell),
+                            expired, reauth-required (server invalidation),
+                            sign-in error, user sign-out → sign-in.
+  A7 page state contracts   for each of the 153 ledger pages: every declared
+                            loading/empty/success/error state renders the matching
+                            shared surface, PLUS the universal cached/stale banner
+                            over still-visible cached content.
+
+STEP 2 / 3 — HARNESS + TESTS ADDED (deterministic, no real network/crypto/device deps)
+--------------------------------------------------------------------------------
+Test libs: only the ADR-012 version lock (JUnit4, androidx.test.ext.junit,
+compose-ui-test-junit4, compose-ui-test-manifest). No MockK / Robolectric /
+Espresso / glance-testing added. Fakes are hand-written, matching convention.
+
+  + support/InstrumentedFakes.kt ........ FakeAuthSession (emits hand-built
+                                          AuthState; no crypto/storage/network) +
+                                          signed-in/expired helpers.
+  + support/PageStateHarness.kt ......... LedgerPage + ParityPageLedger asset
+                                          loader, FakePageFeed (fake shared state
+                                          holder), PageStateContractHost (renders
+                                          the real Spinner/EmptyState/ErrorDisplay/
+                                          LiveStaleDataBanner surfaces off the real
+                                          toUiState projection).
+  + components/datadisplay/DataDisplayInteractionTest.kt   (10)
+  + components/feedback/FeedbackInteractionTest.kt          (8)
+  + components/forms/FormsInteractionTest.kt                (4)
+  + navigation/NavigationShellTest.kt                       (7)
+  + auth/AuthScaffoldTest.kt                                (7)
+  + data/PageStateContractTest.kt                           (1 data-driven over 153
+                                                             pages × declared states
+                                                             + universal stale)
+                                                          ------
+                                                          +37 instrumented tests.
+
+Production test seam (the prompt's sanctioned "minimal test tags/seams ... only
+when required", behavior-preserving): navigation/NavTestTags.kt + three
+Modifier.testTag tags on the bottom-bar / rail / permanent-drawer containers in
+navigation/AppScaffold.kt. The adaptive shell always composes the (closed) modal
+drawer alongside the bottom bar/rail, so a destination label is not unique to one
+affordance; the tags let the layout assertions target the active container. Tags
+are render-only metadata — no runtime behavior change.
+
+STEP 3b — PRE-EXISTING INSTRUMENTED TEST FIXES (latent bugs, first device run)
+--------------------------------------------------------------------------------
+Both predecessor tests asserted UI that does not match the real composition; both
+fixed to assert the REAL rendered surface (no assertion weakened dishonestly):
+  • LaunchTest.activityLaunchesAndRendersShell → activityLaunchesAndRendersAuthGate
+    The production root (ui/App.kt) gates the shell behind AuthScaffold (ADR-008),
+    so a cold launch with no stored session renders the signed-out SIGN-IN surface,
+    never the not-found shell. The test now asserts the sign-in surface — proving
+    Activity launch + theme + the auth-gated Compose tree wired up.
+  • ChartInteractionTest.addAnnotationPopoverShowsFields
+    AddAnnotationPopover renders the literal "Add annotation" TWICE (Modal title +
+    submit button), so onNodeWithText was ambiguous; and the "Label" field is the
+    OutlinedTextField floating label "Label *" (required marker, resting-state
+    display quirk). Now asserts the modal title via onFirst() and the plain
+    "Category" field label (FieldLabelText) — both unambiguous and displayed.
+
+STEP 4 — NOT TESTABLE WITHIN THE VERSION LOCK (enumerated, not silently dropped)
+--------------------------------------------------------------------------------
+Glance home-screen widget RENDERING: Jetpack Glance widgets render through the
+AppWidget host, not Compose's createComposeRule, and need androidx.glance:
+glance-testing (GlanceAppWidgetUnitTest), which the ADR-012 version lock
+(gradle/libs.versions.toml) intentionally does NOT pin. Per the prompt's spec
+("Glance widget rendering where testable") this is out of reach without adding to
+the lock (forbidden). The widget content models + render-state derivation are
+already exercised by the A9-0001 JVM suite (WidgetSnapshotMapperTest,
+WidgetStateTest, WidgetContentSpecTest, WidgetFreshnessTest, WidgetFormattingTest)
+and the widget-adjacent live/stale banner surfaces ARE covered here. System
+permission dialogs / launcher-shortcut intents are OS surfaces (covered at the
+publisher/route level by ShortcutPublisherInstrumentedTest + the JVM route maps).
+
+STEP 5 — GATE (canonical run appended below, verbatim)
+--------------------------------------------------------------------------------
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :android:generateDebugBuildConfig UP-TO-DATE
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :android:compileDebugKotlin UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :android:compileDebugJavaWithJavac UP-TO-DATE
+> Task :android:bundleDebugClassesToRuntimeJar UP-TO-DATE
+> Task :android:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :android:compileDebugUnitTestKotlin UP-TO-DATE
+> Task :android:preDebugUnitTestBuild
+> Task :android:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :android:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :android:processDebugJavaRes UP-TO-DATE
+> Task :android:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :android:testDebugUnitTest UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 20s
+44 actionable tasks: 2 executed, 42 up-to-date
+UNIT_EXIT=0
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :android:generateDebugBuildConfig UP-TO-DATE
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :shared:core:mergeDebugShaders UP-TO-DATE
+> Task :shared:core:compileDebugShaders NO-SOURCE
+> Task :shared:core:debugAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:generateDebugAssets UP-TO-DATE
+> Task :shared:core:mergeDebugAssets UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :shared:core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeDebugNativeLibs NO-SOURCE
+> Task :shared:core:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :android:compileDebugKotlin UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :android:compileDebugJavaWithJavac UP-TO-DATE
+> Task :android:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :android:preDebugAndroidTestBuild SKIPPED
+> Task :android:processDebugAndroidTestManifest UP-TO-DATE
+> Task :android:generateDebugAndroidTestBuildConfig UP-TO-DATE
+> Task :android:checkDebugAndroidTestAarMetadata UP-TO-DATE
+> Task :android:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :android:mapDebugAndroidTestSourceSetPaths UP-TO-DATE
+> Task :android:generateDebugAndroidTestResources UP-TO-DATE
+> Task :android:mergeDebugAndroidTestResources UP-TO-DATE
+> Task :android:processDebugAndroidTestResources UP-TO-DATE
+> Task :android:compileDebugAndroidTestKotlin UP-TO-DATE
+> Task :android:javaPreCompileDebugAndroidTest UP-TO-DATE
+> Task :android:compileDebugAndroidTestJavaWithJavac UP-TO-DATE
+> Task :android:mergeDebugShaders UP-TO-DATE
+> Task :android:compileDebugShaders NO-SOURCE
+> Task :android:generateDebugAssets UP-TO-DATE
+> Task :android:mergeDebugAssets UP-TO-DATE
+> Task :android:compressDebugAssets UP-TO-DATE
+> Task :android:desugarDebugFileDependencies UP-TO-DATE
+> Task :android:dexBuilderDebug UP-TO-DATE
+> Task :android:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :android:processDebugJavaRes UP-TO-DATE
+> Task :android:mergeDebugJavaResource UP-TO-DATE
+> Task :android:checkDebugDuplicateClasses UP-TO-DATE
+> Task :android:mergeExtDexDebug UP-TO-DATE
+> Task :android:mergeLibDexDebug UP-TO-DATE
+> Task :android:mergeProjectDexDebug UP-TO-DATE
+> Task :android:mergeDebugJniLibFolders UP-TO-DATE
+> Task :android:mergeDebugNativeLibs UP-TO-DATE
+> Task :android:stripDebugDebugSymbols UP-TO-DATE
+> Task :android:validateSigningDebug UP-TO-DATE
+> Task :android:writeDebugAppMetadata UP-TO-DATE
+> Task :android:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :android:packageDebug UP-TO-DATE
+> Task :android:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :android:mergeDebugAndroidTestShaders UP-TO-DATE
+> Task :android:compileDebugAndroidTestShaders NO-SOURCE
+> Task :android:generateDebugAndroidTestAssets UP-TO-DATE
+> Task :android:mergeDebugAndroidTestAssets UP-TO-DATE
+> Task :android:compressDebugAndroidTestAssets UP-TO-DATE
+> Task :android:desugarDebugAndroidTestFileDependencies UP-TO-DATE
+> Task :android:dexBuilderDebugAndroidTest UP-TO-DATE
+> Task :android:mergeDebugAndroidTestGlobalSynthetics UP-TO-DATE
+> Task :android:processDebugAndroidTestJavaRes UP-TO-DATE
+> Task :android:mergeDebugAndroidTestJavaResource UP-TO-DATE
+> Task :android:checkDebugAndroidTestDuplicateClasses UP-TO-DATE
+> Task :android:mergeExtDexDebugAndroidTest UP-TO-DATE
+> Task :android:mergeLibDexDebugAndroidTest UP-TO-DATE
+> Task :android:mergeProjectDexDebugAndroidTest UP-TO-DATE
+> Task :android:mergeDebugAndroidTestJniLibFolders UP-TO-DATE
+> Task :android:mergeDebugAndroidTestNativeLibs NO-SOURCE
+> Task :android:stripDebugAndroidTestDebugSymbols NO-SOURCE
+> Task :android:validateSigningDebugAndroidTest UP-TO-DATE
+> Task :android:writeDebugAndroidTestSigningConfigVersions UP-TO-DATE
+> Task :android:packageDebugAndroidTest UP-TO-DATE
+> Task :android:createDebugAndroidTestApkListingFileRedirect UP-TO-DATE
+
+> Task :android:connectedDebugAndroidTest
+Starting 64 tests on Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14
+
+Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14 Tests 7/64 completed. (0 skipped) (0 failed)
+Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14 Tests 14/64 completed. (0 skipped) (0 failed)
+Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14 Tests 20/64 completed. (0 skipped) (0 failed)
+Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14 Tests 28/64 completed. (0 skipped) (0 failed)
+Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14 Tests 35/64 completed. (0 skipped) (0 failed)
+Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14 Tests 41/64 completed. (0 skipped) (0 failed)
+Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14 Tests 48/64 completed. (0 skipped) (0 failed)
+Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14 Tests 52/64 completed. (0 skipped) (0 failed)
+Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14 Tests 55/64 completed. (0 skipped) (0 failed)
+Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14 Tests 59/64 completed. (0 skipped) (0 failed)
+Finished 64 tests on Pixel_3a_API_34_extension_level_7_x86_64(AVD) - 14
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2m 53s
+92 actionable tasks: 3 executed, 89 up-to-date
+ANDROID_TEST_EXIT=0
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :android:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :android:generateDebugBuildConfig UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :shared:core:mergeDebugShaders UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:compileDebugShaders NO-SOURCE
+> Task :shared:core:debugAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:generateDebugAssets UP-TO-DATE
+> Task :shared:core:mergeDebugAssets UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :shared:core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeDebugNativeLibs NO-SOURCE
+> Task :shared:core:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :android:compileDebugKotlin UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :android:compileDebugJavaWithJavac UP-TO-DATE
+> Task :android:mergeDebugShaders UP-TO-DATE
+> Task :android:compileDebugShaders NO-SOURCE
+> Task :android:generateDebugAssets UP-TO-DATE
+> Task :android:mergeDebugAssets UP-TO-DATE
+> Task :android:compressDebugAssets UP-TO-DATE
+> Task :android:desugarDebugFileDependencies UP-TO-DATE
+> Task :android:dexBuilderDebug UP-TO-DATE
+> Task :android:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :android:processDebugJavaRes UP-TO-DATE
+> Task :android:mergeDebugJavaResource UP-TO-DATE
+> Task :android:checkDebugDuplicateClasses UP-TO-DATE
+> Task :android:mergeExtDexDebug UP-TO-DATE
+> Task :android:mergeLibDexDebug UP-TO-DATE
+> Task :android:mergeProjectDexDebug UP-TO-DATE
+> Task :android:mergeDebugJniLibFolders UP-TO-DATE
+> Task :android:mergeDebugNativeLibs UP-TO-DATE
+> Task :android:stripDebugDebugSymbols UP-TO-DATE
+> Task :android:validateSigningDebug UP-TO-DATE
+> Task :android:writeDebugAppMetadata UP-TO-DATE
+> Task :android:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :android:packageDebug UP-TO-DATE
+> Task :android:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :android:assembleDebug UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 20s
+62 actionable tasks: 2 executed, 60 up-to-date
+ASM_EXIT=0
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :shared:core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeDebugNativeLibs NO-SOURCE
+> Task :shared:core:stripDebugDebugSymbols NO-SOURCE
+> Task :shared:core:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :android:generateDebugBuildConfig UP-TO-DATE
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :android:preDebugAndroidTestBuild SKIPPED
+> Task :android:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :android:extractProguardFiles UP-TO-DATE
+> Task :android:preDebugUnitTestBuild
+> Task :android:loadKtlintReporters UP-TO-DATE
+> Task :android:runKtlintCheckOverAndroidTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestReleaseSourceSetCheck SKIPPED
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :android:runKtlintCheckOverDebugSourceSet NO-SOURCE
+> Task :android:ktlintDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :android:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :android:runKtlintCheckOverMainSourceSet UP-TO-DATE
+> Task :shared:core:extractDebugAnnotations UP-TO-DATE
+> Task :shared:core:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :android:ktlintMainSourceSetCheck UP-TO-DATE
+> Task :shared:core:mergeDebugShaders UP-TO-DATE
+> Task :android:runKtlintCheckOverReleaseSourceSet NO-SOURCE
+> Task :android:ktlintReleaseSourceSetCheck SKIPPED
+> Task :shared:core:compileDebugShaders NO-SOURCE
+> Task :shared:core:debugAssetsCopyForAGP NO-SOURCE
+> Task :android:runKtlintCheckOverTestDebugSourceSet NO-SOURCE
+> Task :shared:core:generateDebugAssets UP-TO-DATE
+> Task :android:ktlintTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesDebugSourceSetCheck SKIPPED
+> Task :shared:core:mergeDebugAssets UP-TO-DATE
+> Task :android:runKtlintCheckOverTestFixturesReleaseSourceSet NO-SOURCE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :android:ktlintTestFixturesReleaseSourceSetCheck SKIPPED
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :android:runKtlintCheckOverTestFixturesSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestReleaseSourceSet NO-SOURCE
+> Task :shared:core:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :android:ktlintTestReleaseSourceSetCheck SKIPPED
+> Task :shared:core:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :shared:core:prepareDebugArtProfile UP-TO-DATE
+> Task :shared:core:prepareLintJarForPublish UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :android:runKtlintCheckOverTestSourceSet UP-TO-DATE
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :shared:core:mergeDebugJavaResource UP-TO-DATE
+> Task :android:detekt UP-TO-DATE
+> Task :shared:core:syncDebugLibJars UP-TO-DATE
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:bundleDebugLocalLintAar UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :shared:core:writeDebugLintModelMetadata UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :shared:core:createFullJarDebug UP-TO-DATE
+> Task :shared:core:extractProguardFiles UP-TO-DATE
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :shared:core:generateDebugLintModel UP-TO-DATE
+> Task :shared:core:lintAnalyzeDebug UP-TO-DATE
+> Task :shared:core:preDebugAndroidTestBuild UP-TO-DATE
+> Task :shared:core:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :shared:core:generateDebugAndroidTestLintModel UP-TO-DATE
+> Task :shared:core:preDebugUnitTestBuild UP-TO-DATE
+> Task :shared:core:generateDebugUnitTestLintModel UP-TO-DATE
+> Task :shared:core:lintAnalyzeDebugAndroidTest UP-TO-DATE
+> Task :shared:core:lintAnalyzeDebugUnitTest UP-TO-DATE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :android:compileDebugKotlin UP-TO-DATE
+> Task :android:compileDebugJavaWithJavac UP-TO-DATE
+> Task :android:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :android:generateDebugAndroidTestLintModel
+> Task :android:generateDebugLintReportModel UP-TO-DATE
+> Task :android:generateDebugUnitTestLintModel UP-TO-DATE
+> Task :android:lintAnalyzeDebug UP-TO-DATE
+> Task :android:lintAnalyzeDebugUnitTest UP-TO-DATE
+> Task :android:runKtlintCheckOverAndroidTestSourceSet
+> Task :android:ktlintAndroidTestSourceSetCheck
+> Task :android:ktlintCheck
+> Task :android:lintAnalyzeDebugAndroidTest
+
+> Task :android:lintReportDebug
+Wrote HTML report to file:///F:/github/teslasync-wt/wt-01/apps/android/app/build/reports/lint-results-debug.html
+
+> Task :android:lintDebug
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 40s
+81 actionable tasks: 8 executed, 73 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+STEP 6 — RESULT
+--------------------------------------------------------------------------------
+connectedDebugAndroidTest: 64 instrumented tests on Pixel_3a_API_34 — 0 skipped,
+0 failed. (+37 new this prompt; 2 predecessor tests fixed per STEP 3b; 25 prior
+tests still green.) testDebugUnitTest, assembleDebug, lintDebug+ktlintCheck+detekt
+all BUILD SUCCESSFUL. Placeholder scanner clean (PLACEHOLDER_COUNT=0).
+
+Acceptance criteria:
+  [x] Instrumented tests cover component families (ui/charts/maps/motion prior +
+      data-display/feedback/forms new) and all generated page state contracts
+      (153 ledger pages, data-driven from the canonical parity manifest).
+  [x] Deep links, auth gates, and stale/error/loading/empty/data states asserted
+      via Compose semantics (testTags, contentDescription, text).
+  [x] A device/emulator gate was actually run (connectedDebugAndroidTest on
+      Pixel_3a_API_34) — not BLOCKED.
+  [x] Gate green; placeholder scanner clean.
+
+HONESTY COVENANT: the *_EXIT lines above are the verbatim gate run. No red was
+reported as green (the first canonical run was RED on two predecessor tests —
+ANDROID_TEST_EXIT=1 — and was NOT committed; the latent bugs were fixed and the
+gate re-run to green). Scope was not narrowed: every component family, the full
+153-page contract ledger, and all auth/nav/live state variants are covered; the
+single genuinely untestable surface (Glance widget host rendering, absent from the
+ADR-012 version lock) is enumerated in STEP 4, not silently dropped. The only
+production changes are render-only test seams (NavTestTags + three testTags) and
+two predecessor-test corrections to match the real composition.
+
+EXIT=0
+STATUS=DONE

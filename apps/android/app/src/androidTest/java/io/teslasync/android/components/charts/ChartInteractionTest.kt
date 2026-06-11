@@ -5,6 +5,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -98,8 +100,8 @@ class ChartInteractionTest {
                 AddAnnotationPopover(open = true, onAdd = { _, _, _ -> }, onDismiss = {})
             }
         }
-        rule.onNodeWithText("Add annotation").assertIsDisplayed()
-        rule.onNodeWithText("Label").assertIsDisplayed()
+        rule.onAllNodesWithText("Add annotation").onFirst().assertIsDisplayed()
+        rule.onNodeWithText("Category").assertIsDisplayed()
     }
 
     @Test

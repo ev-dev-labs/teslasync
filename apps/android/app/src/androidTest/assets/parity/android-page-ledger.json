@@ -1,0 +1,1350 @@
+[
+  {
+    "id": "page:admin/APIKeys",
+    "title": "APIKeys",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/ApiLogs",
+    "title": "ApiLogs",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/ApiPlayground",
+    "title": "ApiPlayground",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/AuditLog",
+    "title": "AuditLog",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/BackupRestore",
+    "title": "BackupRestore",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/DevTools",
+    "title": "DevTools",
+    "states": []
+  },
+  {
+    "id": "page:admin/DiskForecast",
+    "title": "DiskForecast",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/DLQInspector",
+    "title": "DLQInspector",
+    "states": [
+      "loading",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/FeatureFlags",
+    "title": "FeatureFlags",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/FeedbackQueue",
+    "title": "FeedbackQueue",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/FleetAPI",
+    "title": "FleetAPI",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/FleetTelemetryCoverage",
+    "title": "FleetTelemetryCoverage",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/GasPriceAutoPoll",
+    "title": "GasPriceAutoPoll",
+    "states": []
+  },
+  {
+    "id": "page:admin/GDPRExport",
+    "title": "GDPRExport",
+    "states": [
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/IngestXRay",
+    "title": "IngestXRay",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/LiveLogs",
+    "title": "LiveLogs",
+    "states": [
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/LiveSignalInspector",
+    "title": "LiveSignalInspector",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/RbacMatrix",
+    "title": "RbacMatrix",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/RedisSignalViewer",
+    "title": "RedisSignalViewer",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/SchemaDrift",
+    "title": "SchemaDrift",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/SecretRotation",
+    "title": "SecretRotation",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/SecurityAccess",
+    "title": "SecurityAccess",
+    "states": [
+      "loading",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/SlowQueries",
+    "title": "SlowQueries",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/System",
+    "title": "System",
+    "states": []
+  },
+  {
+    "id": "page:admin/TeslaFeatureFlags",
+    "title": "TeslaFeatureFlags",
+    "states": []
+  },
+  {
+    "id": "page:admin/TeslaOrders",
+    "title": "TeslaOrders",
+    "states": []
+  },
+  {
+    "id": "page:admin/TeslaRegion",
+    "title": "TeslaRegion",
+    "states": []
+  },
+  {
+    "id": "page:admin/Users",
+    "title": "Users",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:admin/VehicleCost",
+    "title": "VehicleCost",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:analytics/Analytics",
+    "title": "Analytics",
+    "states": [
+      "loading",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:analytics/FleetCompare",
+    "title": "FleetCompare",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:analytics/LifetimeStats",
+    "title": "LifetimeStats",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:analytics/Mileage",
+    "title": "Mileage",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:analytics/PeriodCompare",
+    "title": "PeriodCompare",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:analytics/Statistics",
+    "title": "Statistics",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:analytics/Timeline",
+    "title": "Timeline",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:analytics/TrueCost",
+    "title": "TrueCost",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:analytics/WeeklyDigest",
+    "title": "WeeklyDigest",
+    "states": [
+      "loading",
+      "empty",
+      "error"
+    ]
+  },
+  {
+    "id": "page:analytics/YearReview",
+    "title": "YearReview",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:automations/ActionBuilder",
+    "title": "ActionBuilder",
+    "states": [
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:automations/AutomationActivityFeed",
+    "title": "AutomationActivityFeed",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:automations/AutomationBuilder",
+    "title": "AutomationBuilder",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:automations/AutomationCard",
+    "title": "AutomationCard",
+    "states": [
+      "success"
+    ]
+  },
+  {
+    "id": "page:automations/AutomationList",
+    "title": "AutomationList",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:automations/AutomationsList",
+    "title": "AutomationsList",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:automations/ConditionBuilder",
+    "title": "ConditionBuilder",
+    "states": [
+      "success"
+    ]
+  },
+  {
+    "id": "page:automations/ConflictWarnings",
+    "title": "ConflictWarnings",
+    "states": [
+      "empty",
+      "error"
+    ]
+  },
+  {
+    "id": "page:automations/PresetGallery",
+    "title": "PresetGallery",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:automations/TriggerConfigurator",
+    "title": "TriggerConfigurator",
+    "states": [
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:battery/BatteryCells",
+    "title": "BatteryCells",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:battery/BatteryDegradation",
+    "title": "BatteryDegradation",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:battery/BatteryHealth",
+    "title": "BatteryHealth",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:battery/Energy",
+    "title": "Energy",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:battery/EnergyFlow",
+    "title": "EnergyFlow",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:battery/EnergyProducts",
+    "title": "EnergyProducts",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:battery/PowerFlowDashboard",
+    "title": "PowerFlowDashboard",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:battery/ProjectedRange",
+    "title": "ProjectedRange",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:battery/SleepEfficiency",
+    "title": "SleepEfficiency",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:battery/VampireDrain",
+    "title": "VampireDrain",
+    "states": [
+      "loading",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:charging/ChargingCurve",
+    "title": "ChargingCurve",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:charging/ChargingDetail",
+    "title": "ChargingDetail",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:charging/ChargingHeatmap",
+    "title": "ChargingHeatmap",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:charging/ChargingList",
+    "title": "ChargingList",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:charging/CostAnalysis",
+    "title": "CostAnalysis",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:charging/Powershare",
+    "title": "Powershare",
+    "states": [
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:charging/SmartCharge",
+    "title": "SmartCharge",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:charging/TeslaChargingHistory",
+    "title": "TeslaChargingHistory",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:charging/TeslaChargingSessions",
+    "title": "TeslaChargingSessions",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:charging/TeslaChargingSessionsMap",
+    "title": "TeslaChargingSessionsMap",
+    "states": [
+      "empty"
+    ]
+  },
+  {
+    "id": "page:dashboard/Dashboard",
+    "title": "Dashboard",
+    "states": [
+      "loading",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:dashboard/Glance",
+    "title": "Glance",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:dashboard/QuickStats",
+    "title": "QuickStats",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:diagnostics/AnomalyDashboard",
+    "title": "AnomalyDashboard",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:driving/DriveDetail",
+    "title": "DriveDetail",
+    "states": [
+      "loading",
+      "error"
+    ]
+  },
+  {
+    "id": "page:driving/DriveScore",
+    "title": "DriveScore",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:driving/DrivesList",
+    "title": "DrivesList",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:driving/DrivetrainHealth",
+    "title": "DrivetrainHealth",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:driving/DrivingDynamics",
+    "title": "DrivingDynamics",
+    "states": [
+      "loading",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:driving/Efficiency",
+    "title": "Efficiency",
+    "states": [
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:driving/RegenEfficiency",
+    "title": "RegenEfficiency",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:driving/RouteEfficiency",
+    "title": "RouteEfficiency",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:driving/SpeedProfile",
+    "title": "SpeedProfile",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:driving/TripPlanner",
+    "title": "TripPlanner",
+    "states": [
+      "loading",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:driving/TripReplay",
+    "title": "TripReplay",
+    "states": []
+  },
+  {
+    "id": "page:explore/Explore",
+    "title": "Explore",
+    "states": [
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:exports/Exports",
+    "title": "Exports",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:maps/Geofences",
+    "title": "Geofences",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:maps/Locations",
+    "title": "Locations",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:maps/MapOverview",
+    "title": "MapOverview",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:maps/NavigationRoute",
+    "title": "NavigationRoute",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:maps/TemperatureImpact",
+    "title": "TemperatureImpact",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:notifications/AlertRules",
+    "title": "AlertRules",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:notifications/AlertsList",
+    "title": "AlertsList",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:notifications/AlertStudio",
+    "title": "AlertStudio",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:notifications/Archived",
+    "title": "Archived",
+    "states": [
+      "success"
+    ]
+  },
+  {
+    "id": "page:notifications/AuditLog",
+    "title": "AuditLog",
+    "states": [
+      "loading",
+      "success"
+    ]
+  },
+  {
+    "id": "page:notifications/BrowserNotifications",
+    "title": "BrowserNotifications",
+    "states": []
+  },
+  {
+    "id": "page:notifications/Channels",
+    "title": "Channels",
+    "states": []
+  },
+  {
+    "id": "page:notifications/Inbox",
+    "title": "Inbox",
+    "states": [
+      "success"
+    ]
+  },
+  {
+    "id": "page:notifications/QuietHours",
+    "title": "QuietHours",
+    "states": []
+  },
+  {
+    "id": "page:notifications/Webhooks",
+    "title": "Webhooks",
+    "states": []
+  },
+  {
+    "id": "page:onboarding/Onboarding",
+    "title": "Onboarding",
+    "states": [
+      "loading",
+      "success"
+    ]
+  },
+  {
+    "id": "page:power-user/Dashboards",
+    "title": "Dashboards",
+    "states": [
+      "success"
+    ]
+  },
+  {
+    "id": "page:power-user/GrafanaPanel",
+    "title": "GrafanaPanel",
+    "states": [
+      "success"
+    ]
+  },
+  {
+    "id": "page:power-user/SqlPlayground",
+    "title": "SqlPlayground",
+    "states": [
+      "success"
+    ]
+  },
+  {
+    "id": "page:settings/ActiveSessions",
+    "title": "ActiveSessions",
+    "states": []
+  },
+  {
+    "id": "page:settings/Helix",
+    "title": "Helix",
+    "states": [
+      "loading",
+      "success"
+    ]
+  },
+  {
+    "id": "page:settings/Privacy",
+    "title": "Privacy",
+    "states": []
+  },
+  {
+    "id": "page:settings/Safety",
+    "title": "Safety",
+    "states": [
+      "success"
+    ]
+  },
+  {
+    "id": "page:settings/Settings",
+    "title": "Settings",
+    "states": [
+      "loading",
+      "success"
+    ]
+  },
+  {
+    "id": "page:settings/TwoFactorAuth",
+    "title": "TwoFactorAuth",
+    "states": []
+  },
+  {
+    "id": "page:sharing/SharedDrive",
+    "title": "SharedDrive",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:sharing/SharingTrips",
+    "title": "SharingTrips",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/Chatbot",
+    "title": "Chatbot",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/CommandHistory",
+    "title": "CommandHistory",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/Commands",
+    "title": "Commands",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/DataExport",
+    "title": "DataExport",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/DataRepair",
+    "title": "DataRepair",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/DBHealth",
+    "title": "DBHealth",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/Diagnostic",
+    "title": "Diagnostic",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/Help",
+    "title": "Help",
+    "states": [
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/IncidentTimeline",
+    "title": "IncidentTimeline",
+    "states": [
+      "loading",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/MyActivity",
+    "title": "MyActivity",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/NotFound",
+    "title": "NotFound",
+    "states": [
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/Roadmap",
+    "title": "Roadmap",
+    "states": [
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/ScheduledExportsPanel",
+    "title": "ScheduledExportsPanel",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/Search",
+    "title": "Search",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/StateMachineDebugger",
+    "title": "StateMachineDebugger",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/StatusApiDocs",
+    "title": "StatusApiDocs",
+    "states": [
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/SystemStatus",
+    "title": "SystemStatus",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:system/TeslaAccount",
+    "title": "TeslaAccount",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:telemetry/LiveSignalMonitor",
+    "title": "LiveSignalMonitor",
+    "states": []
+  },
+  {
+    "id": "page:telemetry/MQTTInspector",
+    "title": "MQTTInspector",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:telemetry/SignalDiff",
+    "title": "SignalDiff",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:telemetry/SignalExplorer",
+    "title": "SignalExplorer",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:telemetry/SignalGapDetector",
+    "title": "SignalGapDetector",
+    "states": [
+      "empty"
+    ]
+  },
+  {
+    "id": "page:telemetry/SignalLogViewer",
+    "title": "SignalLogViewer",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:telemetry/SignalsWorkspace",
+    "title": "SignalsWorkspace",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:trips/TripDetail",
+    "title": "TripDetail",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:trips/TripList",
+    "title": "TripList",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:trips/TripReplay",
+    "title": "TripReplay",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:vehicle-systems/ClimateControl",
+    "title": "ClimateControl",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:vehicle-systems/GuardMode",
+    "title": "GuardMode",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:vehicle-systems/Maintenance",
+    "title": "Maintenance",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:vehicle-systems/MediaPlayer",
+    "title": "MediaPlayer",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:vehicle-systems/SafetySettings",
+    "title": "SafetySettings",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:vehicle-systems/SoftwareUpdates",
+    "title": "SoftwareUpdates",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:vehicle-systems/TirePressure",
+    "title": "TirePressure",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:vehicles/DigitalTwin",
+    "title": "DigitalTwin",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:vehicles/VehicleAccess",
+    "title": "VehicleAccess",
+    "states": [
+      "loading",
+      "empty",
+      "success"
+    ]
+  },
+  {
+    "id": "page:vehicles/VehicleDetail",
+    "title": "VehicleDetail",
+    "states": [
+      "loading",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:vehicles/VehicleList",
+    "title": "VehicleList",
+    "states": [
+      "loading",
+      "empty",
+      "error",
+      "success"
+    ]
+  },
+  {
+    "id": "page:watch/WatchFace",
+    "title": "WatchFace",
+    "states": [
+      "loading",
+      "success"
+    ]
+  }
+]

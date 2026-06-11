@@ -38,6 +38,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -203,7 +204,7 @@ private fun AppBottomBar(
     current: Destination,
     onSelect: (Destination) -> Unit,
 ) {
-    NavigationBar {
+    NavigationBar(modifier = Modifier.testTag(NavTestTags.BOTTOM_BAR)) {
         RouteTable.bottomBar.forEach { destination ->
             NavigationBarItem(
                 selected = current.id == destination.id,
@@ -221,7 +222,7 @@ private fun AppNavRail(
     onSelect: (Destination) -> Unit,
     onMore: () -> Unit,
 ) {
-    NavigationRail {
+    NavigationRail(modifier = Modifier.testTag(NavTestTags.RAIL)) {
         RouteTable.rail.forEach { destination ->
             NavigationRailItem(
                 selected = current.id == destination.id,
@@ -244,7 +245,7 @@ private fun AppPermanentDrawer(
     current: Destination,
     onSelect: (Destination) -> Unit,
 ) {
-    PermanentDrawerSheet(modifier = Modifier.width(DRAWER_WIDTH).fillMaxHeight()) {
+    PermanentDrawerSheet(modifier = Modifier.width(DRAWER_WIDTH).fillMaxHeight().testTag(NavTestTags.PERMANENT_DRAWER)) {
         NavDrawerList(current = current, onSelect = onSelect)
     }
 }
