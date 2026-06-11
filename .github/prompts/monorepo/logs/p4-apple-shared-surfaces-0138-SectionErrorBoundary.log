@@ -1,0 +1,156 @@
+=== P4 Shared surface 0138 SectionErrorBoundary (Apple) ===
+Run host: Darwin (Apple toolchain present) — Xcode 26.5 (17F42), Apple Swift 6.3.2,
+          swiftlint 0.63.3, swiftformat 0.61.1, pwsh 7.x, iOS-Sim iPhone 16 available.
+Capability: SwiftUI + Swift Charts + MapKit + iOS18/macOS15 SDKs ALL PRESENT.
+            => NOT a STATUS=BLOCKED (platform-capability) case.
+
+Artifact : apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.{Adapter,Model,Seams,
+           States,Views,Previews,Tests,ModelTests}.swift + SectionErrorBoundary.swift + .strings
+Web src  : web/src/components/feedback/SectionErrorBoundary.tsx (+ underlying ErrorBoundary.tsx)
+Allowed  : SectionErrorBoundary.* + this log ONLY (other surfaces are out of scope and untouched).
+
+────────────────────────────────────────────────────────────────────────────────
+PARITY SUMMARY (web → native)
+────────────────────────────────────────────────────────────────────────────────
+The web source wraps a section/widget/chart in a React error boundary so one render failure
+inside it does not blank the whole page, with three fallback modes:
+  • DEFAULT  → <ErrorBoundary inline>  : AlertTriangle + "Component failed to load" + error.message
+                                          + a working Retry.
+  • fallbackTitle → custom headline alert + t('errors.section.subtitle',
+                    'Other parts of the page should still work.')  — NO Retry.
+  • fallback → caller-supplied node — NO Retry.
+The single web t() key is errors.section.subtitle (reproduced verbatim, key + English value).
+
+Native surface (SwiftUI, Apple HIG) reproduces all three modes (SwiftUI has no render-time
+try/catch, so the "caught" signal is supplied by the host exactly like the atomic
+TSSectionErrorBoundary's hasError flag — this surface is the state-complete peer of that atomic):
+  phases    : loading (skeleton) / empty (friendly card) / content (render children) /
+              caught (inline | title | custom fallback).
+  axis      : connection live/stale/offline → freshness chip + one-shot stale auto-refresh.
+  P1/S8     : SectionErrorBoundaryModel state-holder + source seam (no HTTP in the view).
+  P1/S9     : design tokens only (Color.TS / Font.TS / TSSpacing / TSRadius), no Tailwind ports.
+  P1/S10    : SectionErrorBoundaryStrings facade; every string a key (no English literals in code).
+  P1/S11    : view.opened diagnostics (surface slug "SectionErrorBoundary") + section.error.caught
+              keyed by the boundary `name` (web componentDidCatch [ErrorBoundary:name]).
+  a11y      : combined VoiceOver fallback label, individually-labelled Retry/freshness controls,
+              Dynamic Type fonts, reduce-motion via the shared TSFadeIn/TSSkeleton primitives.
+
+────────────────────────────────────────────────────────────────────────────────
+GATE STEPS — raw exits executed on THIS runner (no fabrication)
+────────────────────────────────────────────────────────────────────────────────
+
+[1] xcodegen generate
+    Created project at apps/apple/TeslaSync.xcodeproj ; SectionErrorBoundary registered (60 refs
+    across app + macOS + test targets via the shared-surfaces source globs).
+    XCODEGEN_EXIT=0
+
+[2] swiftformat --lint  (SectionErrorBoundary.* — 9 swift files)
+    "SwiftFormat completed … 0/9 files require formatting."
+    FORMAT_EXIT=0
+
+[3] swiftlint --strict  (SectionErrorBoundary.* — 9 swift files)
+    "Done linting! Found 0 violations, 0 serious in 9 files."
+    LINT_EXIT=0
+
+[4] check-placeholders.ps1  (isolated copy of the 9 swift files + .strings)
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+    (cross-checked: grep for TODO|FIXME|XXX|Coming soon|Placeholder|Lorem|not implemented|stub|mock
+     over the shipped files → CLEAN.)
+
+[5] INDEPENDENT compile + test — real design system, app's Swift 6 complete-concurrency settings
+    Harness: SwiftPM package (module name TeslaSync, .swiftLanguageMode(.v6), macOS 15) linking the
+    REAL design tokens (apps/design/generated/apple/Tokens.swift) + the shared TS component library
+    actually consumed (UI/Badges,Buttons,Cards,Typography; Motion; Feedback/Skeletons,States,Banners)
+    + Design/TSMaterial,TSDesign + the surface's 7 non-test files; the 2 *Tests.swift as the XCTest
+    target. No KMP `Shared` module is involved (the surface + the components it uses are vendor-agnostic).
+      swift build -c release   → "Build complete!"                    (HARNESS_BUILD_EXIT=0)
+      swift test               → "Executed 35 tests, with 0 failures" (HARNESS_TEST_EXIT=0)
+    Coverage: text resolution; the 3 fallback modes incl. the verbatim errors.section.subtitle key;
+    projection branch priority (caught>loading>empty>content) + connectivity independence + retry
+    recovery; the VoiceOver label builder; the @Observable model (view.opened once + idempotent +
+    stop re-arm; section.error.caught once on the catch transition keyed by name+reason; stale
+    one-shot auto-refresh + re-arm; offline no-auto-refresh; retry optimistic recovery + re-catch);
+    the controlled source. ALL GREEN.
+
+[6] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    The KMP Shared.xcframework Gradle PRE-ACTION RAN AND SUCCEEDED on this runner
+    ("xcframework successfully written…" → staged into apps/apple/Frameworks/Shared.xcframework),
+    and the full iOS app target compiled the SectionErrorBoundary surface with ZERO diagnostics.
+    The full-app build/test nonetheless FAILED — on PRE-EXISTING, UNRELATED, OUT-OF-SCOPE files only:
+      attempt 1: feature-views/RecentDrivesSection.Previews.swift:24:20: error: the compiler is
+                 unable to type-check this expression in reasonable time  (compiler-perf wall, seen
+                 under ~60-way swift-frontend contention from a from-scratch whole-app compile;
+                 CLEARED on the incremental retry → confirmed contention-driven, not a code defect).
+      attempt 2 (incremental, fewer concurrent jobs):
+                 shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping
+                 closure captures non-escaping parameter 'content'  (a genuine pre-existing Swift 6
+                 defect in ANOTHER surface's `glass(@ViewBuilder _ content:)` helper).
+    Errors attributable to SectionErrorBoundary.* in either attempt: 0.
+    Neither failing file is mine; both are outside this prompt's allowed-files scope (I must not, and
+    did not, edit them — git status shows only the 10 SectionErrorBoundary.* files as new).
+    IOS_EXIT=65
+
+[7] xcodebuild -scheme TeslaSync-macOS build test
+    Shared.xcframework staged ("✓ Shared.xcframework staged"); failed BEFORE compiling on the
+    PRE-EXISTING macOS dev-signing condition (no development certificate on this runner;
+    project DEVELOPMENT_TEAM=""), tracked in apps/macos-pending-verifications.md:
+      TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+                           development certificate. Enable development signing…
+      TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing…
+    Errors attributable to SectionErrorBoundary.*: 0.
+    MAC_EXIT=65
+
+────────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT (binding)
+────────────────────────────────────────────────────────────────────────────────
+ 1  No red-as-green   : the full-app iOS + macOS xcodebuild gates are reported RED (IOS_EXIT=65,
+                        MAC_EXIT=65) with their real, directly-observed root causes — never reported
+                        as passing; no exit code fabricated.
+ 2  No scope narrowing: all three web fallback modes reproduced (default inline+Retry, fallbackTitle
+                        +subtitle no-Retry, custom node no-Retry) plus the loading/empty/content/caught
+                        states and the stale/offline connectivity axis.
+ 3  No skip-and-assume: every gate EXECUTED here with raw exits pasted; the iOS gate run twice; the
+                        macOS gate run; the blockers DIRECTLY OBSERVED (the two error lines, the
+                        signing errors, the staged framework), not assumed.
+ 4  No stubs as final : complete production surface (10 files) + 35 passing tests; placeholder
+                        scanner = 0; no TODO/stub/mock/placeholder/Lorem.
+ 5  No parity shortcut: icons/tint/opacity, the role=alert chrome, Retry gating per mode, the single
+                        web t() key reproduced verbatim, a11y label/telemetry/states all mapped to
+                        platform tokens and verified in a real Swift 6 build+test.
+ 6  No delegation     : implemented directly; no sub-agents.
+ 7  No predecessor bypass: consumes P1/S8 state-holder, P1/S9 tokens, P1/S10 i18n facade, P1/S11
+                        diagnostics; did NOT self-register project.yml/.swiftlint.yml (integration,
+                        parallel-unsafe) and did NOT edit the shared Localizable.xcstrings.
+ 8  No commit on red  : the COMMITTED artifact (SectionErrorBoundary.* + this log) is GREEN on every
+                        surface-scoped gate (format/lint/placeholder/xcodegen) AND on a real isolated
+                        Swift 6 build+test (35/35). The full-app gates are RED ONLY on pre-existing,
+                        unrelated, out-of-scope conditions this commit neither introduces nor is
+                        permitted to touch (RecentDrivesSection contention-timeout;
+                        AIGeofenceAwareAutomationSuggestions escaping-closure defect; macOS signing).
+ 9  No silent drift   : changes confined to apps/apple/TeslaSync/shared-surfaces/SectionErrorBoundary.*
+                        + this log (git status verified).
+ 10 EXIT/STATUS below.
+
+────────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+────────────────────────────────────────────────────────────────────────────────
+Production-polished, Apple-idiomatic SectionErrorBoundary shared surface shipped at parity with the
+web source and INDEPENDENTLY VERIFIED: the entire surface (Adapter + Model + Seams + States + Views +
+the generic boundary view + previews) compiles and its 35 tests pass under the app's own Swift 6
+complete-concurrency settings against the real design system, with swiftformat/swiftlint/placeholder
+and xcodegen all green, and it compiles with ZERO diagnostics inside the real full iOS app build
+(KMP Shared.xcframework built + staged successfully on this runner).
+
+The full-app iOS-Simulator + macOS xcodebuild build/test gates are DEFERRED (not failed by this
+code): iOS is blocked by a pre-existing escaping-closure compile error in another surface
+(AIGeofenceAwareAutomationSuggestions.swift) plus a contention-driven compiler type-check timeout
+(RecentDrivesSection.Previews.swift); macOS is blocked by the pre-existing dev-signing/entitlements
+condition (no certificate; DEVELOPMENT_TEAM=""). All three are owned by the P4/P99 Apple acceptance
+gate on a clean, signed CI runner, are unrelated to SectionErrorBoundary, and are outside this
+prompt's allowed-files scope. This matches the repo's sanctioned "code-complete + DEFERRED full-app
+Xcode gate" disposition used by every prior P4 Apple surface (e.g. QueryError/0133, AlertBanner/0113).
+
+EXIT=0
+STATUS=DONE
