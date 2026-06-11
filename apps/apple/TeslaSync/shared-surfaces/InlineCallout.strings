@@ -1,0 +1,26 @@
+/*
+  InlineCallout.strings
+  TeslaSync — P4 shared surface · 0124 · InlineCallout (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web `<InlineCallout>`
+  (components/feedback/InlineCallout.tsx) renders NO translated copy of its own — its body
+  (`children`) and the optional `action.label` are caller-supplied, and the leading icon + trailing
+  chevron are decorative. The surface is therefore anonymous: it owns 0 web `t()` keys.
+
+  The only strings it owns are the localized severity words announced to VoiceOver — the accessible
+  parity of the web's colour-only severity tier (a sighted user perceives info/success/warning/danger
+  from the tint; a VoiceOver user cannot, so the projector prefixes the spoken label with the severity
+  word, e.g. "Warning: 1 anomaly in this range, View"). This mirrors the sibling
+  `KpiOverviewAccessibility.calloutLabel` composition for the same web component.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table ("InlineCallout") so each parallel surface prompt owns its own strings.
+  In test / preview bundles `NSLocalizedString` returns the value below (the capitalized token),
+  keeping the VoiceOver labels deterministic.
+*/
+
+/* --- VoiceOver severity words (accessible parity of the web colour tier) --- */
+"inlineCallout.severity.info" = "Info";
+"inlineCallout.severity.success" = "Success";
+"inlineCallout.severity.warning" = "Warning";
+"inlineCallout.severity.danger" = "Danger";
