@@ -1,0 +1,41 @@
+/*
+  AchievementUnlockListener.strings
+  TeslaSync — P4 shared surface · 0112 · AchievementUnlockListener (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/feedback/AchievementUnlockListener.tsx + the AchievementUnlockedToast it renders) routes
+  the toast copy through `t()`; those keys are reproduced verbatim here with the web English fallback.
+  The native P4 leaf chrome (loading / the two empty states / unavailable retry) and the connectivity
+  chip + VoiceOver strings round it out. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table ("AchievementUnlockListener") so
+  each parallel surface prompt owns its strings. Native code holds no hardcoded English — every literal
+  here is the resolver fallback.
+*/
+
+/* --- Toast copy (verbatim web `t()` keys in AchievementUnlockedToast.tsx) --- */
+"achievements.toastEyebrow" = "Achievement Unlocked";
+"achievements.view" = "View";
+"achievements.dismiss" = "Dismiss achievement notification";
+
+/* --- Loading chrome (native P4 leaf state) --- */
+"achievements.listener.loadingA11y" = "Loading achievement celebrations";
+
+/* --- Empty state: no queued unlocks (native parity of web empty `recent`) --- */
+"achievements.listener.empty.title" = "No new achievements";
+"achievements.listener.empty.message" = "Newly unlocked achievements will be celebrated here.";
+
+/* --- Empty state: celebrations switched off (native parity of web `!showToasts` return null) --- */
+"achievements.listener.off.title" = "Celebrations are off";
+"achievements.listener.off.message" = "Turn on celebration toasts in Settings to see unlocks here. Your achievements are still tracked.";
+
+/* --- Unavailable chrome (native P4 leaf state — SSE feed failed; web `QueryError` peer) --- */
+"achievements.listener.errorTitle" = "Couldn't load achievement celebrations";
+"achievements.listener.retry" = "Retry";
+"achievements.listener.retryA11y" = "Retry loading achievement celebrations";
+
+/* --- Freshness chip (native P4 connectivity axis) --- */
+"achievements.listener.live" = "Live";
+"achievements.listener.stale" = "Stale";
+"achievements.listener.offline" = "Offline";
+"achievements.listener.staleA11y" = "Stale — tap to refresh";
+"achievements.listener.offlineA11y" = "Offline — showing the last received unlocks";
