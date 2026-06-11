@@ -269,3 +269,4 @@ p3-android/feature-views/A-0017-JsonFormatter.prompt.md
 p3-android/feature-views/A-0019-RegexTester.prompt.md
 p3-android/feature-views/A-0020-TeslaApiRefTool.prompt.md
 p3-android/feature-views/A-0021-TimestampTool.prompt.md
+p3-android/feature-views/A-0023-UrlEncoder.prompt.md
