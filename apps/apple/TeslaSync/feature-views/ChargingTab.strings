@@ -1,0 +1,55 @@
+/*
+  ChargingTab.strings
+  TeslaSync — P4 feature view · 0054 · ChargingTab (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `ChargingTab` resolves (table "ChargingTab") lives here with its web English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns its own
+  strings without editing the shared catalog.
+
+  The first group holds the keys extracted verbatim from the web source
+  (features/analytics/components/analytics/ChargingTab.tsx) — the canonical
+  `analytics.charging.*` namespace. The remaining keys back the native-only chrome
+  (freshness chip, stale/offline banner, loading / error / retry copy, and the VoiceOver
+  value nouns). The "kWh", "kW" and "%" card subtitles are unit symbols rendered verbatim
+  (web string literals), not translatable copy, matching how the sibling charts treat
+  "Wh/km".
+*/
+
+/* --- Keys from the web source (parity) --- */
+"analytics.charging.sessions" = "Sessions";
+"analytics.charging.totalEnergy" = "Total Energy";
+"analytics.charging.totalCost" = "Total Cost";
+"analytics.charging.avgPower" = "Avg Power";
+"analytics.charging.avgDuration" = "Avg Duration";
+"analytics.charging.min" = "min";
+"analytics.charging.chargeEff" = "Charge Efficiency";
+"analytics.charging.chargerTypes" = "Charger Types";
+"analytics.charging.noTypes" = "No charger type data";
+"analytics.charging.startBattery" = "Start Battery Distribution";
+"analytics.charging.noBatDist" = "No battery distribution data";
+"analytics.charging.hourlyPattern" = "Hourly Charging Pattern";
+"analytics.charging.charges" = "Charges";
+"analytics.charging.energykWh" = "Energy (kWh)";
+"analytics.charging.noHourly" = "No hourly data";
+
+/* --- Native chrome: freshness + connectivity --- */
+"analytics.charging.live" = "Live";
+"analytics.charging.stale" = "Stale";
+"analytics.charging.offline" = "Offline";
+"analytics.charging.staleBanner" = "Reconnecting — charging analytics may be stale";
+"analytics.charging.offlineBanner" = "Offline — showing last known charging analytics";
+
+/* --- Native chrome: states --- */
+"analytics.charging.loading" = "Loading charging analytics";
+"analytics.charging.errorTitle" = "Couldn't load charging analytics";
+"analytics.charging.retry" = "Retry";
+"analytics.charging.a11ySurface" = "Charging analytics";
+
+/* --- Native chrome: VoiceOver value nouns --- */
+"analytics.charging.a11yTypes" = "charger types";
+"analytics.charging.a11ySessions" = "sessions";
+"analytics.charging.a11yRanges" = "ranges";
+"analytics.charging.a11yHours" = "hours";
+"analytics.charging.a11yNoData" = "No data";
