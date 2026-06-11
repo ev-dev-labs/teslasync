@@ -1,0 +1,237 @@
+================================================================================
+P4 · Dashboard widget · 0045 — EnergyFlowAnimatedWidget (Apple)
+Run: 2026-06-11T01:32-0700   Host: Darwin arm64   Branch: auto/20260611-013149-26127/4
+Base: 8713e1f0e
+Prompt: P4/dashboard-widgets/0045 — EnergyFlowAnimatedWidget
+Web source (spec): web/src/features/dashboard/widgets/EnergyFlowAnimatedWidget.tsx
+Registry (canonical): web/src/features/dashboard/widgets/registry/energy.ts → "energy-flow-animated"
+Mode: code-complete + REAL host gates. KMP Shared.xcframework BUILT this run + staged;
+      full-app xcodebuild ATTEMPTED for real (iPhone 16 sim) — fails ONLY on a
+      pre-existing, unrelated cross-slot error in ONE OTHER surface; DEFERRED to the
+      P4 acceptance gate (precedent 0046 EnergyFlowWidget; ADR-012 macOS CI).
+================================================================================
+
+=== CAPABILITY PROBE (real, this host) ===
+  swift / Xcode .............. Apple Swift 6.3.2, Xcode 26.5 (Build 17F42)             ✅
+  active developer dir ....... /Applications/Xcode.app/Contents/Developer (full Xcode) ✅
+  swiftc -typecheck SwiftUI .. compiles for BOTH arm64-apple-macos15.0 AND
+                               arm64-apple-ios18.0-simulator (Canvas / TimelineView /
+                               contentTransition / ContentUnavailableView / @Observable),
+                               zero warnings                                            ✅
+  iOS Simulator .............. iPhone 16 (83717DEE-…) BOOTED + available                ✅
+  swiftlint / swiftformat .... /opt/homebrew/bin/{swiftlint,swiftformat}                ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh; -SelfTest PASS                   ✅
+  KMP Shared.xcframework ..... BUILT this run (gradle :core:assembleSharedXCFramework,
+                               BUILD SUCCESSFUL in 8m50s, warm cache) + staged to
+                               Frameworks/ (ios-arm64 / ios-arm64-simulator / macos-arm64) ✅
+  codesign identities ........ macOS-app signing not exercised (ADR-012 → signed runner) ⚠
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit (web
+  "Charts/maps used: (none)" — the flow diagram is a bespoke SVG, ported to a SwiftUI
+  Canvas + positioned node views). The core requirement is SwiftUI, which IS available
+  and is proven by REAL iOS-18 + macOS-15 SDK compiles below. The capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore does NOT apply — the
+  surface is authored, host-validated, AND its tests executed for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/EnergyFlowAnimatedWidget.*) ===
+  EnergyFlowAnimatedWidget.Models.swift   253  domain value types (vehicle-state DTO with
+                                               ±0.5 kW drive dead-band; node/arrow/projection +
+                                               enums; compact chip + summary)
+  EnergyFlowAnimatedWidget.Builder.swift  163  pure cached→projection adapter (ALWAYS three
+                                               nodes/arrows; compact summary; stroke/visibility math)
+  EnergyFlowAnimatedWidget.Palette.swift   58  arrow/chip Tailwind colors (cyan/emerald/amber) +
+                                               header glyph + token chrome (uncolored node glyphs)
+  EnergyFlowAnimatedWidget.Model.swift    340  P1/S8 state-holder seam + P1/S11 telemetry + P1/S10
+                                               strings + value fmt (per-node precision) + a11y
+  EnergyFlowAnimatedWidget.Diagram.swift  230  EnergyFlowAnimatedDiagram — Canvas arrows (animated
+                                               dash) + positioned nodes
+  EnergyFlowAnimatedWidget.Compact.swift   72  EnergyFlowAnimatedCompactView — 1-col layout
+                                               (hero %, charging/consuming/regen chips, Idle)
+  EnergyFlowAnimatedWidget.swift          251  the surface (glass shell + header + every state +
+                                               compact branch) + registration/slug
+  EnergyFlowAnimatedWidget.Previews.swift 118  #if DEBUG previews — one per state
+                                               (consuming/regen/charging/loading/empty/error/offline/compact)
+  EnergyFlowAnimatedWidget.Tests.swift    387  XCTest: adapter + model + registry + formatting + a11y
+                                               (33 methods, EXECUTED below)
+  EnergyFlowAnimatedWidget.strings         50  P1/S10 catalog (7 source keys + 2 registry + 14 native-chrome)
+  Every file ≤400 lines (house file_length); largest 387 (Tests). One exported view per file.
+
+=== PARITY (vs web EnergyFlowAnimatedWidget.tsx — distinct from sibling EnergyFlowWidget) ===
+  Data sources → bound via the shared state-holder seam (EnergyFlowAnimatedSource → …Model):
+    useVehicles, useVehicleState(id, refetchInterval 5s), useTranslation. The production app wires
+    the source over the KMP VehiclesStore (StateHolderModel<LoadableState<…>>), resolving the
+    selected vehicle the way the web's `vehicleId ?? vehicles[0].id` does; the view performs NO HTTP.
+  Projection → EnergyFlowAnimatedBuilder.buildProjection is a 1:1 port of the web memoized nodes/arrows.
+    The animated widget's distinguishing behaviours are ALL reproduced + unit-asserted:
+      • ±0.5 kW drive dead-band (web `power > 0.5` / `power < -0.5`, NOT 0) — drive shows Drive/Regen/Idle.
+      • nodes ALWAYS all three: battery(left,%), drive(right,kW@1 or dash), charger(top,kW@0 or dash)
+        — the charger is present even when unplugged (web nodes memo is unconditional), unlike the sibling.
+      • arrows ALWAYS all three: battery→drive(cyan), drive→battery(emerald), charger→battery(amber);
+        inactive arrows carry value 0 (minimal stroke, no marching dash).
+      • node glyphs are UNCOLORED (web icons carry no Tailwind color → inherit --text-primary).
+    Stroke ∝ magnitude (1..4); compact keeps the 3 largest. Verified by EXECUTED XCTest (33/33) below.
+  Compact (web `CompactView`, size.cols < 2) → EnergyFlowAnimatedCompactView: hero `{batteryLevel}%`
+    above ordered active chips (charging→Plug/amber, consuming→Zap/cyan, regen→Battery/emerald, each at
+    1 decimal kW), else "Idle". Surface picks CompactView for cols<2, the full diagram otherwise.
+  Composition → glass widget shell (Zap→`bolt.fill` cyan-400 + "Energy Flow" title + freshness chip +
+    refresh + optional Open) · EnergyFlowAnimatedDiagram (Canvas-stroked arrows with marching-dash flow +
+    node circles: SF Symbol + live value + label outside the ring). Recharts→none / Leaflet→none.
+    Web SVG <line>/<circle>/<foreignObject> → Canvas + positioned SwiftUI views (crisp symbols +
+    numericText value). lucide→SF: Zap→bolt.fill, Battery→battery.100percent, Plug→powerplug.fill.
+  States (all render) → loading (skeleton chrome) · empty ("No energy data available", web
+    `state?…:EmptyState`) · error (Retry) · stale (chip + banner) · offline (cached + chip + banner) ·
+    content (compact or diagram). Model phase resolution keeps cached content visible behind
+    refresh/errors (web shell behaviour). The web shell only passes `isError` (freshness), so the
+    prompt-required hard-error state (no cache) renders a Retry affordance, matching the 0046 precedent.
+  i18n → all 7 source keys (namespace "dashboard": widget.energyFlowAnimated.{title,battery,drive,regen,
+    idle,charger,noData}) resolve through the P1/S10 facade with the web t(key,default) fallback.
+    Used-vs-defined key diff = 0 drift (23 used == 23 defined). No English literals in native code
+    (every Text routes through EnergyFlowAnimatedStrings / Text(verbatim:)).
+  a11y → the diagram is one image element with a localized label ("Energy flow diagram") + a per-node
+    value summary (e.g. "Battery 72%. Drive 18.4 kW. Charger 11 kW"); the compact view is one element
+    with its own spoken summary ("Battery 55%. Charger 11.0 kW" / "Battery 80%. Idle"); every button
+    (refresh / retry / open) has an accessibilityLabel; Dynamic Type via tokens; Reduce Motion pauses the
+    dash + snaps the value roll.
+  Telemetry → EnergyFlowAnimatedModel.start() emits viewOpened(surface:"EnergyFlowAnimatedWidget") →
+    bridges the shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test.
+  Registry → EnergyFlowAnimatedWidget.registration: id "energy-flow-animated", category "energy",
+    default 2×4, min 2×4, max 3×40 (+ clamp()), matching registry/energy.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the 8 source files (+ Previews under -D DEBUG) compiled together with the REAL
+    design tokens (apps/design/generated/apple/Tokens.swift) + the shared DashboardWidgetInfra
+    (DashboardWidgetSize/Registration REUSED, not redefined) + the REAL TSSkeleton struct (extracted
+    verbatim from Sources/Components/Feedback/Skeletons.swift), under the project's real build mode, for
+    BOTH SDKs:
+      xcrun --sdk macosx          swiftc -typecheck -target arm64-apple-macos15.0          -swift-version 6 -strict-concurrency=complete -D DEBUG …
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 -strict-concurrency=complete -D DEBUG …
+      MACOS_TYPECHECK_EXIT=0    IOS_TYPECHECK_EXIT=0    (zero warnings on both)             ✅
+
+[2] Isolated SwiftPM build + EXECUTED XCTest — the 7 source files + the Tests file + the REAL Tokens /
+    DashboardWidgetInfra + the verbatim TSSkeleton were assembled into a throwaway SwiftPM package
+    (Swift 6 language mode, macOS 15 host) and `swift test` was RUN (real adapter/model/registry/
+    formatting/a11y, not a typecheck):
+      Test Suite 'All tests' passed — Executed 33 tests, with 0 failures (0 unexpected)
+        EnergyFlowAnimatedBuilderTests       13/13  (nil→empty; ALWAYS-three nodes+arrows when not
+                                                    charging; consuming positions/units/values; consuming/
+                                                    regen arrows; ±0.5 dead-band → Idle for 0/0.4/0.5/-0.4/
+                                                    -0.5; dead-band edges 0.6/-0.6 engage Drive/Regen;
+                                                    charging→active charger kW@0; compact chip ordering
+                                                    charging/consuming/regen; compact idle + nil; visibleArrows
+                                                    compact top-3; maxArrowValue floor=1; stroke 0/half/max+guard)
+        EnergyFlowAnimatedModelTests         10/10  (loading/empty/error/content phase resolution; cache-
+                                                    behind-error; view.opened telemetry once; refresh
+                                                    delegation; connection+projection+compactSummary tracking;
+                                                    compact threshold cols<2)
+        EnergyFlowAnimatedRegistryTests       2/2   (canonical energy-flow-animated/energy/2×4/2×4/3×40 + clamp)
+        EnergyFlowAnimatedAccessibilityTests  8/8   (one-decimal magnitude; whole-number percent; kW honors
+                                                    decimals 1 vs 0; accessibleValue by unit; full diagram
+                                                    summary; no-data fallback; compact battery+chips; compact idle)
+      SWIFT_TEST_EXIT=0                                                                     ✅
+
+[3] swiftlint --strict — the 9 surface .swift files (explicit paths, repo .swiftlint.yml):
+      Found 0 violations, 0 serious in 9 files.   SURFACE_SWIFTLINT_EXIT=0                  ✅
+    Whole included tree (the exact gate `cd apps/apple && swiftlint lint --strict`):
+      Done linting! Found 0 violations, 0 serious in 3896 files.   SWIFTLINT_EXIT=0         ✅
+      (Cleaner than the 0046 run, which had 1 pre-existing sibling violation; the tree is now clean.)
+
+[4] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 10 new files):
+      0/4126 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                         ✅
+
+[5] check-placeholders (ADR-011 stub gate; pwsh):
+      Literal prompt path `-Path …/EnergyFlowAnimatedWidget` (a filename PREFIX → resolves to nothing → clean):
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0                                  ✅
+      Real per-file scan of all 10 shipped files (isolated copy, -Language swift):
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0                                  ✅
+      -SelfTest (gate proven to DETECT stubs: dirty→4, NotImplementedException, Kotlin TODO(, opt-out rules):
+        SELFTEST_EXIT=0                                                                     ✅
+      (Independent word-scan of the 10 files for TODO/FIXME/stub/mock/placeholder/Lorem/unimpl: NONE.)
+
+[6] xcodegen generate — the real project generator enumerates the surface into the app + test targets:
+      Created project at apps/apple/TeslaSync.xcodeproj   XCODEGEN_EXIT=0                   ✅
+      All 10 EnergyFlowAnimatedWidget.* files referenced (60 pbxproj refs = 10 files × 6): the 8 source
+      files + Previews → app targets (TeslaSync / TeslaSync-macOS); EnergyFlowAnimatedWidget.Tests.swift →
+      the XCTest bundles; EnergyFlowAnimatedWidget.strings → resources. (TeslaSync.xcodeproj is gitignored.)
+
+=== GATE — XCODE FULL-APP build (ATTEMPTED FOR REAL; DEFERRED on an UNRELATED cross-slot error) ===
+    Prereq done this run: the app target links the KMP core, so the Shared.xcframework (absent at start —
+    Frameworks/ had only .gitkeep) was BUILT and staged for real:
+      apps/shared/gradlew :core:assembleSharedXCFramework  →  BUILD SUCCESSFUL in 8m50s
+      staged → apps/apple/Frameworks/Shared.xcframework  (ios-arm64 / ios-arm64-simulator / macos-arm64)  ✅
+
+    xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator -configuration Debug
+               CODE_SIGNING_ALLOWED=NO build
+      → ** BUILD FAILED ** with exactly 1 error. The KMP framework linked and ~thousands of files entered
+        compilation; my surface's resource was processed clean
+        (CopyStringsFile … EnergyFlowAnimatedWidget.strings, "detected encoding … UTF-8", no error). The
+        single failure is a PRE-EXISTING, UNRELATED Swift-6 escaping-closure bug in ONE OTHER surface
+        (committed by 40e1e5da0 "add AIGeofenceAwareAutomationSuggestions surface", NOT in this prompt's
+        allowed-files scope):
+          shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+            error: escaping closure captures non-escaping parameter 'content'
+            (private func glass(@ViewBuilder _ content: () -> some View) … TSGlassPanel { content() })
+      ZERO of the errors are in EnergyFlowAnimatedWidget.* (this surface uses uniquely `EnergyFlowAnimated`-
+      prefixed types and REUSES the shared DashboardWidgetSize/Registration — a fresh tree-wide grep for
+      `EnergyFlowAnimated` returned 0 pre-existing matches, so no cross-slot type collision is possible from
+      this surface). This surface's compilation in the REAL iOS-18 and macOS-15 SDKs is independently PROVEN
+      green by step [1], and its full test suite EXECUTED green by step [2].
+      IOS_BUILD = DEFERRED (real attempt red on an unrelated sibling bug; not faked green)
+      MAC_BUILD = DEFERRED (the same AIGeofenceAware… file is compiled into the macOS app target, so the
+                            macOS build fails identically; macOS additionally needs a signing identity,
+                            per ADR-012 → signed macos-latest runner)
+    Resolution owner: the P4 acceptance gate (p4-apple/P99-0001) runs after the integration prompt fixes
+    cross-slot surface bugs; fixing AIGeofenceAwareAutomationSuggestions is out of scope here.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content + compact) — implemented;
+      each has a #if DEBUG preview; phase + compact logic unit-tested + EXECUTED (33/33).
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — used-vs-defined diff = 0 (23 == 23).
+  [x] Accessibility labels on every interactive element; diagram + compact each carry a value summary.
+  [x] Tests: adapter unit test + per-state model test + registry + formatting + a11y — EXECUTED 33/33 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (dual-SDK typecheck / executed tests / lint / format / placeholder / xcodegen).
+      Full-app xcodebuild ATTEMPTED with a freshly-built KMP framework; DEFERRED on an unrelated cross-slot
+      bug in ONE OTHER surface (0 errors in this surface), per the 0046 disposition + ADR-012.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the full-app iOS build is shown ** BUILD FAILED ** (red) with its literal error —
+                       NOT relabeled green. Every "✅" is a command actually run here with its real exit code.
+  2  No scope narrowing: implemented ALL nodes/arrows/states + compact layout + i18n + a11y + telemetry +
+                       registry; reproduced the animated-widget-specific ±0.5 dead-band + always-three nodes.
+  3  No skip-and-assume: each host gate executed; the KMP framework was actually built (8m50s) and the real
+                       app build actually run to the failing file — nothing assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the web node/arrow derivation + compact view + full diagram + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit the shared Localizable.xcstrings (strings shipped as the per-surface
+                       table) and did NOT touch other slots' files; REUSED the shared DashboardWidgetSize/
+                       Registration rather than redefining them.
+  8  No commit on red  : the only red is a PRE-EXISTING, UNRELATED bug in AIGeofenceAwareAutomationSuggestions
+                       (out of this prompt's allowed files); THIS surface is green on every gate that scopes
+                       to it (typecheck ×2 SDKs, executed tests 33/33, lint, format, placeholder, xcodegen).
+                       Committing the surface is the user-approved P4 disposition (precedent 0046).
+  9  No silent drift   : changes confined to the allowed EnergyFlowAnimatedWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native EnergyFlowAnimatedWidget shipped at parity with the web source: pure-Swift
+  domain port (EXECUTED-green adapter+model+a11y, 33/33), P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every state + compact layout + i18n key + a11y label, registry-correct (energy-flow-animated,
+  energy, 2×4/2×4/3×40). The animated-widget-specific behaviours (±0.5 kW drive dead-band, always-three
+  nodes/arrows with the charger present even when unplugged, uncolored node glyphs, the 1-column compact
+  view) are all reproduced and asserted. The bespoke flow diagram is reproduced with a SwiftUI Canvas
+  (magnitude-weighted, marching-dash arrows) + positioned node views (Reduce-Motion-aware). All surface-
+  scoped + host-runnable gates pass; the KMP Shared.xcframework was built + staged and the full iOS-Simulator
+  `xcodebuild build` was run for real — it fails ONLY on a pre-existing escaping-closure bug in ONE OTHER
+  surface (AIGeofenceAwareAutomationSuggestions; 0 errors in this code), which the P4 acceptance gate
+  resolves post-integration. STATUS=DONE.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/EnergyFlowAnimatedWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0045-EnergyFlowAnimatedWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add EnergyFlowAnimatedWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE
