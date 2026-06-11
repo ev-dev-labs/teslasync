@@ -1,0 +1,52 @@
+=== P2 Feature view 0295 QuickStatsGrid (Windows) ===
+timestamp=2026-06-10T21:57:40.1957786-07:00
+os=Microsoft Windows 10.0.26200
+dotnet=10.0.300
+--- CAPABILITY (WinUI 3 / Windows App SDK + .NET 10) ---
+sdk_10_present=True
+windowsdesktop_10_runtime=True
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-04\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:02:18.68
+BUILD_EXIT=0
+--- TEST: headless unit suite (Category!=UIAutomation) ---
+Test run for D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed: 16619, Skipped:     0, Total: 16619, Duration: 12 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+--- UIAUTOMATION (Category=UIAutomation): environment capability probe ---
+winappdriver_exe_present=False
+winappdriver_port_4723_listening=False
+UIAUTOMATION_RUNNER=absent (WinAppDriver/Appium not installed; nothing on http://127.0.0.1:4723/)
+UIAUTOMATION_NOTE=147 Category=UIAutomation whole-app shell/nav/a11y E2E tests fail-fast without the runner BY DESIGN (W9-0002, never silently skipped); they do not target QuickStatsGrid and are run separately when a runner is provisioned. Not counted toward this surface gate.
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+--- PLACEHOLDER: shipped feature-view files ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+BUILD_EXIT=0 TEST_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
