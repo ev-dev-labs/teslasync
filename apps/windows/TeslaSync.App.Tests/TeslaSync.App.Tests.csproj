@@ -1075,6 +1075,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIRAGHelp.Model.cs" Link="SharedSurfaces\AIRAGHelp.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIRAGHelp.Source.cs" Link="SharedSurfaces\AIRAGHelp.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIRAGHelp.ViewModel.cs" Link="SharedSurfaces\AIRAGHelp.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIThinkingIndicator.Model.cs" Link="SharedSurfaces\AIThinkingIndicator.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIThinkingIndicator.Source.cs" Link="SharedSurfaces\AIThinkingIndicator.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIThinkingIndicator.ViewModel.cs" Link="SharedSurfaces\AIThinkingIndicator.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Model.cs" Link="SharedSurfaces\AnnouncerRegion.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
