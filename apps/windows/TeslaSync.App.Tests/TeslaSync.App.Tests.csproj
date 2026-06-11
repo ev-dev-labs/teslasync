@@ -535,6 +535,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Model.cs" Link="FeatureViews\ChargingTab\ChargingTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Source.cs" Link="FeatureViews\ChargingTab\ChargingTab.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.ViewModel.cs" Link="FeatureViews\ChargingTab\ChargingTab.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingTelemetrySection\ChargingTelemetrySection.Model.cs" Link="FeatureViews\ChargingTelemetrySection\ChargingTelemetrySection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChartsRow.Model.cs" Link="FeatureViews\ChartsRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChatMessageItem.Model.cs" Link="FeatureViews\ChatMessageItem.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Model.cs" Link="FeatureViews\ClientUtilitiesSection.Model.cs" />
@@ -1912,4 +1913,5 @@
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
   </ItemGroup>
 
+</Project>
 </Project>
