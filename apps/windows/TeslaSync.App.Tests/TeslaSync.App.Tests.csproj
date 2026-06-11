@@ -922,103 +922,17 @@
     Compile-linked into the single ItemGroup below (the Link mirrors each source's real location under
     FeatureViews\ or Widgets\); the WinUI view files themselves are exercised by the app build. The
     matching test classes live under this project and are picked up by the SDK default-compile glob. The
-    Content links copy the units-golden, Package.appxmanifest and widget-template fixtures the
-    packaging / units-golden / widget tests read out of the test output directory.
+    Content links copy the units-golden, Package.appxmanifest and widget-template fixtures the tests read
+    from the test output directory.
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every WinUI-free logic source on disk under
-    dashboard-widgets/ and feature-views/ (every .cs that does not reference Microsoft.UI; the bare WinUI
-    view files, and the WinUI-referencing ResponseViewer.Snippet.cs, are excluded). This file carries the
-    .gitattributes "merge=union" strategy, so a chain of integration merges had repeatedly re-concatenated
-    it into multiple Project roots plus duplicate Compile items and orphaned comment prose, failing XML
-    load (MSB4025 / MSB4067 / NETSDK1022); re-consolidated for P2 feature-views/0267 SignalCompareControls
-    into this single canonical root, regenerated directly from the WinUI-free sources on disk plus the new
-    SignalCompareControls.Model link. Do NOT re-concatenate, and never write a literal build-item or
-    project start tag inside this comment.
-    Include-deduplicated Compile ItemGroup. A chain of integration merges had repeatedly re-concatenated
-    this file into multiple roots, duplicate Compile items and broken XML comments (failing XML load as
-    MSB4025 / MSB4067); re-consolidated for P2 feature-views/0257 TeslaApiUsageCard into this single
-    canonical root. Do NOT re-concatenate, and never write a literal build-item or project start tag
-    inside this comment.
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Projection / Registry / diagnostics) for each
-    feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and
-    cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources
-    are Compile-linked into the single ItemGroup below (the Link mirrors each source's real location
-    under FeatureViews\ or Widgets\); the WinUI views themselves are exercised by the app build. The
-    matching test classes live under this project and are picked up by the SDK default-compile glob.
-    The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures the
-    packaging / units-golden / widget tests read out of the test output directory.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs with a
-    role suffix on disk under feature-views/ and dashboard-widgets/ (the bare WinUI view files are
-    excluded). This file carries the .gitattributes "merge=union" strategy, so a chain of integration
-    merges had repeatedly re-concatenated it into multiple Project roots plus duplicate Compile items and
-    orphaned comment prose, failing XML load (MSB4025 / MSB4067). Re-consolidated for P2
-    feature-views/0270 SignalSelector into this single canonical root, regenerated directly from the
-    WinUI-free sources on disk (plus the new SignalSelector Model / ViewModel links). Do NOT
-    re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
-    this comment.
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
-    logic (Model / Source / ViewModel / Projection / Registry / diagnostics) for each feature-view and
-    dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced
-    from a plain net10.0 test host, so each surface's WinUI-free sources are Compile-linked into the single
-    ItemGroup below (the Link mirrors each source's real location under FeatureViews\ or Widgets\); the WinUI
-    views themselves are exercised by the app build. The matching test classes live under this project and are
-    picked up by the SDK default-compile glob.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) source on disk
-    under dashboard-widgets/ and feature-views/ (the WinUI view files are excluded). This file carries the
-    .gitattributes merge=union strategy, so a chain of integration merges had repeatedly re-concatenated it into
-    multiple Project roots plus duplicate Compile items, failing XML load (MSB4025); re-consolidated for P2
-    feature-views/0268 SignalDiffTable by regenerating the Compile ItemGroup directly from the WinUI-free sources
-    on disk (which adds the new SignalDiffTable Model / Source / ViewModel links). Do NOT re-concatenate, and
-    never write a literal build-item or project start tag inside this comment.
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Projection / Registry / diagnostics) for each
-    feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and cannot
-    be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
-    Compile-linked into the single ItemGroup below (the Link mirrors each source's real location under
-    FeatureViews\ or Widgets\); the WinUI views themselves are exercised by the app build. The matching test
-    classes live under this project and are picked up by the SDK default-compile glob. The Content links copy
-    the units-golden, Package.appxmanifest and widget-template fixtures the tests read from the output dir.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted, Include-deduplicated
-    Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk under feature-views/ and
-    dashboard-widgets/ (the bare WinUI view files are excluded). This file carries the .gitattributes
-    merge=union strategy, so a chain of integration merges had repeatedly re-concatenated it into multiple
-    Project roots plus duplicate Compile items, failing XML load (MSB4025). Re-consolidated for P2
-    feature-views/0271 SignalSparklinePreview by regenerating the Compile ItemGroup directly from the
-    WinUI-free sources on disk (which adds the SignalSparklinePreview Model / Source / ViewModel links). Do
-    NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
-    this comment.
-    feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and
-    cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources
-    are Compile-linked into the single ItemGroup below (the Link mirrors each source's real location
-    under FeatureViews\ or Widgets\); the WinUI views themselves are exercised by the app build. The
-    matching test classes live under this project and are picked up by the SDK default-compile glob.
-    The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures the
-    packaging / units-golden / widget tests read out of the test output directory.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on
-    disk under feature-views/ and dashboard-widgets/ (the bare WinUI view files are excluded). This file
-    carries the .gitattributes "merge=union" strategy, so a chain of integration merges had repeatedly
-    re-concatenated it into multiple Project roots plus duplicate Compile items, failing XML load
-    (MSB4025 / MSB4067). Re-consolidated for P2 feature-views/0272 SignalStatsPanel into this single
-    canonical root, regenerated directly from the WinUI-free sources on disk (which adds the new
-    SignalStatsPanel.Model link). Do NOT re-concatenate into multiple roots, and never write a literal
-    build-item or project start tag inside this comment.
-    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk
-    under feature-views/ and dashboard-widgets/ (the bare WinUI view files are excluded). A chain of
-    integration merges had repeatedly re-concatenated this file into multiple Project roots plus duplicate
-    Compile items, failing XML load (MSB4025 / MSB4067); re-consolidated for P2 feature-views/0276
-    FleetSummary into this single canonical root, regenerated directly from the WinUI-free sources on disk
-    (plus the new FleetSummary Model / Source / ViewModel links). Do NOT re-concatenate into multiple
-    roots, and never write a literal build-item or project start tag inside this comment.
+    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) logic
+    source on disk under dashboard-widgets/ and feature-views/ (the bare WinUI view files are excluded).
+    This file carries the .gitattributes merge=union strategy, so a chain of integration merges had
+    repeatedly re-concatenated it into multiple Project roots plus duplicate Compile items and orphaned
+    comment prose, failing XML load (MSB4025 / MSB4067 / NETSDK1022); re-consolidated for P2
+    feature-views/0299 TirePressureSection into this single canonical root. Do NOT re-concatenate into
+    multiple roots, and never write a literal build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -1055,10 +969,6 @@
   </ItemGroup>
 
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union). -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -1431,6 +1341,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Model.cs" Link="FeatureViews\ChargingTab\ChargingTab.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.Source.cs" Link="FeatureViews\ChargingTab\ChargingTab.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.ViewModel.cs" Link="FeatureViews\ChargingTab\ChargingTab.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingTelemetrySection\ChargingTelemetrySection.Model.cs" Link="FeatureViews\ChargingTelemetrySection\ChargingTelemetrySection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChartsRow.Model.cs" Link="FeatureViews\ChartsRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChatMessageItem.Model.cs" Link="FeatureViews\ChatMessageItem.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Model.cs" Link="FeatureViews\ClientUtilitiesSection.Model.cs" />
@@ -1498,6 +1409,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\ElevationChart.ViewModel.cs" Link="FeatureViews\ElevationChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.Model.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EndpointSidebar\EndpointSidebar.ViewModel.cs" Link="FeatureViews\EndpointSidebar\EndpointSidebar.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EnergyChargingPanel\EnergyChargingPanel.Model.cs" Link="FeatureViews\EnergyChargingPanel\EnergyChargingPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EntriesTable\EntriesTable.Model.cs" Link="FeatureViews\EntriesTable\EntriesTable.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentalImpact.Model.cs" Link="FeatureViews\EnvironmentalImpact.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentalImpact.Source.cs" Link="FeatureViews\EnvironmentalImpact.Source.cs" />
@@ -1615,11 +1527,15 @@
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveStatusPill\LiveStatusPill.Model.cs" Link="FeatureViews\LiveStatusPill\LiveStatusPill.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetry\LiveTelemetry.Model.cs" Link="FeatureViews\LiveTelemetry\LiveTelemetry.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" Link="FeatureViews\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.Model.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.Source.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.ViewModel.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LoadingSkeleton.Model.cs" Link="FeatureViews\LoadingSkeleton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MarkdownRenderer\MarkdownRenderer.Model.cs" Link="FeatureViews\MarkdownRenderer\MarkdownRenderer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MediaNavigationPanel\MediaNavigationPanel.Model.cs" Link="FeatureViews\MediaNavigationPanel\MediaNavigationPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MediaNavigationPanel\MediaNavigationPanel.Source.cs" Link="FeatureViews\MediaNavigationPanel\MediaNavigationPanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MediaNavigationPanel\MediaNavigationPanel.ViewModel.cs" Link="FeatureViews\MediaNavigationPanel\MediaNavigationPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MiniGridPreview\MiniGridPreview.Model.cs" Link="FeatureViews\MiniGridPreview\MiniGridPreview.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MonthlyCostChart\MonthlyCostChart.Model.cs" Link="FeatureViews\MonthlyCostChart\MonthlyCostChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MonthlyCostTable\MonthlyCostTable.Model.cs" Link="FeatureViews\MonthlyCostTable\MonthlyCostTable.Model.cs" />
@@ -1706,6 +1622,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Model.cs" Link="FeatureViews\SavingsSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.Source.cs" Link="FeatureViews\SavingsSlide.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsSlide.ViewModel.cs" Link="FeatureViews\SavingsSlide.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.Model.cs" Link="FeatureViews\SecurityPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.Source.cs" Link="FeatureViews\SecurityPanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.ViewModel.cs" Link="FeatureViews\SecurityPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.Model.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.Source.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.ViewModel.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.ViewModel.cs" />
@@ -1769,6 +1688,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsRow.Model.cs" Link="FeatureViews\SummaryStatsRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Model.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Source.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.ViewModel.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryPipelineCard.Model.cs" Link="FeatureViews\TelemetryPipelineCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryPipelineCard.Source.cs" Link="FeatureViews\TelemetryPipelineCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryPipelineCard.ViewModel.cs" Link="FeatureViews\TelemetryPipelineCard.ViewModel.cs" />
@@ -1799,6 +1721,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.Model.cs" Link="FeatureViews\TimeToChargeSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.Source.cs" Link="FeatureViews\TimeToChargeSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.ViewModel.cs" Link="FeatureViews\TimeToChargeSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TirePressurePanel\TirePressurePanel.Model.cs" Link="FeatureViews\TirePressurePanel\TirePressurePanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TirePressurePanel\TirePressurePanel.Source.cs" Link="FeatureViews\TirePressurePanel\TirePressurePanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TirePressurePanel\TirePressurePanel.ViewModel.cs" Link="FeatureViews\TirePressurePanel\TirePressurePanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TirePressureSection\TirePressureSection.Model.cs" Link="FeatureViews\TirePressureSection\TirePressureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TirePressureSection\TirePressureSection.Source.cs" Link="FeatureViews\TirePressureSection\TirePressureSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TirePressureSection\TirePressureSection.ViewModel.cs" Link="FeatureViews\TirePressureSection\TirePressureSection.ViewModel.cs" />
