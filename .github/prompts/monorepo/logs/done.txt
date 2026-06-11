@@ -615,3 +615,4 @@ p2-windows/shared-meaningful/W-0107-TimelineScrubber.prompt.md
 p2-windows/shared-meaningful/W-0110-UserCell.prompt.md
 p2-windows/shared-meaningful/W-0114-BrowserCompatBanner.prompt.md
 p2-windows/shared-meaningful/W-0115-CookieConsentBanner.prompt.md
+p2-windows/shared-meaningful/W-0118-EditConflictBanner.prompt.md
