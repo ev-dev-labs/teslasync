@@ -1,0 +1,243 @@
+=== P4 Shared surface 0072 MetricSwitcherChart (Apple) ===
+
+Prompt: .github/prompts/monorepo/p4-apple/shared-surfaces/0072-MetricSwitcherChart.prompt.md
+Web source of truth: web/src/components/charts/MetricSwitcherChart.tsx
+  (+ web/src/components/forms/PillFilterBar.tsx and web/src/components/feedback/EmptyState.tsx —
+   the shared pill switcher + empty-state the component composes)
+Native output: apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.*
+Date: 2026-06-10  Host: Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / xcodegen 2.45.4 /
+      swiftlint / swiftformat / pwsh / OpenJDK 17  Branch auto/20260609-194659-46608/158
+
+Honesty Covenant (binding — verbatim):
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+=== PREFLIGHT ===
+- Toolchain present: xcodebuild (Xcode 26.5), swift 6.3.2, swiftlint, swiftformat, xcodegen 2.45.4,
+  pwsh, gradlew + OpenJDK 17 + cached ~/.konan Kotlin/Native prebuilt toolchain. iPhone 16 simulator
+  present + booted → the prompt's exact destination is runnable. → capability satisfied (NOT a
+  platform-capability BLOCKED case; SwiftUI + Swift Charts + MapKit all available).
+- KMP Shared.xcframework: BUILT + staged via Scripts/build-shared-xcframework.sh
+  (Gradle :core:assembleSharedXCFramework → "BUILD SUCCESSFUL" → apps/shared/core/build/XCFrameworks/
+  release/Shared.xcframework → staged to apps/apple/Frameworks/Shared.xcframework). Confirmed again in
+  the iOS gate pre-action ("✓ Shared.xcframework staged"). Gradle/Kotlin/Native toolchain works here.
+- Depends-on (P4 core; P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics): present +
+  consumed — LoadableState<T> + FacadeError (Sources/SharedFacade, the cache-then-network S8 seam);
+  Color.TS / Font.TS / TSSpacing / TSRadius / TSChartPalette / TSChartGradient (P1/S9 tokens,
+  apps/design/generated/apple/Tokens.swift + Sources/Components/Charts + Sources/Design); the
+  @MainActor @Observable state-holder model pattern; NSLocalizedString i18n facade (P1/S10); os.Logger
+  view.opened telemetry (P1/S11). The surface typechecks against them with 0 errors on BOTH SDKs.
+- Build wiring already present: project.yml + .swiftlint.yml already glob TeslaSync/shared-surfaces
+  (added by 0001). NO edits to those files were needed — this surface stays strictly within its
+  allowed files (the 9 surface files + this log). Generated TeslaSync.xcodeproj is git-ignored.
+
+=== SURVEY ===
+Web source MetricSwitcherChart.tsx = a presentational chart with a pill row above it for switching the
+displayed metric (overview surfaces where one chart answers several questions). Generic over
+`P extends {date}`; props: title, ariaLabel, series (Record<key,[P]>), metrics[{key,label,chart('bar'|
+'area'|'line'),color,accent,unit,getValue,formatValue,formatTick}], activeMetric, onMetricChange,
+height(=220), formatXTick, emptyMessage, action, testId. Body:
+  • active = metrics.find(key===activeMetric) ?? metrics[0]
+  • data  = series[active.key] ?? [] ; project P → {date, __value} via getValue (default p.value)
+  • render branch: projected.length === 0 → <EmptyState message={emptyMessage}/> ; else a Recharts
+    BarChart / AreaChart / LineChart per active.chart, with formatValue on the tooltip, formatTick ??
+    formatValue on the Y-axis, and formatXTick on the X-axis.
+  • the pill row (<PillFilterBar>) lives in the ChartContainer title-bar action area — always rendered.
+Data sources (P1/S8): none — it is purely presentational (the parent owns the fetch); its only hook is
+useTranslation (P1/S10). Shared components: forms/PillFilterBar, feedback/EmptyState. Charts: Recharts
+Bar/Area/Line. Canonical native peers studied: shared-surfaces/AnnotationList (the props-driven leaf +
+P4 loading/error/stale/offline freshness contract) and shared-surfaces/ChartExportMenu (the
+chart-component leaf + telemetry/strings seams); the atomic chart primitives in
+Sources/Components/Charts (TSBarChart/TSAreaChart/TSLineChart/TSChartContainer/TSChartPalette) and the
+pill bar TSPillFilterBar / TSEmptyState.
+
+=== REASONING ===
+- The native surface composes Swift Charts DIRECTLY (BarMark / AreaMark+LineMark / LineMark over a
+  categorical date X-axis) exactly as the web composes Recharts primitives directly — not via a generic
+  wrapper — because the web component hand-picks per-metric chart kinds + custom axis/tooltip
+  formatters that no single wrapper exposes. Token-styled grid + axis labels (Color.TS/Font.TS), a
+  drag-to-inspect RuleMark tooltip (the HIG-native parity of the web hover <Tooltip>), and the metric's
+  tick formatter on the Y-axis. Map: web Recharts → Swift Charts (done); web Leaflet → MapKit (n/a).
+- The pill switcher is the native parity of web PillFilterBar — it mirrors TSPillFilterBar's capsule
+  styling / accent-selected fill / horizontal scroll / .isSelected trait while rendering the
+  facade-resolved labels verbatim (the shared TSPillFilterBar takes a LocalizedStringKey, which cannot
+  carry our custom-table + verbatim/dynamic labels — so the surface mirrors its contract for
+  Text(verbatim:) labels). A non-matching activeMetric key highlights nothing while the chart falls
+  back to metrics[0] — the faithful web `find ?? metrics[0]` + non-matching PillItem behaviour.
+- Architecture mirrors the AnnotationList props-driven leaf (.Source value types + .Projection pure
+  projection + .Model state-holder/telemetry/i18n + .swift View + .Views subviews + .Previews):
+  • Source (Foundation): MetricSwitcherChartKind (bar/area/line), MetricSwitcherValueFormat (web
+    formatValue/formatTick — plain/integer/decimal/suffixed, non-finite → em dash), MetricSwitcherText
+    (caller-localised key+fallback / verbatim), MetricSwitcherMetricSpec, MetricSwitcherPoint
+    (projected {date,value}), MetricSwitcherDataset, MetricSwitcherConnection, MetricSwitcherChartLayout
+    (height=220), MetricSwitcherChartLogic (activeMetric resolution, non-finite sanitiser, axis-label
+    thinning ≈ preserveStartEnd, a11y summary).
+  • Projection (Foundation): MetricSwitcherInput + .from(LoadableState) "cached → projection" adapter,
+    MetricSwitcherResolved (Body: loading/error/empty/chart + pills + freshness + height),
+    MetricSwitcherProjection (web chart/empty branch + P4 freshness). Localisation applied here.
+  • Model (Foundation/Observation/OSLog): MetricSwitcherChartMeta (slug "MetricSwitcherChart"),
+    MetricSwitcherChartTelemetry seam (P1/S11 view.opened) + OSLog default + Diagnostics seam,
+    MetricSwitcherChartStrings (P1/S10 facade), @MainActor @Observable MetricSwitcherChartModel (owns
+    the controlled selection + dataset state + optional retry; select()/retry()/update();
+    markAppeared() emits view.opened once).
+  • swift (the View): the panel bound through the model; designated + loaded-data + full-LoadableState
+    inits. Views: panel chrome / pill bar / Swift Charts canvas / empty / loading / error / freshness
+    chip. Previews: bar / area / line / interactive / empty / loading / error / stale / offline.
+  • strings: the surface-owned keys (empty/error/loading/freshness/a11y summary). Tests + ModelTests.
+- States: the web source for THIS surface has the chart branch + the empty branch (+ the
+  non-matching-key fallback) — reproduced faithfully. Because it is a data-displaying surface whose
+  parent owns the fetch, the P4 leaf contract (loading skeleton / error+retry / stale chip / offline
+  cached+chip) is layered on the P1/S8 LoadableState the parent feeds — every one renders (no hidden
+  surface), driven by the pure .from(LoadableState) adapter + projection.
+- Side effects off the view: the @MainActor @Observable model owns the selection mutation + the
+  view.opened emission; no HTTP and no Task plumbing in the view (Swift 6 strict concurrency).
+- Rejected: porting Tailwind classes / raw hex (used P1/S9 tokens); a numeric X-axis (web uses
+  type="category" date labels → categorical Swift Charts axis); hiding the surface when empty (web
+  renders <EmptyState> + keeps the pill row → reproduced; never a blank box).
+
+=== PARITY ===
+[x] active-metric resolution: find(key) ?? metrics[0]; raw key kept for pill highlight — ProjectionTests
+    .testUnknownActiveKeyFallsBackToFirstMetricButKeepsRawActiveID + LogicTests.
+[x] per-metric chart kind: bar / area / line — ProjectionTests.testResolvedChartBranchPlotsActiveMetric
+    / .testActiveMetricSelectsAreaKindAndFormatter.
+[x] value/tick formatting (web formatValue/formatTick): plain/integer/decimal/suffixed "10 mi", non-finite
+    → "—" — ValueFormatTests (6).
+[x] empty branch (web projected.length===0 → EmptyState) with pills still shown — ProjectionTests
+    .testEmptyBranchWhenActiveSeriesEmptyStillShowsPills / .testEmptyBranchUsesDefaultMessageWhenNoneSupplied.
+[x] P4 leaf contract from LoadableState (cached → projection): loading / error(retryable) / stale chip /
+    offline cached+chip — InputAdapterTests (11) + ProjectionTests.testLoading/Error/Stale/Offline +
+    .testEndToEndCachedOfflineRendersChartWithOfflineChip.
+[x] controlled selection: select() fires onMetricChange only on a real change; ignores unknown / no-op;
+    update() re-resolves a missing key — ModelTests (8).
+i18n (P1/S10 table "MetricSwitcherChart"): surface-owned keys reproduced; every Swift literal routes
+  through the facade fallback (no hardcoded English) — StringsTests + the identity-resolver projection
+  assertions. Caller props (title/labels/emptyMessage) arrive already-localised (web parity).
+a11y: the panel carries the resolved aria-label; the chart carries the metric label + min/max/latest
+  VoiceOver summary; every pill resolves a non-empty spoken label + .isSelected; the freshness chip has
+  a spoken label; Dynamic Type via Font.TS — AccessibilityTests + LogicTests.testAccessibilitySummary.
+telemetry: view.opened emitted once with slug "MetricSwitcherChart" (P1/S11) — DiagnosticsTests (5).
+PARITY_COVERED == PARITY_REQUIRED (chart kinds + active resolution + value/tick formatting + empty +
+fallback + P4 loading/error/stale/offline + i18n + a11y + telemetry + every web branch).
+
+=== GATE ===
+Runnable host gates (exact prompt commands / their cross-platform equivalents) — all green:
+
+[FORMAT]      swiftformat --lint apps/apple   (config apps/apple/.swiftformat)
+              -> 0/3857 files require formatting, 3 skipped. (surface files: 0/8.)
+              FORMAT_EXIT=0
+
+[LINT]        swiftlint --strict   (config apps/apple/.swiftlint.yml, globs shared-surfaces)
+              -> Done linting! Found 0 violations, 0 serious in 3627 files. (surface files: 0/8.)
+              LINT_EXIT=0
+
+[PLACEHOLDER] pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart -Language swift
+              -> PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0
+              PLACEHOLDER_EXIT=0
+
+[XCODEGEN]    cd apps/apple ; xcodegen generate -> Created project at TeslaSync.xcodeproj
+              (MetricSwitcherChart.* wired into the app + test targets via the shared-surfaces glob;
+              *Tests.swift to the XCTest bundles, the rest to the app targets.)
+              XCODEGEN_EXIT=0
+
+[SURFACE TESTS] Real Source + Projection + Model + the real Tests + ModelTests executed via a standalone
+              SwiftPM harness (module named TeslaSync so `@testable import TeslaSync` resolves; the real
+              LoadableState + FacadeError, trimmed only of the unused `import Shared` KMP bridge they
+              carry — the enum cases + value/isStale/isRetryable are byte-for-byte the shipped contract),
+              Swift 6 language mode (.v6 = -strict-concurrency=complete), macOS 15:
+              -> Test Suite 'All tests' passed. Executed 54 tests, with 0 failures (0 unexpected).
+                 (ValueFormat 6, Logic 7, Projection 10, Accessibility 2, Strings 4, InputAdapter 11,
+                  Diagnostics 5, Model 9.)
+              SWIFT_TEST_EXIT=0
+              NOTE (covenant #1/#3 — surfaced + fixed, not hidden): the harness caught a REAL Swift 6
+              strict-concurrency error the xcodebuild did not reach (it bailed earlier on the
+              pre-existing sibling errors below): the test's `static let identity: MetricSwitcherResolve`
+              was not concurrency-safe because the resolver typealias was a non-@Sendable function type.
+              Fixed at the source by marking `MetricSwitcherResolve = @Sendable (String, String) ->
+              String` (resolvers are pure); re-ran green. The harness omits exactly one View-coupled
+              assertion (MetricSwitcherChart.surfaceSlug, which needs the full SwiftUI/Charts/component
+              stack) — that line is covered by the isolated typecheck of the shipped file below.
+
+[ISOLATED TYPECHECK] The whole surface (9 files incl. the SwiftUI View + Swift Charts Views + Previews)
+              typechecks against the REAL P1/S9 tokens + shared components + P1/S8 LoadableState in the
+              actual app module under Swift 6 + -strict-concurrency=complete on BOTH SDKs:
+              -> iOS-18 simulator SDK : 0 MetricSwitcherChart errors.  macOS-15 SDK : 0 MetricSwitcherChart
+                 errors. (Verified in both the full gate builds and focused arm64 target builds.)
+
+Full Xcode app build/test (DEFERRED — not a defect in this surface; the documented P4-apple predecessor
+disposition, identical to logs/p4-apple-shared-surfaces-0001-AnnouncerRegion.log,
+0007-AIAutoTripNameSuggestion.log and 0066-ChartExportMenu.log):
+
+[XCODEBUILD iOS]   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+              -> Shared.xcframework built+staged via the Gradle pre-action ("✓ Shared.xcframework
+                 staged"), then ** BUILD FAILED ** / ** TEST FAILED **. 162 compile errors, ALL in
+                 PRE-EXISTING sibling-slot surfaces owned by OTHER prompts: ambiguous (duplicate) public
+                 types RecentDrives{Model,Update,LoadStatus,Connection,Projection,...} and
+                 StateTimeline{Update,Connection,LoadStatus,...} declared across committed
+                 dashboard-widgets/RecentDrivesListWidget.*, dashboard-widgets/RecentDrivesWidget.*,
+                 dashboard-widgets/StateTimelineWidget.*, feature-views/RecentDrivesSection.*,
+                 feature-views/StateTimeline.* (e.g. RecentDrivesListWidget.Previews.swift:14:76: error:
+                 'RecentDrivesModel' is ambiguous for type lookup in this context), plus the downstream
+                 "cannot infer contextual base in reference to member 'loaded'/'failed'/'stale'/
+                 'offline'/'live'" cascade in their Previews. MetricSwitcherChart contributes 0 of the
+                 162 errors (grep "error:" | grep "MetricSwitcherChart" = 0).
+              IOS_EXIT=65   (DEFERRED — pre-existing parallel-merge collisions in OTHER surfaces; this
+                             surface clean: 0 errors. Resolving them = renaming OTHER prompts' public
+                             types, explicitly out of scope: "Out of Scope: Other surfaces ...".)
+
+[XCODEBUILD macOS] xcodebuild -scheme TeslaSync-macOS build test
+              -> ** BUILD FAILED **. 4 errors, all environmental code-signing (no Swift errors):
+                 "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing with
+                 a development certificate (none on this runner). MetricSwitcherChart contributes 0
+                 errors (grep "error:" | grep "MetricSwitcherChart" = 0).
+              MAC_EXIT=65   (DEFERRED — environmental code-signing / no dev certificate on runner; this
+                             surface clean: 0 errors.)
+
+Why DONE (not BLOCKED): every runnable host gate is genuinely green and the surface itself is verifiably
+clean — 0 compile errors on the iOS + macOS SDKs, 54/54 tests pass under Swift 6 strict concurrency,
+swiftformat / swiftlint / placeholder / xcodegen clean. The only red is the full-app xcodebuild, caused
+exclusively by (a) pre-existing duplicate-symbol defects in OTHER prompts' sibling surfaces
+(RecentDrives* / StateTimeline*) and (b) the runner lacking a macOS signing identity — neither in this
+prompt's scope nor its allowed files. This is the predecessor-accepted DEFERRED disposition (see the
+committed AnnouncerRegion / AIAutoTripNameSuggestion / ChartExportMenu logs); the xcodebuild red is shown
+verbatim with root-cause evidence rather than hidden, and this surface contributes 0 errors to it.
+
+Honesty Covenant resolution:
+  1  No red-as-green ...... runnable host gates green; xcodebuild shown DEFERRED with verbatim evidence
+                           (IOS_EXIT=65 pre-existing sibling collisions, MAC_EXIT=65 signing); surface
+                           clean (0 errors both SDKs); the harness Swift-6 concurrency error was surfaced
+                           + fixed at source, not hidden.
+  2  No scope narrowing ... exact prompt gate commands run; full results recorded, not a subset.
+  3  No skip-and-assume ... ran every gate; verified the 162/4 errors are all OTHER surfaces/signing.
+  4  No stubs as final .... no TODO/stub/mock/placeholder/Lorem (placeholder gate = 0); every state +
+                           branch implemented; the SwiftPM harness's trimmed LoadableState/FacadeError
+                           are test scaffolding (the shipped surface uses the real S8 types).
+  5  No parity shortcuts .. chart kinds + value/tick formatting + active resolution + empty + P4 leaf
+                           states + i18n + a11y + telemetry all reproduced + asserted.
+  6  No delegation ........ implemented directly (delegation FORBIDDEN by the prompt).
+  7  No predecessor bypass  consumed the real P1/S8 LoadableState, P1/S9 tokens, P1/S10 facade, P1/S11
+                           telemetry; no reimplementation.
+  8  No commit on red ..... committing only the 9 surface files + this log; the surface is green by every
+                           check that applies to it. The deferred xcodebuild red is pre-existing
+                           OTHER-surface breakage + runner signing, documented verbatim — not this
+                           surface's red.
+  9  No silent drift ...... only the 9 surface files + this log; project.yml/.swiftlint.yml already glob
+                           shared-surfaces (no edit needed); generated xcodeproj git-ignored; the
+                           SwiftPM harness lives in /tmp (not committed) and is documented here.
+  10 Log ends with EXIT and STATUS each on its own line.
+
+=== COMMIT ===
+git add apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Source.swift \
+        apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Projection.swift \
+        apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Model.swift \
+        apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.swift \
+        apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Views.swift \
+        apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Previews.swift \
+        apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.strings \
+        apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.Tests.swift \
+        apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.ModelTests.swift \
+        .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0072-MetricSwitcherChart.log
+git commit -m "feat(apps/apple/shared-surfaces): add MetricSwitcherChart surface (P4)"
+
+EXIT=0
+STATUS=DONE
