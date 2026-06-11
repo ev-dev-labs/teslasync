@@ -8,14 +8,14 @@ namespace TeslaSync.App.FeatureViews;
 
 /// <summary>
 /// UI-thread-free state holder backing the WinUI <see cref="TirePressureSection"/> view — the native port of
-/// the web drive-detail Tire-Pressure chart
-/// (web/src/features/driving/components/drive-detail/TirePressureSection.tsx). The web component is a pure
-/// child of the Drive-Detail page; the native surface binds its own cache-then-network
+/// the web vehicle-detail Tire-Pressure section
+/// (web/src/features/vehicles/components/vehicle-detail/TirePressureSection.tsx). The web component is a pure
+/// child that receives its <c>tireData</c> prop; the native surface binds its own cache-then-network
 /// <see cref="ITirePressureSectionSource"/>, projects each snapshot through
-/// <see cref="TirePressureSectionProjection"/> in the user's units, applies the web empty gate (a drive whose
-/// corners carry no tyre pressure renders the friendly "No telemetry data available" empty state), and exposes
-/// the mutually-exclusive <see cref="State"/> plus the header freshness flags so the view is a thin renderer.
-/// Drive it from one confinement (the UI thread); it is not internally synchronised.
+/// <see cref="TirePressureSectionProjection"/> in the user's units (a present snapshot is always content; only
+/// the absence of a snapshot is the empty state, matching the web truthy-<c>tireData</c> gate), and exposes the
+/// mutually-exclusive <see cref="State"/> plus the header freshness flags so the view is a thin renderer. Drive
+/// it from one confinement (the UI thread); it is not internally synchronised.
 /// </summary>
 public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisposable
 {
@@ -23,7 +23,7 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
     private readonly ILocalizer _localizer;
 
     private CancellationTokenSource? _cts;
-    private IReadOnlyList<TirePressureSample> _lastSamples = Array.Empty<TirePressureSample>();
+    private TirePressureReading? _lastReading;
     private bool _disposed;
 
     private UnitPref _units;
@@ -37,7 +37,7 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
     private int _attempts;
 
     /// <summary>Creates the holder over its data source, localizer and (optional) unit preference.</summary>
-    /// <param name="source">The cache-then-network drive-telemetry source.</param>
+    /// <param name="source">The cache-then-network latest-snapshot source.</param>
     /// <param name="localizer">The i18n facade resolving every label.</param>
     /// <param name="units">The user's unit preference (web <c>useUnits</c>); defaults to metric when null.</param>
     public TirePressureSectionViewModel(
@@ -50,7 +50,7 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
         _source = source;
         _localizer = localizer;
         _units = units ?? UnitPref.Metric;
-        _display = TirePressureSectionProjection.Empty(_units, _localizer);
+        _display = TirePressureSectionProjection.Empty(_localizer);
     }
 
     /// <inheritdoc />
@@ -63,7 +63,7 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
         private set => Set(ref _state, value);
     }
 
-    /// <summary>The projected, render-ready display model (chrome + stat tiles + line series).</summary>
+    /// <summary>The projected, render-ready display model (chrome + corner tiles).</summary>
     public TirePressureSectionDisplay Display
     {
         get => _display;
@@ -75,7 +75,7 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
         }
     }
 
-    /// <summary>The user's unit preference; reassigning re-projects the chart + tiles in the new units.</summary>
+    /// <summary>The user's unit preference; reassigning re-projects the corner tiles in the new units.</summary>
     public UnitPref Units
     {
         get => _units;
@@ -89,9 +89,9 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
 
             _units = value;
             Raise(nameof(Units));
-            if (HasContent())
+            if (_lastReading is { } reading)
             {
-                Display = TirePressureSectionProjection.Project(_lastSamples, _units, _localizer);
+                Display = TirePressureSectionProjection.Project(reading, _units, _localizer);
             }
         }
     }
@@ -138,15 +138,15 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
         private set => Set(ref _attempts, value);
     }
 
-    /// <summary>True when at least one corner reported a reading (web <c>stats.hasTirePressure</c>).</summary>
+    /// <summary>True when a snapshot is present (web truthy <c>tireData</c>).</summary>
     public bool HasData => _display.HasData;
 
-    /// <summary>Localized surface title (web "Tire Pressure During Drive").</summary>
+    /// <summary>Localized surface title (web "Tire Pressure").</summary>
     public string Title => TirePressureSectionRegistration.Name(_localizer);
 
-    /// <summary>Localized empty-state message (web "No telemetry data available").</summary>
+    /// <summary>Localized empty-state message (web "No tire pressure data available").</summary>
     public string EmptyMessage =>
-        _localizer.GetString("driveDetail.noChartData", "No telemetry data available");
+        _localizer.GetString("vehicles.detail.noTireData", "No tire pressure data available");
 
     /// <summary>Localized loading announcement for the skeleton live region.</summary>
     public string LoadingLabel => _localizer.GetString("common.loading", "Loading");
@@ -156,11 +156,11 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
 
     /// <summary>Localized error-surface title.</summary>
     public string ErrorTitle =>
-        _localizer.GetString("driveDetail.tirePressure.errorTitle", "Couldn't load tire-pressure telemetry");
+        _localizer.GetString("vehicles.detail.tirePressure.errorTitle", "Couldn't load tire pressure");
 
     /// <summary>Localized refresh-button Narrator label.</summary>
     public string RefreshLabel =>
-        _localizer.GetString("driveDetail.tirePressure.refresh", "Refresh tire pressure");
+        _localizer.GetString("vehicles.detail.tirePressure.refresh", "Refresh tire pressure");
 
     /// <summary>Localized stale freshness-chip label.</summary>
     public string StaleChip => _localizer.GetString("common.stale", "Stale");
@@ -227,7 +227,7 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
     private bool HasContent() =>
         _state is TirePressureSectionState.Loaded or TirePressureSectionState.Stale or TirePressureSectionState.Offline;
 
-    private void Apply(RepositoryResult<IReadOnlyList<TirePressureSample>> result)
+    private void Apply(RepositoryResult<TirePressureReading> result)
     {
         switch (result.Status)
         {
@@ -267,25 +267,15 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
     }
 
     private void ApplySnapshot(
-        IReadOnlyList<TirePressureSample> samples,
+        TirePressureReading reading,
         DateTimeOffset? fetchedAt,
         bool stale,
         bool fetching,
         RepositoryError? error,
         bool offline = false)
     {
-        var display = TirePressureSectionProjection.Project(samples, _units, _localizer);
-
-        // Web parity: stats.hasTirePressure gates the chart; anything else renders the empty state regardless
-        // of freshness.
-        if (!display.HasData)
-        {
-            SetEmpty(fetchedAt);
-            return;
-        }
-
-        _lastSamples = samples;
-        Display = display;
+        _lastReading = reading;
+        Display = TirePressureSectionProjection.Project(reading, _units, _localizer);
         UpdatedAt = fetchedAt;
         IsFetching = fetching;
         IsStale = stale;
@@ -305,8 +295,8 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
 
     private void SetEmpty(DateTimeOffset? fetchedAt)
     {
-        _lastSamples = Array.Empty<TirePressureSample>();
-        Display = TirePressureSectionProjection.Empty(_units, _localizer);
+        _lastReading = null;
+        Display = TirePressureSectionProjection.Empty(_localizer);
         UpdatedAt = fetchedAt;
         IsFetching = false;
         IsStale = false;
@@ -328,16 +318,16 @@ public sealed class TirePressureSectionViewModel : INotifyPropertyChanged, IDisp
     {
         string key = error?.Kind switch
         {
-            RepositoryErrorKind.Unauthorized => "driveDetail.tirePressure.error.auth",
-            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "driveDetail.tirePressure.error.offline",
-            _ => "driveDetail.tirePressure.error",
+            RepositoryErrorKind.Unauthorized => "vehicles.detail.tirePressure.error.auth",
+            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "vehicles.detail.tirePressure.error.offline",
+            _ => "vehicles.detail.tirePressure.error",
         };
 
         string fallback = error?.Kind switch
         {
-            RepositoryErrorKind.Unauthorized => "Sign in to view tire-pressure telemetry",
-            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "You're offline — showing the last cached tire-pressure telemetry",
-            _ => "Couldn't load tire-pressure telemetry",
+            RepositoryErrorKind.Unauthorized => "Sign in to view tire pressure",
+            RepositoryErrorKind.Offline or RepositoryErrorKind.Network => "You're offline — showing the last cached tire pressure",
+            _ => "Couldn't load tire pressure",
         };
 
         return _localizer.GetString(key, fallback);
