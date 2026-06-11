@@ -199,3 +199,4 @@ p3-android/dashboard-widgets/A-0057-LiveSignalSparklinesWidget.prompt.md
 p3-android/dashboard-widgets/A-0063-MediaNowPlayingWidget.prompt.md
 p3-android/dashboard-widgets/A-0064-MileageStatsWidget.prompt.md
 p3-android/dashboard-widgets/A-0062-MediaHistoryWidget.prompt.md
+p3-android/dashboard-widgets/A-0065-MonthlyMileageWidget.prompt.md
