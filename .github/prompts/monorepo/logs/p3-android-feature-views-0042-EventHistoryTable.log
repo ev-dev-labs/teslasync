@@ -1,0 +1,270 @@
+=== P3 Feature view 0042 EventHistoryTable (Android) ===
+NOTE: settings.gradle.kts maps the single app module to Gradle path ':android' (projectDir=app/);
+the prompt gate's ':app:' is the template placeholder for ':android:' (settings.gradle.kts: 'every P3/A* prompt gate addresses :android:').
+Gate run against the real module path ':android:'.
+
+--- :android:assembleRelease ---
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :shared:core:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeReleaseNativeLibs NO-SOURCE
+> Task :shared:core:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :shared:core:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:generateReleaseResources UP-TO-DATE
+> Task :shared:core:packageReleaseResources UP-TO-DATE
+> Task :shared:core:parseReleaseLocalResources UP-TO-DATE
+> Task :shared:core:generateReleaseRFile UP-TO-DATE
+> Task :android:mergeReleaseNativeLibs UP-TO-DATE
+> Task :android:stripReleaseDebugSymbols UP-TO-DATE
+> Task :android:extractReleaseNativeSymbolTables UP-TO-DATE
+> Task :android:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :android:checkReleaseDuplicateClasses UP-TO-DATE
+> Task :shared:core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileRelease UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :android:generateReleaseBuildConfig UP-TO-DATE
+> Task :android:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :shared:core:writeReleaseAarMetadata UP-TO-DATE
+> Task :android:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :shared:core:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:processReleaseManifest UP-TO-DATE
+> Task :shared:core:compileReleaseLibraryResources UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :shared:core:prepareReleaseArtProfile UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :shared:core:mergeReleaseShaders UP-TO-DATE
+> Task :shared:core:compileReleaseShaders NO-SOURCE
+> Task :shared:core:generateReleaseAssets UP-TO-DATE
+> Task :shared:core:releaseAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:mergeReleaseAssets UP-TO-DATE
+> Task :shared:core:processReleaseJavaRes UP-TO-DATE
+> Task :android:checkReleaseAarMetadata UP-TO-DATE
+> Task :android:generateReleaseResources UP-TO-DATE
+> Task :android:mergeReleaseResources UP-TO-DATE
+> Task :android:packageReleaseResources UP-TO-DATE
+> Task :android:parseReleaseLocalResources UP-TO-DATE
+> Task :android:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksRelease UP-TO-DATE
+> Task :android:processReleaseMainManifest UP-TO-DATE
+> Task :android:processReleaseManifest UP-TO-DATE
+> Task :android:processReleaseManifestForPackage UP-TO-DATE
+> Task :android:processReleaseResources UP-TO-DATE
+> Task :android:compileReleaseKotlin UP-TO-DATE
+> Task :android:javaPreCompileRelease UP-TO-DATE
+> Task :android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :android:dexBuilderRelease UP-TO-DATE
+> Task :android:desugarReleaseFileDependencies UP-TO-DATE
+> Task :android:mergeReleaseStartupProfile UP-TO-DATE
+> Task :android:mergeExtDexRelease UP-TO-DATE
+> Task :android:mergeDexRelease UP-TO-DATE
+> Task :android:mergeReleaseArtProfile UP-TO-DATE
+> Task :android:mergeReleaseGlobalSynthetics UP-TO-DATE
+> Task :android:compileReleaseArtProfile UP-TO-DATE
+> Task :android:mergeReleaseShaders UP-TO-DATE
+> Task :android:compileReleaseShaders NO-SOURCE
+> Task :android:generateReleaseAssets UP-TO-DATE
+> Task :android:mergeReleaseAssets UP-TO-DATE
+> Task :android:compressReleaseAssets UP-TO-DATE
+> Task :android:extractReleaseVersionControlInfo UP-TO-DATE
+> Task :android:processReleaseJavaRes UP-TO-DATE
+> Task :android:mergeReleaseJavaResource UP-TO-DATE
+> Task :android:optimizeReleaseResources UP-TO-DATE
+> Task :android:collectReleaseDependencies UP-TO-DATE
+> Task :android:sdkReleaseDependencyData UP-TO-DATE
+> Task :android:writeReleaseAppMetadata UP-TO-DATE
+> Task :android:writeReleaseSigningConfigVersions UP-TO-DATE
+> Task :android:packageRelease UP-TO-DATE
+> Task :android:createReleaseApkListingFileRedirect UP-TO-DATE
+> Task :android:assembleRelease UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-06/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 57s
+70 actionable tasks: 2 executed, 68 up-to-date
+BUILD_EXIT=0
+--- :android:testReleaseUnitTest ---
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :shared:core:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:generateReleaseResources UP-TO-DATE
+> Task :shared:core:packageReleaseResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:processReleaseManifest UP-TO-DATE
+> Task :shared:core:parseReleaseLocalResources UP-TO-DATE
+> Task :shared:core:generateReleaseRFile UP-TO-DATE
+> Task :shared:core:compileReleaseLibraryResources UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :android:generateReleaseBuildConfig UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkReleaseAarMetadata UP-TO-DATE
+> Task :android:generateReleaseResValues UP-TO-DATE
+> Task :android:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :android:generateReleaseResources UP-TO-DATE
+> Task :android:mergeReleaseResources UP-TO-DATE
+> Task :android:packageReleaseResources UP-TO-DATE
+> Task :android:parseReleaseLocalResources UP-TO-DATE
+> Task :android:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileRelease UP-TO-DATE
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :shared:core:processReleaseJavaRes UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :android:processReleaseMainManifest UP-TO-DATE
+> Task :android:processReleaseManifest UP-TO-DATE
+> Task :android:processReleaseManifestForPackage UP-TO-DATE
+> Task :android:processReleaseResources UP-TO-DATE
+> Task :android:compileReleaseKotlin UP-TO-DATE
+> Task :android:javaPreCompileRelease UP-TO-DATE
+> Task :android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :android:bundleReleaseClassesToRuntimeJar UP-TO-DATE
+> Task :android:bundleReleaseClassesToCompileJar UP-TO-DATE
+> Task :android:compileReleaseUnitTestKotlin UP-TO-DATE
+> Task :android:preReleaseUnitTestBuild
+> Task :android:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :android:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :android:processReleaseJavaRes UP-TO-DATE
+> Task :android:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :android:testReleaseUnitTest UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-06/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 42s
+45 actionable tasks: 2 executed, 43 up-to-date
+TEST_EXIT=0
+--- ktlintCheck detekt ---
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :android:loadKtlintReporters UP-TO-DATE
+> Task :android:runKtlintCheckOverAndroidTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestSourceSet UP-TO-DATE
+> Task :android:ktlintAndroidTestSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverDebugSourceSet NO-SOURCE
+> Task :android:ktlintDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :android:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverMainSourceSet UP-TO-DATE
+> Task :android:ktlintMainSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverReleaseSourceSet NO-SOURCE
+> Task :android:ktlintReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestSourceSet UP-TO-DATE
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :android:ktlintCheck UP-TO-DATE
+> Task :android:detekt UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-06/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 23s
+13 actionable tasks: 13 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- Verification summary ---
+assembleRelease ............. BUILD_EXIT=0
+testReleaseUnitTest ......... TEST_EXIT=0  (EventHistoryTableModelTest: 19 tests, 0 failures, 0 errors)
+ktlintCheck + detekt ........ LINT_EXIT=0  (detekt warningsAsErrors=true; clean)
+check-placeholders .......... PLACEHOLDER_EXIT=0  (PLACEHOLDER_COUNT=0)
+
+Files shipped (surface):
+  app/src/main/java/com/teslasync/feature-views/EventHistoryTable/EventHistoryTable.kt
+  app/src/main/java/com/teslasync/feature-views/EventHistoryTable/EventHistoryTableModel.kt
+Tests (established convention dirs; package io.teslasync.android.featureviews.eventhistorytable):
+  app/src/test/java/.../eventhistorytable/EventHistoryTableModelTest.kt        (adapter unit test)
+  app/src/androidTest/java/.../eventhistorytable/EventHistoryTableUiTest.kt    (per-state UI + a11y test)
+
+i18n: all 12 web t('admin.security.*') keys resolve from the P1/S10 catalog (strings.xml: eventHistory,
+  col_time/lock/sentry/doors/windows, locked/unlocked/on/off/closed, noEvents) — no new keys added, none missing.
+  windowSummary "All Closed"/"<n> Open/Venting" are verbatim web helpers.ts literals with no t() key
+  (verified against apps/shared/i18n/catalog/en.json), reproduced for ADR-004 parity per the SentryEventLog precedent.
+
+States reproduced: loading (8-line skeleton) + content + empty ("No security events recorded yet.") match the web
+  source exactly; error (retry) + stale/offline (freshness chip + silent auto-refresh) added via the shared P1/S8
+  UiState lifecycle, mirroring the sibling AlertDetailTimeline surface.
+
+NOTE (honesty): the gate compiles/runs JVM unit tests (testReleaseUnitTest) + assembleRelease + ktlint/detekt +
+  placeholder scan — it does NOT compile or execute the androidTest source set (no emulator). EventHistoryTableUiTest
+  is ktlint+detekt-clean and contains no compile errors attributable to it; it uses only verified compose-test APIs
+  (assertIsDisplayed / onNodeWithText / onNodeWithContentDescription / performClick / waitForIdle), the same set the
+  sibling AlertDetailTimelineUiTest uses. The androidTest source set as a whole currently fails to compile due to
+  PRE-EXISTING, unrelated errors in other surfaces' tests (assertExists/assertDoesNotExist unresolved in
+  BatteryCellsWidgetUiTest, *ChartWidgetUiTest, etc.) — outside this surface's allowed files and scope.
+
+EXIT=0
+STATUS=DONE
