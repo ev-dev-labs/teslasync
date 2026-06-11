@@ -1,0 +1,135 @@
+=== P4 Shared surface 0063 AnnotationList (Apple) ===
+Web source : web/src/components/charts/AnnotationList.tsx
+Native out : apps/apple/TeslaSync/shared-surfaces/AnnotationList.*
+Runner     : macOS 26 · Xcode 26.5 (17F42) · Swift 6.3.2 · xcodegen 2.45.4 · swiftlint/swiftformat (brew) · pwsh · OpenJDK 17
+
+────────────────────────────────────────────────────────────────────────
+CAPABILITY (prompt: "requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG;
+if unavailable → BLOCKED"). AVAILABLE on this runner — the Apple toolchain is present and was
+exercised end to end (xcodegen generate, swiftc typecheck against the macOS 15 SDK under Swift 6
+strict concurrency, a compiled+RUN logic harness, the Kotlin/Native Shared.xcframework built via
+Gradle, and full iOS-Simulator + macOS xcodebuild). This surface uses SwiftUI only (web source has
+no charts/maps — "Charts / maps used: (none)"), so Swift Charts / MapKit are not required here.
+
+────────────────────────────────────────────────────────────────────────
+ARTIFACT (9 files, all AnnotationList.* — the only files this prompt may touch)
+  AnnotationList.swift            — the shared surface View (phase switch + faithful web-`null` withdraw)
+  AnnotationList.Adapter.swift    — pure core: category(+ANNOTATION_COLORS swatch +labels), item,
+                                     availability, connectivity, empty policy, meta slug, #rrggbb
+                                     decoder, VoiceOver builders
+  AnnotationList.Projection.swift — pure input→resolved projection (loading/error/empty/withdrawn/
+                                     populated + freshness + presentsContent), localized
+  AnnotationList.Model.swift      — P1/S8 source seam (Live+InMemory), @Observable @MainActor model
+                                     (start/stop/refresh/remove, one-shot stale auto-refresh,
+                                     once-only view.opened P1/S11), P1/S10 i18n facade
+  AnnotationList.Views.swift      — header(title+freshness chip)/row(swatch+label+desc+timestamp+
+                                     remove)/loading skeleton/empty/error subviews (P1/S9 tokens only)
+  AnnotationList.Previews.swift   — #Preview per state (loading/error/empty/withdrawn/live/stale/offline)
+  AnnotationList.strings          — i18n table "AnnotationList": web-verbatim annotation.listTitle +
+                                     annotation.remove, ANNOTATION_CATEGORY_LABELS, P4 leaf chrome
+  AnnotationList.AdapterTests.swift — pure-core unit tests (incl. ANNOTATION_COLORS hex parity)
+  AnnotationList.Tests.swift      — projection per-state + model + a11y + view-composition tests
+
+PARITY (web → native, faithful + complete)
+  • Title `t('annotation.listTitle','Annotations')` (uppercase tracking) → header label.
+  • Per-row `ANNOTATION_COLORS[category]` swatch (milestone #3b82f6 / maintenance #f59e0b /
+    trip #22c55e / issue #ef4444 / upgrade #a855f7 / custom #94a3b8) reproduced VERBATIM + asserted.
+  • Bold label, optional `— description` (web `hidden … sm:inline` → shown on regular width,
+    hidden on compact, always in the VoiceOver label), right-aligned timestamp.
+  • Ghost `X` remove control `aria-label t('annotation.remove','Remove annotation')` → main-actor
+    onRemove callback (web `onRemove` prop), danger tint on hover.
+  • Web `if (annotations.length === 0) return null` reproduced as the `.withdraw` empty policy;
+    the P4 "never a blank box" default `.emptyState` renders a friendly empty state. Both tested.
+  • P4 leaf axes added over the web body: loading skeleton, QueryError-peer retry, stale chip +
+    one-shot auto-refresh, offline chip. Every state renders.
+
+────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+  1  No red-as-green     : every exit code below is the REAL captured value. The two full-app
+                           xcodebuild gates are RED (65) and are reported as such with file:line
+                           root-cause evidence; they are NOT claimed to pass.
+  2  No scope narrowing  : all web render branches reproduced (withdraw + populated) PLUS the full
+                           P4 leaf state set (loading/error/empty/stale/offline). No state dropped.
+  3  No skip-and-assume  : web source read end-to-end; ANNOTATION_COLORS + ANNOTATION_CATEGORY_LABELS
+                           + both t() keys taken verbatim from web/src/types/annotations.ts and the tsx.
+  4  No stubs as final   : check-placeholders PLACEHOLDER_COUNT=0 (literal gate path AND a real scan
+                           of the 8 .swift files); no TODO/stub/mock/placeholder/Lorem shipped.
+  5  No parity shortcuts : colour swatch asserted equal to the web hex; row/empty/error/freshness all
+                           implemented; a11y labels fold in the category name the swatch encodes.
+  6  No delegation       : implemented directly; no sub-agents / background delegation of the work.
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius),
+                           P1/S10 i18n facade, P1/S11 view.opened telemetry all honoured; types
+                           prefixed `AnnotationList*` to avoid collision with the sibling
+                           AddAnnotationPopover / atomic TSAnnotationList in the single app module.
+  8  No commit on red    : the committed artifact is GREEN on every gate within this surface's
+                           allowed-files scope (format, lint --strict, placeholder, compiled+RUN
+                           71/71 harness, full Views typecheck incl. both #if DEBUG branches against
+                           the REAL design system, xcodegen). The full-app iOS/macOS xcodebuild gates
+                           are RED for PRE-EXISTING, out-of-scope reasons (proof below) — this surface
+                           contributes ZERO errors to either, verified by grep over both build logs.
+  9  No silent drift     : only the 9 AnnotationList.* files are new (git status verified — nothing
+                           else modified). project.yml / .swiftlint.yml already glob shared-surfaces
+                           (no edit). xcodeproj + Shared.xcframework are git-ignored build artifacts.
+  10 EXIT/STATUS below.
+
+────────────────────────────────────────────────────────────────────────
+GATE COMMANDS / EXITS (real, captured)
+  swiftformat --lint (8 surface files) ............... FORMAT_EXIT=0   (0/8 require formatting)
+  swiftlint --strict (8 surface files) ............... LINT_EXIT=0     (0 violations, 0 serious)
+  check-placeholders.ps1 -Path …/AnnotationList ...... PLACEHOLDER_EXIT=0  (literal gate path)
+  check-placeholders.ps1 (real scan of 8 .swift) ..... PLACEHOLDER_COUNT=0 (meaningful verification)
+  isolated logic harness (swiftc -swift-version 6
+     -strict-concurrency=complete, then RUN) ......... HARNESS_BUILD_EXIT=0  HARNESS_RUN_EXIT=0
+                                                        HARNESS_CHECKS=71  HARNESS_FAILURES=0
+  Views typecheck vs REAL design system (no DEBUG) ... TYPECHECK_SHIP_EXIT=0
+  Views+Previews typecheck vs REAL design system ..... TYPECHECK_DEBUG_EXIT=0   (-D DEBUG)
+     (swiftc -typecheck, macOS 15 SDK target, Swift 6 strict concurrency; Tokens + real
+      TSButton/TSCard/TSSkeleton/TSFadeIn/Typography/Badges/TSMaterial closure)
+  test-file API typecheck (tests + surface, 1 unit) .. surface-API errors = 0
+     (the only -typecheck errors are XCTest's C assertion macros, which resolve only inside an
+      XCTest bundle — the deferred TeslaSyncTests target; zero reference an AnnotationList symbol)
+  xcodegen generate .................................. XCODEGEN_EXIT=0   (AnnotationList → 54 pbxproj
+                                                        refs across TeslaSync + TeslaSync-macOS + the
+                                                        TeslaSyncTests / TeslaSync-macOSTests bundles)
+  Shared.xcframework via Gradle (Kotlin/Native) ...... GRADLE_EXIT=0   (BUILD SUCCESSFUL; debug+release
+                                                        XCFrameworks written; staged to Frameworks/)
+  xcodebuild iOS (build test, iPhone 16) ............. IOS_EXIT=65  [DEFERRED — see below]
+  xcodebuild macOS (build test) ...................... MAC_EXIT=65  [DEFERRED — see below]
+
+DEFERRED FULL-APP GATES — ROOT CAUSE (pre-existing, out of this surface's allowed-files scope)
+  IOS_EXIT=65: the app module has DUPLICATE type declarations in two sibling surface slots, e.g.
+      StateTimelineModel       @ TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:104
+                               AND TeslaSync/feature-views/StateTimeline.Model.swift:64
+      StateTimelineConnection  @ TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:52
+                               AND TeslaSync/feature-views/StateTimeline.Adapter.swift:125
+      (and RecentDrives{Model,Connection,LoadStatus,Update} likewise). The compiler reports these as
+      "ambiguous for type lookup", which cascades into RecentDrivesListWidget.*/StateTimelineWidget.*/
+      SummaryStats*/SummarySlide*/SuggestedPrompts*. These files are BASELINE (git status: untracked
+      changes = only the 9 AnnotationList.* files). `grep -iE "AnnotationList.*error|error.*AnnotationList"`
+      over the full iOS build log returns NOTHING — this surface contributes 0 errors. Fixing the
+      duplicates is out of scope (this prompt may touch only AnnotationList.*). Deferred to the
+      P4 acceptance gate per the established 34-surface precedent.
+  MAC_EXIT=65: the macOS targets (TeslaSync-macOS, TeslaSyncWidgets-macOS) declare entitlements that
+      "require signing with a development certificate"; the runner has no dev-signing identity, so the
+      build-for-test is rejected before/independent of compilation (0 "ambiguous" lines reached the
+      macOS log). Runner-infrastructure limitation, not a code defect; 0 AnnotationList errors.
+
+────────────────────────────────────────────────────────────────────────
+DISPOSITION
+Production-polished, Apple-idiomatic AnnotationList shipped at parity with the web source and
+INDEPENDENTLY VERIFIED on this runner: its pure gate/projection/model/telemetry/auto-refresh/
+accessibility/colour-parity logic is RUN-proven by 71/71 isolated assertions under Swift 6 strict
+concurrency; its SwiftUI Views + Previews type-check against the REAL design system (Color.TS,
+TSButton, TSSkeleton, TSFadeIn, …) on the macOS 15 SDK on BOTH #if DEBUG branches; swiftformat /
+swiftlint --strict / placeholder are all green on the surface; xcodegen enumerates all 9 files into
+the TeslaSync + TeslaSync-macOS app and test targets; and the Kotlin/Native Shared.xcframework the
+app links was built from source. The full-app iOS-Simulator + macOS `xcodebuild build test` gates
+are RED (IOS_EXIT=65 / MAC_EXIT=65) for PRE-EXISTING, out-of-scope reasons — the sibling-slot
+StateTimeline*/RecentDrives* duplicate-type ambiguities (iOS) and the absent macOS development-
+signing certificate (macOS), both catalogued in apps/macos-pending-verifications.md — to which this
+surface contributes ZERO errors (verified by grep over both build logs). Per the established
+shared-surface precedent these two gates are DEFERRED to the P4 acceptance gate on a signed
+macos-latest runner with the sibling duplicate-type fix; every gate within this surface's scope is 0.
+
+EXIT=0
+STATUS=DONE
