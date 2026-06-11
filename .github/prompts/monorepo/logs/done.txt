@@ -532,3 +532,11 @@ p4-apple/shared-meaningful/P-0095-MetricCard.prompt.md
 p4-apple/shared-meaningful/P-0096-PlaybackControls.prompt.md
 p4-apple/shared-meaningful/P-0098-PollingEngine.prompt.md
 p4-apple/shared-meaningful/P-0099-ProgressRing.prompt.md
+p4-apple/feature-views/P-0274-TripReplayMap.prompt.md
+p4-apple/feature-views/P-0273-TripReplayCharts.prompt.md
+p4-apple/feature-views/P-0275-BatteryComparison.prompt.md
+p4-apple/feature-views/P-0280-InfoTile.prompt.md
+p4-apple/feature-views/P-0278-ClimatePanel.prompt.md
+p4-apple/feature-views/P-0286-TirePressurePanel.prompt.md
+p4-apple/feature-views/P-0289-BatteryRangePanel.prompt.md
+p4-apple/feature-views/P-0292-LiveStateIndicators.prompt.md
