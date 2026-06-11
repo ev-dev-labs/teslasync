@@ -17004,6 +17004,27 @@
   <data name="translation.shortcuts.title" xml:space="preserve">
     <value>Keyboard Shortcuts</value>
   </data>
+  <data name="translation.signalChart.empty" xml:space="preserve">
+    <value>No data for this time range</value>
+  </data>
+  <data name="translation.signalChart.events" xml:space="preserve">
+    <value>events</value>
+  </data>
+  <data name="translation.signalChart.liveTitle" xml:space="preserve">
+    <value>Live Signal Stream</value>
+  </data>
+  <data name="translation.signalChart.liveWaiting" xml:space="preserve">
+    <value>Waiting for signal data…</value>
+  </data>
+  <data name="translation.signalChart.points" xml:space="preserve">
+    <value>points</value>
+  </data>
+  <data name="translation.signalChart.pointsLoaded" xml:space="preserve">
+    <value>points loaded</value>
+  </data>
+  <data name="translation.signalChart.title" xml:space="preserve">
+    <value>Signal Chart</value>
+  </data>
   <data name="translation.signalDiff.average" xml:space="preserve">
     <value>Average</value>
   </data>
