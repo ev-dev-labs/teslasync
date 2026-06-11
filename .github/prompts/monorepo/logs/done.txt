@@ -547,3 +547,4 @@ p2-windows/shared-meaningful/W-0019-AIFeedbackQueueTriage.prompt.md
 p2-windows/shared-meaningful/W-0020-AIGeofenceAwareAutomationSuggestions.prompt.md
 p2-windows/shared-meaningful/W-0023-AILearnedAnomalyBaselines.prompt.md
 p2-windows/shared-meaningful/W-0021-AIInboxAutoCategorization.prompt.md
+p2-windows/shared-meaningful/W-0030-AINLAutomationBuilder.prompt.md
