@@ -23955,4 +23955,19 @@
   <data name="translation.infrastructure.error.auth" xml:space="preserve">
     <value>Sign in to view infrastructure diagnostics</value>
   </data>
+  <data name="translation.telemetry.signalSparkline.empty" xml:space="preserve">
+    <value>No samples in last hour</value>
+  </data>
+  <data name="translation.telemetry.signalSparkline.nonNumeric" xml:space="preserve">
+    <value>Non-numeric signal ({0})</value>
+  </data>
+  <data name="translation.telemetry.signalSparkline.trend" xml:space="preserve">
+    <value>Signal trend, last hour</value>
+  </data>
+  <data name="translation.telemetry.signalSparkline.error" xml:space="preserve">
+    <value>Couldn't load signal trend</value>
+  </data>
+  <data name="translation.telemetry.signalSparkline.stale" xml:space="preserve">
+    <value>Stale</value>
+  </data>
 </root>
