@@ -182,6 +182,11 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    // Lifecycle ViewModels + Compose binding (P3/A5 data layer): viewModelScope, viewModel(), the
+    // viewModelFactory/initializer DSL, and collectAsStateWithLifecycle.
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
@@ -199,6 +204,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     // SQLDelight runtime — to construct the shared-core offline cache (clear-on-signout, ADR-013).
     implementation(libs.sqldelight.runtime)
+    // kotlinx.serialization JSON — data layer parses the /settings document + handles JsonElement results.
+    implementation(libs.kotlinx.serialization.json)
     debugImplementation(libs.compose.ui.tooling)
 
     // KMP shared core (ADR-004), consumed via composite-build substitution (settings.gradle.kts).
