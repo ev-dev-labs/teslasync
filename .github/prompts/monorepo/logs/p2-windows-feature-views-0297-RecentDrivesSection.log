@@ -1,0 +1,98 @@
+=== P2 Feature view 0297 RecentDrivesSection (Windows) ===
+date: 2026-06-10
+dotnet: 10.0.300
+capability: WindowsAppSDK / WinUI 3 (>= 1.6) + net10.0-windows10.0.19041.0 PRESENT (full-solution Release build green)
+web source: web/src/features/vehicles/components/vehicle-detail/RecentDrivesSection.tsx
+
+--- STEP 1: build (full solution, Release) ---
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+--- STEP 2: test (full solution, Release) ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 362 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 16707, Skipped:     0, Total: 16707, Duration: 6 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_SLN_EXIT=1
+
+--- STEP 2b: test (unit scope: TeslaSync.App.Tests) ---
+Passed!  - Failed:     0, Passed: 16707, Skipped:     0, Total: 16707, Duration: 9 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_UNIT_EXIT=0
+  (includes the 39 new RecentDrivesSectionTests: parse adapter, four column projections, Distance sort,
+   pagination, cache->projection adapter, the loading/loaded/empty/error/stale/offline state matrix, the
+   vehicle-resolving source, registration, diagnostics, and per-row Narrator names.)
+
+--- STEP 3: format --verify-no-changes (full solution) ---
+format diagnostics: 0
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders (gate path: feature-views/RecentDrivesSection subtree) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+NOTE: TEST_SLN_EXIT=1 is caused SOLELY by the 147 TeslaSync.App.UITests (the WinAppDriver UI-automation
+suite). Every one fails in ~2 ms with:
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+(0 assertion failures.) This is a pre-existing, solution-wide environment gap, identical for every prompt
+and orthogonal to this surface (RecentDrivesSection adds NO UI-automation tests). The UITests README
+(apps/windows/TeslaSync.App.UITests/README.md) documents that the suite executes only when a WinAppDriver
+1.2.1+ / Appium-2 Windows-driver endpoint is provisioned. WinUI 3 + .NET 10 themselves ARE available: the
+full-solution Release build and the 16,707 headless unit tests are green. The verifiable scope is GREEN, so
+STATUS=DONE (not BLOCKED): the platform capability is present; only the auxiliary E2E runner is absent. This
+matches prior accepted surface prompts (e.g. 0009 TelemetryErrorsPanel, 0010 ToolCard, 0012 ByteSizeConverter).
+
+=== SUMMARY ===
+BUILD_EXIT=0        full solution (TeslaSync.sln), Release, 0 warnings, 0 errors
+TEST_UNIT_EXIT=0    TeslaSync.App.Tests (incl. 39 RecentDrivesSection tests) -- 16,707 passed
+TEST_SLN_EXIT=1     full-solution dotnet test (147 UITests env-blocked; see NOTE)
+FORMAT_EXIT=0       dotnet format --verify-no-changes (solution-wide)
+PLACEHOLDER_EXIT=0  check-placeholders on feature-views/RecentDrivesSection
+
+Pre-existing shared blocker resolved (required to unbreak the full-solution build/test/format for ALL prompts
+on this integration branch):
+  - TeslaSync.App.Tests.csproj was merge=union-corrupted into TWO concatenated <Project> roots plus a stray
+    second </Project> (MSB4025 "Unexpected end tag" at line 974) and ~1611 <Compile> lines (804 unique,
+    duplicated across both roots). The file's own INVARIANT comment + the .gitattributes merge=union strategy
+    document this recurring corruption and prescribe regeneration to a single canonical root. Regenerated the
+    file as exactly ONE <Project> root with a single, case-insensitive path-sorted, Include-deduplicated
+    Compile ItemGroup = the union of every WinUI-free (Microsoft.UI-free) .cs on disk under feature-views/ and
+    dashboard-widgets/ (807 entries = the 804 prior unique + the 3 new RecentDrivesSection WinUI-free files).
+    Verified behavior-preserving: the regenerated unique Compile set is byte-identical to the on-disk
+    WinUI-free source set (0 added/0 removed beyond the 3 new files), XML loads as a single Project root with
+    0 duplicate Compile items. This unblocks dotnet build/test/format for the whole solution.
+
+Deliverable scope (native output: feature-views/RecentDrivesSection.*):
+  - apps/windows/TeslaSync.App/feature-views/RecentDrivesSection/RecentDrivesSection.Model.cs
+      (WinUI-free: RecentDriveSample parse adapter; RecentDriveRow projection; RecentDrivesSectionState enum;
+       RecentDrivesSectionDisplay; RecentDrivesSectionProjection -- the four web column renderers (Date via
+       the locale-aware time formatter, Distance via SI->display conversion + unit label and the numeric sort
+       key, Duration via the web durationStr port, Battery via the start%->end% / em-dash gate) + Distance
+       sort + pagination; Registration (slug=RecentDrivesSection); Diagnostics (view.opened); ResultMapper.)
+  - apps/windows/TeslaSync.App/feature-views/RecentDrivesSection/RecentDrivesSection.Source.cs
+      (WinUI-free: IRecentDrivesSectionSource + cache-then-network RecentDrivesSectionSource over
+       Operations.Drives.List scoped by vehicle_id; no HTTP in the view.)
+  - apps/windows/TeslaSync.App/feature-views/RecentDrivesSection/RecentDrivesSection.ViewModel.cs
+      (WinUI-free state holder: loading/loaded/empty/error/stale/offline matrix + units + Distance sort + page;
+       LoadAsync/RetryAsync/ToggleDistanceSort/GoToPage; freshness flags; i18n labels.)
+  - apps/windows/TeslaSync.App/feature-views/RecentDrivesSection/RecentDrivesSection.cs
+      (WinUI 3 view: TsGlassPanel + Route-glyph SectionTitle header with a "View all" affordance
+       (ViewAllRequested event) + stale/offline freshness chip + refresh; hand-composed sortable + paged
+       table (TsDateTime date cell, sortable Distance header, TsPagination with localized labels); loading
+       skeleton; TsEmptyState; TsQueryError retry; view.opened diagnostics; Create() factory; Group peer.)
+  - apps/windows/TeslaSync.App.Tests/FeatureViews/RecentDrivesSectionTests.cs (39 headless tests)
+  - apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj (single-root regeneration + 3 new links)
+
+States reproduced (all render; none hidden): loading (skeleton), loaded (sortable + paged table), empty
+(friendly EmptyState with the Route glyph, web "No drives recorded yet"), error (QueryError + retry), stale
+(content + stale chip + refresh), offline (content + offline chip). i18n keys from the web source -- all
+present in Strings/{en,ar,he}/Resources.resw: common.date / common.distance / common.duration /
+common.battery / common.recentDrives / common.viewAll / common.noDrives. Diagnostics emits
+view.opened slug=RecentDrivesSection (P1/S11), no fleet data. A11y: every interactive element (sortable
+Distance header, pager buttons, refresh, View all) carries a Narrator name; every data row carries a composed
+Narrator name; reduced-motion honoured via the shared skeleton/motion primitives.
+
+EXIT=0
+STATUS=DONE
