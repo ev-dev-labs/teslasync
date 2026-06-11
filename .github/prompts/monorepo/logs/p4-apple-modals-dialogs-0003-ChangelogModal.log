@@ -1,0 +1,250 @@
+=== P4 Modal / dialog 0003 ChangelogModal (Apple) ===
+Surface : apps/apple/TeslaSync/modals-dialogs/ChangelogModal.*
+Web src : web/src/components/feedback/ChangelogModal.tsx (THE spec)
+Runner  : Darwin arm64, Xcode 26.5 (17F42), swiftlint, swiftformat, xcodegen 2.45.4,
+          pwsh 7.x, OpenJDK 17. SwiftUI present (iPhone 16 iOS-26.5 sim booted) ->
+          NOT capability-blocked (the required capability is SwiftUI + iOS18/iPadOS18/
+          macOS15 HIG; this surface uses no Swift Charts / MapKit — the web source has
+          no charts or maps, per the prompt "Charts / maps used: (none)").
+Disposition: code-complete; every host-runnable gate GREEN; the surface's own code
+          INDEPENDENTLY compiles + tests under the real Xcode 26 / Swift 6 toolchain
+          (isolated SwiftPM build/test + iOS-18 & macOS-15 SDK typecheck). The two full-app
+          xcodebuild steps are DEFERRED — environment-blocked by PRE-EXISTING, unrelated
+          conditions (evidenced below), the same sanctioned "code-complete + DEFERRED Xcode
+          gate" disposition as the sibling modals-dialogs prompts (0002 AddAnnotationPopover,
+          0005 JobProgressDrawer, 0007 ReauthDialog ...; ADR-002/009,
+          apps/macos-pending-verifications.md).
+
+==================================================================================
+ARTIFACTS (11 Swift files + 1 strings catalog; all match the ChangelogModal.* glob)
+==================================================================================
+  Pure logic (Foundation/OSLog/Observation-only; unit-tested, no SwiftUI):
+    ChangelogModal.Adapter.swift    (189) surface slug + releases URL; ChangelogChangeType (the 6
+                                    Keep-a-Changelog categories in SECTION_ORDER + i18n key +
+                                    fallback); ChangelogBadgeKind (latest/stable/beta + key +
+                                    fallback); ChangelogChange / ChangelogReleaseEntry /
+                                    ChangelogGroup; LoadStatus / Connection / Phase enums.
+    ChangelogModal.Projection.swift (140) verbatim port of useChangelog `compareVersions` (semver
+                                    core ordering + pre-release-before-release + lexical fallback);
+                                    newEntries / visibleEntries / isFirstVisit selection; per-entry
+                                    `grouped` re-grouping; defaultOpen={idx<2}; phase + inlineFailure.
+    ChangelogModal.Catalog.swift    (271) native port of the generated CHANGELOG — all 6 releases
+                                    (0.7.0,0.6.0,0.5.0,0.4.0,0.3.0,0.1.0) / 189 change lines, newest
+                                    first. Ported product data (release notes rendered verbatim, like
+                                    the web `item.text`/`entry.date`); generated from the web source so
+                                    fidelity is mechanical (escaping verified). The long data lines sit
+                                    inside a scoped `swiftlint:disable line_length` + per-file
+                                    `swiftformat:options --maxwidth 500`.
+    ChangelogModal.Seams.swift      (232) telemetry seam (view.opened); action seam (web markSeen /
+                                    stampShown / handleViewFull window.open); coalesced source snapshot
+                                    (history + seenVersion + freshness) + .live factory; P1/S8 source
+                                    protocol + in-memory source; P1/S10 i18n facade ({{token}}); a11y
+                                    builders (dialog / entry / hint).
+  State holder (Foundation/Observation; SwiftUI-free):
+    ChangelogModal.Model.swift      (227) @MainActor @Observable: phase/connection/refreshing,
+                                    visible entries + first-visit, per-release disclosure set (default
+                                    first-two, preserved across reloads), interpolated subtitle,
+                                    lifecycle (start -> view.opened + stampShown), gotIt / viewFull /
+                                    close seams, stale auto-refresh, inline-error + a11y.
+  View (SwiftUI, HIG-native):
+    ChangelogModal.swift            (82)  phase switch + pinned header + sheet dismissal (Close /
+                                    Got it / View full) + lifecycle + a11y + surfaceSlug.
+    ChangelogModal.States.swift     (315) header (title + freshness chip + close), freshness chip,
+                                    connectivity + inline-error banners, populated container (subtitle +
+                                    scrolling list + footer), footer (View full / Got it), loading
+                                    skeleton, empty (ContentUnavailableView), error + retry. Never a
+                                    blank box.
+    ChangelogModal.Rows.swift       (178) collapsible release row (version + badge + date + chevron ->
+                                    grouped sections), change section (heading + tinted dots), change
+                                    row, tone-styled release badge (latest success / stable info / beta
+                                    warning), SECTION_DOT palette.
+    ChangelogModal.Previews.swift   (55)  7 states: since-last-visit / first-visit / loading / empty /
+                                    error / stale / offline.
+    ChangelogModal.strings          (57)  i18n catalog: changelog.modal.* (title/close/2 subtitles/
+                                    viewFull/gotIt) + 6 sections + 3 badges + freshness chip/banners +
+                                    state chrome + a11y builders.
+  Tests (XCTest, @testable import TeslaSync):
+    ChangelogModal.ModelTests.swift (286) state holder: view.opened once + stampShown; phase loading/
+                                    loaded-empty/failed (+inline); since-visit vs first-visit + subtitle;
+                                    default expansion (first two) + toggle + no-clobber-on-reload; grouped
+                                    sections; gotIt / viewFull (opens releases URL) / close; stale
+                                    auto-refresh re-arm; offline (18 tests).
+    ChangelogModal.Tests.swift      (211) compareVersions (equal / core / pre-release / lexical), unseen
+                                    + visible + first-visit selection, group order + drop-empty, default
+                                    expansion, phase + inlineFailure, enum order/keys, Catalog integrity
+                                    (6 releases / latest 0.7.0 / lookup / non-empty), accessibility (23
+                                    tests).
+
+  Total 2243 lines; every file <= 315 (swiftlint file_length 400 strict). Max code line
+  119 outside the Catalog (line_length 120 strict; the Catalog's verbatim release-note data
+  is in a scoped line_length-disabled block). All public symbols are Changelog*-namespaced
+  and were collision-checked against Sources/ + the four globbed surface tiers before
+  authoring (the only pre-existing matches were the atomic component-library
+  TSChangelogModal / TSChangelogEntry in Sources/Components/Feedback/FeedbackOverlays.swift —
+  out of scope per the prompt; this surface's top-level View is `ChangelogModal`, no collision).
+
+==================================================================================
+PARITY (web ChangelogModal.tsx -> native), no scope narrowing
+==================================================================================
+  Data sources (web -> native P1/S8 seam):
+    useTranslation              -> ChangelogStrings facade (P1/S10), no literals.
+    useChangelog.entries        -> ChangelogUpdate.entries (source-owned; ChangelogCatalog ports CHANGELOG).
+    useChangelog.seenVersion    -> ChangelogUpdate.seenVersion.
+    useChangelog.newEntries     -> ChangelogProjection.newEntries(from:seenVersion:) (compareVersions port).
+    markSeen / stampShown       -> ChangelogActions.markSeen() / stampShown().
+    handleViewFull window.open  -> ChangelogActions.openFullChangelog(url:) (ChangelogSurface.releasesURL).
+  Composition (web Modal/body/footer -> native):
+    Modal title "What's new..."  -> header title + freshness chip + close "x".
+    subtitle first-visit/since   -> model.subtitleText (welcome vs "{{count}} new release(s)").
+    visibleEntries.map(Entry)    -> ScrollView of ChangelogEntryRow (collapsible).
+    entry header v{version}+Badge-> v{version} mono + ChangelogReleaseBadge (BADGE_VARIANT ->
+      +date+chevron                success/info/warning tone) + date + chevron.
+    grouped (SECTION_ORDER)      -> model.groups(for:) -> ChangelogSectionView per category, drop-empty.
+    SECTION_DOT colored dots     -> ChangelogSectionPalette (added=success, changed=accent, fixed=warning,
+                                   removed/security=danger, deprecated=chart purple).
+    defaultOpen={idx<2}          -> ChangelogProjection.defaultExpandedVersions (first two).
+    Button ghost View full       -> TSButton(.ghost) -> viewFull (markSeen + open URL + dismiss).
+    Button primary Got it        -> TSButton(.primary) -> gotIt (markSeen + dismiss).
+    Esc/backdrop close           -> close (leaves seen-state untouched; throttle stamped on open).
+  Tailwind classes were NOT ported; chrome is P1/S9 tokens (TSSpacing/TSRadius/Color.TS/Font.TS) + TSButton.
+
+==================================================================================
+STATES (every state renders — no hidden surfaces)
+==================================================================================
+  loading  -> ChangelogLoadingState (pulsing skeleton; honors Reduce Motion).
+  empty    -> ChangelogEmptyState (ContentUnavailableView "No release notes yet").
+  error    -> ChangelogErrorState (QueryError-equivalent + Retry -> model.refresh()).
+  stale    -> freshness chip "Stale" + connectivity banner + ONE guarded auto-refresh.
+  offline  -> freshness chip "Offline" + banner; cached history kept; no refetch.
+  populated-> the release list (+ inline reload error if a refresh failed while a cached history remains).
+  Telemetry: model.start() emits P1/S11 view.opened surface="ChangelogModal" (once, idempotent — proven).
+
+==================================================================================
+GATE EXECUTION (every step run on THIS runner; raw exits)
+==================================================================================
+  [1] swiftformat --lint (the 11 surface Swift files)
+        -> "0/11 files require formatting."                          FORMAT_EXIT=0  GREEN
+  [2] swiftlint --strict (the 11 files, passed explicitly; repo .swiftlint.yml `included`
+      does not yet list the modals-dialogs tier)
+        -> "Found 0 violations, 0 serious in 11 files."              LINT_EXIT=0    GREEN
+  [3] check-placeholders.ps1 — the prompt's literal -Path .../ChangelogModal (no extension)
+      is not an existing path, so the tool returns Count=0 VACUOUSLY. To avoid a false green
+      it was run against a temp dir holding the 12 files:
+        PLACEHOLDER_ALLOWED=1 ; PLACEHOLDER_COUNT=0                  PLACEHOLDER_EXIT=0  GREEN
+      The 1 ALLOWED is the verbatim release-note line "...uses `changeme` placeholders" in
+      ChangelogModal.Catalog.swift (the word matches case-insensitively), opted out with a
+      required `// parity:allow web changelog release-note copy (CHANGELOG.md)` reason — real
+      product copy, not a stub.
+      Positive control: injecting a "// TODO" probe -> COUNT=1 / EXIT=1 (caught), proving the
+      12 files were actually scanned.                               GREEN
+  [4] ISOLATED SwiftPM build + test (library target "TeslaSync" = Adapter+Projection+Catalog+
+      Seams+Model; test target = ModelTests+Tests; swift-tools 6.0 / Swift 6 language mode =
+      complete strict concurrency)
+        -> "Executed 41 tests, with 0 failures"                      SWIFT_TEST_EXIT=0 GREEN
+      (The isolated Swift-6 build caught one real strict-concurrency issue during authoring —
+      a non-`@Sendable` global localizer in Tests.swift — fixed before this run; it would also
+      have failed the full-app build.)
+  [5] SDK typecheck of the FULL view layer + the real design subset it uses (the generated
+      DesignTokens + TSButton), -D DEBUG, -swift-version 6:
+        iOS   arm64-apple-ios18.0-simulator  -> 0 errors   IOS_TYPECHECK=0 GREEN
+        macOS arm64-apple-macos15.0          -> 0 errors   MAC_TYPECHECK=0 GREEN
+      (This typecheck caught one real issue during authoring — a private `body` property on
+      ChangelogEntryRow colliding with View.body — renamed to `expandedSections` before this run.)
+
+  [6] FULL-APP xcodebuild (the prompt's two gate steps), run verbatim on THIS runner, pinned to
+      THIS slot's generated project (-project TeslaSync.xcodeproj, isolated -derivedDataPath, after
+      xcodegen generate):
+
+    Pre-req: the modals-dialogs tier is NOT globbed in project.yml yet (xcodegen generate ->
+    grep modals-dialogs project.pbxproj = 0; ChangelogModal = 0; feature-views = 3). Tier
+    registration is owned by the P4 acceptance gate (the prompt's commit stages only the surface
+    glob + this log), so the full-app build neither includes nor is affected by this surface's
+    files — its OWN code is proven by [4]+[5] instead.
+
+    iOS  : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+           > scheme pre-action ran Scripts/build-shared-xcframework.sh =>
+             apps/shared/gradlew :core:assembleSharedXCFramework (KMP Kotlin/Native) for THIS slot.
+             SUCCEEDED ("xcframework successfully written out ...slot-16/...";
+             Frameworks/Shared.xcframework staged). NOT a hard block — only slow.
+           > the app/test compile then FAILED with 1 ": error:" line — in a PRE-EXISTING, unrelated
+             SIBLING surface, none in this surface:
+               shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+                 error: escaping closure captures non-escaping parameter 'content'
+             (batched in a SwiftCompile group with other AI* shared-surfaces) — a pre-existing
+             Swift-6 strict-concurrency defect in a sibling tier (apps/macos-pending-verifications.md).
+           > ": error:" total = 1 ; errors in modals-dialogs/ChangelogModal = 0
+           ** BUILD FAILED ** / ** TEST FAILED **                    IOS_EXIT=65
+           (NOTE: an earlier un-pinned `xcodebuild -scheme TeslaSync` resolved, in this shared
+            parallel-slot environment, to a SIBLING slot's project (slot-14) and failed on its
+            RecentDrives*/RecentlyViewed* surfaces; the run reported here was re-run pinned to
+            slot-16 with isolated DerivedData so the evidence is unambiguously this slot. 0
+            ChangelogModal errors either way.)
+
+    macOS: xcodebuild -scheme TeslaSync-macOS build test
+           > Shared.xcframework cached; FAILED FAST (pre-compile, 0 "Compiling" lines) at development
+             code-signing — no signing identity on this runner (DEVELOPMENT_TEAM=""):
+               error: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require
+                       signing with a development certificate.
+           > ": error:" total = 4 (all signing) ; ChangelogModal errors = 0
+           ** BUILD FAILED **                                        MAC_EXIT=65
+
+  Reading: both full-app steps exit 65 NOT on any ChangelogModal code, but on (iOS) a pre-existing
+  Swift-6 compile defect in unrelated sibling AI* shared-surfaces and (macOS) development-signing —
+  both owned by the p4-apple/P99 acceptance gate on a signed macos-latest runner per
+  apps/macos-pending-verifications.md. This surface adds 0 errors to the full-app build (grep of
+  both raw logs: 0 lines matching modals-dialogs/ChangelogModal), and is not in the project at all.
+
+==================================================================================
+HONESTY COVENANT (binding)
+==================================================================================
+  1 No red-as-green   : the two full-app xcodebuild steps are reported RED (IOS_EXIT=65 /
+                        MAC_EXIT=65) and explicitly DEFERRED with raw evidence — never claimed
+                        passing. [1]-[5] are real GREEN exits, pasted from this runner.
+  2 No scope narrowing: every web region + branch reproduced (modal title + close, the
+                        first-visit / since-last-visit subtitle fork, the collapsible per-release
+                        entries with version + badge + date + grouped categories + colored dots,
+                        the default-open-first-two rule, the View-full + Got-it footer, the
+                        markSeen/stampShown/openURL semantics) + all six states. All 6 releases /
+                        189 change lines ported (not a subset).
+  3 No skip-and-assume: web source + useChangelog hook read end-to-end; compareVersions ported and
+                        tested; every t() key mapped; every gate executed on THIS runner; iOS+macOS
+                        failures confirmed by reading the raw logs (and re-run pinned to this slot),
+                        not assumed.
+  4 No stubs as final : complete production surface; placeholder scanner COUNT=0 (1 web-copy opt-out
+                        with reason); 41 real tests pass; no TODO/FIXME/Coming soon/Lorem.
+  5 No parity shortcut: versions/badges/sections/dot-colors/grouping/expansion/subtitle/seen-logic/
+                        i18n/telemetry/a11y all mapped to platform seams + tokens and verified; the
+                        SwiftUI layer typechecks against the REAL design system on BOTH SDKs.
+  6 No delegation     : authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass: consumes the P1/S8 state-holder seam shape, P1/S9 tokens, P1/S10 i18n
+                        facade, P1/S11 view.opened, and P4-core shared TSButton; did NOT edit
+                        project.yml / .swiftlint.yml / Localizable.xcstrings /
+                        macos-pending-verifications.md (parallel-unsafe + outside the prompt's commit
+                        scope) — strings ship as the per-surface table; tier registration is the
+                        acceptance gate's, exactly as the full-app build is.
+  8 No commit on red  : the committed artifact is GREEN on every runnable gate AND independently
+                        compiles + tests under the real Xcode 26 / Swift 6 toolchain (isolated
+                        build/test + iOS & macOS SDK typecheck). The only non-green steps are the
+                        environment-blocked full-app xcodebuild build/test, RED solely on a
+                        pre-existing unrelated sibling-surface defect + macOS signing — which this
+                        commit neither introduces nor touches (0 errors in its files; not in project).
+  9 No silent drift   : changes confined to apps/apple/TeslaSync/modals-dialogs/ChangelogModal.* and
+                        this log (the generated TeslaSync.xcodeproj and staged Frameworks/
+                        Shared.xcframework are git-ignored).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ChangelogModal shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner: the pure logic + state holder build and 41/41 tests pass
+  under Swift 6 strict concurrency, and the entire SwiftUI view layer typechecks against the real
+  design system on BOTH the iOS-18 and macOS-15 SDKs (0 errors), with swiftformat --lint /
+  swiftlint --strict / placeholder all green. The full-app iOS-Simulator + macOS xcodebuild
+  build/test gate exits 65/65 (DEFERRED, not failed by this code): the KMP Shared.xcframework
+  actually built + staged on this runner, and the build then aborts on a pre-existing Swift-6
+  compile defect in an unrelated sibling shared-surface (iOS) and on macOS development-signing
+  (macOS) — both owned by the p4-apple/P99 acceptance gate on a signed macos-latest runner per
+  apps/macos-pending-verifications.md. Zero errors in any ChangelogModal file; the surface is not
+  yet globbed into the project (tier registration is the acceptance gate's responsibility).
+
+EXIT=0
+STATUS=DONE
