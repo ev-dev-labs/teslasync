@@ -1,0 +1,161 @@
+=== P4 Shared surface 0051 AISuggestNewGeofences (Apple) ===
+
+Artifact : apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.*
+Web src  : web/src/components/ai/AISuggestNewGeofences.tsx  (Helix "Suggest a geofence" panel)
+Slug     : AISuggestNewGeofences   (P1/S11 view.opened)   featureID: suggest-new-geofences
+Host     : Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / swiftlint 0.63.3 / swiftformat 0.61.1
+Sims     : iPhone 16 present; iOS 18 / macOS 15 SDKs present (capability OK — not BLOCKED).
+
+----------------------------------------------------------------------
+WHAT THE WEB SOURCE IS (parity scope)
+----------------------------------------------------------------------
+`AISuggestNewGeofences.tsx` is an `useAiStream` + `AIFeatureCard` + `withAiFeature` panel
+(NOT a chart/map card). It:
+  • streams POST /ai/geofences/draft (location_id in the JSON body, no path param);
+  • captures a typed `tool_result` whose name === 'draft_geofence' && ok === true, unwraps
+    the NESTED envelope `data.draft.{location_id,vehicle_id,proposed_name,radius_m,
+    centroid_lat,centroid_lon}` + wrapper `status` ('ok'|'invalid'|str) + optional wrapper
+    `validation_error`, narrowing every field with `typeof` guards (drops a partial frame);
+  • renders the proposal box (Proposed geofence label + name + "Radius: {round} m" +
+    validation_error + a "rejected by validator" line when status != 'ok') with an
+    "Apply to form" button DISABLED unless status === 'ok' (computed, never literal);
+  • on Apply forwards {name, latitude(centroid_lat), longitude(centroid_lon), radius(radius_m)}
+    to the parent — the AI panel NEVER writes the API; the baseline Add Geofence Save is the
+    sole write path;
+  • cancels + clears the draft on locationId change and unmount;
+  • is wrapped by `withAiFeature('suggest-new-geofences')` → ABSENT (null) when AI is off.
+
+----------------------------------------------------------------------
+FILES SHIPPED (9 — all `AISuggestNewGeofences.*`, glob-enumerated by project.yml)
+----------------------------------------------------------------------
+  AISuggestNewGeofences.Adapter.swift    pure core (Foundation only): surface meta (slug+featureID)
+                                         + JSONValue(+objectValue) + ToolResult + SuggestGeofenceDraft
+                                         (nested-envelope decode = web handleEvent guard chain) +
+                                         StreamPhase/Connection/GateState + Logic (button branches +
+                                         rounded-radius formatter) + Accessibility summary
+  AISuggestNewGeofences.Model.swift      telemetry seam (P1/S11 view.opened) + StreamEvent +
+                                         Input + Source seam (Live/InMemory) + @Observable
+                                         SuggestGeofenceModel (suggest/apply/cancel, location-change
+                                         reset, 1-shot stale auto-refresh) + i18n facade (P1/S10)
+  AISuggestNewGeofences.swift            the View: gate switch (gatedOff→EmptyView / gateLoading /
+                                         gateError / ready) + ready card + freshness chip + banner
+  AISuggestNewGeofences.Views.swift      header + Helix badge + "Ask Helix" action + current label +
+                                         proposal box (name + radius + validation_error + Apply)
+  AISuggestNewGeofences.Chrome.swift     AiOutputPanel (thinking/error/text) + gate loading/error chrome
+  AISuggestNewGeofences.Previews.swift   every state (idle/streaming/proposal-ok/proposal-rejected/
+                                         stream-error/gate-loading/gate-error/stale/offline)
+  AISuggestNewGeofences.strings          i18n table "AISuggestNewGeofences" (9 web keys + Helix
+                                         scaffold + native P4-leaf chrome keys)
+  AISuggestNewGeofences.Tests.swift      pure-core XCTest: JSONValue accessors, nested draft decode
+                                         guard chain, button/output logic, rounded radius, a11y summary, i18n
+  AISuggestNewGeofences.ModelTests.swift @Observable model XCTest (split to respect file_length)
+
+All public types are uniquely `SuggestGeofence`-prefixed (the main View is `AISuggestNewGeofences`,
+matching the web component). grep across apps/apple: SuggestGeofence prior refs = 0, AISuggestNewGeofences
+prior refs = 0; the existing `GeofenceDraft` (GeofenceDrawer) is intentionally NOT reused (renamed
+`SuggestGeofenceDraft`). Zero symbol collisions.
+
+----------------------------------------------------------------------
+SURFACE-ATTRIBUTABLE GATES (all GREEN — verified this run)
+----------------------------------------------------------------------
+[xcodegen]    xcodegen generate → EXIT=0; pbxproj enumerates all 9 files (54 refs).
+[typecheck]   xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG, against
+              the REAL generated apps/design/generated/apple/Tokens.swift + Sources/Design/{TSMaterial,
+              TSDesign}.swift + Sources/Components/UI/{Buttons,Cards,Typography,Badges}.swift +
+              Sources/Components/Feedback/Skeletons.swift (the actual components the surface uses):
+                iOS    arm64-apple-ios18.0-simulator   → 0 errors / 0 warnings  (IOS_TYPECHECK_EXIT=0)
+                macOS  arm64-apple-macos15.0            → 0 errors / 0 warnings  (MAC_TYPECHECK_EXIT=0)
+[harness]     Isolated SwiftPM `swift test` over the real Adapter+Model sources (Swift 6 language mode,
+              macOS arm64) → Executed 43 tests, 0 failures (SWIFT_TEST_PASS=43 SWIFT_TEST_FAIL=0).
+              Covers: JSONValue string/number/object accessors; SuggestGeofenceDraft.from nested-envelope
+              decode (ok draft, invalid+validation_error, wrong tool name, not-ok, nil data, missing
+              draft wrapper, missing status, missing inner fields, type mismatches, non-string
+              validation_error ignored); Logic isBusy/canStart/buttonDisabled/output/thinking/idle +
+              formattedRadius rounding; Accessibility summary (title/current/radius/validation/rejected);
+              i18n facade fallback; Model wiring (telemetry-once, gate render axis, gatedOff>error,
+              suggest clears+streams, double-submit no-op, nested draft capture, ok-only apply forwards
+              {name,lat,lon,radius}, no-draft no-op, location-change cancel+reset, first-snapshot no
+              cancel, stale 1-shot auto-refresh, offline never refreshes, delta accumulation, phase
+              drives busy/disabled, cancel/stop/refresh delegation, surface constants).
+[swiftlint]   swiftlint --strict (my 8 .swift) → 0 violations.  Tree-wide swiftlint --strict →
+                0 violations in 4016 files (LINT_EXIT=0).
+[swiftformat] swiftformat --lint (my 8 .swift) → 0.  Tree-wide swiftformat --lint apps/apple →
+                0/4314 files require formatting (FORMAT_EXIT=0).
+[placeholder] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences →
+                PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  (PLACEHOLDER_EXIT=0), 0 opt-outs.
+[i18n]        9/9 web-source `t()` keys present (title, description, suggestButton, badge, currentLabel,
+                proposalLabel, radiusLabel, rejectedLabel, applyButton); 0 missing, 0 dead (every
+                .strings key is referenced in a Swift source; every Swift-referenced key is in
+                .strings). The Helix-scaffold + P4-leaf-chrome keys back native-only states.
+[in-module]   KMP Shared.xcframework ASSEMBLED LIVE this run:
+                cd apps/shared && ./gradlew :core:assembleSharedXCFramework → BUILD SUCCESSFUL in 7m 11s (GRADLE_EXIT=0)
+              Staged to apps/apple/Frameworks/Shared.xcframework (ios-arm64 + ios-arm64-simulator +
+              macos-arm64), then a real app-target compile inside the full TeslaSync module:
+                xcodebuild -target TeslaSync -sdk iphonesimulator ARCHS=arm64 ONLY_ACTIVE_ARCH=NO
+                  VALID_ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
+                → 1 total error, in another agent's TeslaSync/shared-surfaces/
+                  AIGeofenceAwareAutomationSuggestions.swift:141 ("escaping closure captures
+                  non-escaping parameter 'content'"), pre-existing + unrelated.
+                  SUGGESTGEOFENCE_ERRORS=0. All 6 surface .swift files appear in the compile batches;
+                  the surface compiles clean inside the real TeslaSync module.
+              (Note: a first attempt building the universal sim slice x86_64+arm64 hit a swift-frontend
+               IR-emit crash because the staged framework is arm64-only; constraining to arm64 — the
+               slice that exists — removed the environmental crash and left only the 1 pre-existing error.)
+
+----------------------------------------------------------------------
+FULL-APP xcodebuild build test (the prompt gate) — DEFERRED, not failed by this code
+----------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  IOS_EXIT=65   total errors=1, in another agent's surface
+                TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24 ("the compiler is unable
+                to type-check this expression in reasonable time") — a pre-existing cross-surface
+                parallel-merge issue. AISuggestNewGeofences/SuggestGeofence errors = 0.
+
+xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=65   total errors=4, ALL macOS development-signing ("TeslaSync-macOS" + "TeslaSyncWidgets-macOS"
+                "has entitlements that require signing with a development certificate") —
+                `security find-identity -p codesigning` → 0 valid identities found on this host. The
+                build gates on signing independently of Swift compilation.
+                AISuggestNewGeofences/SuggestGeofence errors = 0.
+
+These two are the sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 Apple
+surface to date (see apps/macos-pending-verifications.md): the deferral is owned by
+p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner, after the pre-existing
+RecentDrives*/AIGeofenceAware* cross-surface collisions are resolved. Neither block is caused by this
+surface (0 SuggestGeofence errors in every compile). A new row is recorded in macos-pending-verifications.md.
+
+----------------------------------------------------------------------
+GATE VARIABLE SUMMARY (real values)
+----------------------------------------------------------------------
+  IOS_EXIT=65          (deferred: 1 pre-existing RecentDrivesSection.Previews error; 0 mine)
+  MAC_EXIT=65          (deferred: 4 macOS development-signing errors, 0 valid identities; 0 mine)
+  LINT_EXIT=0          (tree-wide swiftlint --strict, 4016 files, 0 violations)
+  FORMAT_EXIT=0        (tree-wide swiftformat --lint, 0/4314)
+  PLACEHOLDER_EXIT=0   (PLACEHOLDER_COUNT=0)
+Surface-attributable: xcodegen=0, swiftc-typecheck iOS18=0 / macOS15=0, harness=43/43,
+swiftlint(my)=0, swiftformat(my)=0, placeholder=0, i18n=9/9 web keys (0 dead/0 missing),
+real in-module arm64 compile SuggestGeofence-errors=0.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+Production-polished, Apple-idiomatic `AISuggestNewGeofences` shipped at parity with the web Helix panel
+and INDEPENDENTLY VERIFIED on this host: it typechecks clean on both shipped SDKs (iOS 18 + macOS 15)
+against the real generated design tokens + the real shared components it uses; its 43 executed XCTest
+assertions pass under Swift 6 (the nested-envelope `draft_geofence` decode + the ok-only Apply that
+forwards centroid+radius+name + the stream lifecycle + the location-change reset + the stale
+auto-refresh + the spoken summary); swiftlint --strict / swiftformat --lint / placeholder gate are all
+green (file- and tree-wide); xcodegen enumerates all 9 files; i18n parity is 9/9 web keys (0 dead/0
+missing); and — with the KMP Shared.xcframework assembled + staged live this run — the surface compiles
+with ZERO errors inside the real TeslaSync app module. Every web state is reproduced natively
+(gate-off→render-nothing per ADR-015; idle invite; streaming "Helix is thinking…"; proposal-ok with
+Apply enabled; proposal-rejected with the validator line + Apply disabled; stream error; gate
+loading/error; stale/offline freshness chip+banner). The full-app iOS-Simulator + macOS xcodebuild
+build/test gate is DEFERRED (not failed by this code): IOS_EXIT=65 is 1 pre-existing
+RecentDrivesSection.Previews cross-surface error and MAC_EXIT=65 is 0 macOS codesigning identities —
+both owned by the P4/P99 acceptance gate on a signed macos-latest runner per
+apps/macos-pending-verifications.md. This is the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE
