@@ -43,6 +43,19 @@
     WinUI-free sources on disk (plus the new SecuritySection Model / Source / ViewModel links). Do NOT
     re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
     this comment.
+    The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures the
+    packaging / units-golden / widget tests read out of the test output directory.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted,
+    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on
+    disk under feature-views/ and dashboard-widgets/ (the bare WinUI view files, and the
+    WinUI-referencing ResponseViewer.Snippet.cs, are excluded). This file carries the .gitattributes
+    merge=union strategy, so a chain of integration merges had repeatedly re-concatenated it into
+    multiple Project roots plus duplicate Compile items and orphaned comment prose, failing XML load
+    (MSB4025 / MSB4067). Re-consolidated for P2 feature-views/0302 VehicleCard into this single canonical
+    root, regenerated directly from the WinUI-free sources on disk (plus the new VehicleCard Model /
+    Source / ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal
+    build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -80,6 +93,7 @@
 
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union); the WinUI views are exercised by the app build. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -886,6 +900,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.Model.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.ViewModel.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleConfigSection\VehicleConfigSection.Model.cs" Link="FeatureViews\VehicleConfigSection\VehicleConfigSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.Model.cs" Link="FeatureViews\VehicleCard\VehicleCard.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.Source.cs" Link="FeatureViews\VehicleCard\VehicleCard.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.ViewModel.cs" Link="FeatureViews\VehicleCard\VehicleCard.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.Model.cs" Link="FeatureViews\VehicleHero\VehicleHero.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.Source.cs" Link="FeatureViews\VehicleHero\VehicleHero.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.ViewModel.cs" Link="FeatureViews\VehicleHero\VehicleHero.ViewModel.cs" />
