@@ -1,0 +1,187 @@
+=== P4 Shared surface 0122 GuardedLink (Apple) ===
+
+ARTIFACT
+  Prompt      : P4/shared-surfaces/0122 — GuardedLink (Apple)
+  Web source  : web/src/components/feedback/GuardedLink.tsx (THE specification)
+  Native out  : apps/apple/TeslaSync/shared-surfaces/GuardedLink.*
+  Delegation  : FORBIDDEN — implemented directly, no sub-agents.
+  ADR refs    : ADR-002 (one SwiftUI source group, iOS+macOS), ADR-005, ADR-009.
+
+ENVIRONMENT (capability check — the prompt's BLOCKED gate is for MISSING capability)
+  Xcode 26.5 (17F42)         — present
+  Swift 6.3.2                — present
+  iOS SDK   : iPhoneSimulator26.5.sdk (deployment target iOS 18.0)   — present
+  macOS SDK : MacOSX26.5.sdk          (deployment target macOS 15.0) — present
+  iPhone 16 simulator        — present (booted)
+  SwiftUI on both SDKs — present. Swift Charts + MapKit are UNUSED by this surface (the web source
+    has none — GuardedLink is a navigation-guard link wrapper, no charts/maps).
+  swiftlint, swiftformat, xcodegen, pwsh, Java 17 (KMP) — all present.
+  Shared.xcframework — built from the KMP core via Gradle (:core:assembleSharedXCFramework,
+    BUILD SUCCESSFUL) and staged for the Apple targets by the scheme pre-action.
+  => Platform CAPABILITY is AVAILABLE. This is NOT a STATUS=BLOCKED (capability) case.
+
+FILES SHIPPED (9; allowed scope = GuardedLink.* + this log)
+  GuardedLink.swift          — bound surface: GuardedLink<Content> (phase switch + surfaceSlug +
+                               controlled init + Text convenience + the unsaved-changes confirmationDialog)
+  GuardedLink.Adapter.swift  — pure core: destination value, navigation options (replace/relative/state),
+                               activation value, the VERBATIM `shouldSkipGuard` decision, a11y hint builder
+  GuardedLink.Model.swift    — P1/S8 state holder + P1/S11 telemetry + projection + confirm flow +
+                               P1/S10 i18n facade
+  GuardedLink.Seams.swift    — P1/S8 guard-feed source protocol (web useNavigationGuardContext) +
+                               navigator protocol (web useNavigate) + static (prod) + in-memory +
+                               recording-navigator (test/preview) impls
+  GuardedLink.States.swift   — loading / empty / error chrome (P4 leaf contract)
+  GuardedLink.Views.swift    — tappable link affordance + "Open in New Window" context action +
+                               freshness chip
+  GuardedLink.Previews.swift — per-state DEBUG previews (data clean, data dirty/guarded, empty,
+                               loading, error, stale, offline)
+  GuardedLink.Tests.swift    — adapter + projection + model + decision + a11y unit tests (39)
+  GuardedLink.strings        — P1/S10 i18n catalog contribution (17 keys)
+
+PARITY (web GuardedLink.tsx → native)
+  The web surface is anonymous (no t() of its own): it is a drop-in <Link>/<NavLink> replacement that,
+  on a primary click, runs the caller onClick, bails for modifier/middle clicks and target="_blank"
+  (shouldSkipGuard), and otherwise awaits confirmIfDirty() before navigate(to,{replace,state,relative}).
+  When a registered guard is dirty, confirmIfDirty surfaces the NavigationGuardProvider <ConfirmDialog>.
+
+  Data sources (P1/S8 state-holder seams, no router/HTTP in the view):
+    useNavigate                  → GuardedNavigator seam: navigate(to,options) (same context) +
+                                   openInNewContext(dest) (the guard-bypass path). The view never
+                                   touches the router.
+    useNavigationGuardContext    → NavigationGuardSource emits GuardedLinkInput (the controlled `to` +
+                                   forwarded replace/relative/state + the live isDirty + the guard's
+                                   optional message + the store load/connectivity state). The view never
+                                   reads the guard registry.
+    useTranslation (provider)    → GuardedLinkStrings P1/S10 facade. The dialog copy is reproduced
+                                   VERBATIM under the web forms.* keys (forms.unsavedTitle /
+                                   forms.unsavedWarning / forms.discard / forms.keepEditing); native leaf
+                                   chrome + the "Open in New Window" affordance are guardedLink.* keys.
+
+  Behaviour (each branch unit-asserted against the web expression):
+    shouldSkipGuard              → GuardDecision.shouldSkipGuard: VERBATIM port —
+                                   metaKey|ctrlKey|shiftKey|altKey OR button!==0 OR
+                                   (target && target!=='' && target!=='_self') ⇒ skip.
+    onClick (clean)              → model.activate: confirmIfDirty()==true ⇒ navigator.navigate(to,options).
+    onClick (dirty)             → model.activate raises confirmRequest ⇒ the SwiftUI .confirmationDialog
+                                   (Discard changes ⇒ confirmDiscard ⇒ navigate; Keep editing ⇒ cancel).
+    skip-guard / new tab         → model.activate ⇒ navigator.openInNewContext(dest), guard bypassed so
+                                   the current context keeps its unsaved work (Apple-idiomatic
+                                   "Open in New Window").
+    e.defaultPrevented           → activation.isPreempted ⇒ neither guard nor navigation runs.
+
+STATES (every state renders — no hidden surface)
+  loading — guard feed being read → skeleton link chrome.
+  empty   — no/blank destination (web `to` empty) → friendly empty state (native improvement; never a
+            blank box).
+  error   — guard-feed failure with no usable destination → retryable error tile (web QueryError peer).
+  data    — the tappable link; primary tap runs the guard-or-navigate flow; context action opens a new
+            window/scene; a dirty guard raises the unsaved-changes confirmation.
+  stale / offline — orthogonal connectivity axis → freshness chip beneath the link + one-shot
+            auto-refresh on the stale transition.
+
+GATE RESULTS (actual commands + actual results)
+
+  [1] swiftlint --strict (cd apps/apple) — the 8 GuardedLink swift files
+      "Done linting! Found 0 violations, 0 serious in 8 files."
+      LINT_EXIT=0
+
+  [2] swiftformat --lint (config apps/apple/.swiftformat) — the 8 GuardedLink swift files
+      "0/8 files require formatting."
+      FORMAT_EXIT=0
+
+  [3] check-placeholders.ps1 (-Language swift) — GuardedLink files
+      0 violations attributable to GuardedLink.* (grep of the violation list for "GuardedLink" is empty;
+      the repo-wide PLACEHOLDER_COUNT is pre-existing sibling debt, none in this surface).
+      PLACEHOLDER_EXIT(GuardedLink)=0
+
+  [4] iOS-Simulator isolated compile — Swift 6 + -strict-concurrency=complete + -D DEBUG (so the
+      #Preview blocks are type-checked), the 7 app-target GuardedLink files compiled against the REAL
+      design system (apps/design/generated/apple/Tokens.swift) + the REAL shared components
+      (TSButton/TSCard/TSEmptyState/TSSkeleton + their transitive deps).
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator ...
+      IOS_ISOLATED_TYPECHECK_EXIT=0  (0 errors)
+
+  [5] macOS isolated compile — same set, Swift 6 + complete concurrency + DEBUG.
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 ...
+      MACOS_ISOLATED_TYPECHECK_EXIT=0  (0 errors)
+
+  [6] XCTest — the 39 surface tests run via an isolated SwiftPM package (swift-tools 6.0,
+      .swiftLanguageMode(.v6)) over the REAL surface + design-system sources (GuardedLink.Tests.swift
+      copied verbatim, only the @testable import module name retargeted).
+      "Executed 39 tests, with 0 failures (0 unexpected)"
+      XCTEST_EXIT=0  (39/39 pass)
+
+  [7] Full-app xcodebuild build (iOS Simulator, scheme TeslaSync)
+      IOS_EXIT=65  — DEFERRED, NOT caused by this surface. See DISPOSITION.
+
+  [8] Full-app xcodebuild build (scheme TeslaSync-macOS)
+      MAC_EXIT=65  — DEFERRED, NOT caused by this surface. See DISPOSITION.
+
+FULL-APP BUILD DISPOSITION (honest — no red-as-green)
+  The literal gate's full-app `xcodebuild build test` exits 65 on BOTH platforms. Neither failure is in
+  GuardedLink, and both are PROVEN pre-existing + unrelated + outside the allowed-files scope:
+
+  • iOS: the app target (one SwiftUI module of ~880 sibling surfaces) fails to compile on a PRE-EXISTING
+    sibling escaping-closure bug. A baseline build with the 9 GuardedLink files temporarily stashed
+    (then restored) fails IDENTICALLY:
+        with GuardedLink : AIGeofenceAwareAutomationSuggestions.swift:141:22:
+                           error: escaping closure captures non-escaping parameter 'content'
+        baseline (none)  : AISuggestNewGeofences.swift:129:22:
+                           error: escaping closure captures non-escaping parameter 'content'
+    Same bug class, different sibling surfaced first (compile ordering). ZERO GuardedLink diagnostics in
+    either build ⇒ this surface adds exactly zero errors. (DerivedData even logged it had compiled +
+    bundled GuardedLink.strings before the unrelated sibling failed the module.)
+
+  • macOS: the app target fails at the entitlements/code-signing stage BEFORE compilation —
+        "TeslaSync-macOS / TeslaSyncWidgets-macOS has entitlements that require signing with a
+         development certificate" — i.e. PRE-EXISTING macOS development-signing (0 identities on this
+    host). ZERO GuardedLink diagnostics.
+
+  Both blockers are owned by the P4/P99 acceptance gate on a signed macos-latest runner (the same
+  disposition recorded for the 0116 DraftRecoveryBanner predecessor). This surface's own correctness on
+  BOTH platforms is established independently by gates [4]/[5]/[6] against the REAL design system under
+  the app's exact Swift 6 strict-concurrency settings.
+
+HONESTY COVENANT
+  1  No red-as-green     : the full-app IOS_EXIT/MAC_EXIT=65 are reported verbatim with their real
+                           causes; the surface "green" is the per-surface gates [1]-[6], each shown with
+                           its actual result.
+  2  No scope narrowing  : every web branch reproduced — shouldSkipGuard (all three clauses), the
+                           clean/dirty confirm flow, the new-context bypass, defaultPrevented, plus the
+                           forwarded replace/relative/state options.
+  3  No skip-and-assume  : iOS + macOS builds were RUN (not assumed); the baseline (no-GuardedLink) build
+                           was RUN to prove zero added errors; the macOS signing block was OBSERVED.
+  4  No stubs as final   : full implementation; no TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/
+                           "Coming soon" in any shipped file (check-placeholders clean on this surface).
+  5  No parity shortcut  : the shouldSkipGuard clauses, the target mapping, the confirm copy (web
+                           forms.* keys verbatim), and every projection branch are each unit-asserted.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder + navigator seams, P1/S9 tokens, P1/S10 i18n facade,
+                           P1/S11 view.opened telemetry all honoured (mirrors DraftRecoveryBanner +
+                           CookieConsentBanner + AlertBanner).
+  8  No commit on red    : the committed artifact (9 GuardedLink.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency dual-SDK
+                           compile (incl. #Preview) + 39/39 XCTest. The red is only in pre-existing,
+                           unrelated sibling surfaces + macOS signing, which this commit does not touch
+                           (proven by the identical baseline failure without this surface).
+  9  No silent drift     : changes confined to shared-surfaces/GuardedLink.* + this log; the friendly
+                           empty state (vs the web rendering nothing for a missing `to`), the
+                           connectivity axis (guard-feed freshness), and the Apple-idiomatic
+                           "Open in New Window" parity of the web new-tab bypass are disclosed native
+                           choices consistent with the sibling surfaces.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic GuardedLink shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles on both the iOS 18 Simulator and macOS 15 SDKs (0/0, including the
+  #Preview blocks) against the REAL design system + shared components under Swift 6 complete
+  strict-concurrency, its 39 tests pass, and swiftlint --strict / swiftformat --lint / placeholder are
+  all green on the 9 surface files. The full-app iOS + macOS `xcodebuild build test` gate is DEFERRED
+  (not failed by this code) on pre-existing, unrelated, out-of-allowed-files blockers — sibling AI*
+  surfaces with their own escaping-closure compile errors (proven by an identical baseline failure with
+  this surface removed), plus macOS development-signing (0 identities) — owned by the P4/P99 acceptance
+  gate on a signed macos-latest runner. Platform capability is AVAILABLE, so this is not a
+  STATUS=BLOCKED (capability) case.
+
+EXIT=0
+STATUS=DONE
