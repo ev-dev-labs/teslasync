@@ -253,3 +253,4 @@ p3-android/feature-views/A-0001-AlertDetailTimeline.prompt.md
 p3-android/dashboard-widgets/A-0118-YearReviewWidget.prompt.md
 p3-android/feature-views/A-0007-ReferenceLinksSection.prompt.md
 p3-android/feature-views/A-0003-ClientUtilitiesSection.prompt.md
+p3-android/feature-views/A-0010-ToolCard.prompt.md
