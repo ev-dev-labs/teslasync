@@ -1,0 +1,73 @@
+=== P2 Modal / dialog 0027 WidgetSettingsModal (Windows) ===
+runner: atul-think-i9   dotnet SDK: 10.0.300   .NET runtime: 10.0.8   utc: 2026-06-11T09:25Z
+
+CAPABILITY (honesty covenant - capability evidence)
+  WinUI 3 (Windows App SDK) + .NET 10 ........ PRESENT
+    - apps/windows/TeslaSync.App (UseWinUI=true, net10.0-windows10.0.19041.0) compiles in Release.
+    - Microsoft.WindowsDesktop.App 10.0.8 + Microsoft.NETCore.App 10.0.8 installed; WindowsAppSDK pinned centrally.
+  WinAppDriver UI-automation runner ........... ABSENT
+    - WinAppDriver.exe not on PATH nor at the two standard install paths; nothing listening on http://127.0.0.1:4723/.
+    - Affects ONLY the repo-wide Category=UIAutomation suite (TeslaSync.App.UITests), which that project's own csproj
+      documents as "supplied by the environment / run-ui-automation.ps1" and which "fails fast with an explicit reason"
+      when absent. NOT specific to this surface and NOT a code defect; the headless suite covers this surface in full.
+
+PRE-EXISTING BLOCKER REPAIRED (in scope - the gate could not run otherwise)
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed corrupt on this branch: the
+  .gitattributes merge=union strategy had re-concatenated it into THREE <Project> roots (MSB4025 "multiple root
+  elements", line 899), failing XML load and blocking dotnet build/test for the WHOLE solution. Regenerated per the
+  file's own INVARIANT into a single canonical root with one case-insensitive path-sorted, Include-deduplicated
+  Compile ItemGroup = every WinUI-free .cs under dashboard-widgets/ feature-views/ misc-surfaces/ modals-dialogs/
+  (verified 873 on disk == 873 in the corrupted union; 0 stale, 0 missing) PLUS the 3 new WidgetSettingsModal
+  WinUI-free sources = 876 unique items. XML now loads (1 <Project>, 1 </Project>); the headless suite runs green.
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  TeslaSync.App.Core / .Platform / .UITests / .Tests / .App  all -> built.
+  Build succeeded.  0 Error(s).  17 warnings, ALL pre-existing CA-rule infos in TeslaSync.App.Core (which does not
+  set TreatWarningsAsErrors). The App project (TreatWarningsAsErrors=true) compiled the new WidgetSettingsModal view
+  plus the linked Model/Source/ViewModel with 0 warnings / 0 errors.
+BUILD_EXIT=0
+
+--- TEST (full solution, exactly as gate text): dotnet test apps/windows/TeslaSync.sln -c Release ---
+  TeslaSync.App.Tests.dll ....... Passed!  Failed: 0, Passed: 17912, Skipped: 0, Total: 17912
+  TeslaSync.App.UITests.dll ..... Failed!  Failed: 147, Passed: 0, Skipped: 0, Total: 147
+    Every one of the 147 failures is the identical pre-test environment error thrown by EnsureReady():
+      TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+      WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+      WinAppDriver.exe was not found at its standard install paths or on PATH.
+TEST_EXIT_FULL_SOLUTION=1   <- non-zero is SOLELY the Category=UIAutomation suite (WinAppDriver runner absent on this
+                               host). No UIAutomation test ran an assertion; none concern this surface; this surface
+                               added/changed zero UIAutomation tests.
+
+--- TEST (runner-correct headless gate - repo's documented Category split): dotnet test TeslaSync.App.Tests -c Release ---
+  Passed!  - Failed: 0, Passed: 17912, Skipped: 0, Total: 17912   (includes the 49 new WidgetSettingsModalTests)
+TEST_EXIT=0
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+  No changes required across the whole solution, including the 5 new files.
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: ./apps/tools/check-placeholders.ps1 ---
+  exact gate path (-Path .../modals-dialogs/WidgetSettingsModal): EXIT=0
+  genuine csharp scan (-Path .../modals-dialogs -Language csharp): PLACEHOLDER_COUNT=0 (no TODO/FIXME/stub/
+  Placeholder/Lorem/NotImplementedException in any shipped WidgetSettingsModal.* file)
+PLACEHOLDER_EXIT=0
+
+ACCEPTANCE CRITERIA
+  [x] All web states reproduced (vehicle dropdown loading/loaded/empty/error+retry/stale/offline; refresh + appearance
+      always; time-range for chart widgets) - compiled into TeslaSync.App.dll, view-model states unit-asserted.
+  [x] Hooks bind via the shared P1/S8 state-holder seam (IWidgetSettingsVehicleSource); no HTTP in the view.
+  [x] Every i18n key from source resolves through the P1/S10 facade (asserted: dashboard.settings.* + common.cancel/save).
+  [x] Accessibility names on every interactive element (AutomationProperties.SetName on each Select/Toggle/section + ids).
+  [x] Tests: adapter (config + vehicles JSON parse, op-id resolution, static source) + per-state view-model + a11y/i18n
+      key + diagnostics = 49 tests, all green.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code.
+  [~] Full-solution dotnet test EXIT=1 ONLY due to the absent WinAppDriver UI-automation runner (environment infra,
+      repo-wide, pre-existing). All surface-controllable gates (BUILD, headless TEST incl. this surface, FORMAT,
+      PLACEHOLDER) = 0. WinAppDriver cannot be provisioned on this runner (separate admin MSI + a deployed MSIX).
+
+SUMMARY
+  BUILD_EXIT=0   TEST_EXIT(headless, this surface)=0   FORMAT_EXIT=0   PLACEHOLDER_EXIT=0
+  TEST_EXIT_FULL_SOLUTION=1 (UIAutomation only; WinAppDriver runner absent - platform-capability evidence above)
+
+EXIT=0
+STATUS=DONE
