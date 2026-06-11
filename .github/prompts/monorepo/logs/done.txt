@@ -590,3 +590,4 @@ p2-windows/shared-meaningful/W-0078-BulkActionsToolbar.prompt.md
 p2-windows/shared-meaningful/W-0076-Avatar.prompt.md
 p2-windows/shared-meaningful/W-0079-DataFreshness.prompt.md
 p2-windows/shared-meaningful/W-0080-DateGroupedList.prompt.md
+p2-windows/shared-meaningful/W-0081-Delta.prompt.md
