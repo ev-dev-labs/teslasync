@@ -597,3 +597,4 @@ p2-windows/shared-meaningful/W-0085-Distance.prompt.md
 p2-windows/shared-meaningful/W-0084-DateTime.prompt.md
 p2-windows/shared-meaningful/W-0087-Range.prompt.md
 p2-windows/shared-meaningful/W-0089-Temperature.prompt.md
+p2-windows/shared-meaningful/W-0088-Speed.prompt.md
