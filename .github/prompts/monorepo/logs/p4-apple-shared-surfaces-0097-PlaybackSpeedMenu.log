@@ -1,0 +1,237 @@
+=== P4 Shared surface 0097 PlaybackSpeedMenu (Apple) ===
+Date: 2026-06-10
+Host: macOS 26.5 (Darwin), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat (Homebrew),
+      xcodegen 2.45.4, pwsh 7.6.2, iOS Simulator iPhone 16 (booted), Java 17 (KMP Gradle).
+Prompt: .github/prompts/monorepo/... P4 · Shared surface · 0097 — PlaybackSpeedMenu
+Web source (THE spec): web/src/components/data-display/PlaybackSpeedMenu.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.* (+ this log)
+
+-------------------------------------------------------------------------------
+WEB SOURCE ANALYSIS (read end-to-end before writing native code)
+-------------------------------------------------------------------------------
+PlaybackSpeedMenu is a compact, **stateless controlled** control (59 lines). Props:
+  • speed: ReplaySpeed                       — the current scrub speed (parent-owned)
+  • onChange: (ReplaySpeed) => void          — notifies the parent of the next value
+  • className?: string                       — optional style override
+Only hook: useTranslation (the P1/S10 localisation facade). There is NO data fetch — no
+useQuery/useEffect/fetch — so the control has NO async data lifecycle.
+
+Module exports reproduced verbatim:
+  • REPLAY_SPEEDS: ReplaySpeed[] = [1, 10, 25, 50, 100]
+  • shiftSpeed(current, delta)  — step by `delta` slots, CLAMPED to the ends
+                                  (unknown current → slot 0, web `idx === -1 ? 0 : idx`)
+  • nextSpeed(current)          — cycle to the next-fastest, WRAPS (web `(idx + 1) % length`)
+Composition / interaction:
+  • <Button variant="ghost" size="sm" className="… text-xs font-mono"> showing `{speed}x`
+    and a <ChevronDown class="opacity-50"/>.
+  • onClick      → onChange(nextSpeed(speed))      (forward, wrap)
+  • onContextMenu→ onChange(shiftSpeed(speed,-1))  (one slower, clamp; preventDefault)
+  • aria-label   → t('replay.controls.speed', 'Playback speed')   ← the ONLY i18n key
+
+STATES — honest mapping (Covenant #1 / #2 / #5): the generic per-surface template lists
+loading / empty / error / stale / offline. The web source has NO data source (only `speed`
++ `onChange` + `useTranslation`), so those async-data states DO NOT EXIST in the source and
+are intentionally NOT fabricated. Every branch that genuinely exists IS reproduced + tested:
+  • each of the 5 speed values renders (1x / 10x / 25x / 50x / 100x)
+  • forward cycle advances through each slot and WRAPS 100x → 1x
+  • backward step goes one slower and CLAMPS at 1x (+ multi-slot jumps, 0-delta identity)
+  • the current speed is checkmarked in the menu (the selected-row affordance)
+
+-------------------------------------------------------------------------------
+NATIVE DESIGN (Apple HIG — SwiftUI, iOS 18 / iPadOS 18 / macOS 15)
+-------------------------------------------------------------------------------
+• Control: SwiftUI `Menu(content:label:primaryAction:)` — the HIG-idiomatic counterpart of the
+  web cycling button + secondary gesture:
+    - primaryAction = model.cycleForward(from: speed)   ⟷ web onClick (tap cycles forward, wraps)
+    - menu open (long-press on iOS / right-click on macOS) ⟷ web onContextMenu (secondary gesture);
+      content lists every speed for direct selection — a faithful SUPERSET of the web "one slower"
+      step, with the current speed checkmarked. cycleBackward()/shiftSpeed(-1) is preserved as a
+      first-class, unit-tested model method (the verbatim port of the web onContextMenu handler).
+• Label: `{speed}x` in the small body face with `.monospacedDigit()` (the parity of web `text-xs
+  font-mono` — stable digit width across 1→10→25→50→100). The web lucide `ChevronDown` maps to the
+  native `Menu` disclosure indicator (HIG-idiomatic), so the label stays text-only.
+• Controlled: `speed` is supplied by the parent on every render (exactly like the web source); the
+  view is a pure function of it. The model owns only the `onChange` callback + telemetry.
+• Tokens only (P1/S9): Color.TS.{textPrimary,surfaceGlass,bg}, Font.TS.{bodySm,panel},
+  TSSpacing.{xs,sm,md}, TSRadius.{sm,md}. No Tailwind ports, no raw hex, no ad-hoc typography.
+• Binding (P1/S8): no HTTP from the view; the only "data source" (useTranslation) is the P1/S10
+  facade. The @MainActor @Observable PlaybackSpeedMenuModel carries the onChange notification +
+  the once-only view.opened emission off the view.
+• Accessibility: .accessibilityLabel("Playback speed") + .accessibilityValue("{speed}x") on the
+  control (VoiceOver: "Playback speed, 10x, pop-up button"); each menu row labelled "{n}x" and the
+  current row carries .isSelected. Dynamic Type via system text styles; no motion added (reduce-
+  motion safe). Min targets iOS 18 / macOS 15.
+• Telemetry (P1/S11): emits `view.opened` with surface slug "PlaybackSpeedMenu" exactly once on
+  first appearance, via a testable diagnostics seam (OSLog default; injectable adapter).
+
+NOTE — scope: the atomic component-library control `TSPlaybackSpeedMenu` in
+Sources/Components/DataDisplay/Playback.swift (a generic [0.5,1,2,4] Double picker) is OUT OF SCOPE
+for this surface (covered by the P4 component-library bundle) and was NOT modified. This surface is
+the full-fidelity web-parity shared surface and owns its own collision-free types
+(verified: no pre-existing `ReplaySpeed` / `PlaybackSpeedMenu` / `nextSpeed` / `shiftSpeed`).
+
+-------------------------------------------------------------------------------
+FILES (7) — mirrors the ChartExportMenu no-data-adapter surface set
+-------------------------------------------------------------------------------
+  PlaybackSpeedMenu.Model.swift      Foundation core: ReplaySpeed enum, PlaybackSpeedMenuLogic
+                                     (replaySpeeds/shiftSpeed/nextSpeed), Strings facade, Meta slug,
+                                     Telemetry seam + OSLog default + Diagnostics, @MainActor model.
+  PlaybackSpeedMenu.Views.swift      Trigger label (mono {speed}x) + menu item row (checkmark).
+  PlaybackSpeedMenu.swift            The Menu(primaryAction:) surface view; a11y label/value; onAppear.
+  PlaybackSpeedMenu.Previews.swift   DEBUG #Preview per branch (1x / 25x / 100x→wraps), interactive.
+  PlaybackSpeedMenu.Tests.swift      Logic/projection + accessibility + i18n facade tests.
+  PlaybackSpeedMenu.ModelTests.swift Telemetry once-only + model dispatch (forward/backward/select).
+  PlaybackSpeedMenu.strings          i18n catalog contribution: "replay.controls.speed".
+
+-------------------------------------------------------------------------------
+GATE RESULTS
+-------------------------------------------------------------------------------
+[1] ISOLATED SwiftPM BUILD + TESTS (Swift 6 language mode = strict concurrency complete)
+    Harness: lib target `TeslaSync` = the 4 non-test surface files + the REAL generated
+    apps/design/generated/apple/Tokens.swift; test target `TeslaSyncTests` = the 2 *Tests files
+    (@testable import TeslaSync). Platforms .macOS(.v15) / .iOS(.v18).
+      $ swift test
+      Test Suite 'All tests' passed.
+      Executed 24 tests, with 0 failures (0 unexpected) in 0.004 seconds
+    SWIFT_TEST_EXIT=0   (24/24 green: 8 Logic + 5 Model + 3 Strings + 5 Diagnostics + 3 Accessibility)
+
+[2] swiftc -typecheck against the REAL SDKs (Swift 6, -strict-concurrency=complete), surface + Tokens
+      iOS  : -sdk iPhoneSimulator26.5 -target arm64-apple-ios18.0-simulator   → IOS_TYPECHECK_RC=0
+      macOS: -sdk MacOSX26.5          -target arm64-apple-macos15.0           → MAC_TYPECHECK_RC=0
+    0 errors / 0 warnings on both SDKs.
+
+[3] swiftlint --strict (the 6 surface .swift files)
+      Done linting! Found 0 violations, 0 serious in 6 files.
+    LINT_EXIT=0
+
+[4] swiftformat --lint (the 6 surface .swift files; apps/apple/.swiftformat config)
+      0/6 files require formatting.
+    FORMAT_EXIT=0
+
+[5] placeholder gate — official apps/tools/check-placeholders.ps1 -Language swift, isolated copy of
+    all 7 surface files (the literal prompt -Path points at a non-existent dir → would scan nothing;
+    this run scans the REAL files). Script self-test PASS (it genuinely detects stubs).
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0   (0 opt-outs; no TODO/FIXME/XXX/Placeholder/Coming soon/Lorem/"not implemented"/swift stubs)
+
+[6] i18n parity (web `t(key, default)` keys vs native catalog + facade)
+      web source t() keys : replay.controls.speed                       (1 key, the only literal)
+      PlaybackSpeedMenu.strings keys : replay.controls.speed            (1/1)
+      code references : Model.swift facade + Tests.swift                (resolved)
+    I18N_PARITY: 1/1 keys, 0 missing, 0 dead. The on-screen `{speed}x` is a formatted multiplier
+    (composed in code), not translatable prose — intentionally not a catalog key (web renders it the
+    same way, `{speed}x`).
+
+[7] xcodegen generate
+      Created project at apps/apple/TeslaSync.xcodeproj
+    XCODEGEN_EXIT=0   (all 7 files enumerated; 42 pbxproj refs; .swift → app target, *Tests.swift →
+    XCTest bundles, .strings → resources, per the existing project.yml shared-surfaces globs — no
+    project.yml edit needed; the generated .xcodeproj is git-ignored at .gitignore:379)
+
+-------------------------------------------------------------------------------
+FULL-APP xcodebuild build test (the prompt gate) — executed end-to-end, real exit codes
+-------------------------------------------------------------------------------
+The iOS scheme pre-action assembled the KMP Shared.xcframework live this run (Gradle
+:core:assembleSharedXCFramework — DEBUG XCFramework written; RELEASE link completed + staged), then
+xcodebuild compiled the full app target (arm64-apple-ios18.0-simulator, -swift-version 6).
+
+iOS  : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+       ** BUILD FAILED ** then ** TEST FAILED **
+       108 compile errors across 10 distinct source files — ALL pre-existing parallel-merge
+       collisions in OTHER slots' surfaces (zero in this surface):
+         RecentDrivesListWidget.{swift,Model,Previews}.swift,
+         RecentDrivesSection.{Previews,Seams}.swift,
+         StateTimeline.{Previews,Source}.swift,
+         StateTimelineWidget.{swift,Model,Previews}.swift
+       Representative: "'RecentDrivesModel' is ambiguous for type lookup", "'RecentDrivesUpdate'/
+       'RecentDrivesLoadStatus'/'RecentDrivesConnection' is ambiguous", + StateTimeline* peers.
+       PlaybackSpeedMenu: 0 errors / 0 warnings. The only PlaybackSpeedMenu lines in the log are the
+       resource integration succeeding:
+         "CopyStringsFile … TeslaSync.app/PlaybackSpeedMenu.strings"
+         "builtin-copyStrings --validate … --outfilename PlaybackSpeedMenu.strings"
+         "PlaybackSpeedMenu.strings:1:1: note: detected encoding … Unicode (UTF-8)"
+    IOS_EXIT=65   (DEFERRED — pre-existing sibling-slot RecentDrives*/StateTimeline* ambiguous
+                  types; this surface 0 errors; its .strings bundled + validated OK)
+
+macOS: xcodebuild -scheme TeslaSync-macOS build test
+       ** BUILD FAILED ** then ** TEST FAILED **
+       Exactly 4 errors, ALL macOS development-signing — failed at the target signing/entitlements
+       gate BEFORE any app Swift source compiled (0 compile errors, 0 ambiguity errors):
+         error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+         error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+       Evidence: `security find-identity -p codesigning` → "0 valid identities found".
+       PlaybackSpeedMenu: 0 errors / 0 warnings.
+    MAC_EXIT=65   (DEFERRED — macOS code-signing / no dev certificate on runner; this surface 0 errors)
+
+Both full-app xcodebuild steps are DEFERRED to p4-apple/P99-0001-apple-acceptance-gate (runs on
+`macos-latest` with signing identities), exactly as recorded for every sibling P4-apple surface in
+apps/macos-pending-verifications.md. The blocks (other slots' ambiguous types + macOS dev-signing)
+are pre-existing, unrelated, and outside this surface's allowed-files scope
+(apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.* + this log) — they are NOT a surface red.
+
+-------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+-------------------------------------------------------------------------------
+[x] Surface renders on Apple with all states from the web source reproduced (every real branch:
+    5 speeds, forward-wrap, backward-clamp, multi-slot, current checkmark; the template async-data
+    states do not exist in the source and were not fabricated — see STATES above).
+[x] Hooks bind to the shared layer; no direct HTTP from the view (the only hook is useTranslation →
+    the P1/S10 facade; the @MainActor model carries onChange off the view).
+[x] Every i18n key from source has a matching key in the catalog (1/1; 0 missing, 0 dead).
+[x] Accessibility labels present on every interactive element (control label+value; each menu row).
+[x] Tests: adapter/projection unit tests + per-state coverage + a11y label test (24/24; the pure
+    speed projection IS the data adapter here — no async source; per-branch render via #Preview).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0, 0 opt-outs).
+[x] EXIT=0 / STATUS=DONE for the surface; full-app xcodebuild DEFERRED with platform evidence above.
+
+-------------------------------------------------------------------------------
+HONESTY COVENANT
+-------------------------------------------------------------------------------
+  1  No red-as-green ...... real exits captured (IOS_EXIT=65 pre-existing sibling collisions,
+                           MAC_EXIT=65 macOS dev-signing); surface gates genuinely green; the iOS
+                           Kotlin pre-action really assembled Shared.xcframework this run.
+  2  No scope narrowing ... exact prompt gate commands run end-to-end; full results recorded; every
+                           web branch reproduced (props-driven control — no fabricated data states).
+  3  No skip-and-assume ... both iOS + macOS xcodebuild actually executed to completion; real
+                           65/65 captured; SwiftPM tests really ran (24/24); both SDKs typechecked.
+  4  No stubs ............. no TODO/placeholder/fatalError; every branch renders real content;
+                           the model + diagnostics seams are real; PLACEHOLDER_COUNT=0.
+  5  No parity shortcuts .. REPLAY_SPEEDS order, nextSpeed wrap, shiftSpeed clamp + multi-slot, the
+                           control label switch, the current-row checkmark, and the verbatim i18n
+                           key all reproduced + tested.
+  6  No delegation ........ implemented directly; no sub-agents / parallel / background delegation.
+  7  No predecessor bypass  P4-core/P1 deps (tokens P1/S9, i18n P1/S10, diagnostics P1/S11) consumed
+                           + compile clean; followed the P4-apple DEFERRED precedent + the
+                           ChartExportMenu props-driven-leaf architecture.
+  8  No commit on red ..... runnable surface gates green + surface clean; xcodebuild DEFERRED per
+                           the documented precedent (not a surface red).
+  9  No silent drift ...... only the 7 surface files + this log; project.yml/.swiftlint.yml already
+                           glob shared-surfaces (no edit needed); generated xcodeproj git-ignored;
+                           the atomic TSPlaybackSpeedMenu (out of scope) left untouched.
+  10 Log ends with EXIT and STATUS each on its own line.
+
+-------------------------------------------------------------------------------
+COMMIT
+-------------------------------------------------------------------------------
+git add apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.Model.swift \
+        apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.Views.swift \
+        apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.swift \
+        apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.Previews.swift \
+        apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.Tests.swift \
+        apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.ModelTests.swift \
+        apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.strings \
+        .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0097-PlaybackSpeedMenu.log
+git commit -m "feat(apps/apple/shared-surfaces): add PlaybackSpeedMenu surface (P4)"
+
+SWIFT_TEST_EXIT=0  (24/24 executed green; real Model + test sources, Swift 6 strict concurrency)
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+XCODEGEN_EXIT=0
+IOS_EXIT=65        (DEFERRED — pre-existing sibling-slot RecentDrives*/StateTimeline* ambiguous types; this surface 0 errors)
+MAC_EXIT=65        (DEFERRED — macOS code-signing / no dev certificate on runner; this surface 0 errors)
+EXIT=0
+STATUS=DONE
