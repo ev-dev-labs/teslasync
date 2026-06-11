@@ -235,3 +235,4 @@ p3-android/dashboard-widgets/A-0096-StateTimelineWidget.prompt.md
 p3-android/dashboard-widgets/A-0097-SubscriptionsWidget.prompt.md
 p3-android/dashboard-widgets/A-0095-SpeedProfileWidget.prompt.md
 p3-android/dashboard-widgets/A-0099-SystemHealthWidget.prompt.md
+p3-android/dashboard-widgets/A-0100-TelemetryErrorsWidget.prompt.md
