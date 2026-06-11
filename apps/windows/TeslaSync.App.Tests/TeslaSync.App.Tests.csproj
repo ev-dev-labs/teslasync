@@ -3,12 +3,11 @@
   <!--
     TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
     UI-thread-free logic (Model / Source / ViewModel / Projection / Registry / diagnostics) for each
-    feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and
-    cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
-    Compile-linked below (the WinUI views themselves are exercised by the app build).
+    feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and cannot
+    be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
     Compile-linked into the single ItemGroup below (the Link mirrors each source's real location under
-    FeatureViews\ or Widgets\); the WinUI views themselves are exercised by the app build. The matching
-    test classes live under this project and are picked up by the SDK default-compile glob.
+    FeatureViews\ or Widgets\); the WinUI views themselves are exercised by the app build. The matching test
+    classes live under this project and are picked up by the SDK default-compile glob.
 
     INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted, Include-deduplicated
     Compile ItemGroup - the union of every WinUI-free logic source on disk under dashboard-widgets/ and
@@ -140,6 +139,12 @@
     this file into multiple Project roots plus duplicate Compile items, failing XML load (MSB4025);
     re-consolidated for P2 feature-views/0248 InfrastructureSection. Do NOT re-concatenate, and never
     write a literal build-item or project start tag inside this comment.
+    feature-views/ (every .cs that does not reference Microsoft.UI; the bare WinUI view files are excluded).
+    This file uses the .gitattributes "merge=union" strategy, so a chain of integration merges had repeatedly
+    re-concatenated it into multiple Project roots plus duplicate Compile items and orphaned comment prose,
+    failing XML load (MSB4025/MSB4067); re-consolidated for P2 feature-views/0252 ServiceHealthSection into
+    this single canonical root. Do NOT re-concatenate, and never write a literal build-item or project start
+    tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -814,6 +819,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.Source.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityStatusCards\SecurityStatusCards.ViewModel.cs" Link="FeatureViews\SecurityStatusCards\SecurityStatusCards.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SentryModeChart.Model.cs" Link="FeatureViews\SentryModeChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ServiceHealthSection.Model.cs" Link="FeatureViews\ServiceHealthSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ServiceHealthSection.Source.cs" Link="FeatureViews\ServiceHealthSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ServiceHealthSection.ViewModel.cs" Link="FeatureViews\ServiceHealthSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Model.cs" Link="FeatureViews\SessionComparisonChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.Source.cs" Link="FeatureViews\SessionComparisonChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SessionComparisonChart.ViewModel.cs" Link="FeatureViews\SessionComparisonChart.ViewModel.cs" />
