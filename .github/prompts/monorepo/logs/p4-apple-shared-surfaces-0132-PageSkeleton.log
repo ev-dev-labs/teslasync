@@ -1,0 +1,165 @@
+=== P4 Shared surface 0132 PageSkeleton (Apple) ===
+Web source : web/src/components/feedback/PageSkeleton.tsx (pure presentational; imports ./Skeleton)
+Native out : apps/apple/TeslaSync/shared-surfaces/PageSkeleton.*
+Date       : 2026-06-11
+Host       : Darwin arm64, shared (non-sandboxed) parallel-slot host
+Prompt     : .github/prompts/monorepo/p4-apple/shared-meaningful/P-0132-PageSkeleton.prompt.md
+Allowed    : apps/apple/TeslaSync/shared-surfaces/PageSkeleton.* + this log ONLY
+
+------------------------------------------------------------------------------------------------------------------
+CAPABILITY (per the prompt's capability clause)
+------------------------------------------------------------------------------------------------------------------
+  Xcode 26.5 (Build 17F42), swift 6.3.2, swiftlint, swiftformat, xcodegen 2.45.4, pwsh — all present.
+  iOS Simulator: iPhone 16 present (runtime iOS 26.5). macOS SDK 15+ via Xcode 26.5. Deployment iOS 18 / macOS 15.
+  KMP Shared.xcframework: built + staged cleanly (apps/shared gradlew :core:assembleSharedXCFramework, BUILD
+    SUCCESSFUL; Frameworks/Shared.xcframework written for ios-arm64, ios-arm64-sim, macos-arm64).
+  swiftc -typecheck of the surface OK on BOTH the iOS-18-simulator and macOS-15 SDKs (see GATES).
+  CONCLUSION: the platform CAN build + verify this surface. This surface uses NO charts and NO maps
+    (web source "none"); it is pure SwiftUI + the P1/S9 design tokens + the shared TSSkeleton primitive.
+
+------------------------------------------------------------------------------------------------------------------
+ARTIFACT (7 files, 691 lines; one exported concern per file)
+------------------------------------------------------------------------------------------------------------------
+  PageSkeleton.swift             178  public surface: the 4 web building-block views (PageHeaderSkeleton,
+                                      StatGridSkeleton{cards}, ChartBlockSkeleton{height}, TableSkeleton{rows,cols});
+                                      each wires once-only view.opened + the loading-status a11y region
+  PageSkeleton.Projection.swift  123  SwiftUI-free core: PageSkeletonMeta.surfaceSlug, PageSkeletonRegion (the web
+                                      role=status/aria-label set + data-testid ids), PageSkeletonLayout (web Tailwind
+                                      → P1/S9 tokens), responsive statColumns(), non-negative clampedCount()
+  PageSkeleton.Model.swift        93  state-holder (P1/S8): PageSkeletonTelemetry seam + OSLog default (P1/S11
+                                      view.opened), PageSkeletonStrings i18n facade (P1/S10), once-only start()
+                                      + facade-routed label(for:)
+  PageSkeleton.Views.swift        62  presentational leaves over the shared TSSkeleton primitive (DRY = web
+                                      <Skeleton>): stat card, table row, + the .pageSkeletonRegion a11y modifier
+  PageSkeleton.Previews.swift     63  DEBUG previews: each block default + a configured variant + full page composite
+  PageSkeleton.Tests.swift       153  XCTest: projection defaults/columns/clamp, region keys/fallbacks/ids,
+                                      model once-only telemetry + facade label routing, view compose contract (12)
+  PageSkeleton.strings            19  P1/S10 catalog contribution (table "PageSkeleton", 4 a11y label keys)
+
+  No .Seams.swift / .Adapter.swift / data source: the web source is PURE presentation (no hook, no fetch),
+  so there is no data seam to model — modelling one would be invented scope. Build/lint wiring is integration-time
+  (project.yml already lists TeslaSync/shared-surfaces for both app targets + the unit-test bundles; .swiftlint.yml
+  already includes it) — no edits required, and none allowed, outside PageSkeleton.* by this prompt.
+
+------------------------------------------------------------------------------------------------------------------
+PARITY (web source read end-to-end; every export + branch reproduced)
+------------------------------------------------------------------------------------------------------------------
+  web PageHeaderSkeleton   -> PageHeaderSkeleton   : title (h-8 w-64 -> 32x256) over subtitle (h-4 w-96
+                              max-w-full -> 16x<=384), space-y-2 (8). role=status aria-label "Loading page header" [done]
+  web StatGridSkeleton     -> StatGridSkeleton     : grid-cols-2 / md:grid-cols-4 -> 2 (compact) / 4 (regular)
+                              via horizontalSizeClass; gap-4 (16); card h-24 (96) rounded-xl (TSRadius.md=12);
+                              cards default 4, configurable. aria-label "Loading stat cards"                       [done]
+  web ChartBlockSkeleton   -> ChartBlockSkeleton   : full-width box, height default 320, rounded-xl (md).
+                              aria-label "Loading chart"                                                            [done]
+  web TableSkeleton        -> TableSkeleton        : header h-10 (40) rounded-t-xl (md) over rows x cols cells
+                              (h-8 (32) rounded -> TSRadius.sm), gap-3 (12) cols, space-y-2 (8) rows; rows default 8,
+                              cols default 4, configurable. aria-label "Loading table"                              [done]
+  web <Skeleton> (./Skeleton) -> shared TSSkeleton (Sources/Components/Feedback/Skeletons.swift) REUSED, not
+                              re-implemented (DRY): animate-pulse -> token shimmer gated on Reduce Motion           [done]
+  Tailwind classes         -> NOT ported; mapped to P1/S9 tokens (TSSpacing, TSRadius) per the prompt              [done]
+  i18n                     -> the 4 hardcoded web aria-label literals resolve through the P1/S10 facade
+                              ("PageSkeleton" table): skeleton.{pageHeader,statGrid,chart,table}.label             [done]
+  a11y                     -> each region = one VoiceOver element, localized "Loading ..." label,
+                              .updatesFrequently (web role=status/aria-busy live region), data-testid -> a11y id;
+                              inner boxes decorative (TSSkeleton accessibilityHidden); Reduce Motion respected;
+                              Dynamic Type N/A (fixed-size placeholders, as in the web source)                     [done]
+  telemetry                -> P1/S11 view.opened surface="PageSkeleton" emitted once per block on first appear    [done]
+
+------------------------------------------------------------------------------------------------------------------
+STATES (every state the WEB SOURCE has is reproduced; the rest are documented N/A)
+------------------------------------------------------------------------------------------------------------------
+  The web source is a PURE loading-skeleton module: it has NO data binding, NO query, and therefore NO
+  empty / error / stale / offline branch. The loading shape IS the surface. Reproducing exactly that (and NOT
+  inventing empty/error/stale/offline chrome the web component does not have) is the faithful, honest port —
+  the same disposition the sibling LiveIndicator projection documents ("rather than inventing chrome the web
+  source does not have"). The generic per-surface state list does not apply because there is no data boundary
+  to gate. loading = the four rendered building blocks (always visible, never a blank box).
+
+------------------------------------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (surface scope — the unit this prompt owns) — all GREEN
+------------------------------------------------------------------------------------------------------------------
+  [PASS] swiftc -typecheck  iOS 18.0-simulator   (surface + previews vs REAL Tokens + REAL TSSkeleton,
+            swift 6, -strict-concurrency=complete)                                                       EXIT=0
+  [PASS] swiftc -typecheck  macOS 15.0            (surface + previews vs REAL Tokens + REAL TSSkeleton,
+            swift 6, -strict-concurrency=complete)                                                       EXIT=0
+  [PASS] swift test  (isolated SwiftPM, module "TeslaSync" = real Tokens + TSSkeleton + surface,
+            language mode v6; the XCTest file runs verbatim incl. its @testable import TeslaSync)
+            -> Executed 12 tests, with 0 failures (0 unexpected)
+               PageSkeletonProjectionTests (4)  PageSkeletonRegionTests (3)
+               PageSkeletonModelTests (3)       PageSkeletonViewTests (2)                                 EXIT=0
+  [PASS] standalone logic runner (real Projection + Model, macOS) -> 26/26 checks PASS                   EXIT=0
+  [PASS] swiftlint --strict       (full apps/apple WITH surface) -> 0 violations, 0 serious in 4300 files LINT_EXIT=0
+  [PASS] swiftformat --lint apps/apple (full WITH surface)       -> 0/4598 files require formatting       FORMAT_EXIT=0
+  [PASS] check-placeholders.ps1 -Path .../shared-surfaces/PageSkeleton -> PLACEHOLDER_COUNT=0             EXIT=0
+  [PASS] xcodegen generate (surface registered in both app targets + both unit-test bundles)             EXIT=0
+  [PASS] full from-scratch iOS app-target compile submitted all 5 production files with 0 error/0 warning
+            diagnostics attributable to PageSkeleton.* (Tests.swift correctly compiles in the test bundle)
+
+------------------------------------------------------------------------------------------------------------------
+VERBATIM WHOLE-APP GATE (xcodebuild build test) — RED, but DEFERRED (NOT failed by this surface)
+------------------------------------------------------------------------------------------------------------------
+  [iOS ] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test    IOS_EXIT=65
+         Fails at COMPILE on PRE-EXISTING peer-surface errors OUTSIDE this prompt's allowed files:
+           TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24
+             error: the compiler is unable to type-check this expression in reasonable time
+           TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142
+             error: escaping closure captures non-escaping parameter 'content'
+               (a repo-wide pattern: glass(@ViewBuilder _ content: () -> some View) passed into the
+                @escaping TSGlassPanel.init; same class of error also seen in AIAutoNameUnnamedLocations.swift:123)
+         ZERO diagnostics in PageSkeleton.*.
+  [mac ] xcodebuild -scheme TeslaSync-macOS build test                                                   MAC_EXIT=65
+         Source compiles; fails on macOS DEVELOPMENT-SIGNING (no code defect):
+           "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require signing with a
+            development certificate ... Testing cancelled because the build failed.
+           (DEVELOPMENT_TEAM is empty in project.yml; no signing identity on this host.)
+         ZERO diagnostics in PageSkeleton.*.
+
+  PROOF the RED is PRE-EXISTING and independent of this surface:
+    A clean BASELINE build with PageSkeleton.* REMOVED (files moved out, xcodegen regenerated, fresh
+    derivedData) FAILS IDENTICALLY:
+      xcodebuild -scheme TeslaSync -destination '...iPhone 16' build  -> EXIT=65, first failure
+        TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24 (same type-check-timeout).
+    Across 4 whole-app builds the failures land in different UNTOUCHED files (RecentDrivesSection,
+    AISignalExplorerNlFilter, AIAutoNameUnnamedLocations, + a nondeterministic IRGen
+    report_at_maximum_capacity crash in AppearanceSettings.Controls.swift under the Xcode-26.5 toolchain,
+    which is newer than this code's iOS-18/macOS-15 target era and ships no iOS-18 simulator). None are in,
+    caused by, or fixable within PageSkeleton.* (only PageSkeleton.* + this log are editable here).
+
+  DISPOSITION: the whole-app xcodebuild build/test is DEFERRED to the p4-apple/P99-0001 acceptance gate on a
+  signed macos-latest CI runner (peer-surface compile fixes + macOS dev-signing), per
+  apps/macos-pending-verifications.md. This is the sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date (cf. feature-views/0254 StatusPageSkeleton STATUS=DONE,
+  shared-surfaces/0094 LiveIndicator, 0096 PlaybackControls).
+
+------------------------------------------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------------------------------------------
+  1 No red-as-green     : the raw IOS_EXIT=65 / MAC_EXIT=65 are shown verbatim with root causes; the DEFERRAL is
+                          explicit and evidence-backed (baseline reproduction), not hidden.
+  2 No scope narrowing  : all 4 web exports reproduced, every prop (cards/height/rows/cols), a11y, i18n, telemetry.
+  3 No skip-and-assume  : web source + base ./Skeleton read end-to-end; tokens/primitive verified in-repo.
+  4 No stubs as final   : no TODO/stub/mock/placeholder/Lorem (check-placeholders=0); full implementations.
+  5 No parity shortcuts : reuses the real shared TSSkeleton (DRY); maps Tailwind -> real P1/S9 tokens.
+  6 No delegation       : authored directly.
+  7 No predecessor bypass: P4 core (tokens/telemetry/i18n facade), P1/S8/S9/S10/S11 consumed as-is.
+  8 No commit on red    : the surface itself is GREEN on every file-scoped gate; the whole-app build RED is
+                          pre-existing/peer/signing and DEFERRED (sanctioned), not a defect in committed code.
+  9 No silent drift     : the pure-presentational state mapping (no empty/error/stale/offline) is documented.
+ 10 Log ends with EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------------------------------
+  Production-polished, Apple-idiomatic PageSkeleton shipped at parity with web/src/components/feedback/
+  PageSkeleton.tsx and INDEPENDENTLY VERIFIED: it typechecks against BOTH the iOS-18 simulator and macOS-15
+  SDKs under the app target's own Swift-6 strict-concurrency rules vs the real design system + the real
+  shared TSSkeleton primitive; its 12 XCTest cases pass (and a 26-check logic runner); and
+  swiftlint/swiftformat/placeholder/xcodegen are all green, with the full from-scratch app compile producing
+  ZERO diagnostics in this surface. The whole-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED
+  (not failed by this code): the only blockers are PRE-EXISTING peer-surface compile errors and macOS
+  development-signing, both OUTSIDE this prompt's allowed files and owned by the P99-0001 acceptance gate on a
+  signed CI runner. This matches the sanctioned code-complete + DEFERRED Xcode gate disposition used by every
+  P4 surface to date.
+
+EXIT=0
+STATUS=DONE
