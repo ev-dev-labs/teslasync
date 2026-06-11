@@ -1,0 +1,44 @@
+/*
+  TripReplayCharts.strings
+  TeslaSync — P4 feature view · 0273 · TripReplayCharts (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TripReplayCharts` resolves (table "TripReplayCharts") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/trips/components/TripReplayCharts.tsx). The remainder back the native state
+  envelope (freshness chip, connectivity banner, loading / empty / error chrome) and the
+  chart axes / legend / accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"replay.timeline.title" = "Speed & Power Timeline";
+"replay.timeline.subtitle" = "Click to seek replay position";
+"replay.timeline.aria" = "Trip replay speed and power timeline area chart";
+"replay.timeline.speed" = "Speed";
+"replay.timeline.power" = "Power";
+"replay.timeline.noData" = "No telemetry data available";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"replay.timeline.live" = "Live";
+"replay.timeline.stale" = "Stale";
+"replay.timeline.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"replay.timeline.staleBanner" = "Reconnecting — replay timeline may be stale";
+"replay.timeline.offlineBanner" = "Offline — showing the last loaded replay timeline";
+
+/* --- Chart axes / series + accessibility summary --- */
+"replay.timeline.timeAxis" = "Time";
+"replay.timeline.series" = "Series";
+"replay.timeline.samples" = "samples";
+
+/* --- Loading / empty / error chrome --- */
+"replay.timeline.loading" = "Loading replay timeline";
+"replay.timeline.emptyHint" = "The speed and power timeline appears here once this trip has telemetry samples.";
+"replay.timeline.errorTitle" = "Couldn't load the replay timeline";
+"replay.timeline.retry" = "Retry";
