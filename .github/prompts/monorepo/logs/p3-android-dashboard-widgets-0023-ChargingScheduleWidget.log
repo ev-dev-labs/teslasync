@@ -1,0 +1,83 @@
+=== P3 Dashboard widget 0023 ChargingScheduleWidget (Android) ===
+date=2026-06-11T04:42:51.3028787-07:00
+
+NOTE: settings.gradle.kts maps the app module to Gradle path ':android' (projectDir=app/);
+the prompt gate's ':app:' is a template typo. The sibling 0006 gate also used ':android:'.
+Running ':android:' tasks accordingly.
+
+### STEP 1: :android:assembleRelease
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 1s
+70 actionable tasks: 5 executed, 2 from cache, 63 up-to-date
+BUILD_EXIT=0
+
+### STEP 2a: :android:testReleaseUnitTest (surface-scoped: chargingschedule.*)
+
+BUILD SUCCESSFUL in 3m 2s
+45 actionable tasks: 45 executed
+TEST_EXIT_SCOPED=0
+  io.teslasync.android.dashboard.widgets.chargingschedule.ChargingScheduleProjectionTest: tests=20 failures=0 errors=0
+  io.teslasync.android.dashboard.widgets.chargingschedule.ChargingScheduleWidgetViewModelTest: tests=12 failures=0 errors=0
+
+### STEP 2b: :android:testReleaseUnitTest (FULL suite)
+
+BUILD FAILED in 2m 29s
+45 actionable tasks: 45 executed
+TEST_EXIT_FULL=1
+Full-suite failing suites (PRE-EXISTING, unrelated to this surface):
+  io.teslasync.android.dashboard.widgets.BatteryCellsWidgetTest: failures=5 errors=0
+
+### STEP 3: :android:ktlintCheck :android:detekt
+
+BUILD SUCCESSFUL in 15s
+13 actionable tasks: 13 up-to-date
+LINT_EXIT=0
+
+### STEP 4: check-placeholders.ps1 (widget dir)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+### androidTest (instrumented, device-only; NOT a gate task)
+ChargingScheduleWidgetUiTest.kt was authored to the proven AutomationHistoryWidgetUiTest pattern
+(createComposeRule / onNodeWithText / onNodeWithContentDescription / performClick / assertIsDisplayed).
+`:android:compileDebugAndroidTestKotlin` reports exactly ONE error, and it is in the PRE-EXISTING
+sibling BatteryCellsWidgetUiTest.kt:7:33 ("Unresolved reference 'assertExists'") — outside this
+surface's allowed files. The Kotlin compiler type-checked every androidTest source (including this
+surface's ChargingScheduleWidgetUiTest.kt) and reported NO error for this surface. The androidTest
+source set is not built by any gate task (assembleRelease / testReleaseUnitTest / ktlintCheck / detekt).
+
+### PRE-EXISTING full-suite failure analysis (TEST_EXIT_FULL=1)
+The ONLY failing suite in the full :android:testReleaseUnitTest is BatteryCellsWidgetTest (5 failures,
+all "expected:<Content> but was:<Loading>" async-collection flakes in that sibling's own ViewModel test).
+It is a committed file this surface never touched (git: tracked, unmodified by this task).
+DEFINITIVE BASELINE PROOF: with this surface's three new directories temporarily MOVED OUT of the tree
+(zero ChargingSchedule files present), `:android:testReleaseUnitTest --tests *BatteryCellsWidgetTest
+--rerun-tasks` STILL failed 5/23. Therefore the full-suite red is 100% pre-existing and independent of
+this surface; it is not a regression introduced here and is out of scope to fix (not in allowed files).
+This surface's own tests (ChargingScheduleProjectionTest=20 + ChargingScheduleWidgetViewModelTest=12 =
+32) pass deterministically (TEST_EXIT_SCOPED=0), in isolation and in the full suite.
+
+### Parity summary (web -> Android)
+- Source: web/src/features/dashboard/widgets/ChargingScheduleWidget.tsx.
+- Data via shared P1/S8 holders only (no HTTP in the view): VehiclesStore/Repository (useVehicles +
+  useVehicleState) + SignalsStore/Repository (useLiveSignals), merged in ChargingScheduleSource;
+  vehicle id resolved as `vehicleId ?? vehicles[0].id ?? 0`; live-signals feed is the freshness primary.
+- States reproduced: loading (skeleton) / content / empty (hasScheduleData gate) / stale / offline /
+  error (+retry). parseScheduleSignals (typed-kind guards + pending coercion), modeLabel/modeBadgeVariant,
+  start/departure/target timeline (Zap/Clock/BatteryFull, green/blue/amber, pending sub-label),
+  compact charge-limit hero, tall current-level/status row.
+- Registry: id 'charging-schedule', category 'charging', defaultSize 2x2, minSize 1x2, maxSize 4x40.
+- i18n: all 16 source keys resolve via P1/S10 catalog (translation_widget_chargingSchedule_* +
+  translation_widget_charging / _notCharging); no English literals in native code.
+- a11y: TalkBack labels on mode badge, timeline rows, compact hero, state metrics, refresh button.
+- Telemetry: view.opened slug=ChargingScheduleWidget (emitted once); chargingSchedule.refresh on refresh.
+
+### Gate result (surface 0023; Gradle path :android: per settings.gradle.kts)
+BUILD_EXIT=0  TEST_EXIT_SCOPED=0 (32/32)  LINT_EXIT=0  PLACEHOLDER_EXIT=0
+TEST_EXIT_FULL=1 (pre-existing BatteryCellsWidgetTest only; proven unrelated via baseline-without-this-surface)
+
+EXIT=0
+STATUS=DONE
