@@ -497,3 +497,4 @@ p2-windows/feature-views/W-0296-RecentChargesSection.prompt.md
 p2-windows/feature-views/W-0300-VehicleConfigSection.prompt.md
 p2-windows/feature-views/W-0298-SecuritySection.prompt.md
 p2-windows/feature-views/W-0299-TirePressureSection.prompt.md
+p2-windows/feature-views/W-0301-VehicleHeader.prompt.md
