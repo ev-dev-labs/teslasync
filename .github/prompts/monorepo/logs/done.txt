@@ -140,3 +140,4 @@ p3-android/A6-0001-live-data-sse.prompt.md
 p3-android/A6-0002-push-fcm.prompt.md
 p3-android/A8-0001-app-widgets-glance.prompt.md
 p3-android/A8-0002-shortcuts-notifications-settings.prompt.md
+p3-android/A8-0003-wear-os-companion.prompt.md
