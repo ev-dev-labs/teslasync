@@ -36,41 +36,10 @@ public enum IncidentsState
     Error,
 }
 
-/// <summary>
-/// Incident severity (web <c>IncidentSeverity</c> in web/src/api/hooks/useIncidents.ts). An ordered scale —
-/// <see cref="Minor"/> &lt; <see cref="Major"/> &lt; <see cref="Critical"/> — that drives the row glyph, the
-/// severity tone and the severity label.
-/// </summary>
-public enum IncidentSeverity
-{
-    /// <summary>Lowest severity (web <c>'minor'</c>).</summary>
-    Minor,
-
-    /// <summary>Mid severity (web <c>'major'</c>).</summary>
-    Major,
-
-    /// <summary>Highest severity (web <c>'critical'</c>).</summary>
-    Critical,
-}
-
-/// <summary>
-/// Incident lifecycle status (web <c>IncidentStatus</c> in web/src/api/hooks/useIncidents.ts). Drives the per-row
-/// status badge tone exactly as the web <c>STATUS_BADGE</c> map does.
-/// </summary>
-public enum IncidentStatus
-{
-    /// <summary>Under active investigation (web <c>'investigating'</c>) — danger badge.</summary>
-    Investigating,
-
-    /// <summary>Root cause identified (web <c>'identified'</c>) — warning badge.</summary>
-    Identified,
-
-    /// <summary>Fix deployed, watching (web <c>'monitoring'</c>) — info badge.</summary>
-    Monitoring,
-
-    /// <summary>Closed out (web <c>'resolved'</c>) — success badge.</summary>
-    Resolved,
-}
+// IncidentSeverity (Minor/Major/Critical) and IncidentStatus (Investigating/Identified/Monitoring/Resolved)
+// are declared once for the TeslaSync.App.FeatureViews namespace in IncidentForm.Model.cs — the incident-domain
+// authority that also owns their wire mappings. This card consumes those canonical enums; a second copy here
+// produced a CS0101 duplicate-type build break, so the redundant declarations were consolidated away.
 
 /// <summary>
 /// One active incident as the card needs it — the native mirror of the fields the web row reads from the
