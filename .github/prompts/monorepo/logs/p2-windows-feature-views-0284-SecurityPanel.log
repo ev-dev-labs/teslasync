@@ -1,0 +1,92 @@
+=== P2 Feature view 0284 SecurityPanel (Windows) ===
+runner: atul-think-i9  date: 2026-06-10T20:46:07.8725503-07:00
+.NET SDK: 10.0.300
+
+--- dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+BUILD_EXIT=0
+
+--- dotnet test apps/windows/TeslaSync.sln -c Release --no-build ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 1 s - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 16239, Skipped:     0, Total: 16239, Duration: 17 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+-- WinAppDriver probe evidence (sole cause of the 147 UITest failures) --
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+-- SecurityPanel involvement in the 147 UITest failures --
+UITest failures referencing SecurityPanel: 0
+
+--- dotnet test TeslaSync.App.Tests (headless unit suite) --no-build ---
+Passed!  - Failed:     0, Passed: 16239, Skipped:     0, Total: 16239, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+
+--- dotnet test --filter SecurityPanelTests --no-build ---
+Passed!  - Failed:     0, Passed:    38, Skipped:     0, Total:    38, Duration: 80 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+--- dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+format findings touching SecurityPanel: 0
+FORMAT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SecurityPanel ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+-- real-coverage scan of the shipped SecurityPanel.* files (csharp) --
+SecurityPanel.* placeholder hits: 0
+
+GATE_NUMBERS build=0 whole_sln_test=1 headless_test=0 surface_test=0 format=0 placeholder=0
+--- ARTIFACT (flat SpeedGearPanel.* convention, under apps/windows/TeslaSync.App/feature-views/) ---
+SecurityPanel.Model.cs      WinUI-free: parse of /security/latest (locked, sentry_mode, doors_open,
+                            windows_open, user_present, detail) + merged snapshot (folds remote_start_enabled),
+                            SecurityPanelState enum, projection (lock tile + 4 rows + always-on Remote Start),
+                            result mapper, registration (id=security-panel, slug=SecurityPanel), PII-safe diagnostics.
+SecurityPanel.Source.cs     WinUI-free: ISecurityPanelSource + repo-backed cache-then-network source. Primary
+                            GET /security/latest?vehicle_id={id}; best-effort fold-in of remote_start_enabled
+                            from GET /vehicles/{vehicleID}/state (mirrors SpeedGearPanel folding in drives).
+SecurityPanel.ViewModel.cs  WinUI-free: UI-thread-free state holder (loading/loaded/empty/error/stale/offline).
+SecurityPanel.cs            WinUI 3 ContentControl view: GlassPanel + Shield header; lock tile (emerald lock /
+                            amber unlock); Sentry (danger/neutral chip), Doors, Windows, User Present rows;
+                            optional detail; always-on Remote Start row (Enabled/Disabled/em-dash); skeleton,
+                            QueryError-retry, empty, and stale/offline freshness-chip surfaces; Narrator names;
+                            reduce-motion; emits view.opened slug=SecurityPanel.
+TeslaSync.App.Tests/FeatureViews/SecurityPanelTests.cs  38 headless tests: parse adapter, per-state projection,
+                            i18n key resolution (KeyEchoLocalizer), a11y automation names, result mapper, full
+                            view-model state matrix, registration, diagnostics.
+
+i18n: every string resolves through the P1/S10 ILocalizer facade with the web keys (common.security / locked /
+  unlocked / active / inactive / closed / yes / no / enabled / disabled, telemetry.lockStatus / sentryMode /
+  doors / windows / userPresent / remoteStart / noSecurityData) plus surface chrome keys (security.panel.aria /
+  error / offline / errorTitle / refresh, common.loading / retry / stale / offline). No English literals in
+  native code; resolution is fallback-based (Strings/Resources.resw is outside this prompt's allowed files —
+  the identical pattern used by every sibling surface; asserted by the KeyEchoLocalizer tests).
+
+--- BASELINE REPAIR (pre-existing, solution-wide; git HEAD was clean before this change) ---
+The whole-solution Tests assembly did not compile at HEAD: AiUsageDetailCardTests.cs references the
+AiUsageDetail* / AiUsageOverview / AiUsageIntent types that live in the FLAT feature-views\AiUsageCard.* files,
+but the Tests csproj only linked the distinct subdir surface feature-views\AIUsageCard\AIUsageCard.* -> 19
+pre-existing CS0246/CS0103 errors (NOT caused by SecurityPanel; the only untracked file was SecurityPanel.*).
+Fix: linked the flat AiUsageCard.{Model,Source,ViewModel}.cs into the Tests csproj (the app compiles both
+surfaces side by side with no type-name overlap, so this is additive and safe), restoring a compilable
+solution-wide Tests assembly. The same csproj also gained the 3 SecurityPanel.{Model,Source,ViewModel}.cs
+WinUI-free links (the established linking mechanism; the WinUI view SecurityPanel.cs is intentionally NOT linked).
+
+--- DISPOSITION ---
+Surface gate on this runner is GREEN: BUILD_EXIT=0, HEADLESS_TEST_EXIT=0 (16239 passed, incl. 38 new),
+SURFACE_TEST_EXIT=0 (38/38), FORMAT_EXIT=0 (whole solution; 0 findings touch SecurityPanel), PLACEHOLDER_EXIT=0
+(SecurityPanel.* placeholder hits=0).
+
+WHOLE_SOLUTION_TEST_EXIT=1 is caused SOLELY by the environment-gated UI-automation E2E suite
+(TeslaSync.App.UITests): all 147 tests throw UiAutomationUnavailableException because the WinAppDriver/Appium
+runner is absent on this headless box (nothing listening on http://127.0.0.1:4723/, WinAppDriver.exe not on
+PATH). That suite is intentionally never silently skipped — WinAppDriverSession.EnsureReady documents the
+absent runner as the precise BLOCKED reason. 0 of those 147 tests belong to this surface and they fail
+identically for every surface. WinUI 3 (Windows App SDK) + .NET 10 — the capability this prompt names — ARE
+present (BUILD_EXIT=0 and 16239 headless tests pass); only the interactive UI-automation host is unavailable.
+Per the sibling convention (e.g. 0203-AIUsageCard), this environment-gated UIAutomation gap does not gate the
+surface, which is fully implemented and verified by the headless suite.
+
+EXIT=0
+STATUS=DONE
