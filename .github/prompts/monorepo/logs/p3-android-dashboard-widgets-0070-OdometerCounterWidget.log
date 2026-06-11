@@ -1,0 +1,83 @@
+=== P3 Dashboard widget 0070 OdometerCounterWidget (Android) ===
+run: 2026-06-11 08:57:55Z
+
+GATE PATH CORRECTION (non-silent): the prompt gate text addresses ':app:', but this repo's
+single app module is registered as ':android' (sources under app/) — apps/android/settings.gradle.kts
+L33-36: 'Its Gradle path is :android (every P3/A* prompt gate addresses :android:)'.
+':app:assembleRelease' fails with 'project app not found in root project teslasync-android'.
+The gate below runs the IDENTICAL tasks against the real ':android' module.
+
+CAPABILITY: Jetpack Compose + Material 3 + Kotlin 2.4.0 (>= 2.2.x) build clean on this runner
+(JDK 21 / Gradle 8.14.5 / AGP 8.9.2). NOT BLOCKED.
+
+androidTest NOTE (out of gate scope): the gate runs testReleaseUnitTest (headless JVM), not the
+on-device androidTest source set (no emulator). That source set has a PRE-EXISTING compile break
+in three unrelated sibling files (BatteryCellsWidgetUiTest / DriveEfficiencyChartWidgetUiTest /
+EnergyStatsWidgetUiTest) referencing assertExists/assertDoesNotExist (removed by the pinned
+Compose BOM 2026.04.01). git status shows only the OdometerCounterWidget dirs as new — it is not
+caused by, and does not touch, this surface. OdometerCounterWidgetUiTest uses only current
+Compose-test APIs and is ktlint-clean.
+
+Surface files (allowed path com/teslasync/dashboard-widgets/OdometerCounterWidget/):
+  OdometerCounterModel.kt            pure projection + foldState + registry (off-device tested)
+  OdometerCounterSource.kt           data port + S7 repo / S8 store factories
+  OdometerCounterWidgetViewModel.kt  combine(useVehicleState, useDrivingStats) + default-vehicle
+  OdometerCounterWidget.kt           Compose UI: loading/error/empty/compact/expanded/wide + previews
+Tests (mirror the ChargeStatus/DrivetrainHealth precedent layout):
+  src/test/.../odometercounter/OdometerCounterProjectionTest.kt        (adapter/projection unit test)
+  src/test/.../odometercounter/OdometerCounterWidgetViewModelTest.kt   (state-matrix unit test)
+  src/androidTest/.../odometercounter/OdometerCounterWidgetUiTest.kt   (per-state UI + a11y test)
+
+--- :android:assembleRelease ---
+> Task :android:assembleRelease UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-04/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 40s
+70 actionable tasks: 2 executed, 68 up-to-date
+BUILD_EXIT=0
+
+--- :android:testReleaseUnitTest ---
+> Task :android:testReleaseUnitTest UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-04/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 57s
+45 actionable tasks: 2 executed, 43 up-to-date
+TEST_EXIT=0
+
+--- :android:ktlintCheck :android:detekt ---
+> Task :android:detekt UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-04/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 55s
+13 actionable tasks: 13 up-to-date
+LINT_EXIT=0
+
+--- check-placeholders.ps1 (OdometerCounterWidget) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE
