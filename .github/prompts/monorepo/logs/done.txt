@@ -192,3 +192,4 @@ p3-android/dashboard-widgets/A-0053-GeofenceWidget.prompt.md
 p3-android/dashboard-widgets/A-0054-GuardModeWidget.prompt.md
 p3-android/dashboard-widgets/A-0055-LifetimeStatsWidget.prompt.md
 p3-android/dashboard-widgets/A-0056-LivePowerFlowWidget.prompt.md
+p3-android/dashboard-widgets/A-0058-LiveSignalsWidget.prompt.md
