@@ -1,0 +1,106 @@
+=== P2 Shared surface 0050 AIStateMachineDebuggerNarrator (Windows) ===
+
+Surface: apps/windows/TeslaSync.App/shared-surfaces/AIStateMachineDebuggerNarrator.{Model,Source,ViewModel}.cs + .cs (view)
+Tests:   apps/windows/TeslaSync.App.Tests/SharedSurfaces/AIStateMachineDebuggerNarratorTests.cs
+Web src: web/src/components/ai/AIStateMachineDebuggerNarrator.tsx (THE specification)
+
+Parity port of the web AIStateMachineDebuggerNarrator composed with its shared AIFeatureCard scaffold and the
+withAiFeature gate. On-demand Helix narration of the deterministic per-vehicle FSM transition trace: the action
+POSTs the in-scope { vehicle_id, from_unix, to_unix } body to /api/v1/ai/system/fsm/narrate via the canonical
+useAiStream SSE contract and streams the narrative into the output region. The deterministic transition table /
+state diagram / FSM health panel / timeline remain the canonical baseline (ADR-015 I3); this is the opt-in
+narration section beneath them.
+
+Architecture (mirrors the shipped AICabinTemperatureImpactNarrative narrate-surface, the closest analogue — same
+POST-body -> narrate-path -> SSE-stream shape). Each AI shared surface owns its own stream stack (AIDriveCoaching
+uses AiCoach*, AICabinTemperatureImpactNarrative uses AiNarration*); only IAiFeatureGate is shared. This surface
+uses the FsmNarrate* prefix:
+  - .Model.cs       : AIStateMachineDebuggerNarratorRegistration (FeatureId/Slug/RootAutomationId/NarratePath +
+                      the five web i18n keys with catalog-verified fallbacks), FsmNarrateStreamState /
+                      FsmNarrateEventKind / FsmNarrateErrorReason, FsmNarrateStreamEvent, FsmNarrateRequest
+                      (vehicle_id/from_unix/to_unix, snake_case-pinned), FsmNarrateSseParser (native port of
+                      useAiStream parseSSEFrame/toTypedEvent), AIStateMachineDebuggerNarratorDiagnostics.
+  - .Source.cs      : IFsmNarrateStreamTransport (P1/S8 seam) + HttpFsmNarrateStreamTransport (POSTs the body,
+                      reads text/event-stream, classifies HTTP vs Network failure). Reuses the shared
+                      IAiFeatureGate / StaticAiFeatureGate / DelegateAiFeatureGate (canonical home:
+                      AICabinTemperatureImpactNarrative.Source.cs).
+  - .ViewModel.cs   : UI-thread-free state holder. Gate (IsGateOpen), the haveScope guard
+                      (CanStart = vehicle_id>0 AND from_unix>0 AND to_unix>from_unix), the emptyHint
+                      (ShowEmptyHint = !CanStart), the useAiStream lifecycle (idle -> streaming -> done/error,
+                      duplicate-start no-op, cancel -> idle), offline classification, and all projected labels.
+                      No HTTP, no WinUI types.
+  - .cs (view)      : WinUI 3 ContentControl. TsGlassPanel card -> header (PanelTitle + Helix TsBadge + Subhead
+                      description + emptyHint Caption when !CanStart) + universal "Ask Helix" TsButton -> output
+                      region (TsSkeleton thinking / Text narration / TsQueryError retryable, offline-aware error).
+                      withAiFeature gate collapses the whole surface (Visibility.Collapsed + cleared automation id
+                      + AccessibilityView.Raw) when the feature is off.
+
+States rendered (on-demand SSE action — no cached prior result to age, so no "stale" state, matching the web
+hook's stream_http_* -> error fallback): gate-off (collapsed) - idle with emptyHint - streaming/thinking skeleton
+- accumulating narration text - error / offline (retryable QueryError). Every branch is asserted headlessly in
+the view-model per-state tests (the headless snapshot of what the view renders in each state).
+
+i18n: every string resolves through the ILocalizer facade (P1/S10). The five web keys
+(stateMachineDebugger.aiNarrator.{title,description,button,badge,emptyHint}) plus the shared helix.* CTA keys are
+present in apps/shared/i18n/catalog/en.json (verified); the registration fallbacks are the catalog values
+verbatim. No English literals in the view.
+
+Accessibility: Narrator name on the card and the badge; the action button carries the composed
+"Ask Helix \u00b7 Narrate transitions" accessible name + the per-feature verb tooltip; decorative Helix glyph
+marked AccessibilityView.Raw; thinking skeleton honours MotionPreference.ReduceMotion; streamed output uses a
+LiveRegion so Narrator announces deltas.
+
+Telemetry: AIStateMachineDebuggerNarratorDiagnostics emits "view.opened slug=AIStateMachineDebuggerNarrator"
+(PII-safe — never the narration text, vehicle id, or window bounds) once when the surface is shown (P1/S11).
+
+Hook-URL verification (acceptance): NarratePath "/ai/system/fsm/narrate" matches the backend route
+internal/api/ai_routes.go:510  r.Post("/system/fsm/narrate", g.Wrap("state-machine-debugger-narrator", ...))
+(mounted under the /ai group, +/api/v1 prefix => /api/v1/ai/system/fsm/narrate). Feature id
+"state-machine-debugger-narrator" is present in AiFeatureRegistry.Features (verified by test).
+
+Pre-existing build-unblock (NOT introduced by this surface):
+  The committed TeslaSync.App.Tests.csproj did not load: the .gitattributes merge=union strategy had
+  re-concatenated it into TWO <Project> roots (plus extra </Project> tags) at line 1079, failing XML load with
+  MSB4025 — which blocked dotnet build/test/format for the WHOLE solution (every surface) on this branch (clean
+  working tree; HEAD baseline was already corrupted, so `git checkout` could not restore a clean copy). Per the
+  file's own INVARIANT, re-consolidated into a single canonical <Project> root: the case-insensitive path-sorted,
+  Include-deduplicated UNION of every WinUI-free Compile link on disk. Verified before regenerating that the 929
+  distinct Compile includes already equalled the WinUI-free .cs sources on disk EXACTLY (0 missing, 0 stale), so
+  the only defect was the duplication; the regenerated root is 929 + the 3 new AIStateMachineDebuggerNarrator
+  WinUI-free links (Model/Source/ViewModel) = 932 (the bare WinUI view .cs stays app-build-only). Behaviour-
+  preserving: 18890 headless tests pass (the project was un-buildable before) — zero regressions across all
+  surfaces. This mirrors the identical unblock recorded by p2-windows-feature-views-0228-FSMHealthPanel.
+
+Gate (commands run from repo root; final state, LF-normalized .cs per root .editorconfig end_of_line=lf):
+  dotnet build  apps/windows/TeslaSync.sln -c Release                                  -> BUILD_EXIT=0
+  dotnet test   apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" -> TEST_EXIT=0
+        Passed!  Failed: 0, Passed: 18890, Skipped: 0, Total: 18890 (TeslaSync.App.Tests.dll)
+        of which the 50 AIStateMachineDebuggerNarrator cases (37 [Fact]/[Theory] methods) pass: parser/adapter,
+        registration + registry membership, PII-safe diagnostics, gate, canStart scope-triple matrix, empty-hint,
+        full stream lifecycle, offline vs http error, confirm-pause, cancel, retry-clears, i18n + a11y labels.
+  dotnet format apps/windows/TeslaSync.sln --verify-no-changes                          -> FORMAT_EXIT=0
+  ./apps/tools/check-placeholders.ps1 -Path .../shared-surfaces/AIStateMachineDebuggerNarrator -> PLACEHOLDER_EXIT=0
+        (the verbatim gate path is a file prefix; additionally ran a real csharp scan of shared-surfaces/ and
+         Tests/SharedSurfaces/ and confirmed ZERO placeholder violations reference any AIStateMachineDebuggerNarrator
+         file — no TODO/stub/mock/placeholder/Lorem in the shipped code.)
+
+BUILD_EXIT=0
+TEST_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+Note: the verbatim full-solution `dotnet test apps/windows/TeslaSync.sln -c Release` (no filter) additionally
+      executes the Category=UIAutomation suite (TeslaSync.App.UITests), which fails fast on this runner with
+      UiAutomationUnavailableException: "WinAppDriver/Appium runner is absent: nothing is listening on
+      http://127.0.0.1:4723/ and WinAppDriver.exe was not found...". That suite drives the PACKAGED app over
+      WinAppDriver out-of-process and is run independently via run-ui-automation.ps1 per its csproj contract; it is
+      environment-supplied and intentionally excluded from this headless gate (recorded with evidence, not
+      reported as green) — the same convention recorded by the shipped p2-windows-feature-views-0228-FSMHealthPanel
+      log. The headless suite (which includes all 50 AIStateMachineDebuggerNarrator cases) is 18890/18890.
+
+Capability: WinUI 3 (Windows App SDK) + .NET 10 (SDK 10.0.300) are AVAILABLE on this runner — the Release
+solution, including the WinUI app project TeslaSync.App and this surface's WinUI view, builds with 0 errors /
+0 warnings. The required platform capability is present; STATUS is DONE (not BLOCKED).
+
+EXIT=0
+STATUS=DONE
