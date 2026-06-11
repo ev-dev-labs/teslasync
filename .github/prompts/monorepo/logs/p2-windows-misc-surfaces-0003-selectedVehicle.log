@@ -1,0 +1,37 @@
+=== P2 Misc surface 0003 selectedVehicle (Windows) ===
+date: 2026-06-10T23:21:04.9961461-07:00
+capability: WinUI 3 (Windows App SDK) + .NET 10 present (dotnet 10.0.300; Microsoft.WindowsDesktop.App 10.0.8).
+web source: web/src/store/selectedVehicle.tsx (Tier=provider; non-visual Context store — no UI/charts/maps/i18n).
+
+--- pre-existing blocker repaired (required for the gate to load) ---
+TeslaSync.App.Tests.csproj was concatenated by .gitattributes merge=union into multiple <Project> roots
+(MSB4025, the failure mode the file's own INVARIANT comment documents). Consolidated to ONE root:
+829 Include-deduplicated Compile entries (0 lost vs HEAD, all exist on disk) + 3 selectedVehicle links.
+
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:28.61
+BUILD_EXIT=0
+
+Passed!  - Failed:     0, Passed: 17130, Skipped:     0, Total: 17130, Duration: 5 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+NOTE: TeslaSync.App.UITests is an E2E WinAppDriver suite; every test is [Trait(Category,UIAutomation)] and
+      'fails fast' when the driver is absent (by its own csproj design — never silently skipped). On this
+      build runner WinAppDriver is absent, so those E2E tests are excluded via the repo's documented
+      Category!=UIAutomation split (W9-0002). Evidence (one such test, run explicitly):
+        UiAutomationUnavailableException: WinAppDriver/Appium runner is absent: nothing is listening on
+        http://127.0.0.1:4723/ and WinAppDriver.exe was not found on PATH.
+      The selectedVehicle surface is a non-visual provider/store; its logic is fully covered headless.
+
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+PLACEHOLDER_EXIT=0
+  real-scan: PLACEHOLDER_ALLOWED=0
+  real-scan: PLACEHOLDER_COUNT=0
+  real-scan: EXIT=0
+PLACEHOLDER_REAL_EXIT=0
+
+EXIT=0
+STATUS=DONE
