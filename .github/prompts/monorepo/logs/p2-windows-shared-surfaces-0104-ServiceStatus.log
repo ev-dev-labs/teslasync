@@ -1,0 +1,119 @@
+=== P2 Shared surface 0104 ServiceStatus (Windows) ===
+date: 2026-06-11T12:57:20.4471142-07:00
+sdk: 10.0.300
+
+--- build: dotnet build apps/windows/TeslaSync.sln -c Release ---
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\SseEventDecoder.cs(290,69): warning CA1859: Change type of field 'ValueKindLongToCompact' from 'System.Collections.Generic.IReadOnlyDictionary<string, TeslaSync.App.Core.Live.SignalKind>' to 'System.Collections.Generic.Dictionary<string, TeslaSync.App.Core.Live.SignalKind>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\Net\GeneratedApiClient.cs(218,81): warning CA1859: Change return type of method 'BuildIndex' from 'System.Collections.Generic.IReadOnlyDictionary<string, TeslaSync.Windows.Generated.Api.EndpointDescriptor>' to 'System.Collections.Generic.Dictionary<string, TeslaSync.Windows.Generated.Api.EndpointDescriptor>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+    17 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:04:22.66
+BUILD_EXIT=0
+
+--- test: dotnet test apps/windows/TeslaSync.sln -c Release ---
+TEST_EXIT=1
+--- per-assembly test decomposition ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 373 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 21106, Skipped:     0, Total: 21106, Duration: 10 s - TeslaSync.App.Tests.dll (net10.0)
+--- UI-automation failure evidence (representative) ---
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+
+--- format: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- placeholders: gate literal path ---
+check-placeholders.ps1 -Path .../shared-surfaces/ServiceStatus (gate literal; flat-file prefix scans 0 files)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- placeholders: genuine per-file scan of the 5 shipped files ---
+ServiceStatus.cs: PLACEHOLDER_COUNT=0
+ServiceStatus.Model.cs: PLACEHOLDER_COUNT=0
+ServiceStatus.Source.cs: PLACEHOLDER_COUNT=0
+ServiceStatus.ViewModel.cs: PLACEHOLDER_COUNT=0
+ServiceStatusTests.cs: PLACEHOLDER_COUNT=0
+GENUINE_PLACEHOLDER_COUNT_TOTAL=0
+
+================================================================================
+ANALYSIS / DECOMPOSITION
+================================================================================
+
+SURFACE DELIVERED (parity port of web/src/components/data-display/ServiceStatus.tsx)
+  Two web exports reproduced as two native WinUI 3 controls in TeslaSync.App.SharedSurfaces:
+    1. ServiceStatusBanner - app-chrome offline strip. Danger-tinted bar (TsColorDangerColor
+       @0.15 bg / @0.20 bottom-border, TsColorDangerBrush fg) with a Segoe Fluent WifiOff glyph
+       (\uEB5E) + localized "You are offline. Data may be stale. Reconnecting automatically...".
+       Shown only while offline (web isOffline + AnimatePresence). Slide-in/out height+opacity
+       transition (web height 0->auto, opacity 0->1, 0.3s), reduce-motion snaps to final state.
+       Polite status live region named with the offline message.
+    2. SystemHealthDot - compact health indicator. Dot tinted healthy->success/green,
+       degraded->warning/amber, else->danger/red (web colour table) + soft glow; rendered only
+       once status resolves (web `if (!data) return null`). Tooltip + Narrator name "System:
+       {status}" (web title).
+
+STATES (all reproduced from the web source)
+  banner : online (collapsed)            / offline (shown)
+  dot    : unknown/no-data (collapsed, web null) / healthy / degraded / unhealthy
+
+FILES (4-file surface pattern + headless tests)
+  apps/windows/TeslaSync.App/shared-surfaces/ServiceStatus.Model.cs      (WinUI-free)
+  apps/windows/TeslaSync.App/shared-surfaces/ServiceStatus.Source.cs     (WinUI-free)
+  apps/windows/TeslaSync.App/shared-surfaces/ServiceStatus.ViewModel.cs  (WinUI-free)
+  apps/windows/TeslaSync.App/shared-surfaces/ServiceStatus.cs            (WinUI views)
+  apps/windows/TeslaSync.App.Tests/SharedSurfaces/ServiceStatusTests.cs  (42 headless tests)
+
+BINDINGS
+  P1/S8 state holders: IServiceStatusConnectionSource (production: NetworkServiceStatusConnection-
+    Source adapts Core.Lifecycle.INetworkAvailability) and IServiceStatusHealthSource (production:
+    RepositoryServiceStatusHealthSource over a cache-then-network RepositoryResult<ServiceStatus-
+    ReadModel> stream). Views read no HTTP/connectivity directly. Static seams for headless/tests.
+  P1/S9 tokens : TsColorSuccess/Warning/DangerBrush + TsColorDangerColor (no raw hex in views).
+  P1/S10 i18n  : every string via ILocalizer (translation.serviceStatus.*); no English literals.
+  P1/S11 diag  : ServiceStatusDiagnostics emits exactly `view.opened slug=ServiceStatus`.
+  Accessibility: polite live regions, decorative glyph/glow marked AccessibilityView.Raw, Narrator
+    names on both controls, reduce-motion honoured.
+
+PRE-EXISTING BLOCKER REPAIRED (required for ANY build to pass)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed at HEAD with a merge=union multi-root
+  corruption (TWO <Project> roots, MSB4025 "multiple root elements" at line 1442) -> the WHOLE
+  solution build failed before any change. Consolidated into ONE canonical <Project> root and the
+  Compile ItemGroup regenerated from disk (the documented recovery in the file's own INVARIANT).
+  Proof the regeneration is exact: the union of the two corrupt roots == every WinUI-free .cs on disk
+  under the 5 surface dirs (1060 files, 0 missing / 0 stale); regenerated list = 1063 (1060 + the 3
+  new ServiceStatus WinUI-free logic files; the ServiceStatus.cs view is correctly excluded).
+
+GATE DECOMPOSITION
+  BUILD_EXIT=0      dotnet build apps/windows/TeslaSync.sln -c Release (0 errors; 17 pre-existing CA warnings in Core).
+  TEST_EXIT=1       dotnet test apps/windows/TeslaSync.sln -c Release, decomposed by assembly:
+                      TeslaSync.App.Tests.dll   : Passed!  Failed: 0, Passed: 21106, Skipped: 0  (headless unit suite incl. 42 new ServiceStatus tests)
+                      TeslaSync.App.UITests.dll : Failed!  Failed: 147, Passed: 0                 (WinAppDriver UI-automation suite)
+  FORMAT_EXIT=0     dotnet format apps/windows/TeslaSync.sln --verify-no-changes (whole solution clean).
+  PLACEHOLDER_EXIT=0 gate literal path; PLUS a genuine per-file scan of all 5 shipped files -> GENUINE_PLACEHOLDER_COUNT_TOTAL=0.
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders all web-source states (banner online/offline; dot unknown/healthy/degraded/unhealthy).
+  [x] Hooks bind to the shared P1/S8 state-holder layer; no direct HTTP from the view.
+  [x] Every i18n string resolves through the P1/S10 ILocalizer facade (translation.serviceStatus.*).
+  [x] Accessibility labels present on both controls (Narrator names, live regions, reduce-motion).
+  [x] Tests: adapter unit test (FromRepositoryResult) + per-state projection tests + a11y label tests (42 total, all green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (genuine scan = 0).
+  [~] EXIT=0 on this runner -> BLOCKED only by the absent WinAppDriver UI-automation harness (evidence below).
+
+BLOCKED_REASON (platform-capability evidence)
+  The ONLY red is TeslaSync.App.UITests: 147/147 fail with
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : "UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH."
+  These out-of-process e2e tests are, by the UITests project's own design (WinAppDriverSession /
+  RunnerAvailability), failed-not-skipped when the runner is absent. This headless build agent has no
+  WinAppDriver/Appium endpoint and no deployed packaged app, so the UI-automation suite cannot execute
+  here; it runs in CI with a runner. The WinUI 3 (WindowsAppSDK) + .NET 10 build & unit-test capability
+  IS present and fully green. Identical precedent: p2-windows-shared-surfaces-0091-HistoryListRow and
+  -0093-KpiOverviewCard (both EXIT=1 / STATUS=BLOCKED for the same absent-runner reason).
+
+EXIT=1
+STATUS=BLOCKED
