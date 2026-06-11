@@ -1,0 +1,46 @@
+/*
+  AIRAGHelp.strings
+  TeslaSync — P4 shared surface · 0042 · AIRAGHelp (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native surface
+  resolves (table "AIRAGHelp") lives here with its web `t(key, default)` English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time;
+  they are kept in a per-surface table so each parallel surface prompt owns its own strings
+  without editing the shared catalog.
+
+  Group 1 is the exact set of keys from the web source (components/ai/AIRAGHelp.tsx). Group 2
+  is the shared Helix scaffold keys the web `AIFeatureCard` / `AiOutputPanel` / `AIBadge`
+  resolve (the universal "Ask Helix" CTA, the thinking label, the badge tooltip, the error
+  label). Group 3 backs the native chrome — the prompt field a11y label (the web Textarea has
+  no aria-label), the P4 leaf freshness / loading / empty / error copy + the a11y answer-ready
+  phrase — so the Swift sources hold no English literals.
+*/
+
+/* --- Group 1: keys from the web source (parity) --- */
+"help.aiHelp.title" = "Ask the help assistant";
+"help.aiHelp.description" = "Ask a natural-language question about the application and the assistant will answer using the project’s own documentation, runbooks, and i18n strings — with explicit citations to each source.";
+"help.aiHelp.askButton" = "Ask the assistant";
+"help.aiHelp.badge" = "Helix";
+"help.aiHelp.placeholder" = "e.g. How do I enable energy cost forecasting?";
+
+/* --- Group 2: shared Helix scaffold (web AIFeatureCard / AiOutputPanel / AIBadge) --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.tooltip" = "Helix is your AI assistant. It generates responses using your redacted fleet context.";
+"helix.ariaLabel" = "Helix";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Group 3: native chrome — prompt a11y label + P4 leaf freshness / loading / empty / error + a11y --- */
+"help.aiHelp.inputLabel" = "Help question";
+"help.aiHelp.emptyHintPrompt" = "Ask a question about the app to get help.";
+"help.aiHelp.answerReady" = "Answer ready";
+"help.aiHelp.loadingA11y" = "Loading Helix help";
+"help.aiHelp.errorTitle" = "Couldn't load Helix help";
+"help.aiHelp.retry" = "Retry";
+"help.aiHelp.live" = "Live";
+"help.aiHelp.stale" = "Stale";
+"help.aiHelp.offline" = "Offline";
+"help.aiHelp.staleBanner" = "Reconnecting — data may be stale";
+"help.aiHelp.offlineBanner" = "Offline — showing last known data";
+"help.aiHelp.refresh" = "Refresh";
