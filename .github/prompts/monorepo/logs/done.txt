@@ -186,3 +186,4 @@ p3-android/dashboard-widgets/A-0047-EnergySiteInfoWidget.prompt.md
 p3-android/dashboard-widgets/A-0046-EnergyFlowWidget.prompt.md
 p3-android/dashboard-widgets/A-0049-ExportStatusWidget.prompt.md
 p3-android/dashboard-widgets/A-0050-FleetStatsBarWidget.prompt.md
+p3-android/dashboard-widgets/A-0051-FleetStatsWidget.prompt.md
