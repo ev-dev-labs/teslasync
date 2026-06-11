@@ -66,11 +66,14 @@
     comment.
     TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
     UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each
-    feature-view, dashboard-widget, misc-surface and modal-dialog surface. The WinUI app targets a WinUI
-    TFM and cannot be project-referenced from a plain net10.0 host, so each surface's WinUI-free sources
-    are Compile-linked into the single item group below; the bare WinUI view files are excluded and
-    exercised by the app build. The matching test classes live under this project and are picked up by the
-    SDK default-compile glob.
+    feature-view, dashboard-widget, misc-surface, shared-surface and modal/dialog. The WinUI app
+    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host,
+    so each surface's Microsoft.UI-free sources are Compile-linked into the single item group below (the
+    Link mirrors each source's real location); the bare WinUI view files are excluded and exercised by
+    the app build. The matching test classes live under this project and are picked up by the SDK
+    default-compile glob. The Content links copy the units-golden, Package.appxmanifest and
+    widget-template fixtures the tests read out of the test output directory.
+
     INVARIANT: keep this file as exactly ONE root element with a single, ordinal path-sorted,
     Include-deduplicated Compile item group - the union of every Microsoft.UI-free source on disk under
     dashboard-widgets/, feature-views/, misc-surfaces/ and modals-dialogs/. The .gitattributes merge=union
@@ -124,6 +127,10 @@
     modals-dialogs/0030 CommandInputDialog into this single canonical root (plus the new CommandInputDialog
     Model / ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal build-item
     or project start tag inside this comment.
+    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. The
+    .gitattributes merge=union strategy can re-concatenate this file into multiple roots plus duplicate
+    items, failing XML load (MSB4025); regenerate it from the WinUI-free sources on disk. Do NOT
+    re-concatenate into multiple roots, and never write a build-item or root start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -2133,6 +2140,8 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Model.cs" Link="ModalsDialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Source.cs" Link="ModalsDialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.ViewModel.cs" Link="ModalsDialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\KioskSettingsModal\KioskSettingsModal.Model.cs" Link="ModalsDialogs\KioskSettingsModal\KioskSettingsModal.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\KioskSettingsModal\KioskSettingsModal.ViewModel.cs" Link="ModalsDialogs\KioskSettingsModal\KioskSettingsModal.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\Modal\Modal.Model.cs" Link="ModalsDialogs\Modal\Modal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\Modal\Modal.ViewModel.cs" Link="ModalsDialogs\Modal\Modal.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\NotificationBellPopover.Model.cs" Link="ModalsDialogs\NotificationBellPopover.Model.cs" />
@@ -2195,6 +2204,12 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetCatalogueDialog\WidgetCatalogueDialog.ViewModel.cs" Link="ModalsDialogs\WidgetCatalogueDialog\WidgetCatalogueDialog.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" />
+  </ItemGroup>
+
+</Project>
+    <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.Model.cs" Link="SharedSurfaces\VisuallyHidden.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.Source.cs" Link="SharedSurfaces\VisuallyHidden.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\VisuallyHidden.ViewModel.cs" Link="SharedSurfaces\VisuallyHidden.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
