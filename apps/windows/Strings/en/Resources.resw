@@ -23856,4 +23856,82 @@
   <data name="translation.widget.quickNav.noData" xml:space="preserve">
     <value>No navigation links available</value>
   </data>
+  <data name="translation.infrastructure.title" xml:space="preserve">
+    <value>Infrastructure</value>
+  </data>
+  <data name="translation.infrastructure.description" xml:space="preserve">
+    <value>SSE connections and polling engine diagnostics</value>
+  </data>
+  <data name="translation.infrastructure.connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="translation.infrastructure.disconnected" xml:space="preserve">
+    <value>Disconnected</value>
+  </data>
+  <data name="translation.infrastructure.sseConnection" xml:space="preserve">
+    <value>SSE Connection</value>
+  </data>
+  <data name="translation.infrastructure.connectionState" xml:space="preserve">
+    <value>Connection State</value>
+  </data>
+  <data name="translation.infrastructure.endpoint" xml:space="preserve">
+    <value>Endpoint</value>
+  </data>
+  <data name="translation.infrastructure.protocol" xml:space="preserve">
+    <value>Protocol</value>
+  </data>
+  <data name="translation.infrastructure.fallbackMode" xml:space="preserve">
+    <value>Fallback Mode</value>
+  </data>
+  <data name="translation.infrastructure.yesPolling" xml:space="preserve">
+    <value>Yes — Polling</value>
+  </data>
+  <data name="translation.infrastructure.no" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="translation.infrastructure.pollingEngine" xml:space="preserve">
+    <value>Polling Engine</value>
+  </data>
+  <data name="translation.infrastructure.active" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="translation.infrastructure.standby" xml:space="preserve">
+    <value>Standby</value>
+  </data>
+  <data name="translation.infrastructure.mode" xml:space="preserve">
+    <value>Mode</value>
+  </data>
+  <data name="translation.infrastructure.speedComparison" xml:space="preserve">
+    <value>Speed Comparison</value>
+  </data>
+  <data name="translation.infrastructure.fleetTelemetryLatency" xml:space="preserve">
+    <value>Fleet Telemetry Latency</value>
+  </data>
+  <data name="translation.infrastructure.fleetApiPolling" xml:space="preserve">
+    <value>Fleet API Polling</value>
+  </data>
+  <data name="translation.infrastructure.totalConns" xml:space="preserve">
+    <value>Total Conns</value>
+  </data>
+  <data name="translation.infrastructure.acquired" xml:space="preserve">
+    <value>Acquired</value>
+  </data>
+  <data name="translation.infrastructure.idle" xml:space="preserve">
+    <value>Idle</value>
+  </data>
+  <data name="translation.infrastructure.loading" xml:space="preserve">
+    <value>Loading infrastructure diagnostics</value>
+  </data>
+  <data name="translation.infrastructure.stale" xml:space="preserve">
+    <value>Showing cached infrastructure diagnostics</value>
+  </data>
+  <data name="translation.infrastructure.error" xml:space="preserve">
+    <value>Couldn't load infrastructure diagnostics</value>
+  </data>
+  <data name="translation.infrastructure.error.offline" xml:space="preserve">
+    <value>You're offline — showing the last cached infrastructure diagnostics</value>
+  </data>
+  <data name="translation.infrastructure.error.auth" xml:space="preserve">
+    <value>Sign in to view infrastructure diagnostics</value>
+  </data>
 </root>

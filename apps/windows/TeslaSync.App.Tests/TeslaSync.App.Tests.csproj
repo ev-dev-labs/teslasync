@@ -130,6 +130,15 @@
     Compile items and orphaned prose, failing XML load (MSB4025/MSB4067/NETSDK1022); re-consolidated for P2
     feature-views/0250 OperationsSection into this single canonical root, regenerated directly from the
     WinUI-free sources on disk (plus the new OperationsSection surface). Do NOT re-concatenate, and never
+    cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources
+    are Compile-linked into the single ItemGroup below; the WinUI views themselves are exercised by the
+    app build. The matching test classes live under this project and are picked up by the SDK
+    default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted,
+    Include-deduplicated Compile ItemGroup. A chain of integration merges had repeatedly re-concatenated
+    this file into multiple Project roots plus duplicate Compile items, failing XML load (MSB4025);
+    re-consolidated for P2 feature-views/0248 InfrastructureSection. Do NOT re-concatenate, and never
     write a literal build-item or project start tag inside this comment.
   -->
 
@@ -170,6 +179,7 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union). -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union);
        the WinUI views themselves are exercised by the app build. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal-sorted, Include-deduplicated union); the WinUI views themselves are exercised by the app build. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Model.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\APIUsageWidget\APIUsageWidget.Source.cs" Link="Widgets\APIUsageWidget\APIUsageWidget.Source.cs" />
@@ -668,6 +678,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Model.cs" Link="FeatureViews\InfrastructureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Source.cs" Link="FeatureViews\InfrastructureSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.ViewModel.cs" Link="FeatureViews\InfrastructureSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection\InfrastructureSection.Model.cs" Link="FeatureViews\InfrastructureSection\InfrastructureSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection\InfrastructureSection.Source.cs" Link="FeatureViews\InfrastructureSection\InfrastructureSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection\InfrastructureSection.ViewModel.cs" Link="FeatureViews\InfrastructureSection\InfrastructureSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InputCommandTile.Model.cs" Link="FeatureViews\InputCommandTile.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JourneyDetailsPanel\JourneyDetailsPanel.Model.cs" Link="FeatureViews\JourneyDetailsPanel\JourneyDetailsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JsonFormatter\JsonFormatter.Model.cs" Link="FeatureViews\JsonFormatter\JsonFormatter.Model.cs" />
