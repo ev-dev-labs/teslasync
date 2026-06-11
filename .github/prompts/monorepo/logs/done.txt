@@ -163,3 +163,4 @@ p3-android/dashboard-widgets/A-0019-ChargeSessionChartWidget.prompt.md
 p3-android/dashboard-widgets/A-0016-ChargeCostTrackerWidget.prompt.md
 p3-android/dashboard-widgets/A-0020-ChargeStatusLiveWidget.prompt.md
 p3-android/dashboard-widgets/A-0018-ChargePlansWidget.prompt.md
+p3-android/dashboard-widgets/A-0021-ChargeStatusWidget.prompt.md
