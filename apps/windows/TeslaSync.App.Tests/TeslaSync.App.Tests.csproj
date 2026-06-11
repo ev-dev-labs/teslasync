@@ -2240,6 +2240,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AISuggestNewGeofences.Model.cs" Link="SharedSurfaces\AISuggestNewGeofences.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AISuggestNewGeofences.Source.cs" Link="SharedSurfaces\AISuggestNewGeofences.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AISuggestNewGeofences.ViewModel.cs" Link="SharedSurfaces\AISuggestNewGeofences.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIThinkingIndicator.Model.cs" Link="SharedSurfaces\AIThinkingIndicator.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIThinkingIndicator.Source.cs" Link="SharedSurfaces\AIThinkingIndicator.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIThinkingIndicator.ViewModel.cs" Link="SharedSurfaces\AIThinkingIndicator.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Model.cs" Link="SharedSurfaces\AnnouncerRegion.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
