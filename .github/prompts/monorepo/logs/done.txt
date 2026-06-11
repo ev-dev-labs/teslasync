@@ -250,3 +250,4 @@ p3-android/dashboard-widgets/A-0116-WeeklyDigestWidget.prompt.md
 p3-android/dashboard-widgets/A-0113-WarrantyStatusWidget.prompt.md
 p3-android/dashboard-widgets/A-0107-VehicleHeroCardWidget.prompt.md
 p3-android/feature-views/A-0001-AlertDetailTimeline.prompt.md
+p3-android/dashboard-widgets/A-0118-YearReviewWidget.prompt.md
