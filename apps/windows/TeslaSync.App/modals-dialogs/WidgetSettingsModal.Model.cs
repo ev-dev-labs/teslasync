@@ -4,6 +4,12 @@ using TeslaSync.App.Core.Forms;
 using TeslaSync.App.Core.Notifications;
 using TeslaSync.App.FeatureViews;
 
+// This surface configures a FeatureViews.WidgetCatalogEntry, whose Category is FeatureViews.WidgetCategory.
+// A later modals-dialogs surface (WidgetCatalogueDialog) introduced a second WidgetCategory in this same
+// namespace; a same-namespace type shadows a plain `WidgetCategory` reference here, so alias the FeatureViews
+// enum under a distinct name and use it for the WidgetCatalogEntry-typed category predicates below.
+using WidgetCatalogCategory = TeslaSync.App.FeatureViews.WidgetCategory;
+
 namespace TeslaSync.App.ModalsDialogs;
 
 /// <summary>
@@ -297,17 +303,17 @@ public static class WidgetSettingsProjection
     /// <c>def.category !== 'system' &amp;&amp; def.category !== 'analytics'</c>).
     /// </summary>
     /// <param name="category">The widget category.</param>
-    public static bool IsVehicleWidget(WidgetCategory category) =>
-        category is not (WidgetCategory.System or WidgetCategory.Analytics);
+    public static bool IsVehicleWidget(WidgetCatalogCategory category) =>
+        category is not (WidgetCatalogCategory.System or WidgetCatalogCategory.Analytics);
 
     /// <summary>
     /// True when the widget is chart-backed and the time-range selector renders (web
     /// <c>['driving','charging','analytics','battery'].includes(def.category)</c>).
     /// </summary>
     /// <param name="category">The widget category.</param>
-    public static bool IsChartWidget(WidgetCategory category) => category is
-        WidgetCategory.Driving or WidgetCategory.Charging or
-        WidgetCategory.Analytics or WidgetCategory.Battery;
+    public static bool IsChartWidget(WidgetCatalogCategory category) => category is
+        WidgetCatalogCategory.Driving or WidgetCatalogCategory.Charging or
+        WidgetCatalogCategory.Analytics or WidgetCatalogCategory.Battery;
 
     /// <summary>
     /// The vehicle dropdown options: the "All Vehicles (first)" sentinel followed by each vehicle, labelled by its

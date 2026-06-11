@@ -7,6 +7,11 @@ using TeslaSync.App.FeatureViews;
 using TeslaSync.App.ModalsDialogs;
 using Xunit;
 using GeneratedApi = TeslaSync.Windows.Generated.Api;
+// WidgetCategory is declared in both TeslaSync.App.FeatureViews (the WidgetCatalogEntry this test builds) and
+// TeslaSync.App.ModalsDialogs (the WidgetCatalogueDialog catalogue). The surface under test pairs with the
+// FeatureViews enum, so disambiguate to it (the collision surfaced once the test csproj was regenerated to
+// include the newer WidgetCatalogueDialog sources).
+using WidgetCategory = TeslaSync.App.FeatureViews.WidgetCategory;
 
 namespace TeslaSync.App.Tests.ModalsDialogs;
 
