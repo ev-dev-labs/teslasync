@@ -151,3 +151,4 @@ p3-android/dashboard-widgets/A-0003-AnomalyDetectorWidget.prompt.md
 p3-android/dashboard-widgets/A-0010-BatteryCellsWidget.prompt.md
 p3-android/dashboard-widgets/A-0005-AuditLogWidget.prompt.md
 p3-android/dashboard-widgets/A-0004-APIUsageWidget.prompt.md
+p3-android/dashboard-widgets/A-0009-BackupMonitorWidget.prompt.md
