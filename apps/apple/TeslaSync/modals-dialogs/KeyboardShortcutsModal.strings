@@ -1,0 +1,47 @@
+/*
+  KeyboardShortcutsModal.strings
+  TeslaSync — P4 modal/dialog · 0006 · KeyboardShortcutsModal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  KeyboardShortcutsModal resolves (table "KeyboardShortcutsModal") lives here with
+  its web `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (web/src/components/feedback/KeyboardShortcutsModal.tsx). The remainder backs the
+  native state envelope (loading, error retry, freshness chip, connectivity banner)
+  and the VoiceOver builders. Group labels, descriptions, and key tokens are NOT
+  here — the web reads them already-translated from the shortcut registry, so they
+  arrive as data on each `KBShortcutEntry`.
+*/
+
+/* --- Web source keys (KeyboardShortcutsModal.tsx) --- */
+"shortcuts.title" = "Keyboard Shortcuts";
+"shortcuts.filter.all" = "All";
+"shortcuts.filter.global" = "Global";
+"shortcuts.filter.page" = "This page";
+"shortcuts.search" = "Search shortcuts…";
+"shortcuts.empty" = "No shortcuts match your search.";
+
+/* --- Loading (web Spinner) --- */
+"shortcuts.state.loading" = "Loading shortcuts…";
+
+/* --- Error + retry (web QueryError) --- */
+"shortcuts.state.error" = "Couldn't load shortcuts.";
+"shortcuts.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"shortcuts.live" = "Live";
+"shortcuts.stale" = "Stale";
+"shortcuts.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"shortcuts.staleBanner" = "Reconnecting — the shortcut list may be momentarily out of date";
+"shortcuts.offlineBanner" = "Offline — showing the last loaded shortcuts";
+
+/* --- VoiceOver builders --- */
+"shortcuts.a11y.close" = "Close";
+"shortcuts.a11y.filter" = "Filter shortcuts";
+"shortcuts.a11y.keySeparator" = "plus";
