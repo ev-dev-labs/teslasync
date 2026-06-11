@@ -6,49 +6,11 @@ using TeslaSync.App.Core.Data.Net;
 
 namespace TeslaSync.App.SharedSurfaces;
 
-/// <summary>
-/// The AI-feature visibility gate — the native seam behind the web <c>withAiFeature</c> HOC /
-/// <c>useAiEnabled</c> hook (web/src/components/ai/withAiFeature.tsx, web/src/hooks/useAiEnabled.ts) and the
-/// ADR-015 AI-off contract. A feature is enabled only when <c>ai_mode != 'off'</c> AND the per-feature opt-in
-/// toggle is on; everything defaults off. The host (the drive-detail page) supplies the concrete gate backed by
-/// the settings holder; the surface collapses to nothing when the gate is closed, exactly as the web HOC
-/// returns <see langword="null"/>. This keeps the surface free of any direct settings read.
-/// </summary>
-public interface IAiFeatureGate
-{
-    /// <summary>True when <paramref name="featureId"/> is enabled (web <c>useAiEnabled(feature)</c>).</summary>
-    /// <param name="featureId">The AI feature id (e.g. <c>"drive-coaching"</c>).</param>
-    /// <returns>Whether the feature's opt-in surface should render.</returns>
-    bool IsEnabled(string featureId);
-}
-
-/// <summary>
-/// An <see cref="IAiFeatureGate"/> backed by a predicate — the host wires one that consults the settings holder,
-/// and tests pass a deterministic predicate. <see cref="Disabled"/> is the AI-off default (every feature off),
-/// the native analogue of the web HOC rendering nothing when no AI mode is selected.
-/// </summary>
-public sealed class DelegateAiFeatureGate : IAiFeatureGate
-{
-    private readonly Func<string, bool> _predicate;
-
-    /// <summary>Creates the gate over an enabled-predicate.</summary>
-    /// <param name="predicate">Returns true when the given feature id is enabled.</param>
-    public DelegateAiFeatureGate(Func<string, bool> predicate)
-    {
-        ArgumentNullException.ThrowIfNull(predicate);
-        _predicate = predicate;
-    }
-
-    /// <summary>The AI-off default: every feature reports disabled (ADR-015 default).</summary>
-    public static DelegateAiFeatureGate Disabled { get; } = new(static _ => false);
-
-    /// <inheritdoc />
-    public bool IsEnabled(string featureId)
-    {
-        ArgumentNullException.ThrowIfNull(featureId);
-        return _predicate(featureId);
-    }
-}
+// The AI-feature visibility gate (IAiFeatureGate) and its predicate/AI-off implementations
+// (DelegateAiFeatureGate, StaticAiFeatureGate) are defined once for all AI shared surfaces in
+// AICabinTemperatureImpactNarrative.Source.cs (the canonical home, which also defines StaticAiFeatureGate);
+// this surface reuses them, mirroring how AIGeofenceAwareAutomationSuggestions and AINLGrafanaPanel consume the
+// shared gate rather than redeclaring it.
 
 /// <summary>
 /// The streaming transport the coaching state holder consumes (P1/S8 data seam) — the native analogue of the
