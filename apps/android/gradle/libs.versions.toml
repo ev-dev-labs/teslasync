@@ -17,6 +17,12 @@ composeBom = "2026.04.01"
 # Vico — Compose-native charting (ADR-012 lock, apps/versions.lock.md). Major bumps
 # require a superseding ADR; Renovate keeps patch versions current.
 vico = "2.0.0"
+# Google Maps Compose — Compose-native map wrappers (ADR-002 native UI, ADR-012
+# lists "MapLibre/Google Maps Compose"). The maps-compose AAR is published to Maven
+# Central; its transitive play-services-maps comes from the Google Maven repo (the
+# settings.gradle.kts content filter routes com.google.* there). Major bumps require
+# a superseding ADR; Renovate keeps patch versions current.
+mapsCompose = "6.6.0"
 # Quality
 ktlint = "12.1.2"
 ktlintEngine = "1.5.0"
@@ -46,6 +52,8 @@ compose-material3 = { module = "androidx.compose.material3:material3" }
 # Vico charts — Compose-native cartesian charts + Material 3 theme bridge.
 vico-compose = { module = "com.patrykandpatrick.vico:compose", version.ref = "vico" }
 vico-compose-m3 = { module = "com.patrykandpatrick.vico:compose-m3", version.ref = "vico" }
+# Google Maps Compose — pulls play-services-maps + maps-ktx transitively.
+maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 # Test
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestExtJunit" }

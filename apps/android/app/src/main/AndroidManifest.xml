@@ -9,6 +9,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TeslaSync">
 
+        <!-- Google Maps SDK key. Injected at build time from the MAPS_API_KEY manifest
+             placeholder (see app/build.gradle.kts); empty in local/dev builds. The maps
+             component library (components/maps) renders a blank base map without a valid key
+             but still builds and runs. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
