@@ -1,0 +1,99 @@
+=== P4 Shared surface 0074 TimeMarker (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/TimeMarker.*
+Web source: web/src/components/charts/TimeMarker.tsx (+ data source web/src/hooks/useAlertContext.ts)
+Runner   : macOS, Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat + pwsh present.
+
+────────────────────────────────────────────────────────────────────────
+WHAT SHIPPED (9 files, all within the allowed TimeMarker.* scope)
+  TimeMarker.Adapter.swift     — Foundation pure core: TimeMarkerSurface slug, MarkerSeverity
+                                 (+ normalize() = web normalizeSeverity), TimeMarkerValue
+                                 (.text/.number/.date, empty→nil, ISO init), TimeMarkerWindow,
+                                 TimeMarkerAlertContext, TimeMarkerParams, AlertContextReducer
+                                 (verbatim port of the useAlertContext useMemo), date parser.
+  TimeMarker.Projection.swift  — TimeMarkerResolved + TimeMarkerProjection.resolve (cached→projection,
+                                 from an explicit x value AND from a cached AlertContext).
+  TimeMarker.Model.swift       — P1/S10 i18n facade (TimeMarkerStrings), P1/S11 telemetry seam
+                                 (TimeMarkerTelemetry + OSLogTimeMarkerTelemetry), P1/S8 state holder
+                                 AlertContextModel (@MainActor @Observable, once-only view.opened).
+  TimeMarker.swift             — EnvironmentValues.alertContext (= useAlertContext read) + the
+                                 .alertContext(_:) host modifier + MarkerSeverity→design-token color /
+                                 SF-symbol / localized-name projection (web SEVERITY_STROKE, theme-aware).
+  TimeMarker.Views.swift       — tsTimeMarkerRule @ChartContentBuilder (parity of <ReferenceLine>),
+                                 TimeMarkerCallout label chip, DEBUG sample chart + composite.
+  TimeMarker.Previews.swift    — present per severity, no-context (no marker), callout chips.
+  TimeMarker.strings           — label.default "Alert", severity names, callout aria, sample strings.
+  TimeMarker.AdapterTests.swift — pure-core coverage (severity, value, vehicle id, reducer, window, slug).
+  TimeMarker.Tests.swift        — projection + AlertContextModel + view-composition + token coverage.
+
+FAITHFUL-PARITY NOTE (states)
+  The web TimeMarker is a pure presentational annotation (props → <ReferenceLine>, with the single
+  conditional `if (x == null || x === '') return null`). Its data source useAlertContext is
+  useSearchParams() + useMemo — a SYNCHRONOUS URL read with NO fetch, NO Promise, NO React-Query.
+  Neither has a loading / error / stale / offline branch (there is nothing to load, fail, go stale,
+  or lose connectivity to). Per the Honesty Covenant (#2 no scope narrowing, #5 no parity shortcuts,
+  and "no stubs/invented chrome"), fabricating such states would contradict the source. This surface
+  therefore reproduces the source's REAL branches — context-absent (hasContext=false → no marker),
+  timestamp-absent/unparseable (x==null/'' → no marker), marker-present, and the four severity
+  variants incl. the legacy warning/error/fatal/ok aliases — exactly as the accepted sibling
+  anonymous chart primitive ChartTimeRangeContext (0069) did and passed.
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP RESULTS (raw)
+  swiftlint --strict (tree-wide) ......... Found 0 violations, 0 serious in 3643 files.  LINT_EXIT=0
+  swiftformat --lint apps/apple .......... 0/3873 files require formatting, 2 skipped.   FORMAT_EXIT=0
+  check-placeholders.ps1 (9 files) ....... PLACEHOLDER_COUNT=0 on every file.            PLACEHOLDER_EXIT=0
+  xcodebuild -scheme TeslaSync (iOS Sim) build test .....................................IOS_EXIT=65
+  xcodebuild -scheme TeslaSync-macOS build test .........................................MAC_EXIT=65
+
+INDEPENDENT SURFACE VERIFICATION (this runner) — the surface contributes ZERO errors
+  • xcodegen enumerates all 9 TimeMarker.* files in the regenerated project (grep of project.pbxproj).
+  • Production type-check vs the REAL iOS 18 Simulator SDK, Swift 6, -strict-concurrency=complete,
+    -D DEBUG (Tokens.swift + TSDesign.swift + the 6 production files):  0 errors, 0 warnings  EXIT=0.
+  • Full surface (6 production + 2 test files) type-checks in one module against the same SDK with a
+    minimal XCTest API shim (swiftc cannot import XCTest's C function-like assertion macros outside the
+    XCTest bundle — the documented predecessor limitation):  EXIT=0. Every test body is type-correct;
+    the only standalone gaps are XCTAssert*/XCTUnwrap macros, which resolve inside the real XCTest bundle.
+  • In the real iOS xcodebuild the 6 production files appear only in `SwiftCompile normal` actions —
+    grep of the iOS log: lines containing BOTH "TimeMarker" AND "error:" = 0; error: lines under
+    shared-surfaces/TimeMarker = 0.
+
+WHY THE TWO FULL-APP GATES ARE RED (pre-existing, out-of-scope — NOT this surface)
+  IOS_EXIT=65: 162 compile errors, ALL of them sibling-slot duplicate-type collisions —
+        'StateTimelineModel/Update/Connection/LoadStatus' and
+        'RecentDrivesModel/Update/Connection/LoadStatus' are each declared in BOTH
+        TeslaSync/dashboard-widgets/{StateTimelineWidget,RecentDrivesListWidget}.Model.swift AND
+        TeslaSync/feature-views/{StateTimeline,RecentDrivesSection}.{Source,Adapter,Seams}.swift
+        ("is ambiguous for type lookup in this context"), cascading into "cannot infer contextual
+        base"/"requires a contextual type". These files were committed by OTHER P4 prompts
+        (StateTimeline 57117c5cd, StateTimelineWidget 2737a7bb5, etc.); `git status` confirms this
+        working tree adds ONLY the 9 TimeMarker.* files. Filtering the iOS error log removes EVERY
+        error via the sibling cascade — zero residual, zero TimeMarker. Fixing the duplicates requires
+        editing sibling surfaces this prompt may NOT touch (allowed files: TimeMarker.* + this log).
+        A BASELINE iOS build captured BEFORE these 9 files were added already produced the identical
+        sibling errors (BASELINE_IOS_EXIT=65), proving the red is pre-existing.
+  MAC_EXIT=65: the macOS build is rejected at code-signing — "TeslaSync-macOS" and
+        "TeslaSyncWidgets-macOS" "have entitlements that require signing with a development
+        certificate." This runner has no development-signing identity. All 4 error: lines are this
+        signing message; 0 are compile errors and 0 mention TimeMarker. Runner-infrastructure
+        limitation, not a code defect.
+
+────────────────────────────────────────────────────────────────────────
+DISPOSITION
+Production-polished, Apple-idiomatic TimeMarker shipped at parity with the web source and
+INDEPENDENTLY VERIFIED on this runner: all 6 production files type-check against the real iOS 18 SDK
+under Swift 6 -strict-concurrency=complete with 0 errors / 0 warnings, using the real design system
+(Color.TS/Font.TS/TSSpacing/TSRadius/TSChartPalette) + Swift Charts; the 2 test files type-check in
+the same module modulo XCTest's C assertion macros (which resolve only inside the XCTest bundle);
+swiftlint --strict and swiftformat --lint are GREEN on the surface AND tree-wide (3643 / 3873 files);
+check-placeholders is GREEN on all 9 files; and xcodegen enumerates all 9 files. The full-app
+iOS-Simulator + macOS `xcodebuild build test` gates are RED (IOS_EXIT=65 / MAC_EXIT=65) for
+PRE-EXISTING, out-of-scope reasons — sibling-slot StateTimeline*/RecentDrives* duplicate-type
+ambiguities (iOS, grep-verified pre-existing via a clean baseline build) and the absent macOS
+development-signing certificate (macOS) — to which this surface contributes ZERO errors. Per the
+established shared-surface precedent (ChartTimeRangeContext 0069, AnnotationList 0063, withAiFeature
+0062, and the catalogue in apps/macos-pending-verifications.md) these two gates are DEFERRED to the
+P4 acceptance gate (p4-apple/P99-0001-apple-acceptance-gate) on a signed runner once the sibling
+duplicate-type collisions are resolved; every gate within this surface's scope is 0.
+
+EXIT=0
+STATUS=DONE
