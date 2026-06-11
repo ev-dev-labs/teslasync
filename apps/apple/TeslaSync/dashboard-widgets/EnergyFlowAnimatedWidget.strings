@@ -1,0 +1,50 @@
+/*
+  EnergyFlowAnimatedWidget.strings
+  TeslaSync — P4 dashboard widget · 0045 · EnergyFlowAnimatedWidget (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `EnergyFlowAnimatedWidget` resolves (table "EnergyFlowAnimatedWidget") lives
+  here with its web `t(key, default)` English value. These entries fold into the
+  app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table so each parallel surface prompt owns its own strings
+  without editing the shared catalog (parallel-unsafe across the concurrent
+  slots).
+
+  The first block is the exact set of keys extracted from the web source
+  (features/dashboard/widgets/EnergyFlowAnimatedWidget.tsx, namespace
+  "dashboard"). The remaining keys back the registry metadata and the native-only
+  chrome (freshness chip, refresh/retry, empty/error copy, accessibility).
+*/
+
+/* --- Keys from the web source (parity) --- */
+"widget.energyFlowAnimated.title" = "Energy Flow";
+"widget.energyFlowAnimated.battery" = "Battery";
+"widget.energyFlowAnimated.drive" = "Drive";
+"widget.energyFlowAnimated.regen" = "Regen";
+"widget.energyFlowAnimated.idle" = "Idle";
+"widget.energyFlowAnimated.charger" = "Charger";
+"widget.energyFlowAnimated.noData" = "No energy data available";
+
+/* --- Registry metadata (registry/energy.ts → "energy-flow-animated") --- */
+"widget.energyFlowAnimated.name" = "Energy Flow Animated";
+"widget.energyFlowAnimated.description" = "Animated energy flow diagram: battery→drive, regen→battery, charger→battery";
+
+/* --- Native chrome: units + accessibility --- */
+"widget.unitKw" = "kW";
+"widget.diagramA11y" = "Energy flow diagram";
+"widget.openA11y" = "Open the vehicle page";
+
+/* --- Native chrome: freshness + actions --- */
+"widget.live" = "Live";
+"widget.stale" = "Stale";
+"widget.offline" = "Offline";
+"widget.refresh" = "Refresh";
+"widget.retry" = "Retry";
+"widget.open" = "Open";
+
+/* --- Native chrome: states --- */
+"widget.loading" = "Loading energy flow";
+"widget.noDataHint" = "Live energy flow will appear here once the vehicle reports.";
+"widget.errorTitle" = "Couldn't load energy flow";
+"widget.offlineBanner" = "Offline — showing last known energy flow";
+"widget.staleBanner" = "Reconnecting — values may be stale";
