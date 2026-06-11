@@ -9,96 +9,34 @@ using TeslaSync.App.Core.Data.Net;
 namespace TeslaSync.App.SharedSurfaces;
 
 /// <summary>
-/// The streaming data port the <see cref="AICabinTemperatureImpactNarrativeViewModel"/> binds to (P1/S8
-/// state-holder seam) — the native analogue of the web <c>useAiStream</c> hook
-/// (web/src/hooks/useAiStream.ts). It opens one narration stream per <see cref="StreamAsync"/> call and yields
-/// the parsed lifecycle events (deltas, the terminal done / error) in arrival order; cancelling the token
-/// aborts the stream (the native analogue of the hook's <c>AbortController</c>). The view never performs HTTP
-/// — the concrete <see cref="HttpAiNarrationStreamTransport"/> (or a test fake) drives this.
+/// The streaming data port the <see cref="AINLGrafanaPanelViewModel"/> binds to (P1/S8 state-holder seam) — the
+/// native analogue of the web <c>useAiStream</c> hook (web/src/hooks/useAiStream.ts). It opens one draft stream
+/// per <see cref="StreamAsync"/> call and yields the parsed lifecycle events (deltas, the captured
+/// <c>draft_grafana_panel</c> tool result, the terminal done / error) in arrival order; cancelling the token
+/// aborts the stream (the native analogue of the hook's <c>AbortController</c>). The view never performs HTTP —
+/// the concrete <see cref="HttpAiGrafanaDraftStreamTransport"/> (or a test fake) drives this. The AI feature
+/// gate (<see cref="IAiFeatureGate"/>) is shared with the other AI shared surfaces.
 /// </summary>
-public interface IAiNarrationStreamTransport
+public interface IAiGrafanaDraftStreamTransport
 {
-    /// <summary>Open a narration stream for the request body and yield its events until the stream closes.</summary>
-    IAsyncEnumerable<AiNarrationStreamEvent> StreamAsync(
-        AiNarrationRequest request,
+    /// <summary>Open a draft stream for the request body and yield its events until the stream closes.</summary>
+    IAsyncEnumerable<AiGrafanaDraftStreamEvent> StreamAsync(
+        AiGrafanaDraftRequest request,
         CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// The gate the surface consults before rendering — the native analogue of the web <c>useAiEnabled(feature)</c>
-/// consumed by <c>withAiFeature</c> (web/src/components/ai/withAiFeature.tsx). When it reports the feature as
-/// off the surface renders nothing (the web HOC returns <see langword="null"/>); when on, the card renders.
-/// The host supplies an implementation backed by the user's per-feature opt-in (the AI settings toggles).
-/// </summary>
-public interface IAiFeatureGate
-{
-    /// <summary>True when the given AI feature id is enabled for the current user / session.</summary>
-    bool IsEnabled(string featureId);
-}
-
-/// <summary>
-/// A constant <see cref="IAiFeatureGate"/> — the headless / default implementation. AI features default OFF
-/// (the web registry's "all default off" contract), so the parameterless instance reports every feature
-/// disabled; tests and the off-mode invariant use <see cref="Off"/>, and <see cref="On"/> exercises the
-/// enabled branch.
-/// </summary>
-public sealed class StaticAiFeatureGate : IAiFeatureGate
-{
-    private readonly bool _enabled;
-
-    /// <summary>Creates a gate that reports every feature as <paramref name="enabled"/>.</summary>
-    public StaticAiFeatureGate(bool enabled) => _enabled = enabled;
-
-    /// <summary>A gate that reports every feature disabled (the default-off contract).</summary>
-    public static StaticAiFeatureGate Off { get; } = new(false);
-
-    /// <summary>A gate that reports every feature enabled.</summary>
-    public static StaticAiFeatureGate On { get; } = new(true);
-
-    /// <inheritdoc />
-    public bool IsEnabled(string featureId)
-    {
-        ArgumentNullException.ThrowIfNull(featureId);
-        return _enabled;
-    }
-}
-
-/// <summary>
-/// An <see cref="IAiFeatureGate"/> over a predicate — the production adapter the host wires to the user's
-/// per-feature opt-in map (e.g. the AI settings feature toggles). Keeps the surface decoupled from the
-/// settings store while still honoring the live per-feature flag.
-/// </summary>
-public sealed class DelegateAiFeatureGate : IAiFeatureGate
-{
-    private readonly Func<string, bool> _predicate;
-
-    /// <summary>Creates the gate over the enabled-lookup predicate.</summary>
-    public DelegateAiFeatureGate(Func<string, bool> predicate) =>
-        _predicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
-
-    /// <summary>The AI-off default: every feature reports disabled (ADR-015 default).</summary>
-    public static DelegateAiFeatureGate Disabled { get; } = new(static _ => false);
-
-    /// <inheritdoc />
-    public bool IsEnabled(string featureId)
-    {
-        ArgumentNullException.ThrowIfNull(featureId);
-        return _predicate(featureId);
-    }
-}
-
-/// <summary>
-/// The production <see cref="IAiNarrationStreamTransport"/>: streams <c>text/event-stream</c> over an
-/// <see cref="HttpClient"/> by POSTing the narration request body — the native analogue of the web
+/// The production <see cref="IAiGrafanaDraftStreamTransport"/>: streams <c>text/event-stream</c> over an
+/// <see cref="HttpClient"/> by POSTing the draft request body — the native analogue of the web
 /// <c>useAiStream</c> using <c>fetch</c> + a <c>ReadableStream</c> reader (EventSource cannot POST a body,
 /// web/src/hooks/useAiStream.ts L9-L17). Each call attaches the current bearer token from the
 /// <see cref="ITokenProvider"/>, reads the response line by line, reassembles blank-line-delimited frames and
-/// parses them through <see cref="AiNarrationSseParser"/>. Failures are surfaced as a terminal
-/// <see cref="AiNarrationEventKind.Error"/> event (never an exception across the enumerator boundary) with a
-/// classified <see cref="AiNarrationErrorReason"/> so the view can show the offline affordance; cancellation
+/// parses them through <see cref="AiGrafanaDraftSseParser"/>. Failures are surfaced as a terminal
+/// <see cref="AiGrafanaDraftEventKind.Error"/> event (never an exception across the enumerator boundary) with a
+/// classified <see cref="AiGrafanaDraftErrorReason"/> so the view can show the offline affordance; cancellation
 /// propagates as <see cref="OperationCanceledException"/>. The bearer token is never logged. WinUI-free.
 /// </summary>
-public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
+public sealed class HttpAiGrafanaDraftStreamTransport : IAiGrafanaDraftStreamTransport
 {
     private readonly HttpClient _http;
     private readonly ApiClientOptions _options;
@@ -106,7 +44,7 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
     private readonly Action<string>? _diagnostics;
 
     /// <summary>Creates the transport over a configured client, options and token provider.</summary>
-    public HttpAiNarrationStreamTransport(
+    public HttpAiGrafanaDraftStreamTransport(
         HttpClient http,
         ApiClientOptions options,
         ITokenProvider tokenProvider,
@@ -122,8 +60,8 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
     }
 
     /// <inheritdoc />
-    public async IAsyncEnumerable<AiNarrationStreamEvent> StreamAsync(
-        AiNarrationRequest request,
+    public async IAsyncEnumerable<AiGrafanaDraftStreamEvent> StreamAsync(
+        AiGrafanaDraftRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -141,9 +79,9 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
         if (!response.IsSuccessStatusCode)
         {
             // web: `stream_http_${res.status}` — off-mode 404, feature-off 404, 5xx, rate-limit, etc.
-            yield return AiNarrationStreamEvent.Error(
+            yield return AiGrafanaDraftStreamEvent.Error(
                 string.Concat("stream_http_", ((int)response.StatusCode).ToString(System.Globalization.CultureInfo.InvariantCulture)),
-                AiNarrationErrorReason.Http);
+                AiGrafanaDraftErrorReason.Http);
             yield break;
         }
 
@@ -199,7 +137,7 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
         }
     }
 
-    private static IEnumerable<AiNarrationStreamEvent> Flush(StringBuilder frame)
+    private static IEnumerable<AiGrafanaDraftStreamEvent> Flush(StringBuilder frame)
     {
         if (frame.Length == 0)
         {
@@ -213,18 +151,18 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
             yield break;
         }
 
-        var ev = AiNarrationSseParser.ParseFrame(raw);
+        var ev = AiGrafanaDraftSseParser.ParseFrame(raw);
         if (ev is not null)
         {
             yield return ev;
         }
     }
 
-    private async Task<OpenResult> OpenAsync(AiNarrationRequest request, CancellationToken cancellationToken)
+    private async Task<OpenResult> OpenAsync(AiGrafanaDraftRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            var uri = BuildUri(AICabinTemperatureImpactNarrativeRegistration.NarratePath);
+            var uri = BuildUri(AINLGrafanaPanelRegistration.DraftPath);
             using var message = new HttpRequestMessage(HttpMethod.Post, uri);
             message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
             message.Headers.CacheControl = new CacheControlHeaderValue { NoCache = true };
@@ -238,7 +176,7 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
             var json = JsonSerializer.Serialize(request, _options.Json);
             message.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            _diagnostics?.Invoke($"ai-narrate \u2192 POST {uri.AbsolutePath}");
+            _diagnostics?.Invoke($"ai-grafana-draft \u2192 POST {uri.AbsolutePath}");
 
             var response = await _http
                 .SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -251,11 +189,11 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
         }
         catch (HttpRequestException)
         {
-            return new OpenResult(null, AiNarrationStreamEvent.Error("stream_network", AiNarrationErrorReason.Network));
+            return new OpenResult(null, AiGrafanaDraftStreamEvent.Error("stream_network", AiGrafanaDraftErrorReason.Network));
         }
         catch (IOException)
         {
-            return new OpenResult(null, AiNarrationStreamEvent.Error("stream_network", AiNarrationErrorReason.Network));
+            return new OpenResult(null, AiGrafanaDraftStreamEvent.Error("stream_network", AiGrafanaDraftErrorReason.Network));
         }
     }
 
@@ -274,11 +212,11 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
         }
         catch (HttpRequestException)
         {
-            return new ReaderResult(null, AiNarrationStreamEvent.Error("stream_network", AiNarrationErrorReason.Network));
+            return new ReaderResult(null, AiGrafanaDraftStreamEvent.Error("stream_network", AiGrafanaDraftErrorReason.Network));
         }
         catch (IOException)
         {
-            return new ReaderResult(null, AiNarrationStreamEvent.Error("stream_network", AiNarrationErrorReason.Network));
+            return new ReaderResult(null, AiGrafanaDraftStreamEvent.Error("stream_network", AiGrafanaDraftErrorReason.Network));
         }
     }
 
@@ -295,7 +233,7 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
         }
         catch (IOException)
         {
-            return new LineResult(null, false, AiNarrationStreamEvent.Error("stream_network", AiNarrationErrorReason.Network));
+            return new LineResult(null, false, AiGrafanaDraftStreamEvent.Error("stream_network", AiGrafanaDraftErrorReason.Network));
         }
     }
 
@@ -307,7 +245,7 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
 
     private readonly struct OpenResult
     {
-        public OpenResult(HttpResponseMessage? response, AiNarrationStreamEvent? failure)
+        public OpenResult(HttpResponseMessage? response, AiGrafanaDraftStreamEvent? failure)
         {
             Response = response;
             Failure = failure;
@@ -315,12 +253,12 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
 
         public HttpResponseMessage? Response { get; }
 
-        public AiNarrationStreamEvent? Failure { get; }
+        public AiGrafanaDraftStreamEvent? Failure { get; }
     }
 
     private readonly struct ReaderResult
     {
-        public ReaderResult(Stream? stream, AiNarrationStreamEvent? failure)
+        public ReaderResult(Stream? stream, AiGrafanaDraftStreamEvent? failure)
         {
             Stream = stream;
             Failure = failure;
@@ -328,12 +266,12 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
 
         public Stream? Stream { get; }
 
-        public AiNarrationStreamEvent? Failure { get; }
+        public AiGrafanaDraftStreamEvent? Failure { get; }
     }
 
     private readonly struct LineResult
     {
-        public LineResult(string? line, bool endOfStream, AiNarrationStreamEvent? failure)
+        public LineResult(string? line, bool endOfStream, AiGrafanaDraftStreamEvent? failure)
         {
             Line = line;
             EndOfStream = endOfStream;
@@ -344,6 +282,6 @@ public sealed class HttpAiNarrationStreamTransport : IAiNarrationStreamTransport
 
         public bool EndOfStream { get; }
 
-        public AiNarrationStreamEvent? Failure { get; }
+        public AiGrafanaDraftStreamEvent? Failure { get; }
     }
 }
