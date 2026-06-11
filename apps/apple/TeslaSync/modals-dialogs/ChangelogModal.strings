@@ -1,0 +1,57 @@
+/*
+  ChangelogModal.strings
+  TeslaSync — P4 modal / dialog · 0003 · ChangelogModal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `ChangelogModal` resolves
+  (table "ChangelogModal") lives here with its English value. The web source
+  (components/feedback/ChangelogModal.tsx) routes its copy through `t('changelog.modal…')` /
+  `t('changelog.sections…')` / `t('changelog.badges…')`; the native surface mirrors those keys so no
+  English literal lives in Swift. `{{token}}` markers match the web `t(key, fallback, { token })`
+  interpolation. These entries fold into the app `Localizable.xcstrings` master catalog at integration
+  time; they are kept in a per-surface table so each parallel surface prompt owns its own strings.
+
+  Groups: the modal chrome (title/close/subtitles/footer actions); the six Keep-a-Changelog section
+  headings; the three release badges; the freshness chip + banners; the native state chrome
+  (loading/empty/error); and the VoiceOver builders.
+*/
+
+/* --- Modal chrome (web Modal title + subtitles + footer) --- */
+"changelog.modal.title" = "What's new in TeslaSync";
+"changelog.modal.close" = "Close";
+"changelog.modal.subtitleFirstVisit" = "Welcome! Here's a quick tour of what TeslaSync ships with right now.";
+"changelog.modal.subtitleSinceLastVisit" = "{{count}} new release(s) since your last visit.";
+"changelog.modal.viewFull" = "View full changelog";
+"changelog.modal.gotIt" = "Got it";
+
+/* --- Section headings (web SECTION_FALLBACK) --- */
+"changelog.sections.added" = "Added";
+"changelog.sections.changed" = "Changed";
+"changelog.sections.fixed" = "Fixed";
+"changelog.sections.removed" = "Removed";
+"changelog.sections.deprecated" = "Deprecated";
+"changelog.sections.security" = "Security";
+
+/* --- Release badges (web BADGE_FALLBACK) --- */
+"changelog.badges.latest" = "Latest";
+"changelog.badges.stable" = "Stable";
+"changelog.badges.beta" = "Beta";
+
+/* --- Freshness chip + banners (ADR-013) --- */
+"changelog.live" = "Live";
+"changelog.stale" = "Stale";
+"changelog.offline" = "Offline";
+"changelog.staleBanner" = "Reconnecting — the seen-state may be out of date";
+"changelog.offlineBanner" = "Offline — showing the last loaded release history";
+"changelog.reloadError" = "Couldn't refresh the changelog";
+
+/* --- Native state chrome (loading/empty/error) --- */
+"changelog.loading" = "Loading what's new…";
+"changelog.emptyTitle" = "No release notes yet";
+"changelog.emptyBody" = "There's nothing new to show right now. Check back after the next update.";
+"changelog.error" = "Couldn't load the changelog";
+"changelog.retry" = "Retry";
+
+/* --- VoiceOver builders --- */
+"changelog.a11y.entry" = "Version {{version}}, {{badge}}, released {{date}}";
+"changelog.a11y.expand" = "Expand release notes";
+"changelog.a11y.collapse" = "Collapse release notes";
