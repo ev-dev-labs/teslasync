@@ -267,3 +267,4 @@ p3-android/feature-views/A-0022-UnixPermissionTool.prompt.md
 p3-android/feature-views/A-0018-JwtDecoder.prompt.md
 p3-android/feature-views/A-0017-JsonFormatter.prompt.md
 p3-android/feature-views/A-0019-RegexTester.prompt.md
+p3-android/feature-views/A-0020-TeslaApiRefTool.prompt.md
