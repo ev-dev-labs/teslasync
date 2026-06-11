@@ -1,0 +1,44 @@
+/*
+  GuardedLink.strings
+  TeslaSync — P4 shared surface · 0122 · GuardedLink (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/feedback/GuardedLink.tsx) is anonymous — it holds no `t()` calls of
+  its own: it is a navigation-guard wrapper around react-router's `<Link>` that
+  calls `confirmIfDirty()` and, when a guard is dirty, surfaces the
+  NavigationGuardProvider's `<ConfirmDialog>`. The dialog copy is therefore the
+  source's real user-facing strings, reproduced here VERBATIM under the web
+  `forms.*` keys so the native confirm flow matches the web one key-for-key. The
+  remaining `guardedLink.*` keys are the native P4 leaf chrome (loading / empty /
+  error / freshness) and the Apple-idiomatic "open in new window" affordance (the
+  native parity of the web modifier-click / target="_blank" guard bypass).
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table ("GuardedLink") so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+*/
+
+/* --- Confirm dialog (web NavigationGuardProvider `<ConfirmDialog>`, forms.*) --- */
+"forms.unsavedTitle" = "Unsaved changes";
+"forms.unsavedWarning" = "You have unsaved changes. Discard them?";
+"forms.discard" = "Discard changes";
+"forms.keepEditing" = "Keep editing";
+
+/* --- Link affordances (native — the web surface is anonymous) --- */
+"guardedLink.openInNewWindow" = "Open in New Window";
+"guardedLink.a11yHint" = "Navigates within the app";
+"guardedLink.a11yHintGuarded" = "Confirms unsaved changes before navigating";
+
+/* --- Loading / empty / error chrome (P4 leaf contract) --- */
+"guardedLink.loadingA11y" = "Loading link";
+"guardedLink.empty" = "No destination";
+"guardedLink.emptyMessage" = "This link has no destination yet.";
+"guardedLink.errorTitle" = "Couldn't load this link";
+"guardedLink.retry" = "Retry";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"guardedLink.live" = "Live";
+"guardedLink.stale" = "Stale";
+"guardedLink.offline" = "Offline";
+"guardedLink.staleA11y" = "Stale — tap to refresh";
+"guardedLink.offlineA11y" = "Offline — guard state may be out of date";
