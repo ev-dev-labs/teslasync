@@ -518,3 +518,4 @@ p2-windows/modals-dialogs/W-0012-ConfirmDialog.prompt.md
 p2-windows/modals-dialogs/W-0011-GeofenceDrawer.prompt.md
 p2-windows/modals-dialogs/W-0010-NotificationBellPopover.prompt.md
 p2-windows/modals-dialogs/W-0014-Modal.prompt.md
+p2-windows/modals-dialogs/W-0013-Drawer.prompt.md
