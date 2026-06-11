@@ -1,0 +1,44 @@
+/*
+  SkipToContent.strings
+  TeslaSync — P4 shared surface · 0139 · SkipToContent (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/feedback/SkipToContent.tsx) extracts exactly one translation key —
+  `t('a11y.skipToContent', 'Skip to main content')` — which is preserved here verbatim and
+  drives the hero skip link. The remaining keys are native chrome: the surface title/subtitle,
+  the VoiceOver hint, the post-activation announcement, the secondary-landmark "Skip to {name}"
+  template, the bypass-blocks explainer, and the P4 leaf freshness / loading / empty / error
+  copy, so the Swift sources hold no English literals. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface
+  table ("SkipToContent") so each parallel surface prompt owns its own strings without editing
+  the shared catalog.
+*/
+
+/* --- Web source key (verbatim from components/feedback/SkipToContent.tsx) --- */
+"a11y.skipToContent" = "Skip to main content";
+
+/* --- Accessibility (VoiceOver hint + post-activation announcement) --- */
+"a11y.skipToContentHint" = "Jumps past the navigation to the main content";
+"a11y.skippedTo" = "Skipped to %@";
+
+/* --- Surface header --- */
+"skip.title" = "Skip navigation";
+"skip.subtitle" = "Bypass the navigation and jump to the main content";
+
+/* --- Skip links --- */
+"skip.toNamed" = "Skip to %@";
+"skip.explainer" = "Jump straight to a landmark, bypassing the navigation (WCAG 2.4.1 Bypass Blocks).";
+
+/* --- Loading / empty / error chrome --- */
+"skip.loadingA11y" = "Loading skip navigation";
+"skip.empty" = "No landmarks to skip to";
+"skip.emptyMessage" = "Skip links appear here once the page registers its main content landmark.";
+"skip.errorTitle" = "Couldn't load skip navigation";
+"skip.retry" = "Retry";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"skip.live" = "Live";
+"skip.stale" = "Stale";
+"skip.offline" = "Offline";
+"skip.staleA11y" = "Stale — tap to refresh";
+"skip.offlineA11y" = "Offline — showing last known landmarks";
