@@ -911,6 +911,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.ViewModel.cs" Link="FeatureViews\TimeToChargeSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.Model.cs" Link="FeatureViews\TimestampTool\TimestampTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.ViewModel.cs" Link="FeatureViews\TimestampTool\TimestampTool.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TirePressurePanel\TirePressurePanel.Model.cs" Link="FeatureViews\TirePressurePanel\TirePressurePanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TirePressurePanel\TirePressurePanel.Source.cs" Link="FeatureViews\TirePressurePanel\TirePressurePanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TirePressurePanel\TirePressurePanel.ViewModel.cs" Link="FeatureViews\TirePressurePanel\TirePressurePanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TirePressureSection\TirePressureSection.Model.cs" Link="FeatureViews\TirePressureSection\TirePressureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TirePressureSection\TirePressureSection.Source.cs" Link="FeatureViews\TirePressureSection\TirePressureSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TirePressureSection\TirePressureSection.ViewModel.cs" Link="FeatureViews\TirePressureSection\TirePressureSection.ViewModel.cs" />
