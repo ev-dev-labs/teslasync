@@ -1,0 +1,48 @@
+/*
+  SourceLayerBadge.strings
+  TeslaSync — P4 shared surface · 0105 · SourceLayerBadge (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/data-display/SourceLayerBadge.tsx) routes the layer descriptions and the "age" word
+  through `t()`; those keys are reproduced verbatim here with the web English fallback. The layer
+  glyphs (L1 / L2 / LOG / STALE / —) are hardcoded in the web span, so they are lifted into keys with
+  the verbatim glyph as the fallback (native code holds no hardcoded literals). The age-unit templates
+  reproduce the web `formatAge` literals with a `%@` numeric token (locale- and width-safe). The
+  native P4 leaf chrome (loading / unavailable / offline) and the VoiceOver strings round it out.
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table ("SourceLayerBadge") so each parallel surface prompt owns its strings.
+*/
+
+/* --- Layer descriptions (verbatim web `STYLE[key].descKey` / `descFallback`) --- */
+"sourceLayer.l1.desc" = "Read from the in-process SignalStore (hot path, freshest).";
+"sourceLayer.l2.desc" = "Read from Redis cross-pod cache (legacy entry; freshness unknown).";
+"sourceLayer.log.desc" = "Replayed from signal_log (durable history).";
+"sourceLayer.stale.desc" = "Redis-backed value older than the 2-minute freshness window.";
+"sourceLayer.unknown.desc" = "Source layer unknown.";
+
+/* --- Age word (verbatim web `t('sourceLayer.age', 'age')`) --- */
+"sourceLayer.age" = "age";
+
+/* --- Age-unit templates (verbatim port of web `formatAge`; %@ numeric token) --- */
+"sourceLayer.age.ms" = "%@ ms";
+"sourceLayer.age.seconds" = "%@ s";
+"sourceLayer.age.minutes" = "%@ min";
+"sourceLayer.age.hours" = "%@ h";
+"sourceLayer.age.days" = "%@ d";
+
+/* --- Layer glyphs (web `STYLE[key].label`, lifted into keys) --- */
+"sourceLayer.l1.label" = "L1";
+"sourceLayer.l2.label" = "L2";
+"sourceLayer.log.label" = "LOG";
+"sourceLayer.stale.label" = "STALE";
+"sourceLayer.unknown.label" = "—";
+
+/* --- Loading chrome (native P4 leaf state) --- */
+"sourceLayer.loadingA11y" = "Loading source layer";
+
+/* --- Unavailable chrome (native P4 leaf state — source feed failed) --- */
+"sourceLayer.unavailable" = "Source unavailable";
+"sourceLayer.unavailableA11y" = "Source layer unavailable — tap to retry";
+
+/* --- Offline chrome (native P4 leaf state — connectivity lost) --- */
+"sourceLayer.offlineA11y" = "Offline — showing the last known value";
