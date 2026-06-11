@@ -206,3 +206,4 @@ p3-android/dashboard-widgets/A-0068-MQTTStatusWidget.prompt.md
 p3-android/dashboard-widgets/A-0066-MotorHistoryWidget.prompt.md
 p3-android/dashboard-widgets/A-0069-NotificationStatsWidget.prompt.md
 p3-android/dashboard-widgets/A-0072-PositionHeatmapWidget.prompt.md
+p3-android/dashboard-widgets/A-0073-PowerFlowHistoryWidget.prompt.md
