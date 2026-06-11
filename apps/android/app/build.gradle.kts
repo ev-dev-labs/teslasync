@@ -191,6 +191,15 @@ dependencies {
     // ProcessLifecycleOwner — app-wide foreground/background gate for the live SSE stream (P3/A6, ADR-009).
     implementation(libs.androidx.lifecycle.process)
 
+    // Jetpack Glance — home-screen app widgets (P3/A8, ADR-009/013). glance-appwidget supplies the
+    // GlanceAppWidget + receiver + Glance state APIs; glance-material3 supplies GlanceTheme + the
+    // dynamic-color ColorProviders the widget theme maps the generated design tokens onto.
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+    // WorkManager — responsible background refresh for the widgets (P3/A8): a CoroutineWorker drives the
+    // shared cache-then-network repositories and re-renders the widgets; never a held SSE stream (ADR-009).
+    implementation(libs.androidx.work.runtime.ktx)
+
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.graphics)

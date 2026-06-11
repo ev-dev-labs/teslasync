@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Home-screen widget strings (P3/A8, app-owned; not part of the auto-generated i18n catalog, like
+  live_strings/push_strings). Microcopy is centralized here so the Glance composables stay thin and
+  the app locale (and RTL ar/he fallbacks) apply automatically.
+-->
+<resources>
+    <!-- Freshness chip ("Updated X ago"). -->
+    <string name="widget_freshness_unknown">\u2014</string>
+    <string name="widget_freshness_just_now">Updated just now</string>
+    <string name="widget_freshness_minutes">Updated %1$dm ago</string>
+    <string name="widget_freshness_hours">Updated %1$dh ago</string>
+    <string name="widget_freshness_days">Updated %1$dd ago</string>
+    <string name="widget_freshness_weeks">Updated %1$dw ago</string>
+
+    <!-- Vehicle lifecycle/FSM labels. -->
+    <string name="widget_vehicle_state_driving">Driving</string>
+    <string name="widget_vehicle_state_charging">Charging</string>
+    <string name="widget_vehicle_state_parked">Parked</string>
+    <string name="widget_vehicle_state_asleep">Asleep</string>
+    <string name="widget_vehicle_state_online">Online</string>
+    <string name="widget_vehicle_state_offline">Offline</string>
+    <string name="widget_vehicle_state_unknown">Unknown</string>
+
+    <!-- Degraded-state banners (tap to retry). -->
+    <string name="widget_banner_offline">Offline \u2014 showing last known. Tap to retry.</string>
+    <string name="widget_banner_stale">Data may be stale. Tap to refresh.</string>
+    <string name="widget_banner_error">Couldn\u2019t update. Tap to retry.</string>
+
+    <!-- Body messages for non-content states. -->
+    <string name="widget_state_loading">Loading\u2026</string>
+    <string name="widget_state_error">Couldn\u2019t load data</string>
+
+    <!-- Shared metric labels. -->
+    <string name="widget_metric_battery">Battery</string>
+    <string name="widget_metric_range">Range</string>
+    <string name="widget_metric_temp">Interior</string>
+    <string name="widget_metric_lock">Lock</string>
+    <string name="widget_metric_power">Power</string>
+    <string name="widget_metric_eta">Time to full</string>
+    <string name="widget_metric_target">Target</string>
+    <string name="widget_metric_last_session">Last session</string>
+    <string name="widget_metric_distance">Distance</string>
+    <string name="widget_metric_energy">Energy</string>
+    <string name="widget_metric_cost">Cost</string>
+    <string name="widget_metric_efficiency">Efficiency</string>
+    <string name="widget_metric_drives">Drives</string>
+    <string name="widget_metric_charges">Charges</string>
+    <string name="widget_lock_locked">Locked</string>
+    <string name="widget_lock_unlocked">Unlocked</string>
+
+    <!-- Vehicle-status widget. -->
+    <string name="widget_vehicle_title">Vehicle</string>
+    <string name="widget_vehicle_default_name">Tesla</string>
+    <string name="widget_vehicle_empty">No vehicle yet. Open the app to add one.</string>
+    <string name="widget_vehicle_description">At-a-glance battery, range, and state for your Tesla.</string>
+
+    <!-- Charging widget. -->
+    <string name="widget_charging_title">Charging</string>
+    <string name="widget_charging_charging">Charging</string>
+    <string name="widget_charging_idle">Not charging</string>
+    <string name="widget_charging_empty">No charging data yet</string>
+    <string name="widget_charging_description">Charging status, power, and time to full.</string>
+
+    <!-- Quick-stats widget. -->
+    <string name="widget_quickstats_title">Quick Stats</string>
+    <string name="widget_quickstats_empty">No stats yet. Drive to see data.</string>
+    <string name="widget_quickstats_description">Fleet distance, energy, cost, and efficiency.</string>
+
+    <!-- Alerts widget. -->
+    <string name="widget_alerts_title">Alerts</string>
+    <string name="widget_alerts_critical">Critical</string>
+    <string name="widget_alerts_unread">Unread</string>
+    <string name="widget_alerts_quiet_hours">Quiet hours on</string>
+    <string name="widget_alerts_empty">No alerts</string>
+    <string name="widget_alerts_description">Critical alert count and the latest alert.</string>
+</resources>
