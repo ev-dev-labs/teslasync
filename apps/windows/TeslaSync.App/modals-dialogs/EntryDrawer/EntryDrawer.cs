@@ -35,7 +35,7 @@ public sealed partial class EntryDrawer : ContentControl, IDisposable
     private readonly EntryDrawerViewModel _viewModel;
     private readonly DispatcherQueue? _dispatcher;
 
-    private readonly TsDrawer _drawer = new() { Side = DrawerSide.Right, PaneWidth = PaneWidth };
+    private readonly TsDrawer _drawer = new() { Side = Components.UI.DrawerSide.Right, PaneWidth = PaneWidth };
     private readonly Grid _root = new();
     private readonly SectionTitle _titleText = new();
     private readonly TsButton _closeIcon = new() { Variant = ButtonVariant.Subtle, Size = ControlSize.Small, IconGlyph = CloseGlyph };
