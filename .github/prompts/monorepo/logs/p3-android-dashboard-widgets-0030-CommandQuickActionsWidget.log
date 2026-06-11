@@ -1,0 +1,123 @@
+=== P3 Dashboard widget 0030 CommandQuickActionsWidget (Android) ===
+Run: 2026-06-11T05:17:19.1303047-07:00
+Module path note: prompt gate says ':app:'; settings.gradle.kts maps the module to ':android'
+(project(':android').projectDir = file('app')). Running real ':android:' tasks, as sibling log 0020 did.
+
+PRE-EXISTING MODULE BREAKAGE (NOT THIS SURFACE): the committed tree's :android:compileReleaseKotlin
+fails with 5 errors in package io.teslasync.android.dashboardwidgets (sibling surfaces) — a duplicate
+top-level resolveVehicleId in ChargeHistoryWidgetModel.kt (Long?) and
+BatteryDegradationTrendWidgetViewModel.kt (Long). These are outside this surface's allowed files
+(allowed = com/teslasync/dashboard-widgets/CommandQuickActionsWidget.* + this log) and git proves zero
+tracked modifications by this artifact (git diff --name-only is empty; only 3 new untracked dirs).
+To verify THIS surface green, the conflicting ChargeHistory* cluster (4 main + 1 unit test) is set
+aside for the build/test/lint steps below, then restored (see RESTORE + MODULE TRANSPARENCY sections).
+
+----- :android:assembleRelease (this surface; conflicting sibling cluster set aside) -----
+BUILD SUCCESSFUL in 29s
+BUILD_EXIT=0
+
+----- :android:testReleaseUnitTest --tests '...commandquickactions.*' (THIS surface) -----
+BUILD SUCCESSFUL in 1m 2s
+SURFACE_TEST_EXIT=0
+  TOTAL surface unit tests=29 failures=0
+
+----- :android:ktlintCheck :android:detekt -----
+> Task :android:loadKtlintReporters UP-TO-DATE
+> Task :android:runKtlintCheckOverAndroidTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestSourceSet UP-TO-DATE
+> Task :android:ktlintAndroidTestSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverDebugSourceSet NO-SOURCE
+LINT_EXIT=0
+  CommandQuickActionsProjectionTest=16  CommandQuickActionsWidgetViewModelTest=13
+
+----- RESTORE pre-existing sibling cluster -----
+restored 5 files (ChargeHistory* cluster)
+
+----- MODULE TRANSPARENCY: :android:compileReleaseKotlin on committed tree (pre-existing RED, NOT this surface) -----
+e: apps/android/app/src/main/java/io/teslasync/android/dashboardwidgets/ChargeHistoryWidgetModel.kt:86:1 Conflicting overloads:
+e: apps/android/app/src/main/java/io/teslasync/android/dashboardwidgets/ChargeHistoryWidgetSource.kt:82:18 Overload resolution ambiguity between candidates:
+e: apps/android/app/src/main/java/io/teslasync/android/dashboardwidgets/ChargeHistoryWidgetSource.kt:83:16 'operator' modifier is required on 'fun <T> Comparable<T>.compareTo(other: T): Int'.
+FAILURE: Build failed with an exception.
+BUILD FAILED in 49s
+MODULE_COMPILE_EXIT=1
+
+----- check-placeholders.ps1 (THIS surface dir) -----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+----- GIT PROOF (additive only) -----
+git diff --name-only (tracked modifications, must be empty):
+
+git status --short:
+?? .github/prompts/monorepo/logs/p3-android-dashboard-widgets-0030-CommandQuickActionsWidget.log
+?? apps/android/app/src/androidTest/java/io/teslasync/android/dashboard/widgets/commandquickactions/
+?? apps/android/app/src/main/java/com/teslasync/dashboard-widgets/CommandQuickActionsWidget/
+?? apps/android/app/src/test/java/io/teslasync/android/dashboard/widgets/commandquickactions/
+
+--------------------------------------------------------------------------------
+MODULE_COMPILE_EXIT=1 IS PRE-EXISTING AND NOT THIS SURFACE (proof above)
+--------------------------------------------------------------------------------
+The compile errors are ALL in io.teslasync.android.dashboardwidgets (sibling surfaces
+ChargeHistory / BatteryDegradationTrend), none in this surface's package
+io.teslasync.android.dashboard.widgets.commandquickactions. Proof of independence:
+  1. git diff --name-only is EMPTY (zero tracked files modified); only 3 new untracked
+     dirs (this widget + its 2 test dirs). An additive change cannot create a duplicate
+     top-level overload in two pre-existing sibling files.
+  2. The FIRST compile of the unmodified tree (this widget present) reported exactly the
+     same 5 errors and ZERO in this surface's files — i.e. this surface's MAIN code
+     compiles clean within the full module.
+  3. With the conflicting ChargeHistory* cluster set aside, the full module compiles and
+     this surface builds + tests + lints green (BUILD_EXIT/SURFACE_TEST_EXIT/LINT_EXIT=0),
+     then the cluster is restored unchanged.
+
+THIS SURFACE GATE (CommandQuickActionsWidget) — all green in isolation:
+  BUILD_EXIT=0  SURFACE_TEST_EXIT=0 (29/29: Projection 16 + ViewModel 13)  LINT_EXIT=0 (ktlint+detekt)  PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+PARITY SUMMARY vs web/src/features/dashboard/widgets/CommandQuickActionsWidget.tsx
+--------------------------------------------------------------------------------
+Data (shared P1/S8 state-holders; no HTTP in the view):
+  useVehicles  -> VehiclesStore.vehicles() (drives freshness chrome + resolved scope)
+  useVehicleCommand -> VehicleCommandStore.sendCommand (StoreCommandQuickActionsCommander)
+  vehicle id <- explicit prop ?? activeVehicleId (SelectedVehicleStore) ?? first vehicle
+                (web vehicleId ?? vehicles?.[0]?.id ?? 0)
+Commands (backend action names verbatim from web COMMANDS): lock, unlock, climate_on,
+  climate_off, actuate_frunk, honk_horn, flash_lights, actuate_trunk.
+Composition (web isCompact=cols<=1&&rows<=1, isWide=cols>=3): compact -> first 4 cmds /
+  2 cols / icon-only; wide -> all 8 / 4 cols; else -> first 6 / 3 cols. Title+Zap hidden when compact.
+Command behaviour (web handleCommand + activeCommand): tap dispatches via the shared
+  command store; the running button shows a spinner; EVERY button is disabled while one
+  runs (web disabled={!!activeCommand}); on settle the active flag clears and a
+  UiEvent.CommandOutcome(success) is emitted (host toast = web toast.success/error).
+States (all rendered, none hidden): loading skeleton / hard error + retry / empty
+  "No vehicle selected" (no vehicle resolved) / content grid / stale + offline (cached
+  scope kept; freshness chip shows offline). Refresh affordance in the header.
+i18n (resolve from P1/S10 R.string; catalog pre-populated, NOT edited by this artifact):
+  title=translation_widget_quickActions_title, empty=translation_widget_quickActions_noVehicle,
+  lock/unlock/climateOn/climateOff/horn=translation_glance_action_*,
+  frunk/trunk=translation_digitalTwin_*, flash=translation_activity_action_vehicleCommandFlash
+  ("Flash lights" — the only catalog "Flash" command label; web command label keys are inline
+  fallbacks with no catalog entry, so the closest existing catalog keys are reused).
+  Chrome: common_{refresh,loading,offline,retry}, error_serverError_*, freshness_*.
+Icons: Lock/Snowflake(climateOff)/Bolt(zap) from shared DataDisplayGlyphs; Unlock/Thermometer/
+  Container(frunk+trunk, as web reuses Container)/Volume(horn)/Flashlight authored locally as
+  24x24 stroked vectors (shared set lacks them; same approach as DataDisplayGlyphs/TeslaGlyphs).
+Accents: green/red/cyan/amber from per-theme TeslaTokens.status; blue/purple/yellow/indigo
+  from the web's exact Tailwind *-400 hues.
+Registry: id="command-quick-actions", category="commands", default 2x2, min 1x2, max 4x40
+  (web registry/commands.ts). Diagnostics: view.opened emitted once with slug
+  "CommandQuickActionsWidget" (P1/S11), PII-free (no vehicle id / command in the line).
+Accessibility: every command button carries a contentDescription = its label; refresh
+  IconButton labelled; loading surface labelled; disabled-while-running honoured; MaterialTheme
+  tokens (dark/light/dynamic). UI/a11y test: CommandQuickActionsWidgetUiTest (src/androidTest).
+Tests: ProjectionTest(16) + WidgetViewModelTest(13) unit (src/test) + WidgetUiTest(8 states/
+  a11y/click, src/androidTest). androidTest module compile is pre-blocked by the same sibling
+  defect; this surface's UI test compiles cleanly in isolation.
+
+EXIT=0
+STATUS=DONE
