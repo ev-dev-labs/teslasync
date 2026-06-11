@@ -300,3 +300,4 @@ p3-android/feature-views/A-0051-AchievementBadge.prompt.md
 p3-android/feature-views/A-0049-WindowStatusDetail.prompt.md
 p3-android/feature-views/A-0052-BatteryTab.prompt.md
 p3-android/feature-views/A-0053-ChargingDetailSection.prompt.md
+p3-android/feature-views/A-0055-DrivingPerformanceCards.prompt.md
