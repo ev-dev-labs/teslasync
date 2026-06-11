@@ -9810,6 +9810,12 @@
   <data name="translation.efficiency.totalRegen" xml:space="preserve">
     <value>Total Regen</value>
   </data>
+  <data name="translation.emptyState.threshold.defaultItem" xml:space="preserve">
+    <value>items</value>
+  </data>
+  <data name="translation.emptyState.threshold.message" xml:space="preserve">
+    <value>Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far.</value>
+  </data>
   <data name="translation.enabled" xml:space="preserve">
     <value>enabled</value>
   </data>
