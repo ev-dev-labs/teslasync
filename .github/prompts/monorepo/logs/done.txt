@@ -472,3 +472,4 @@ p2-windows/feature-views/W-0270-SignalSelector.prompt.md
 p2-windows/feature-views/W-0268-SignalDiffTable.prompt.md
 p2-windows/feature-views/W-0271-SignalSparklinePreview.prompt.md
 p2-windows/feature-views/W-0272-SignalStatsPanel.prompt.md
+p2-windows/feature-views/W-0273-TripReplayCharts.prompt.md
