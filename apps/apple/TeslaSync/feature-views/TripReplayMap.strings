@@ -1,0 +1,45 @@
+/*
+  TripReplayMap.strings
+  TeslaSync — P4 feature view · 0274 · TripReplayMap (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `TripReplayMap` resolves (table "TripReplayMap") lives here with its web value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface
+  prompt owns its own strings without editing the shared catalog.
+
+  Group 1 is the exact keys + values extracted from the web source
+  (features/trips/components/TripReplayMap.tsx, namespace "replay.map").
+  Group 2 backs the native map labels (start / end / anchor / playhead + canvas a11y).
+  Group 3 backs the native-only chrome (freshness chip, loading / error, layer switcher).
+*/
+
+/* --- Group 1: web source (replay.map.*) --- */
+"replay.map.stationaryRouteTitle" = "Route can't be plotted";
+"replay.map.stationaryRouteBody" = "Only one GPS coordinate was recorded for this drive, so the route can't be drawn. The trip statistics, speed, and elevation timeline above the scrubber are unaffected.";
+"replay.map.noPositions" = "No position data available for this drive";
+
+/* --- Group 2: native map labels (markers + canvas a11y) --- */
+"replay.map.mapLabel" = "Trip replay route map";
+"replay.map.start" = "Start";
+"replay.map.end" = "End";
+"replay.map.lastKnown" = "Last known location";
+"replay.map.currentPosition" = "Current position";
+
+/* --- Group 3: native chrome (freshness chip) --- */
+"replay.map.refresh" = "Refresh";
+"replay.map.updating" = "Updating";
+"replay.map.live" = "Live";
+"replay.map.stale" = "Reconnecting";
+"replay.map.offline" = "Offline";
+
+/* --- Group 3: native chrome (loading / error) --- */
+"replay.map.loading" = "Loading replay map";
+"replay.map.errorTitle" = "Couldn't load the replay map";
+"replay.map.retry" = "Retry";
+
+/* --- Group 3: native chrome (layer switcher) --- */
+"replay.map.styleLabel" = "Map style";
+"replay.map.style.standard" = "Standard";
+"replay.map.style.hybrid" = "Hybrid";
+"replay.map.style.satellite" = "Satellite";
