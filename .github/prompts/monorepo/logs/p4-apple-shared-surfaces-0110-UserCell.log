@@ -1,0 +1,167 @@
+=== P4 Shared surface 0110 UserCell (Apple) ===
+Web source : web/src/components/data-display/UserCell.tsx (THE specification)
+Runner     : Darwin arm64, Xcode 26.5, swift 6.3.2, swiftlint + swiftformat + xcodegen + pwsh present.
+Sims       : iPhone 16 (booted) available.
+
+CAPABILITY: SwiftUI present (iOS 18 / macOS 15 SDKs reachable). UserCell uses neither Swift Charts
+  nor MapKit (it is a pure presentational table cell that composes the Avatar surface) -> this is
+  NOT a platform-capability BLOCK. The surface is fully implemented and verified on this runner.
+
+==============================================================================
+SURFACE-SCOPED HOST-RUNNABLE GATES  (all GREEN)
+==============================================================================
+[1] swiftformat --lint (7 UserCell swift files)
+    0/7 files require formatting.
+    FORMAT_EXIT=0
+[1b] swiftformat --lint . (tree-wide, the literal gate step 4)
+    0/4467 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0
+
+[2] swiftlint --strict (7 UserCell swift files)
+    Found 0 violations, 0 serious in 7 files.
+    LINT_EXIT=0
+[2b] swiftlint --strict (tree-wide, the literal gate step 3)
+    Done linting! Found 0 violations, 0 serious in 4169 files.
+    LINT_EXIT=0
+
+[3] swiftc -typecheck iOS 18 simulator (arm64-apple-ios18.0-simulator, -swift-version 6,
+    -strict-concurrency=complete, -D DEBUG; production + Previews, against the real generated
+    Color.TS / Font.TS / TSSpacing / TSRadius tokens + the real Avatar surface it composes)
+    IOS_TYPECHECK_EXIT=0
+[4] swiftc -typecheck macOS 15 (arm64-apple-macos15.0, -swift-version 6,
+    -strict-concurrency=complete, -D DEBUG; production + Previews)
+    MAC_TYPECHECK_EXIT=0
+
+[5] swift build + swift test (isolated SwiftPM, module name "TeslaSync", swift-tools 6.0 =>
+    Swift 6 language mode + complete concurrency; real Tokens.swift + real Avatar.* sources +
+    the 4 UserCell production sources + the 2 UserCell test files via @testable import)
+    Build complete!
+    BUILD_EXIT=0
+    Test Suite 'All tests' passed.
+      Executed 36 tests, with 0 failures (0 unexpected).
+        - UserCellIdentityPrimitiveTests   (isFalsy / emailLocalPart / isEmpty — JS-truthiness ports)
+        - UserCellDisplayNameTests         (name -> email local-part -> id -> Unknown user priority)
+        - UserCellProjectionTests          (empty vs populated branches + showEmail gate + carried fields)
+        - UserCellMetaTests                (surface slug + em-dash glyph)
+        - UserCellAccessibilityTests       (spoken label = name, value = email|empty)
+        - UserCellModelTests               (view.opened once; stop/start no re-emit; apply; refresh;
+                                            empty has no name; a11y strings; i18n-facade unknown word)
+        - LiveUserCellSourceTests          (start/refresh emit the bound descriptor)
+        - UserCellViewTests                (subviews + surface compose; always-tooltip avatar contract)
+    TEST_EXIT=0
+
+[6] xcodegen generate (enumerates the 8 UserCell files into the app + test targets)
+    XCODEGEN_EXIT=0
+    UserCell files referenced in project.pbxproj (count per file shown by grep):
+       UserCell.Adapter.swift  UserCell.Model.swift  UserCell.Views.swift  UserCell.swift
+       UserCell.Previews.swift  UserCell.Tests.swift  UserCell.ModelTests.swift  UserCell.strings
+
+[7] placeholder / stub scan (apps/tools/check-placeholders.ps1, shipped UserCell sources)
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  (scanned each of the 7 .swift files individually)
+    PLACEHOLDER_EXIT=0
+
+==============================================================================
+PARITY — every web UserCell branch reproduced (no scope narrowing)
+==============================================================================
+- The web cell renders exactly two branches; both are reproduced and neither is hidden:
+  * EMPTY  : `!user || (!user.name && !user.email && !user.id)` (untrimmed JS truthiness) ->
+             a muted em-dash "—" (web `data-testid="user-cell-empty"`,
+             `text-[var(--text-muted)]`) -> native UserCellEmpty (Color.TS.textMuted).
+  * POPULATED: the composed Avatar (size=size, showTooltip=ALWAYS true) + the display name
+             (text-sm / --text-primary / truncate -> Font.TS.body + Color.TS.textPrimary +
+             lineLimit(1).tail) and, only when `showEmail && user.email`, a muted email line
+             beneath (text-xs / --text-muted / truncate -> Font.TS.bodySm + Color.TS.textMuted).
+- Display-name priority chain ported verbatim: `name.trim() || email.split('@')[0] || id ||
+  t('avatar.unknown')`. Pinned in tests: name "Alice Adams" -> "Alice Adams"; "  Alice Adams  "
+  -> trimmed; email-only "jane.smith@example.com" -> "jane.smith"; id-only "subject-abc" ->
+  "subject-abc"; "@example.com"+id -> falls through to id; whitespace-only name + no other
+  signal -> localised "Unknown user".
+- The avatar is fed name=displayName and userId=user.id (web `userId={user.id} name={displayName}
+  src={user.avatarUrl} showTooltip`), so initials/seed/colour derive from the SAME displayName the
+  cell shows. Tie-tested: displayName "Alice Adams" -> AvatarIdentity.initials == "AA".
+- showEmail default false (email hidden by default — web test "does NOT render the email by
+  default"); when on with an empty address, no email line (the address is JS-falsy).
+- size token (xs/sm/md/lg, default sm) carried to the avatar; avatarUrl carried to the avatar
+  image. The web `className` prop is a styling hook with no native analogue (documented in source).
+
+==============================================================================
+STATES — every state the web source actually has is rendered
+==============================================================================
+- empty     : rendered (the muted em-dash; keeps dense tables scannable).
+- populated : rendered (avatar + name + optional email).
+- The web UserCell is a PURE presentational cell whose only data source is `useTranslation`
+  (no query hook). It therefore has no network freshness axis — fabricating loading / error /
+  stale / offline chips here would be DRIFT, not parity (Honesty Covenant #5 "no parity
+  shortcuts", #9 "no silent drift"). This is the same disposition the Avatar surface (0076) took
+  for the identical reason. The only genuine fetch in the cell is the avatar's optional remote
+  image, whose loading/loaded/failed lifecycle is handled inside the composed Avatar (AsyncImage
+  -> fallback disc), so the cell is never a blank box.
+
+i18n (P1/S10)  : the one web key `avatar.unknown` ("Unknown user") resolves through the
+  NSLocalizedString facade (UserCellStrings, table "UserCell"); shipped in UserCell.strings; no
+  English literals in the Swift sources. Verified at runtime via the injected-resolver test
+  (custom resolver -> "Inconnu").
+a11y           : the cell folds into ONE VoiceOver element (children: .ignore) — label = display
+  name (or the em-dash), value = email when shown — so the name is not voiced twice (avatar +
+  label). Dynamic Type respected via Font.TS tokens; Reduce-Motion respected by the composed
+  Avatar's image cross-fade. No interactive elements in this cell (display-only).
+telemetry (P1/S11): UserCellModel emits `view.opened` exactly once with slug "UserCell"
+  (asserted: not re-emitted after stop/start).
+state-holder (P1/S8): the view binds through UserCellModel over a UserCellSource seam
+  (LiveUserCellSource in production, InMemoryUserCellSource in tests/previews); no HTTP in the view.
+
+==============================================================================
+FULL-APP xcodebuild (gate steps 1 & 2) — RED for PRE-EXISTING, OUT-OF-SCOPE reasons
+==============================================================================
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' ... test
+  -> ** TEST FAILED **  IOS_EXIT=65
+  The app target fails to COMPILE on pre-existing defects in sibling surfaces that this prompt's
+  allowed-files scope (UserCell.* + this log) forbids editing, and which are owned by their own
+  prompts:
+    (a) apps/apple/TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22
+        error: escaping closure captures non-escaping parameter 'content'
+        (its private `glass(_ content:)` helper passes a non-@escaping closure into
+         TSGlassPanel's @escaping initializer — a one-line defect in that surface).
+    (b) apps/apple/TeslaSync/feature-views/RecentDrivesSection.Previews.swift
+        error: the compiler is unable to type-check this expression in reasonable time.
+  PROOF these are pre-existing and NOT produced by UserCell:
+    * `git status --short` => the ENTIRE change set is the 8 new (untracked) UserCell.* files;
+      ZERO tracked files modified.
+    * `git status --short <AIGeofence.swift> <RecentDrivesSection.Previews.swift>` => empty
+      (both byte-identical to HEAD; untouched by this surface).
+    * The error sites are in those files' own bodies (a closure-escaping helper / an over-large
+      view expression), independent of UserCell.
+
+macOS scheme (TeslaSync-macOS) shares the same Sources/ + feature-views + shared-surfaces source
+  set, so it is blocked by the IDENTICAL pre-existing compile errors. The macOS surface-scoped
+  swiftc -typecheck [4] above is the substitute and is GREEN. MAC_EXIT (full app) would be 65 for
+  the same pre-existing reasons.  -> DEFERRED to the P4 acceptance gate on a clean baseline, per
+  the established shared-surface precedent (Avatar 0076, MetricCard 0095) and
+  apps/macos-pending-verifications.md. UserCell contributes ZERO errors to either app target
+  (proven by the iOS + macOS swiftc -typecheck and the SwiftPM build+test above).
+
+==============================================================================
+HONESTY COVENANT
+==============================================================================
+1 No red-as-green   : the full-app xcodebuild is reported RED with full evidence; NOT claimed green.
+2 No scope narrowing: both web render branches + the full display-name priority chain reproduced.
+3 No skip-and-assume: the priority chain / truthiness / email-split are pinned against the web
+                      reference and executed (36 tests, 0 failures).
+4 No stubs as final : 0 placeholders; complete implementation (scanned + verified).
+5 No parity shortcut: empty + populated + optional-email all present; no fabricated network states.
+6 No delegation     : authored directly (delegation FORBIDDEN per the prompt).
+7 No predecessor bypass: P1/S8 state-holder, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry consumed;
+                      composes the existing Avatar shared surface (0076).
+8 No commit on red  : every surface-attributable gate is GREEN; the only RED is pre-existing,
+                      unrelated, and outside the allowed-files scope.
+9 No silent drift   : the no-network-freshness-axis decision is documented above (matches Avatar
+                      0076); the single-VoiceOver-element a11y fold is documented + tested.
+10 EXIT/STATUS below.
+
+FORMAT_EXIT=0 LINT_EXIT=0 IOS_TYPECHECK_EXIT=0 MAC_TYPECHECK_EXIT=0 BUILD_EXIT=0 TEST_EXIT=0
+XCODEGEN_EXIT=0 PLACEHOLDER_EXIT=0   (all surface-scoped gates green; 36/36 tests pass)
+FULL_APP_XCODEBUILD=RED (pre-existing, unrelated AIGeofenceAwareAutomationSuggestions.swift:141 +
+  RecentDrivesSection.Previews.swift; UserCell contributes zero errors; deferred to P4 acceptance gate)
+
+EXIT=0
+STATUS=DONE
