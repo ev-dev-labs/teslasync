@@ -609,3 +609,4 @@ p2-windows/shared-meaningful/W-0105-SourceLayerBadge.prompt.md
 p2-windows/shared-meaningful/W-0104-ServiceStatus.prompt.md
 p2-windows/shared-meaningful/W-0102-SavedViewMenu.prompt.md
 p2-windows/shared-meaningful/W-0108-TimeStamp.prompt.md
+p2-windows/shared-meaningful/W-0106-TeslaCarViz.prompt.md
