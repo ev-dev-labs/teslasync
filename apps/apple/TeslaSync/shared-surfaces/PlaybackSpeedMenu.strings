@@ -1,0 +1,17 @@
+/*
+  PlaybackSpeedMenu.strings
+  TeslaSync — P4 shared surface · 0097 · PlaybackSpeedMenu (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native surface resolves
+  (table "PlaybackSpeedMenu") lives here with its web `t(key, default)` English value, taken verbatim
+  from the web source `components/data-display/PlaybackSpeedMenu.tsx`. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table so
+  each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The web source resolves exactly one string — the control's accessible label. The on-screen
+  `{speed}x` value is a formatted multiplier (composed in code), not a translatable string, so it is
+  intentionally not a catalog key.
+*/
+
+/* --- Accessible label (web `aria-label={t('replay.controls.speed', 'Playback speed')}`) --- */
+"replay.controls.speed" = "Playback speed";
