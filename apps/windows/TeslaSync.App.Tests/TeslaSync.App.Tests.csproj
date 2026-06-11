@@ -2063,6 +2063,8 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.ViewModel.cs" Link="ModalsDialogs\KeyboardShortcutsModal\KeyboardShortcutsModal.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\Modal\Modal.Model.cs" Link="ModalsDialogs\Modal\Modal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\Modal\Modal.ViewModel.cs" Link="ModalsDialogs\Modal\Modal.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\CommandSelectDialog.Model.cs" Link="ModalsDialogs\CommandSelectDialog.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\CommandSelectDialog.ViewModel.cs" Link="ModalsDialogs\CommandSelectDialog.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\DashboardSettingsModal\DashboardSettingsModal.Model.cs" Link="ModalsDialogs\DashboardSettingsModal\DashboardSettingsModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\DashboardSettingsModal\DashboardSettingsModal.ViewModel.cs" Link="ModalsDialogs\DashboardSettingsModal\DashboardSettingsModal.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\Drawer\Drawer.Model.cs" Link="ModalsDialogs\Drawer\Drawer.Model.cs" />
