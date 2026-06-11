@@ -203,3 +203,4 @@ p3-android/dashboard-widgets/A-0065-MonthlyMileageWidget.prompt.md
 p3-android/dashboard-widgets/A-0061-MaintenanceTrackerWidget.prompt.md
 p3-android/dashboard-widgets/A-0067-MotorPerformanceWidget.prompt.md
 p3-android/dashboard-widgets/A-0068-MQTTStatusWidget.prompt.md
+p3-android/dashboard-widgets/A-0066-MotorHistoryWidget.prompt.md
