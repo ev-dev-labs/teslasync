@@ -14,7 +14,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            App(windowSizeClass = calculateWindowSizeClass(this))
+            App(
+                windowSizeClass = calculateWindowSizeClass(this),
+                container = (application as TeslaSyncApplication).container,
+            )
         }
     }
 }
