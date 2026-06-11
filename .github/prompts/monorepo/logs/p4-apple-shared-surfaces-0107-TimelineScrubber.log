@@ -1,0 +1,128 @@
+=== P4 Shared surface 0107 TimelineScrubber (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.*
+Web spec : web/src/components/data-display/TimelineScrubber.tsx
+Runner   : Darwin (arm64), Xcode 26.5 (17F42), Apple Swift 6.3.2, swiftlint + swiftformat + xcodegen
+           + Kotlin/Native (Gradle 8.14.5) — SwiftUI + Swift Charts + MapKit available → NOT capability-BLOCKED.
+
+------------------------------------------------------------------------
+HONESTY COVENANT — every result below is from a real command run on this runner; raw exit
+codes are reported verbatim. The full-scheme `xcodebuild build test` is reported as its true
+state (BLOCKED by a pre-existing defect in OTHER agents' surfaces), NOT as green.
+------------------------------------------------------------------------
+
+PARITY — the native surface reproduces the web TimelineScrubber data, composition, states & i18n:
+[x] Interactive track (content): thin track + buffered band + neon fill + active playhead thumb
+    (grows + accent ring while dragging) + hover ghost playhead + 8 marker-kind ticks (tint by kind,
+    clustered-count badge, tap-to-seek, `.help` tooltip) + hover/drag preview bubble (time over the
+    host-formatted speed/power/SoC/elevation) + optional decorative background (web `<Sparkline>`).
+[x] Drag-to-scrub emits intermediate seeks throttled to SCRUB_INTERVAL_MS (0.05s); a zero-distance
+    drag = tap-to-seek on release; VoiceOver swipe = adjustable slider increment/decrement.
+[x] Reduce Motion drops the fill/thumb transition (web `prefers-reduced-motion`) via
+    @Environment(\.accessibilityReduceMotion). useTranslation → P1/S10 facade.
+[x] P4 leaf states the web pure render lacks: loading (skeleton track), empty (no timeline → friendly),
+    error (QueryError + retry), plus the orthogonal freshness axis: stale/offline chip + banner with a
+    one-shot stale auto-refresh.
+[x] Hooks bind via the shared P1/S8 state-holder seam (TimelineScrubberSource + TimelineScrubberModel);
+    NO direct HTTP in the view (web source has none).
+[x] i18n: 22/22 keys present in TimelineScrubber.strings (table "TimelineScrubber"); web parity keys
+    `Playback progress`→timelineScrubber.progress, `at {{pct}}%`→timelineScrubber.markerAtPercent.
+    No English string literals in native code (all via the P1/S10 facade).
+[x] Accessibility on every interactive element: the track is one adjustable slider (label + m:ss/`NN%`
+    value + increment/decrement); each marker is a focusable Button with a localized label (+clustered
+    count) and a tooltip.
+[x] Telemetry: `view.opened` emitted once with surface slug "TimelineScrubber" (P1/S11 seam;
+    asserted by testStartEmitsViewOpenedOnce).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code.
+
+------------------------------------------------------------------------
+SHIPPED FILES (apps/apple/TeslaSync/shared-surfaces/) — each .swift <= 400 lines (swiftlint file_length)
+------------------------------------------------------------------------
+  TimelineScrubber.swift             114  surface composition + phase switch + freshness chip/banner
+  TimelineScrubber.Model.swift       200  meta, telemetry seam, i18n facade, value types, actions
+  TimelineScrubber.Adapter.swift      87  clamp01/percent/timeText/throttle + accessibility labels
+  TimelineScrubber.Projection.swift  123  Resolved + resolve(input): phase precedence + clamps + a11y
+  TimelineScrubber.Seams.swift        99  source protocol + live source + in-memory source (P1/S8)
+  TimelineScrubber.Store.swift        98  @Observable model: project, view.opened once, stale refresh, seek
+  TimelineScrubber.Views.swift       279  interactive track + marker tick + preview tooltip
+  TimelineScrubber.Chrome.swift      173  loading skeleton / empty / error / freshness chip + banner
+  TimelineScrubber.Previews.swift    116  every state preview (DEBUG)
+  TimelineScrubber.Tests.swift       195  adapter + accessibility + projection + meta tests
+  TimelineScrubber.ModelTests.swift  172  source seam + state-holder + telemetry + seek tests
+  TimelineScrubber.strings            45  i18n catalog (22 keys, table "TimelineScrubber")
+  total                             1701
+
+------------------------------------------------------------------------
+GATE RESULTS (raw exit codes from real runs)
+------------------------------------------------------------------------
+LINT_EXIT=0                  # `swiftlint --strict` — whole project, clean (incl. all 11 surface .swift)
+FORMAT_EXIT=0                # `swiftformat --lint apps/apple` — 0/4449 files require formatting
+PLACEHOLDER_EXIT=0           # check-placeholders.ps1 (swift) on the 12 surface files → PLACEHOLDER_COUNT=0
+                             #   NOTE: the gate path `...shared-surfaces/TimelineScrubber` is a filename
+                             #   PREFIX, not a directory, so the scanner's Test-Path is false and it
+                             #   returns a vacuous 0. To verify HONESTLY the 12 files were copied into a
+                             #   real TimelineScrubber/ dir and scanned → PLACEHOLDER_COUNT=0, EXIT=0.
+MACOS_TYPECHECK_EXIT=0       # swiftc -typecheck, Swift 6 + -strict-concurrency=complete, arm64-apple-macos15.0,
+                             #   surface + REAL design system (generated Tokens + Sources/Design + the
+                             #   UI/Feedback primitives it uses) — 0 errors.
+IOS_TYPECHECK_EXIT=0         # swiftc -typecheck, Swift 6 strict, arm64-apple-ios18.0-simulator — 0 errors.
+MACOS_PREVIEWS_TYPECHECK=0   # same, -D DEBUG, INCLUDING TimelineScrubber.Previews.swift (#Preview macro) — 0 errors.
+SWIFT_TEST_EXIT=0            # SwiftPM XCTest against the REAL design system: Executed 35 tests, 0 failures.
+XCODEGEN_EXIT=0              # `xcodegen generate` enumerates all 12 TimelineScrubber.* files (72 pbxproj refs
+                             #   across the iOS+macOS app targets and the iOS+macOS XCTest bundles).
+GIT_SCOPE_OK=1               # working tree shows ONLY the 12 TimelineScrubber.* files; the generated
+                             #   .xcodeproj and the Gradle-staged Frameworks/Shared.xcframework are git-ignored.
+
+IOS_EXIT=BLOCKED-UNRELATED   # `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test`
+MAC_EXIT=DEFERRED            # (macOS variant deferred behind the same blocker)
+
+------------------------------------------------------------------------
+FULL-SCHEME xcodebuild DISPOSITION — BLOCKED by PRE-EXISTING defects in OTHER agents' surfaces,
+proven independent of this artifact (Honesty Covenant: no skip-and-assume).
+------------------------------------------------------------------------
+The Kotlin/Native `Shared.xcframework` preAction SUCCEEDED on this runner (log: "✓ Shared.xcframework
+staged"), so the historical "framework unstaged" deferral no longer applies here. The full-app Swift
+compile then fails for reasons NOT in this surface:
+
+  1) A swift-frontend CRASH (Apple Swift 6.3.2, "Please submit a bug report ... crash backtrace",
+     "Command SwiftCompile failed") while code-generating the batch whose -primary-file set is
+     AppSettings.swift / AppSettingsModel.swift / AppSettingsStore.swift / AppSettingsView.swift /
+     AppShell.swift / AppearanceSettings.* / AppleAuthSession.swift / AuditPanel.* / AuthBiometricBridge.swift.
+     NO TimelineScrubber file is in that -primary-file set.
+
+  2) A deterministic, pre-existing compile ERROR in another agent's surface:
+       TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+       error: escaping closure captures non-escaping parameter 'content'
+
+PROOF this artifact is NOT the cause (reproduce-without-my-files):
+  • Moved all 12 TimelineScrubber.* files OUT of the tree, `xcodegen generate` → 0 TimelineScrubber refs,
+    `xcodebuild ... build` → ** BUILD FAILED ** (exit 65) with error (2) above and 0 TimelineScrubber
+    mentions anywhere in the log. The full-app build is broken with my surface entirely absent.
+  • Restored all 12 files, `xcodegen generate` → 72 TimelineScrubber refs (state reverted).
+
+Those files (AppSettings*, AppearanceSettings*, AuditPanel*, AIGeofenceAwareAutomationSuggestions*) are
+OUTSIDE this prompt's allowed-files scope (apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.* + this
+log), so fixing them here is forbidden (scope + predecessor rules). The full-scheme `build test` is
+therefore deferred to the P4 acceptance gate once the sibling surfaces compile — exactly the sanctioned
+disposition used by prior P4 surfaces (0090 FreshnessIndicator, 0093 KpiOverviewCard, 0096 PlaybackControls).
+
+This artifact itself is INDEPENDENTLY VERIFIED GREEN: it compiles under the app's own Swift 6
+strict-concurrency rules against the REAL design tokens + components on BOTH the iOS-18 and macOS-15
+SDKs (incl. views + previews), its 35 XCTest pass via the SwiftPM runtime against the real design
+system, and swiftlint --strict / swiftformat --lint / placeholder / xcodegen are all green.
+
+------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------
+[x] Surface renders on Apple with all states from the web source reproduced (content + loading + empty
+    + error + stale + offline) — previews + chrome + track.
+[x] Hooks bind to the shared P1/S8 state-holder layer; no direct HTTP from the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (22/22; 0 missing).
+[x] Accessibility labels present on every interactive element (slider + marker buttons).
+[x] Tests: adapter unit tests + per-state projection tests + state-holder/seam tests + a11y label tests = 35, all green.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code.
+[~] EXIT=0 for the in-scope artifact (all applicable gates green); full-scheme `xcodebuild build test`
+    is BLOCKED by pre-existing defects in OTHER agents' out-of-scope surfaces (evidence above), not by
+    this artifact or by platform capability.
+
+EXIT=0
+STATUS=DONE
