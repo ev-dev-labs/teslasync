@@ -1,0 +1,49 @@
+/*
+  ExportModal.strings
+  TeslaSync — P4 modal / dialog · 0023 · ExportModal (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `ExportModal` resolves
+  (table "ExportModal") lives here with its web `t(key, default)` English value. The web source
+  (features/dashboard/components/ExportModal.tsx) routes its copy through `t('export…')`; the native
+  surface mirrors those keys so no English literal lives in Swift. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table so each
+  parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source. The remainder backs the native state
+  envelope (loading, empty, error retry, freshness chip, connectivity banner), the header close, and the
+  transient copy confirmation.
+*/
+
+/* --- Web source keys (ExportModal.tsx) --- */
+"export.title" = "Export Dashboard";
+"export.widgetCount" = "{{count}} widgets";
+"export.updated" = "Updated {{date}}";
+"export.downloadFile" = "Download JSON File";
+"export.copyClipboard" = "Copy to Clipboard";
+"export.copyShareUrl" = "Copy Shareable URL";
+"export.urlTooLong" = "Layout too large for URL sharing ({{size}} chars). Use clipboard or file export instead.";
+
+/* --- Header close + copy confirmation --- */
+"export.close" = "Close";
+"export.copied" = "Copied";
+
+/* --- Loading (first-load outline) --- */
+"export.loading" = "Loading export…";
+
+/* --- Empty (dashboard not found) --- */
+"export.emptyTitle" = "Dashboard unavailable";
+"export.emptyMessage" = "This dashboard couldn't be found. It may have been deleted.";
+
+/* --- Error + retry (first-load failure) --- */
+"export.error" = "Couldn't load this dashboard";
+"export.retry" = "Retry";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"export.live" = "Live";
+"export.stale" = "Stale";
+"export.offline" = "Offline";
+
+/* --- Connectivity + inline-error banners (ADR-013) --- */
+"export.staleBanner" = "Reconnecting — this dashboard may be out of date";
+"export.offlineBanner" = "Offline — showing the last loaded dashboard";
+"export.reloadError" = "Couldn't refresh this dashboard";
