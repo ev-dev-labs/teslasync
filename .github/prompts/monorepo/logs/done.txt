@@ -535,3 +535,4 @@ p2-windows/shared-meaningful/W-0001-AnnouncerRegion.prompt.md
 p2-windows/modals-dialogs/W-0031-CommandSelectDialog.prompt.md
 p2-windows/shared-meaningful/W-0002-RouteAnnouncer.prompt.md
 p2-windows/modals-dialogs/W-0030-CommandInputDialog.prompt.md
+p2-windows/shared-meaningful/W-0003-VisuallyHidden.prompt.md
