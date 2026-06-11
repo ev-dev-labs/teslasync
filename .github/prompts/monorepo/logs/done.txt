@@ -220,3 +220,4 @@ p3-android/dashboard-widgets/A-0081-RegenEfficiencyWidget.prompt.md
 p3-android/dashboard-widgets/A-0085-SecurityStatusWidget.prompt.md
 p3-android/dashboard-widgets/A-0083-SafetyFeaturesWidget.prompt.md
 p3-android/dashboard-widgets/A-0086-SentryEventLogWidget.prompt.md
+p3-android/dashboard-widgets/A-0082-RouteEfficiencyWidget.prompt.md
