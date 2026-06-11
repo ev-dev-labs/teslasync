@@ -232,3 +232,4 @@ p3-android/dashboard-widgets/A-0092-SoftwareUpdateStatusWidget.prompt.md
 p3-android/dashboard-widgets/A-0094-SpeedHeatmapWidget.prompt.md
 p3-android/dashboard-widgets/A-0098-SuperchargerHistoryWidget.prompt.md
 p3-android/dashboard-widgets/A-0096-StateTimelineWidget.prompt.md
+p3-android/dashboard-widgets/A-0097-SubscriptionsWidget.prompt.md
