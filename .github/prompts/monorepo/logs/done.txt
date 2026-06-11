@@ -180,3 +180,4 @@ p3-android/dashboard-widgets/A-0042-DrivetrainHealthWidget.prompt.md
 p3-android/dashboard-widgets/A-0041-DriveTelemetryWidget.prompt.md
 p3-android/dashboard-widgets/A-0043-DrivingCoachWidget.prompt.md
 p3-android/dashboard-widgets/A-0044-DrivingDynamicsWidget.prompt.md
+p3-android/dashboard-widgets/A-0045-EnergyFlowAnimatedWidget.prompt.md
