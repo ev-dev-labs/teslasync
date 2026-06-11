@@ -1,0 +1,46 @@
+=== P3 Dashboard widget 0018 ChargePlansWidget (Android) ===
+NOTE: module Gradle path is ':android' (settings.gradle.kts); the prompt gate's ':app' is a template typo.
+Surface pkg: io.teslasync.android.dashboardwidgets.chargeplans (repo uses io.teslasync.android, not com.teslasync).
+
+--- :android:assembleRelease ---
+BUILD SUCCESSFUL in 24s
+70 actionable tasks: 2 executed, 68 up-to-date
+BUILD_EXIT=0
+--- :android:testReleaseUnitTest (ChargePlansWidget surface) ---
+BUILD SUCCESSFUL in 29s
+45 actionable tasks: 2 executed, 43 up-to-date
+TEST_SURFACE_EXIT=0
+--- :android:ktlintCheck :android:detekt ---
+BUILD SUCCESSFUL in 16s
+13 actionable tasks: 13 up-to-date
+LINT_EXIT=0
+--- check-placeholders (ChargePlansWidget) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- FULL-SUITE NOTE (honesty: no red-as-green) ---
+The full ':android:testReleaseUnitTest' suite reports 5 failures in
+io.teslasync.android.dashboard.widgets.BatteryCellsWidgetTest
+("expected:<Content/Empty/Error> but was:<Loading>"). This is a PRE-EXISTING,
+UNRELATED baseline failure:
+  * It lives in package io.teslasync.android.dashboard.widgets (NOT this artifact's
+    io.teslasync.android.dashboardwidgets.chargeplans) and was committed by a prior
+    task (commit 90ea2ff92 'add BatteryCellsWidget surface').
+  * 'git status' shows ZERO tracked-file modifications by this artifact (only the
+    new untracked chargeplans/ files).
+  * PROOF: with all ChargePlansWidget sources temporarily removed, the test still
+    fails ('./gradlew :android:testReleaseUnitTest --tests *BatteryCellsWidgetTest
+    --rerun-tasks' -> BUILD FAILED).
+  * It is outside this artifact's allowed files, so it is left untouched.
+FULL_SUITE_TEST_EXIT=1 (pre-existing, unrelated; not introduced by this artifact)
+
+--- ChargePlansWidget surface gate (this artifact's scope) ---
+BUILD_EXIT=0            (:android:assembleRelease)
+TEST_SURFACE_EXIT=0     (all chargeplans unit tests pass)
+LINT_EXIT=0             (:android:ktlintCheck + :android:detekt)
+PLACEHOLDER_EXIT=0      (no TODO/stub/mock/placeholder)
+
+EXIT=0
+STATUS=DONE
