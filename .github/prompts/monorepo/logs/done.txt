@@ -217,3 +217,4 @@ p3-android/dashboard-widgets/A-0077-RangeEstimateWidget.prompt.md
 p3-android/dashboard-widgets/A-0079-RecentDrivesWidget.prompt.md
 p3-android/dashboard-widgets/A-0080-RecentlyUnlockedAchievements.prompt.md
 p3-android/dashboard-widgets/A-0081-RegenEfficiencyWidget.prompt.md
+p3-android/dashboard-widgets/A-0085-SecurityStatusWidget.prompt.md
