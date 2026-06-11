@@ -1,0 +1,42 @@
+/*
+  VehiclePhotoGallery.strings
+  TeslaSync — P4 feature view · 0306 · VehiclePhotoGallery (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "VehiclePhotoGallery").
+  Every key the native surface resolves lives here with its web `t(key, default)` English
+  value. These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface prompt
+  owns its own strings without editing the shared catalog.
+
+  The first group is the exact set of keys extracted from the web source
+  (features/vehicles/components/VehiclePhotoGallery.tsx) — the empty-state copy, the
+  named/unnamed gallery aria-label, and the per-thumbnail open label. The second group is
+  the native chrome the Apple leaf contract adds (the loading/error a11y, the retry, the
+  freshness chip + banner, and the immersive-viewer counter / navigation / alt fallback),
+  so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"vehicles.photos.empty" = "No photos uploaded yet.";
+"vehicles.photos.emptyHelp" = "Photos uploaded for this vehicle will appear here.";
+"vehicles.photos.galleryNamed" = "{{name}} photo gallery";
+"vehicles.photos.gallery" = "Photo gallery";
+"vehicles.photos.openAt" = "Open photo {{index}} of {{total}}";
+
+/* --- Native chrome: leaf-contract states (loading / error / freshness) --- */
+"vehicles.photos.gallery.loadingA11y" = "Loading photos";
+"vehicles.photos.gallery.errorTitle" = "Couldn't load photos";
+"vehicles.photos.gallery.errorA11y" = "Photos failed to load";
+"vehicles.photos.gallery.retry" = "Retry";
+"vehicles.photos.gallery.live" = "Live";
+"vehicles.photos.gallery.stale" = "Stale";
+"vehicles.photos.gallery.offlineChip" = "Offline";
+"vehicles.photos.gallery.staleBanner" = "Reconnecting — these photos may be out of date";
+"vehicles.photos.gallery.offlineBanner" = "Offline — showing the last loaded photos";
+
+/* --- Native chrome: immersive viewer (composes the shared lightbox) --- */
+"vehicles.photos.gallery.viewerA11y" = "Photo viewer";
+"vehicles.photos.gallery.viewerCounter" = "{{index}} of {{total}}";
+"vehicles.photos.gallery.previous" = "Previous photo";
+"vehicles.photos.gallery.next" = "Next photo";
+"vehicles.photos.gallery.photoAlt" = "Vehicle photo";
