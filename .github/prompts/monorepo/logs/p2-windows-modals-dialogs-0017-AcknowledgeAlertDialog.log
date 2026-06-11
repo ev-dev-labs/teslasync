@@ -1,0 +1,160 @@
+=== P2 Modal / dialog 0017 AcknowledgeAlertDialog (Windows) ===
+Prompt:   .github/prompts/monorepo/... P2/modals-dialogs/0017 AcknowledgeAlertDialog
+Web spec: web/src/features/admin/components/AcknowledgeAlertDialog.tsx (THE specification)
+Native:   apps/windows/TeslaSync.App/modals-dialogs/AcknowledgeAlertDialog.*
+Host:     Windows_NT, .NET SDK 10.0.300 (+ runtime 10.0.8), WinUI 3 (Windows App SDK, UseWinUI=true) — WinUI 3 + .NET 10 capability PRESENT.
+
+--------------------------------------------------------------------------------
+PLATFORM CAPABILITY
+--------------------------------------------------------------------------------
+[OK]   WinUI 3 (Windows App SDK 1.6+) + .NET 10 + Fluent Design System available:
+       the WinUI app (TeslaSync.App, net10.0-windows10.0.19041.0, UseWinUI=true)
+       BUILDS clean including the XAML markup compiler. The surface is shipped, not
+       blocked on the WinUI capability itself.
+[GAP]  WinAppDriver / Appium runner ABSENT on this host: nothing listening on
+       http://127.0.0.1:4723/ and WinAppDriver.exe not found on PATH or standard
+       install paths. The packaged-app UI-automation suite (TeslaSync.App.UITests,
+       147 [Category=UIAutomation] cases) therefore cannot run here. This is the
+       same documented environmental gap as p2-windows/W9-0002-ui-automation and is
+       deferred to a WinAppDriver-provisioned Windows runner (CI windows-latest).
+
+--------------------------------------------------------------------------------
+ARTIFACTS (this surface)
+--------------------------------------------------------------------------------
+  apps/windows/TeslaSync.App/modals-dialogs/
+    AcknowledgeAlertDialog.cs            — WinUI view (TsModal/ContentDialog): optional
+                                           acked-alert subtitle + auto-focused multi-line
+                                           note field (TsTextarea, cap 1050) + too-long
+                                           ErrorText (assertive live region) + always-shown
+                                           hint; Acknowledge/Cancel buttons gated on the
+                                           note-length + submitting state; Narrator names;
+                                           full-description hint association (aria-describedby
+                                           analogue); no bespoke motion (reduced-motion safe).
+    AcknowledgeAlertDialog.Model.cs       — WinUI-free: Registration (slug + bounds
+                                           NoteMaxLength=1000 / NoteInputMaxLength=1050 +
+                                           i18n keys with web-literal fallbacks + {{max}} hint
+                                           interpolation), Projection (NormalizeNote / IsTooLong
+                                           / BuildDraft), AcknowledgeAlertDraft, Diagnostics.
+    AcknowledgeAlertDialog.ViewModel.cs   — WinUI-free state holder (web useState + props):
+                                           Note, host-driven Submitting, TooLong / NoteError /
+                                           CanSubmit (web disabled={submitting||tooLong}) /
+                                           CanCancel (web !submitting), AcknowledgeRequested +
+                                           CloseRequested events, NotifyOpened (reset note +
+                                           view.opened diagnostic — web open useEffect).
+  apps/windows/TeslaSync.App.Tests/ModalsDialogs/AcknowledgeAlertDialogTests.cs
+                                          — 34 headless cases (projection note/too-long/draft,
+                                           registration bounds + i18n fallbacks + {{max}} hint,
+                                           VM state matrix idle/too-long/submitting/acknowledge/
+                                           blank-note/cancel/reset, a11y label key contract,
+                                           diagnostics view.opened + alert.acknowledged).
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+                                          — RE-CONSOLIDATED to a single canonical <Project>
+                                           root (see NOTE below) + 2 new WinUI-free Compile
+                                           links for this surface.
+  apps/environment-pending-verifications.md
+                                          — deferred-verification row for the 147 WinAppDriver
+                                           UI-automation cases against this surface.
+
+--------------------------------------------------------------------------------
+NOTE — pre-existing Tests-csproj corruption repaired (no silent drift)
+--------------------------------------------------------------------------------
+At baseline, apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj contained
+FOUR concatenated <Project> roots (<Project> at lines 1, 925, 1006; </Project> at
+924, 2468, 2474, 2481) — the .gitattributes merge=union re-concatenation the file's
+own INVARIANT comment warns about — so the whole solution failed XML load with:
+  TeslaSync.App.Tests.csproj(925,2): error MSB4025: There are multiple root elements.
+Per the file's documented remediation ("regenerate it directly from the WinUI-free
+sources on disk"), it was re-consolidated into ONE canonical root. The single Compile
+ItemGroup is the case-insensitive path-sorted, Include-deduplicated union of every
+WinUI-free (Microsoft.UI-free) .cs under feature-views/, dashboard-widgets/,
+misc-surfaces/ and modals-dialogs/ = 856 (854 pre-existing + 2 new). The set was
+validated bidirectionally against the HEAD merge-union: every prior include exists on
+disk and is Microsoft.UI-free (zero stale), and a fresh disk scan of WinUI-free sources
+reproduces exactly the prior 854 plus only the 2 new AcknowledgeAlertDialog logic links
+(Model + ViewModel) — so no source was dropped or misclassified. The bare WinUI view
+(AcknowledgeAlertDialog.cs, Microsoft.UI-referencing) is correctly EXCLUDED. PropertyGroup,
+PackageReference, ProjectReference and the 3 Content fixture links were preserved verbatim.
+
+--------------------------------------------------------------------------------
+GATE — host-runnable steps (actual exit codes)
+--------------------------------------------------------------------------------
+BUILD   dotnet build apps/windows/TeslaSync.sln -c Release
+        => 0 Warning(s), 0 Error(s).  BUILD_EXIT=0
+        (All projects incl. the WinUI app + XAML markup compiler. The new surface
+         compiled clean on first build under the App's strict EnableNETAnalyzers +
+         AnalysisMode + TreatWarningsAsErrors — no fixes required.)
+
+TEST    dotnet test apps/windows/TeslaSync.sln -c Release
+        => TeslaSync.App.Tests.dll : Passed!  Failed: 0, Passed: 17598, Skipped: 0
+                                     (incl. the 34 AcknowledgeAlertDialog cases — verified
+                                      via --filter FullyQualifiedName~AcknowledgeAlertDialogTests
+                                      => Passed: 34, Failed: 0).
+           TeslaSync.App.UITests.dll: Failed!  Failed: 147, Passed: 0
+                                     — ALL 147 are UiAutomationUnavailableException
+                                       (WinAppDriver/Appium absent; see PLATFORM CAPABILITY).
+                                       Baseline-unchanged: the same 147 documented for the
+                                       prior modal surfaces; none reference AcknowledgeAlertDialog.
+        => TEST_EXIT=1  (solely the deferred WinAppDriver suite; headless logic 100% green)
+
+FORMAT  dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+        => whole-solution clean.  FORMAT_EXIT=0
+        (New files were normalized CRLF->LF to satisfy .editorconfig end_of_line=lf.)
+
+PLACE   apps/tools/check-placeholders.ps1 -Path .../modals-dialogs/AcknowledgeAlertDialog
+        => PLACEHOLDER_EXIT=0.
+        (The literal -Path prefix resolves no file, so the gate command is a clean no-op;
+         additionally scanning the real source dir -Language csharp reports
+         PLACEHOLDER_COUNT=0 / PLACEHOLDER_ALLOWED=6 for the shipped files — the lone
+         opt-out is the notePlaceholder i18n-key line marked `// parity:allow`. No
+         TODO/stub/mock/placeholder/Lorem in shipped code.)
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA MAPPING
+--------------------------------------------------------------------------------
+[x] Surface renders all web states. The web source composes only useTranslation + useId
+    (NO fetch/query/cache/connectivity) — it is a write-only callback form whose render
+    branches are: the editable note, the too-long validation error (trimmed > 1000), the
+    in-flight submitting-disabled state, and the optional acked-alert subtitle. All four
+    reproduced. loading/empty/error/stale/offline are deliberately ABSENT — they would be
+    fabricated behavior the web source does not have (no network read) — reproduced
+    faithfully, not invented (Honesty Covenant: no parity shortcuts / no silent drift).
+[x] Hooks bind via the shared P1/S8 state-holder layer: AcknowledgeAlertDialogViewModel
+    (over the ILocalizer facade). The ack mutation is owned by the parent (web AlertsPage),
+    modeled as the AcknowledgeRequested(note) callback event. The view performs NO data access.
+[x] Every i18n key from the web source has a matching key in the P1/S10 catalog and is
+    resolved through the ILocalizer facade — verified present in Strings/en/Resources.resw:
+      translation.alerts.ack.dialogTitle     = "Acknowledge alert"
+      translation.alerts.ack.noteLabel       = "Note (optional)"
+      translation.alerts.ack.notePlaceholder = "Optional: what's being done?"
+      translation.alerts.ack.noteHint        = "Up to {0} characters. Shared in the audit timeline."
+      translation.alerts.ack.cancel          = "Cancel"
+      translation.alerts.ack.submit          = "Acknowledge"
+    No English literal reaches the view tree (asserted by the i18n-key contract test).
+[x] Accessibility: Narrator name on the dialog + the note field; the note hint is wired as
+    the field's full-description (the native aria-describedby analogue); the too-long error
+    is an assertive live region. No bespoke motion, so reduced-motion is honored by
+    construction; no fixed text heights, so system font/text scale is honored.
+[x] Telemetry: view.opened emitted with surface slug "AcknowledgeAlertDialog" on open
+    (P1/S11 diagnostics contract), PII-safe (slug only — never the note or alert title).
+[x] Tests: adapter/projection unit + per-state (idle/too-long/submitting/acknowledge/
+    blank-note/cancel/reset/subtitle) + a11y label-key contract + diagnostics + bounds +
+    i18n fallbacks = 34 facts, all green.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate clean).
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+The AcknowledgeAlertDialog surface is implemented to production parity with the web
+source and independently verified on this host: BUILD_EXIT=0 (WinUI app + XAML compiler),
+FORMAT_EXIT=0 (whole solution), PLACEHOLDER_EXIT=0, and the entire headless logic suite
+17598/17598 green including all 34 new AcknowledgeAlertDialog cases. The acceptance
+gate's aggregate TEST step cannot reach 0 ONLY because the WinAppDriver/Appium runner is
+absent on this host, so the 147 packaged-app UI-automation cases cannot execute — a
+documented platform-capability gap (same as W9-0002) now recorded in
+apps/environment-pending-verifications.md for a WinAppDriver-provisioned runner.
+Per the prompt's capability clause and Honesty Covenant rule 1 (no red-as-green), this
+is reported as BLOCKED on that single environmental gap rather than a falsely-green DONE.
+The deliverable (code + tests) is complete, committed, and every host-runnable gate is green.
+
+EXIT=1
+STATUS=BLOCKED
