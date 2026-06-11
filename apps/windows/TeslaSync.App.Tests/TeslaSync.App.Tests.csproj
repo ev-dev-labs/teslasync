@@ -446,6 +446,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\AISettings\AISettings.Model.cs" Link="FeatureViews\AISettings\AISettings.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AISettings\AISettings.Source.cs" Link="FeatureViews\AISettings\AISettings.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AISettings\AISettings.ViewModel.cs" Link="FeatureViews\AISettings\AISettings.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AiUsageCard.Model.cs" Link="FeatureViews\AiUsageCard.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AiUsageCard.Source.cs" Link="FeatureViews\AiUsageCard.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AiUsageCard.ViewModel.cs" Link="FeatureViews\AiUsageCard.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AIUsageCard\AIUsageCard.Model.cs" Link="FeatureViews\AIUsageCard\AIUsageCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AIUsageCard\AIUsageCard.Source.cs" Link="FeatureViews\AIUsageCard\AIUsageCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AIUsageCard\AIUsageCard.ViewModel.cs" Link="FeatureViews\AIUsageCard\AIUsageCard.ViewModel.cs" />
@@ -636,6 +639,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\IncidentsCard\IncidentsCard.Model.cs" Link="FeatureViews\IncidentsCard\IncidentsCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\IncidentsCard\IncidentsCard.Source.cs" Link="FeatureViews\IncidentsCard\IncidentsCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\IncidentsCard\IncidentsCard.ViewModel.cs" Link="FeatureViews\IncidentsCard\IncidentsCard.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InfoTile\InfoTile.Model.cs" Link="FeatureViews\InfoTile\InfoTile.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Model.cs" Link="FeatureViews\InfrastructureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Source.cs" Link="FeatureViews\InfrastructureSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.ViewModel.cs" Link="FeatureViews\InfrastructureSection.ViewModel.cs" />
