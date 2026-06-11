@@ -183,3 +183,4 @@ p3-android/dashboard-widgets/A-0044-DrivingDynamicsWidget.prompt.md
 p3-android/dashboard-widgets/A-0045-EnergyFlowAnimatedWidget.prompt.md
 p3-android/dashboard-widgets/A-0048-EnergyStatsWidget.prompt.md
 p3-android/dashboard-widgets/A-0047-EnergySiteInfoWidget.prompt.md
+p3-android/dashboard-widgets/A-0046-EnergyFlowWidget.prompt.md
