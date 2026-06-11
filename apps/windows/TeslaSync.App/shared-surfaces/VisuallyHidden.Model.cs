@@ -20,12 +20,12 @@ public static class VisuallyHiddenRegistration
 }
 
 /// <summary>
-/// Live-region urgency — the native analogue of the web <c>AnnouncerPriority</c> and the
+/// Live-region urgency — the native analogue of the web <c>VisuallyHiddenAnnouncerPriority</c> and the
 /// <c>VisuallyHidden</c> <c>priority</c> prop. <see cref="Polite"/> waits for the screen reader to finish
 /// its current activity; <see cref="Assertive"/> interrupts (reserved for genuine errors and
 /// security-sensitive messages, exactly as the web doc-comment instructs).
 /// </summary>
-public enum AnnouncerPriority
+public enum VisuallyHiddenAnnouncerPriority
 {
     /// <summary>web <c>'polite'</c> — the default; waits for the assistive technology to finish.</summary>
     Polite,
@@ -72,7 +72,7 @@ public static class AnnouncerMessage
 public readonly record struct LiveRegionSemantics(string? Role, string? Live, bool Atomic)
 {
     /// <summary>Compute the triplet for a region (web <c>liveProps</c>).</summary>
-    public static LiveRegionSemantics For(bool liveRegion, AnnouncerPriority priority)
+    public static LiveRegionSemantics For(bool liveRegion, VisuallyHiddenAnnouncerPriority priority)
     {
         if (!liveRegion)
         {
@@ -80,7 +80,7 @@ public readonly record struct LiveRegionSemantics(string? Role, string? Live, bo
         }
 
         // web: role = priority === 'assertive' ? 'alert' : 'status'; aria-live = priority; aria-atomic true.
-        return priority == AnnouncerPriority.Assertive
+        return priority == VisuallyHiddenAnnouncerPriority.Assertive
             ? new LiveRegionSemantics("alert", "assertive", true)
             : new LiveRegionSemantics("status", "polite", true);
     }

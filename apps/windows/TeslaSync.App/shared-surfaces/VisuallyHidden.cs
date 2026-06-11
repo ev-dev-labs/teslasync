@@ -14,7 +14,7 @@ namespace TeslaSync.App.SharedSurfaces.VisuallyHiddenSurface;
 /// <c>AnnouncerRegion</c> in <c>Layout.tsx</c>, fed by <c>useAnnouncer()</c>). It hosts a polite and an
 /// assertive visually-hidden live region — each the shared atomic <see cref="TsAnnouncerRegion"/> (1×1,
 /// clipped, zero-opacity, so it is invisible to sighted users yet present in the UI-Automation tree) — and
-/// binds them to the <see cref="IAnnouncer"/> data source through an <see cref="AnnouncerRegionViewModel"/>,
+/// binds them to the <see cref="IAnnouncer"/> data source through an <see cref="VisuallyHiddenAnnouncerViewModel"/>,
 /// so any feature that calls <see cref="IAnnouncer.Announce"/> has its message voiced by Narrator on the
 /// matching-urgency region without moving focus. The two regions are siblings so each region's
 /// <c>aria-live</c> value stays static (the web split, because some screen readers ignore live-value
@@ -29,7 +29,7 @@ namespace TeslaSync.App.SharedSurfaces.VisuallyHiddenSurface;
 /// </summary>
 public sealed partial class VisuallyHidden : ContentControl, IDisposable
 {
-    private readonly AnnouncerRegionViewModel _viewModel;
+    private readonly VisuallyHiddenAnnouncerViewModel _viewModel;
     private readonly VisuallyHiddenDiagnostics _diagnostics;
     private readonly DispatcherQueue? _dispatcher;
     private readonly TsAnnouncerRegion _polite = new();
@@ -51,7 +51,7 @@ public sealed partial class VisuallyHidden : ContentControl, IDisposable
     {
         ArgumentNullException.ThrowIfNull(announcer);
 
-        _viewModel = new AnnouncerRegionViewModel(announcer);
+        _viewModel = new VisuallyHiddenAnnouncerViewModel(announcer);
         _diagnostics = diagnostics ?? new VisuallyHiddenDiagnostics();
         _dispatcher = DispatcherQueue.GetForCurrentThread();
 
@@ -75,7 +75,7 @@ public sealed partial class VisuallyHidden : ContentControl, IDisposable
     public static string Slug => VisuallyHiddenRegistration.Slug;
 
     /// <summary>The backing live-region state holder (exposed for hosting / diagnostics / tests).</summary>
-    public AnnouncerRegionViewModel ViewModel => _viewModel;
+    public VisuallyHiddenAnnouncerViewModel ViewModel => _viewModel;
 
     /// <summary>Detach from the announcer and stop responding (idempotent).</summary>
     public void Dispose()
@@ -122,11 +122,11 @@ public sealed partial class VisuallyHidden : ContentControl, IDisposable
         {
             switch (e.PropertyName)
             {
-                case nameof(AnnouncerRegionViewModel.PoliteMessage):
+                case nameof(VisuallyHiddenAnnouncerViewModel.PoliteMessage):
                     _polite.Announce(_viewModel.PoliteMessage);
                     break;
 
-                case nameof(AnnouncerRegionViewModel.AssertiveMessage):
+                case nameof(VisuallyHiddenAnnouncerViewModel.AssertiveMessage):
                     _assertive.Announce(_viewModel.AssertiveMessage);
                     break;
             }

@@ -1,0 +1,143 @@
+=== P2 Shared surface 0023 AILearnedAnomalyBaselines (Windows) ===
+
+Capability: WinUI 3 (Windows App SDK) + .NET 10 present (dotnet 10.0.300; net10.0-windows10.0.19041.0
+app TFM; Microsoft.WindowsAppSDK referenced). Build + headless logic tests run on this runner. The E2E
+UI-automation runner (WinAppDriver/Appium) is ABSENT on this non-interactive host — see the TEST step.
+
+Web source (THE spec): web/src/components/ai/AILearnedAnomalyBaselines.tsx, composed with the shared
+web/src/components/ai/AIFeatureCard.tsx scaffold + web/src/components/ai/withAiFeature.tsx gate, streaming
+web/src/hooks/useAiStream.ts (POST /api/v1/ai/ml/anomaly-baselines/train) into
+web/src/components/ai/AiOutputPanel.tsx. The body is { vehicle_id: vehicleId ?? 0, days: 14 } and the
+action is enabled by canStart = vehicleId != null.
+
+----------------------------------------------------------------------------------------------------
+SURFACE IMPLEMENTATION (apps/windows/TeslaSync.App/shared-surfaces/AILearnedAnomalyBaselines.*)
+----------------------------------------------------------------------------------------------------
+Four-file split mirroring the shipped AnnouncerRegion / AICabinTemperatureImpactNarrative surfaces:
+  .Model.cs      - Registration (slug AILearnedAnomalyBaselines, feature id
+                   "learned-per-vehicle-anomaly-baselines", root automation id
+                   ai-feature-learned-per-vehicle-anomaly-baselines-root, train path
+                   /ai/ml/anomaly-baselines/train, DefaultLearningWindowDays=14, every i18n key+English
+                   fallback); AnomalyBaselineStreamState enum (idle/streaming/paused-confirm/done/error -
+                   the web AiStreamState union); AnomalyBaselineStreamEvent + AnomalyBaselineSseParser
+                   (native port of useAiStream parseSSEFrame/toTypedEvent, malformed/unknown -> null,
+                   bit-for-bit); AnomalyBaselineTrainRequest ({vehicle_id, days} - the web useMemo body,
+                   snake_case JSON); PII-safe diagnostics (view.opened only).
+  .Source.cs     - IAnomalyBaselineStreamTransport (P1/S8 seam = the native useAiStream) + production
+                   HttpAnomalyBaselineStreamTransport (POST text/event-stream over HttpClient +
+                   ITokenProvider, line-reassembled SSE frames; network faults -> classified terminal
+                   Error event, never an exception across the enumerator; cancellation propagates).
+                   IAnomalyBaselineFeatureGate (native useAiEnabled) + Static/Delegate gates.
+  .ViewModel.cs  - INotifyPropertyChanged+IDisposable state machine: withAiFeature gate (IsGateOpen),
+                   canStart guard (CanStart = vehicleId != null - web AILearnedAnomalyBaselines L53, NOT a
+                   positive-id guard), useAiStream lifecycle (idle->streaming->done/error; duplicate Start
+                   no-op; cancel->idle; close-without-terminal->done), offline classification, all
+                   localized labels + the "Ask Helix . Train baseline" accessible name. Builds the request
+                   with days=DefaultLearningWindowDays (14). Validates the feature id against the canonical
+                   AiFeatureRegistry (native withAiFeature unknown-id guard).
+  .cs            - WinUI 3 ContentControl: tokenized glass card (DisplayTokens), header (PanelTitle title +
+                   "Helix" TsBadge + secondary description), TsButton (Outline/Small, IsLoading ring while
+                   streaming), streamed-output panel (TsSpinner thinking indicator -> accumulating
+                   narration -> danger error row), dispatcher-coalesced render, gate collapses the whole
+                   surface when off (no root automation id - matches the web HOC rendering null), Narrator
+                   name + Group automation peer, emits view.opened on Loaded.
+
+States reproduced from the web source (every state renders; none hidden):
+  gated-off (collapsed, no DOM/automation id) | idle not-ready (vehicle unresolved -> disabled action) |
+  idle ready | streaming-thinking (spinner) | streaming-with-text | done (final narration) |
+  error (Helix error: <msg>) | offline (connectivity fault -> offline message + retry via the button).
+  NOTE: the web source is an on-demand SSE narration card, NOT a cached read; it has no data-freshness
+  "stale" branch, so none is fabricated (faithful parity). The connectivity-aware "offline" branch is
+  derived honestly from a classified network failure on the stream.
+
+i18n: every string flows through ILocalizer.GetString(key, fallback) with the translation.* catalog
+  prefix; keys: anomaly.aiBaseline.{title,description,generateButton,badge} (all four present in
+  Strings/{en,he,ar}/Resources.resw), helix.{askHelix,thinking,errorLabel}, ai.common.errorUnknown,
+  common.offline. English fallbacks verbatim from the web second args.
+A11y: card Narrator name = title; action accessible name = "Ask Helix . Train baseline" (web aria-label);
+  output panel is a live region; thinking spinner + error surface announce. No English literals in code.
+Telemetry: view.opened slug=AILearnedAnomalyBaselines on Loaded (P1/S11), PII-safe (never the narration
+  text, vehicle id, or prompt input).
+Tests (apps/windows/TeslaSync.App.Tests/SharedSurfaces/AILearnedAnomalyBaselinesTests.cs, 43 cases):
+  adapter unit tests (SSE parser delta/done/error/tool/confirm + malformed/unknown -> null, no-space,
+  comment-line), the train-request body shape (vehicle_id + days=14), per-state view-model tests (gate
+  on/off, canStart matrix [null->false, 0/-3/7->true], streaming->done, no-terminal->done, duplicate-start
+  no-op, error, offline, confirm-pause, cancel->idle, retry), and a11y-label tests (action automation
+  name "Ask Helix . Train baseline", thinking label flip, fallback copy). All via a headless fake transport
+  + PassthroughLocalizer.
+
+----------------------------------------------------------------------------------------------------
+PRE-EXISTING REPO FIXES required to reach a loadable/buildable gate (NOT part of the surface, but
+mandatory to run build/test - documented per honesty covenant rule 7 "no predecessor bypass" / rule 9
+"no silent drift"):
+----------------------------------------------------------------------------------------------------
+1. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was CORRUPTED into 5 concatenated <Project>
+   roots (</Project> at lines 1132,1162,1165,1173,1179) by the file's documented `.gitattributes
+   merge=union` strategy -> MSB4025 "multiple root elements" -> the WHOLE test project (and thus the
+   `dotnet test` gate) could not load at HEAD. Regenerated, per the file's own INVARIANT, into exactly
+   ONE <Project> = the verbatim singular header (Project + comment + PropertyGroup + the 3 unique
+   PackageReference / 2 ProjectReference / 3 Content ItemGroups) + a single case-insensitive path-sorted,
+   Include-deduplicated Compile-link ItemGroup of every Microsoft.UI-free .cs under dashboard-widgets/
+   feature-views/misc-surfaces/modals-dialogs/shared-surfaces. 917 entries = the prior 914 unique union
+   (980 raw - 66 merge duplicates) + this surface's 3 logic files (Model/Source/ViewModel; the bare WinUI
+   view .cs stays in the app build). Verified: 1 <Project> open / 1 close, XML loads with a single root,
+   917 Compile total == 917 unique.
+2. The regenerated (now-loadable) build surfaced a latent type collision the csproj corruption had masked
+   (the App project had never compiled): the VisuallyHidden surface (P2 shared-surfaces/0003) ships its own
+   self-contained announcer stack, but its delegate `AnnouncerListener`, enum `AnnouncerPriority`, and class
+   `AnnouncerRegionViewModel` collided (CS0101 x3 + CS0111 duplicate Dispose) with the sibling
+   AnnouncerRegion surface's same-named public types in the shared TeslaSync.App.SharedSurfaces namespace,
+   breaking BOTH TeslaSync.App.csproj (app) AND the test project. Fixed minimally + correctly by renaming
+   ONLY VisuallyHidden's three colliding types to unique names (AnnouncerListener ->
+   VisuallyHiddenAnnouncerListener, AnnouncerPriority -> VisuallyHiddenAnnouncerPriority,
+   AnnouncerRegionViewModel -> VisuallyHiddenAnnouncerViewModel) across the four VisuallyHidden surface
+   files + VisuallyHiddenTests.cs; AnnouncerRegion keeps the canonical names. Pure whole-word rename, zero
+   behaviour change; restores the broken sibling surface to compiling. (Confirmed only these 2 type names
+   were duplicated across all shared-surfaces sources; no external consumer references them.)
+
+----------------------------------------------------------------------------------------------------
+GATE RESULTS (commands per the prompt; full no-incremental solution build + test)
+----------------------------------------------------------------------------------------------------
+BUILD_EXIT=0   dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Warning(s),
+               0 Error(s). All projects built incl. TeslaSync.App (WinUI app, x64) and TeslaSync.App.Tests.
+
+TEST_EXIT=1    dotnet test apps/windows/TeslaSync.sln -c Release:
+               Passed!  - Failed: 0, Passed: 18612, Skipped: 0, Total: 18612 - TeslaSync.App.Tests.dll
+                          (headless logic, INCLUDING this surface's 43 tests)
+               Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147   - TeslaSync.App.UITests.dll
+                          (E2E UI automation)
+               ALL 147 UITests failures share ONE pre-existing reason (1 distinct message, 147 occurrences):
+                 TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+                 WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+                 WinAppDriver.exe was not found at its standard install paths or on PATH.
+               Confirmed on this host: TCP 127.0.0.1:4723 not listening; no WinAppDriver.exe at either
+               standard install path. These are pre-existing shell/nav/auth/accessibility/component E2E
+               tests (Category=UIAutomation), unrelated to this surface (which adds 0 UITests). They are
+               gated separately by apps/windows/run-ui-automation.ps1 (P2/W9-0002), whose own policy is to
+               report STATUS=BLOCKED when the runner is absent and "never report an absent runner as green".
+               Scoped evidence (this surface + the headless suite are green):
+                 dotnet test TeslaSync.App.Tests --filter "FullyQualifiedName~AILearnedAnomalyBaselines"
+                   => EXIT=0, Passed 43 / Failed 0.
+                 dotnet test apps/windows/TeslaSync.sln --filter "Category!=UIAutomation"
+                   => EXIT=0 (headless suite green, 18612 passed; only the WinAppDriver E2E set is excluded).
+
+FORMAT_EXIT=0  dotnet format apps/windows/TeslaSync.sln --verify-no-changes -> clean across the whole
+               solution (the 5 new/edited .cs files normalized to the editorconfig `end_of_line = lf`).
+
+PLACEHOLDER_EXIT=0  ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/
+               AILearnedAnomalyBaselines -> PLACEHOLDER_COUNT=0 / EXIT=0. No TODO/FIXME/stub/mock/
+               placeholder/Lorem/NotImplementedException in any of the four surface files.
+
+----------------------------------------------------------------------------------------------------
+BUILD_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  TEST_EXIT=1.
+The full-solution `dotnet test` aggregate cannot reach 0 ONLY because the WinAppDriver/Appium UI-automation
+runtime is unavailable on this non-interactive runner (no WinAppDriver.exe; nothing on 127.0.0.1:4723).
+The surface itself is complete and fully verified by every available means: it builds in the WinUI app,
+its 43 adapter/per-state/a11y tests pass, the whole headless suite (18612) is green, format + placeholder
+are clean. Per this prompt's capability clause ("requires WinUI 3 ... If unavailable on the runner ->
+STATUS=BLOCKED with API evidence") and matching the adjacent sibling shared-surfaces 0001 AnnouncerRegion
+and 0009 AICabinTemperatureImpactNarrative (both TEST_EXIT=1 / STATUS=BLOCKED on the same WinAppDriver
+gap), E2E UIAutomation verification is deferred to a WinAppDriver-provisioned runner.
+
+EXIT=1
+STATUS=BLOCKED

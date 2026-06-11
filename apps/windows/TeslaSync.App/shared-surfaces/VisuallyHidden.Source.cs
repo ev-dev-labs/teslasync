@@ -2,17 +2,17 @@ namespace TeslaSync.App.SharedSurfaces.VisuallyHiddenSurface;
 
 /// <summary>
 /// A live-region listener — one per mounted announcer region (the native analogue of the web
-/// <c>AnnouncerListener</c> callback in web/src/hooks/useAnnouncer.ts). Invoked with the already-padded
+/// <c>VisuallyHiddenAnnouncerListener</c> callback in web/src/hooks/useAnnouncer.ts). Invoked with the already-padded
 /// message and its urgency every time <see cref="IAnnouncer.Announce"/> fires.
 /// </summary>
-public delegate void AnnouncerListener(string message, AnnouncerPriority priority);
+public delegate void VisuallyHiddenAnnouncerListener(string message, VisuallyHiddenAnnouncerPriority priority);
 
 /// <summary>
 /// The global screen-reader announcer seam (P1/S8 state-holder layer) — the native port of the web
 /// <c>useAnnouncer</c> module's public surface (web/src/hooks/useAnnouncer.ts): <c>announce</c>,
 /// <c>subscribeAnnouncer</c> and the <c>useAnnouncer()</c> hook's stable object. It is the single shared
 /// live-region channel any feature fires imperative announcements on (bulk action completed, filter
-/// applied, saved view applied, ...); the mounted <see cref="AnnouncerRegionViewModel"/> subscribes to
+/// applied, saved view applied, ...); the mounted <see cref="VisuallyHiddenAnnouncerViewModel"/> subscribes to
 /// voice them. The canonical implementation is <see cref="Announcer"/>; <see cref="NoOpAnnouncer"/> stands
 /// in when no region is mounted (the web call-before-mount drop). The view never touches this seam
 /// directly — it binds through the view-model.
@@ -20,13 +20,13 @@ public delegate void AnnouncerListener(string message, AnnouncerPriority priorit
 public interface IAnnouncer
 {
     /// <summary>Fire an announcement (web <c>announce</c>); empty messages are skipped.</summary>
-    void Announce(string message, AnnouncerPriority priority = AnnouncerPriority.Polite);
+    void Announce(string message, VisuallyHiddenAnnouncerPriority priority = VisuallyHiddenAnnouncerPriority.Polite);
 
     /// <summary>
     /// Subscribe a live region to the channel (web <c>subscribeAnnouncer</c>). Dispose the returned handle
     /// to unsubscribe (the web returned unsubscribe function / effect cleanup).
     /// </summary>
-    IDisposable Subscribe(AnnouncerListener listener);
+    IDisposable Subscribe(VisuallyHiddenAnnouncerListener listener);
 }
 
 /// <summary>
@@ -43,7 +43,7 @@ public interface IAnnouncer
 public sealed class Announcer : IAnnouncer
 {
     private readonly object _gate = new();
-    private readonly HashSet<AnnouncerListener> _listeners = new();
+    private readonly HashSet<VisuallyHiddenAnnouncerListener> _listeners = new();
     private int _counter;
 
     /// <summary>
@@ -65,7 +65,7 @@ public sealed class Announcer : IAnnouncer
     }
 
     /// <inheritdoc />
-    public IDisposable Subscribe(AnnouncerListener listener)
+    public IDisposable Subscribe(VisuallyHiddenAnnouncerListener listener)
     {
         ArgumentNullException.ThrowIfNull(listener);
         lock (_gate)
@@ -77,7 +77,7 @@ public sealed class Announcer : IAnnouncer
     }
 
     /// <inheritdoc />
-    public void Announce(string message, AnnouncerPriority priority = AnnouncerPriority.Polite)
+    public void Announce(string message, VisuallyHiddenAnnouncerPriority priority = VisuallyHiddenAnnouncerPriority.Polite)
     {
         // web announce: `if (!message) return;` — empty strings never announce.
         if (string.IsNullOrEmpty(message))
@@ -85,7 +85,7 @@ public sealed class Announcer : IAnnouncer
             return;
         }
 
-        AnnouncerListener[] snapshot;
+        VisuallyHiddenAnnouncerListener[] snapshot;
         string padded;
         lock (_gate)
         {
@@ -95,21 +95,21 @@ public sealed class Announcer : IAnnouncer
             _counter += 1;
             padded = AnnouncerMessage.Pad(message, _counter);
             snapshot = _listeners.Count == 0
-                ? Array.Empty<AnnouncerListener>()
-                : new AnnouncerListener[_listeners.Count];
+                ? Array.Empty<VisuallyHiddenAnnouncerListener>()
+                : new VisuallyHiddenAnnouncerListener[_listeners.Count];
             if (snapshot.Length > 0)
             {
                 _listeners.CopyTo(snapshot);
             }
         }
 
-        foreach (AnnouncerListener listener in snapshot)
+        foreach (VisuallyHiddenAnnouncerListener listener in snapshot)
         {
             listener(padded, priority);
         }
     }
 
-    private void Unsubscribe(AnnouncerListener listener)
+    private void Unsubscribe(VisuallyHiddenAnnouncerListener listener)
     {
         lock (_gate)
         {
@@ -117,7 +117,7 @@ public sealed class Announcer : IAnnouncer
         }
     }
 
-    private sealed class Subscription(Announcer owner, AnnouncerListener listener) : IDisposable
+    private sealed class Subscription(Announcer owner, VisuallyHiddenAnnouncerListener listener) : IDisposable
     {
         private bool _disposed;
 
@@ -151,13 +151,13 @@ public sealed class NoOpAnnouncer : IAnnouncer
     }
 
     /// <inheritdoc />
-    public void Announce(string message, AnnouncerPriority priority = AnnouncerPriority.Polite)
+    public void Announce(string message, VisuallyHiddenAnnouncerPriority priority = VisuallyHiddenAnnouncerPriority.Polite)
     {
         // No region mounted — the web announcer drops messages that have no live region to voice them.
     }
 
     /// <inheritdoc />
-    public IDisposable Subscribe(AnnouncerListener listener) => NoOpSubscription.Instance;
+    public IDisposable Subscribe(VisuallyHiddenAnnouncerListener listener) => NoOpSubscription.Instance;
 
     private sealed class NoOpSubscription : IDisposable
     {

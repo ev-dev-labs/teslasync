@@ -7,7 +7,7 @@ namespace TeslaSync.App.Tests.SharedSurfaces;
 /// Headless verification of the VisuallyHidden announcer surface's UI-thread-free logic — the
 /// <c>useAnnouncer</c> pub/sub port (<see cref="Announcer"/>), the rotating zero-width-space de-duplication
 /// (<see cref="AnnouncerMessage"/>), the ARIA live-region semantics (<see cref="LiveRegionSemantics"/>), the
-/// state holder that routes announcements by priority (<see cref="AnnouncerRegionViewModel"/>), the inert
+/// state holder that routes announcements by priority (<see cref="VisuallyHiddenAnnouncerViewModel"/>), the inert
 /// fallback (<see cref="NoOpAnnouncer"/>), the registration slug and the PII-safe diagnostics. Mirrors the
 /// web spec one-for-one (web/src/components/a11y/VisuallyHidden.tsx, web/src/components/a11y/AnnouncerRegion.tsx,
 /// web/src/hooks/useAnnouncer.ts + web/src/hooks/__tests__/useAnnouncer.test.ts). The WinUI view
@@ -28,7 +28,7 @@ public sealed class VisuallyHiddenTests
     [Fact]
     public void Semantics_for_non_live_region_are_inert()
     {
-        LiveRegionSemantics semantics = LiveRegionSemantics.For(liveRegion: false, AnnouncerPriority.Polite);
+        LiveRegionSemantics semantics = LiveRegionSemantics.For(liveRegion: false, VisuallyHiddenAnnouncerPriority.Polite);
 
         Assert.Null(semantics.Role);
         Assert.Null(semantics.Live);
@@ -38,7 +38,7 @@ public sealed class VisuallyHiddenTests
     [Fact]
     public void Semantics_for_polite_live_region_are_status_polite_atomic()
     {
-        LiveRegionSemantics semantics = LiveRegionSemantics.For(liveRegion: true, AnnouncerPriority.Polite);
+        LiveRegionSemantics semantics = LiveRegionSemantics.For(liveRegion: true, VisuallyHiddenAnnouncerPriority.Polite);
 
         // web: role="status" aria-live="polite" aria-atomic="true".
         Assert.Equal("status", semantics.Role);
@@ -49,7 +49,7 @@ public sealed class VisuallyHiddenTests
     [Fact]
     public void Semantics_for_assertive_live_region_are_alert_assertive_atomic()
     {
-        LiveRegionSemantics semantics = LiveRegionSemantics.For(liveRegion: true, AnnouncerPriority.Assertive);
+        LiveRegionSemantics semantics = LiveRegionSemantics.For(liveRegion: true, VisuallyHiddenAnnouncerPriority.Assertive);
 
         // web: role="alert" aria-live="assertive" aria-atomic="true".
         Assert.Equal("alert", semantics.Role);
@@ -91,38 +91,38 @@ public sealed class VisuallyHiddenTests
     public void Announce_delivers_to_subscribed_listeners()
     {
         var announcer = new Announcer();
-        var received = new List<(string Message, AnnouncerPriority Priority)>();
+        var received = new List<(string Message, VisuallyHiddenAnnouncerPriority Priority)>();
         using IDisposable _ = announcer.Subscribe((m, p) => received.Add((m, p)));
 
         announcer.Announce("hello");
 
-        (string Message, AnnouncerPriority Priority) call = Assert.Single(received);
+        (string Message, VisuallyHiddenAnnouncerPriority Priority) call = Assert.Single(received);
         Assert.StartsWith("hello", call.Message, System.StringComparison.Ordinal);
-        Assert.Equal(AnnouncerPriority.Polite, call.Priority);
+        Assert.Equal(VisuallyHiddenAnnouncerPriority.Polite, call.Priority);
     }
 
     [Fact]
     public void Announce_defaults_to_polite()
     {
         var announcer = new Announcer();
-        AnnouncerPriority? seen = null;
+        VisuallyHiddenAnnouncerPriority? seen = null;
         using IDisposable _ = announcer.Subscribe((_, p) => seen = p);
 
         announcer.Announce("default-priority");
 
-        Assert.Equal(AnnouncerPriority.Polite, seen);
+        Assert.Equal(VisuallyHiddenAnnouncerPriority.Polite, seen);
     }
 
     [Fact]
     public void Announce_routes_the_priority_argument_through_to_listeners()
     {
         var announcer = new Announcer();
-        AnnouncerPriority? seen = null;
+        VisuallyHiddenAnnouncerPriority? seen = null;
         using IDisposable _ = announcer.Subscribe((_, p) => seen = p);
 
-        announcer.Announce("error!", AnnouncerPriority.Assertive);
+        announcer.Announce("error!", VisuallyHiddenAnnouncerPriority.Assertive);
 
-        Assert.Equal(AnnouncerPriority.Assertive, seen);
+        Assert.Equal(VisuallyHiddenAnnouncerPriority.Assertive, seen);
     }
 
     [Fact]
@@ -212,12 +212,12 @@ public sealed class VisuallyHiddenTests
     public void Shared_announcer_is_a_stable_singleton() =>
         Assert.Same(Announcer.Shared, Announcer.Shared);
 
-    // ── AnnouncerRegionViewModel: per-state routing (web AnnouncerRegion two regions) ─────────────────────
+    // ── VisuallyHiddenAnnouncerViewModel: per-state routing (web AnnouncerRegion two regions) ─────────────────────
 
     [Fact]
     public void ViewModel_starts_empty()
     {
-        using var viewModel = new AnnouncerRegionViewModel(new Announcer());
+        using var viewModel = new VisuallyHiddenAnnouncerViewModel(new Announcer());
 
         Assert.Equal(string.Empty, viewModel.PoliteMessage);
         Assert.Equal(string.Empty, viewModel.AssertiveMessage);
@@ -227,7 +227,7 @@ public sealed class VisuallyHiddenTests
     public void ViewModel_routes_polite_announcement_to_polite_message_only()
     {
         var announcer = new Announcer();
-        using var viewModel = new AnnouncerRegionViewModel(announcer);
+        using var viewModel = new VisuallyHiddenAnnouncerViewModel(announcer);
         var changed = new List<string?>();
         viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
@@ -235,35 +235,35 @@ public sealed class VisuallyHiddenTests
 
         Assert.StartsWith("filter applied", viewModel.PoliteMessage, System.StringComparison.Ordinal);
         Assert.Equal(string.Empty, viewModel.AssertiveMessage);
-        Assert.Contains(nameof(AnnouncerRegionViewModel.PoliteMessage), changed);
-        Assert.DoesNotContain(nameof(AnnouncerRegionViewModel.AssertiveMessage), changed);
+        Assert.Contains(nameof(VisuallyHiddenAnnouncerViewModel.PoliteMessage), changed);
+        Assert.DoesNotContain(nameof(VisuallyHiddenAnnouncerViewModel.AssertiveMessage), changed);
     }
 
     [Fact]
     public void ViewModel_routes_assertive_announcement_to_assertive_message_only()
     {
         var announcer = new Announcer();
-        using var viewModel = new AnnouncerRegionViewModel(announcer);
+        using var viewModel = new VisuallyHiddenAnnouncerViewModel(announcer);
         var changed = new List<string?>();
         viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
 
-        announcer.Announce("session expiring", AnnouncerPriority.Assertive);
+        announcer.Announce("session expiring", VisuallyHiddenAnnouncerPriority.Assertive);
 
         Assert.StartsWith("session expiring", viewModel.AssertiveMessage, System.StringComparison.Ordinal);
         Assert.Equal(string.Empty, viewModel.PoliteMessage);
-        Assert.Contains(nameof(AnnouncerRegionViewModel.AssertiveMessage), changed);
-        Assert.DoesNotContain(nameof(AnnouncerRegionViewModel.PoliteMessage), changed);
+        Assert.Contains(nameof(VisuallyHiddenAnnouncerViewModel.AssertiveMessage), changed);
+        Assert.DoesNotContain(nameof(VisuallyHiddenAnnouncerViewModel.PoliteMessage), changed);
     }
 
     [Fact]
     public void ViewModel_raises_change_for_each_duplicate_announcement()
     {
         var announcer = new Announcer();
-        using var viewModel = new AnnouncerRegionViewModel(announcer);
+        using var viewModel = new VisuallyHiddenAnnouncerViewModel(announcer);
         int politeChanges = 0;
         viewModel.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(AnnouncerRegionViewModel.PoliteMessage))
+            if (e.PropertyName == nameof(VisuallyHiddenAnnouncerViewModel.PoliteMessage))
             {
                 politeChanges++;
             }
@@ -281,7 +281,7 @@ public sealed class VisuallyHiddenTests
     public void ViewModel_dispose_unsubscribes_from_the_announcer()
     {
         var announcer = new Announcer();
-        var viewModel = new AnnouncerRegionViewModel(announcer);
+        var viewModel = new VisuallyHiddenAnnouncerViewModel(announcer);
         viewModel.Dispose();
 
         announcer.Announce("after dispose");
@@ -296,7 +296,7 @@ public sealed class VisuallyHiddenTests
     public void Announced_message_becomes_the_live_region_accessible_name_with_polite_urgency()
     {
         var announcer = new Announcer();
-        using var viewModel = new AnnouncerRegionViewModel(announcer);
+        using var viewModel = new VisuallyHiddenAnnouncerViewModel(announcer);
 
         announcer.Announce("3 vehicles archived");
 
@@ -304,7 +304,7 @@ public sealed class VisuallyHiddenTests
         // TsAnnouncerRegion.Announce), so the holder's text IS the accessible name Narrator reads, and the
         // region carries the polite aria-live urgency.
         Assert.StartsWith("3 vehicles archived", viewModel.PoliteMessage, System.StringComparison.Ordinal);
-        Assert.Equal("polite", LiveRegionSemantics.For(liveRegion: true, AnnouncerPriority.Polite).Live);
+        Assert.Equal("polite", LiveRegionSemantics.For(liveRegion: true, VisuallyHiddenAnnouncerPriority.Polite).Live);
     }
 
     // ── NoOpAnnouncer: inert fallback (web call-before-mount drop) ────────────────────────────────────────
@@ -313,9 +313,9 @@ public sealed class VisuallyHiddenTests
     public void NoOp_announcer_is_inert()
     {
         IAnnouncer announcer = NoOpAnnouncer.Instance;
-        using var viewModel = new AnnouncerRegionViewModel(announcer);
+        using var viewModel = new VisuallyHiddenAnnouncerViewModel(announcer);
 
-        announcer.Announce("ignored", AnnouncerPriority.Assertive);
+        announcer.Announce("ignored", VisuallyHiddenAnnouncerPriority.Assertive);
 
         Assert.Equal(string.Empty, viewModel.PoliteMessage);
         Assert.Equal(string.Empty, viewModel.AssertiveMessage);
