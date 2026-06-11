@@ -1,0 +1,43 @@
+/*
+  CommandSelectDialog.strings
+  TeslaSync — P4 modal / dialog · 0031 · CommandSelectDialog (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `CommandSelectDialog`
+  resolves (table "CommandSelectDialog") lives here with its web `t(key, default)` English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they
+  are kept in a per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the only literal key extracted from the web source
+  (features/system/components/CommandSelectDialog.tsx): the Cancel button's `t('common.cancel',
+  'Cancel')`. The dialog title and every option label / description are NOT here — the web resolves
+  `t(def.labelKey, …)` / `t(opt.labelKey, …)` from the command-registry `def`, so they arrive
+  already-translated as data on each `CommandSelectRequest` / `CommandSelectOption`. The remaining
+  groups back the native chrome (the header close, the loading / empty / error envelopes, the P4
+  freshness / cached-data copy) and the VoiceOver builders so the Swift sources hold no English
+  literals.
+*/
+
+/* --- Web source key (parity) --- */
+"common.cancel" = "Cancel";
+
+/* --- Native chrome: header close (accessibility) --- */
+"command.select.a11y.close" = "Close";
+"command.select.a11y.dialog" = "Select an option";
+"command.select.a11y.busy" = "Sending…";
+
+/* --- Native chrome: loading / empty / error + retry --- */
+"command.select.loading" = "Loading options…";
+"command.select.empty" = "No options available";
+"command.select.emptyMessage" = "This command has no options to choose from.";
+"command.select.errorTitle" = "Couldn't load options";
+"command.select.retry" = "Retry";
+
+/* --- Native chrome: freshness chip (Live / Stale / Offline) --- */
+"command.select.live" = "Live";
+"command.select.stale" = "Stale";
+"command.select.offline" = "Offline";
+
+/* --- Native chrome: connectivity banner (stale / offline) --- */
+"command.select.staleBanner" = "Reconnecting — these options may be out of date";
+"command.select.offlineBanner" = "Offline — these options are from your last sync";
