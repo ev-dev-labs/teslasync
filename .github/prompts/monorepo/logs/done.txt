@@ -189,3 +189,4 @@ p3-android/dashboard-widgets/A-0050-FleetStatsBarWidget.prompt.md
 p3-android/dashboard-widgets/A-0051-FleetStatsWidget.prompt.md
 p3-android/dashboard-widgets/A-0052-FSMDistributionWidget.prompt.md
 p3-android/dashboard-widgets/A-0053-GeofenceWidget.prompt.md
+p3-android/dashboard-widgets/A-0054-GuardModeWidget.prompt.md
