@@ -66,6 +66,25 @@
     MSB4067); regenerate it directly from the WinUI-free sources on disk. Re-consolidated for P2
     shared-surfaces/0052 AITCONarration into this single canonical root. Do NOT re-concatenate into multiple roots,
     and never write a literal build-item or project start tag inside this comment.
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each
+    feature-view, dashboard-widget, misc-surface, modal/dialog and shared-surface. The WinUI app
+    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host,
+    so each surface's WinUI-free sources are Compile-linked into the single ItemGroup below (the Link
+    mirrors each source's real location under Widgets\, FeatureViews\, MiscSurfaces\, ModalsDialogs\ or
+    SharedSurfaces\); the bare WinUI view files are excluded and exercised by the app build. The matching
+    test classes live under this project and are picked up by the SDK default-compile glob. The Content
+    links copy the units-golden, Package.appxmanifest and widget-template fixtures the tests read.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive path-sorted,
+    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on disk
+    under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare
+    WinUI view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
+    integration merges can re-concatenate it into multiple Project roots plus duplicate Compile items,
+    failing XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk.
+    Re-consolidated for P2 shared-surfaces/0051 AISuggestNewGeofences into this single canonical root (plus
+    the new AISuggestNewGeofences Model / Source / ViewModel links). Do NOT re-concatenate into multiple
+    roots, and never write a literal build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -105,6 +124,7 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal-sorted, Include-deduplicated union under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0046 AISignalExplorerNlFilter. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files themselves are exercised by the app build. Re-consolidated for P2 shared-surfaces/0052 AITCONarration. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files themselves are exercised by the app build. Regenerated for P2 shared-surfaces/0051 AISuggestNewGeofences. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -2208,6 +2228,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AITCONarration.Model.cs" Link="SharedSurfaces\AITCONarration.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AITCONarration.Source.cs" Link="SharedSurfaces\AITCONarration.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AITCONarration.ViewModel.cs" Link="SharedSurfaces\AITCONarration.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISuggestNewGeofences.Model.cs" Link="SharedSurfaces\AISuggestNewGeofences.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISuggestNewGeofences.Source.cs" Link="SharedSurfaces\AISuggestNewGeofences.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AISuggestNewGeofences.ViewModel.cs" Link="SharedSurfaces\AISuggestNewGeofences.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Model.cs" Link="SharedSurfaces\AnnouncerRegion.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
