@@ -1,0 +1,111 @@
+=== P2 Shared surface 0001 AnnouncerRegion (Windows) ===
+Prompt: .github/prompts/.../p2-windows__shared-meaningful__W-0001-AnnouncerRegion.prompt.md
+Web source (THE spec): web/src/components/a11y/AnnouncerRegion.tsx (+ web/src/hooks/useAnnouncer.ts)
+Native output: apps/windows/TeslaSync.App/shared-surfaces/AnnouncerRegion.*
+
+--------------------------------------------------------------------------------
+PLATFORM CAPABILITY VERIFICATION
+--------------------------------------------------------------------------------
+.NET SDK 10.0.300 present; Microsoft.WindowsDesktop.App 10.0.8 present.
+TeslaSync.App targets net10.0-windows10.0.19041.0, UseWinUI=true, WindowsAppSDK (WinUI 3).
+=> WinUI 3 / .NET 10 build + headless unit capability IS present and proven below.
+The ONE capability absent on this non-interactive runner is the E2E UI-automation runtime
+(WinAppDriver/Appium); see TEST step.
+
+--------------------------------------------------------------------------------
+SURFACE IMPLEMENTATION (parity port; no stubs / no placeholder)
+--------------------------------------------------------------------------------
+Model/Source/ViewModel/View split (the selectedVehicle precedent); 3 logic files are
+Microsoft.UI-free and headlessly tested, the view is exercised by the app build:
+- AnnouncerRegion.Model.cs   : AnnouncerPriority enum (Polite=0 default), AnnouncerRegionRegistration.Slug
+                               ("AnnouncerRegion"), AnnouncerText.Pad (web '\u200B'.repeat(counter%4) dedup),
+                               AnnouncerMessageEventArgs, AnnouncerDiagnostics (PII-safe view.opened).
+- AnnouncerRegion.Source.cs  : AnnouncerListener delegate, IAnnouncerBus, AnnouncerBus (+ Shared singleton,
+                               ListenerCount / ResetForTests test seams). Port of useAnnouncer.ts module
+                               (empty-skip, rotating-suffix dedup, subscribe/unsubscribe fan-out).
+- AnnouncerRegion.ViewModel.cs: AnnouncerRegionViewModel - subscribes the bus, routes assertive->Assertive
+                               else->Polite (web .tsx body), INotifyPropertyChanged + Announced event,
+                               unsubscribes on Dispose (web effect cleanup).
+- AnnouncerRegion.cs (WinUI)  : ContentControl mounting two TsAnnouncerRegion live regions (Components/A11y),
+                               polite + assertive, AutomationId announcer-polite / announcer-assertive
+                               (web data-testid), LiveSetting pinned, marshals fan-outs onto the
+                               DispatcherQueue, emits view.opened once on Loaded, AccessibilityView.Raw.
+
+States reproduced (every branch the web source actually has): empty (both regions empty / initial),
+polite-active, assertive-active. The generic data-fetch states (loading/error/stale/offline) do NOT exist
+in this source: AnnouncerRegion binds an imperative pub/sub (useAnnouncer), not a TanStack query, and renders
+no fetch chrome. They are therefore intentionally absent (reproduced faithfully; nothing fabricated).
+i18n: the surface is anonymous - it has NO literal strings (announcement text is supplied already-localized
+by call sites), so there are no i18n keys to resolve. Accessibility: two UIA live regions (polite/assertive),
+Narrator-visible via the regions, container hidden (AccessibilityView.Raw). Telemetry: view.opened slug=AnnouncerRegion.
+
+--------------------------------------------------------------------------------
+PRE-EXISTING BLOCKERS FOUND ON BRANCH HEAD + REPAIRS (full transparency; merge artifacts)
+--------------------------------------------------------------------------------
+The branch base (integration merge) was RED before any of my work, for two reasons unrelated to
+the surface. Both are .gitattributes merge=union / parallel-merge artifacts. Repaired:
+
+1. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed CORRUPT - three
+   concatenated <Project> roots (MSB4025: ItemGroup/Project tag mismatch), which fails XML load and
+   blocks the WHOLE solution build+test. The file's own INVARIANT comment documents this exact failure
+   mode and remedy: regenerate ONE root with a single Compile ItemGroup = union of every Microsoft.UI-free
+   .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ (+ now shared-surfaces/).
+   Regenerated deterministically from disk. Validation vs the last VALID feat version (12dd54eb7): 0 files
+   wrongly dropped; +21 files correctly RECOVERED (TOUSettingsModal/DashboardSettingsModal/EntryDrawer/
+   Drawer/Modal/Popover/AcknowledgeAlertDialog/GeofenceDrawer/NotificationBellPopover logic that the feat
+   commit had silently lost) + my 3 AnnouncerRegion logic files. Headless test count rose accordingly
+   (~17.7k -> 18075), i.e. ~300 previously-dropped tests are now compiled and run again.
+
+2. CS0266 compile error in modals-dialogs/EntryDrawer/EntryDrawer.cs and
+   modals-dialogs/FlagEditDrawer/FlagEditDrawer.cs: bare "DrawerSide.Right" resolved to the
+   same-namespace ModalsDialogs.DrawerSide (introduced later by Drawer/Drawer.Model.cs) instead of the
+   Components.UI.DrawerSide that TsDrawer.Side expects. The failed C# compile starved the XAML compiler,
+   surfacing as a cascade of WMC0001/WMC0110 + a WMC9999 internal crash on UNRELATED types (TsButton,
+   TsRouteAnnouncer, ...). Fixed by qualifying the enum to Components.UI.DrawerSide.Right in those two
+   files (1 token each; identical enum shape; no behaviour change). Confirmed pre-existing (reproduced with
+   my surface files moved aside) and NOT caused by the surface.
+
+--------------------------------------------------------------------------------
+GATE (apps/windows/TeslaSync.sln, Release)
+--------------------------------------------------------------------------------
+BUILD_EXIT=0        Build succeeded. 0 Error(s). (17 pre-existing CA1859 warnings in App.Core only;
+                    that project does not treat warnings as errors. App project: 0 warnings, 0 errors,
+                    TreatWarningsAsErrors=true.)
+
+TEST_EXIT=1         dotnet test apps/windows/TeslaSync.sln -c Release:
+  Passed!  - Failed:     0, Passed: 18075, Skipped: 0, Total: 18075 - TeslaSync.App.Tests.dll (headless logic, incl. surface)
+  Failed!  - Failed:   147, Passed:     0, Skipped: 0, Total:   147 - TeslaSync.App.UITests.dll (E2E UI automation)
+  ALL 147 UITests failures share ONE reason (verified: 1 distinct message, 147 occurrences):
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+  These 147 are PRE-EXISTING shell/navigation/auth/accessibility/component E2E tests (Category=UIAutomation).
+  The surface added ZERO UI-automation tests; it added 36 headless tests (all pass, see below).
+  By design (RunnerAvailability.cs) these E2E tests FAIL (not skip) when the runner is absent.
+
+  Corroboration that the redness is SOLELY the absent runner:
+  - dotnet test ... --filter "Category!=UIAutomation"  =>  EXIT=0, Passed 18075 / Failed 0.
+  - dotnet test TeslaSync.App.Tests --filter FullyQualifiedName~AnnouncerRegionTests => EXIT=0, Passed 36 / Failed 0.
+
+FORMAT_EXIT=0       dotnet format apps/windows/TeslaSync.sln --verify-no-changes: clean across the whole
+                    solution (incl. the regenerated test csproj + the 5 new files; LF normalized).
+
+PLACEHOLDER_EXIT=0  check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/AnnouncerRegion:
+                    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0.
+
+--------------------------------------------------------------------------------
+OUTCOME
+--------------------------------------------------------------------------------
+BUILD_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  TEST_EXIT=1.
+The full-solution `dotnet test` aggregate cannot reach 0 ONLY because the WinAppDriver/Appium
+UI-automation runtime is unavailable on this non-interactive runner (no WinAppDriver.exe; nothing on
+:4723; no deployed MSIX; Developer Mode off). This is exactly the prompt's capability clause:
+"requires WinUI 3 ... If unavailable on the runner -> STATUS=BLOCKED with API evidence." The same
+WinAppDriver gap is logged TEST_EXIT=1 / STATUS=BLOCKED by the adjacent sibling surfaces
+(modals-dialogs 0017 AcknowledgeAlertDialog, 0018 EntryDrawer, 0015 Popover, 0022 DashboardSettingsModal).
+The AnnouncerRegion surface itself is complete and fully verified to the extent the runner allows:
+it builds, its 36 tests + the entire 18075 headless suite pass, it is format-clean and placeholder-free.
+E2E UIAutomation verification is deferred to a WinAppDriver-provisioned runner.
+
+EXIT=1
+STATUS=BLOCKED
