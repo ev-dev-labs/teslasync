@@ -1,0 +1,116 @@
+=== P2 Feature view 0304 VehicleGauges (Windows) ===
+date: 2026-06-10T21:48:00-07:00
+dotnet: 10.0.300  (SDKs: 9.0.314, 10.0.300)
+capability: WindowsAppSDK 2.1.x (>= 1.6), net10.0-windows10.0.19041.0, Fluent Design System
+capability-verdict: PRESENT — full-solution WinUI 3 Release build succeeds (see STEP 1). NOT BLOCKED.
+
+web source: web/src/features/vehicles/components/VehicleGauges.tsx
+native output: apps/windows/TeslaSync.App/feature-views/VehicleGauges/
+  VehicleGauges.Model.cs      (records + parseModelKey + FromVehiclesArray/FromResponse + projection + registration + diagnostics; WinUI-free)
+  VehicleGauges.Source.cs     (IVehicleGaugesSource + repository source: GET /vehicles -> resolve, GET /vehicles/{id}/state; WinUI-free)
+  VehicleGauges.ViewModel.cs  (state-holder VM: loading/loaded/empty/error/stale/offline; WinUI-free)
+  VehicleGauges.cs            (WinUI 3 view; excluded from the headless test project)
+tests: apps/windows/TeslaSync.App.Tests/FeatureViews/VehicleGaugesTests.cs (42 tests)
+
+--- STEP 0: pre-existing blocker repaired (prerequisite for any build/test) ---
+TeslaSync.App.Tests.csproj was committed broken at HEAD (1dece9508): the .gitattributes merge=union strategy
+had re-concatenated it into TWO <Project> roots (lines 1-963 and 964-1907) plus duplicate </Project> tags,
+failing XML load with MSB4025 — exactly the recurring corruption its own INVARIANT comment documents
+("re-consolidated for P2 feature-views/0267/0268/0271/0272/0276 ..."). Re-consolidated to ONE canonical
+<Project> root with a single, case-insensitive path-sorted, Include-deduplicated Compile ItemGroup =
+the union of every WinUI-free source on disk under feature-views/ + dashboard-widgets/ (818 entries),
+which adds the three new VehicleGauges Model/Source/ViewModel links. XML now validates; 1 <Project>, 1 </Project>.
+
+--- STEP 1: build (full solution, Release) ---
+cmd: dotnet build apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App -> apps/windows/TeslaSync.App/bin/x64/Release/net10.0-windows10.0.19041.0/TeslaSync.App.dll
+    17 Warning(s)
+    0 Error(s)
+  note: the 17 warnings are all pre-existing CA rules (CA1859/CA1720/CA1716/CA1000) in TeslaSync.App.Core
+        and are unrelated to this surface; TeslaSync.App (which compiles the new VehicleGauges view under
+        TreatWarningsAsErrors=true) and TeslaSync.App.Tests build with 0 warnings / 0 errors.
+BUILD_EXIT=0
+
+--- STEP 2: test (full solution, Release) ---
+cmd: dotnet test apps/windows/TeslaSync.sln -c Release
+Passed!  - Failed:     0, Passed: 16925, Skipped:     0, Total: 16925, Duration: 11 s - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 176 ms - TeslaSync.App.UITests.dll (net10.0)
+  UITests error (x147, identical): TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException :
+    UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+    http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TEST_SLN_EXIT=1
+
+--- STEP 2b: test (unit scope: Category!=UIAutomation) ---
+cmd: dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+  TeslaSync.App.UITests.dll : 0 tests selected (all UITests are [Trait("Category","UIAutomation")], so the
+    headless gate excludes them by design — they run only under apps/windows/run-ui-automation.ps1, which
+    itself emits STATUS=BLOCKED when WinAppDriver is absent and "never reports an absent runner as green").
+Passed!  - Failed:     0, Passed: 16925, Skipped:     0, Total: 16925, Duration: 9 s - TeslaSync.App.Tests.dll (net10.0)
+  includes the 42 new VehicleGaugesTests. Filtered run of just VehicleGaugesTests: Passed 42, Failed 0.
+  coverage: parseModelKey (8 cases) / FromVehiclesArray (prefer-id, fallback, null) / FromResponse
+    (canonical, plain, asleep=null, position fallback) / projection: 4 gauges in web order, battery 3-tier
+    colour (good>60 Success, warn>25 Warning, crit Danger), range km<->mi, speed purple-when-moving/muted,
+    power green-while-charging/muted, metric bars (charge-rate only while charging), 4 chips (lock/sentry/
+    climate/firmware on+off colours), car visualization mirror / per-gauge+metric+chip Narrator names /
+    VM per-state (loading, loaded, no-state->empty, empty emission, error, stale, offline, unit reproject) /
+    diagnostics view.opened slug=VehicleGauges / registration.
+TEST_UNIT_EXIT=0
+
+--- STEP 3: format --verify-no-changes (full solution) ---
+cmd: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (the 5 new files were normalized by dotnet format first; verify then reports no further changes)
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders (surface scan) ---
+cmd: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/VehicleGauges
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- surface notes (parity with the web source) ---
+- Architecture mirrors the shipped sibling VehicleHero (web VehicleGauges is a presentational child of the
+  vehicles page; the native surface binds the same data — GET /vehicles -> resolve primary/explicit vehicle,
+  GET /vehicles/{id}/state — through the shared cache-then-network state holder, so EVERY state renders).
+- Component mapping (web -> native counterpart; atomic components are out of scope per the prompt):
+  GlassPanel->TsGlassPanel; FadeIn->TsFadeIn; MetricBar->TsMetricBar; TeslaCarViz->TsVehicleTwin
+  (VehicleTwinModel: Locked/SentryMode/IsCharging/IsDriving(speed>0)/ExteriorColor; parseModelKey surfaced in
+  the twin's Narrator name). RadialGauge: drawn from the shared ChartGeometry/ChartShapes primitives (the same
+  ones TsRadialGauge uses) — the HealthGaugeGrid precedent — because the web colours each gauge by a SEMANTIC
+  value (batteryColor / boolColorMuted), not purely a brand-palette role, and TsRadialGauge.Role has no danger
+  hue for the low-SoC red tier.
+- Colour fidelity (web hex -> exact design-token brush key): CYAN #00f0ff->TsChartSpeedBrush,
+  PURPLE #a855f7->TsChartPowerBrush (exact), GOOD #10b981->TsColorSuccessBrush, WARN #f59e0b->TsColorWarningBrush
+  (=TsChartEnergyBrush hue), BAD #ef4444->TsColorDangerBrush, MUTED/DARK->TsColorTextMutedBrush.
+- States (all render, never a blank panel): loading (skeleton gauges), loaded (car + 4 gauges + metric bars +
+  chips), empty (no vehicle OR no live state -> friendly EmptyState), error (TsQueryError + retry), stale
+  (content + stale chip), offline (content + offline chip).
+- i18n (every web string keyed through the P1/S10 ILocalizer facade; all 13 already in Strings/en/Resources.resw):
+  common.battery, common.range, common.speed, common.power, common.batteryLevel, common.estimatedRange,
+  common.chargeRate, common.locked, common.unlocked, common.sentryOn, common.sentryOff, common.climateOn,
+  common.climateOff (+ native chrome: common.loading/offline/stale/refresh; native-only surfaceName/empty/error
+  resolve via the facade's English fallback).
+- Accessibility: surface AutomationPeer is a Group named by the composed surface name; each gauge/metric/chip
+  carries a Narrator name; decorative glyphs + the gauge canvas are AccessibilityView.Raw; entrances fade via
+  TsFadeIn which honours reduce-motion.
+- Telemetry: view.opened slug=VehicleGauges on first load, per the P1/S11 diagnostics contract (PII-safe — never
+  a VIN, name, location or telemetry value).
+
+NOTE: TEST_SLN_EXIT=1 is caused solely by the 147 TeslaSync.App.UITests (the WinAppDriver UI-automation suite).
+They fail in ~180ms with UiAutomationUnavailableException (0 assertion failures) because the WinAppDriver/Appium
+runner is not installed in this sandbox (nothing on http://127.0.0.1:4723/) — a pre-existing, solution-wide
+environment gap, identical for every prompt and orthogonal to this surface (VehicleGauges adds no UI-automation
+tests). The UITests project is run as a separate suite (apps/windows/run-ui-automation.ps1, Category=UIAutomation)
+which itself emits STATUS=BLOCKED when the runner is absent. WinUI 3 + .NET 10 themselves ARE available: the
+full-solution Release build and the 16,925 headless unit tests (incl. the 42 new VehicleGauges tests) are green.
+The verifiable scope is GREEN, so STATUS=DONE (not BLOCKED): the platform capability is present; only an auxiliary
+E2E runner is absent.
+
+=== SUMMARY ===
+BUILD_EXIT=0        full solution (TeslaSync.sln), Release, 0 errors (17 pre-existing Core CA warnings)
+TEST_UNIT_EXIT=0    TeslaSync.App.Tests (incl. 42 VehicleGauges tests) -- 16,925 passed
+TEST_SLN_EXIT=1     full-solution dotnet test (147 UITests env-blocked by absent WinAppDriver; see NOTE)
+FORMAT_EXIT=0       dotnet format --verify-no-changes
+PLACEHOLDER_EXIT=0  0 placeholders/stubs/mocks in the surface
+
+EXIT=0
+STATUS=DONE
