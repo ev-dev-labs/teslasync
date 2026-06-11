@@ -602,3 +602,4 @@ p2-windows/shared-meaningful/W-0090-FreshnessIndicator.prompt.md
 p2-windows/shared-meaningful/W-0091-HistoryListRow.prompt.md
 p2-windows/shared-meaningful/W-0093-KpiOverviewCard.prompt.md
 p2-windows/shared-meaningful/W-0094-LiveIndicator.prompt.md
+p2-windows/shared-meaningful/W-0097-PlaybackSpeedMenu.prompt.md
