@@ -1,0 +1,51 @@
+=== P2 Shared surface 0124 InlineCallout (Windows) ===
+capability probe: dotnet --version = 10.0.300
+capability probe: WinAppDriver.exe = False  (UI-automation E2E harness; WinUI 3 SDK + .NET 10 themselves are present, proven by the Release build below)
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generated -> D:\repos\teslasync-wt2\wt-01\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:02:53.22
+BUILD_EXIT=0
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generated -> D:\repos\teslasync-wt2\wt-01\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+Test run for D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+Test run for D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed: 21883, Skipped:     0, Total: 21883, Duration: 14 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+PLACEHOLDER_VIEW_EXIT=0
+PLACEHOLDER_MODEL_EXIT=0
+=== GATE DONE ===
+
+--- ENVIRONMENTAL EVIDENCE: Category=UIAutomation requires WinAppDriver (absent on this runner) ---
+The 147 TeslaSync.App.UITests are all [Trait(Category, UIAutomation)] E2E tests driven through WinAppDriver/Appium.
+WinUI 3 (Windows App SDK) + .NET 10 ARE present: the Release build above produced TeslaSync.App.dll and all 21883 headless tests pass.
+Only the optional UI-automation harness is missing; excluding Category=UIAutomation matches the accepted precedent (p2-windows-shared-surfaces-0110-UserCell.log). Evidence:
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+
+EXIT=0
+STATUS=DONE
