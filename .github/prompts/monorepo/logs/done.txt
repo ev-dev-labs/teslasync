@@ -208,3 +208,4 @@ p3-android/dashboard-widgets/A-0069-NotificationStatsWidget.prompt.md
 p3-android/dashboard-widgets/A-0072-PositionHeatmapWidget.prompt.md
 p3-android/dashboard-widgets/A-0073-PowerFlowHistoryWidget.prompt.md
 p3-android/dashboard-widgets/A-0070-OdometerCounterWidget.prompt.md
+p3-android/dashboard-widgets/A-0071-OnboardingChecklistWidget.prompt.md
