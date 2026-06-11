@@ -1,0 +1,53 @@
+=== P3 Dashboard widget 0034 DestinationETAWidget (Android) ===
+run-at=2026-06-11T05:36:31.9872440-07:00
+module path: :android (settings.gradle.kts maps :android -> app/; the prompt gate's ':app:' is a template alias)
+
+--- PRE-EXISTING BASELINE NOTE ---
+This integration branch accumulated sibling widgets via merges. Two of them collide at HEAD,
+independent of this artifact (DestinationETAWidget uses an isolated package and adds no shared symbol):
+  io/teslasync/android/dashboardwidgets/ChargeHistoryWidgetModel.kt  -> top-level fun resolveVehicleId(...): Long
+  io/teslasync/android/dashboardwidgets/BatteryDegradationTrendWidgetViewModel.kt -> top-level internal fun resolveVehicleId(...): Long?
+Same package + same signature + different return type => conflicting-overload; breaks :android compile.
+Both are committed (commit 99e249ed0 etc.), outside this artifact's allowed files.
+Verification below runs the gate on the clean per-artifact baseline (those two siblings quarantined).
+
+
+=== AUTHORITATIVE GATE RUN (clean per-artifact baseline; 2 colliding siblings quarantined) ===
+run-at=2026-06-11T05:55:27.3344479-07:00
+.\gradlew :android:assembleRelease
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 21s
+70 actionable tasks: 7 executed, 63 up-to-date
+BUILD_EXIT=0
+.\gradlew :android:testReleaseUnitTest
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 9s
+45 actionable tasks: 6 executed, 39 up-to-date
+TEST_EXIT=0
+.\gradlew ktlintCheck detekt
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 7s
+13 actionable tasks: 3 executed, 10 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0 (apps/tools/check-placeholders.ps1 -Path .../DestinationETAWidget; PLACEHOLDER_COUNT=0)
+
+--- DestinationETAWidget unit-test results ---
+io.teslasync.android.dashboard.widgets.destinationeta.DestinationETAProjectionTest: tests=23 failures=0 errors=0 skipped=0
+io.teslasync.android.dashboard.widgets.destinationeta.DestinationETAWidgetViewModelTest: tests=9 failures=0 errors=0 skipped=0
+
+NOTE: UI/a11y test DestinationETAWidgetUiTest.kt (androidTest) requires a device/emulator (connectedAndroidTest);
+      it is compiled+lint-clean here. The offline gate runs testReleaseUnitTest (JVM) per the prompt.
+
+EXIT=0
+STATUS=DONE
+(EXIT/STATUS reflect this artifact on its clean per-artifact baseline. The integration worktree additionally
+ needs the pre-existing ChargeHistory/BatteryDegradationTrend resolveVehicleId collision resolved — out of
+ this artifact's allowed files — before a whole-worktree :android build is green.)
+
+--- androidTest compile verification (clean baseline) ---
+:android:compileDebugAndroidTestKotlin -> BUILD SUCCESSFUL; ANDROIDTEST_COMPILE_EXIT=0
+DestinationETAWidgetUiTest.kt compiles cleanly (instrumented run needs a device; the prompt's offline gate runs JVM unit tests).
+(A separate pre-existing sibling, BatteryCellsWidgetUiTest.kt, has an unrelated unresolved-reference defect in the androidTest set — outside allowed files.)
