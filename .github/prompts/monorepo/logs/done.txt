@@ -169,3 +169,4 @@ p3-android/dashboard-widgets/A-0023-ChargingScheduleWidget.prompt.md
 p3-android/dashboard-widgets/A-0025-ChargingTelemetryWidget.prompt.md
 p3-android/dashboard-widgets/A-0024-ChargingSessionDetailWidget.prompt.md
 p3-android/dashboard-widgets/A-0030-CommandQuickActionsWidget.prompt.md
+p3-android/dashboard-widgets/A-0029-CommandHistoryWidget.prompt.md
