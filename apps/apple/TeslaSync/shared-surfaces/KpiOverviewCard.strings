@@ -1,0 +1,40 @@
+/*
+  KpiOverviewCard.strings
+  TeslaSync — P4 shared surface · 0093 · KpiOverviewCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (web/src/components/data-display/KpiOverviewCard.tsx) renders NO translatable copy of its own: the
+  title, the current/comparison period labels, the KPI labels + values, the secondary fold-down line,
+  and the footer message are all caller-provided strings the page has already localized + formatted
+  (the card is a presentational shell free of date/i18n logic). The keys below are therefore the
+  native chrome the web pure render has no concept of: the P4 leaf states (loading / empty), the
+  freshness chip (the connectivity axis), and the VoiceOver labels for the delta + footer severity.
+  Entries fold into the app Localizable.xcstrings master catalog at integration time; they are kept in
+  a per-surface table ("KpiOverviewCard") so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+*/
+
+/* --- Delta direction (spoken; the arrow + colour are the visual-only channel) --- */
+"kpiOverview.delta.up" = "Up";
+"kpiOverview.delta.down" = "Down";
+"kpiOverview.delta.none" = "No change";
+
+/* --- Footer callout severity (spoken prefix for the VoiceOver label) --- */
+"kpiOverview.callout.info" = "Info";
+"kpiOverview.callout.success" = "Success";
+"kpiOverview.callout.warning" = "Warning";
+"kpiOverview.callout.danger" = "Alert";
+
+/* --- Empty state (P4 leaf contract — web EmptyState peer) --- */
+"kpiOverview.empty.title" = "No metrics yet";
+"kpiOverview.empty.message" = "There are no metrics for this period.";
+
+/* --- Loading (P4 leaf contract — skeleton grid a11y) --- */
+"kpiOverview.loadingA11y" = "Loading metrics";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"kpiOverview.live" = "Live";
+"kpiOverview.stale" = "Stale";
+"kpiOverview.offline" = "Offline";
+"kpiOverview.staleA11y" = "Stale — tap to refresh";
+"kpiOverview.offlineA11y" = "Offline — showing the last known values";
