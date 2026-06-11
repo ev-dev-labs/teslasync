@@ -197,3 +197,4 @@ p3-android/dashboard-widgets/A-0060-LocationMapWidget.prompt.md
 p3-android/dashboard-widgets/A-0059-LocationFavoritesWidget.prompt.md
 p3-android/dashboard-widgets/A-0057-LiveSignalSparklinesWidget.prompt.md
 p3-android/dashboard-widgets/A-0063-MediaNowPlayingWidget.prompt.md
+p3-android/dashboard-widgets/A-0064-MileageStatsWidget.prompt.md
