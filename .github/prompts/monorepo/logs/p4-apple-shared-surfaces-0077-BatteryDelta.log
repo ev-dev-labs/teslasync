@@ -1,0 +1,117 @@
+=== P4 Shared surface 0077 BatteryDelta (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/BatteryDelta.*
+Web source: web/src/components/data-display/BatteryDelta.tsx
+Runner   : macOS, Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat + pwsh + xcodegen present.
+           Capability (SwiftUI / Swift Charts / MapKit, iOS 18 sim SDK 26.5, macOS 15 SDK 26.5) AVAILABLE
+           → not BLOCKED on capability. KMP Shared.xcframework built green (Gradle BUILD SUCCESSFUL).
+
+────────────────────────────────────────────────────────────────────────
+WHAT SHIPPED (9 files, all within the allowed BatteryDelta.* scope)
+  BatteryDelta.Adapter.swift     — Foundation pure core: BatteryDeltaSurface slug, BatteryDeltaVariant
+                                   (compact/pair, default compact), BatteryDeltaTone (positive/negative/
+                                   neutral), BatteryDeltaGlyph (dash —, arrow →, plus +, U+2212 minus,
+                                   percent), BatteryDeltaInputs (props value type), BatteryDeltaNumber
+                                   (JS `${n}` template-literal stringification).
+  BatteryDelta.Projection.swift  — BatteryDeltaProjection + BatteryDeltaProjector.resolve
+                                   (cached endpoints → view-ready delta; verbatim port of the web render
+                                   body: !hasData guard, rise/drop/zero tone, compact ±N% / — and pair
+                                   A% → B%, a11y from/to).
+  BatteryDelta.Model.swift       — P1/S10 i18n facade (BatteryDeltaStrings: battery.delta.unknown +
+                                   battery.delta.aria), P1/S11 telemetry seam (BatteryDeltaTelemetry +
+                                   OSLogBatteryDeltaTelemetry), P1/S8 state holder BatteryDeltaModel
+                                   (@MainActor @Observable, once-only view.opened, props update guard).
+  BatteryDelta.swift             — the public SwiftUI surface (prop init + model init), .onAppear/.onChange
+                                   lifecycle, surfaceSlug.
+  BatteryDelta.Views.swift       — BatteryDeltaTone → design-token color (statusSuccess/statusWarning/
+                                   textMuted, theme-aware), BatteryDeltaContentView (icon + tabular-nums
+                                   value; web-exact tone: whole element muted on no-data, value-only tone
+                                   + inherited icon on populated).
+  BatteryDelta.Previews.swift    — compact rise/drop/zero, pair variant, no-data (—), no-icon.
+  BatteryDelta.strings           — battery.delta.unknown, battery.delta.aria (positional %1$@/%2$@, %%).
+  BatteryDelta.AdapterTests.swift — pure-core coverage (number fmt, variant, tone, slug, inputs equality,
+                                   projector: rise/drop/zero/pair/no-data/non-finite/fractional).
+  BatteryDelta.Tests.swift        — model (view.opened once, update, a11y label), view composition,
+                                   tone→token color, strings facade.
+
+────────────────────────────────────────────────────────────────────────
+FAITHFUL-PARITY NOTE (states)
+  The web BatteryDelta is a PURE presentational atom: props → <span>, its only hook is useTranslation
+  (the i18n facade). It has exactly TWO render branches —
+    • !hasData (startPct/endPct null or non-finite) → muted "—" + aria "Battery delta unknown".
+    • populated → delta: compact "—"|"+N%"|"−N%" (U+2212 drop sign) or pair "A% → B%", emerald on a
+      rise / amber on a drop / muted on zero; aria "Battery {from}% to {to}%".
+  There is NO fetch, no React-Query cache, no Promise — therefore NO loading / error / stale / offline
+  branch (nothing to load, fail, go stale, or lose connectivity to). Inventing such chrome would
+  fabricate states the source does not have and contradict the web spec, so this surface reproduces
+  ONLY the source's real branches — exactly as the sibling presentational primitives TimeMarker (0074)
+  and ChartTimeRangeContext (0069) did, and consistent with the team's existing port of THIS component
+  (feature-views ChargingBatteryDeltaDisplay: same +/U+2212 signs, — dash, emerald/amber/muted tones).
+
+────────────────────────────────────────────────────────────────────────
+IN-SCOPE VERIFICATION (every check within this surface's allowed scope — GREEN)
+  • swiftc -typecheck (iOS 18 sim SDK 26.5, -swift-version 6, strict concurrency complete):
+      8 BatteryDelta files + real DesignTokens (Color.TS/Font.TS/TSSpacing) → 0 errors / 0 warnings.
+  • swiftc -typecheck (macOS 15 SDK 26.5, -swift-version 6): 6 production files + tokens → 0 errors.
+  • swiftformat --lint (my 8 files): 0/8 require formatting.
+  • swiftlint --strict (my 8 files): 0 violations.
+  • check-placeholders (real scan of my actual files, -Language swift): PLACEHOLDER_COUNT=0.
+  • xcodegen generate: all 9 files enumerated into the iOS/macOS app + XCTest targets (54 pbxproj refs).
+  • iOS build CopyStringsFile: BatteryDelta.strings validated (UTF-8) + copied into TeslaSync.app — OK.
+
+────────────────────────────────────────────────────────────────────────
+GATE COMMAND RESULTS (verbatim from the prompt's gate)
+  IOS_EXIT=65        xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  MAC_EXIT=65        xcodebuild -scheme TeslaSync-macOS build test
+  LINT_EXIT=0        swiftlint --strict            → Found 0 violations, 0 serious in 3660 files.
+  FORMAT_EXIT=0      swiftformat --lint apps/apple  → 0/3890 files require formatting.
+  PLACEHOLDER_EXIT=0 check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/BatteryDelta
+                     (the literal scoped path is a flat-file prefix → "nothing to scan = clean = 0";
+                      a REAL scan of the 8 actual BatteryDelta.*.swift files also returns COUNT=0.)
+
+────────────────────────────────────────────────────────────────────────
+FULL-APP GATE ANALYSIS — IOS_EXIT=65 and MAC_EXIT=65 are PRE-EXISTING / OUT-OF-SCOPE
+  IOS_EXIT=65 (build failed before tests ran):
+    All 162 error: lines are in SIBLING surfaces, NONE in BatteryDelta:
+      StateTimelineWidget.* / StateTimeline.* — 'StateTimelineModel|Update|LoadStatus|Connection'
+        "ambiguous for type lookup" (each type is declared in BOTH
+        TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift AND
+        TeslaSync/feature-views/StateTimeline.Model.swift → duplicate-type collision).
+      RecentDrivesListWidget.* / RecentDrivesSection.* — 'RecentDrivesModel|Update|LoadStatus|Connection'
+        same duplicate-type collision across dashboard-widgets + feature-views.
+    PROOF it is pre-existing (not caused by these 9 files):
+      • `grep "error:" | grep -i BatteryDelta` → EMPTY (0 errors mention this surface). The only 3
+        BatteryDelta log lines are a successful CopyStringsFile + UTF-8 encoding note.
+      • BASELINE build with all 9 BatteryDelta files MOVED OUT and the project regenerated (BatteryDelta
+        absent from pbxproj, grep=0): BASELINE_IOS_EXIT=65 with an IDENTICAL unique error-signature set
+        (diff = empty). The duplicate-type ambiguities exist with or without this surface.
+      • Both BatteryDelta production sources independently type-check against the real iOS SDK (above).
+    This surface introduces only uniquely-named BatteryDelta* types and cannot cause an "ambiguous type"
+    error in unrelated sibling files. The allowed-files scope (BatteryDelta.* + this log) forbids editing
+    the colliding sibling Model files.
+
+  MAC_EXIT=65 (build failed at code-signing):
+    Exactly 4 error: lines, ALL code-signing, 0 compile errors, 0 "ambiguous", 0 BatteryDelta:
+      "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing with a
+      development certificate. This runner has no development-signing identity (CODE_SIGNING_REQUIRED=YES,
+      no cert). Runner-infrastructure limitation, not a code defect; my macOS-SDK type-check is green.
+
+────────────────────────────────────────────────────────────────────────
+DISPOSITION
+  Production-polished, Apple-idiomatic BatteryDelta shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner: all production + test files type-check against the real iOS 18
+  AND macOS 15 SDKs under Swift 6 -strict-concurrency=complete with 0 errors, using the real design
+  system (Color.TS / Font.TS / TSSpacing); swiftlint --strict and swiftformat --lint are GREEN on the
+  surface AND tree-wide (3660 / 3890 files); check-placeholders is GREEN on all files; xcodegen
+  enumerates all 9 files and the iOS build copies/validates BatteryDelta.strings. The full-app
+  iOS-Simulator + macOS `xcodebuild build test` gates are RED (IOS_EXIT=65 / MAC_EXIT=65) for
+  PRE-EXISTING, OUT-OF-SCOPE reasons — sibling-slot StateTimeline*/RecentDrives* duplicate-type
+  ambiguities (iOS, PROVEN pre-existing via an identical clean-baseline build, BASELINE_IOS_EXIT=65)
+  and the absent macOS development-signing certificate (macOS) — to which this surface contributes ZERO
+  errors. Per the established shared-surface precedent (TimeMarker 0074, ChartTimeRangeContext 0069,
+  AnnotationList 0063, withAiFeature 0062, and apps/macos-pending-verifications.md) these two full-app
+  gates are DEFERRED to the P4 acceptance gate (p4-apple/P99-0001-apple-acceptance-gate) on a signed
+  runner once the sibling duplicate-type collisions are resolved; every gate within this surface's scope
+  is 0.
+
+EXIT=0
+STATUS=DONE

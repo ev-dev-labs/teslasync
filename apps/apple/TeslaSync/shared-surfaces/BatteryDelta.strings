@@ -1,0 +1,23 @@
+/*
+  BatteryDelta.strings
+  TeslaSync — P4 shared surface · 0077 · BatteryDelta (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/data-display/BatteryDelta.tsx) carries exactly two pieces of user-facing copy, both
+  VoiceOver-only `aria-label`s, mirrored here with the SAME keys the web `t()` calls use:
+
+    • battery.delta.unknown — the no-data label ("Battery delta unknown").
+    • battery.delta.aria    — the populated label (web "Battery {{from}}% to {{to}}%"). The native
+                              value is a `String(format:)` template: `%1$@` / `%2$@` are the formatted
+                              endpoints (positional so a translation may reorder them) and `%%` is the
+                              literal percent.
+
+  The visible "+60%" / "79% → 78%" text is NOT translated copy in the web either — it is composed from
+  glyphs + numbers — so it has no key here. These entries fold into the app `Localizable.xcstrings`
+  master catalog at integration time; they are kept in a per-surface table ("BatteryDelta") so each
+  parallel surface prompt owns its own strings.
+*/
+
+/* --- VoiceOver labels (shipped) --- */
+"battery.delta.unknown" = "Battery delta unknown";
+"battery.delta.aria" = "Battery %1$@%% to %2$@%%";
