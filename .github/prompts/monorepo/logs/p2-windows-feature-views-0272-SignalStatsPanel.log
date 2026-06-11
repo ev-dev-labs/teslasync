@@ -1,0 +1,60 @@
+=== P2 Feature view 0272 SignalStatsPanel (Windows) ===
+timestamp: 2026-06-10T19:28:36.5871284-07:00
+dotnet: 10.0.300
+
+## dotnet build apps/windows/TeslaSync.sln -c Release
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:01:06.13
+BUILD_EXIT=0
+
+## dotnet test apps/windows/TeslaSync.sln -c Release
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 238 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 15898, Skipped:     0, Total: 15898, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+
+-- representative UITest failure (platform-capability evidence) --
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TEST_EXIT=1
+
+## dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+## check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SignalStatsPanel
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== ANALYSIS ===
+Surface implemented: apps/windows/TeslaSync.App/feature-views/SignalStatsPanel/
+  - SignalStatsPanel.Model.cs  (WinUI-free: SignalStat, SignalStatsModel, SignalStatCell, SignalStatRow,
+    SignalStatsDisplay, SignalStatsProjection, SignalStatsPanelRegistration, SignalStatsPanelDiagnostics)
+  - SignalStatsPanel.cs        (WinUI view: TsFadeIn > TsGlassPanel > header[SectionTitle + TsToggle] + table;
+    loading skeleton grid / Ready table / TsEmptyState; Narrator names; AutomationPeer)
+Tests: apps/windows/TeslaSync.App.Tests/FeatureViews/SignalStatsPanelTests.cs (35 tests, all PASS) — projection
+  adapter, displayStats gap-fill, renderNumeric coercion, loading/ready/empty state matrix, hide-empty filter +
+  interpolated label, categorical colour mapping, composed Narrator names, full i18n key set, registration, diagnostics.
+
+Code-level gate (this runner): BUILD_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0,
+  TeslaSync.App.Tests = 15898 passed / 0 failed (incl. the 35 SignalStatsPanel tests).
+
+Pre-existing repair (required for ANY solution build): TeslaSync.App.Tests.csproj had MSB4025 (two concatenated
+  <Project> roots from the .gitattributes merge=union strategy) and would not load. Re-consolidated into one
+  canonical root with the Compile ItemGroup regenerated from the 763 WinUI-free sources on disk (= the prior
+  union, plus the new SignalStatsPanel.Model link), ordinal-sorted, de-duplicated.
+
+BLOCKER (platform capability): TEST_EXIT=1 is caused solely by TeslaSync.App.UITests — 147/147 throw
+  UiAutomationUnavailableException: "WinAppDriver/Appium runner is absent: nothing is listening on
+  http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH."
+  The UI-automation suite is deliberately designed to hard-fail (never silently skip) when the runner is absent
+  (WinAppDriverSession.cs L12-14, L71-83). This runner has WinUI 3 + .NET 10 (build + 15898 headless tests pass)
+  but no interactive WinAppDriver/Appium UI-automation host, so the per-surface implementation cannot be exercised
+  through the live-app UI-automation layer here. This is the prompt's sanctioned "platform capability unavailable
+  on the runner" condition.
+
+EXIT=1
+STATUS=BLOCKED

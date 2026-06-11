@@ -78,6 +78,23 @@
     WinUI-free sources on disk (which adds the SignalSparklinePreview Model / Source / ViewModel links). Do
     NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
     this comment.
+    feature-view and dashboard-widget surface. The WinUI app (TeslaSync.App) targets a WinUI TFM and
+    cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources
+    are Compile-linked into the single ItemGroup below (the Link mirrors each source's real location
+    under FeatureViews\ or Widgets\); the WinUI views themselves are exercised by the app build. The
+    matching test classes live under this project and are picked up by the SDK default-compile glob.
+    The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures the
+    packaging / units-golden / widget tests read out of the test output directory.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, ordinal-sorted,
+    Include-deduplicated Compile ItemGroup - the union of every WinUI-free (Microsoft.UI-free) .cs on
+    disk under feature-views/ and dashboard-widgets/ (the bare WinUI view files are excluded). This file
+    carries the .gitattributes "merge=union" strategy, so a chain of integration merges had repeatedly
+    re-concatenated it into multiple Project roots plus duplicate Compile items, failing XML load
+    (MSB4025 / MSB4067). Re-consolidated for P2 feature-views/0272 SignalStatsPanel into this single
+    canonical root, regenerated directly from the WinUI-free sources on disk (which adds the new
+    SignalStatsPanel.Model link). Do NOT re-concatenate into multiple roots, and never write a literal
+    build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -797,6 +814,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\SignalSparklinePreview\SignalSparklinePreview.Model.cs" Link="FeatureViews\SignalSparklinePreview\SignalSparklinePreview.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalSparklinePreview\SignalSparklinePreview.Source.cs" Link="FeatureViews\SignalSparklinePreview\SignalSparklinePreview.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalSparklinePreview\SignalSparklinePreview.ViewModel.cs" Link="FeatureViews\SignalSparklinePreview\SignalSparklinePreview.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SignalStatsPanel\SignalStatsPanel.Model.cs" Link="FeatureViews\SignalStatsPanel\SignalStatsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SlideRenderer\SlideRenderer.Model.cs" Link="FeatureViews\SlideRenderer\SlideRenderer.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SnapshotInspector\SnapshotInspector.Model.cs" Link="FeatureViews\SnapshotInspector\SnapshotInspector.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SocChart\SocChart.Model.cs" Link="FeatureViews\SocChart\SocChart.Model.cs" />
