@@ -521,3 +521,4 @@ p2-windows/modals-dialogs/W-0014-Modal.prompt.md
 p2-windows/modals-dialogs/W-0013-Drawer.prompt.md
 p2-windows/modals-dialogs/W-0017-AcknowledgeAlertDialog.prompt.md
 p2-windows/modals-dialogs/W-0015-Popover.prompt.md
+p2-windows/modals-dialogs/W-0018-EntryDrawer.prompt.md
