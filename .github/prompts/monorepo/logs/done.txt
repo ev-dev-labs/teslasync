@@ -256,3 +256,4 @@ p3-android/feature-views/A-0003-ClientUtilitiesSection.prompt.md
 p3-android/feature-views/A-0010-ToolCard.prompt.md
 p3-android/feature-views/A-0006-InfrastructureSection.prompt.md
 p3-android/feature-views/A-0008-ResultPanel.prompt.md
+p3-android/feature-views/A-0009-TelemetryErrorsPanel.prompt.md
