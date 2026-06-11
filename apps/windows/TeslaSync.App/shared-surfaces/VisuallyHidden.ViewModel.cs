@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace TeslaSync.App.SharedSurfaces;
+namespace TeslaSync.App.SharedSurfaces.VisuallyHiddenSurface;
 
 /// <summary>
 /// The live-region state holder bound to the announcer data source (P1/S8) — the native port of the web

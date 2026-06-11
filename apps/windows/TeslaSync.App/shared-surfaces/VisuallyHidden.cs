@@ -5,7 +5,7 @@ using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using TeslaSync.App.Components.A11y;
 
-namespace TeslaSync.App.SharedSurfaces;
+namespace TeslaSync.App.SharedSurfaces.VisuallyHiddenSurface;
 
 /// <summary>
 /// The native WinUI 3 VisuallyHidden announcer surface — a parity port of

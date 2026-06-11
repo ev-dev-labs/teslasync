@@ -1,4 +1,4 @@
-using TeslaSync.App.SharedSurfaces;
+using TeslaSync.App.SharedSurfaces.VisuallyHiddenSurface;
 using Xunit;
 
 namespace TeslaSync.App.Tests.SharedSurfaces;

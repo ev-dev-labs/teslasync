@@ -143,6 +143,7 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/ and modals-dialogs/); the WinUI view files themselves are exercised by the app build. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the WinUI view files themselves are exercised by the app build. Regenerated for P2 shared-surfaces/0009 AICabinTemperatureImpactNarrative. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the WinUI view files themselves are exercised by the app build. Re-consolidated for P2 shared-surfaces/0020 AIGeofenceAwareAutomationSuggestions into this single canonical root from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -1078,6 +1079,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AICabinTemperatureImpactNarrative.Model.cs" Link="SharedSurfaces\AICabinTemperatureImpactNarrative.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AICabinTemperatureImpactNarrative.Source.cs" Link="SharedSurfaces\AICabinTemperatureImpactNarrative.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AICabinTemperatureImpactNarrative.ViewModel.cs" Link="SharedSurfaces\AICabinTemperatureImpactNarrative.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIGeofenceAwareAutomationSuggestions.Model.cs" Link="SharedSurfaces\AIGeofenceAwareAutomationSuggestions.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIGeofenceAwareAutomationSuggestions.Source.cs" Link="SharedSurfaces\AIGeofenceAwareAutomationSuggestions.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AIGeofenceAwareAutomationSuggestions.ViewModel.cs" Link="SharedSurfaces\AIGeofenceAwareAutomationSuggestions.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Model.cs" Link="SharedSurfaces\AnnouncerRegion.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
