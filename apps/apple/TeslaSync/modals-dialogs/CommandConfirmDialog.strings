@@ -1,0 +1,49 @@
+/*
+  CommandConfirmDialog.strings
+  TeslaSync — P4 modal / dialog · 0029 · CommandConfirmDialog (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `CommandConfirmDialog`
+  resolves (table "CommandConfirmDialog") lives here with its web `t(key, default)` English value.
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  The first group is the copy the web source (features/system/components/CommandConfirmDialog.tsx)
+  resolves through `t()` or inlines as an English default: the `common.confirm` / `common.cancel`
+  button labels, the `commands.confirm.typeToConfirm` prompt (with the `{{word}}` interpolation token),
+  the "Are you sure?" message default, and the `{{label}} ({{seconds}}s)` countdown template that
+  rebuilds the web `` `${t('common.confirm')} (${remaining}s)` ``. The remainder backs the native
+  chrome (header close, the loading / empty / error envelopes, the P4 freshness / cached-data copy) and
+  the VoiceOver-only strings so the Swift sources hold no English literals. `{{word}}` / `{{seconds}}`
+  / `{{label}}` are the i18next interpolation tokens the projection substitutes.
+*/
+
+/* --- Copy from / derived from the web source (parity) --- */
+"common.confirm" = "Confirm";
+"common.cancel" = "Cancel";
+"commands.confirm.areYouSure" = "Are you sure?";
+"commands.confirm.typeToConfirm" = "Type \"{{word}}\" to confirm:";
+"commands.confirm.countdown" = "{{label}} ({{seconds}}s)";
+
+/* --- Native chrome: header close (accessibility) --- */
+"commands.confirm.close" = "Close";
+
+/* --- Native chrome: loading / empty / error + retry --- */
+"commands.confirm.loading" = "Preparing…";
+"commands.confirm.empty" = "Nothing to confirm";
+"commands.confirm.emptyMessage" = "There's no command awaiting confirmation.";
+"commands.confirm.errorTitle" = "Couldn't load this command";
+"commands.confirm.retry" = "Retry";
+
+/* --- Native chrome: freshness chip (Live / Stale / Offline) --- */
+"commands.confirm.live" = "Live";
+"commands.confirm.stale" = "Stale";
+"commands.confirm.offline" = "Offline";
+
+/* --- Native chrome: connectivity banner (stale / offline) --- */
+"commands.confirm.staleBanner" = "Reconnecting — this command may be out of date";
+"commands.confirm.offlineBanner" = "Offline — this command is from your last sync";
+
+/* --- VoiceOver-only: warning prefix + countdown value --- */
+"commands.confirm.a11y.warning" = "Warning";
+"commands.confirm.a11y.countdown" = "Available in {{seconds}} seconds";
