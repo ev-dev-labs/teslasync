@@ -2122,6 +2122,11 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\NotificationBellPopover.Model.cs" Link="ModalsDialogs\NotificationBellPopover.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\NotificationBellPopover.Source.cs" Link="ModalsDialogs\NotificationBellPopover.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\NotificationBellPopover.ViewModel.cs" Link="ModalsDialogs\NotificationBellPopover.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\NotificationBellPopover.Model.cs" Link="ModalsDialogs\NotificationBellPopover.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\NotificationBellPopover.Source.cs" Link="ModalsDialogs\NotificationBellPopover.Source.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\NotificationBellPopover.ViewModel.cs" Link="ModalsDialogs\NotificationBellPopover.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\Popover\Popover.Model.cs" Link="ModalsDialogs\Popover\Popover.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\Popover\Popover.ViewModel.cs" Link="ModalsDialogs\Popover\Popover.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\ReauthDialog.Model.cs" Link="ModalsDialogs\ReauthDialog.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\ReauthDialog.Source.cs" Link="ModalsDialogs\ReauthDialog.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\ReauthDialog.ViewModel.cs" Link="ModalsDialogs\ReauthDialog.ViewModel.cs" />
@@ -2160,6 +2165,12 @@
   </ItemGroup>
 
 </Project>
+  </ItemGroup>
+
+</Project>
+    <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetCatalogueDialog\WidgetCatalogueDialog.Model.cs" Link="ModalsDialogs\WidgetCatalogueDialog\WidgetCatalogueDialog.Model.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetCatalogueDialog\WidgetCatalogueDialog.Source.cs" Link="ModalsDialogs\WidgetCatalogueDialog\WidgetCatalogueDialog.Source.cs" />
+    <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetCatalogueDialog\WidgetCatalogueDialog.ViewModel.cs" Link="ModalsDialogs\WidgetCatalogueDialog\WidgetCatalogueDialog.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
