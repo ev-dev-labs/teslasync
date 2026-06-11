@@ -579,3 +579,4 @@ p2-windows/shared-meaningful/W-0067-ChartHiddenSeriesContext.prompt.md
 p2-windows/shared-meaningful/W-0068-ChartLegend.prompt.md
 p2-windows/shared-meaningful/W-0065-ChartContainer.prompt.md
 p2-windows/shared-meaningful/W-0069-ChartTimeRangeContext.prompt.md
+p2-windows/shared-meaningful/W-0072-MetricSwitcherChart.prompt.md
