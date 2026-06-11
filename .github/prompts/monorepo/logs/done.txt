@@ -528,3 +528,4 @@ p2-windows/modals-dialogs/W-0019-FlagEditDrawer.prompt.md
 p2-windows/modals-dialogs/W-0023-ExportModal.prompt.md
 p2-windows/modals-dialogs/W-0025-KioskSettingsModal.prompt.md
 p2-windows/modals-dialogs/W-0024-ImportPreviewModal.prompt.md
+p2-windows/modals-dialogs/W-0026-WidgetCatalogueDialog.prompt.md
