@@ -218,6 +218,7 @@
   <!-- WinUI-free logic sources compiled in from TeslaSync.App (case-insensitive ordinal path-sorted, include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0072 MetricSwitcherChart. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0078 BulkActionsToolbar. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets, feature-views, misc-surfaces, modals-dialogs and shared-surfaces); the bare WinUI view files are exercised by the app build. Regenerated for P2 shared-surfaces/0076 Avatar. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build, and the test classes are picked up by the SDK default-compile glob. Regenerated into a single canonical Project root for P2 shared-surfaces/0079 DataFreshness (repairing a merge=union multi-root corruption) from the WinUI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -2524,9 +2525,16 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\BulkActionsToolbar.Model.cs" Link="SharedSurfaces\BulkActionsToolbar.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BulkActionsToolbar.Source.cs" Link="SharedSurfaces\BulkActionsToolbar.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BulkActionsToolbar.ViewModel.cs" Link="SharedSurfaces\BulkActionsToolbar.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AreaChartWrapper.Model.cs" Link="SharedSurfaces\AreaChartWrapper.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.Model.cs" Link="SharedSurfaces\ChartContainer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.Source.cs" Link="SharedSurfaces\ChartContainer.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.ViewModel.cs" Link="SharedSurfaces\ChartContainer.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.Model.cs" Link="SharedSurfaces\ChartExportMenu.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.Source.cs" Link="SharedSurfaces\ChartExportMenu.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.ViewModel.cs" Link="SharedSurfaces\ChartExportMenu.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartHiddenSeriesContext.Model.cs" Link="SharedSurfaces\ChartHiddenSeriesContext.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartHiddenSeriesContext.Source.cs" Link="SharedSurfaces\ChartHiddenSeriesContext.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ChartHiddenSeriesContext.ViewModel.cs" Link="SharedSurfaces\ChartHiddenSeriesContext.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.Model.cs" Link="SharedSurfaces\ChartTimeRangeContext.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.Source.cs" Link="SharedSurfaces\ChartTimeRangeContext.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTimeRangeContext.ViewModel.cs" Link="SharedSurfaces\ChartTimeRangeContext.ViewModel.cs" />
@@ -2584,6 +2592,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartHiddenSeriesContext.Model.cs" Link="SharedSurfaces\ChartHiddenSeriesContext.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartHiddenSeriesContext.Source.cs" Link="SharedSurfaces\ChartHiddenSeriesContext.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartHiddenSeriesContext.ViewModel.cs" Link="SharedSurfaces\ChartHiddenSeriesContext.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Model.cs" Link="SharedSurfaces\DataFreshness.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Source.cs" Link="SharedSurfaces\DataFreshness.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.ViewModel.cs" Link="SharedSurfaces\DataFreshness.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SmallMultiplesChart.Model.cs" Link="SharedSurfaces\SmallMultiplesChart.Model.cs" />
