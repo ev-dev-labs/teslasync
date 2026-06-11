@@ -260,3 +260,4 @@ p3-android/feature-views/A-0009-TelemetryErrorsPanel.prompt.md
 p3-android/feature-views/A-0004-FleetApiSection.prompt.md
 p3-android/feature-views/A-0012-ByteSizeConverter.prompt.md
 p3-android/feature-views/A-0013-ColorConverter.prompt.md
+p3-android/feature-views/A-0015-HashCalculator.prompt.md
