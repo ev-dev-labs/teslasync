@@ -509,3 +509,4 @@ p2-windows/misc-surfaces/W-0001-TourLauncher.prompt.md
 p2-windows/modals-dialogs/W-0002-AddAnnotationPopover.prompt.md
 p2-windows/modals-dialogs/W-0003-ChangelogModal.prompt.md
 p2-windows/modals-dialogs/W-0005-JobProgressDrawer.prompt.md
+p2-windows/modals-dialogs/W-0004-FeedbackModal.prompt.md
