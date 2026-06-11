@@ -1,7 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Package visibility (Android 11+) so AppAuth can discover a browser / Custom Tabs provider
+         for the OIDC authorize round-trip (P3/A4, ADR-008). -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
+
     <application
+        android:name=".TeslaSyncApplication"
         android:allowBackup="true"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
@@ -44,6 +58,16 @@
                 <data android:scheme="teslasync" android:host="app" />
             </intent-filter>
         </activity>
+
+        <!-- OIDC authorize trampoline (P3/A4): drives the AppAuth Custom Tab and captures the
+             redirect. Transparent + internal-only; the redirect itself returns through AppAuth's
+             RedirectUriReceiverActivity, which the AAR registers for the appAuthRedirectScheme
+             manifest placeholder (set in app/build.gradle.kts from the OIDC redirect URI). -->
+        <activity
+            android:name=".auth.AuthorizationActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
     </application>
 
 </manifest>

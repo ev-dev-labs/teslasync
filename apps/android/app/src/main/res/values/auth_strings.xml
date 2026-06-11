@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Auth + onboarding surface strings (app-owned; not part of the auto-generated i18n catalog). -->
+<resources>
+    <string name="auth_authorizing">Signing you in…</string>
+    <string name="auth_welcome_title">Welcome to TeslaSync</string>
+    <string name="auth_welcome_body">Sign in with your TeslaSync account to view and manage your fleet.</string>
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_secure_note">You\'ll sign in securely through your browser.</string>
+    <string name="auth_error_title">Sign-in failed</string>
+    <string name="auth_error_retry">Try again</string>
+    <string name="auth_expired_title">Refreshing session</string>
+    <string name="auth_expired_body">Your session is being renewed. This only takes a moment.</string>
+    <string name="auth_expired_retry">Retry now</string>
+    <string name="auth_reauth_title">Session ended</string>
+    <string name="auth_reauth_body">Your session has expired. Please sign in again to continue.</string>
+    <string name="auth_reauth_action">Sign in again</string>
+</resources>

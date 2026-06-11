@@ -27,6 +27,17 @@ vico = "2.0.0"
 # settings.gradle.kts content filter routes com.google.* there). Major bumps require
 # a superseding ADR; Renovate keeps patch versions current.
 mapsCompose = "6.6.0"
+# AppAuth — OAuth 2.0 / OIDC Authorization-Code + PKCE via Chrome Custom Tabs (ADR-008, P3/A4).
+# 0.11.1 is the current stable line; it contributes the redirect-receiver activity (bound to the
+# appAuthRedirectScheme manifest placeholder) and pulls androidx.browser transitively.
+appAuth = "0.11.1"
+# SQLDelight runtime — referenced by the app only to construct the shared-core offline cache
+# (LocalCache(DriverFactory(context).createDriver()), ADR-013); the driver itself lives in :core.
+# Pinned to the same version the shared core uses (apps/shared/gradle/libs.versions.toml).
+sqldelight = "2.3.2"
+# Coroutines — the auth state holder, redirect bridge, and flows are coroutine-based. Pinned to the
+# shared-core version so the app and :core resolve one coroutines line (ADR-012 version lock).
+kotlinxCoroutines = "1.10.2"
 # Quality
 ktlint = "12.1.2"
 ktlintEngine = "1.5.0"
@@ -64,11 +75,19 @@ vico-compose = { module = "com.patrykandpatrick.vico:compose", version.ref = "vi
 vico-compose-m3 = { module = "com.patrykandpatrick.vico:compose-m3", version.ref = "vico" }
 # Google Maps Compose — pulls play-services-maps + maps-ktx transitively.
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
+# AppAuth — OAuth 2.0 / OIDC Authorization-Code + PKCE (Chrome Custom Tabs + redirect receiver).
+appauth = { module = "net.openid:appauth", version.ref = "appAuth" }
+# SQLDelight runtime — names SqlDriver so the app can build the shared-core LocalCache (ADR-013).
+sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+# Coroutines — Android dispatchers for the auth state holder + redirect bridge.
+kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
 # Test
 junit = { module = "junit:junit", version.ref = "junit" }
 androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestExtJunit" }
 compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+# Test-only: virtual-time coroutine test scheduler for deterministic auth-flow tests.
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -41,6 +41,33 @@ android {
         // MAPS_API_KEY environment variable; local/dev builds default to empty so the
         // build never fails on a missing secret (the base map renders blank without it).
         manifestPlaceholders["MAPS_API_KEY"] = System.getenv("MAPS_API_KEY") ?: "" // parity:allow Gradle manifestPlaceholders DSL name
+
+        // ── OIDC / Authentik public-client configuration (P3/A4, ADR-008) ──────────────
+        // The native app is a PUBLIC OAuth client (no secret). Endpoints + client id are
+        // deployment-specific (the Authentik client-config runbook is P0/P1 / out of scope here),
+        // so they are injected from the environment at build time with sensible self-hosted
+        // defaults — the same pattern as MAPS_API_KEY. The redirect scheme registered for the
+        // AppAuth redirect receiver is derived from the redirect URI so the two never drift.
+        val oidcRedirectUri = System.getenv("TESLASYNC_OIDC_REDIRECT_URI") ?: "io.teslasync.android://oauth2redirect"
+        manifestPlaceholders["appAuthRedirectScheme"] = oidcRedirectUri.substringBefore("://") // parity:allow manifestPlaceholders DSL
+        buildConfigField("String", "API_BASE_URL", "\"${System.getenv("TESLASYNC_API_BASE_URL") ?: "https://app.teslasync.io"}\"")
+        buildConfigField("String", "OIDC_CLIENT_ID", "\"${System.getenv("TESLASYNC_OIDC_CLIENT_ID") ?: "teslasync-android"}\"")
+        buildConfigField("String", "OIDC_REDIRECT_URI", "\"$oidcRedirectUri\"")
+        buildConfigField(
+            "String",
+            "OIDC_AUTHORIZATION_ENDPOINT",
+            "\"${System.getenv("TESLASYNC_OIDC_AUTHORIZATION_ENDPOINT") ?: "https://auth.teslasync.io/application/o/authorize/"}\"",
+        )
+        buildConfigField(
+            "String",
+            "OIDC_TOKEN_ENDPOINT",
+            "\"${System.getenv("TESLASYNC_OIDC_TOKEN_ENDPOINT") ?: "https://auth.teslasync.io/application/o/token/"}\"",
+        )
+        buildConfigField(
+            "String",
+            "OIDC_REVOCATION_ENDPOINT",
+            "\"${System.getenv("TESLASYNC_OIDC_REVOCATION_ENDPOINT") ?: "https://auth.teslasync.io/application/o/revoke/"}\"",
+        )
     }
 
     buildTypes {
@@ -55,6 +82,8 @@ android {
 
     buildFeatures {
         compose = true
+        // BuildConfig carries the deployment OIDC endpoints + API base URL (see defaultConfig).
+        buildConfig = true
     }
 
     // Compile the generated design-token theme layer (apps/design/generated/android/**)
@@ -164,12 +193,19 @@ dependencies {
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
     implementation(libs.maps.compose)
+    // OIDC PKCE sign-in via Chrome Custom Tabs + redirect receiver (P3/A4, ADR-008).
+    implementation(libs.appauth)
+    // Coroutines (Android dispatchers) for the auth state holder + redirect bridge.
+    implementation(libs.kotlinx.coroutines.android)
+    // SQLDelight runtime — to construct the shared-core offline cache (clear-on-signout, ADR-013).
+    implementation(libs.sqldelight.runtime)
     debugImplementation(libs.compose.ui.tooling)
 
     // KMP shared core (ADR-004), consumed via composite-build substitution (settings.gradle.kts).
     implementation("io.teslasync.shared:core")
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(platform(libs.compose.bom))
