@@ -1,0 +1,294 @@
+=== P4 Modal / dialog 0031 CommandSelectDialog (Apple) ===
+Surface : apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.*
+Web src : web/src/features/system/components/CommandSelectDialog.tsx (THE spec)
+Runner  : Darwin arm64, Xcode 26.5 (17F42), Swift 6.3.2, swiftlint, swiftformat,
+          xcodegen 2.45.4, pwsh 7.x, OpenJDK 17.0.19 (KMP). SwiftUI present (iOS-18 +
+          macOS-15 SDKs) -> NOT capability-blocked. The required capability is
+          SwiftUI + iOS18/iPadOS18/macOS15 HIG; this surface uses no Swift Charts /
+          MapKit (the web source has neither charts nor maps).
+Disposition: code-complete; every host-runnable gate GREEN; the surface's own code
+          INDEPENDENTLY compiles + tests under the real Xcode 26 / Swift 6 toolchain
+          (isolated SwiftPM build/test of the pure-logic core + state holder = 31/31
+          tests, plus an iOS-18 & macOS-15 SDK typecheck of the full SwiftUI view layer
+          against the real design system = 0 errors). The full-app iOS xcodebuild was
+          RUN here (the KMP Shared.xcframework actually built + staged in 6m58s) and
+          exits 65 (RED) -- but SOLELY on 2 pre-existing parallel-merge errors in two
+          UNRELATED shared-surfaces siblings (AIAutoNameUnnamedLocations /
+          AISignalExplorerNlFilter); 0 errors in this surface, which is not even in the
+          generated project (the modals-dialogs tier is unwired: 0 pbxproj refs /
+          0 .swiftlint.yml includes). macOS is signing-deferred (0 valid identities).
+          Tier registration + macOS signing belong to the P4/P99 acceptance gate, and
+          project.yml / .swiftlint.yml are outside this prompt's allowed files. This is
+          the same sanctioned "code-complete + DEFERRED full-app Xcode gate"
+          disposition as the 0002/0005/0006/0007..0017 siblings in this modals-dialogs
+          tier (ADR-002/009, apps/macos-pending-verifications.md).
+
+==================================================================================
+ARTIFACTS (9 Swift files + 1 strings catalog; all match the CommandSelectDialog.* glob)
+==================================================================================
+  Pure logic (Foundation-only; unit-tested, no SwiftUI):
+    CommandSelectDialog.Adapter.swift (209) surface slug; LoadStatus / Connection /
+                                Visibility / Phase; CommandSelectOption (value/label/
+                                description?, id=value); CommandSelectRequest (id/title/
+                                iconSystemName/options/loading, empty-icon -> defaultIcon);
+                                CommandSelectProjection (resolvePhase, resolveVisibility,
+                                inlineFailure, cancelLabel, title fallback, Keys/Fallbacks,
+                                defaultIcon "slider.horizontal.3").
+    CommandSelectDialog.Seams.swift   (199) telemetry seam (view.opened); select/cancel
+                                command seam (web onSelect/onClose; select awaited so the
+                                tapped option spins); Update snapshot (status/request/
+                                connection/refreshing/updatedAt); P1/S8 source protocol +
+                                in-memory source; P1/S10 i18n facade; VoiceOver builders
+                                (summary, optionLabel [+ description + busy suffix], close).
+  State holder (Foundation/Observation; SwiftUI-free):
+    CommandSelectDialog.Model.swift   (203) @MainActor @Observable model: loadStatus/
+                                connection/refreshing/updatedAt/request; resolved
+                                visibility/phase/inlineError; per-option submittingValue
+                                (web `loading` parity) + isBusy + isSubmitting(value);
+                                lifecycle (start -> view.opened once); async select(value)
+                                with re-entrancy/unknown-value/no-request/parent-loading
+                                guards; cancel (swallowed while busy); stale auto-refresh
+                                re-arm; derived copy + a11y.
+  View (SwiftUI, HIG-native):
+    CommandSelectDialog.swift         (55)  visibility switch (hidden EmptyView vs presented
+                                TSFadeIn panel) + lifecycle + surfaceSlug (web Modal early-
+                                return -> native).
+    CommandSelectDialog.Views.swift   (225) panel shell (TSGlassPanel, maxWidth 420, web
+                                Modal size=sm), header (icon chip + title + freshness chip +
+                                close), content (inline error + option list + Cancel footer
+                                via TSButton .ghost), CommandSelectOptionRow (label medium +
+                                description + chevron/spinner accessory, disabled-dim while
+                                busy), .text helper.
+    CommandSelectDialog.States.swift  (206) loading (spinner + "Loading options...") / empty
+                                (ContentUnavailableView "No options available") / error+retry
+                                (QueryError -> model.refresh()) / inline reload error /
+                                freshness chip / connectivity banner. Never a blank box.
+    CommandSelectDialog.Previews.swift(147) 8 states: content-with-descriptions / content-
+                                plain / in-flight (hanging controller) / empty / loading /
+                                error / stale / offline.
+    CommandSelectDialog.strings       (43)  i18n catalog: the 1 web key (common.cancel) +
+                                native state chrome (loading/empty/emptyMessage/errorTitle/
+                                retry/live/stale/offline/staleBanner/offlineBanner) + a11y
+                                (close/dialog/busy) = 14 keys total.
+  Tests (XCTest, @testable import TeslaSync):
+    CommandSelectDialog.Tests.swift   (202) projection: resolvePhase (no-request-by-status /
+                                request-with-options content / request-without-options empty),
+                                resolveVisibility (request/none/pinned), inlineFailure,
+                                cancelLabel, title fallback, empty-icon normalization, option
+                                id; accessibility: summary, close, optionLabel (+ desc + busy)
+                                (15 tests).
+    CommandSelectDialog.ModelTests.swift(306) state holder: view.opened once/idempotent,
+                                loading->content, loaded-no-request->empty (pinned) / hidden
+                                (unpinned), request-without-options->empty, failed->error /
+                                failed-keeps-content + inline error, select delegates + clears
+                                submitting, select marks tapped option in-flight (gated
+                                controller) + blocks concurrent select, unknown-value/no-
+                                request/parent-loading guards, cancel delegates / swallowed
+                                while busy, stale auto-refresh re-arm, offline keeps content
+                                (16 tests).
+
+  Total 1795 lines (1752 swift + 43 strings); every swift file <= 306 (swiftlint
+  file_length 400 strict). All public symbols are CommandSelect*-namespaced; the
+  top-level View is `CommandSelectDialog`. Collision-checked: `CommandSelect` = 0
+  pre-existing matches across Sources/ + feature-views/ + dashboard-widgets/ +
+  misc-surfaces/ + shared-surfaces/ + modals-dialogs/ before authoring.
+
+==================================================================================
+PARITY (web CommandSelectDialog.tsx -> native), no scope narrowing
+==================================================================================
+  Data sources (web -> native P1/S8 seam):
+    useTranslation -> CommandSelectStrings facade (P1/S10), no literals.
+    def (CommandDef + selectConfig) -> CommandSelectSource pushes a CommandSelectRequest:
+        t(def.labelKey, def.labelFallback)        -> request.title (already-localized data,
+                                                     same as ConfirmDialog title/message).
+        def.icon (Lucide)                         -> request.iconSystemName (SF Symbol data).
+        sc.options[{value,labelKey,labelFallback, -> [CommandSelectOption] with each label
+          description}]                              already resolved via t() upstream.
+        loading prop (disables all options)        -> request.loading, combined in the model
+                                                     with its own submittingValue into isBusy.
+  Logic (verbatim ports):
+    onSelect(opt.value)                 -> controller.select(value) (awaited; the tapped row
+                                           spins via submittingValue, the rest stay disabled).
+    onClose (Cancel button / Escape)    -> controller.cancel() (swallowed while a dispatch is
+                                           in flight so the dialog stays mounted).
+    t('common.cancel','Cancel')         -> Keys.cancel / Fallbacks.cancel via the i18n facade
+                                           (the ONLY literal t() in the source).
+  Composition (web Modal/body -> native):
+    Modal size=sm + close                -> TSGlassPanel (maxWidth 420) + CommandSelectHeader
+                                            (icon chip + title + freshness chip + close).
+    icon chip + h2 title                 -> header iconChip + title (Font.TS.panel, .isHeader).
+    sc.options.map(ghost ControlButton)  -> CommandSelectOptionRow list (label medium weight +
+                                            optional description + chevron, full-width card).
+    opt label (bold) + opt.description   -> row label (.medium) + caption description line.
+    disabled={loading} + opacity-50      -> row .disabled(isBusy) + dim (busy && !submitting);
+                                            the tapped option shows a spinner accessory.
+    flex justify-end Cancel (ghost)      -> footer TSButton(.ghost,.small) -> model.cancel().
+  Native widening (honest, documented): the web component is prop-driven (open/onClose/onSelect/
+  loading) and purely presentational; the native surface widens it into the prompt-required
+  loading / empty / error / stale / offline envelopes (a command context resolved async /
+  cross-pod), with a freshness chip + cached-data banner + one guarded stale auto-refresh and a
+  per-option in-flight spinner. Tailwind classes were NOT ported; chrome is P1/S9 tokens
+  (TSSpacing/TSRadius/Color.TS/Font.TS) via TSGlassPanel/TSFadeIn/TSButton.
+
+==================================================================================
+STATES (every state renders -- no hidden surfaces)
+==================================================================================
+  loading  -> CommandSelectLoadingState (spinner + "Loading options...") before first request.
+  empty    -> CommandSelectEmptyState (ContentUnavailableView "No options available") -- a
+              resolved request with no selectConfig options.
+  error    -> CommandSelectErrorState (QueryError-equivalent + Retry -> model.refresh()).
+  stale    -> freshness chip "Stale" + connectivity banner + ONE guarded auto-refresh (re-armed
+              on return to live).
+  offline  -> freshness chip "Offline" + banner; cached request kept; no refetch.
+  content  -> the option list (label + description rows; per-option spinner while dispatching;
+              Cancel footer). A failed reload over a cached request keeps content + an inline
+              error.
+  Telemetry: model.start() emits P1/S11 view.opened surface="CommandSelectDialog" (once,
+  idempotent -- ModelTests proven).
+
+==================================================================================
+i18n (P1/S10) -- 14-key bijection (catalog <-> code)
+==================================================================================
+  CommandSelectDialog.strings carries 14 keys; the 6 non-test surface files reference exactly
+  those 14 (orphan scan empty -> 0 unused; bijection verified). The one web `t()` key is mapped
+  (common.cancel -> 'Cancel'); title + option labels/descriptions arrive already-translated as
+  data on the request (the web resolves t(def.labelKey)/t(opt.labelKey) from the command
+  registry). Native envelope keys: loading, empty, emptyMessage, errorTitle, retry, live/stale/
+  offline, staleBanner/offlineBanner; a11y: a11y.close, a11y.dialog, a11y.busy. No English
+  literals in native code (0 raw Text("...") outside the verbatim/localized facade). No
+  placeholder opt-outs were needed (PLACEHOLDER_ALLOWED=0).
+
+==================================================================================
+GATE EXECUTION (every step run on THIS runner; raw exits)
+==================================================================================
+  [1] swiftformat --lint apps/apple (literal gate step)
+        -> "0/4197 files require formatting, 2 files skipped."   FORMAT_EXIT=0  GREEN
+      (my 9 swift files are among the 4197 and are clean; also confirmed scoped:
+       swiftformat --lint <my 9 files> -> 0/9 require formatting.)
+
+  [2] swiftlint --strict (the 9 surface files, passed explicitly; repo .swiftlint.yml
+      `included:` does not list the modals-dialogs tier yet -- tier registration is the
+      P4 acceptance gate's, exactly as the 0006/0017 siblings)
+        -> "Done linting! Found 0 violations, 0 serious in 9 files."  LINT_EXIT=0  GREEN
+
+  [3] check-placeholders.ps1 -- the prompt's literal -Path .../CommandSelectDialog
+        & ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog
+        -> PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0
+      (The prefix matched my 10 CommandSelectDialog.* files; 0 placeholders in any of them.
+       A whole-tier scan [-Path modals-dialogs] reports COUNT=5, but ALL 5 are in OTHER,
+       pre-existing siblings -- ImportPreviewModal.Views.swift / WidgetCatalogueDialog.* --
+       and 0 are in any CommandSelectDialog file.)            PLACEHOLDER_EXIT=0  GREEN
+
+  [4] ISOLATED build + test (SwiftPM module "TeslaSync" = Adapter+Seams+Model, test target =
+      Tests+ModelTests, swift-tools 6.0 / Swift 6 language mode, StrictConcurrency)
+        -> "Executed 31 tests, with 0 failures (0 unexpected)"  SWIFT_TEST_EXIT=0  GREEN
+      (16 model tests + 15 adapter/projection/a11y tests. A standalone executable harness
+       additionally RAN the projection + model logic = 30/30 runtime checks, ALL_HARNESS_
+       TESTS_PASSED -- evidence the verification actually exercised the code, incl. the gated-
+       controller in-flight `submittingValue` observation and the stale auto-refresh re-arm.)
+
+  [5] SDK typecheck of the FULL view layer + the real (Shared-free) design system
+      (Tokens + TSDesign + TSMaterial + Motion + all Sources/Components/UI) + the 7 non-test
+      surface files, -D DEBUG (incl. the #Preview macros), -swift-version 6,
+      -strict-concurrency=complete:
+        iOS   arm64-apple-ios18.0-simulator  -> 0 errors   IOS_TYPECHECK=0  GREEN
+        macOS arm64-apple-macos15.0          -> 0 errors   MAC_TYPECHECK=0  GREEN
+      (The design system is self-contained -- 0 files under Sources/Components or
+       Sources/Design import the KMP `Shared` framework -- so the SwiftUI layer typechecks
+       against the REAL components/tokens on both SDKs with no stubs.)
+
+  [6] FULL-APP xcodebuild (the prompt's two gate steps): RUN; iOS RED on pre-existing
+      unrelated siblings; macOS DEFERRED on signing.
+
+    Pre-req proof: the new modals-dialogs tier is NOT globbed in project.yml. The TeslaSync /
+    TeslaSync-macOS app + test targets glob only Sources, dashboard-widgets, feature-views,
+    misc-surfaces, and shared-surfaces -- `modals-dialogs` appears 0 times in project.yml.
+    `xcodegen generate` (run on this runner) -> grep TeslaSync.xcodeproj/project.pbxproj:
+      CommandSelectDialog = 0 ; modals-dialogs = 0 ; shared-surfaces (control) = 3 (wired
+      tiers DO appear). So the full-app build neither includes nor is affected by this
+      surface's files -- its OWN code is proven by [4]+[5] instead. Wiring the tier in
+      requires editing project.yml + .swiftlint.yml, OUTSIDE this prompt's allowed-files set
+      (CommandSelectDialog.* + this log); tier registration is owned by the P4/P99 acceptance
+      gate, exactly as all siblings.
+
+    iOS: the KMP Shared.xcframework BUILD SUCCESSFUL in 6m58s and was staged
+      (apps/apple/Frameworks/Shared.xcframework), then
+      `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+      build test` -> ** BUILD FAILED ** / ** TEST FAILED ** ; IOS_EXIT=65 (RED, reported as
+      such). The build aborts on exactly 2 compiler errors, BOTH in pre-existing, unrelated
+      wired-tier siblings:
+        TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22:
+          error: escaping closure captures non-escaping parameter 'content'
+        TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142:22:
+          error: escaping closure captures non-escaping parameter 'content'
+      grep "CommandSelectDialog" over the full build log = 0 (zero references to this surface).
+      `git status` shows ONLY the 10 CommandSelectDialog.* files as new, and the two failing
+      AI* files unmodified + tracked at HEAD -> the RED is pre-existing and not introduced or
+      touched by this commit.                                 IOS_EXIT=65  (pre-existing/unrelated)
+
+    macOS: DEFERRED. `security find-identity -v -p codesigning` -> "0 valid identities found",
+      so the macOS app cannot be signed/linked on this runner.  MAC_EXIT=deferred (no signing identity)
+
+==================================================================================
+HONESTY COVENANT
+==================================================================================
+  1 No red-as-green   : the full-app iOS xcodebuild was RUN on this runner and is reported RED
+                        (IOS_EXIT=65) -- never claimed passing -- with raw evidence that both
+                        errors are in pre-existing unrelated shared-surfaces siblings
+                        (AIAutoNameUnnamedLocations / AISignalExplorerNlFilter; 0 in my files;
+                        my tier unwired, 0 pbxproj refs). macOS is DEFERRED (0 signing
+                        identities). [1]-[5] are real GREEN exits with raw output.
+  2 No scope narrowing: every web region + branch reproduced -- the icon+title header, the full
+                        option list (label + optional description), the disabled-while-loading
+                        behaviour (widened to a per-option in-flight spinner), and the Cancel
+                        footer -- plus all six states (loading/empty/error/stale/offline/content)
+                        and the telemetry view.opened.
+  3 No skip-and-assume: web source read end-to-end; the onSelect/onClose/loading semantics ported
+                        and unit-tested; the one t() key mapped; every runnable gate executed on
+                        THIS runner; the tier-unwired claim verified by generating the real Xcode
+                        project and grepping the pbxproj (not assumed); the iOS RED root-caused to
+                        specific unrelated sibling files (not assumed); the KMP framework actually
+                        built + staged (not assumed).
+  4 No stubs as final : complete production surface; placeholder scanner COUNT=0 on my files;
+                        31 real XCTest cases pass (+ 30 runtime-harness checks); no TODO/FIXME/
+                        stub/mock/Lorem.
+  5 No parity shortcut: selection / dismissal / loading / i18n / telemetry / a11y all mapped to
+                        platform seams + tokens and verified; the SwiftUI layer typechecks against
+                        the REAL design system on BOTH the iOS-18 and macOS-15 SDKs.
+  6 No delegation     : authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass: consumes the P1/S8 state-holder seam shape, P1/S9 tokens, P1/S10 i18n
+                        facade, P1/S11 view.opened, and the P4-core shared TSGlassPanel / TSFadeIn /
+                        TSButton; did NOT edit project.yml / .swiftlint.yml / Localizable.xcstrings /
+                        macos-pending-verifications.md / any sibling surface (outside the prompt's
+                        allowed files) -- strings ship as the per-surface table; the pre-existing
+                        shared-surfaces errors are left untouched (not mine to fix here).
+  8 No commit on red  : the committed artifact is GREEN on every runnable gate AND independently
+                        compiles + tests under the real Xcode 26 / Swift 6 toolchain ([4] 31 tests,
+                        [5] iOS+macOS typecheck). The full-app iOS xcodebuild exits 65 RED solely on
+                        pre-existing, unrelated sibling errors -- 0 errors in this surface, which is
+                        not even in the project (tier unwired) -- and macOS is signing-deferred;
+                        neither is introduced or touched by this commit.
+  9 No silent drift   : changes confined to apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.*
+                        and this log (the generated TeslaSync.xcodeproj and staged
+                        Frameworks/Shared.xcframework are git-ignored; `git status` confirms only the
+                        10 surface files are new).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic CommandSelectDialog shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner: the pure logic + state holder build and 31/31 XCTest cases
+  pass under Swift 6 strict concurrency, and the entire SwiftUI view layer typechecks against the
+  real design system on BOTH the iOS-18 and macOS-15 SDKs (0 errors), with swiftformat --lint
+  (0/4197) / swiftlint --strict (0 violations) / placeholder (COUNT=0) all green. The full-app
+  iOS-Simulator xcodebuild build/test was RUN on this runner and exits 65 (RED, reported as such):
+  the KMP Shared.xcframework actually built + staged (6m58s), and the build then aborts on 2
+  pre-existing parallel-merge errors across two unrelated sibling shared-surfaces files
+  (AIAutoNameUnnamedLocations / AISignalExplorerNlFilter) -- 0 errors in any CommandSelectDialog
+  file, which is not even in the generated project (the modals-dialogs tier is unwired: 0 pbxproj
+  refs). The macOS xcodebuild is DEFERRED on development signing (security find-identity: 0 valid
+  identities) -- both owned by the p4-apple/P99 acceptance gate on a signed macos-latest runner per
+  apps/macos-pending-verifications.md, the same disposition as all modals-dialogs siblings. Zero
+  errors in any CommandSelectDialog file.
+
+EXIT=0
+STATUS=DONE
