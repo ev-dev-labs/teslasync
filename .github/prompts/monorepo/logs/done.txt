@@ -239,3 +239,4 @@ p3-android/dashboard-widgets/A-0100-TelemetryErrorsWidget.prompt.md
 p3-android/dashboard-widgets/A-0102-TirePressureVisualWidget.prompt.md
 p3-android/dashboard-widgets/A-0101-TirePressureHistoryWidget.prompt.md
 p3-android/dashboard-widgets/A-0103-TripSummaryWidget.prompt.md
+p3-android/dashboard-widgets/A-0104-UptimeMonitorWidget.prompt.md
