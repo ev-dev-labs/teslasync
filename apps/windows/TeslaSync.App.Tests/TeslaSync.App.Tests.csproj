@@ -2,14 +2,6 @@
 
   <!--
     TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
-    logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each feature-view,
-    dashboard-widget, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
-    TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free sources are
-    Compile-linked into the single ItemGroup below (the Link mirrors each source's real location under Widgets\,
-    FeatureViews\, MiscSurfaces\, ModalsDialogs\ or SharedSurfaces\); the bare WinUI view files are excluded and
-    exercised by the app build. The matching test classes live under this project and are picked up by the SDK
-    default-compile glob. The Content links copy the units-golden, Package.appxmanifest and widget-template
-    fixtures the tests read out of the test output directory.
     logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each dashboard-widget,
     feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
     TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's WinUI-free
@@ -27,8 +19,8 @@
     dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI view
     files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of integration
     merges can re-concatenate it into multiple Project roots plus duplicate Compile items, failing XML load
-    (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Re-consolidated for P2
-    shared-surfaces/0059 AIVoiceMode into this single canonical root (plus the new AIVoiceMode Model / Source /
+    (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Regenerated for P2
+    shared-surfaces/0075 AnimatedNumber into this single canonical root (plus the new AnimatedNumber Model /
     ViewModel links). Do NOT re-concatenate into multiple roots, and never write a literal build-item or project
     start tag inside this comment.
     logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each dashboard-widget,
@@ -2473,12 +2465,15 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIYearReviewNarration.Model.cs" Link="SharedSurfaces\AIYearReviewNarration.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIYearReviewNarration.Source.cs" Link="SharedSurfaces\AIYearReviewNarration.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIYearReviewNarration.ViewModel.cs" Link="SharedSurfaces\AIYearReviewNarration.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AnimatedNumber.Model.cs" Link="SharedSurfaces\AnimatedNumber.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AnimatedNumber.ViewModel.cs" Link="SharedSurfaces\AnimatedNumber.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnotationList\AnnotationList.Model.cs" Link="SharedSurfaces\AnnotationList\AnnotationList.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnotationList\AnnotationList.Source.cs" Link="SharedSurfaces\AnnotationList\AnnotationList.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnotationList\AnnotationList.ViewModel.cs" Link="SharedSurfaces\AnnotationList\AnnotationList.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Model.cs" Link="SharedSurfaces\AnnouncerRegion.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.Source.cs" Link="SharedSurfaces\AnnouncerRegion.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnnouncerRegion.ViewModel.cs" Link="SharedSurfaces\AnnouncerRegion.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AreaChartWrapper.Model.cs" Link="SharedSurfaces\AreaChartWrapper.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.Model.cs" Link="SharedSurfaces\ChartExportMenu.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.Source.cs" Link="SharedSurfaces\ChartExportMenu.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartExportMenu.ViewModel.cs" Link="SharedSurfaces\ChartExportMenu.ViewModel.cs" />
