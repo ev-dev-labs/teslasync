@@ -142,3 +142,4 @@ p3-android/A8-0001-app-widgets-glance.prompt.md
 p3-android/A8-0002-shortcuts-notifications-settings.prompt.md
 p3-android/A8-0003-wear-os-companion.prompt.md
 p3-android/A9-0001-unit-tests.prompt.md
+p3-android/A9-0002-instrumented-compose-ui-tests.prompt.md
