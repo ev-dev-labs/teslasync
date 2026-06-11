@@ -461,3 +461,4 @@ p2-windows/feature-views/W-0249-LiveStatusPill.prompt.md
 p2-windows/feature-views/W-0254-StatusPageSkeleton.prompt.md
 p2-windows/feature-views/W-0250-OperationsSection.prompt.md
 p2-windows/feature-views/W-0248-InfrastructureSection.prompt.md
+p2-windows/feature-views/W-0252-ServiceHealthSection.prompt.md
