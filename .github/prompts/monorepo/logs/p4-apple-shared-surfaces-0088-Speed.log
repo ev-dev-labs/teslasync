@@ -1,0 +1,178 @@
+=== P4 Shared surface 0088 Speed (Apple) ===
+run: 2026-06-11T04:24:46Z  toolchain: Xcode 26.5 / swift 6.3.2  host: macOS (arm64)
+web source: web/src/components/data-display/format/Speed.tsx
+artifact:   apps/apple/TeslaSync/shared-surfaces/Speed.{swift,Adapter,Projection,Model,Views,Previews,AdapterTests,Tests,strings}
+
+--- [1/6] swiftformat --lint ---
+surface scope (8 Speed.* swift files), config apps/apple/.swiftformat:
+  SwiftFormat completed. 0/8 files require formatting.
+global gate (`swiftformat --lint apps/apple`):
+  SwiftFormat completed. 0/3954 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+--- [2/6] swiftlint --strict ---
+surface scope (8 Speed.* swift files), config apps/apple/.swiftlint.yml:
+  Done linting! Found 0 violations, 0 serious in 8 files.
+global gate (`swiftlint --strict`):
+  Done linting! Found 0 violations, 0 serious in 3724 files.
+LINT_EXIT=0
+note: the test file was split into Speed.AdapterTests.swift (pure core: conversion / formatting /
+      settings / input / projection / meta / accessibility) + Speed.Tests.swift (model / view /
+      telemetry) so each stays under the file_length rule (the combined 457-line file tripped it). The
+      project.yml test targets include `**/*Tests.swift` from shared-surfaces, so both bundles compile.
+
+--- [3/6] placeholder scan (per shipped swift file — apps/tools/check-placeholders.ps1) ---
+  PLACEHOLDER_COUNT=0  Speed.swift
+  PLACEHOLDER_COUNT=0  Speed.Adapter.swift
+  PLACEHOLDER_COUNT=0  Speed.Projection.swift
+  PLACEHOLDER_COUNT=0  Speed.Model.swift
+  PLACEHOLDER_COUNT=0  Speed.Views.swift
+  PLACEHOLDER_COUNT=0  Speed.Previews.swift
+  PLACEHOLDER_COUNT=0  Speed.AdapterTests.swift
+  PLACEHOLDER_COUNT=0  Speed.Tests.swift
+PLACEHOLDER_COUNT_TOTAL=0
+PLACEHOLDER_EXIT=0
+note: the prompt gate's `-Path .../shared-surfaces/Speed` is a basename prefix that resolves to no
+      file/dir (the files are `Speed.*`), so the script would scan nothing and trivially exit 0. To make
+      the check MEANINGFUL it was run against each shipped Speed.* swift file individually; all 0. The
+      Speed.strings file carries no forbidden marker (and is not a scanned extension). (The whole
+      shared-surfaces dir is NOT clean — pre-existing siblings carry the literal word "Placeholder";
+      those are outside this surface's allowed-files scope and untouched.)
+
+--- [4/6] isolated Swift 6 strict-concurrency build + XCTest (surface vs REAL design tokens) ---
+harness: SwiftPM module 'TeslaSync' = 6 Speed surface sources + apps/design/generated/apple/Tokens.swift;
+         test target = Speed.AdapterTests.swift + Speed.Tests.swift (@testable import TeslaSync);
+         swiftLanguageModes(.v6) == app SWIFT_VERSION 6.0 + SWIFT_STRICT_CONCURRENCY complete.
+  Test Suite 'SpeedConversionTests'        Executed  7 tests, 0 failures
+  Test Suite 'SpeedFormattingTests'        Executed  7 tests, 0 failures
+  Test Suite 'SpeedDisplaySettingsTests'   Executed  5 tests, 0 failures
+  Test Suite 'SpeedInputTests'             Executed 10 tests, 0 failures
+  Test Suite 'SpeedProjectionTests'        Executed 10 tests, 0 failures
+  Test Suite 'SpeedMetaTests'              Executed  3 tests, 0 failures
+  Test Suite 'SpeedAccessibilityTests'     Executed  2 tests, 0 failures
+  Test Suite 'SpeedModelTests'             Executed  5 tests, 0 failures
+  Test Suite 'SpeedViewTests'              Executed  2 tests, 0 failures
+  Test Suite 'All tests' passed — Executed 51 tests, with 0 failures (0 unexpected) in 0.008s
+ISO_BUILD_TEST_EXIT=0
+
+  cross-platform compile proof (swiftc -typecheck, swift 6, -strict-concurrency=complete, -D DEBUG,
+  all 6 sources + Tokens.swift):
+    iOS 18 simulator (arm64-apple-ios18.0-simulator, iPhoneSimulator26.5.sdk)  IOS_TYPECHECK_EXIT=0
+    macOS 15        (arm64-apple-macos15.0, MacOSX26.5.sdk)                    MAC_TYPECHECK_EXIT=0
+  parity assertions verified against the web expressions (locale-fixed): the source-to-SI factors
+    (mph * 0.44704, kmh * 1000 / 3600), the convertSpeedFromSI SI-to-display step (km/h mps*3600/1000,
+    mph mps*3600/1609.344), the input precedence (finite mph wins; non-finite mph falls through to kmh;
+    0 mph is a valid finite value; neither -> em-dash fallback), the cross-unit case (65 mph under a
+    km/h preference -> "104.61 km/h" with a "65.0 mph" tooltip), fmtNumber locale grouping
+    (en_US "104.61" vs de_DE "104,61"; "5,000.00"), the locale-neutral toFixed(1) title figure, and the
+    precision override (precision 0 -> "73 mph").
+
+--- [5/6] full-app iOS Simulator build test  (scheme TeslaSync, iPhone 16) ---
+Shared.xcframework: built + staged this run (Gradle :core:assembleSharedDebugXCFramework — written out
+                    to apps/shared/core/build/XCFrameworks/...; ios-arm64 / ios-arm64-simulator /
+                    macos-arm64 slices staged into apps/apple/Frameworks).
+
+FIRST PASS (before fix): IOS_EXIT=65, errors total = 213. THREE of those (in ElevationChart.Model.swift
+  + ElevationChart.Previews.swift) were attributable to THIS surface: the surface initially named its
+  display-unit enum `SpeedUnit`, which collided with the PRE-EXISTING `public enum SpeedUnit` in
+  TeslaSync/feature-views/ElevationChart.Models.swift:54, making `SpeedUnit` ambiguous for the
+  ElevationChart consumer (with cascade ".mph"/".kmh" member-lookup failures).
+    error: 'SpeedUnit' is ambiguous for type lookup in this context  (ElevationChart.Model.swift:83)
+  FIX (within allowed files only): renamed the surface enum `SpeedUnit` -> `SpeedUnitPref` (the web type
+  name `web/src/lib/unitConversion.ts` `export type SpeedUnitPref = 'km/h' | 'mph'`, so the rename is a
+  parity IMPROVEMENT, not a workaround). This follows the established surface-local naming pattern:
+  ElevationChart owns `SpeedUnit`, SpeedProfileWidget owns `SpeedDisplayUnit`; this surface owns
+  `SpeedUnitPref`. No sibling file was touched.
+
+SECOND PASS (after fix): IOS_EXIT=65   ** BUILD FAILED ** (build failed -> testing cancelled)
+errors total = 108; errors attributed to Speed.* = 0   (the 213 -> 108 drop is exactly this surface's
+  former contribution removed; the residual 108 are unchanged pre-existing collisions)
+ROOT CAUSE (pre-existing, unrelated, OUTSIDE allowed files): duplicate type declarations among sibling
+surfaces collapsed into the single app module make shared names ambiguous. Categories (count):
+  StateTimelineUpdate 8, StateTimelineConnection 8, StateTimelineLoadStatus 6, RecentDrivesUpdate 6,
+  RecentDrivesLoadStatus 6, RecentDrivesConnection 6, StateTimelineModel 4, RecentDrivesModel 4, … .
+Representative ambiguity + the two colliding declarations behind it:
+  TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift:14:76: error: 'RecentDrivesModel' is ambiguous for type lookup in this context
+  defn A: TeslaSync/feature-views/RecentDrivesSection.Model.swift:23        public final class RecentDrivesModel
+  defn B: TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift:181 public final class RecentDrivesModel
+  defn A: TeslaSync/feature-views/StateTimeline.Model.swift:64              public final class StateTimelineModel
+  defn B: TeslaSync/dashboard-widgets/StateTimelineWidget.Model.swift:104   public final class StateTimelineModel
+  (feature-views + dashboard-widgets are BOTH sources of the same app target — project.yml L41/45,L90/94)
+  -> after the SpeedUnitPref rename, NONE of the 108 errors reference Speed; this surface defines none of
+     RecentDrives*/StateTimeline* (verified absent). Removing the Speed.* files cannot resolve a
+     collision between two OTHER files, so the app target fails identically with or without this surface.
+     This matches the predecessor (0083 Currency) disposition: same 108-error pre-existing iOS blocker.
+
+--- [6/6] full-app macOS build test  (scheme TeslaSync-macOS) ---
+MAC_EXIT=65   ** BUILD FAILED **
+errors total = 4; errors attributed to Speed.* = 0
+ROOT CAUSE (runner capability, unrelated): code-signing requires a development certificate the unsigned
+runner does not have. The four errors:
+  TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS')
+  TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS')
+  (each reported twice across the build graph)
+
+=== Honesty Covenant (binding) ===
+ 1 No red-as-green   : IOS_EXIT/MAC_EXIT pasted RAW as 65 and labelled BUILD FAILED — never reported
+                       green. The first-pass 213-error build (including this surface's 3 SpeedUnit
+                       collision errors) is disclosed in full, not hidden; the full-app build is
+                       disclosed as DEFERRED, not passing.
+ 2 No scope narrowing : every web branch reproduced — the value branch (fmtNumber(convertSpeedFromSI(
+                       sourceMps, speedUnit), precision) + " " + speedUnit, with the raw source value +
+                       source unit `${raw.toFixed(1)} ${sourceUnit}` as the title/tooltip) for BOTH the
+                       mph and kmh source props, AND the fallback branch (no finite mph/kmh -> em dash,
+                       no title). The web source has NO data/loading/error/empty/stale/offline branch
+                       (pure presentational; useUnits is a synchronous settings selector, not a fetch) —
+                       see the Adapter parity note; the 0083 Currency / 0075 AnimatedNumber / 0053
+                       AIThinkingIndicator precedents took the same line. The cross-unit case (display
+                       unit = preference, tooltip unit = source) is reproduced and tested.
+ 3 No skip-and-assume : every runnable gate executed on THIS runner; raw exits pasted. The deferred
+                       iOS/macOS blockers were each re-confirmed by real xcodebuild error lines + a grep
+                       of the duplicate declarations (iOS) and the signing entitlement errors (macOS) —
+                       not assumed. The full-app build was run TWICE (before + after the rename) to
+                       prove the surface's contribution went to exactly 0.
+ 4 No stubs as final  : complete production surface + 51 real tests; placeholder COUNT=0 on every shipped
+                       swift file; no TODO/FIXME/XXX/Coming-soon/Placeholder/Lorem/not-impl. The OSLog
+                       telemetry default is a working logging seam the app overrides.
+ 5 No parity shortcut : the deriveSpeed unit rule ("mi" -> mph, else km/h), the mph*0.44704 /
+                       kmh*1000/3600 source-to-SI step, the convertSpeedFromSI SI-to-display step, the
+                       fmtNumber locale grouping + safeNumber + precision clamp, the toFixed(1) title,
+                       the mph-wins / non-finite-falls-through input precedence, and the unit-symbol
+                       labels are each unit-asserted against the web expressions.
+ 6 No delegation      : implemented directly; no agents (delegation FORBIDDEN for this tier).
+ 7 No predecessor bypass: binds P1/S8 state-holder (SpeedModel) fed by the SpeedDisplaySettings projection
+                       (the native useUnits().unitPrefs.speed + global-precision selectors), P1/S9 tokens
+                       (Color.TS / Font.TS via Tokens.swift, applied at the use-site as the web span
+                       inherits style), P1/S10 i18n (locale-driven number formatting; unit symbols are
+                       universal, no translatable copy in source — see Speed.strings), and P1/S11
+                       view.opened telemetry. Honours the established P4 isolated-build + DEFERRED
+                       full-app disposition AND the surface-local type-naming convention.
+ 8 No commit on red   : the committed artifact (9 Speed.* files + this log) is GREEN on swiftformat,
+                       swiftlint --strict, placeholder, AND a real Swift 6 strict-concurrency build +
+                       51/51 XCTest against the REAL design tokens, plus iOS + macOS typecheck. The
+                       surface's own former collision (SpeedUnit) was FOUND by the full-app build and
+                       FIXED (-> SpeedUnitPref) before committing — the surface now contributes 0 errors.
+                       The deferred full-app gate is blocked only by pre-existing, unrelated, out-of-
+                       allowed-files sibling collisions (iOS) and runner code-signing (macOS).
+ 9 No silent drift    : changes confined to TeslaSync/shared-surfaces/Speed.* + this log (git status
+                       shows exactly 9 untracked Speed.* files and nothing else). No sibling surface,
+                       project.yml, or token file was touched (the RecentDrives*/StateTimeline*
+                       duplicate-symbol fix is owned by the P4 acceptance gate, not this per-surface
+                       prompt). The generated .xcodeproj + staged Shared.xcframework are git-ignored.
+10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic Speed shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles for iOS 18 + macOS 15 and its 51 tests pass under the app's own Swift 6 strict-
+  concurrency rules, against the REAL design system (Tokens.swift), via the Xcode 26.5 toolchain, with
+  swiftformat / swiftlint --strict / placeholder all green on the surface files and the #Preview matrix
+  compiling. A naming collision the surface itself introduced (SpeedUnit vs the pre-existing
+  ElevationChart SpeedUnit) was surfaced by the full-app build and corrected by renaming to the web's own
+  type name SpeedUnitPref, dropping the iOS error count 213 -> 108 with ZERO errors now attributed to
+  this surface. The full-app iOS + macOS xcodebuild build/test gate is DEFERRED (not failed by this code)
+  on pre-existing, unrelated, out-of-allowed-files blockers — sibling duplicate-symbol collisions
+  (RecentDrives*/StateTimeline* in feature-views vs dashboard-widgets) on iOS, and development code-
+  signing on the unsigned macOS runner — owned by the P4 acceptance gate on a signed runner.
+
+EXIT=0
+STATUS=DONE
