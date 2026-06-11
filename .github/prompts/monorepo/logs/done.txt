@@ -494,3 +494,4 @@ p2-windows/feature-views/W-0293-MotorSection.prompt.md
 p2-windows/feature-views/W-0297-RecentDrivesSection.prompt.md
 p2-windows/feature-views/W-0295-QuickStatsGrid.prompt.md
 p2-windows/feature-views/W-0296-RecentChargesSection.prompt.md
+p2-windows/feature-views/W-0300-VehicleConfigSection.prompt.md
