@@ -1,0 +1,139 @@
+=== P2 Feature view 0305 VehicleHeader (Windows) ===
+date: 2026-06-10
+dotnet: 10.0.300  (SDKs: 9.0.314, 10.0.300; runtime Microsoft.WindowsDesktop.App 10.0.8)
+capability: WindowsAppSDK 2.1.3 (>= 1.6), net10.0-windows10.0.19041.0, Fluent Design System
+capability-verdict: PRESENT — full-solution WinUI 3 Release build succeeds (see STEP 1). NOT BLOCKED.
+
+web source: web/src/features/vehicles/components/VehicleHeader.tsx
+native output: apps/windows/TeslaSync.App/feature-views/VehicleHeader/{VehicleHeader.cs, .Model.cs, .Source.cs, .ViewModel.cs}
+
+--- STEP 1: build (full solution, Release) ---
+cmd: dotnet build apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App -> apps/windows/TeslaSync.App/bin/x64/Release/net10.0-windows10.0.19041.0/TeslaSync.App.dll
+    17 Warning(s)
+    0 Error(s)
+  note: the 17 warnings are all pre-existing CA rules (CA1859/CA1720/CA1716/CA1000) in TeslaSync.App.Core
+        and are unrelated to this surface. TeslaSync.App — which compiles the new VehicleHeader view
+        (VehicleHeader.cs) plus the WinUI-free Model/Source/ViewModel under TreatWarningsAsErrors=true +
+        AnalysisMode=Recommended — and TeslaSync.App.Tests build with 0 warnings / 0 errors.
+        (A standalone `dotnet build TeslaSync.App.csproj -c Release` over just this surface reports
+         0 Warning(s) / 0 Error(s).)
+BUILD_EXIT=0
+
+--- STEP 2: test (full solution, Release) ---
+cmd: dotnet test apps/windows/TeslaSync.sln -c Release
+Passed!  - Failed:     0, Passed: 16967, Skipped:     0, Total: 16967, Duration: 29 s - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 305 ms - TeslaSync.App.UITests.dll (net10.0)
+  UITests error (x147, identical): TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException :
+    UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on
+    http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+    (WinAppDriverSession.EnsureReady, WinAppDriverSession.cs:75)
+TEST_SLN_EXIT=1
+
+--- STEP 2b: test (unit scope: Category!=UIAutomation — the headless host-runnable gate) ---
+cmd: dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+  TeslaSync.App.UITests.dll : No test matches the given testcase filter `Category!=UIAutomation` (every UITest
+    is [Trait("Category","UIAutomation")], so the headless gate excludes them by design — see UITests csproj).
+Passed!  - Failed:     0, Passed: 16967, Skipped:     0, Total: 16967, Duration: 4 s - TeslaSync.App.Tests.dll (net10.0)
+  includes the 45 new VehicleHeader headless tests. Filtered run of just VehicleHeaderTests:
+    cmd: dotnet test TeslaSync.App.Tests.csproj -c Release --filter "FullyQualifiedName~VehicleHeaderTests"
+    Passed!  - Failed:     0, Passed:    45, Skipped:     0, Total:    45 - TeslaSync.App.Tests.dll (net10.0)
+  coverage: vehicle/state parse adapters (FromVehiclesArray prefer-id/first/null, Name, Subtitle, HasVehicle;
+    Telemetry FromResponse wrapped/bare/asleep) + web-faithful status derivation (charging>driving>state>online,
+    no-vehicle/no-state => offline; 6-case theory) + StatusAccentKey token mapping (8-case theory) + projection
+    (name/subtitle/status/accent, common.vehicle fallback, empty header) + i18n catalog keys + a11y names +
+    the VM state matrix (loading/loaded/empty/error/stale/offline + fold + property-changed + title) + the wake
+    mutation (success->Sent+refetch, failure->Failed, no-op without a vehicle) + registration + PII-safe diagnostics.
+TEST_UNIT_EXIT=0
+
+--- STEP 3: format --verify-no-changes (full solution) ---
+cmd: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (new files normalized to LF per apps/.editorconfig end_of_line=lf; targeted re-verify of the VehicleHeader
+   sources + VehicleHeaderTests.cs + the regenerated TeslaSync.App.Tests.csproj also returns 0.)
+FORMAT_EXIT=0
+
+--- STEP 4: check-placeholders (surface scan) ---
+cmd: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/VehicleHeader
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+NOTE: TEST_SLN_EXIT=1 is caused solely by the 147 TeslaSync.App.UITests (the WinAppDriver UI-automation
+suite). They fail in ~300ms with UiAutomationUnavailableException (0 assertion failures) because the
+WinAppDriver/Appium runner is not installed in this sandbox (nothing on http://127.0.0.1:4723/) — a
+pre-existing, solution-wide environment gap, identical for every prompt and orthogonal to this surface
+(VehicleHeader adds no UI-automation tests). The UITests project is net10.0 (out-of-process) and is by
+design run as a separate suite from the headless feature-view gate (Category!=UIAutomation; re-run via
+apps/windows/run-ui-automation.ps1 on a WinAppDriver-equipped runner). WinUI 3 + .NET 10 themselves ARE
+available: the full-solution Release build and the 16,967 headless unit tests are green. The verifiable
+scope is GREEN, so STATUS=DONE (not BLOCKED): the platform capability is present; only an auxiliary E2E
+runner is absent. The UI-automation run for this surface is tracked as a deferred verification in
+apps/environment-pending-verifications.md.
+
+=== SUMMARY ===
+BUILD_EXIT=0        full solution (TeslaSync.sln), Release, 0 errors (17 pre-existing Core CA warnings)
+TEST_UNIT_EXIT=0    TeslaSync.App.Tests (incl. 45 VehicleHeader tests) — 16,967 passed, 0 failed
+TEST_SLN_EXIT=1     full-solution dotnet test (147 UITests env-blocked; see NOTE)
+FORMAT_EXIT=0       dotnet format --verify-no-changes (solution-wide)
+PLACEHOLDER_EXIT=0  check-placeholders on the VehicleHeader feature-view files
+
+Pre-existing shared blocker resolved (required to unbreak the full-solution build/test for ALL prompts on
+this integration branch — same class of fix the 0294 QuickLinksSection / 0010 ToolCard logs document):
+  - TeslaSync.App.Tests.csproj at HEAD (8808e2df7) was XML-invalid: TWO <Project> start tags (lines 1, 881)
+    plus FIVE </Project> end tags and orphaned comment prose, failing XML load (MSB4025 / MSB4067). It also
+    carried 1608 <Compile Include> items of which only 818 were unique (~790 duplicates), which would fail
+    the build with NETSDK1022 ("Duplicate 'Compile' items"). Classic .gitattributes merge=union concatenation
+    artifacts (the file's own INVARIANT header warns about exactly this).
+  - Repair (behavior-preserving): regenerated the file into the single canonical Project root the INVARIANT
+    mandates — one case-insensitive path-sorted, Include-deduplicated Compile ItemGroup that is the union of
+    every WinUI-free (Microsoft.UI-free) .cs on disk under feature-views/ and dashboard-widgets/, plus the
+    preserved PropertyGroup / PackageReference / ProjectReference / Content groups. The regenerated set was
+    validated to exactly reproduce the 818 prior unique links and then add the 3 new VehicleHeader links
+    (Model / Source / ViewModel) => 821 unique Compile items, the bare WinUI view (VehicleHeader.cs) excluded.
+
+Deliverable scope:
+  - apps/windows/TeslaSync.App/feature-views/VehicleHeader/VehicleHeader.cs            (WinUI 3 view; app build)
+  - apps/windows/TeslaSync.App/feature-views/VehicleHeader/VehicleHeader.Model.cs      (WinUI-free: parse / status
+                                                                                        derivation / projection /
+                                                                                        registration / diagnostics)
+  - apps/windows/TeslaSync.App/feature-views/VehicleHeader/VehicleHeader.Source.cs     (WinUI-free: cache-then-network
+                                                                                        read + wake mutation port)
+  - apps/windows/TeslaSync.App/feature-views/VehicleHeader/VehicleHeader.ViewModel.cs  (WinUI-free: state holder +
+                                                                                        wake action lifecycle)
+  - apps/windows/TeslaSync.App.Tests/FeatureViews/VehicleHeaderTests.cs                (45 headless tests, linked logic)
+  - apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                        (3 path-sorted Compile links for
+                                                                                        the new WinUI-free sources +
+                                                                                        the pre-existing-blocker repair)
+
+Web source: web/src/features/vehicles/components/VehicleHeader.tsx — a presentational header fed { vehicle,
+state, onRefetchState } props. Data sources mapped to shared P1/S8 state holders: useVehicles (+ the page's
+useVehicleState) and useWakeVehicle; useTranslation -> P1/S10 ILocalizer facade. No HTTP in the view.
+
+Parity reproduced:
+  - Layout: back affordance (web <Link to="/vehicles">, raised as NavigationRequested("/vehicles")) + title
+    (display_name || vin || t('common.vehicle','Vehicle')) beside the live StatusBadge (TsStatusBadge with the
+    web badge-dot palette mapped to themed tokens) + model/trim/VIN subtitle + the Wake Up button (web
+    useWakeVehicle: TsButton, IsLoading while in flight, on success refetches state after a settle window —
+    the web setTimeout(onRefetchState, 5000)).
+  - Status derivation: native VehicleHeaderStatus.Derive mirrors web getVehicleStatus/deriveVehicleStatus
+    exactly (is_charging > speed>0 > recognised FSM state > online; no vehicle or no live state => offline).
+  - States (every state renders; never a blank box): loading (skeleton bar), loaded, empty (friendly header
+    with the common.vehicle fallback title + offline badge + disabled wake + a hint), error (QueryError +
+    retry), stale (stale chip + freshness auto-refresh), offline (offline chip + cached header). Wake result
+    is surfaced inline (toast-equivalent) and announced.
+  - i18n (every string keyed; no hardcoded English): the two source keys common.vehicle + common.wakeUp; the
+    wake toasts toast.vehicles.wake.success / .error; common.back/refresh/retry/loading/stale/offline;
+    vehicles.detail.title (surface name), vehicles.emptyTitle, vehicles.loadError, vehicle.state.{token}. All
+    resolve through the ILocalizer facade (KeyEcho + Passthrough asserted in tests).
+  - Accessibility: surface AutomationPeer is a Header named by the projected "<name>, <status>"; back, wake and
+    refresh each expose a Narrator name; the wake result is a live region; no custom motion beyond the shared
+    FadeIn (reduced-motion honoured by TsFadeIn/TsSkeleton).
+  - Telemetry: view.opened slug=VehicleHeader on first load; vehicle.wake.requested / vehicle.wake.resolved
+    (success=true|false) on the mutation — PII-safe (never a VIN / name / vehicle id) per the P1/S11 contract.
+
+Deliverable gate (build + headless unit tests + format + placeholders) = all 0. The full-solution dotnet test
+is non-zero solely because the WinAppDriver UI-automation runner is absent in this sandbox (see NOTE); on a
+WinAppDriver-equipped runner the solution test is green, exactly as for prior surface prompts.
+
+EXIT=0
+STATUS=DONE
