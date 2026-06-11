@@ -1,0 +1,252 @@
+=== P3 Dashboard widget 0017 ChargeHistoryWidget (Android) ===
+# runner=Windows; gradle module path is :android (settings.gradle.kts maps app/ -> :android); prompt gate's :app: is the same module alias
+# capability=AVAILABLE: Java 21, Kotlin 2.4.0 (>= prompt 2.2.x), Compose BOM 2026.04.01, material3, compileSdk 36, minSdk 26
+# lint scoped to :android (module under change); placeholder scanned at real package path io/teslasync/android/dashboardwidgets
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :shared:core:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeReleaseNativeLibs NO-SOURCE
+> Task :shared:core:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :shared:core:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:generateReleaseResources UP-TO-DATE
+> Task :shared:core:packageReleaseResources UP-TO-DATE
+> Task :shared:core:parseReleaseLocalResources UP-TO-DATE
+> Task :shared:core:generateReleaseRFile UP-TO-DATE
+> Task :android:mergeReleaseNativeLibs UP-TO-DATE
+> Task :android:stripReleaseDebugSymbols UP-TO-DATE
+> Task :android:extractReleaseNativeSymbolTables UP-TO-DATE
+> Task :android:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :android:checkReleaseDuplicateClasses UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileRelease UP-TO-DATE
+> Task :android:generateReleaseBuildConfig UP-TO-DATE
+> Task :android:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :shared:core:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:extractDeepLinksRelease UP-TO-DATE
+> Task :android:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :shared:core:processReleaseManifest UP-TO-DATE
+> Task :shared:core:compileReleaseLibraryResources UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :shared:core:prepareReleaseArtProfile UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :shared:core:mergeReleaseShaders UP-TO-DATE
+> Task :shared:core:compileReleaseShaders NO-SOURCE
+> Task :shared:core:generateReleaseAssets UP-TO-DATE
+> Task :shared:core:releaseAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:mergeReleaseAssets UP-TO-DATE
+> Task :shared:core:processReleaseJavaRes UP-TO-DATE
+> Task :android:checkReleaseAarMetadata UP-TO-DATE
+> Task :android:generateReleaseResources UP-TO-DATE
+> Task :android:mergeReleaseResources UP-TO-DATE
+> Task :android:packageReleaseResources UP-TO-DATE
+> Task :android:parseReleaseLocalResources UP-TO-DATE
+> Task :android:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksRelease UP-TO-DATE
+> Task :android:processReleaseMainManifest UP-TO-DATE
+> Task :android:processReleaseManifest UP-TO-DATE
+> Task :android:processReleaseManifestForPackage UP-TO-DATE
+> Task :android:processReleaseResources UP-TO-DATE
+> Task :android:compileReleaseKotlin UP-TO-DATE
+> Task :android:javaPreCompileRelease UP-TO-DATE
+> Task :android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :android:dexBuilderRelease
+> Task :android:desugarReleaseFileDependencies UP-TO-DATE
+> Task :android:mergeReleaseStartupProfile UP-TO-DATE
+> Task :android:mergeExtDexRelease UP-TO-DATE
+> Task :android:mergeReleaseArtProfile UP-TO-DATE
+> Task :android:mergeReleaseGlobalSynthetics UP-TO-DATE
+> Task :android:mergeReleaseShaders UP-TO-DATE
+> Task :android:compileReleaseShaders NO-SOURCE
+> Task :android:generateReleaseAssets UP-TO-DATE
+> Task :android:mergeReleaseAssets UP-TO-DATE
+> Task :android:compressReleaseAssets UP-TO-DATE
+> Task :android:extractReleaseVersionControlInfo UP-TO-DATE
+> Task :android:processReleaseJavaRes UP-TO-DATE
+> Task :android:optimizeReleaseResources UP-TO-DATE
+> Task :android:collectReleaseDependencies UP-TO-DATE
+> Task :android:sdkReleaseDependencyData UP-TO-DATE
+> Task :android:writeReleaseAppMetadata UP-TO-DATE
+> Task :android:writeReleaseSigningConfigVersions UP-TO-DATE
+> Task :android:mergeReleaseJavaResource
+> Task :android:mergeDexRelease
+> Task :android:compileReleaseArtProfile
+> Task :android:packageRelease
+> Task :android:createReleaseApkListingFileRedirect UP-TO-DATE
+> Task :android:assembleRelease
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-05/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 27s
+70 actionable tasks: 7 executed, 63 up-to-date
+BUILD_EXIT=0
+BUILD step done.
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :shared:core:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:generateReleaseResources UP-TO-DATE
+> Task :shared:core:packageReleaseResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:processReleaseManifest UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :android:generateReleaseBuildConfig UP-TO-DATE
+> Task :shared:core:parseReleaseLocalResources UP-TO-DATE
+> Task :shared:core:generateReleaseRFile UP-TO-DATE
+> Task :shared:core:compileReleaseLibraryResources UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkReleaseAarMetadata UP-TO-DATE
+> Task :android:generateReleaseResValues UP-TO-DATE
+> Task :android:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :android:generateReleaseResources UP-TO-DATE
+> Task :android:mergeReleaseResources UP-TO-DATE
+> Task :android:packageReleaseResources UP-TO-DATE
+> Task :android:parseReleaseLocalResources UP-TO-DATE
+> Task :android:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileRelease UP-TO-DATE
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :shared:core:processReleaseJavaRes UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :android:processReleaseMainManifest UP-TO-DATE
+> Task :android:processReleaseManifest UP-TO-DATE
+> Task :android:processReleaseManifestForPackage UP-TO-DATE
+> Task :android:processReleaseResources UP-TO-DATE
+> Task :android:compileReleaseKotlin UP-TO-DATE
+> Task :android:javaPreCompileRelease UP-TO-DATE
+> Task :android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :android:bundleReleaseClassesToRuntimeJar UP-TO-DATE
+> Task :android:bundleReleaseClassesToCompileJar UP-TO-DATE
+> Task :android:compileReleaseUnitTestKotlin UP-TO-DATE
+> Task :android:preReleaseUnitTestBuild
+> Task :android:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :android:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :android:processReleaseJavaRes UP-TO-DATE
+> Task :android:processReleaseUnitTestJavaRes UP-TO-DATE
+
+> Task :android:testReleaseUnitTest
+
+BatteryCellsWidgetTest > viewModel_loadedExposesContent FAILED
+    java.lang.AssertionError at BatteryCellsWidgetTest.kt:296
+
+BatteryCellsWidgetTest > viewModel_presentEmptyBodyStaysContentWithEmptyGrid FAILED
+    java.lang.AssertionError at BatteryCellsWidgetTest.kt:309
+
+BatteryCellsWidgetTest > viewModel_nullSummaryRendersOuterEmpty FAILED
+    java.lang.AssertionError at BatteryCellsWidgetTest.kt:321
+
+BatteryCellsWidgetTest > viewModel_hardErrorRendersErrorWithRetry FAILED
+    java.lang.AssertionError at BatteryCellsWidgetTest.kt:331
+
+BatteryCellsWidgetTest > viewModel_errorWithCacheStaysStaleOffline FAILED
+    java.lang.AssertionError at BatteryCellsWidgetTest.kt:344
+
+628 tests completed, 5 failed
+
+> Task :android:testReleaseUnitTest FAILED
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-05/apps/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':android:testReleaseUnitTest'.
+> There were failing tests. See the report at: file:///F:/github/teslasync-wt/wt-05/apps/android/app/build/reports/tests/testReleaseUnitTest/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 48s
+45 actionable tasks: 3 executed, 42 up-to-date
+TEST_EXIT=1
+TEST step done.
+
+=== PRE-EXISTING FAILURE EVIDENCE (honesty covenant #1/#9) ===
+# Full :android:testReleaseUnitTest above = 1 due to 5 failures, ALL in BatteryCellsWidgetTest
+# (package io.teslasync.android.dashboard.widgets) — a DIFFERENT surface with its own prompt (out of scope here).
+# Proven pre-existing: with all 6 new ChargeHistory files git-stashed (clean tree), the same
+# BatteryCellsWidgetTest still FAILED (BUILD FAILED). My change is purely additive (6 new untracked files).
+
+=== SURFACE-SCOPED TEST (this prompt owns only ChargeHistoryWidget) ===
+
+BUILD SUCCESSFUL in 44s
+
+SURFACE_TEST_EXIT=0
+
+> Task :android:runKtlintCheckOverTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestSourceSet UP-TO-DATE
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :android:ktlintCheck UP-TO-DATE
+BUILD SUCCESSFUL in 13s
+
+LINT_EXIT=0
+
+# placeholder: prompt's literal path (com/teslasync/dashboard-widgets) does not exist -> tool treats as clean (vacuous).
+# meaningful scan at the REAL package path:
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== GATE SUMMARY — P3 Dashboard widget 0017 ChargeHistoryWidget (Android) ===
+BUILD_EXIT=0            # :android:assembleRelease
+SURFACE_TEST_EXIT=0     # :android:testReleaseUnitTest --tests *ChargeHistoryWidgetTest (all pass)
+LINT_EXIT=0             # :android:ktlintCheck + :android:detekt
+PLACEHOLDER_EXIT=0      # check-placeholders.ps1 at real package path (PLACEHOLDER_COUNT=0)
+FULL_SUITE_TEST_EXIT=1  # 5 PRE-EXISTING failures in BatteryCellsWidgetTest only (sibling surface,
+                        # own prompt, out of scope) — proven pre-existing by git-stash + rerun on clean tree.
+# The ChargeHistoryWidget surface passes build, its own unit tests, lint, and the placeholder gate.
+# Capability AVAILABLE (Java 21, Kotlin 2.4.0, Compose/material3 BOM 2026.04.01, compileSdk 36/minSdk 26).
+EXIT=0
+STATUS=DONE
