@@ -1,0 +1,54 @@
+/*
+  VehicleConfigSection.strings
+  TeslaSync — P4 feature view · 0300 · VehicleConfigSection (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VehicleConfigSection` resolves (table "VehicleConfigSection") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first two groups are the exact keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/VehicleConfigSection.tsx). The remainder
+  back the native state envelope (no-value dash, empty sentence, freshness chip,
+  connectivity banner, loading / error chrome) that the web leaf delegates to its parent
+  page.
+*/
+
+/* --- Row labels from the web source (parity) --- */
+"vehicles.detail.vehicleConfig" = "Vehicle Configuration";
+"vehicles.detail.carType" = "Car Type";
+"vehicles.detail.trim" = "Trim";
+"vehicles.detail.color" = "Exterior Color";
+"vehicles.detail.wheels" = "Wheels";
+"vehicles.detail.roofColor" = "Roof Color";
+"vehicles.detail.chargePort" = "Charge Port";
+"vehicles.detail.rhd" = "Right-Hand Drive";
+"vehicles.detail.europeVehicle" = "Europe Vehicle";
+"vehicles.detail.offroadLightbar" = "Offroad Lightbar";
+"vehicles.detail.rearSeatHeaters" = "Rear Seat Heaters";
+"vehicles.detail.sunroofInstalled" = "Sunroof";
+"vehicles.detail.softwareVersion" = "Software";
+
+/* --- Boolean values (web `t('common.yes', 'Yes')` / `t('common.no', 'No')`) --- */
+"common.yes" = "Yes";
+"common.no" = "No";
+
+/* --- Empty display + empty state (native envelope; web leaf delegates to its page) --- */
+"configSection.noValue" = "—";
+"vehicles.detail.noVehicleConfig" = "No configuration data available";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"configSection.live" = "Live";
+"configSection.stale" = "Stale";
+"configSection.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"configSection.staleBanner" = "Reconnecting — configuration may be stale";
+"configSection.offlineBanner" = "Offline — showing last known configuration";
+
+/* --- Loading / error chrome --- */
+"configSection.loading" = "Loading vehicle configuration";
+"configSection.errorTitle" = "Couldn't load vehicle configuration";
+"configSection.retry" = "Retry";
