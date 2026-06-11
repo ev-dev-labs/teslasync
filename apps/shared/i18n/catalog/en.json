@@ -34133,6 +34133,11 @@
       "translated": true,
       "value": "Charge Rate"
     },
+    "translation.vehicles.detail.rangeAdded": {
+      "tokens": [],
+      "translated": true,
+      "value": "Range Added"
+    },
     "translation.vehicles.detail.chargerPower": {
       "tokens": [],
       "translated": true,
