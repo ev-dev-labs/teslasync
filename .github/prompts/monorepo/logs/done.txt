@@ -297,3 +297,4 @@ p3-android/feature-views/A-0048-SummaryStatsRow.prompt.md
 p3-android/feature-views/A-0046-SecurityStatusCards.prompt.md
 p3-android/feature-views/A-0050-UserImpersonateButton.prompt.md
 p3-android/feature-views/A-0051-AchievementBadge.prompt.md
+p3-android/feature-views/A-0049-WindowStatusDetail.prompt.md
