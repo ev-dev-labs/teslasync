@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher app-shortcut labels (P3/A8; app-owned, not part of the generated i18n catalog). -->
+<resources>
+    <string name="shortcut_dashboard_short">Dashboard</string>
+    <string name="shortcut_dashboard_long">Open dashboard</string>
+    <string name="shortcut_vehicles_short">Vehicles</string>
+    <string name="shortcut_vehicles_long">View vehicles</string>
+    <string name="shortcut_charging_short">Charging</string>
+    <string name="shortcut_charging_long">View charging</string>
+    <string name="shortcut_live_map_short">Live map</string>
+    <string name="shortcut_live_map_long">Open live map</string>
+    <string name="shortcut_commands_short">Commands</string>
+    <string name="shortcut_commands_long">Send commands</string>
+    <string name="shortcut_notifications_short">Notifications</string>
+    <string name="shortcut_notifications_long">View notifications</string>
+    <string name="shortcut_search_short">Search</string>
+    <string name="shortcut_search_long">Search TeslaSync</string>
+</resources>

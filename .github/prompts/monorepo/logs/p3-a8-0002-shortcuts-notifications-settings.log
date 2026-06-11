@@ -1,0 +1,400 @@
+=== P3/A8/0002 shortcuts-notifications-settings gate 2026-06-11T00:31:50.5967644-07:00 (gradle --offline; deps cached) ===
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :android:generateDebugBuildConfig UP-TO-DATE
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :android:compileDebugKotlin UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :android:compileDebugJavaWithJavac UP-TO-DATE
+> Task :android:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :android:preDebugUnitTestBuild
+> Task :android:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :android:processDebugJavaRes UP-TO-DATE
+> Task :android:bundleDebugClassesToRuntimeJar
+> Task :android:compileDebugUnitTestKotlin
+> Task :android:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :android:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :android:testDebugUnitTest
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 28s
+44 actionable tasks: 5 executed, 39 up-to-date
+UNIT_EXIT=0
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :android:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :android:generateDebugBuildConfig UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:mergeDebugShaders UP-TO-DATE
+> Task :shared:core:compileDebugShaders NO-SOURCE
+> Task :shared:core:debugAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:generateDebugAssets UP-TO-DATE
+> Task :shared:core:mergeDebugAssets UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :shared:core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeDebugNativeLibs NO-SOURCE
+> Task :shared:core:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :android:compileDebugKotlin UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :android:compileDebugJavaWithJavac UP-TO-DATE
+> Task :android:mergeDebugShaders UP-TO-DATE
+> Task :android:compileDebugShaders NO-SOURCE
+> Task :android:generateDebugAssets UP-TO-DATE
+> Task :android:mergeDebugAssets UP-TO-DATE
+> Task :android:compressDebugAssets UP-TO-DATE
+> Task :android:desugarDebugFileDependencies UP-TO-DATE
+> Task :android:dexBuilderDebug
+> Task :android:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :android:processDebugJavaRes UP-TO-DATE
+> Task :android:checkDebugDuplicateClasses UP-TO-DATE
+> Task :android:mergeExtDexDebug UP-TO-DATE
+> Task :android:mergeLibDexDebug UP-TO-DATE
+> Task :android:mergeDebugJniLibFolders UP-TO-DATE
+> Task :android:mergeDebugNativeLibs UP-TO-DATE
+> Task :android:stripDebugDebugSymbols UP-TO-DATE
+> Task :android:validateSigningDebug UP-TO-DATE
+> Task :android:writeDebugAppMetadata UP-TO-DATE
+> Task :android:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :android:mergeProjectDexDebug
+> Task :android:mergeDebugJavaResource
+> Task :android:packageDebug
+> Task :android:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :android:assembleDebug
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 24s
+62 actionable tasks: 6 executed, 56 up-to-date
+ASM_EXIT=0
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:preDebugBuild UP-TO-DATE
+> Task :shared:core:mergeDebugJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeDebugNativeLibs NO-SOURCE
+> Task :shared:core:stripDebugDebugSymbols NO-SOURCE
+> Task :shared:core:copyDebugJniLibsProjectAndLocalJars UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preDebugBuild
+> Task :android:generateDebugBuildConfig UP-TO-DATE
+> Task :android:generateDebugResValues UP-TO-DATE
+> Task :android:generateDebugResources UP-TO-DATE
+> Task :android:packageDebugResources UP-TO-DATE
+> Task :android:parseDebugLocalResources UP-TO-DATE
+> Task :android:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksDebug UP-TO-DATE
+> Task :android:javaPreCompileDebug UP-TO-DATE
+> Task :android:preDebugAndroidTestBuild SKIPPED
+> Task :android:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :android:extractProguardFiles UP-TO-DATE
+> Task :android:preDebugUnitTestBuild
+> Task :android:loadKtlintReporters UP-TO-DATE
+> Task :android:runKtlintCheckOverAndroidTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestReleaseSourceSetCheck SKIPPED
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestSourceSet UP-TO-DATE
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :shared:core:generateDebugResValues UP-TO-DATE
+> Task :android:ktlintAndroidTestSourceSetCheck UP-TO-DATE
+> Task :shared:core:generateDebugResources UP-TO-DATE
+> Task :android:runKtlintCheckOverDebugSourceSet NO-SOURCE
+> Task :android:ktlintDebugSourceSetCheck SKIPPED
+> Task :shared:core:packageDebugResources UP-TO-DATE
+> Task :shared:core:parseDebugLocalResources UP-TO-DATE
+> Task :android:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :shared:core:generateDebugRFile UP-TO-DATE
+> Task :android:mapDebugSourceSetPaths UP-TO-DATE
+> Task :android:mergeDebugResources UP-TO-DATE
+> Task :android:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverMainSourceSet UP-TO-DATE
+> Task :android:ktlintMainSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverReleaseSourceSet NO-SOURCE
+> Task :android:ktlintReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestReleaseSourceSetCheck SKIPPED
+> Task :shared:core:compileDebugKotlinAndroid UP-TO-DATE
+> Task :android:runKtlintCheckOverTestSourceSet UP-TO-DATE
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :android:ktlintCheck UP-TO-DATE
+> Task :shared:core:extractDebugAnnotations UP-TO-DATE
+> Task :shared:core:extractDeepLinksForAarDebug UP-TO-DATE
+> Task :shared:core:mergeDebugShaders UP-TO-DATE
+> Task :shared:core:compileDebugShaders NO-SOURCE
+> Task :shared:core:debugAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:generateDebugAssets UP-TO-DATE
+> Task :shared:core:mergeDebugAssets UP-TO-DATE
+> Task :shared:core:javaPreCompileDebug UP-TO-DATE
+> Task :shared:core:compileDebugJavaWithJavac NO-SOURCE
+> Task :android:detekt UP-TO-DATE
+> Task :shared:core:mergeDebugGeneratedProguardFiles UP-TO-DATE
+> Task :shared:core:mergeDebugConsumerProguardFiles UP-TO-DATE
+> Task :shared:core:prepareDebugArtProfile UP-TO-DATE
+> Task :shared:core:prepareLintJarForPublish UP-TO-DATE
+> Task :shared:core:processDebugManifest UP-TO-DATE
+> Task :shared:core:processDebugJavaRes UP-TO-DATE
+> Task :shared:core:mergeDebugJavaResource UP-TO-DATE
+> Task :shared:core:syncDebugLibJars UP-TO-DATE
+> Task :shared:core:writeDebugAarMetadata UP-TO-DATE
+> Task :shared:core:bundleDebugLocalLintAar UP-TO-DATE
+> Task :shared:core:extractDeepLinksDebug UP-TO-DATE
+> Task :shared:core:compileDebugLibraryResources UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :shared:core:writeDebugLintModelMetadata UP-TO-DATE
+> Task :android:checkDebugAarMetadata UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :shared:core:createFullJarDebug UP-TO-DATE
+> Task :shared:core:extractProguardFiles UP-TO-DATE
+> Task :android:processDebugMainManifest UP-TO-DATE
+> Task :android:processDebugManifest UP-TO-DATE
+> Task :android:processDebugManifestForPackage UP-TO-DATE
+> Task :shared:core:generateDebugLintModel UP-TO-DATE
+> Task :shared:core:preDebugAndroidTestBuild UP-TO-DATE
+> Task :shared:core:generateDebugAndroidTestResValues UP-TO-DATE
+> Task :android:processDebugResources UP-TO-DATE
+> Task :shared:core:generateDebugAndroidTestLintModel UP-TO-DATE
+> Task :shared:core:preDebugUnitTestBuild UP-TO-DATE
+> Task :shared:core:generateDebugUnitTestLintModel UP-TO-DATE
+> Task :android:compileDebugKotlin UP-TO-DATE
+> Task :android:compileDebugJavaWithJavac UP-TO-DATE
+> Task :android:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :android:generateDebugAndroidTestLintModel
+> Task :android:generateDebugLintReportModel
+> Task :android:generateDebugUnitTestLintModel
+
+> Task :shared:core:lintAnalyzeDebug
+e: file:///C:/Users/AtulM/.gradle/caches/8.14.5/transforms/f8b225cf0ebfc29a8b42d4eaf2eea270/transformed/android-driver-2.3.2/jars/classes.jar!/META-INF/android-driver.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-okhttp-jvm/3.5.0/a76c4f00690aa8562903426aab016bcd99469cb/ktor-client-okhttp-jvm-3.5.0.jar!/META-INF/ktor-client-okhttp.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/app.cash.sqldelight/runtime-jvm/2.3.2/ca2286f676b8a70bac0d71e7b7a95a89dfa4a859/runtime-jvm-2.3.2.jar!/META-INF/runtime.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-content-negotiation-jvm/3.5.0/4aba161e9ff646c386f83aa5146aa0312010edfd/ktor-client-content-negotiation-jvm-3.5.0.jar!/META-INF/ktor-client-content-negotiation.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-core-jvm/3.5.0/cb48c792be6c3caffa8dba50a1ba69193a23babd/ktor-client-core-jvm-3.5.0.jar!/META-INF/ktor-client-core.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-serialization-kotlinx-json-jvm/3.5.0/ecef802224af6f133a376718edeb8b97d96c9c00/ktor-serialization-kotlinx-json-jvm-3.5.0.jar!/META-INF/ktor-serialization-kotlinx-json.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-http-cio-jvm/3.5.0/d6c4f6b0139dea5bd8c8c75689b1ac5711d81b4b/ktor-http-cio-jvm-3.5.0.jar!/META-INF/ktor-http-cio.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-websocket-serialization-jvm/3.5.0/8d38b53385c257b0e7e8467eb632949fbaf3aec/ktor-websocket-serialization-jvm-3.5.0.jar!/META-INF/ktor-websocket-serialization.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-serialization-kotlinx-jvm/3.5.0/137d7f4f380244643500d63074a1c2b54ff820b7/ktor-serialization-kotlinx-jvm-3.5.0.jar!/META-INF/ktor-serialization-kotlinx.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-serialization-jvm/3.5.0/3414457dbc4fb1ab930abf06d54a348cf676610e/ktor-serialization-jvm-3.5.0.jar!/META-INF/ktor-serialization.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-websockets-jvm/3.5.0/3f3c72ff0ac05cd56112dd573f2ae523d747799/ktor-websockets-jvm-3.5.0.jar!/META-INF/ktor-websockets.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-http-jvm/3.5.0/fa0ea5826b757e0cb3245acb6367c46211bfe33b/ktor-http-jvm-3.5.0.jar!/META-INF/ktor-http.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-events-jvm/3.5.0/99eb61a544eff4069c737c2bf0c15f5bda6813c9/ktor-events-jvm-3.5.0.jar!/META-INF/ktor-events.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-sse-jvm/3.5.0/1a9fcd645bb7b06186e501c7c1eaca2d4a85e19a/ktor-sse-jvm-3.5.0.jar!/META-INF/ktor-sse.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-network-jvm/3.5.0/137aa65c4be101e37cebc3de024220f5444b2a12/ktor-network-jvm-3.5.0.jar!/META-INF/ktor-network.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-utils-jvm/3.5.0/1f08480b0d2c5effd77efd84dc2ca71332fdd09/ktor-utils-jvm-3.5.0.jar!/META-INF/ktor-utils.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-io-jvm/3.5.0/2e0a1d6b645dd541c6ce2c2ee6f7fc9631f45484/ktor-io-jvm-3.5.0.jar!/META-INF/ktor-io.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-io-jvm/1.11.0/645ed54ca9128fc217b30b3686a083141ebe635c/kotlinx-serialization-json-io-jvm-1.11.0.jar!/META-INF/kotlinx-serialization-json-io.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.11.0/c1905c9bf7452b045d5af9248835abe64ddad6bf/kotlinx-serialization-core-jvm-1.11.0.jar!/META-INF/kotlinx-serialization-core.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.11.0/e7e045e99e56f07599bb9ccb708c2190e2af0606/kotlinx-serialization-json-jvm-1.11.0.jar!/META-INF/kotlinx-serialization-json.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-io-core-jvm/0.9.0/7f7536f8f057ffc7f79375714e9730c4b8bdd7c9/kotlinx-io-core-jvm-0.9.0.jar!/META-INF/kotlinx-io-core.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-io-bytestring-jvm/0.9.0/e73a7915234a8ea7954f32b715ef8e42b02f66a3/kotlinx-io-bytestring-jvm-0.9.0.jar!/META-INF/kotlinx-io-bytestring.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.4.0/4e9f4b531dce5c7dee58ed2de9a8b9a763c8dc6c/kotlin-stdlib-2.4.0.jar!/META-INF/kotlin-stdlib-jdk8.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.4.0/4e9f4b531dce5c7dee58ed2de9a8b9a763c8dc6c/kotlin-stdlib-2.4.0.jar!/META-INF/kotlin-stdlib.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.4.0/4e9f4b531dce5c7dee58ed2de9a8b9a763c8dc6c/kotlin-stdlib-2.4.0.jar!/META-INF/kotlin-stdlib-jdk7.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+e: file:///F:/github/teslasync-wt/wt-01/apps/shared/core/build/tmp/kotlin-classes/debug/META-INF/shared_core_debug.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+
+> Task :android:lintAnalyzeDebugAndroidTest
+e: file:///C:/Users/AtulM/.gradle/caches/8.14.5/transforms/334cadb92c875dc8ef4547f910c18285/transformed/out/jars/classes.jar!/META-INF/shared_core_debug.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/8.14.5/transforms/f8b225cf0ebfc29a8b42d4eaf2eea270/transformed/android-driver-2.3.2/jars/classes.jar!/META-INF/android-driver.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-okhttp-jvm/3.5.0/a76c4f00690aa8562903426aab016bcd99469cb/ktor-client-okhttp-jvm-3.5.0.jar!/META-INF/ktor-client-okhttp.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/app.cash.sqldelight/runtime-jvm/2.3.2/ca2286f676b8a70bac0d71e7b7a95a89dfa4a859/runtime-jvm-2.3.2.jar!/META-INF/runtime.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-content-negotiation-jvm/3.5.0/4aba161e9ff646c386f83aa5146aa0312010edfd/ktor-client-content-negotiation-jvm-3.5.0.jar!/META-INF/ktor-client-content-negotiation.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-core-jvm/3.5.0/cb48c792be6c3caffa8dba50a1ba69193a23babd/ktor-client-core-jvm-3.5.0.jar!/META-INF/ktor-client-core.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-serialization-kotlinx-json-jvm/3.5.0/ecef802224af6f133a376718edeb8b97d96c9c00/ktor-serialization-kotlinx-json-jvm-3.5.0.jar!/META-INF/ktor-serialization-kotlinx-json.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-http-cio-jvm/3.5.0/d6c4f6b0139dea5bd8c8c75689b1ac5711d81b4b/ktor-http-cio-jvm-3.5.0.jar!/META-INF/ktor-http-cio.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-websocket-serialization-jvm/3.5.0/8d38b53385c257b0e7e8467eb632949fbaf3aec/ktor-websocket-serialization-jvm-3.5.0.jar!/META-INF/ktor-websocket-serialization.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-serialization-kotlinx-jvm/3.5.0/137d7f4f380244643500d63074a1c2b54ff820b7/ktor-serialization-kotlinx-jvm-3.5.0.jar!/META-INF/ktor-serialization-kotlinx.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-serialization-jvm/3.5.0/3414457dbc4fb1ab930abf06d54a348cf676610e/ktor-serialization-jvm-3.5.0.jar!/META-INF/ktor-serialization.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-websockets-jvm/3.5.0/3f3c72ff0ac05cd56112dd573f2ae523d747799/ktor-websockets-jvm-3.5.0.jar!/META-INF/ktor-websockets.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-http-jvm/3.5.0/fa0ea5826b757e0cb3245acb6367c46211bfe33b/ktor-http-jvm-3.5.0.jar!/META-INF/ktor-http.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-events-jvm/3.5.0/99eb61a544eff4069c737c2bf0c15f5bda6813c9/ktor-events-jvm-3.5.0.jar!/META-INF/ktor-events.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-sse-jvm/3.5.0/1a9fcd645bb7b06186e501c7c1eaca2d4a85e19a/ktor-sse-jvm-3.5.0.jar!/META-INF/ktor-sse.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-network-jvm/3.5.0/137aa65c4be101e37cebc3de024220f5444b2a12/ktor-network-jvm-3.5.0.jar!/META-INF/ktor-network.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-utils-jvm/3.5.0/1f08480b0d2c5effd77efd84dc2ca71332fdd09/ktor-utils-jvm-3.5.0.jar!/META-INF/ktor-utils.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-io-jvm/3.5.0/2e0a1d6b645dd541c6ce2c2ee6f7fc9631f45484/ktor-io-jvm-3.5.0.jar!/META-INF/ktor-io.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-io-jvm/1.11.0/645ed54ca9128fc217b30b3686a083141ebe635c/kotlinx-serialization-json-io-jvm-1.11.0.jar!/META-INF/kotlinx-serialization-json-io.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.11.0/c1905c9bf7452b045d5af9248835abe64ddad6bf/kotlinx-serialization-core-jvm-1.11.0.jar!/META-INF/kotlinx-serialization-core.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.11.0/e7e045e99e56f07599bb9ccb708c2190e2af0606/kotlinx-serialization-json-jvm-1.11.0.jar!/META-INF/kotlinx-serialization-json.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-io-core-jvm/0.9.0/7f7536f8f057ffc7f79375714e9730c4b8bdd7c9/kotlinx-io-core-jvm-0.9.0.jar!/META-INF/kotlinx-io-core.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-io-bytestring-jvm/0.9.0/e73a7915234a8ea7954f32b715ef8e42b02f66a3/kotlinx-io-bytestring-jvm-0.9.0.jar!/META-INF/kotlinx-io-bytestring.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.4.0/4e9f4b531dce5c7dee58ed2de9a8b9a763c8dc6c/kotlin-stdlib-2.4.0.jar!/META-INF/kotlin-stdlib-jdk8.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.4.0/4e9f4b531dce5c7dee58ed2de9a8b9a763c8dc6c/kotlin-stdlib-2.4.0.jar!/META-INF/kotlin-stdlib.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.4.0/4e9f4b531dce5c7dee58ed2de9a8b9a763c8dc6c/kotlin-stdlib-2.4.0.jar!/META-INF/kotlin-stdlib-jdk7.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+
+> Task :shared:core:lintAnalyzeDebugAndroidTest
+e: file:///C:/Users/AtulM/.gradle/caches/8.14.5/transforms/334cadb92c875dc8ef4547f910c18285/transformed/out/jars/classes.jar!/META-INF/shared_core_debug.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-test-junit/2.4.0/5b808384bea8c7e4846caef918a4fd5a75bbc2ad/kotlin-test-junit-2.4.0.jar!/META-INF/org.jetbrains.kotlin_kotlin-test_JUnit.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-test/2.4.0/c9a0c254adade886172cb021c0b099d8be1a5fc4/kotlin-test-2.4.0.jar!/META-INF/org.jetbrains.kotlin_kotlin-test.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/8.14.5/transforms/f8b225cf0ebfc29a8b42d4eaf2eea270/transformed/android-driver-2.3.2/jars/classes.jar!/META-INF/android-driver.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/app.cash.sqldelight/sqlite-driver/2.3.2/bba6319d69c46427650fd815d337e5de64b291d0/sqlite-driver-2.3.2.jar!/META-INF/sqldelight-sqlite-driver.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-okhttp-jvm/3.5.0/a76c4f00690aa8562903426aab016bcd99469cb/ktor-client-okhttp-jvm-3.5.0.jar!/META-INF/ktor-client-okhttp.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-mock-jvm/3.5.0/66a124e525faf2e9a278f467422c746b5de8f035/ktor-client-mock-jvm-3.5.0.jar!/META-INF/ktor-client-mock.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-content-negotiation-jvm/3.5.0/4aba161e9ff646c386f83aa5146aa0312010edfd/ktor-client-content-negotiation-jvm-3.5.0.jar!/META-INF/ktor-client-content-negotiation.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-client-core-jvm/3.5.0/cb48c792be6c3caffa8dba50a1ba69193a23babd/ktor-client-core-jvm-3.5.0.jar!/META-INF/ktor-client-core.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-serialization-kotlinx-json-jvm/3.5.0/ecef802224af6f133a376718edeb8b97d96c9c00/ktor-serialization-kotlinx-json-jvm-3.5.0.jar!/META-INF/ktor-serialization-kotlinx-json.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-http-cio-jvm/3.5.0/d6c4f6b0139dea5bd8c8c75689b1ac5711d81b4b/ktor-http-cio-jvm-3.5.0.jar!/META-INF/ktor-http-cio.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-websocket-serialization-jvm/3.5.0/8d38b53385c257b0e7e8467eb632949fbaf3aec/ktor-websocket-serialization-jvm-3.5.0.jar!/META-INF/ktor-websocket-serialization.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-serialization-kotlinx-jvm/3.5.0/137d7f4f380244643500d63074a1c2b54ff820b7/ktor-serialization-kotlinx-jvm-3.5.0.jar!/META-INF/ktor-serialization-kotlinx.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-serialization-jvm/3.5.0/3414457dbc4fb1ab930abf06d54a348cf676610e/ktor-serialization-jvm-3.5.0.jar!/META-INF/ktor-serialization.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-websockets-jvm/3.5.0/3f3c72ff0ac05cd56112dd573f2ae523d747799/ktor-websockets-jvm-3.5.0.jar!/META-INF/ktor-websockets.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-http-jvm/3.5.0/fa0ea5826b757e0cb3245acb6367c46211bfe33b/ktor-http-jvm-3.5.0.jar!/META-INF/ktor-http.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-events-jvm/3.5.0/99eb61a544eff4069c737c2bf0c15f5bda6813c9/ktor-events-jvm-3.5.0.jar!/META-INF/ktor-events.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-sse-jvm/3.5.0/1a9fcd645bb7b06186e501c7c1eaca2d4a85e19a/ktor-sse-jvm-3.5.0.jar!/META-INF/ktor-sse.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-network-jvm/3.5.0/137aa65c4be101e37cebc3de024220f5444b2a12/ktor-network-jvm-3.5.0.jar!/META-INF/ktor-network.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-utils-jvm/3.5.0/1f08480b0d2c5effd77efd84dc2ca71332fdd09/ktor-utils-jvm-3.5.0.jar!/META-INF/ktor-utils.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/io.ktor/ktor-io-jvm/3.5.0/2e0a1d6b645dd541c6ce2c2ee6f7fc9631f45484/ktor-io-jvm-3.5.0.jar!/META-INF/ktor-io.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/app.cash.sqldelight/jdbc-driver/2.3.2/675c4cf8037ee6ea27336e752ba6ee6dca18ac55/jdbc-driver-2.3.2.jar!/META-INF/sqldelight-jdbc-driver.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/app.cash.sqldelight/runtime-jvm/2.3.2/ca2286f676b8a70bac0d71e7b7a95a89dfa4a859/runtime-jvm-2.3.2.jar!/META-INF/runtime.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-io-jvm/1.11.0/645ed54ca9128fc217b30b3686a083141ebe635c/kotlinx-serialization-json-io-jvm-1.11.0.jar!/META-INF/kotlinx-serialization-json-io.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-core-jvm/1.11.0/c1905c9bf7452b045d5af9248835abe64ddad6bf/kotlinx-serialization-core-jvm-1.11.0.jar!/META-INF/kotlinx-serialization-core.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-serialization-json-jvm/1.11.0/e7e045e99e56f07599bb9ccb708c2190e2af0606/kotlinx-serialization-json-jvm-1.11.0.jar!/META-INF/kotlinx-serialization-json.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-io-core-jvm/0.9.0/7f7536f8f057ffc7f79375714e9730c4b8bdd7c9/kotlinx-io-core-jvm-0.9.0.jar!/META-INF/kotlinx-io-core.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlinx/kotlinx-io-bytestring-jvm/0.9.0/e73a7915234a8ea7954f32b715ef8e42b02f66a3/kotlinx-io-bytestring-jvm-0.9.0.jar!/META-INF/kotlinx-io-bytestring.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.3.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.4.0/4e9f4b531dce5c7dee58ed2de9a8b9a763c8dc6c/kotlin-stdlib-2.4.0.jar!/META-INF/kotlin-stdlib-jdk8.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.4.0/4e9f4b531dce5c7dee58ed2de9a8b9a763c8dc6c/kotlin-stdlib-2.4.0.jar!/META-INF/kotlin-stdlib.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+e: file:///C:/Users/AtulM/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.4.0/4e9f4b531dce5c7dee58ed2de9a8b9a763c8dc6c/kotlin-stdlib-2.4.0.jar!/META-INF/kotlin-stdlib-jdk7.kotlin_module Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.4.0, expected version is 2.1.0.
+
+> Task :shared:core:lintAnalyzeDebugUnitTest
+
+> Task :android:lintAnalyzeDebugUnitTest
+> Task :android:lintAnalyzeDebug
+
+> Task :android:lintReportDebug
+Wrote HTML report to file:///F:/github/teslasync-wt/wt-01/apps/android/app/build/reports/lint-results-debug.html
+
+> Task :android:lintDebug
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-01/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 21s
+81 actionable tasks: 13 executed, 68 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+# placeholder scanner: PLACEHOLDER_COUNT=0, PLACEHOLDER_ALLOWED=2 (pre-existing manifestPlaceholders opt-outs in build.gradle.kts).
+# All *_EXIT values are 0 and the placeholder scanner is clean.
+EXIT=0
+STATUS=DONE

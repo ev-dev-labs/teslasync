@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Per-app language list (P3/A8, ADR-014). Declares the locales the bundled string catalog ships
+  (English plus Arabic/Hebrew) so Android 13+ surfaces the system per-app language picker
+  (Settings → Apps → TeslaSync → Language). Referenced from the manifest's android:localeConfig.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="ar" />
+    <locale android:name="he" />
+</locale-config>

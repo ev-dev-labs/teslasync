@@ -6,7 +6,10 @@ import io.teslasync.android.data.DataContainer
 import io.teslasync.android.data.live.LiveFeed
 import io.teslasync.android.data.live.LiveSessionStore
 import io.teslasync.android.navigation.OnboardingGate
+import io.teslasync.android.notifications.NotificationPreferencesController
 import io.teslasync.android.push.PushContainer
+import io.teslasync.android.settings.AppSettingsController
+import io.teslasync.android.settings.SharedPreferencesAppSettingsStore
 import io.teslasync.android.widgets.WidgetContainer
 import io.teslasync.shared.core.auth.AndroidKeystoreTokenStore
 import io.teslasync.shared.core.auth.AuthService
@@ -123,6 +126,21 @@ class AuthContainer(
     val onboardingGate: OnboardingGate = OnboardingGate { onboardingGateController.required.value }
 
     /**
+     * Device-local app preferences (P3/A8): theme/dynamic-color/density, reduced motion, haptics, the
+     * per-app language and the diagnostics-sharing opt-in. The opt-in is wired straight into the shared
+     * consent-gated [diagnostics] (ADR-016) so flipping it on/off grants/revokes (and purges) at the one
+     * sanctioned sink; the rest are read at the Compose root to apply theme/density/motion/haptics.
+     */
+    val appSettings: AppSettingsController =
+        AppSettingsController(
+            store = SharedPreferencesAppSettingsStore(appContext),
+            scope = scope,
+            onDiagnosticsConsentChanged = { granted ->
+                if (granted) diagnostics.grantConsent() else diagnostics.revokeConsent()
+            },
+        )
+
+    /**
      * The push pipeline DI graph (ADR-009): FCM device registration tied to the auth state machine plus
      * the notification channels/dispatcher/banner. It reuses the same single [apiClient] (so the
      * device-registration call carries the bearer + 401 refresh) and the shared redacting logger.
@@ -161,10 +179,25 @@ class AuthContainer(
         )
     }
 
+    /**
+     * Live projection of the user's notification preferences (P3/A6) for the settings UI: it reads and
+     * writes the SAME [PushContainer.settingsStore] the dispatcher consults on every push, so a toggle
+     * here is reflected on the next notification. Lazy — built when the settings screen first needs it.
+     */
+    val notificationPreferences: NotificationPreferencesController by lazy {
+        NotificationPreferencesController(push.settingsStore, scope).also { it.start() }
+    }
+
+    /** Clears the offline cache on demand (P3/A8 cache control) without signing the user out (ADR-013). */
+    suspend fun clearOfflineCache() {
+        localCache.logout()
+    }
+
     /** Starts the auth + onboarding observers. Idempotent; call once from the app shell. */
     fun start() {
         authController.start()
         onboardingGateController.start()
+        appSettings.start()
     }
 
     /** Whether [state] may hold a live SSE stream: a valid (or transparently refreshing) session. */

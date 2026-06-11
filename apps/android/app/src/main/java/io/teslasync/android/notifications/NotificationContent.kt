@@ -6,7 +6,8 @@ import io.teslasync.android.push.PushPayload
  * The fully-composed semantic notification (P3/A6). Produced by [NotificationComposer] from a decoded
  * [PushPayload], it is the single source the dispatcher fans out: the in-app banner renders [title] /
  * [body] at [severity]; the OS notification is posted on [channelId] with a tap that opens
- * [deepLinkUri]. [routePath] is the validated in-app route the tap navigates to.
+ * [deepLinkUri] and the [actions] rendered as buttons. [routePath] is the validated in-app route the
+ * tap navigates to.
  */
 data class NotificationContent(
     val kind: NotificationKind,
@@ -17,6 +18,7 @@ data class NotificationContent(
     val routePath: String,
     val entityId: String?,
     val deepLinkUri: String,
+    val actions: List<NotificationAction> = emptyList(),
 ) {
     /** True when there is something to show — a payload with no title and no body is recorded only. */
     val hasDisplayText: Boolean get() = title.isNotBlank() || body.isNotBlank()
@@ -38,16 +40,18 @@ object NotificationComposer {
         val severity = BannerSeverities.of(payload.category, kind)
         val resolved = NotificationRouteMap.resolve(kind, payload.data)
         val channelId = NotificationChannels.channelIdFor(kind, payload.data["channel"] ?: payload.category)
-        return NotificationContent(
-            kind = kind,
-            channelId = channelId,
-            title = display(payload.title, settings),
-            body = display(payload.body, settings),
-            severity = severity,
-            routePath = resolved.path,
-            entityId = resolved.entityId,
-            deepLinkUri = NotificationRouteMap.deepLinkUriFor(resolved.path),
-        )
+        val content =
+            NotificationContent(
+                kind = kind,
+                channelId = channelId,
+                title = display(payload.title, settings),
+                body = display(payload.body, settings),
+                severity = severity,
+                routePath = resolved.path,
+                entityId = resolved.entityId,
+                deepLinkUri = NotificationRouteMap.deepLinkUriFor(resolved.path),
+            )
+        return content.copy(actions = NotificationActions.actionsFor(content))
     }
 
     private fun display(

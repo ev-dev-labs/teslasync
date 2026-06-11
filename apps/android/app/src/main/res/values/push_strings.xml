@@ -15,4 +15,23 @@
     <string name="push_channel_system_description">Service incidents and the results of vehicle commands.</string>
     <string name="push_channel_general_name">General</string>
     <string name="push_channel_general_description">Other notifications from TeslaSync.</string>
+
+    <!-- Notification action buttons (P3/A8). -->
+    <string name="notif_action_open">Open</string>
+    <string name="notif_action_acknowledge">Acknowledge</string>
+    <string name="notif_action_open_session">View session</string>
+    <string name="notif_action_open_history">Command history</string>
+    <string name="notif_action_open_incident">View incident</string>
+    <string name="notif_action_sign_in">Sign in</string>
+    <string name="notif_action_quiet_hours">Quiet hours</string>
+
+    <!-- Per-kind notification labels for the settings toggles (P3/A8). -->
+    <string name="notif_kind_generic">General</string>
+    <string name="notif_kind_alert">Alerts</string>
+    <string name="notif_kind_charge_complete">Charging complete</string>
+    <string name="notif_kind_vehicle_state">Vehicle state changes</string>
+    <string name="notif_kind_automation">Automations</string>
+    <string name="notif_kind_command_result">Command results</string>
+    <string name="notif_kind_system_incident">System incidents</string>
+    <string name="notif_kind_reauth">Sign-in required</string>
 </resources>

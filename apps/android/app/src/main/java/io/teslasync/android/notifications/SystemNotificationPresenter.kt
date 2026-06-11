@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import io.teslasync.android.MainActivity
@@ -24,6 +26,13 @@ interface SystemNotificationPresenter {
  * notification is posted on the content's channel with an immutable [PendingIntent] that re-launches
  * the single app Activity carrying the deep-link extra. A blank title falls back to the app name so
  * the OS surface always has a visible title.
+ *
+ * P3/A8 adds action buttons ([NotificationContent.actions]): an **open** action launches the Activity
+ * at a deep link (with `setAuthenticationRequired` so a locked device must be unlocked first — the
+ * lock-state safeguard, applied by `NotificationCompat` on API 31+), while **acknowledge** broadcasts
+ * to [NotificationActionReceiver] to dismiss the notification in the background without opening the app.
+ * The notification is posted [VISIBILITY_PRIVATE][NotificationCompat.VISIBILITY_PRIVATE] so its content
+ * is hidden on a secure lock screen.
  */
 class AndroidSystemNotificationPresenter(
     context: Context,
@@ -40,7 +49,8 @@ class AndroidSystemNotificationPresenter(
         if (!manager.areNotificationsEnabled()) return
 
         val title = content.title.ifBlank { appContext.getString(R.string.app_name) }
-        val notification =
+        val notificationId = content.deepLinkUri.hashCode()
+        val builder =
             NotificationCompat
                 .Builder(appContext, content.channelId)
                 .setSmallIcon(R.drawable.ic_stat_notification)
@@ -48,14 +58,37 @@ class AndroidSystemNotificationPresenter(
                 .setContentText(content.body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(content.body))
                 .setPriority(priorityOf(content.severity))
+                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
                 .setAutoCancel(true)
-                .setContentIntent(deepLinkIntent(content.deepLinkUri))
-                .build()
+                .setContentIntent(openIntent(content.deepLinkUri, notificationId))
 
-        manager.notify(content.deepLinkUri.hashCode(), notification)
+        content.actions.forEach { action -> builder.addAction(buildAction(action, notificationId)) }
+
+        manager.notify(notificationId, builder.build())
     }
 
-    private fun deepLinkIntent(deepLinkUri: String): PendingIntent {
+    private fun buildAction(
+        action: NotificationAction,
+        notificationId: Int,
+    ): NotificationCompat.Action {
+        val pendingIntent =
+            when (action.behavior) {
+                NotificationActionBehavior.Open -> {
+                    val uri = NotificationRouteMap.deepLinkUriFor(action.deepLinkPath ?: NotificationRouteMap.INBOX_PATH)
+                    openIntent(uri, requestCode(notificationId, action.id))
+                }
+                NotificationActionBehavior.Acknowledge -> acknowledgeIntent(notificationId, action.id)
+            }
+        return NotificationCompat.Action
+            .Builder(actionIcon(action.id), appContext.getString(actionLabel(action.id)), pendingIntent)
+            .setAuthenticationRequired(action.authRequired)
+            .build()
+    }
+
+    private fun openIntent(
+        deepLinkUri: String,
+        requestCode: Int,
+    ): PendingIntent {
         val intent =
             Intent(appContext, MainActivity::class.java).apply {
                 action = Intent.ACTION_VIEW
@@ -64,11 +97,47 @@ class AndroidSystemNotificationPresenter(
             }
         return PendingIntent.getActivity(
             appContext,
-            deepLinkUri.hashCode(),
+            requestCode,
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
     }
+
+    private fun acknowledgeIntent(
+        notificationId: Int,
+        actionId: NotificationActionId,
+    ): PendingIntent =
+        PendingIntent.getBroadcast(
+            appContext,
+            requestCode(notificationId, actionId),
+            NotificationActionIntent.broadcast(appContext, actionId, notificationId),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+    private fun requestCode(
+        notificationId: Int,
+        actionId: NotificationActionId,
+    ): Int = notificationId * REQUEST_CODE_PRIME + actionId.ordinal
+
+    @StringRes
+    private fun actionLabel(id: NotificationActionId): Int =
+        when (id) {
+            NotificationActionId.Open -> R.string.notif_action_open
+            NotificationActionId.Acknowledge -> R.string.notif_action_acknowledge
+            NotificationActionId.OpenSession -> R.string.notif_action_open_session
+            NotificationActionId.OpenHistory -> R.string.notif_action_open_history
+            NotificationActionId.OpenIncident -> R.string.notif_action_open_incident
+            NotificationActionId.SignIn -> R.string.notif_action_sign_in
+            NotificationActionId.QuietHours -> R.string.notif_action_quiet_hours
+        }
+
+    @DrawableRes
+    private fun actionIcon(id: NotificationActionId): Int =
+        when (id) {
+            NotificationActionId.Acknowledge -> R.drawable.ic_action_acknowledge
+            NotificationActionId.QuietHours -> R.drawable.ic_action_quiet_hours
+            else -> R.drawable.ic_action_open
+        }
 
     private fun priorityOf(severity: BannerSeverity): Int =
         when (severity) {
@@ -76,4 +145,8 @@ class AndroidSystemNotificationPresenter(
             BannerSeverity.Warning -> NotificationCompat.PRIORITY_DEFAULT
             BannerSeverity.Info -> NotificationCompat.PRIORITY_LOW
         }
+
+    private companion object {
+        const val REQUEST_CODE_PRIME = 31
+    }
 }
