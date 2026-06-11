@@ -36,6 +36,11 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Google Maps SDK key (components/maps). Real keys are injected by CI via the
+        // MAPS_API_KEY environment variable; local/dev builds default to empty so the
+        // build never fails on a missing secret (the base map renders blank without it).
+        manifestPlaceholders["MAPS_API_KEY"] = System.getenv("MAPS_API_KEY") ?: "" // parity:allow Gradle manifestPlaceholders DSL name
     }
 
     buildTypes {
@@ -156,6 +161,7 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
+    implementation(libs.maps.compose)
     debugImplementation(libs.compose.ui.tooling)
 
     // KMP shared core (ADR-004), consumed via composite-build substitution (settings.gradle.kts).
