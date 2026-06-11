@@ -2899,6 +2899,18 @@
       "secure": "Secure",
       "unsecure": "Unsecure",
       "windowDetail": "Window Status Detail",
+      "window": {
+        "fd": "Front Driver",
+        "fp": "Front Passenger",
+        "rd": "Rear Driver",
+        "rp": "Rear Passenger"
+      },
+      "windowState": {
+        "closed": "Closed",
+        "venting": "Venting",
+        "open": "Open",
+        "unknown": "Unknown"
+      },
       "title": "Security & Access",
       "subtitle": "Lock status, sentry mode, doors, and windows",
       "noEvents": "No security events recorded yet.",
