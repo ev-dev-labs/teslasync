@@ -721,3 +721,4 @@ p2-windows/pages/admin/SchemaDriftPage.prompt.md
 p2-windows/pages/admin/TeslaRegionPage.prompt.md
 p2-windows/pages/admin/VehicleCostPage.prompt.md
 p2-windows/pages/analytics/TimelinePage.prompt.md
+p2-windows/pages/analytics/TrueCostPage.prompt.md
