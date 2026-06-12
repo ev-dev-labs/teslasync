@@ -1,0 +1,156 @@
+=== p2-windows · W7 · page:analytics/YearReview (WinUI 3 / Fluent) ===
+Parity unit : page:analytics/YearReview   kind=page   web route=/year-review/:year
+Web source  : web/src/features/analytics/pages/YearReviewPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300), maui-windows workload installed — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ApiLogsPage / FeedbackQueuePage / SchemaDriftPage / VehicleCostPage do. The generated prompt's idealized
+  "YearReviewPage.xaml + YearReviewPageViewModel.cs under TeslaSync/Features/Analytics" is mapped onto these real
+  conventions. A fifth file YearReviewPage.SlideFactory.cs hosts the ISlideContentFactory (a UI-construction
+  concern, kept beside the view). The surface registers itself with the W4 ShellPageFactory by route name
+  ("YearReview", already in RouteTable.cs L85 -> /year-review/:year) via ShellWindow.xaml.cs; the registration
+  reads the :year route param from ShellViewModel.Current.Param("year") (web Number(yearParam) || current year)
+  and wires CloseRequested -> GoBack() (web navigate(-1)).
+- Data binding (ADR-004): the two manifest data sources are useVehicles (GET /vehicles) + useYearReview
+  (GET /analytics/year-review [year, vehicle_id]). The view-model composes them through an injected
+  IYearReviewPageFeed: it loads the vehicle list, auto-selects the first vehicle when none is chosen (web
+  useEffect), then reads the year-review for the selected vehicle (web useYearReview enabled: !!vehicleId). The
+  default EmptyYearReviewPageFeed resolves the empty/loading state, and the generated-client-backed
+  YearReviewPageClientFeed (YearReviewPage.Source.cs) binds to the generated OpenAPI contract client operations
+  Operations.Vehicles.List (get_api_v1_vehicles) + Operations.Analytics.YearReview
+  (get_api_v1_analytics_year_review), passing the snake_case year + vehicle_id query params exactly as the web
+  hook does (asserted via the FakeFeed). Routes confirmed in internal/api/router.go (/vehicles,
+  /analytics/year-review). No HTTP touches the view; a non-success response surfaces as ApiException and the
+  view-model renders the native InfoBar+Retry error branch.
+- The response is wrapped by the platform httputil.Respond envelope as {data:{…}}; YearReviewReport.FromJson
+  unwraps the {data:…} envelope before reading total_drives / total_charge_sessions / year, and keeps the full
+  unwrapped object in Raw so the hosted slide deck reads every other field from the SAME single fetch (the native
+  analogue of the web threading one resolved `data` object into every slide).
+- The web page is a full-bleed story player (the EXCEPTION comment in the web source: a full-screen route that
+  intentionally covers app chrome). The native port reproduces every region as visible Fluent regions on a black
+  Mica-free overlay (web bg-black) per ADR-006: loading -> centred TsSpinner with the localized "Building your
+  year in review…" caption; no-data (web total_drives===0 && total_charge_sessions===0) -> the 🚗 glyph + the
+  localized noData line + noDataHint + a Go Back TsButton; error (native robustness branch, never blank) ->
+  TsQueryError InfoBar + Retry -> RefreshAsync; success -> the swipe deck: the segmented progress bar, the vehicle
+  TsSelect (shown only for >1 vehicle, web vehicleList.length>1), the SlideRenderer deck host, the 1/3 tap zones
+  (web w-1/3 cursor zones), the prev/next chevron buttons (web ChevronLeft/Right, shown at the deck ends), the
+  close button (web X), the slide counter (web "{i+1} / {n}") and the AI narration mount.
+- The SlideRenderer (its own W-prompt, already in-repo) is a pure dispatcher fed by an ISlideContentFactory. The
+  parent story player owns the ordered 12-entry SLIDE_DEFS deck (YearReviewSlideDeck.Slides, a verbatim port of
+  web review/slides.ts) and wires YearReviewSlideContentFactory, which builds each sibling slide from the single
+  resolved YearReviewReport.Raw: the presentational slides (TitleSlide, StatChartSlide, DriveHighlightSlide,
+  ChargingBreakdownSlide, EnvironmentSlide, SummarySlide) receive a model parsed from the shared JSON, and the
+  cache-then-network slides (StatHeroSlide, SavingsSlide, PatternsSlide) receive a fixed in-memory source that
+  replays the same payload as one Loaded emission (so no slide re-fetches). The 'comparisons' kind has no native
+  sibling surface yet (its own future prompt), so the factory returns null and SlideRenderer falls back to its
+  never-blank localized empty surface — never a blank box.
+- SI units (P1/S5): no unit-bearing physical value is formatted by the page shell itself (the slides own their
+  conversions); the active UnitPref is resolved once from AppSettingsHost.Current.ToUnitPref() and threaded to the
+  unit-aware slides (DriveHighlightSlide/StatHeroSlide/SummarySlide/PatternsSlide) at the display boundary.
+- Live data (ADR-013): neither data source is live (useYearReview is STALE-cached static analytics, useVehicles
+  is not streamed), so no SSE subscription / >2-min staleness indicator applies to this page.
+- i18n (ADR-014): all nine manifest keys already exist verbatim in Strings/en/Resources.resw as
+  translation.yearReview.{close,goBack,loading,next,noData,noDataHint,pageTitle,prev,selectVehicle} (added by the
+  earlier year-review slide prompts); the page resolves each through the ILocalizer facade with the web key names
+  and the same English defaults, so zero literals are hardcoded and no catalog change was needed. The ar/he
+  catalogs fall back to the English default via ILocalizer until translated.
+- a11y (ADR-015): AutomationProperties names on the page (state-aware), the close/prev/next buttons + tap zones
+  (+ tooltips), the vehicle selector and the error surface; keyboard ←/→/Space/Esc nav (web window keydown) and
+  pointer tap zones; the surface is a focusable Group automation peer; the black overlay uses an explicit
+  white-opacity ramp (never a theme token that would invert under the light theme), the same approach the sibling
+  SlideRenderer documents for its always-dark canvas.
+- Microsoft.UI-free Model/Source/ViewModel links were added to TeslaSync.App.Tests.csproj (the WinUI view +
+  slide factory are excluded — they use Microsoft.UI); the page's own JsonReads helper (internal, this surface)
+  does the null-tolerant parsing.
+- Build-time defects found + fixed in this surface's own new code (no red shipped): (1) DispatcherQueue was
+  ambiguous between Microsoft.UI.Dispatching and Windows.System (the latter imported for VirtualKey) — fully
+  qualified to Microsoft.UI.Dispatching.DispatcherQueue; (2) the app project enforces CA1822/CA1859 as errors, so
+  ResolveUnits was made static, the unused VM Slides accessor was inlined, and the three fixed-source builders were
+  given concrete return types; (3) an unused _localizer field (CS0414) and unused usings were removed; (4) the new
+  files were authored CRLF and normalized to LF via dotnet format. All repaired; the solution builds 0 errors.
+
+=== PARITY ===
+PARITY_REQUIRED=12
+
+# Data states (3) — loading / empty / success, each a visible region (never blank); + the native error branch
+[x] state  - loading   -> YearReviewPageState.Loading + YearReviewPageDisplay.ShowLoading (projection:
+             HasError? no, !HasReport -> Loading); rendered YearReviewPage.cs#_loadingHost (TsSpinner, Label =
+             LoadingText "Building your year in review…"); tests State_loading_when_no_report_yet +
+             ViewModel_no_vehicles_stays_loading
+[x] state  - empty     -> YearReviewPageState.Empty + ShowEmpty (projection: HasReport && Report.HasNoActivity,
+             web total_drives===0 && total_charge_sessions===0); rendered _emptyHost (🚗 _emptyEmoji + _emptyTitle
+             NoDataText + _emptyHint NoDataHintText + _goBackButton); tests State_empty_when_review_has_no_activity +
+             ViewModel_no_activity_review_is_the_empty_state
+[x] state  - success   -> YearReviewPageState.Success + ShowSuccess (projection: HasReport && activity); rendered
+             _successHost (the swipe deck: _progressGrid + _vehicleSelect + _slideRenderer (SlideRenderer fed by
+             YearReviewSlideContentFactory) + tap zones + _prevButton/_nextButton + _closeButton + _counter +
+             _aiNarration); tests State_success_when_review_has_activity +
+             ViewModel_loads_vehicles_auto_selects_first_and_reaches_success
+#   (+ native robustness branch, not one of the 3 required: YearReviewPageState.Error + ShowError ->
+#    _errorHost TsQueryError + Retry -> RefreshAsync; tests State_error_takes_precedence_over_loading +
+#    ViewModel_feed_failure_is_the_error_state)
+
+# Strings (9) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names + defaults
+[x] string - yearReview.close        -> YearReviewPageProjection.CloseKey "translation.yearReview.close" ->
+             GetString(…,"Close") -> Display.CloseText -> YearReviewPage.cs _closeButton AutomationProperties name + tooltip
+[x] string - yearReview.goBack       -> GoBackKey "translation.yearReview.goBack" -> GetString(…,"Go Back") ->
+             Display.GoBackText -> _goBackButton.Text (empty surface)
+[x] string - yearReview.loading      -> LoadingKey "translation.yearReview.loading" ->
+             GetString(…,"Building your year in review...") -> Display.LoadingText -> _spinner.Label
+[x] string - yearReview.next         -> NextKey "translation.yearReview.next" -> GetString(…,"Next slide") ->
+             Display.NextText -> _nextButton / _nextZone automation name
+[x] string - yearReview.noData       -> NoDataKey "translation.yearReview.noData" ->
+             string.Format(GetString(…,"No driving data for {0}"), year) -> Display.NoDataText -> _emptyTitle.Text
+[x] string - yearReview.noDataHint   -> NoDataHintKey "translation.yearReview.noDataHint" ->
+             GetString(…,"Start driving and charging to build your annual review!") -> Display.NoDataHintText -> _emptyHint.Text
+[x] string - yearReview.pageTitle    -> PageTitleKey "translation.yearReview.pageTitle" ->
+             string.Format(GetString(…,"{0} Year in Review"), year) -> Display.PageTitle / YearReviewPageRegistration.Title
+             (web usePageTitle)
+[x] string - yearReview.prev         -> PrevKey "translation.yearReview.prev" -> GetString(…,"Previous slide") ->
+             Display.PrevText -> _prevButton / _prevZone automation name
+[x] string - yearReview.selectVehicle-> SelectVehicleKey "translation.yearReview.selectVehicle" ->
+             GetString(…,"Select vehicle") -> Display.SelectVehicleText -> _vehicleSelect AutomationProperties name
+
+PARITY_COVERED=12
+# Coverage asserted headlessly (TeslaSync.App.Tests / YearReviewPageTests):
+#  - the three required data states + the error branch are asserted by the State_* projection tests and the
+#    ViewModel_* tests (load / auto-select / empty / error / select / navigate / refresh) reading the bound
+#    YearReviewPageDisplay state holder;
+#  - I18n_key_names_match_the_web_source_under_the_translation_namespace pins all 9 web key names, and
+#    All_nine_strings_resolve_into_the_display asserts each resolves (incl. the {year}-formatted pageTitle + noData);
+#  - Slide_deck_matches_the_web_slide_defs_order pins the 12-entry SLIDE_DEFS port; Vehicle_selector_* +
+#    Slide_counter_and_arrows_track_the_index assert the selector visibility/selection + counter/prev/next chrome;
+#  - Report_* / Vehicle_option_parses_id_and_name assert the {data:…} envelope unwrap + tolerant snake_case parse;
+#  - Registration_metadata_is_stable + Diagnostics_records_view_opened_with_surface_slug pin the registration +
+#    PII-safe diagnostics. The WinUI view + slide factory are exercised by the app build.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/YearReviewPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Analytics path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <YearReviewPage Model/Source/ViewModel/view/
+#   SlideFactory + YearReviewPageTests + ShellWindow.xaml.cs> -> 0 issues (all LF/utf-8 after auto-format)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 25887, Failed: 0, Skipped: 0
+#   (incl. 26 YearReviewPageTests)
+TEST_EXIT=0
+PARITY_COVERED=12
+PARITY_REQUIRED=12
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/YearReviewPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/YearReviewPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-analytics-YearReviewPage.log
+# git commit -m "feat(apps/windows): YearReviewPage at web parity (W7 analytics)"
+
+EXIT=0
+STATUS=DONE
