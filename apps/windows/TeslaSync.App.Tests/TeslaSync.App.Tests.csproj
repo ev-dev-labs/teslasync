@@ -91,6 +91,15 @@
     UptimeHeatmap (repairing a merge=union multi-root corruption), adding the new UptimeHeatmap Model link. Do NOT
     re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment.
   -->
+    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
+    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
+    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so
+    each surface's Microsoft.UI-free sources are Compile-linked below (the Link mirrors each source's real
+    location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces). The bare WinUI
+    view files are excluded and exercised by the app build; the test classes are picked up by the SDK
+    default-compile glob; the Content links copy the units-golden, Package.appxmanifest and widget-template
+    fixtures the tests read out of the output directory.
+
     INVARIANT: keep this file as exactly ONE project root with a single PropertyGroup, the package /
     project-reference / content item groups, and ONE Compile item group - the case-insensitive ordinal
     path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/,
@@ -120,6 +129,11 @@
     P2 shared-surfaces/0201 StickyCompactHero (repairing a merge=union multi-root corruption), plus the new
     StickyCompactHero Model / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal
     build-item or project start tag inside this comment.
+    duplicate items, failing XML load (MSB4025 / MSB4067); when that happens, regenerate it directly from
+    the Microsoft.UI-free sources on disk. Regenerated into this single canonical project root for P2
+    shared-surfaces/0207 CopyButton (repairing a merge=union multi-root corruption), plus the new CopyButton
+    Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal
+    build item or project start tag inside this comment.
   -->
 
     INVARIANT: keep this as exactly ONE project root with a single, case-insensitive ordinal path-sorted,
@@ -1202,6 +1216,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.Model.cs" Link="SharedSurfaces\CookieConsentBanner.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.Source.cs" Link="SharedSurfaces\CookieConsentBanner.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.ViewModel.cs" Link="SharedSurfaces\CookieConsentBanner.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\CopyButton.Model.cs" Link="SharedSurfaces\CopyButton.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\CopyButton.Source.cs" Link="SharedSurfaces\CopyButton.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\CopyButton.ViewModel.cs" Link="SharedSurfaces\CopyButton.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CopyLinkButton.Model.cs" Link="SharedSurfaces\CopyLinkButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CopyLinkButton.Source.cs" Link="SharedSurfaces\CopyLinkButton.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CopyLinkButton.ViewModel.cs" Link="SharedSurfaces\CopyLinkButton.ViewModel.cs" />
@@ -1253,6 +1270,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Model.cs" Link="SharedSurfaces\FreshnessIndicator.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Source.cs" Link="SharedSurfaces\FreshnessIndicator.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.ViewModel.cs" Link="SharedSurfaces\FreshnessIndicator.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Model.cs" Link="SharedSurfaces\HealthRow\HealthRow.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Source.cs" Link="SharedSurfaces\HealthRow\HealthRow.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.ViewModel.cs" Link="SharedSurfaces\HealthRow\HealthRow.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.Model.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.ViewModel.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\InlineCallout.Model.cs" Link="SharedSurfaces\InlineCallout.Model.cs" />
