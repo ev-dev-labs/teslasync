@@ -171,7 +171,7 @@ public sealed class LayoutBreadcrumbsTests
     [Fact]
     public void Resolve_returns_an_empty_trail_for_an_unmatched_route()
     {
-        IReadOnlyList<BreadcrumbItem> trail =
+        IReadOnlyList<LayoutBreadcrumbItem> trail =
             BreadcrumbResolver.Resolve(null, NoParams(), NoOverrides(), SampleMeta(), PassthroughLocalizer.Instance);
 
         Assert.Empty(trail);
@@ -180,10 +180,10 @@ public sealed class LayoutBreadcrumbsTests
     [Fact]
     public void Resolve_returns_a_single_item_for_a_top_level_route()
     {
-        IReadOnlyList<BreadcrumbItem> trail =
+        IReadOnlyList<LayoutBreadcrumbItem> trail =
             BreadcrumbResolver.Resolve("a", NoParams(), NoOverrides(), SampleMeta(), PassthroughLocalizer.Instance);
 
-        BreadcrumbItem only = Assert.Single(trail);
+        LayoutBreadcrumbItem only = Assert.Single(trail);
         Assert.Equal("A", only.Label);
         Assert.True(only.IsCurrent);
         Assert.Null(only.Href);
@@ -193,7 +193,7 @@ public sealed class LayoutBreadcrumbsTests
     [Fact]
     public void Resolve_walks_the_parent_chain_root_to_current_with_hrefs_and_param_substitution()
     {
-        IReadOnlyList<BreadcrumbItem> trail = BreadcrumbResolver.Resolve(
+        IReadOnlyList<LayoutBreadcrumbItem> trail = BreadcrumbResolver.Resolve(
             "a/b/:id",
             Params(("id", "7")),
             NoOverrides(),
@@ -223,7 +223,7 @@ public sealed class LayoutBreadcrumbsTests
     {
         var overrides = new Dictionary<string, string>(StringComparer.Ordinal) { ["a/b"] = "Trip to office" };
 
-        IReadOnlyList<BreadcrumbItem> trail =
+        IReadOnlyList<LayoutBreadcrumbItem> trail =
             BreadcrumbResolver.Resolve("a/b", NoParams(), overrides, SampleMeta(), PassthroughLocalizer.Instance);
 
         Assert.Equal(2, trail.Count);
@@ -236,7 +236,7 @@ public sealed class LayoutBreadcrumbsTests
     public void Resolve_is_cycle_safe()
     {
         // x -> y -> x in SampleMeta; the walk must terminate.
-        IReadOnlyList<BreadcrumbItem> trail =
+        IReadOnlyList<LayoutBreadcrumbItem> trail =
             BreadcrumbResolver.Resolve("x", NoParams(), NoOverrides(), SampleMeta(), PassthroughLocalizer.Instance);
 
         Assert.Equal(2, trail.Count);
@@ -271,9 +271,9 @@ public sealed class LayoutBreadcrumbsTests
     {
         var projector = new RouteBreadcrumbProjector();
 
-        IReadOnlyList<BreadcrumbItem> trail = projector.Project("/", NoOverrides(), PassthroughLocalizer.Instance);
+        IReadOnlyList<LayoutBreadcrumbItem> trail = projector.Project("/", NoOverrides(), PassthroughLocalizer.Instance);
 
-        BreadcrumbItem only = Assert.Single(trail);
+        LayoutBreadcrumbItem only = Assert.Single(trail);
         Assert.Equal("Dashboard", only.Label);
     }
 
@@ -282,7 +282,7 @@ public sealed class LayoutBreadcrumbsTests
     {
         var projector = new RouteBreadcrumbProjector();
 
-        IReadOnlyList<BreadcrumbItem> trail =
+        IReadOnlyList<LayoutBreadcrumbItem> trail =
             projector.Project("/vehicles/5/access", NoOverrides(), PassthroughLocalizer.Instance);
 
         Assert.Collection(
@@ -310,7 +310,7 @@ public sealed class LayoutBreadcrumbsTests
     {
         var projector = new RouteBreadcrumbProjector();
 
-        IReadOnlyList<BreadcrumbItem> trail =
+        IReadOnlyList<LayoutBreadcrumbItem> trail =
             projector.Project("/me/activity", NoOverrides(), PassthroughLocalizer.Instance);
 
         Assert.Equal(2, trail.Count);
@@ -325,7 +325,7 @@ public sealed class LayoutBreadcrumbsTests
     {
         var projector = new RouteBreadcrumbProjector();
 
-        IReadOnlyList<BreadcrumbItem> trail =
+        IReadOnlyList<LayoutBreadcrumbItem> trail =
             projector.Project("/does/not/exist", NoOverrides(), PassthroughLocalizer.Instance);
 
         // Catch-all (NotFound) is a single item -> suppressed by the renderer.
@@ -610,8 +610,8 @@ public sealed class LayoutBreadcrumbsTests
     [Fact]
     public void NullBreadcrumbNavigator_is_a_safe_no_op_singleton()
     {
-        Assert.Same(NullBreadcrumbNavigator.Instance, NullBreadcrumbNavigator.Instance);
-        Exception? error = Record.Exception(() => NullBreadcrumbNavigator.Instance.Navigate("/anywhere"));
+        Assert.Same(NullLayoutBreadcrumbNavigator.Instance, NullLayoutBreadcrumbNavigator.Instance);
+        Exception? error = Record.Exception(() => NullLayoutBreadcrumbNavigator.Instance.Navigate("/anywhere"));
         Assert.Null(error);
     }
 
@@ -650,7 +650,7 @@ public sealed class LayoutBreadcrumbsTests
         public void Raise() => Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    private sealed class FakeNavigator : IBreadcrumbNavigator
+    private sealed class FakeNavigator : ILayoutBreadcrumbNavigator
     {
         private readonly List<string> _navigations = [];
 
