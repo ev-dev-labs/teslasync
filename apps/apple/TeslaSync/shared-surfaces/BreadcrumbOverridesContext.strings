@@ -1,0 +1,37 @@
+/*
+  BreadcrumbOverridesContext.strings
+  TeslaSync — P4 shared surface · 0166 · BreadcrumbOverridesContext (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/layout/BreadcrumbOverridesContext.tsx) is an anonymous, transparent coordination
+  primitive — it carries no user-facing copy of its own (it only collects + merges per-route label
+  overrides). The shipped entries here back the trail renderer's accessibility wording (the
+  `<nav aria-label>` and the leading Home link, the native peer of the web `a11y.breadcrumb` /
+  `a11y.breadcrumbHome` keys `<Breadcrumbs>` resolves). The remaining "sample" entries back the
+  DEBUG-only inspector + route table used by the previews + the view-composition tests; they are never
+  shipped. Production callers register their own already-localized labels via setBreadcrumbOverrides.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table ("BreadcrumbOverridesContext") so each parallel surface prompt owns its
+  own strings.
+*/
+
+/* --- Trail renderer accessibility (shipped; consumes the context) --- */
+"breadcrumbOverrides.a11y.nav" = "Breadcrumb";
+"breadcrumbOverrides.a11y.home" = "Dashboard";
+
+/* --- DEBUG sample route labels (previews + tests only; not shipped) --- */
+"breadcrumbOverrides.sample.drives" = "Drives";
+"breadcrumbOverrides.sample.drive" = "Drive #{{id}}";
+"breadcrumbOverrides.sample.replay" = "Replay";
+"breadcrumbOverrides.sample.vehicles" = "Vehicles";
+
+/* --- DEBUG inspector scenario titles (previews + tests only; not shipped) --- */
+"breadcrumbOverrides.sample.scenario.overridden" = "Override applied (drive detail)";
+"breadcrumbOverrides.sample.scenario.defaults" = "Route defaults (no override)";
+"breadcrumbOverrides.sample.scenario.suppressed" = "Suppressed (top-level route)";
+"breadcrumbOverrides.sample.scenario.unknown" = "Unknown route (no trail)";
+
+/* --- DEBUG inspector notes for the non-rendering branches (previews + tests only; not shipped) --- */
+"breadcrumbOverrides.sample.note.empty" = "No breadcrumb — route not registered";
+"breadcrumbOverrides.sample.note.suppressed" = "Single item — breadcrumb hidden (top-level page)";
