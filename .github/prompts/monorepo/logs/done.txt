@@ -675,3 +675,4 @@ p2-windows/shared-meaningful/W-0193-StaggerContainer.prompt.md
 p2-windows/shared-meaningful/W-0194-StaggerItem.prompt.md
 p2-windows/shared-meaningful/W-0196-ActionItem.prompt.md
 p2-windows/shared-meaningful/W-0197-HealthRow.prompt.md
+p2-windows/shared-meaningful/W-0198-ResourcesPanel.prompt.md
