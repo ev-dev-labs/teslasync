@@ -537,3 +537,4 @@ p3-android/feature-views/A-0287-VehicleStatePanel.prompt.md
 p3-android/feature-views/A-0286-TirePressurePanel.prompt.md
 p3-android/feature-views/A-0290-ChargingTelemetrySection.prompt.md
 p3-android/feature-views/A-0289-BatteryRangePanel.prompt.md
+p3-android/feature-views/A-0294-QuickLinksSection.prompt.md
