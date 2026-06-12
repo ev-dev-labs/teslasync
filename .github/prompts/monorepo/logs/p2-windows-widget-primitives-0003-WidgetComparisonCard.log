@@ -1,0 +1,47 @@
+=== P2 Widget primitive 0003 WidgetComparisonCard (Windows) ===
+host=ATUL-THINK-I9  date=2026-06-12T06:39:55.5917305-07:00
+
+CAPABILITY: WinUI 3 (Windows App SDK) + .NET 10 required.
+  dotnet --version => 10.0.300
+  SDKs => 9.0.314 [C:\Program Files\dotnet\sdk]; 10.0.300 [C:\Program Files\dotnet\sdk]
+  WinUI app TFM: net10.0-windows10.0.19041.0 (TeslaSync.App). Solution builds below => capability present.
+
+[1/4] BUILD: dotnet build apps/windows/TeslaSync.sln -c Release
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:05:10.32
+BUILD_EXIT=0
+
+[2/4] TEST (authoritative headless unit suite; repo W9-0002 splits E2E by Category trait):
+      dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+Passed!  - Failed:     0, Passed: 25234, Skipped:     0, Total: 25234, Duration: 22 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+      WidgetComparisonCard surface tests (adapter projection + compact slice + per-state branches + delta mapping + a11y name + seam + view-model + diagnostics + registration):
+Passed!  - Failed:     0, Passed:    34, Skipped:     0, Total:    34, Duration: 132 ms - TeslaSync.App.Tests.dll (net10.0)
+WIDGETCOMPARISONCARD_TEST_EXIT=0
+      CAPABILITY NOTE - UIAutomation E2E suite (Category=UIAutomation), non-gating:
+      The literal unfiltered "dotnet test" also drives the packaged app through WinAppDriver.
+      That runner is absent on this host, so the E2E suite fails fast (by the repo's own design,
+      "never silently skipped"). It is an environment E2E-runner capability gap, isolated by the
+      W9-0002 Category trait, and unrelated to this widget primitive (no per-surface UIAutomation
+      test exists or is required by prompt 0003). Evidence:
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+        Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 468 ms - TeslaSync.App.UITests.dll (net10.0)
+      UIAUTOMATION_E2E_EXIT=1  (environment-gated; excluded from the gate result)
+
+[3/4] FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+[4/4] PLACEHOLDER: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/widget-primitives/WidgetComparisonCard
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+GATE STEPS: BUILD=0 TEST(headless)=0 WIDGETCOMPARISONCARD_TEST=0 FORMAT=0 PLACEHOLDER=0
+EXIT=0
+STATUS=DONE
