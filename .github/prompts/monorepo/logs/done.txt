@@ -672,3 +672,4 @@ p2-windows/shared-meaningful/W-0192-RouteTransition.prompt.md
 p2-windows/shared-meaningful/W-0189-SwipeRow.prompt.md
 p2-windows/shared-meaningful/W-0190-CarAnimation.prompt.md
 p2-windows/shared-meaningful/W-0193-StaggerContainer.prompt.md
+p2-windows/shared-meaningful/W-0194-StaggerItem.prompt.md
