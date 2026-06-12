@@ -14805,6 +14805,15 @@
   <data name="translation.powershare.hoursLeft" xml:space="preserve">
     <value>Hours Remaining</value>
   </data>
+  <data name="translation.powershare.hoursLeftSub" xml:space="preserve">
+    <value>Estimated runtime at current output</value>
+  </data>
+  <data name="translation.powershare.noData" xml:space="preserve">
+    <value>No Powershare data received yet. Values appear once your vehicle reports Powershare telemetry.</value>
+  </data>
+  <data name="translation.powershare.noStopReason" xml:space="preserve">
+    <value>No stop reason recorded. Powershare has not been halted, or the signal has not yet been reported.</value>
+  </data>
   <data name="translation.powershare.outputPower" xml:space="preserve">
     <value>Output Power</value>
   </data>
@@ -14817,8 +14826,14 @@
   <data name="translation.powershare.statusSection" xml:space="preserve">
     <value>Powershare Status</value>
   </data>
+  <data name="translation.powershare.stopReasonHelp" xml:space="preserve">
+    <value>Last recorded reason Powershare was halted.</value>
+  </data>
   <data name="translation.powershare.stopReasonSection" xml:space="preserve">
     <value>Stop Reason</value>
+  </data>
+  <data name="translation.powershare.subtitle" xml:space="preserve">
+    <value>Monitor your vehicle’s bidirectional power sharing — status, output, remaining runtime, and stop conditions.</value>
   </data>
   <data name="translation.powershare.title" xml:space="preserve">
     <value>Powershare</value>

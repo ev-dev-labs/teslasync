@@ -694,6 +694,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\PedalUsage\PedalUsage.ViewModel.cs" Link="FeatureViews\PedalUsage\PedalUsage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PowerOutputChart\PowerOutputChart.Model.cs" Link="FeatureViews\PowerOutputChart\PowerOutputChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PowerProfileChart\PowerProfileChart.Model.cs" Link="FeatureViews\PowerProfileChart\PowerProfileChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PowersharePage\PowersharePage.Model.cs" Link="FeatureViews\PowersharePage\PowersharePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PowersharePage\PowersharePage.Source.cs" Link="FeatureViews\PowersharePage\PowersharePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PowersharePage\PowersharePage.ViewModel.cs" Link="FeatureViews\PowersharePage\PowersharePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PresetGallery\PresetGallery.Model.cs" Link="FeatureViews\PresetGallery\PresetGallery.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PresetGallery\PresetGallery.Source.cs" Link="FeatureViews\PresetGallery\PresetGallery.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PresetGallery\PresetGallery.ViewModel.cs" Link="FeatureViews\PresetGallery\PresetGallery.ViewModel.cs" />
