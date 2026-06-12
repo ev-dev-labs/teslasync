@@ -127,6 +127,24 @@
       "requiredCount": 63,
       "promptId": "p4-apple/P7/page:analytics/FleetCompare",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-FleetComparePage.log"
+    },
+    {
+      "unitId": "page:analytics/Statistics",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 61,
+      "requiredCount": 61,
+      "promptId": "p4-apple/P7/page:analytics/Statistics",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-StatisticsPage.log"
+    },
+    {
+      "unitId": "page:analytics/Statistics",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 61,
+      "requiredCount": 61,
+      "promptId": "p4-apple/P7/page:analytics/Statistics",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-StatisticsPage.log"
     }
   ]
 }
