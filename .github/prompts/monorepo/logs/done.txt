@@ -381,3 +381,4 @@ p3-android/feature-views/A-0139-DriveStatCards.prompt.md
 p3-android/feature-views/A-0140-DriveTimeline.prompt.md
 p3-android/feature-views/A-0134-WidgetPicker.prompt.md
 p3-android/feature-views/A-0132-TemplateGallery.prompt.md
+p3-android/feature-views/A-0138-DriveOverviewChart.prompt.md
