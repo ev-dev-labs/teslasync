@@ -723,3 +723,4 @@ p2-windows/pages/admin/VehicleCostPage.prompt.md
 p2-windows/pages/analytics/TimelinePage.prompt.md
 p2-windows/pages/analytics/TrueCostPage.prompt.md
 p2-windows/pages/automations/AutomationActivityFeed.prompt.md
+p2-windows/pages/automations/AutomationCard.prompt.md
