@@ -514,3 +514,4 @@ p3-android/feature-views/A-0267-SignalCompareControls.prompt.md
 p3-android/feature-views/A-0265-SignalCategoryTree.prompt.md
 p3-android/feature-views/A-0270-SignalSelector.prompt.md
 p3-android/feature-views/A-0266-SignalChartPanel.prompt.md
+p3-android/feature-views/A-0268-SignalDiffTable.prompt.md
