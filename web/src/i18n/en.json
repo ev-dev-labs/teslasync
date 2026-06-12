@@ -395,6 +395,11 @@
       "updateAvailable": "Update available",
       "updateBanner": "A newer release is available",
       "changelog": "Release notes",
+      "calloutTitleVersion": "Update available — v{{version}}",
+      "calloutRunning": "You're running v{{version}}.",
+      "calloutBody": "Review the release notes before upgrading your deployment.",
+      "calloutLastChecked": "Last checked {{datetime}}",
+      "calloutViewNotes": "View notes",
       "close": "Close"
     }
   },

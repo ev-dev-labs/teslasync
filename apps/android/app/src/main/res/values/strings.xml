@@ -6028,6 +6028,11 @@
   <string name="translation_statusBar_vehicle_tooltip">Active vehicle</string>
   <string name="translation_statusBar_version_appVersion">App version</string>
   <string name="translation_statusBar_version_aria">TeslaSync version</string>
+  <string name="translation_statusBar_version_calloutBody">Review the release notes before upgrading your deployment.</string>
+  <string name="translation_statusBar_version_calloutLastChecked">Last checked %1$s</string>
+  <string name="translation_statusBar_version_calloutRunning">You\'re running v%1$s.</string>
+  <string name="translation_statusBar_version_calloutTitleVersion">Update available — v%1$s</string>
+  <string name="translation_statusBar_version_calloutViewNotes">View notes</string>
   <string name="translation_statusBar_version_changelog">Release notes</string>
   <string name="translation_statusBar_version_chart">Helm chart</string>
   <string name="translation_statusBar_version_close">Close</string>
