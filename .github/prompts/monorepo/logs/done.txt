@@ -358,3 +358,4 @@ p3-android/feature-views/A-0112-EnvironmentalImpact.prompt.md
 p3-android/feature-views/A-0106-SessionListSection.prompt.md
 p3-android/feature-views/A-0111-CostSummaryCards.prompt.md
 p3-android/feature-views/A-0113-ForecastDetails.prompt.md
+p3-android/feature-views/A-0107-ChargingSessionCard.prompt.md
