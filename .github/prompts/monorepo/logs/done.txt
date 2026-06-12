@@ -735,3 +735,4 @@ p2-windows/pages/automations/AutomationListPage.prompt.md
 p2-windows/pages/automations/AutomationsListPage.prompt.md
 p2-windows/pages/automations/AutomationBuilderPage.prompt.md
 p2-windows/pages/battery/BatteryDegradationPage.prompt.md
+p2-windows/pages/battery/EnergyFlowPage.prompt.md
