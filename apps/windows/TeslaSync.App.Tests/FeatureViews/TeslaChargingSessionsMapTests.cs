@@ -215,6 +215,20 @@ public sealed class TeslaChargingSessionsMapTests
         Assert.Contains("€12.50", first.DetailLines);
     }
 
+    [Fact]
+    public void Marker_label_interpolates_the_generated_catalog_token()
+    {
+        // The generated Windows catalog renders the web i18next "{{name}}" token as string.Format's "{0}"
+        // (apps/shared/i18n/generators/gen-i18n.ts); the marker label must compose with that positional form,
+        // not a literal "{{name}}" replace, or the real .resw value would surface as raw "{0} charging session".
+        var catalog = new CatalogLocalizer("tesla_sessions.markerLabel", "{0} charging session");
+
+        var display = TeslaChargingSessionsMapProjection.Project(Sample(), catalog, Now);
+
+        Assert.Equal("Fremont SC charging session", display.Points[0].AriaLabel);
+        Assert.Equal("Unknown charging session", display.Points[1].AriaLabel);
+    }
+
     // ---- View-model state matrix (loading / ready / empty / stale / offline / error) ----
 
     [Fact]
@@ -475,5 +489,22 @@ public sealed class TeslaChargingSessionsMapTests
             Keys.Add(key);
             return fallback;
         }
+    }
+
+    // Resolves one key to its generated-catalog value (e.g. the "{0}"-tokenized markerLabel), every other key
+    // to the supplied English fallback — exercising the real resource shape the shell's Localization bridge serves.
+    private sealed class CatalogLocalizer : ILocalizer
+    {
+        private readonly string _key;
+        private readonly string _value;
+
+        public CatalogLocalizer(string key, string value)
+        {
+            _key = key;
+            _value = value;
+        }
+
+        public string GetString(string key, string fallback) =>
+            string.Equals(key, _key, StringComparison.Ordinal) ? _value : fallback;
     }
 }

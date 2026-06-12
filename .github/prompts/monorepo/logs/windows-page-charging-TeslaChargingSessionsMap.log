@@ -1,0 +1,161 @@
+=== p2-windows · W7 · page:charging/TeslaChargingSessionsMap (WinUI 3 / Fluent) ===
+Parity unit : page:charging/TeslaChargingSessionsMap   kind=page   web route=(unrouted)
+Web source  : web/src/features/charging/pages/TeslaChargingSessionsMap.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+Output      : apps/windows/TeslaSync.App/feature-views/TeslaChargingSessionsMap/{TeslaChargingSessionsMap.Model.cs,
+              TeslaChargingSessionsMap.Source.cs, TeslaChargingSessionsMap.ViewModel.cs, TeslaChargingSessionsMap.cs}
+              (the generated prompt's idealized "TeslaSync/Features/Charging/TeslaChargingSessionsMap.xaml +
+              TeslaChargingSessionsMapViewModel.cs" is mapped onto the repo's real code-first WinUI conventions).
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the cache-then-network data port, also Microsoft.UI-free),
+  <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view).
+  Namespace TeslaSync.App.FeatureViews. The TeslaChargingSessionsMap surface already exists (built by the
+  predecessor component prompt p2-windows/feature-views/W-0120-TeslaChargingSessionsMap, commit 840b28474, in the
+  base integration branch); this page-parity unit verifies it against the 7 manifest items, fixes the two real
+  defects that blocked an honest green gate (below), adds the markerLabel regression test, runs the windows triad,
+  and records the ledger row. The web component is the (unrouted) <MapContainer>/<MarkerCluster> map that the
+  charging-history page passes its useTeslaChargingSessions() `sessions` into — no standalone nav item.
+- Data source (web page's useTeslaChargingSessions() · GET /tesla/charging/sessions/): the Microsoft.UI-free
+  ITeslaChargingSessionsMapSource / repository-backed TeslaChargingSessionsMapSource runs one cache-then-network
+  read of the generated operation get_api_v1_tesla_charging_sessions through the shared CacheThenNetworkEngine
+  (cacheKey tesla:charging:sessions:map), parsing each emission into TeslaChargingSessionsMapData (the
+  { sessions:[…] } envelope OR a bare array, with numeric-string coercion). No HTTP touches the view.
+- Projection (web useMemo(center) + useMemo(clusterPoints)): TeslaChargingSessionsMapProjection.Project is the 1:1
+  port — center = mean of every session's (lat ?? 0, lng ?? 0) falling back to the SF view { 37.77, -122.42 } at
+  zoom 5; a marker is emitted for every session with a FINITE lat/lng (web typeof===number && !isNaN); the popup
+  mirrors the web popupHtml (fmtNumber(convertEnergyFromSI(wh,'kWh'),1)+' kWh', formatCurrency(cost,2), the
+  uppercased charger type) and the Narrator label resolves tesla_sessions.markerLabel. Every label flows through
+  ILocalizer; the view binds the projected viewport + markers and stays a thin renderer.
+- Units (P1/S5): total_energy_added_wh is SI watt-hours on the wire; the popup restates it via the shared
+  UnitConverters.EnergyFromSi(wh, EnergyUnit.Kwh) + ScalarFormatters.FormatNumber at projection time — the "kWh"
+  unit is intrinsic to the web popup string. Nothing non-SI is stored or computed.
+- Defect 1 fixed (pre-existing build blocker, in this prompt's allowed "NavigationView registration" file):
+  apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs had a malformed page-factory block — the "AutomationList"
+  registration lambda was never closed (missing `return page; });`), so the sibling "Automations" registration and
+  every later statement were swallowed into its body. That unbalanced the constructor braces (CS1026/CS1002/CS1513
+  at line 146) and cascaded into a WMC9999 XAML-compiler crash on every XAML file (130×WMC0001 + 30×WMC0110), i.e.
+  the whole solution was red and the page could not be built/verified at all. Repaired by closing the AutomationList
+  lambda (the un-nested Automations/AutomationBuilder/BatteryDegradation/ProjectedRange registrations are unchanged).
+- Defect 2 fixed (real runtime i18n parity bug in the surface, allowed feature dir):
+  TeslaChargingSessionsMapRegistration.MarkerLabel composed the marker's accessible label with
+  GetString("tesla_sessions.markerLabel", "{{name}} charging session").Replace("{{name}}", name). But the shared
+  i18n generator (apps/shared/i18n/generators/gen-i18n.ts, placeholderFor() case 'windows' → "{idx}") renders the
+  web i18next "{{name}}" token as the positional string.Format placeholder "{0}" in the .resw catalog (the
+  canonical Windows form — 417 "{0}"-style values vs 4 "{{}}" in en/Resources.resw). With the real catalog value
+  "{0} charging session", the literal Replace("{{name}}",…) was a no-op, so every marker's Narrator label would
+  have surfaced as the raw "{0} charging session" (a11y parity break). Fixed to read the "{0}" fallback and compose
+  with string.Format(CultureInfo.CurrentCulture, template, name) — mirroring the web t('…', { name }) call and the
+  app-wide convention (e.g. ProjectedRange range.whatIfConditions). Added a regression test
+  (Marker_label_interpolates_the_generated_catalog_token) that feeds the real "{0} charging session" catalog
+  value through a CatalogLocalizer and asserts "Fremont SC charging session" / "Unknown charging session", so a
+  revert to the literal-replace form fails the build.
+- Catalog: the 3 web i18n keys (tesla_sessions.mapLabel / markerLabel / unknown) plus the empty-overlay key
+  (tesla_sessions.noMapData) already exist verbatim in Strings/{en,ar,he}/Resources.resw (mapLabel "Charging
+  sessions map", markerLabel "{0} charging session", unknown "Unknown"). No catalog rows added; every visible
+  literal resolves through ILocalizer with the web key names.
+
+=== PARITY ===
+PARITY_REQUIRED=7
+
+# Maps (3) — native W3 MapControl wrappers, never a web canvas
+[x] map    - MapContainer  -> TeslaChargingSessionsMap.cs#48 _map (TeslaSync.App.Components.Maps.TsMapControl, the
+                              W3 wrapper for the web Leaflet <MapContainer center={[lat,lng]} zoom={5} scrollWheelZoom>);
+                              centre/zoom bound from the projection in UpdateMap (TeslaChargingSessionsMap.cs#216-218
+                              _map.CenterLat/CenterLng/Zoom = display.CenterLatitude/Longitude/Zoom), marker layer
+                              hosted via _map.AddOverlay(_cluster) (#235). Center/zoom port asserted by
+                              Center_is_the_mean_of_every_session_coordinate / _defaults_to_the_san_francisco_view.
+[x] map    - MapTileLayer  -> the web <MapTileLayer /> child is the TsMapTileLayer that TsMapControl owns and renders:
+                              Components/Maps/TsMapControl.cs#26 (private readonly TsMapTileLayer _tiles = new()),
+                              added to the visual tree at #71 (_root.Children.Add(_tiles)) and drawn each layout at
+                              #209 (_tiles.Render(Center, Zoom, ViewWidth, ViewHeight)) with the resolved
+                              MapTileProvider source + attribution. The charging map uses the default OSM tiles.
+[x] map    - MarkerCluster -> TeslaChargingSessionsMap.cs#49 _cluster (TsMarkerCluster) with SetClusterRadius(60)
+                              (#112, const ClusterRadiusPx=60 #35 = web maxClusterRadius={60}); points pushed via
+                              _cluster.SetPoints(clusterPoints) (#234) built from the projection's cyan markers
+                              (defaultColor "#22d3ee" = TeslaChargingSessionsMapProjection.MarkerColorHex
+                              Model.cs#244); grouped by the headless Core/Maps/MarkerClusterEngine (density palette
+                              + 5000 cap). Single-marker activation opens the web popupHtml flyout (site / time /
+                              kWh / cost / charger). Marker set asserted by Only_sessions_with_finite_coordinates_
+                              become_markers / Marker_popup_carries_site_energy_cost_and_uppercased_charger.
+
+# Data states (1 declared: empty) — a visible region, never blank
+[x] state  - empty -> TeslaChargingSessionsMapState.Empty (Model.cs#85); classified by the view-model from
+                      LoadStatus.Empty and from a null/coordinate-less payload (ContentState → Empty,
+                      ViewModel.cs), with the localized EmptyMessage = NoMapData (Model.cs#324,#416,
+                      tesla_sessions.noMapData "No location data available yet."). The view feeds it to the map's
+                      built-in "no location data" overlay (TeslaChargingSessionsMap.cs#219 _map.EmptyMessage,
+                      #242 _map.SetHasGeometry(false)) so the region is never blank. Asserted by
+                      ViewModel_empty_body_is_whole_surface_empty + Center_defaults_to_the_san_francisco_view.
+                      (loading skeleton, retryable error, and stale/offline freshness chip are also implemented for
+                      the single data source — BuildLoading / BuildError / UpdateFreshness — and covered by the
+                      view-model state-matrix tests, exceeding the one declared state.)
+
+# Strings (3) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - tesla_sessions.mapLabel    -> TeslaChargingSessionsMapRegistration.MapLabel (Model.cs#408)
+                                           localizer.GetString("tesla_sessions.mapLabel", "Charging sessions map");
+                                           the map region's accessible name (TeslaChargingSessionsMap.cs#129/#131/
+                                           #213-214, web role="application" aria-label). Catalog: en/ar/he
+                                           Resources.resw. Asserted by Map_and_marker_labels_are_present_for_
+                                           accessibility + Every_surface_string_resolves_through_the_facade.
+[x] string - tesla_sessions.markerLabel -> TeslaChargingSessionsMapRegistration.MarkerLabel (Model.cs#420)
+                                           localizer.GetString("tesla_sessions.markerLabel", "{0} charging session")
+                                           composed with string.Format(name) — the per-marker Narrator label (web
+                                           ariaLabel t('tesla_sessions.markerLabel', { name })). Catalog value
+                                           "{0} charging session". Asserted by Marker_aria_label_interpolates_the_
+                                           site_name + the new Marker_label_interpolates_the_generated_catalog_
+                                           token (real "{0}" catalog value → "Fremont SC charging session").
+[x] string - tesla_sessions.unknown     -> TeslaChargingSessionsMapRegistration.Unknown (Model.cs#412)
+                                           localizer.GetString("tesla_sessions.unknown", "Unknown"); the fallback
+                                           site name + the {name} feeding markerLabel when site_location_name is
+                                           empty (web s.site_location_name || t('tesla_sessions.unknown')). Catalog:
+                                           en/ar/he. Asserted by Marker_popup_omits_absent_cost_and_charger_and_
+                                           falls_back_to_unknown ("Unknown" + "Unknown charging session").
+
+PARITY_COVERED=7
+# Coverage asserted headlessly by TeslaChargingSessionsMapTests (32 cases, 0 failed): the JSON parse adapter
+# (envelope + bare-array + numeric-string coercion), the cache-then-network result mapper, the projection
+# (mean-coordinate centre + SF fallback, the finite-coordinate marker filter, the kWh/currency/uppercased-charger
+# popup lines, the markerLabel "{0}" interpolation), the repository source request shape + offline fallback, the
+# view-model state matrix (loading / ready / empty / stale / offline / error), the i18n facade key coverage (the 3
+# web keys + chrome keys), the map/marker accessibility labels, and the PII-safe diagnostics. The WinUI view's
+# per-state branch selection is driven entirely by the TeslaChargingSessionsMapState asserted here and exercised by
+# the Release app build.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TeslaChargingSessionsMap -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Charging path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (pre-existing ShellWindow.xaml.cs AutomationList Pass1 syntax break repaired — Defect 1 above; the 17
+#    CA1000/CA1716/CA1720/CA1859 warnings are pre-existing analyzer perf/naming suggestions in TeslaSync.App.Core
+#    files this change never touches — zero warnings in the charging surface, ShellWindow, or the new test.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> Formatted 0 of 4377 files
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26312, Failed: 0, Skipped: 0
+#   (incl. the TeslaChargingSessionsMapTests suite + the new markerLabel "{0}" regression case)
+TEST_EXIT=0
+# Note (honesty): apps/windows/TeslaSync.App.UITests is a WinAppDriver/Appium end-to-end harness — all 147 of its
+# cases throw UiAutomationUnavailableException ("nothing is listening on http://127.0.0.1:4723/ … WinAppDriver.exe
+# not found") in this headless runner. These are an absent-interactive-desktop environment gap, NOT logic failures
+# and NOT introduced by this change (the solution did not even build before Defect 1 was fixed). The windows test
+# gate is the TeslaSync.App.Tests unit project (the established W7 page-prompt target), which is fully green.
+PARITY_COVERED=7
+PARITY_REQUIRED=7
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TeslaChargingSessionsMap \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/TeslaChargingSessionsMapTests.cs \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-charging-TeslaChargingSessionsMap.log
+# git commit -m "feat(apps/windows): TeslaChargingSessionsMap at web parity (W7 charging)"
+
+EXIT=0
+STATUS=DONE
