@@ -1,0 +1,165 @@
+=== P4 Shared surface 0197 HealthRow (Apple) ===
+artifact: apps/apple/TeslaSync/shared-surfaces/HealthRow.*
+web source (THE spec): web/src/components/status/HealthRow.tsx
+runner: macOS (Darwin), Xcode 26.5 (17F42), Swift 6, swiftlint + swiftformat + pwsh + xcodegen present,
+        iPhone 16 simulator booted. Capability (SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15
+        HIG) AVAILABLE — so this is reported DONE, not BLOCKED.
+
+----------------------------------------------------------------------------------------------------
+WHAT SHIPPED  (9 files, single shared surface — the parity of the web HealthRow)
+  HealthRow.Adapter.swift     Foundation-only core: HealthRowSurface.slug, HealthRowStatus (web
+                              HeroStatus union), HealthRowActivationKind, HealthRowInputs (Equatable).
+  HealthRow.Projection.swift  Pure projection HealthRowProjector.resolve(inputs:) → HealthRowProjection
+                              (the "cached → projection" adapter the acceptance calls for).
+  HealthRow.Model.swift       P1/S10 i18n facade (HealthRowStrings), P1/S11 telemetry seam
+                              (HealthRowTelemetry + OSLog default), P1/S8 @Observable @MainActor holder
+                              (lifecycle, derived projection, localized a11y label/hint, once-only
+                              view.opened).
+  HealthRow.Views.swift       status → shared TSTone token projection + HealthRowContentView (dot, icon,
+                              truncating label, status-tinted summary, chevron; link/button/inert wrap).
+  HealthRow.swift             Public SwiftUI surface + HealthRowActivation enum (none/link/externalLink/
+                              action). Generic icon @ViewBuilder slot erased to AnyView? (web ReactNode).
+  HealthRow.Previews.swift    #Preview for all statuses, activation variants, truncation (DEBUG-only).
+  HealthRow.AdapterTests.swift  Pure-core XCTest (slug, status, kind, inputs equality, projector).
+  HealthRow.Tests.swift       Model + activation + tone-color + view-composition + strings XCTest.
+  HealthRow.strings           Per-surface i18n catalog (HealthRow table).
+
+----------------------------------------------------------------------------------------------------
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  status: HeroStatus            → HealthRowStatus (healthy/degraded/unhealthy/unknown/maintenance)
+  DOT_FOR_STATUS/TEXT_FOR_STATUS→ HealthRowStatus.tone (shared TSTone): healthy→success, degraded→
+    (bg/text *-400 hues)          warning, unhealthy→danger, unknown→neutral, maintenance→info →
+                                  Color.TS.status* tokens (theme-aware light/dark/high-contrast).
+  icon?: ReactNode              → @ViewBuilder icon slot erased to AnyView?; hasIcon in Inputs; decorative
+                                  (accessibilityHidden), tinted Color.TS.textSecondary.
+  label: string (flex-1 truncate)→ Text(Font.TS.body, .medium, textPrimary), lineLimit(1) .tail,
+                                  frame(maxWidth:.infinity). Single flexible run, truncates first.
+  summary: string (shrink-0)    → Text(Font.TS.caption, status color), fixedSize → holds intrinsic width.
+  to (internal) / to+external / → HealthRowActivation .link / .externalLink / .action / .none;
+    onClick / neither             precedence to-over-onClick preserved; perform wired by embedder.
+  (to||onClick) && <ChevronRight>→ showsChevron = isNavigable; chevron "chevron.right" textMuted.
+  hover:bg-white/[0.04]         → Color.TS.surfaceGlass hover fill on interactive rows (Reduce-Motion
+                                  aware via TSAnimation.fast); inert rows have none.
+  aria-label `{label} — {summary}`→ HealthRowStrings.accessibilityLabel localizable format "%1$@ — %2$@"
+                                  (separator/word-order translatable); applied to every variant.
+  (web has no hint)             → DISCLOSED native HIG addition: VoiceOver hint — "Opens details"
+                                  (internal link/action) / "Opens in your browser" (externalLink); link
+                                  vs button trait split by activation kind. No silent drift.
+  tokens                        → TSSpacing/TSRadius/Color.TS/Font.TS/TSTone — no Tailwind, no hex.
+
+----------------------------------------------------------------------------------------------------
+STATES (every REAL branch renders — no hidden surface; no fabricated chrome)
+  HealthRow is a PURE presentational primitive — the prompt's own "Data sources: (none — pure
+  presentational component)", "Shared components: (none)", and "i18n keys: (none extracted)" confirm it.
+  It binds NO hook (not even useTranslation). It therefore has NO loading / empty / error / stale /
+  offline branch — there is nothing to load, fail, go stale, or lose connectivity to. Inventing such
+  chrome would fabricate states the source does not have (honesty covenant #2/#5), so this surface
+  reproduces ONLY the source's REAL branches — exactly the disposition sibling 0091 HistoryListRow took.
+  REAL branches, all rendered + tested:
+    • status × 5 (each recolours dot + summary via TSTone)         ✓ projector + tone tests + previews
+    • icon present / absent                                        ✓ projector + composition + previews
+    • activation none(div) / link / externalLink / action(button)  ✓ projector + model + activation tests
+    • chevron shown iff navigable                                  ✓ projector tests
+    • long label truncates while summary holds width               ✓ previews ("Truncation")
+
+----------------------------------------------------------------------------------------------------
+GATES  (raw exits — nothing massaged; reds reported as reds)
+
+  [GREEN] xcodegen generate                                                          XCODEGEN_EXIT=0
+          The shared-surfaces dir is glob-sourced in project.yml, so the 9 HealthRow files are picked
+          up with no project edits (allowed-files scope preserved: only HealthRow.* + this log changed).
+
+  [GREEN] swiftformat --lint (.swiftformat) — my 8 swift files     : 0/8 require formatting  FORMAT_MY=0
+  [GREEN] swiftformat --lint apps/apple (whole tree)               : 0/4898 require formatting  FORMAT_EXIT=0
+  [GREEN] swiftlint --strict (.swiftlint.yml) — my 8 swift files   : 0 violations, 0 serious in 8  LINT_MY=0
+  [GREEN] swiftlint --strict (whole tree)                          : 0 violations, 0 serious in 4600  LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 — literal prompt -Path (HealthRow prefix) : PLACEHOLDER_COUNT=0  EXIT=0
+  [GREEN] check-placeholders.ps1 -Language swift — REAL scoped scan of my files (temp copy):
+                                                                     PLACEHOLDER_ALLOWED=0 COUNT=0  PLACEHOLDER_EXIT=0
+          (the literal -Path is a file PREFIX, not a real dir, so it self-passes; the scoped scan over
+           copies of the actual 8 swift files proves zero stubs/TODO/FIXME/Coming-soon/Lorem honestly.)
+
+  [GREEN] ISOLATED build + test — SwiftPM swift-tools 6.0, Swift 6 language mode (= SWIFT_STRICT_
+          CONCURRENCY complete, matching the app's SWIFT_VERSION 6.0 / complete), macOS 15 platform,
+          DEBUG defined, compiling the EXACT shipped surface sources (incl. the #Preview macro file)
+          against the REAL repo design system (generated apps/design Tokens + Sources/Design
+          TSDesign/TSMaterial + Sources/Components/UI Badges TSTone) under the Xcode 26.5 toolchain
+          (real #Preview macro + XCTest), module named `TeslaSync` so the co-located `@testable import
+          TeslaSync` tests resolve exactly as in the app bundle:
+              Test Suite 'All tests' passed · Executed 39 tests, with 0 failures (0 unexpected)  SWIFT_TEST_EXIT=0
+
+  [DEFERRED — pre-existing, unrelated, NOT this surface] full-app iOS xcodebuild (the prompt's IOS step):
+      `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test`
+      → ** BUILD FAILED **                                                            IOS_EXIT=65
+      EVIDENCE this is NOT attributable to HealthRow (raw, verified — no red-as-green):
+        1. The scheme pre-action `Stage Shared.xcframework` ran Gradle :core:assembleSharedXCFramework
+           and DID stage the framework ("✓ Shared.xcframework staged"); the iOS app target then began
+           compiling (57+ "Compiling …" SwiftDriverJobDiscovery lines for the TeslaSync module + exts).
+        2. The build reached the TeslaSync app target and processed THIS surface's resources cleanly:
+           "CopyStringsFile … HealthRow.strings" + "HealthRow.strings:1:1: note: detected encoding …
+           Unicode (UTF-8)" — i.e. HealthRow.strings validated OK.
+        3. EXACTLY ONE ` error: ` in the entire 13,442-line build log, and it is NOT in any HealthRow
+           file — it is a pre-existing SIBLING surface:
+             apps/apple/TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping
+             closure captures non-escaping parameter 'content'
+        4. ZERO ` error: ` referencing any HealthRow.* file (grep count = 0).
+        5. AISuggestNewGeofences.swift is git-tracked + UNMODIFIED by this task (git status shows only
+           the 9 new `?? HealthRow.*` files). It is OUT of this prompt's allowed-files scope
+           (`HealthRow.*` + the log) and out of scope per "Out of Scope: Other surfaces …each has its
+           own prompt" — so it is NOT fixed here; it is owned by the P4/P99 acceptance gate, exactly as
+           sibling logs 0001/0004/0005 deferred their unrelated other-surface blockers.
+      Disposition: the literal full-app iOS gate exits 65 due to a pre-existing Swift-6 escaping-closure
+      Sema error in an UNRELATED, out-of-allowed-files sibling surface — not this surface's code.
+      Reported RED honestly; NOT counted green. HealthRow itself is proven to compile + pass 39 tests
+      under the identical Swift 6 strict-concurrency settings via the isolated app-module-equivalent run.
+
+  [DEFERRED — environmental, NOT this surface] full-app macOS xcodebuild (the prompt's MAC step):
+      `xcodebuild -scheme TeslaSync-macOS build test`                                 MAC_EXIT=65
+      → ** BUILD FAILED ** / ** TEST FAILED ** with ZERO "Compiling" lines — it failed at
+        GatherProvisioningInputs BEFORE compiling any Swift:
+          TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+          development certificate. Enable development signing in the Signing & Capabilities editor.
+          TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing …
+      This is the no-development-certificate / empty DEVELOPMENT_TEAM runner limitation (the macOS
+      code-signing blocker sibling 0001 documented), purely environmental and unrelated to any source —
+      no HealthRow (or any) Swift was compiled. Owned by the P4/P99 acceptance gate on a signed runner.
+      Reported RED honestly; NOT counted green.
+
+----------------------------------------------------------------------------------------------------
+HONESTY COVENANT COMPLIANCE
+  1  No red-as-green     : full-app iOS + macOS reported ** BUILD FAILED ** / IOS_EXIT=65 / MAC_EXIT=65,
+                          not green. Only the surface's own gates (format/lint/placeholder/SwiftPM
+                          build+test/xcodegen) are claimed green, with raw output above.
+  2  No scope narrowing  : every REAL web branch reproduced (5 statuses × icon × 4 activations × chevron
+                          × truncation); the absent loading/empty/error/stale/offline are documented as
+                          non-existent for this sourceless primitive, not silently dropped.
+  3  No skip-and-assume  : macOS was actually executed (not assumed); its real provisioning failure is
+                          quoted. iOS error count + the single offending file verified by grep.
+  4  No stubs as final   : no TODO/FIXME/stub/placeholder/Lorem (placeholder gate COUNT=0, scoped scan).
+  5  No parity shortcuts : tokens + a11y + i18n facade + telemetry + projection all implemented; the one
+                          native HIG addition (VoiceOver hint) is DISCLOSED, not hidden.
+  6  No delegation       : authored directly (delegation FORBIDDEN per prompt).
+  7  No predecessor bypass: P4 core (theme/nav/live/cache/state-holders), P1/S8 holder pattern, P1/S9
+                          tokens, P1/S10 i18n facade, P1/S11 telemetry all consumed, not re-invented.
+  8  No commit on red    : the SURFACE is fully green (39/39 tests, 0 lint, 0 format, 0 placeholder,
+                          compiles under Swift 6 strict concurrency). The full-app reds are DEFERRED,
+                          pre-existing/environmental, out-of-allowed-files blockers — committed under the
+                          same accepted definition-of-done as sibling P4 surfaces 0001/0004/0005.
+  9  No silent drift     : the to-over-onClick precedence, the externalLink split, and the VoiceOver
+                          hint addition are all spelled out in PARITY MAPPING.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic HealthRow shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 39 tests pass under the app's own Swift 6 strict-concurrency rules,
+  against the REAL design system, via the Xcode 26.5 XCTest runtime, with swiftformat / swiftlint /
+  placeholder all green on the surface files AND on the whole tree (0/4898 format, 0/4600 lint), and the
+  #Preview macro compiling; and within the REAL full-app iOS build the surface produced ZERO errors and
+  its .strings validated. The full-app iOS build/test gate is DEFERRED (reported RED, not failed by this
+  code) on a single pre-existing, out-of-allowed-files sibling-surface Sema error
+  (AISuggestNewGeofences.swift:129); the macOS gate is DEFERRED on the environmental no-dev-certificate
+  code-signing limitation (no Swift compiled). Both are owned by the P4/P99 acceptance gate on a signed,
+  uncontended runner.
+
+EXIT=0
+STATUS=DONE
