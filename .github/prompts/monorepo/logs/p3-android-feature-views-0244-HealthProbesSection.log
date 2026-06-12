@@ -1,0 +1,248 @@
+=== P3 Feature view 0244 HealthProbesSection (Android) ===
+NOTE: Gradle module path is :android (settings.gradle.kts maps app/ -> :android; the prompt template's :app: is a placeholder). Absolute log path used so Tee survives Push-Location.
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :shared:core:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeReleaseNativeLibs NO-SOURCE
+> Task :shared:core:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :shared:core:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:generateReleaseResources UP-TO-DATE
+> Task :shared:core:packageReleaseResources UP-TO-DATE
+> Task :android:mergeReleaseNativeLibs UP-TO-DATE
+> Task :shared:core:parseReleaseLocalResources UP-TO-DATE
+> Task :android:stripReleaseDebugSymbols UP-TO-DATE
+> Task :shared:core:generateReleaseRFile UP-TO-DATE
+> Task :android:extractReleaseNativeSymbolTables UP-TO-DATE
+> Task :android:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :android:checkReleaseDuplicateClasses UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileRelease UP-TO-DATE
+> Task :android:generateReleaseBuildConfig UP-TO-DATE
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :android:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :shared:core:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:extractDeepLinksRelease UP-TO-DATE
+> Task :android:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :shared:core:processReleaseManifest UP-TO-DATE
+> Task :shared:core:compileReleaseLibraryResources UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :shared:core:prepareReleaseArtProfile UP-TO-DATE
+> Task :android:checkReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :android:generateReleaseResources UP-TO-DATE
+> Task :shared:core:mergeReleaseShaders UP-TO-DATE
+> Task :shared:core:compileReleaseShaders NO-SOURCE
+> Task :shared:core:generateReleaseAssets UP-TO-DATE
+> Task :shared:core:releaseAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:mergeReleaseAssets UP-TO-DATE
+> Task :android:mergeReleaseResources UP-TO-DATE
+> Task :android:packageReleaseResources UP-TO-DATE
+> Task :android:parseReleaseLocalResources UP-TO-DATE
+> Task :android:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :shared:core:processReleaseJavaRes UP-TO-DATE
+> Task :android:extractDeepLinksRelease UP-TO-DATE
+> Task :android:processReleaseMainManifest UP-TO-DATE
+> Task :android:processReleaseManifest UP-TO-DATE
+> Task :android:processReleaseManifestForPackage UP-TO-DATE
+> Task :android:processReleaseResources UP-TO-DATE
+> Task :android:javaPreCompileRelease UP-TO-DATE
+> Task :android:desugarReleaseFileDependencies UP-TO-DATE
+> Task :android:mergeReleaseStartupProfile UP-TO-DATE
+> Task :android:mergeExtDexRelease UP-TO-DATE
+> Task :android:mergeReleaseArtProfile UP-TO-DATE
+> Task :android:mergeReleaseShaders UP-TO-DATE
+> Task :android:compileReleaseShaders NO-SOURCE
+> Task :android:generateReleaseAssets UP-TO-DATE
+> Task :android:mergeReleaseAssets UP-TO-DATE
+> Task :android:compressReleaseAssets UP-TO-DATE
+> Task :android:extractReleaseVersionControlInfo UP-TO-DATE
+> Task :android:optimizeReleaseResources UP-TO-DATE
+> Task :android:collectReleaseDependencies UP-TO-DATE
+> Task :android:sdkReleaseDependencyData UP-TO-DATE
+> Task :android:writeReleaseAppMetadata UP-TO-DATE
+> Task :android:writeReleaseSigningConfigVersions UP-TO-DATE
+> Task :android:compileReleaseKotlin
+> Task :android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :android:dexBuilderRelease UP-TO-DATE
+> Task :android:mergeDexRelease UP-TO-DATE
+> Task :android:mergeReleaseGlobalSynthetics UP-TO-DATE
+> Task :android:compileReleaseArtProfile UP-TO-DATE
+> Task :android:processReleaseJavaRes UP-TO-DATE
+> Task :android:mergeReleaseJavaResource UP-TO-DATE
+> Task :android:packageRelease UP-TO-DATE
+> Task :android:createReleaseApkListingFileRedirect UP-TO-DATE
+> Task :android:assembleRelease UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-09/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m 33s
+70 actionable tasks: 3 executed, 67 up-to-date
+BUILD_EXIT=0
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :shared:core:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:generateReleaseResources UP-TO-DATE
+> Task :shared:core:packageReleaseResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:processReleaseManifest UP-TO-DATE
+> Task :shared:core:parseReleaseLocalResources UP-TO-DATE
+> Task :shared:core:generateReleaseRFile UP-TO-DATE
+> Task :shared:core:compileReleaseLibraryResources UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :android:generateReleaseBuildConfig UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkReleaseAarMetadata UP-TO-DATE
+> Task :android:generateReleaseResValues UP-TO-DATE
+> Task :android:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :android:generateReleaseResources UP-TO-DATE
+> Task :android:mergeReleaseResources UP-TO-DATE
+> Task :android:packageReleaseResources UP-TO-DATE
+> Task :android:parseReleaseLocalResources UP-TO-DATE
+> Task :android:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileRelease UP-TO-DATE
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :shared:core:processReleaseJavaRes UP-TO-DATE
+> Task :android:processReleaseMainManifest UP-TO-DATE
+> Task :android:processReleaseManifest UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :android:processReleaseManifestForPackage UP-TO-DATE
+> Task :android:processReleaseResources UP-TO-DATE
+> Task :android:compileReleaseKotlin UP-TO-DATE
+> Task :android:javaPreCompileRelease UP-TO-DATE
+> Task :android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :android:bundleReleaseClassesToRuntimeJar UP-TO-DATE
+> Task :android:bundleReleaseClassesToCompileJar UP-TO-DATE
+> Task :android:compileReleaseUnitTestKotlin UP-TO-DATE
+> Task :android:preReleaseUnitTestBuild
+> Task :android:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :android:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :android:processReleaseJavaRes UP-TO-DATE
+> Task :android:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :android:testReleaseUnitTest UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-09/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 1m
+45 actionable tasks: 2 executed, 43 up-to-date
+TEST_EXIT=0
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :android:loadKtlintReporters UP-TO-DATE
+> Task :android:runKtlintCheckOverAndroidTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestSourceSet UP-TO-DATE
+> Task :android:ktlintAndroidTestSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverDebugSourceSet NO-SOURCE
+> Task :android:ktlintDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :android:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverReleaseSourceSet NO-SOURCE
+> Task :android:ktlintReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestSourceSet UP-TO-DATE
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverMainSourceSet
+> Task :android:detekt
+> Task :android:ktlintMainSourceSetCheck
+> Task :android:ktlintCheck
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-09/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 4m 6s
+13 actionable tasks: 3 executed, 10 up-to-date
+LINT_EXIT=0
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+----- RATIONALE (honesty covenant) -----
+capability: Jetpack Compose + Material 3 present (Compose BOM 2026.04.01, material3); Kotlin 2.4.0 KGP (>= the 2.2.x the prompt names); JDK 21 runner, Android SDK 36. assembleRelease + testReleaseUnitTest both green => capability satisfied, NOT blocked.
+module-path: prompt gate says :app:assembleRelease, but settings.gradle.kts maps app/ -> :android (there is no :app project). Ran :android:* (the real path every P3/A* gate uses); documented above. No scope narrowing.
+data: view performs NO HTTP. HealthProbesSectionSource binds the shared S8 AdminStore.systemHealth() (= web getExtendedHealth -> GET /system/health); the ViewModel projects Resource<JsonElement> -> HealthProbesData -> UiState via BaseFeedViewModel.asUiState (ADR-013 cache-then-network).
+states: every P3 state renders -> loading (two skeletons, web isLoading), content (two probe cards + Live/Ready badges, web success), error (QueryError + retry, web error), empty (payload not an object => friendly EmptyState, never a blank box), stale + offline (cached cards kept visible + a freshness chip in the header + one auto-refresh, ADR-013). No fabricated state, no red-as-green.
+i18n: every displayed string resolves through the Android resource facade (P1/S10) via resolveHealthProbesText("translation_<sanitized-key>"), reproducing react-i18next's natural-key fallback 1:1. Catalog-backed keys (Live, Ready, Status, Goroutines, Uptime, Database, Latency) localize; the web's untranslated natural keys (Health Probes, the two endpoint titles, Pool Connections, the description) fall back to the key text exactly as the web t() does. Raw liveness/database statuses are data shown verbatim (web {livenessStatus}/{dbStatus}), not UI copy. No hardcoded display literals. NOTE: catalog entries are in P1/S10 strings.xml, which is outside this artifact's allowed-files scope, so absent keys use the documented fallback (identical on-screen text to web).
+a11y: header is one merged Button node carrying expand/collapse action label + aria-expanded state description; QueryError retry, loading region (contentDescription), and the freshness chip all expose accessible names. API 26+ target. Reduced motion honored via FadeIn / rememberMotionDurationMs.
+tests: adapter unit test (HealthProbesProjectionTest) + ViewModel state test (HealthProbesSectionViewModelTest) run in the JVM testReleaseUnitTest gate (green). Per-state UI + a11y test (HealthProbesSectionUiTest, androidTest) uses only resolvable finders (assertIsDisplayed / onNodeWithText / onNodeWithContentDescription / performClick) — the repo's androidTest set is pre-existingly non-compiling on 8 unrelated widget tests (assertExists/assertDoesNotExist), which is why the gate runs JVM unit tests, not connectedAndroidTest; running the instrumented suite additionally needs a device/emulator (unavailable here).
+placeholder: PLACEHOLDER_COUNT=0. The one PLACEHOLDER_ALLOWED is value.toDouble() (the 'toDo' substring trips the case-insensitive TODO pattern) — a numeric conversion, marked // parity:allow with a reason, identical to the sibling SystemHealthWidgetModel.
+footprint: com/teslasync/feature-views/HealthProbesSection/{HealthProbesSection,HealthProbesSectionModel,HealthProbesSectionSource,HealthProbesSectionViewModel}.kt + the two test packages (featureviews/healthprobes) + this log.
+
+EXIT=0
+STATUS=DONE
