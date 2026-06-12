@@ -1,0 +1,77 @@
+/*
+  ThemePicker.strings
+  TeslaSync — P4 shared surface · 0228 · ThemePicker (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The first block mirrors the EXACT keys the web
+  `components/ui/ThemePicker.tsx` resolves through `t(key, default)`. The second block localizes the
+  theme + mode display names (static data in `ThemeProvider.tsx`, surfaced here through the facade so the
+  native code holds no English literal — the same precedent as the AppearanceSettings accent labels).
+  The third block is the native a11y additions (the spoken selected value + the per-control hints + the
+  "never a blank box" empty leaf), which the anonymous web swatches convey purely visually.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table ("ThemePicker") so each parallel surface prompt owns its own strings. In
+  test / preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web `t()` keys (verbatim from components/ui/ThemePicker.tsx) --- */
+
+/* Toast prefix + section copy for a theme pick (web t('theme.theme', 'Theme')). */
+"theme.theme" = "Theme";
+
+/* Toast prefix for a mode pick (web t('theme.mode', 'Mode')). */
+"theme.mode" = "Mode";
+
+/* Display-Mode section title (web t('theme.displayMode', 'Display Mode')). */
+"theme.displayMode" = "Display Mode";
+
+/* Accent-Colour section title (web t('theme.accentColor', 'Accent Color')). */
+"theme.accentColor" = "Accent Color";
+
+/* The Custom theme name (web t('theme.custom', 'Custom')). */
+"theme.custom" = "Custom";
+
+/* Custom-builder Primary channel label (web t('theme.primary', 'Primary')). */
+"theme.primary" = "Primary";
+
+/* Custom-builder Accent channel label (web t('theme.accent', 'Accent')). */
+"theme.accent" = "Accent";
+
+/* --- Theme + mode display names (ThemeProvider.tsx data, localized here) --- */
+
+"theme.color.neonCyan" = "Neon Cyan";
+"theme.color.teslaRed" = "Tesla Red";
+"theme.color.matrixGreen" = "Matrix Green";
+"theme.color.royalPurple" = "Royal Purple";
+"theme.color.solarAmber" = "Solar Amber";
+
+"theme.mode.dark" = "Dark";
+"theme.mode.light" = "Light";
+"theme.mode.oled" = "OLED Black";
+"theme.mode.midnight" = "Midnight Blue";
+"theme.mode.auto" = "Auto (System)";
+"theme.mode.sunset" = "Sunset";
+"theme.mode.nord" = "Nord";
+
+/* --- Native a11y additions (no web t() key; the swatches convey state visually) --- */
+
+/* VoiceOver value spoken for the active mode / theme swatch. */
+"theme.a11y.selected" = "Selected";
+
+/* VoiceOver hint on a Display-Mode card. */
+"theme.a11y.modeHint" = "Selects the display mode";
+
+/* VoiceOver hint on an Accent-Colour swatch. */
+"theme.a11y.themeHint" = "Selects the accent color";
+
+/* VoiceOver label for the custom Primary colour well. */
+"theme.a11y.customPrimary" = "Custom primary color";
+
+/* VoiceOver label for the custom Accent colour well. */
+"theme.a11y.customAccent" = "Custom accent color";
+
+/* Title of the empty leaf shown when no themes are configured. */
+"theme.empty" = "No themes available";
+
+/* Supporting line of the empty leaf. */
+"theme.emptyMessage" = "Theme options appear here once configured.";
