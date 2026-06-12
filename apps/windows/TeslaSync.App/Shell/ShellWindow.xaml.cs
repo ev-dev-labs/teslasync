@@ -70,6 +70,10 @@ public sealed partial class ShellWindow : Window
 
         // Admin / Vehicle cost page (P2/W7) — parity port of web VehicleCostPage at route /admin/vehicle-cost.
         _viewModel.PageFactory.Register("VehicleCost", static () => new FeatureViews.Admin.VehicleCostPage());
+
+        // Automations / AutomationBuilder page (P2/W7) — parity port of web AutomationBuilderPage at routes
+        // automations/new + automations/:id/edit.
+        _viewModel.PageFactory.Register("AutomationBuilder", static () => new FeatureViews.Automations.AutomationBuilderPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

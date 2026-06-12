@@ -349,6 +349,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\AchievementBadge.Model.cs" Link="FeatureViews\AchievementBadge.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.Model.cs" Link="FeatureViews\ActionBuilder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActionBuilder.ViewModel.cs" Link="FeatureViews\ActionBuilder.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AutomationBuilderPage\AutomationBuilderPage.Model.cs" Link="FeatureViews\AutomationBuilderPage\AutomationBuilderPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AutomationBuilderPage\AutomationBuilderPage.Source.cs" Link="FeatureViews\AutomationBuilderPage\AutomationBuilderPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AutomationBuilderPage\AutomationBuilderPage.ViewModel.cs" Link="FeatureViews\AutomationBuilderPage\AutomationBuilderPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActiveOrdersSection\ActiveOrdersSection.Model.cs" Link="FeatureViews\ActiveOrdersSection\ActiveOrdersSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActiveOrdersSection\ActiveOrdersSection.Source.cs" Link="FeatureViews\ActiveOrdersSection\ActiveOrdersSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActiveOrdersSection\ActiveOrdersSection.ViewModel.cs" Link="FeatureViews\ActiveOrdersSection\ActiveOrdersSection.ViewModel.cs" />
