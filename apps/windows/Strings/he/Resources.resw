@@ -12018,6 +12018,33 @@
   <data name="translation.lightbox.zoomReset" xml:space="preserve">
     <value>Reset zoom</value>
   </data>
+  <data name="translation.listExport.button" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="translation.listExport.csv" xml:space="preserve">
+    <value>Download as CSV</value>
+  </data>
+  <data name="translation.listExport.disabledTooltip" xml:space="preserve">
+    <value>No data to export</value>
+  </data>
+  <data name="translation.listExport.json" xml:space="preserve">
+    <value>Download as JSON</value>
+  </data>
+  <data name="translation.listExport.menuLabel" xml:space="preserve">
+    <value>Export list</value>
+  </data>
+  <data name="translation.listExport.scopeLegend" xml:space="preserve">
+    <value>Export scope</value>
+  </data>
+  <data name="translation.listExport.selectedWithCount" xml:space="preserve">
+    <value>Selected ({{count}})</value>
+  </data>
+  <data name="translation.listExport.visible" xml:space="preserve">
+    <value>Visible</value>
+  </data>
+  <data name="translation.listExport.visibleWithCount" xml:space="preserve">
+    <value>Visible ({{count}})</value>
+  </data>
   <data name="translation.live.connected" xml:space="preserve">
     <value>Live</value>
   </data>
