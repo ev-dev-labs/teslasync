@@ -128,6 +128,8 @@ public sealed partial class ShellWindow : Window
             page.BackRequested += (_, _) => NavigateTo("charging");
             return page;
         });
+        // Charging / Charging Curve page (P2/W7) — parity port of web ChargingCurvePage at route /charging-curve.
+        _viewModel.PageFactory.Register("ChargingCurve", static () => new FeatureViews.Charging.ChargingCurvePage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

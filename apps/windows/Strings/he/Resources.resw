@@ -5067,6 +5067,9 @@
   <data name="translation.charging.curve.empty" xml:space="preserve">
     <value>No charging sessions to plot a curve.</value>
   </data>
+  <data name="translation.charging.curve.emptyHint" xml:space="preserve">
+    <value>Start a charging session and data will appear here.</value>
+  </data>
   <data name="translation.charging.curve.energyAdded" xml:space="preserve">
     <value>Energy Added</value>
   </data>
@@ -5099,6 +5102,9 @@
   </data>
   <data name="translation.charging.curve.selectSession" xml:space="preserve">
     <value>Select a session to inspect</value>
+  </data>
+  <data name="translation.charging.curve.selectSessionHint" xml:space="preserve">
+    <value>Select a session above to view its charging curve</value>
   </data>
   <data name="translation.charging.curve.sessionComparison" xml:space="preserve">
     <value>Session Comparison</value>
