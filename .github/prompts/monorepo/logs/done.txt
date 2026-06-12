@@ -714,3 +714,4 @@ p2-windows/widget-primitives/W-0012-WidgetTipCards.prompt.md
 p2-windows/widget-primitives/W-0013-WidgetShell.prompt.md
 p2-windows/pages/admin/ApiLogsPage.prompt.md
 p2-windows/widget-primitives/W-0011-WidgetStatusGrid.prompt.md
+p2-windows/pages/admin/DiskForecastPage.prompt.md
