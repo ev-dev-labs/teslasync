@@ -1,0 +1,94 @@
+=== P2 Shared surface 0174 LinearSidebar (Windows) ===
+
+SURFACE   : apps/windows/TeslaSync.App/shared-surfaces/LinearSidebar/LinearSidebar.{cs,Model.cs,Source.cs,ViewModel.cs}
+TEST      : apps/windows/TeslaSync.App.Tests/SharedSurfaces/LinearSidebarTests.cs
+WEB SOURCE: web/src/components/layout/sidebar/LinearSidebar.tsx
+CAPABILITY: WinUI 3 (Microsoft.WindowsAppSDK 2.1.0) + .NET 10.0.300 — PRESENT (app builds, headless suite runs).
+            UI-automation harness (WinAppDriver) — ABSENT on this runner (see TEST breakdown / BLOCKED note).
+
+--- WHAT SHIPPED (parity port of the web LinearSidebar) ---
+4-file shared-surface pattern, all bound to the shared P1/S8 seams + P1/S10 i18n facade; the view performs
+no router/storage I/O and reads every label from the projection:
+  * LinearSidebar.Model.cs      — Registration (Slug + 8 i18n keys/fallbacks + 3 trailing-badge route literals
+                                   + {{count}}/{{page}}/{0} interpolators + 99+ chip cap), data records
+                                   (LinearNavItem/Section), projected display records, the pure
+                                   LinearSidebarProjection (active-path test, whitespace tokenizer, every-token
+                                   match, favorites-resolve, trailing-badge routing, collapse + filter-expand),
+                                   and the PII-safe LinearSidebarDiagnostics (emits only view.opened slug).
+  * LinearSidebar.Source.cs     — P1/S8 seams: INavLocationSource (web useLocation) + IPinnedPagesStore
+                                   (web pinnedItems source + onPin/onUnpin), each with an in-memory impl.
+  * LinearSidebar.ViewModel.cs  — INotifyPropertyChanged + IDisposable holder: collapse set seeded to
+                                   "everything except the active section" + auto-expand on active change,
+                                   tree filter, pin/unpin via the store, controlled pathname over live location.
+  * LinearSidebar.cs            — WinUI 3 ContentControl: navigation landmark, always-visible Favorites group,
+                                   collapsible sections as Expanders, 2px active accent + medium weight,
+                                   trailing unread-dot / count-chip, hover/focus-revealed pin/unpin actions,
+                                   and the empty-filter "No matches." + "Clear filter" branch announced via a
+                                   polite live region. Tokenized brushes (DisplayTokens, P1/S9) — no inline hex.
+
+STATES REPRODUCED: Tree (favorites + collapsible sections + active accent + trailing badges) and EmptyFilter
+("No matches." + Clear filter). The web source is presentational — its tree/favorites arrive as props and its
+only hooks are useLocation + useTranslation, so it performs NO data fetch and therefore has NO loading / error /
+stale / offline chrome to reproduce (documented in the surface XML docs, mirroring siblings EndpointSidebar /
+SearchInput). Accessibility: Navigation landmark + Narrator name on every interactive element; decorative
+glyphs/dots marked AccessibilityView.Raw; system font scale honoured via text primitives; nothing animated
+beyond the Expander reveal (reduced-motion safe). Telemetry: view.opened slug=LinearSidebar (P1/S11).
+
+i18n (P1/S10): every surface-owned string flows through ILocalizer. Added the 7 missing nav.* keys to
+Strings/{en,ar,he}/Resources.resw in sorted position (nav.unpinPage already present): nav.sidebar,
+nav.favorites, nav.filterNoMatch, nav.filterClear, nav.vehicleCount, nav.staleCount, nav.pinPage. Values follow
+the existing per-locale convention (the catalog currently carries English placeholders for every nav.* key in
+ar/he, e.g. nav.vehicles=Fleet, nav.unpinPage="Unpin {0}").
+
+PRE-REQ REPAIR: apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed-corrupt at HEAD
+(merge=union had re-concatenated it into 4 <Project> roots / 2711 lines → MSB4025 "multiple root elements",
+which blocked the whole-solution build/test/format for ANY surface). Per the file's own embedded INVARIANT
+(and exactly as predecessors RangePicker 0157 / TagInput 0160 / NewVersionBanner 0129 did), it was regenerated
+into ONE canonical root with the case-insensitive ordinal path-sorted, Include-deduplicated union of every
+Microsoft.UI-free .cs under dashboard-widgets/ feature-views/ misc-surfaces/ modals-dialogs/ shared-surfaces/
+(1201 Compile links — the prior 1198 plus the 3 new LinearSidebar Model/Source/ViewModel links; the bare WinUI
+view LinearSidebar.cs is excluded and exercised by the app build). Disk-scan == committed set verified (0 drift).
+
+=== GATE ===
+
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    Build succeeded.
+        0 Warning(s)
+        0 Error(s)
+    BUILD_EXIT=0
+
+[2] dotnet test apps/windows/TeslaSync.sln -c Release
+    Passed!  - Failed:     0, Passed: 23499, Skipped:     0, Total: 23499 - TeslaSync.App.Tests.dll (net10.0)
+    Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+    -> The headless logic suite (which contains the LinearSidebar adapter / per-state projection / a11y-label /
+       diagnostics tests) PASSES in full; no LinearSidebar test failed.
+    -> All 147 TeslaSync.App.UITests failures occur at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.
+       EnsureReady() — i.e. shared fixture setup, across EVERY surface (AuthenticationFlowTests,
+       PlatformPolishTests, ...), NOT in any LinearSidebar test. The fixture is designed to hard-fail (never
+       silently skip) when the runner is absent. Capability evidence (verbatim):
+         TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+         WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+         WinAppDriver.exe was not found at its standard install paths or on PATH.
+    TEST_EXIT=1   (whole-solution; caused exclusively by the absent WinAppDriver/Appium UI-automation runner)
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    clean across the whole solution (new files are LF + formatted to the repo style)
+    FORMAT_EXIT=0
+
+[4] ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/LinearSidebar
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0   (no TODO/FIXME/stub/mock/placeholder/Lorem/NotImplemented across the 4 shipped files)
+    PLACEHOLDER_EXIT=0
+
+--- VERDICT ---
+BUILD_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  TEST_EXIT=1.
+The LinearSidebar deliverable is complete and green on every gate within this runner's reach: it builds clean
+(0/0), its full headless test suite passes, the solution is format-clean, and it carries zero placeholders.
+The only non-zero step is the whole-solution TEST, failing solely because the WinAppDriver/Appium UI-automation
+runner is unavailable on this runner (no interactive desktop session) — a platform-capability gap that fails
+all 147 UITests identically regardless of surface. Per the prompt's capability clause ("If unavailable on the
+runner -> STATUS=BLOCKED with API evidence") and matching the adjacent sibling shared-surface logs (0001
+AnnouncerRegion, 0002 RouteAnnouncer, 0009, 0020, ...), this is recorded as BLOCKED with the evidence above.
+
+EXIT=1
+STATUS=BLOCKED

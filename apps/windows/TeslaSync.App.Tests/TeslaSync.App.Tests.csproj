@@ -34,101 +34,18 @@
     TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
     TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's
     UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
-    dashboard widget, feature view, misc surface, modal/dialog and shared surface. The WinUI app
-    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so
-    each surface's Microsoft.UI-free sources are Compile-linked into the single, case-insensitive ordinal
-    path-sorted, Include-deduplicated Compile ItemGroup below (the Link mirrors each source's real location
-    under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files
-    are excluded and exercised by the app build, and the test classes are picked up by the SDK
-    default-compile glob.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk under
-    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI
-    view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
-    integration merges can re-concatenate it into multiple Project roots plus duplicate Compile items, failing
-    XML load (MSB4025 / MSB4067); regenerate it directly from the WinUI-free sources on disk. Regenerated into
-    this single canonical Project root for P2 shared-surfaces/0144 Toast (repairing a merge=union multi-root
-    corruption) from the WinUI-free sources on disk, plus the new Toast Model / Source / ViewModel links. Do NOT
-    re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this
-    comment.
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
     dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
     (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so
     each surface's Microsoft.UI-free sources are Compile-linked into the single, case-insensitive ordinal
-    path-sorted, Include-deduplicated item group below (the Link mirrors each source's real location under
-    Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are
+    path-sorted, Include-deduplicated Compile ItemGroup below (the Link mirrors each source's real location
+    under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are
     excluded and exercised by the app build, and the test classes are picked up by the SDK default-compile
     glob. The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures.
 
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
-    path-sorted, Include-deduplicated item group - the union of every Microsoft.UI-free .cs on disk under
-    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI
-    view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
-    integration merges can re-concatenate it into multiple roots plus duplicate items, failing XML load
-    (MSB4025 / MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk.
-    Regenerated into this single canonical root for P2 shared-surfaces/0147 ActiveFilterChips (repairing a
-    merge=union multi-root corruption) from the WinUI-free sources on disk, plus the new ActiveFilterChips
-    Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal
-    build-item or project start tag inside this comment.
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
-    path-sorted, Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk
-    under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This
-    file carries the .gitattributes merge=union strategy, so a chain of integration merges can
-    re-concatenate it into multiple roots plus duplicate items, failing XML load (MSB4025 / MSB4067);
-    if that happens, regenerate it directly from the WinUI-free sources on disk. Do NOT re-concatenate
-    into multiple roots, and never write a literal build-item or project start tag inside this comment.
-    Regenerated into this single canonical Project root for P2 shared-surfaces/0146 FormatterPrefsBridge,
-    plus the new FormatterPrefsBridge Model / Source / ViewModel links.
-    shared-surfaces/0150 CurrencyInput (repairing a merge=union multi-root corruption) from the WinUI-free
-    sources on disk, plus the new CurrencyInput Model / Source / ViewModel links. Do NOT re-concatenate into
-    multiple roots, and never write a literal build-item or project start tag inside this comment.
-    so each surface's Microsoft.UI-free sources are Compile-linked into the single, case-insensitive
-    ordinal path-sorted, Include-deduplicated item group below (the Link mirrors each source's real
-    location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI
-    view files are excluded and exercised by the app build, and the test classes are picked up by the SDK
-    default-compile glob. The Content links copy the units-golden, manifest and widget-template fixtures.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
-    path-sorted, Include-deduplicated compile item group - the union of every Microsoft.UI-free .cs on disk
-    under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare
-    WinUI view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
-    integration merges can re-concatenate it into multiple roots plus duplicate items, failing XML load
-    (MSB4025 / MSB4067); when that happens regenerate it directly from the WinUI-free sources on disk.
-    Regenerated into this single canonical root for P2 shared-surfaces/0148 Combobox (repairing a merge=union
-    multi-root corruption) from the WinUI-free sources on disk, plus the new Combobox Model / Source /
-    ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build item or
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
-    path-sorted, Include-deduplicated Compile ItemGroup. The .gitattributes merge=union strategy can
-    re-concatenate it into multiple Project roots plus duplicate Compile items (failing XML load, MSB4025 /
-    MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk. Regenerated
-    into this single canonical Project root for P2 shared-surfaces/0154 FormField (repairing a merge=union
-    multi-root corruption) from the WinUI-free sources on disk, plus the new FormField Model / Source /
-    ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build-item or
-    INVARIANT: keep this file as exactly ONE Project root with this single Compile ItemGroup - the union of
-    every Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/,
-    modals-dialogs/ and shared-surfaces/. This file carries the .gitattributes merge=union strategy, so a
-    chain of integration merges can re-concatenate it into multiple Project roots plus duplicate Compile items
-    (failing load with MSB4025 / MSB4067); when that happens, regenerate it directly from the WinUI-free
-    sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or
-    project start tag inside this comment.
-    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Registration / diagnostics) for every dashboard
-    widget, feature view, misc surface, modal/dialog and shared surface. The WinUI app (TeslaSync.App)
-    targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's
-    Microsoft.UI-free sources are Compile-linked below; the bare WinUI view files are excluded and exercised
-    by the app build, and the test classes are picked up by the SDK default-compile glob.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
-    path-sorted, Include-deduplicated Compile item group — the union of every Microsoft.UI-free .cs on disk
-    under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file
-    carries the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it
-    into multiple Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); when that
-    happens, regenerate it directly from the WinUI-free sources on disk. Regenerated into this single canonical
-    Project root for P2 shared-surfaces/0155 ListExportMenu (repairing a merge=union multi-root corruption),
-    plus the new ListExportMenu Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots,
-    and never write a literal build-item or project start tag inside this comment.
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
+    Include-deduplicated Compile ItemGroup — the union of every Microsoft.UI-free .cs on disk under
+    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file carries
+    the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it into
     multiple Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); when that
     happens, regenerate it directly from the WinUI-free sources on disk. Regenerated into this single canonical
     Project root for P2 shared-surfaces/0159 SortControl (repairing a merge=union multi-root corruption), plus
@@ -160,6 +77,11 @@
     P2 shared-surfaces/0166 BreadcrumbOverridesContext (repairing a merge=union multi-root corruption), plus the
     new BreadcrumbOverridesContext Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots,
     and never write a literal build-item or project start tag inside this comment.
+    happens, regenerate it directly from the Microsoft.UI-free sources on disk. Regenerated into this single
+    canonical Project root for P2 shared-surfaces/0174 LinearSidebar (repairing a merge=union multi-root
+    corruption) from the Microsoft.UI-free sources on disk, plus the new LinearSidebar Model / Source /
+    ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project
+    start tag inside this comment.
   -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App: a single, case-insensitive ordinal path-sorted, Include-deduplicated ItemGroup (the union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/; the Link mirrors each source's real location). The bare WinUI view files are excluded and exercised by the app build; the test classes are picked up by the SDK default-compile glob; the Content links copy the units-golden, Package.appxmanifest and widget-template fixtures. INVARIANT: keep this file as exactly ONE Project root with this single Compile ItemGroup. The .gitattributes merge=union strategy can re-concatenate it into multiple Project roots plus duplicate Compile items (failing XML load, MSB4025 / MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk. Regenerated into this single canonical Project root for P2 shared-surfaces/0170 LayoutBreadcrumbs, plus the new LayoutBreadcrumbs Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
 
@@ -179,8 +101,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
     <ProjectReference Include="..\Generated\Generated.csproj" />
+    <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -1277,6 +1199,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\LayoutBreadcrumbs\LayoutBreadcrumbs.Model.cs" Link="SharedSurfaces\LayoutBreadcrumbs\LayoutBreadcrumbs.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\LayoutBreadcrumbs\LayoutBreadcrumbs.Source.cs" Link="SharedSurfaces\LayoutBreadcrumbs\LayoutBreadcrumbs.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\LayoutBreadcrumbs\LayoutBreadcrumbs.ViewModel.cs" Link="SharedSurfaces\LayoutBreadcrumbs\LayoutBreadcrumbs.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\LinearSidebar\LinearSidebar.Model.cs" Link="SharedSurfaces\LinearSidebar\LinearSidebar.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\LinearSidebar\LinearSidebar.Source.cs" Link="SharedSurfaces\LinearSidebar\LinearSidebar.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\LinearSidebar\LinearSidebar.ViewModel.cs" Link="SharedSurfaces\LinearSidebar\LinearSidebar.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.Model.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.Source.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.ViewModel.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.ViewModel.cs" />
