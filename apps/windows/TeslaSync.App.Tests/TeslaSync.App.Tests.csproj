@@ -1180,6 +1180,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Model.cs" Link="SharedSurfaces\ChartTooltip.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Source.cs" Link="SharedSurfaces\ChartTooltip.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.ViewModel.cs" Link="SharedSurfaces\ChartTooltip.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Checkbox\Checkbox.Model.cs" Link="SharedSurfaces\Checkbox\Checkbox.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Checkbox\Checkbox.ViewModel.cs" Link="SharedSurfaces\Checkbox\Checkbox.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Combobox.Model.cs" Link="SharedSurfaces\Combobox.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Combobox.Source.cs" Link="SharedSurfaces\Combobox.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Combobox.ViewModel.cs" Link="SharedSurfaces\Combobox.ViewModel.cs" />
