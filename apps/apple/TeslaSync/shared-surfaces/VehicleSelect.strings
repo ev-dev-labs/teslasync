@@ -1,0 +1,61 @@
+/*
+  VehicleSelect.strings
+  TeslaSync — P4 shared surface · 0164 · VehicleSelect (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface — the native peer of the strings used by
+  `components/forms/VehicleSelect.tsx`. The web component holds exactly ONE `t()` call:
+  `t('vehicleSelect.aria', 'Select vehicle')` — the accessible name of the `<Select>` — mirrored verbatim
+  below. The web also derives an option label fallback `Vehicle ${v.id}` inline (not via `t()`); the native
+  peer routes that through the facade as `vehicleSelect.fallbackName` so no English literal lives in Swift.
+
+  The remaining entries are the NATIVE chrome / accessibility additions for the P4 always-render leaf states
+  (loading / empty / error) and the freshness axis (live / stale / offline) — the web renders nothing for an
+  empty fleet and has no loading / error / connectivity chrome, whereas the native HIG calls for a labelled
+  state rather than a blank box.
+
+  These fold into the app `Localizable.xcstrings` master catalog at integration time; kept in a per-surface
+  table ("VehicleSelect") so each parallel surface prompt owns its own strings. In test / preview bundles
+  `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web source key (verbatim) --- */
+
+/* The accessible name of the vehicle scope picker (web `t('vehicleSelect.aria', 'Select vehicle')`). */
+"vehicleSelect.aria" = "Select vehicle";
+
+/* --- Web inline fallback, routed through the facade (web `Vehicle ${v.id}`) --- */
+
+/* Option label for a vehicle with no display name and no VIN. {{id}} is the numeric vehicle id. */
+"vehicleSelect.fallbackName" = "Vehicle {{id}}";
+
+/* --- Native chrome / a11y additions (no blank box — see the leaf states) --- */
+
+/* VoiceOver label for the initial loading skeleton (web has no loading state). */
+"vehicleSelect.loadingA11y" = "Loading vehicles";
+
+/* Compact empty-fleet indicator title (the web returns null for an empty fleet). */
+"vehicleSelect.empty" = "No vehicles";
+
+/* Accessibility hint under the empty indicator, guiding the user to add a vehicle. */
+"vehicleSelect.emptyMessage" = "Add a vehicle to your fleet to choose one.";
+
+/* Title of the compact error tile shown when the fleet read fails (web has no QueryError peer). */
+"vehicleSelect.errorTitle" = "Couldn't load vehicles";
+
+/* Retry action on the error tile. */
+"vehicleSelect.retry" = "Retry";
+
+/* Freshness chip label — the fleet feed is live. */
+"vehicleSelect.live" = "Live";
+
+/* Freshness chip label — the fleet feed is older than the freshness window. */
+"vehicleSelect.stale" = "Stale";
+
+/* Freshness chip label — no connectivity; the cached fleet is shown. */
+"vehicleSelect.offline" = "Offline";
+
+/* Expanded VoiceOver label for the stale freshness chip (it is a refresh button). */
+"vehicleSelect.staleA11y" = "Stale — tap to refresh";
+
+/* Expanded VoiceOver label for the offline freshness chip. */
+"vehicleSelect.offlineA11y" = "Offline — showing the last fleet";
