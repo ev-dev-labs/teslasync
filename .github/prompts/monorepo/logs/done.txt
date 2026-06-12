@@ -664,3 +664,4 @@ p2-windows/shared-meaningful/W-0174-LinearSidebar.prompt.md
 p2-windows/shared-meaningful/W-0178-ConnectionSegment.prompt.md
 p2-windows/shared-meaningful/W-0177-BackgroundWorkSegment.prompt.md
 p2-windows/shared-meaningful/W-0181-VersionSegment.prompt.md
+p2-windows/shared-meaningful/W-0183-VehiclePicker.prompt.md
