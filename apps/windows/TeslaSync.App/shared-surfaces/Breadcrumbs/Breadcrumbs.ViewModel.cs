@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using TeslaSync.App.Core.Notifications;
 
-namespace TeslaSync.App.SharedSurfaces;
+namespace TeslaSync.App.SharedSurfaces.BreadcrumbsSurface;
 
 /// <summary>
 /// UI-thread-free state holder backing the WinUI <see cref="Breadcrumbs"/> view — the native port of the web

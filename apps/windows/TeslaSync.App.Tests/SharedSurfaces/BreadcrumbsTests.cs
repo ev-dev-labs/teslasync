@@ -1,5 +1,5 @@
 using TeslaSync.App.Core.Notifications;
-using TeslaSync.App.SharedSurfaces;
+using TeslaSync.App.SharedSurfaces.BreadcrumbsSurface;
 using Xunit;
 
 namespace TeslaSync.App.Tests.SharedSurfaces;

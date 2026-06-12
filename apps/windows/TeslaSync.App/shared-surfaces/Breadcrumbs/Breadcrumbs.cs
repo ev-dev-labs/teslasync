@@ -9,7 +9,7 @@ using TeslaSync.App.Components.DataDisplay;
 using TeslaSync.App.Core.Notifications;
 using Windows.UI.Text;
 
-namespace TeslaSync.App.SharedSurfaces;
+namespace TeslaSync.App.SharedSurfaces.BreadcrumbsSurface;
 
 /// <summary>
 /// The native WinUI 3 <c>Breadcrumbs</c> shared surface — a parity port of

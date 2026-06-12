@@ -1,0 +1,80 @@
+=== P2 Shared surface 0184 AnimatedMarker (Windows) ===
+date: 2026-06-11T23:42:10.4603934-07:00
+
+--- Platform capability (prompt requires WinUI 3 / Windows App SDK + .NET 10) ---
+dotnet --version: 10.0.300
+.NET 10 SDK: present (10.0.300). Windows App SDK NuGet packages: present. OS: Windows 11 build 26200.
+Capability AVAILABLE -> not BLOCKED. WinUI App project builds (see BUILD below).
+
+--- Pre-existing-breakage remediation required to load+build the shared solution ---
+1) TeslaSync.App.Tests.csproj was merge=union corrupted (two <Project> roots -> MSB4025). Regenerated as a
+   single canonical root = sorted/deduped union of every Microsoft.UI-free .cs under the 5 surface dirs
+   (1224 == disk truth) + the 3 new AnimatedMarker links (1227). Sanctioned by the file's own header comment.
+2) Breadcrumbs (0167) and LayoutBreadcrumbs (0170) are two legitimate sibling web surfaces whose native ports
+   both declared BreadcrumbItem/IBreadcrumbNavigator/NullBreadcrumbNavigator in namespace
+   TeslaSync.App.SharedSurfaces (CS0101 -> App build broken at HEAD). Isolated the older Breadcrumbs surface
+   into ...SharedSurfaces.BreadcrumbsSurface (the KpiOverviewCardSurface nested-namespace precedent); both
+   surfaces + both test files preserved. No external consumers of the 3 types (verified).
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-01\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:03:05.61
+BUILD_EXIT=0
+
+--- TEST: dotnet test apps/windows/TeslaSync.sln -c Release (headless unit suite) ---
+NOTE: the repo splits its suites by trait (see TeslaSync.App.UITests.csproj / run-ui-automation.ps1): the
+headless unit gate is Category!=UIAutomation; the Category=UIAutomation E2E suite is the separate W9-0002
+gate that drives a deployed MSIX via WinAppDriver 1.2.1+ and 'blocks honestly when any piece is missing'.
+WinAppDriver is absent on this runner (not on PATH; not under Program Files) so the E2E suite is run by
+its own W9-0002 gate, not here. The AnimatedMarker surface's adapter/per-state/a11y tests run headless below.
+Test run for D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed: 23902, Skipped:     0, Total: 23902, Duration: 15 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/AnimatedMarker ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- Acceptance ---
+[x] Surface renders all web-source states (loading/empty/error/stale/offline/live) — per-state projection + view.
+[x] Binds P1/S8 seams: IAnimatedMarkerSource (live position) + IAnimatedMarkerMap (the useMap analogue); no HTTP in view.
+[x] i18n keys all resolve to existing Strings catalog entries (common.loading, mapOverview.noLocation,
+    error.loadFailed, error.retry, mqtt.stale, live.disconnected, Live, Vehicle).
+[x] Accessibility: AutomationName on every state (incl. heading), Image control type, retry affordance wired.
+[x] Tests: adapter (FromRepositoryResult) + per-state snapshot + pan geometry + seams + view-model + a11y + diagnostics
+    (40 AnimatedMarker tests; full headless suite 23902 passed, 0 failed, 0 skipped).
+[x] No TODO/stub/placeholder/Lorem in shipped code (placeholder gate clean).
+[x] Diagnostics: view.opened slug=AnimatedMarker.
+
+BUILD_EXIT=0
+TEST_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE
