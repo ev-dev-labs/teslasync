@@ -504,3 +504,4 @@ p3-android/feature-views/A-0258-TeslaAuthCard.prompt.md
 p3-android/feature-views/A-0260-ToggleCommandTile.prompt.md
 p3-android/feature-views/A-0257-TeslaApiUsageCard.prompt.md
 p3-android/feature-views/A-0259-UpdateAvailableCallout.prompt.md
+p3-android/feature-views/A-0253-SLOTrackingCard.prompt.md
