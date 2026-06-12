@@ -349,3 +349,4 @@ p3-android/feature-views/A-0102-EfficiencyPanel.prompt.md
 p3-android/feature-views/A-0100-CostHeatmap.prompt.md
 p3-android/feature-views/A-0101-DetailedStatistics.prompt.md
 p3-android/feature-views/A-0103-HeroGauges.prompt.md
+p3-android/feature-views/A-0110-CostPerKwhChart.prompt.md
