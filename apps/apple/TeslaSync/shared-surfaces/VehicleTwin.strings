@@ -1,0 +1,122 @@
+/*
+  VehicleTwin.strings
+  TeslaSync — P4 shared surface · 0235 · VehicleTwin (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface (table "VehicleTwin").
+  Every string the native VehicleTwin surface resolves lives here with its web
+  English value, so the Swift sources hold no hardcoded prose. These entries fold
+  into the app `Localizable.xcstrings` master catalog at integration time; they
+  are kept in a per-surface table so each parallel surface prompt owns its own
+  strings without editing the shared catalog.
+
+  The web source (web/src/components/vehicles/VehicleTwin.tsx) is anonymous (it
+  renders no headings) and hardcodes its region/state labels (windowLabel,
+  stateLabel, the InteractiveHotspot/title labels, the aria-label) plus the paint
+  names from web/src/lib/vehicleColors.ts. The first group reproduces those
+  verbatim; the second group backs the native P4 leaf chrome + the always-visible
+  status legend (a native-idiomatic peer of the web hover tooltips).
+*/
+
+/* --- Parity: the figure's role + title --- */
+"vehicles.twin.title" = "Digital Twin";
+"vehicles.twin.a11yLabel" = "Vehicle digital twin showing current physical state";
+"vehicles.twin.a11yDescription" = "Scalable layered vehicle illustration with live overlays for doors, windows, lights, lock, sentry mode, and charging status.";
+
+/* --- Parity: window labels (web windowLabel) --- */
+"vehicles.twin.window.closed" = "Closed";
+"vehicles.twin.window.open" = "Open";
+"vehicles.twin.window.partial" = "Partially open";
+"vehicles.twin.window.unknown" = "Unknown";
+
+/* --- Parity: generic open/closed/unknown (web stateLabel) --- */
+"vehicles.twin.state.open" = "Open";
+"vehicles.twin.state.closed" = "Closed";
+"vehicles.twin.state.unknown" = "Unknown";
+
+/* --- Parity: region labels (web InteractiveHotspot / <title> labels) --- */
+"vehicles.twin.region.frunk" = "Frunk";
+"vehicles.twin.region.trunk" = "Trunk";
+"vehicles.twin.region.chargePort" = "Charge port";
+"vehicles.twin.region.charging" = "Charging";
+"vehicles.twin.region.doorDriverFront" = "Driver Front";
+"vehicles.twin.region.doorDriverRear" = "Driver Rear";
+"vehicles.twin.region.doorPassengerFront" = "Passenger Front";
+"vehicles.twin.region.doorPassengerRear" = "Passenger Rear";
+"vehicles.twin.region.windowFrontDriver" = "Front driver window";
+"vehicles.twin.region.windowRearDriver" = "Rear driver window";
+"vehicles.twin.region.windowFrontPassenger" = "Front passenger window";
+"vehicles.twin.region.windowRearPassenger" = "Rear passenger window";
+
+/* --- Parity: security overlay (web Lock / Unlock / Shield) --- */
+"vehicles.twin.locked" = "Locked";
+"vehicles.twin.unlocked" = "Unlocked";
+"vehicles.twin.lockUnknown" = "Lock unknown";
+"vehicles.twin.sentry" = "Sentry mode active";
+"vehicles.twin.sentryOff" = "Sentry off";
+
+/* --- Status legend: section labels (native peer of the web hover tooltips) --- */
+"vehicles.twin.legend.doors" = "Doors";
+"vehicles.twin.legend.windows" = "Windows";
+"vehicles.twin.legend.lock" = "Lock";
+"vehicles.twin.legend.charge" = "Charge";
+"vehicles.twin.legend.lights" = "Lights";
+"vehicles.twin.legend.sentry" = "Sentry";
+"vehicles.twin.legend.seat" = "Driver seat";
+"vehicles.twin.legend.motion" = "Motion";
+"vehicles.twin.legend.turnSignal" = "Turn signal";
+"vehicles.twin.legend.frunkTrunk" = "Frunk / Trunk";
+
+/* --- Status legend: value labels --- */
+"vehicles.twin.value.doorsAllClosed" = "All closed";
+"vehicles.twin.value.doorsOpen" = "%lld open";
+"vehicles.twin.value.doorsUnknown" = "Unknown";
+"vehicles.twin.value.windowsAllClosed" = "All closed";
+"vehicles.twin.value.windowsOpen" = "%lld open";
+"vehicles.twin.value.windowsUnknown" = "Unknown";
+"vehicles.twin.value.on" = "On";
+"vehicles.twin.value.off" = "Off";
+"vehicles.twin.value.hazardsOn" = "Hazards";
+"vehicles.twin.value.unknown" = "Unknown";
+"vehicles.twin.value.seatOccupied" = "Occupied";
+"vehicles.twin.value.seatEmpty" = "Empty";
+"vehicles.twin.value.driving" = "Driving";
+"vehicles.twin.value.parked" = "Parked";
+"vehicles.twin.value.charging" = "Charging";
+"vehicles.twin.value.chargePortOpen" = "Port open";
+"vehicles.twin.value.chargeIdle" = "Idle";
+"vehicles.twin.value.turnLeft" = "Left";
+"vehicles.twin.value.turnRight" = "Right";
+"vehicles.twin.value.turnBoth" = "Both";
+"vehicles.twin.value.turnOff" = "Off";
+"vehicles.twin.value.frunkOpen" = "Frunk open";
+"vehicles.twin.value.trunkOpen" = "Trunk open";
+"vehicles.twin.value.frunkTrunkOpen" = "Both open";
+"vehicles.twin.value.frunkTrunkClosed" = "Closed";
+"vehicles.twin.value.none" = "—";
+
+/* --- Last-updated caption --- */
+"vehicles.twin.updated" = "Updated %@";
+"vehicles.twin.updatedUnknown" = "Awaiting telemetry";
+
+/* --- Paint names (web lib/vehicleColors.ts labelKey / defaultLabel) --- */
+"paint.pearlWhite" = "Pearl White Multi-Coat";
+"paint.midnightSilver" = "Midnight Silver Metallic";
+"paint.deepBlue" = "Deep Blue Metallic";
+"paint.solidBlack" = "Solid Black";
+"paint.redMulticoat" = "Red Multi-Coat";
+"vehicles.twin.paint.a11y" = "Finished in %@";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"vehicles.twin.live" = "Live";
+"vehicles.twin.stale" = "Stale";
+"vehicles.twin.offline" = "Offline";
+"vehicles.twin.staleBanner" = "Reconnecting — vehicle state may be stale";
+"vehicles.twin.offlineBanner" = "Offline — showing the last known vehicle state";
+"vehicles.twin.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error / empty states --- */
+"vehicles.twin.loadingA11y" = "Loading vehicle digital twin";
+"vehicles.twin.errorTitle" = "Couldn’t load vehicle state";
+"vehicles.twin.retry" = "Retry";
+"vehicles.twin.emptyTitle" = "No vehicle selected";
+"vehicles.twin.emptyHint" = "Select a vehicle to see its live physical state.";
