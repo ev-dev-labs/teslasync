@@ -17463,6 +17463,18 @@
   <data name="translation.softwareUpdates.title" xml:space="preserve">
     <value>Software Updates</value>
   </data>
+  <data name="translation.sortControl.ascending" xml:space="preserve">
+    <value>Ascending</value>
+  </data>
+  <data name="translation.sortControl.descending" xml:space="preserve">
+    <value>Descending</value>
+  </data>
+  <data name="translation.sortControl.direction" xml:space="preserve">
+    <value>Sort direction</value>
+  </data>
+  <data name="translation.sortControl.fieldLabel" xml:space="preserve">
+    <value>Sort by</value>
+  </data>
   <data name="translation.sourceLayer.age" xml:space="preserve">
     <value>age</value>
   </data>
