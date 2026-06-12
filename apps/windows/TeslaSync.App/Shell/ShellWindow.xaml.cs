@@ -148,6 +148,15 @@ public sealed partial class ShellWindow : Window
         // Charging / Tesla fleet charging sessions page (P2/W7) — parity port of web TeslaChargingSessionsPage at
         // route /tesla-charging-sessions.
         _viewModel.PageFactory.Register("TeslaChargingSessions", static () => new FeatureViews.Charging.TeslaChargingSessionsPage());
+
+        // Dashboard / Quick Stats page (P2/W7) — parity port of web QuickStatsPage at route /quick-stats. The
+        // footer "Open Dashboard" link navigates to the dashboard root (web Link to="/").
+        _viewModel.PageFactory.Register("QuickStats", () =>
+        {
+            var page = new FeatureViews.Dashboard.QuickStatsPage();
+            page.OpenDashboardRequested += (_, _) => NavigateTo(string.Empty);
+            return page;
+        });
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
