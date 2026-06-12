@@ -1,0 +1,17 @@
+/*
+  WidgetChartSummary.strings
+  TeslaSync — P4 widget primitive · 0002 · WidgetChartSummary (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `WidgetChartSummary` primitive resolves (table "WidgetChartSummary") lives here with its web
+  `t(key, default)` English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each parallel surface prompt
+  owns its own strings without editing the shared catalog (parallel-unsafe across concurrent slots).
+
+  The web source (features/dashboard/widgets/shared/WidgetChartSummary.tsx) is anonymous — it
+  extracts no i18n keys. Its only string literal is the empty-state default fallback,
+  `emptyMessage ?? 'No data available'`, captured here so the view holds no hardcoded literal.
+*/
+
+/* --- Empty state (web `EmptyState message={emptyMessage ?? 'No data available'}`) --- */
+"widget.chartSummary.noData" = "No data available";
