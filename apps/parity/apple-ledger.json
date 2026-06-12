@@ -1,5 +1,5 @@
 {
-  "ledger": "P4 apple program — page parity rows (apple-macos + apple-ios)",
+  "ledger": "P4 apple program \u2014 page parity rows (apple-macos + apple-ios)",
   "generatedBy": ".github/prompts/monorepo/p4-apple/pages/p4-apple-P7-page-admin-ApiPlayground.prompt.md",
   "rows": [
     {
@@ -109,6 +109,24 @@
       "requiredCount": 2,
       "promptId": "p4-apple/P7/page:admin/TeslaOrders",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-TeslaOrdersPage.log"
+    },
+    {
+      "unitId": "page:analytics/FleetCompare",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 63,
+      "requiredCount": 63,
+      "promptId": "p4-apple/P7/page:analytics/FleetCompare",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-FleetComparePage.log"
+    },
+    {
+      "unitId": "page:analytics/FleetCompare",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 63,
+      "requiredCount": 63,
+      "promptId": "p4-apple/P7/page:analytics/FleetCompare",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-FleetComparePage.log"
     }
   ]
 }
