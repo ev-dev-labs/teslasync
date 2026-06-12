@@ -71,7 +71,7 @@ public sealed class RouteBreadcrumbProjector
     /// <param name="path">The current location path (web <c>location.pathname</c>).</param>
     /// <param name="overrides">Per-route label overrides keyed by pattern (web <c>useBreadcrumbOverrides</c>).</param>
     /// <param name="localizer">The i18n facade labels resolve through.</param>
-    public IReadOnlyList<BreadcrumbItem> Project(
+    public IReadOnlyList<LayoutBreadcrumbItem> Project(
         string? path,
         IReadOnlyDictionary<string, string> overrides,
         ILocalizer localizer)

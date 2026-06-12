@@ -40,11 +40,11 @@ public sealed class LayoutBreadcrumbsViewModel : INotifyPropertyChanged, IDispos
     private readonly IBreadcrumbRouteContext _route;
     private readonly IBreadcrumbOverrideSource _overrides;
     private readonly ILocalizer _localizer;
-    private readonly IBreadcrumbNavigator _navigator;
+    private readonly ILayoutBreadcrumbNavigator _navigator;
     private readonly IReadOnlyDictionary<string, BreadcrumbRouteMeta> _routeMeta;
     private readonly LayoutBreadcrumbsDiagnostics _diagnostics;
 
-    private IReadOnlyList<BreadcrumbItem> _items;
+    private IReadOnlyList<LayoutBreadcrumbItem> _items;
     private bool _opened;
     private bool _disposed;
 
@@ -59,7 +59,7 @@ public sealed class LayoutBreadcrumbsViewModel : INotifyPropertyChanged, IDispos
         IBreadcrumbRouteContext route,
         IBreadcrumbOverrideSource overrides,
         ILocalizer localizer,
-        IBreadcrumbNavigator? navigator = null,
+        ILayoutBreadcrumbNavigator? navigator = null,
         IReadOnlyDictionary<string, BreadcrumbRouteMeta>? routeMeta = null,
         LayoutBreadcrumbsDiagnostics? diagnostics = null)
     {
@@ -70,7 +70,7 @@ public sealed class LayoutBreadcrumbsViewModel : INotifyPropertyChanged, IDispos
         _route = route;
         _overrides = overrides;
         _localizer = localizer;
-        _navigator = navigator ?? NullBreadcrumbNavigator.Instance;
+        _navigator = navigator ?? NullLayoutBreadcrumbNavigator.Instance;
         _routeMeta = routeMeta ?? DefaultBreadcrumbRouteMeta.Map;
         _diagnostics = diagnostics ?? new LayoutBreadcrumbsDiagnostics();
 
@@ -86,7 +86,7 @@ public sealed class LayoutBreadcrumbsViewModel : INotifyPropertyChanged, IDispos
     public event PropertyChangedEventHandler? PropertyChanged;
 
     /// <summary>The resolved breadcrumb trail in root-to-current order (web <c>useBreadcrumbs</c> result).</summary>
-    public IReadOnlyList<BreadcrumbItem> Items => _items;
+    public IReadOnlyList<LayoutBreadcrumbItem> Items => _items;
 
     /// <summary>True when the trail has one or zero crumbs — a top-level page (web <c>items.length &lt;= 1</c>).</summary>
     public bool IsSuppressed => _items.Count <= 1;
@@ -148,7 +148,7 @@ public sealed class LayoutBreadcrumbsViewModel : INotifyPropertyChanged, IDispos
     /// </summary>
     /// <param name="item">The crumb that was activated.</param>
     /// <returns>True when navigation occurred; false for the non-interactive current crumb.</returns>
-    public bool Activate(BreadcrumbItem item)
+    public bool Activate(LayoutBreadcrumbItem item)
     {
         if (_disposed || !item.IsLink || item.Href is null)
         {
@@ -195,7 +195,7 @@ public sealed class LayoutBreadcrumbsViewModel : INotifyPropertyChanged, IDispos
             return;
         }
 
-        IReadOnlyList<BreadcrumbItem> next = Resolve();
+        IReadOnlyList<LayoutBreadcrumbItem> next = Resolve();
         if (ItemsEqual(_items, next))
         {
             return;
@@ -213,7 +213,7 @@ public sealed class LayoutBreadcrumbsViewModel : INotifyPropertyChanged, IDispos
         }
     }
 
-    private IReadOnlyList<BreadcrumbItem> Resolve() =>
+    private IReadOnlyList<LayoutBreadcrumbItem> Resolve() =>
         BreadcrumbResolver.Resolve(
             _route.MatchedPattern,
             _route.Parameters,
@@ -233,7 +233,7 @@ public sealed class LayoutBreadcrumbsViewModel : INotifyPropertyChanged, IDispos
         }
     }
 
-    private static bool ItemsEqual(IReadOnlyList<BreadcrumbItem> a, IReadOnlyList<BreadcrumbItem> b)
+    private static bool ItemsEqual(IReadOnlyList<LayoutBreadcrumbItem> a, IReadOnlyList<LayoutBreadcrumbItem> b)
     {
         if (a.Count != b.Count)
         {
