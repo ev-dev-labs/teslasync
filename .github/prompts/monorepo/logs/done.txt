@@ -680,3 +680,4 @@ p2-windows/shared-meaningful/W-0199-StatusHero.prompt.md
 p2-windows/shared-meaningful/W-0202-UptimeHeatmap.prompt.md
 p2-windows/shared-meaningful/W-0201-StickyCompactHero.prompt.md
 p2-windows/shared-meaningful/W-0203-Accordion.prompt.md
+p2-windows/shared-meaningful/W-0200-StickyChipBar.prompt.md
