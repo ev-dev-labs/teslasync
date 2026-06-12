@@ -2924,6 +2924,7 @@
   <string name="translation_driveDetail_socOverTime">SOC % Over Time</string>
   <string name="translation_driveDetail_speed">Speed</string>
   <string name="translation_driveDetail_speedHistogram">Speed Histogram</string>
+  <string name="translation_driveDetail_speedHistogramAria">Speed-bucket distribution histogram</string>
   <string name="translation_driveDetail_start">Start</string>
   <string name="translation_driveDetail_temperatures">Temperatures</string>
   <string name="translation_driveDetail_tirePressure">Tire Pressure During Drive</string>
