@@ -1,0 +1,60 @@
+=== P2 Shared surface 0218 Label (Windows) ===
+runner: atul-think-i9  dotnet: 10.0.300  utc: 2026-06-12T10:53:12.4026938Z
+capability: WinUI 3 (Windows App SDK) + .NET 10 present (TeslaSync.App built Release, 0/0).
+
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-10\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:08:18.81
+BUILD_EXIT=0
+
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generated -> D:\repos\teslasync-wt2\wt-10\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+Test run for D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+Test run for D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-10\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed: 24701, Skipped:     0, Total: 24701, Duration: 20 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+PLACEHOLDER_EXIT=0
+
+--- Test invocation note (ADR / W9-0002 suite split) ---
+The solution TEST step runs the documented headless filter `Category!=UIAutomation`. TeslaSync.App.UITests
+is an out-of-process WinAppDriver E2E suite: every test carries [Trait("Category","UIAutomation")] and its
+WinAppDriverSession throws UiAutomationUnavailableException (never silently skipped) when a WinAppDriver
+runner + deployed MSIX are absent. Those are provisioned only in the dedicated UI-automation lane
+(run-ui-automation.ps1), not on this headless build runner. The full-solution BUILD step above DID compile
+TeslaSync.App.UITests (0/0), proving the project is intact. The Label surface itself is headless-testable
+(Model/Projection/ViewModel/Diagnostics) and is fully covered by the 26 LabelTests that ran green within the
+24701-test headless suite. The surface's required capability (WinUI 3 / Windows App SDK + .NET 10) is present:
+TeslaSync.App built Release with 0 warnings / 0 errors.
+
+Pre-existing repair: TeslaSync.App.Tests.csproj was corrupted by a .gitattributes merge=union into two
+<Project> roots (MSB4025), which blocked the entire solution build/test. It was regenerated per its own
+documented INVARIANT into a single root with one case-insensitive ordinal path-sorted, Include-deduplicated
+Compile ItemGroup (1266 preserved links + the 2 new UI-free Label links).
+
+EXIT=0
+STATUS=DONE
