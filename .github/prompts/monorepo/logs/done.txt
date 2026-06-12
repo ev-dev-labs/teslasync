@@ -517,3 +517,4 @@ p3-android/feature-views/A-0266-SignalChartPanel.prompt.md
 p3-android/feature-views/A-0268-SignalDiffTable.prompt.md
 p3-android/feature-views/A-0269-SignalHistoryTable.prompt.md
 p3-android/feature-views/A-0271-SignalSparklinePreview.prompt.md
+p3-android/feature-views/A-0273-TripReplayCharts.prompt.md
