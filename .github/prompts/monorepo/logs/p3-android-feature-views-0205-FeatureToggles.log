@@ -1,0 +1,78 @@
+=== P3 Feature view 0205 FeatureToggles (Android) ===
+
+Surface: com/teslasync/feature-views/FeatureToggles
+  - FeatureToggles.kt        (Compose render layer: stateful store-bound entry + stateless content + previews)
+  - FeatureTogglesModel.kt   (pure projection + lucide Flag/Refresh glyphs + view.opened diagnostic)
+Tests:
+  - app/src/test/java/io/teslasync/android/featureviews/featuretoggles/FeatureTogglesProjectionTest.kt   (JVM unit)
+  - app/src/androidTest/java/io/teslasync/android/featureviews/featuretoggles/FeatureTogglesUiTest.kt    (Compose UI + a11y)
+
+Web source (THE spec): web/src/features/settings/components/FeatureToggles.tsx
+Data binding: shared P1/S8 io.teslasync.shared.core.presentation.user.UserStore
+  (teslaFeatureConfig() read + refreshTeslaFeatureConfig() mutation) — no HTTP in the view (ADR-002).
+  Envelope = TeslaConfigEnvelope<JsonElement> { data, fetchedAt }, projected through toUiState (ADR-013).
+Adapter (pure, 1:1 port of the web useMemo): a JSON-object `data` blob flattens to {key, enabled, details}
+  rows — an object value takes `enabled` from value.enabled and joins its other members as
+  `k: JSON.stringify(v)`; a primitive value takes `enabled = Boolean(value)` with null details. The
+  enabled coercion reproduces JS `Boolean()` truthiness over the JSON value domain (the `isString` guard
+  keeps the boolean false distinct from the string "false"). Insertion order preserved (no sort).
+i18n (P1/S10): all 12 source keys already exist as generated resources
+  (translation_featureConfig_{title,subtitle,lastSynced,refresh,feature,status,details,enabled,disabled,noData},
+   translation_toast_{featureConfigRefreshed,featureConfigFailed}) — no catalog change required.
+IconBox: web `color="purple"` has no 1:1 Material token, folds to IconBoxTone.Primary
+  (the InfrastructureSection precedent) so light/dark/high-contrast all resolve.
+Telemetry (P1/S11): recordFeatureTogglesOpened(logger) -> logger.info("view.opened", {surface=FeatureToggles}).
+States rendered: loading skeleton / hard-error+retry / empty(noData) / content table(Feature·Status·Details)
+  / stale+offline freshness chip + auto-refresh. Header + Refresh stay visible in every state.
+
+NOTE on module + task paths: the prompt's literal gate uses ':app:'. The real Gradle module is ':android'
+(rootProject teslasync-android; settings.gradle.kts: include(":android"); projectDir = app/). Every P3/A* gate
+addresses ':android:'. The placeholder template path is honored verbatim as the on-disk surface directory.
+
+### STEP: ./gradlew :android:assembleRelease ###
+BUILD SUCCESSFUL in 2m 53s   (:android:assembleRelease)
+BUILD_EXIT=0
+
+### STEP: ./gradlew :android:testReleaseUnitTest ###
+:android:testReleaseUnitTest — executed.
+TEST-io.teslasync.android.featureviews.featuretoggles.FeatureTogglesProjectionTest.xml:
+  tests=17 failures=0 errors=0 skipped=0
+TEST_EXIT=0
+
+### STEP: ./gradlew :android:ktlintCheck :android:detekt ###
+:android:ktlintMainSourceSetCheck        PASS
+:android:ktlintTestSourceSetCheck        PASS
+:android:ktlintAndroidTestSourceSetCheck PASS   (the new FeatureTogglesUiTest.kt is ktlint-clean)
+:android:detekt                          PASS   (warningsAsErrors=true)
+LINT_EXIT=0
+
+### STEP: check-placeholders (surface dir) ###
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- androidTest compile note (honesty covenant) -----------------------------------------------------
+The :android: gate intentionally does NOT compile the androidTest source set (no emulator; instrumented
+tests run in connectedAndroidTest only). For diligence, :android:compileDebugAndroidTestKotlin was run
+separately. It FAILS, but EXCLUSIVELY on PRE-EXISTING, unrelated files that incorrectly write
+`import androidx.compose.ui.test.assertExists`/`assertDoesNotExist` as top-level functions (they are
+SemanticsNodeInteraction members, so the import is unresolved):
+  - dashboard/widgets/BatteryCellsWidgetUiTest.kt
+  - dashboard/widgets/driveefficiencychart/DriveEfficiencyChartWidgetUiTest.kt
+  - dashboard/widgets/energystats/EnergyStatsWidgetUiTest.kt
+  - dashboard/widgets/mileagestats/MileageStatsWidgetUiTest.kt
+  - dashboard/widgets/powerflowhistory/PowerFlowHistoryWidgetUiTest.kt
+  - dashboard/widgets/projectedrange/ProjectedRangeWidgetUiTest.kt
+  - dashboard/widgets/solarproduction/SolarProductionWidgetUiTest.kt
+  - dashboard/widgets/tirepressurehistory/TirePressureHistoryWidgetUiTest.kt
+  - featureviews/timestamptool/TimestampToolUiTest.kt
+These are other surfaces (out of scope; their own prompts) and are NOT modifiable under this prompt's
+allowed files. The new FeatureTogglesUiTest.kt is NOT among the compiler-reported errors — it uses the
+correct member-call style (`.assertExists()`, `.assertDoesNotExist()`), exactly like the canonical
+ActiveOrdersSectionUiTest. The compiler did a full pass and reported every unresolved reference; none
+originate from this surface's files.
+-----------------------------------------------------------------------------------------------------
+
+BUILD_EXIT=0 TEST_EXIT=0 LINT_EXIT=0 PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
