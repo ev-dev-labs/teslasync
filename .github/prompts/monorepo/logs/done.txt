@@ -719,3 +719,4 @@ p2-windows/pages/admin/FeedbackQueuePage.prompt.md
 p2-windows/pages/admin/LiveLogsPage.prompt.md
 p2-windows/pages/admin/SchemaDriftPage.prompt.md
 p2-windows/pages/admin/TeslaRegionPage.prompt.md
+p2-windows/pages/admin/VehicleCostPage.prompt.md
