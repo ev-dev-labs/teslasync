@@ -1,0 +1,117 @@
+=== p2-windows · W7 · page:automations/PresetGallery (WinUI 3 / Fluent) ===
+Parity unit : page:automations/PresetGallery   kind=page   web route=(unrouted)
+Web source  : web/src/features/automations/pages/PresetGallery.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET SDK 10.0.300 present (dotnet --version 10.0.300) + maui-windows workload (10.0.20/10.0.100) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection +
+  records + registration + diagnostics, unit-tested headlessly), <Name>.Source.cs (the cache-then-network data
+  port), <Name>.ViewModel.cs (the ObservableObject-style state holder) and <Name>.cs (the Fluent view). The
+  generated prompt's idealized "PresetGallery.xaml + PresetGalleryViewModel.cs under TeslaSync/Features/
+  Automations" is mapped onto these real conventions — exactly as the peer W7 page AutomationActivityFeed
+  (feature-views/AutomationActivityFeed/) and the W7 ApiLogsPage precedent already are.
+- The PresetGallery surface itself was authored in the W3 component phase (commit 2528336e4
+  "feat(apps/windows/feature-views): add PresetGallery surface (P2)"): PresetGallery.{cs,ViewModel.cs,
+  Source.cs,Model.cs} + 45 headless tests (TeslaSync.App.Tests/FeatureViews/PresetGalleryTests.cs). This W7
+  page task verifies it at full panel/state/string parity, fixes the i18n-resolution defect below, runs the
+  windows triad gate, and records the ledger row + this evidence log — mirroring how the AutomationActivityFeed
+  W7 task closed out its already-authored surface.
+- web route is (unrouted): the web PresetGallery is a presentational child rendered inside the Automations
+  page (web/src/features/automations/pages/AutomationsPage composition), not a standalone react-router route.
+  Per the manifest "(unrouted)" + the AutomationActivityFeed precedent, there is therefore NO NavigationView /
+  ShellPageFactory entry to add (the "if routed" deep-link clause does not apply). The surface still owns its
+  own cache-then-network read of the presets list so it renders the full P2 state matrix (the web component is
+  a pure child; a native Windows surface is not), exactly as the peer surfaces do.
+- Data source: useAutomationPresets → GET /automations/presets (manifest queryParam = optional ?category=).
+  Bound through PresetGallerySource (Operations.Automations.Presets, generated operation
+  get_api_v1_automations_presets, ADR-004) → CacheThenNetworkEngine → PresetGalleryViewModel (P1/S8 state
+  holder, INotifyPropertyChanged + LoadAsync/RetryAsync). The view never performs HTTP. This is a static
+  templates read, NOT a live SSE source, so the ADR-013 ">2 min staleness" live-indicator clause does not
+  apply; the surface nonetheless surfaces cache-freshness Stale/Offline chips + a Refresh affordance over the
+  cards. No unit-bearing fields on a preset (name/description/trigger-kind/action-count/icon), so SI converters
+  (P1/S5) are N/A here.
+- i18n RESOLUTION FIX (this task): the generated native catalog (apps/windows/Strings/{en,ar,he}/Resources.resw,
+  emitted from web/src/i18n by apps/shared/i18n) keys every entry as "translation.<dotted.web.key>" (8088/8088
+  entries carry the translation. namespace), and the shell bridge Localization.Get resolves a key verbatim
+  (key.Replace('.','/')) with no namespace insertion. The W3 surface called localizer.GetString("automations.
+  presets.install", …) WITHOUT the namespace, so every label fell back to its English default instead of binding
+  to the catalog — invisible in en (fallback == en value) but a real ar/he parity break. The accepted peer
+  AutomationActivityFeed resolves with the full "translation.*" key, which is the established W7 convention.
+  Fix: added PresetGalleryRegistration.CatalogKey(webKey) => "translation." + webKey and routed all 14
+  GetString call sites (Model.cs ×4, ViewModel.cs ×9, PresetGallery.cs ×1) through it. The web-key constants
+  (PresetGalleryProjection.{ActionCountKey,InstallKey,EmptyKey}, PresetTriggerLabels.NoTriggerKey, and the
+  trigger-label keys) are kept VERBATIM (ported from the web t() keys, per "key names match web") — only the
+  resolution prepends the catalog namespace. No .resw was hand-edited (the catalog is generated; CI -Check
+  guards drift) and the headless tests (PassthroughLocalizer → fallback) remain green unchanged.
+- Trigger-label keys (automations.builder.triggerSchedule/Event/Geofence/Signal) and the native-only state keys
+  (automations.presets.{loading,refresh,error,error.auth,error.offline}) are absent from web/src/i18n — the WEB
+  component itself falls back to the inline default for the trigger labels (the keys do not exist in the web
+  catalog either), and the loading/refresh/error/offline states have no web counterpart at all. They are routed
+  through CatalogKey for convention-consistency and resolve to their English fallback exactly as the web does;
+  the four manifest-REQUIRED strings (noTrigger / actionCount / empty / install) DO exist in the catalog and now
+  bind to it in all three locales.
+- a11y (ADR-015): the surface, its automation peer (Group), every preset card (TsGlassPanel), the action-count
+  badge, the Install button (name = "{Install} {preset name}"), the freshness chip and the Refresh button all
+  carry an AutomationProperties name; decorative glyphs are AccessibilityView.Raw; the loading grid announces
+  via LiveRegion. The card grid reflows 1/2/3/4 columns at the web sm/lg/xl breakpoints (640/1024/1280). The
+  whole surface fades in (TsFadeIn) and the cards stagger (TsStaggerContainer/TsStaggerItem), honouring
+  reduce-motion. Light/dark honoured via DisplayTokens (no hardcoded colors). PII-safe diagnostics emit only
+  "view.opened slug=PresetGallery" — never a preset id, name or action count.
+
+=== PARITY ===
+PARITY_REQUIRED=9
+
+# Panels (2) — the web GlassPanel usages: the preset card and the loading skeleton card
+[x] panel  - GlassPanel1   -> PresetGallery.cs#BuildCard returns TsGlassPanel{ Glow=GlassGlow.Cyan (web glow="cyan"), Padding=20 (web p-5) } holding icon-box + name/trigger column + action-count TsBadge + description + Install TsButton (web PresetCard <GlassPanel hover glow="cyan" className="p-5">); laid out in the reflowing grid by BuildCards
+[x] panel  - GlassPanel2   -> PresetGallery.cs#BuildSkeletonCard returns TsGlassPanel{ Padding=20 } holding the icon/name/trigger/description/button TsSkeleton blocks (web PresetCardSkeleton <GlassPanel className="p-5">); shown ×4 by BuildLoading (web Array.from({length:4}))
+
+# Data states (3) — loading / empty / success, each a visible region (never blank); + Error/Stale/Offline beyond web
+[x] state  - loading       -> PresetGalleryViewModel.State=Loading when no content yet (web isLoading); PresetGallery.cs#Render→BuildLoading renders SkeletonCount=4 BuildSkeletonCard tiles in the reflow grid + LiveRegion announce; tests Loading_* / skeleton-count
+[x] state  - empty         -> State=Empty when the resolved presets list is empty (web presets.length === 0 → EmptyState); Render→BuildEmpty renders TsEmptyState{ IconGlyph=Clock, Message=EmptyMessage } (web <EmptyState icon={<Clock/>} message={t('automations.presets.empty')}>); tests Empty_* / Project_empty_list_has_no_data
+[x] state  - success       -> State=Loaded/Stale/Offline → Render→BuildCards → TsFadeIn>TsStaggerContainer>TsStaggerItem grid of BuildCard cards (web FadeIn > StaggerContainer > StaggerItem > PresetCard); tests Project_builds_one_localized_card_per_preset / ProjectCard_*
+
+# Strings (4 REQUIRED) — every visible literal resolves from Strings/*.resw via ILocalizer; web key ported verbatim, bound as translation.<key> (en/ar/he 4/4/4)
+[x] string - automations.builder.noTrigger    -> PresetGalleryProjection.TriggerLabelText → localizer.GetString(PresetGalleryRegistration.CatalogKey(PresetTriggerLabels.NoTriggerKey)="translation.automations.builder.noTrigger", "No trigger configured"); catalog en/ar/he present (web `t('automations.builder.noTrigger','No trigger configured')`)
+[x] string - automations.presets.actionCount  -> PresetGalleryProjection.ActionCountText → localizer.GetString(CatalogKey(ActionCountKey)="translation.automations.presets.actionCount", "{{count}} actions") then {{count}} interpolation (web `t('automations.presets.actionCount',{count})`); catalog en/ar/he present
+[x] string - automations.presets.empty        -> PresetGalleryViewModel.EmptyMessage → localizer.GetString(CatalogKey(PresetGalleryProjection.EmptyKey)="translation.automations.presets.empty", "No preset templates available") (web EmptyState message); catalog en/ar/he present
+[x] string - automations.presets.install      -> PresetGalleryProjection.ProjectCard → localizer.GetString(CatalogKey(InstallKey)="translation.automations.presets.install", "Install") (web Install <Button>); catalog en/ar/he present
+
+PARITY_COVERED=9
+# Coverage asserted headlessly by TeslaSync.App.Tests/FeatureViews/PresetGalleryTests.cs (45 tests): the icon-glyph
+# map (web iconMap incl. Shield fallback), the trigger-label map (4 known kinds + no-trigger), the projection
+# (one localized card per preset, blank-name em-dash, action-count interpolation, composed Narrator name, empty →
+# HasData=false), the web-verbatim key constants (Project_constants_match_web: actionCount/install/empty +
+# {{count}} fallback), the install deep-link target (web /automations/new?preset={id}), the full ViewModel state
+# matrix (loading/empty/loaded/stale/offline/error + retry), the cache-then-network source and result mapper, and
+# the PII-safe diagnostics. The WinUI view (PresetGallery.cs) is compiled by the Release app build.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/PresetGallery -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Automations path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Error(s)
+#   (17 pre-existing TeslaSync.App.Core CA warnings only — CA1000/CA1716/CA1720/CA1859, unrelated to this unit and
+#    identical to the AutomationActivityFeed baseline; TeslaSync.App WinUI app + Generated + App.Core + App.Platform
+#    + App.Tests + App.UITests all built; elapsed 00:02:24)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes (benign workspace-load warnings only)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25934, Failed: 0, Skipped: 0, Total: 25934
+#   (the headless unit project = the gate's testable surface, per the AutomationActivityFeed precedent; the
+#    TeslaSync.App.UITests project requires a deployed MSIX + WinAppDriver and is not run headlessly.
+#    filtered FullyQualifiedName~PresetGallery -> Passed: 45, Failed: 0, Skipped: 0)
+TEST_EXIT=0
+PARITY_COVERED=9
+PARITY_REQUIRED=9
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/PresetGallery apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-automations-PresetGallery.log
+# git commit -m "feat(apps/windows): PresetGallery at web parity (W7 automations)"
+
+EXIT=0
+STATUS=DONE

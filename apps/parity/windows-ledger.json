@@ -43,5 +43,14 @@
     "requiredCount": 11,
     "promptId": "p2-windows/W7/windows-page-automations-AutomationActivityFeed",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-automations-AutomationActivityFeed.log"
+  },
+  {
+    "unitId": "page:automations/PresetGallery",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 9,
+    "requiredCount": 9,
+    "promptId": "p2-windows/W7/windows-page-automations-PresetGallery",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-automations-PresetGallery.log"
   }
 ]

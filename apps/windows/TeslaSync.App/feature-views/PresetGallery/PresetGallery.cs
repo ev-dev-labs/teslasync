@@ -511,7 +511,8 @@ public sealed partial class PresetGalleryView : ContentControl, IDisposable
         var error = new TsQueryError
         {
             Title = _viewModel.Title,
-            Message = _viewModel.ErrorMessage ?? _localizer.GetString("automations.presets.error", "Couldn't load preset templates"),
+            Message = _viewModel.ErrorMessage ?? _localizer.GetString(
+                PresetGalleryRegistration.CatalogKey("automations.presets.error"), "Couldn't load preset templates"),
             ActionText = _viewModel.RetryLabel,
             AttemptCount = _viewModel.Attempts,
             VerticalAlignment = VerticalAlignment.Center,

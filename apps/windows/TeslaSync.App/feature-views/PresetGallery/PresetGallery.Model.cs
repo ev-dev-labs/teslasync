@@ -323,7 +323,7 @@ public static class PresetGalleryProjection
         string glyph = PresetIconGlyphs.Resolve(preset.Icon);
         string triggerLabel = TriggerLabelText(preset.FirstTriggerKind, localizer);
         string actionCount = ActionCountText(preset.ActionCount, localizer);
-        string install = localizer.GetString(InstallKey, InstallFallback);
+        string install = localizer.GetString(PresetGalleryRegistration.CatalogKey(InstallKey), InstallFallback);
         string automationName = ComposeAutomationName(name, triggerLabel, actionCount);
 
         return new PresetCardModel(
@@ -346,10 +346,12 @@ public static class PresetGalleryProjection
 
         if (!string.IsNullOrEmpty(kind) && PresetTriggerLabels.TryResolve(kind, out var label))
         {
-            return localizer.GetString(label.Key, label.Fallback);
+            return localizer.GetString(PresetGalleryRegistration.CatalogKey(label.Key), label.Fallback);
         }
 
-        return localizer.GetString(PresetTriggerLabels.NoTriggerKey, PresetTriggerLabels.NoTriggerFallback);
+        return localizer.GetString(
+            PresetGalleryRegistration.CatalogKey(PresetTriggerLabels.NoTriggerKey),
+            PresetTriggerLabels.NoTriggerFallback);
     }
 
     /// <summary>The localized, interpolated action-count chip (web <c>t('…actionCount', { count })</c>).</summary>
@@ -359,7 +361,7 @@ public static class PresetGalleryProjection
     {
         ArgumentNullException.ThrowIfNull(localizer);
 
-        string template = localizer.GetString(ActionCountKey, ActionCountFallback);
+        string template = localizer.GetString(PresetGalleryRegistration.CatalogKey(ActionCountKey), ActionCountFallback);
         return template.Replace(CountToken, count.ToString(CultureInfo.CurrentCulture), StringComparison.Ordinal);
     }
 
@@ -420,6 +422,23 @@ public static class PresetGalleryRegistration
 
     /// <summary>The query parameter carrying the preset id (web <c>?preset=</c>).</summary>
     public const string PresetQueryParam = "preset";
+
+    /// <summary>
+    /// The i18n namespace every generated <c>Strings/*.resw</c> resource key carries. The web i18n key
+    /// <c>foo.bar</c> (ported verbatim from <c>web/src/i18n</c>) is emitted into the native catalog as
+    /// <c>translation.foo.bar</c> — apps/shared/i18n keys the neutral catalog by
+    /// <c>translation.&lt;dotted.key&gt;</c> (ADR-014). Resolution prepends this so labels bind to the
+    /// catalog (every locale) instead of falling back to the English default.
+    /// </summary>
+    public const string CatalogNamespace = "translation.";
+
+    /// <summary>Map a web i18n key (ported verbatim) to its generated <c>.resw</c> resource key.</summary>
+    /// <param name="webKey">The web <c>t()</c> key, e.g. <c>automations.presets.install</c>.</param>
+    public static string CatalogKey(string webKey)
+    {
+        ArgumentNullException.ThrowIfNull(webKey);
+        return string.Concat(CatalogNamespace, webKey);
+    }
 
     /// <summary>
     /// Build the install navigation intent for a preset, mirroring the web

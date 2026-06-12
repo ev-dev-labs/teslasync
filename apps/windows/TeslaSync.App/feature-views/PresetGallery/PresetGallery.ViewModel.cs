@@ -126,28 +126,33 @@ public sealed class PresetGalleryViewModel : INotifyPropertyChanged, IDisposable
     public bool HasData => _display.HasData;
 
     /// <summary>Localized surface title (the preset-section heading; used as the accessible name).</summary>
-    public string Title => _localizer.GetString("automations.presets.title", "Quick Start Templates");
+    public string Title => _localizer.GetString(
+        PresetGalleryRegistration.CatalogKey("automations.presets.title"), "Quick Start Templates");
 
     /// <summary>Localized empty-state message (no preset templates available — web <c>automations.presets.empty</c>).</summary>
     public string EmptyMessage =>
-        _localizer.GetString(PresetGalleryProjection.EmptyKey, PresetGalleryProjection.EmptyFallback);
+        _localizer.GetString(
+            PresetGalleryRegistration.CatalogKey(PresetGalleryProjection.EmptyKey),
+            PresetGalleryProjection.EmptyFallback);
 
     /// <summary>Localized loading announcement.</summary>
     public string LoadingLabel =>
-        _localizer.GetString("automations.presets.loading", "Loading preset templates");
+        _localizer.GetString(
+            PresetGalleryRegistration.CatalogKey("automations.presets.loading"), "Loading preset templates");
 
     /// <summary>Localized retry affordance label.</summary>
-    public string RetryLabel => _localizer.GetString("common.retry", "Retry");
+    public string RetryLabel => _localizer.GetString(PresetGalleryRegistration.CatalogKey("common.retry"), "Retry");
 
     /// <summary>Localized refresh affordance label.</summary>
     public string RefreshLabel =>
-        _localizer.GetString("automations.presets.refresh", "Refresh preset templates");
+        _localizer.GetString(
+            PresetGalleryRegistration.CatalogKey("automations.presets.refresh"), "Refresh preset templates");
 
     /// <summary>Localized stale freshness chip label.</summary>
-    public string StaleChipLabel => _localizer.GetString("common.stale", "Stale");
+    public string StaleChipLabel => _localizer.GetString(PresetGalleryRegistration.CatalogKey("common.stale"), "Stale");
 
     /// <summary>Localized offline freshness chip label.</summary>
-    public string OfflineChipLabel => _localizer.GetString("common.offline", "Offline");
+    public string OfflineChipLabel => _localizer.GetString(PresetGalleryRegistration.CatalogKey("common.offline"), "Offline");
 
     /// <summary>
     /// Run a cache-then-network load: counts the attempt, shows the card skeletons only when nothing is already
@@ -333,7 +338,7 @@ public sealed class PresetGalleryViewModel : INotifyPropertyChanged, IDisposable
             _ => "Couldn't load preset templates",
         };
 
-        return _localizer.GetString(key, fallback);
+        return _localizer.GetString(PresetGalleryRegistration.CatalogKey(key), fallback);
     }
 
     private void Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
