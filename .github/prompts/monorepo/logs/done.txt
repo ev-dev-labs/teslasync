@@ -354,3 +354,4 @@ p3-android/feature-views/A-0105-QuickMetrics.prompt.md
 p3-android/feature-views/A-0104-OptimizerSection.prompt.md
 p3-android/feature-views/A-0109-CostForecastSection.prompt.md
 p3-android/feature-views/A-0108-ChargerTypeBreakdown.prompt.md
+p3-android/feature-views/A-0112-EnvironmentalImpact.prompt.md
