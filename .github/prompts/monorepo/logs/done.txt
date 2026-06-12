@@ -691,3 +691,4 @@ p2-windows/shared-meaningful/W-0211-DataTableColumnsMenu.prompt.md
 p2-windows/shared-meaningful/W-0214-FullscreenButton.prompt.md
 p2-windows/shared-meaningful/W-0216-HelpTooltip.prompt.md
 p2-windows/shared-meaningful/W-0222-PinButton.prompt.md
+p2-windows/shared-meaningful/W-0221-Pagination.prompt.md
