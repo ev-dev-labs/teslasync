@@ -1,0 +1,186 @@
+=== p2-windows · W7 · page:dashboard/Dashboard (WinUI 3 / Fluent) ===
+Parity unit : page:dashboard/Dashboard   kind=page   web route=/
+Web source  : web/src/features/dashboard/pages/DashboardPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection +
+  registration + diagnostics + data ports, unit-tested headlessly), <Name>.Source.cs (the generated-client feed),
+  <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly
+  as the sibling W7 ApiLogsPage / EnergyPage / VehicleCostPage do. The generated prompt's idealized
+  "DashboardPage.xaml + DashboardPageViewModel.cs under TeslaSync/Features/Dashboard" is mapped onto these real
+  conventions; the surface registers itself with the W4 ShellPageFactory by route name ("Dashboard", already in
+  RouteTable.cs L91 → path "" / index route /) via ShellWindow.xaml.cs.
+- Data binding (ADR-004, P1/S8): the manifest's two data sources are bound to the generated OpenAPI contract client
+  through observable ViewModel ports.
+    * useAuthStatus → GET /auth/status : IAuthStatusSource → AuthStatusClientSource (DashboardPage.Source.cs) reads
+      generated operation get_api_v1_auth_status cache-then-network through the shared CacheThenNetworkEngine, caching
+      raw JSON so the snake_case wire shape round-trips, and parses {authenticated:bool} into DashboardAuthStatus.
+    * useSyncVehicles → POST /vehicles/sync : IVehicleSyncGateway → VehicleSyncClientGateway posts generated
+      operation post_api_v1_vehicles_sync through the contract client; failures map through ApiErrorMapper. Both
+      operation ids resolve against the generated ApiEndpoints table (Generated/Api/ApiEndpoints.cs L177 + L513). No
+      HTTP touches the view. The parameterless page uses headless-safe defaults (EmptyAuthStatusSource yields a
+      resolved "not connected" snapshot; NoopVehicleSyncGateway is a benign success) so the surface is fully
+      renderable in tests / design-time hosts.
+- The web page composes a header (PageContainer title/subtitle + a header-actions toolbar), a stack of conditional
+  banners (ThemeFirstRunBanner, customize hint, anyError, auth-not-connected), and a body that switches on
+  vehiclesLoading / vehicles / EmptyOnboarding. The manifest narrows THIS unit to the page chrome + the two
+  EmptyOnboarding GlassPanels (DashboardPage.tsx L691 outer hero + L724 feature card ×4); the widget grid is the
+  union of ~95 separate dashboard-widget parity units and is out of this unit's scope. The native port reproduces
+  every in-scope region as a visible Fluent region per ADR-006:
+    * header  : PageTitle + Subhead + TsDataFreshness chip; the customize/normal toolbars (TsButton row).
+    * banners : TsAlertBanner(Info) theme first-run (title/body + Open/Maybe-later actions, dismissible);
+                TsAlertBanner(Info) customize hint (message + Add-widgets action, normal-mode, dismissible);
+                TsAlertBanner(Danger) failure banner (web anyError); TsAlertBanner(Warning) account-not-connected
+                (notConnected title + connectPrompt/settings/toStart message + Settings action → NavigateTo settings).
+    * edit    : the edit-mode hint TsGlassPanel (web editHint), the reset-confirmation TsAlertBanner (web
+                layout.resetMessage, shown on Reset, confirm → CommandRequested(Reset)), and the New-Dashboard
+                TsButton surface (web dashboard.newDashboard, shown on Templates).
+    * body    : the three declared data states — loading → TsStatGridSkeleton(4)+TsTableSkeleton shimmer; error →
+                TsQueryError (InfoBar-equivalent) + Retry → RefreshAsync; success → the onboarding hero (GlassPanel1)
+                whose footer is the four feature cards (GlassPanel2). Never a blank region.
+- The onboarding hero branches on auth.authenticated exactly as web EmptyOnboarding: authenticated → "Sync Your
+  Vehicles" / syncDesc / "Sync Vehicles" (→ ViewModel.SyncAsync, web syncVehicles.mutate()); unauthenticated →
+  "Welcome to TeslaSync" / desc / "Connect Tesla Account" (→ NavigateTo settings). The projection resolves BOTH
+  branches of every onboarding ternary unconditionally so a single Project() references all 36 manifest keys
+  regardless of the model branch (asserted headlessly via RecordingLocalizer).
+- Toolbar: Customize/Done toggle the real local edit-mode (web editMode) on the ViewModel; Refresh → RefreshAsync;
+  Reset opens the confirmation banner; Templates reveals the New-Dashboard surface. The remaining chrome commands
+  (Undo/Redo/AddWidget/AutoArrange/Templates/Kiosk/PrintSnapshot/NewDashboard/Reset) raise the documented
+  CommandRequested event seam for the host to handle (the widget/layout/kiosk/print subsystems are separate parity
+  units) — the established repo pattern (NavigationRequested/BackRequested/CloseRequested on sibling pages), not a
+  stub.
+- Live SSE / staleness (ADR-013): neither declared data source is a live signal stream (auth-status is a one-shot
+  read; sync is a command), so no SSE subscription or >2-min staleness indicator is required for this unit; the
+  header freshness chip still reflects the last auth read (UpdatedAt/IsFetching/IsError).
+- SI units (P1/S5): this surface renders zero unit-bearing physical fields (no distances, speeds, temps, energy,
+  pressure) — only auth state, onboarding copy and command labels — so the SI converter boundary is trivially
+  honored (nothing to convert).
+- i18n (ADR-014): all 36 manifest keys already exist in Strings/en/Resources.resw as translation.* entries (generated
+  from the shared web i18n source); the surface resolves every label through the ILocalizer facade with the web key
+  names (bare, matching the sibling pages' GetString convention) and the verbatim English defaults, so no literal is
+  hardcoded. The ar/he catalogs fall back to the English default via ILocalizer until translated.
+- a11y (ADR-015): AutomationProperties.Name on the page (document title), the onboarding hero and each feature card;
+  TsButton labels seed their own Narrator names; the icon-only Refresh button gets an explicit localized name; the
+  banners are live regions (TsBannerBase). Light/dark + high-contrast honored via the W2 design tokens (TsGlassPanel
+  Mica/glass surface + token brushes); no hardcoded colors.
+- Headless test wiring: the Microsoft.UI-free Model/Source/ViewModel files were added as <Compile Include> links to
+  TeslaSync.App.Tests.csproj (the bare WinUI view DashboardPage.cs is excluded — it uses Microsoft.UI). The card
+  accent is a Core-only DashboardCardAccent enum in the Model (mapped to the component GlassGlow only in the view) so
+  the headless files carry zero UI dependency.
+- Build-time defects found + fixed in this surface's own new code (no red shipped): (1) the headless Model.cs
+  initially referenced the component GlassGlow enum, which is unavailable to the Core-only test project that links it
+  — replaced with the Core-only DashboardCardAccent enum, mapped to GlassGlow in the view; (2) the new .cs files were
+  authored with CRLF line endings, which dotnet format flagged as ENDOFLINE — normalized to LF (UTF-8, no BOM) to
+  match the repo. Both fully repaired; app + solution build 0 errors / 0 warnings and format-verify is clean.
+
+=== PARITY ===
+PARITY_REQUIRED=41
+
+# Panels (2) — every web region reproduced as a Fluent Card/Mica region, bound to the state holder
+[x] panel  - GlassPanel1  -> onboarding welcome/sync hero: DashboardPage.cs#_onboardingPanel (TsGlassPanel) built in
+             BuildOnboarding, hosting _onboardingHeading (Heading) + _onboardingDescription (Text) +
+             _onboardingAction (TsButton) + _featureGrid; web EmptyOnboarding outer GlassPanel (DashboardPage.tsx
+             L691); rendered in success state (DashboardState.Success); tests
+             Unauthenticated_onboarding_shows_welcome_and_connect + Authenticated_onboarding_shows_sync_and_hides_warning
+[x] panel  - GlassPanel2  -> feature-highlight cards: DashboardPage.cs#_featureCards (TsGlassPanel[4]) built in
+             BuildFeatureGrid from DashboardProjection.FeatureCards (tracking/drives/charging/control, each with glyph
+             + accent glow); web EmptyOnboarding footer grid GlassPanel ×4 (DashboardPage.tsx L724); test
+             Feature_cards_carry_labels_and_accents
+
+# Data states (3) — loading / error / success, each a visible region (never blank)
+[x] state  - loading  -> DashboardState.Loading (DashboardProjection.Project when model.Loading);
+             DashboardPage.cs#RenderBody shows _loadingPanel (TsStatGridSkeleton(4)+TsTableSkeleton); web
+             vehiclesLoading skeleton; tests Loading_model_projects_loading_state +
+             ViewModel_load_transitions_to_success_with_auth (loading→success) + Unknown_auth_does_not_show_warning_before_first_read
+[x] state  - error    -> DashboardState.Error (model.LoadFailed); _errorState (TsQueryError + Retry→RefreshAsync) in
+             the body + _errorBanner (TsAlertBanner Danger, error.loadFailed) above; web anyError; tests
+             Failed_model_projects_error_state_with_banner_text + ViewModel_load_failure_sets_error_state
+[x] state  - success  -> DashboardState.Success; _successPanel renders the onboarding hero; the additive error banner
+             still composes above on a sync failure (Sync_error_is_additive_banner_over_success); tests
+             Resolved_model_projects_success_state + ViewModel_load_transitions_to_success_with_auth
+
+# Strings (36) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - auth.connectPrompt        -> DashboardProjection.Project GetString("auth.connectPrompt","Connect your account in") -> AuthConnectPrompt -> _authBanner.Message
+[x] string - auth.notConnected         -> GetString("auth.notConnected","Tesla account not connected") -> AuthNotConnected -> _authBanner.Title
+[x] string - auth.settings             -> GetString("auth.settings","Settings") -> AuthSettings -> _authBanner.Message + _authBanner.ActionText
+[x] string - auth.toStart              -> GetString("auth.toStart","to start tracking.") -> AuthToStart -> _authBanner.Message
+[x] string - dashboard.addWidget       -> GetString("dashboard.addWidget","Add Widget") -> AddWidgetLabel -> _addWidgetButton.Text
+[x] string - dashboard.autoArrange     -> GetString("dashboard.autoArrange","Auto Arrange") -> AutoArrangeLabel -> _autoArrangeButton.Text
+[x] string - dashboard.customize       -> GetString("dashboard.customize","Customize") -> CustomizeLabel -> _customizeButton.Text
+[x] string - dashboard.customizeHint   -> GetString("dashboard.customizeHint","You can customize this dashboard. Tap the + to add widgets.") -> CustomizeHint -> _customizeHintBanner.Message
+[x] string - dashboard.customizeHintCta-> GetString("dashboard.customizeHintCta","Add widgets") -> CustomizeHintCta -> _customizeHintBanner.ActionText
+[x] string - dashboard.done            -> GetString("dashboard.done","Done") -> DoneLabel -> _doneButton.Text
+[x] string - dashboard.editHint        -> GetString("dashboard.editHint","Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.") -> EditHint -> _editHint.Value (edit-mode hint panel)
+[x] string - dashboard.kiosk           -> GetString("dashboard.kiosk","Kiosk") -> KioskLabel -> _kioskButton.Text
+[x] string - dashboard.newDashboard    -> GetString("dashboard.newDashboard","New Dashboard") -> NewDashboardLabel -> _newDashboardButton.Text
+[x] string - dashboard.printSnapshot   -> GetString("dashboard.printSnapshot","Print snapshot") -> PrintSnapshotLabel -> _printButton.Text
+[x] string - dashboard.redo            -> GetString("dashboard.redo","Redo") -> RedoLabel -> _redoButton.Text
+[x] string - dashboard.reset           -> GetString("dashboard.reset","Reset") -> ResetLabel -> _resetButton.Text + _resetConfirmBanner.Title/ActionText
+[x] string - dashboard.templates       -> GetString("dashboard.templates","Templates") -> TemplatesLabel -> _templatesButton.Text
+[x] string - dashboard.undo            -> GetString("dashboard.undo","Undo") -> UndoLabel -> _undoButton.Text
+[x] string - error.loadFailed          -> GetString("error.loadFailed","Failed to load data") -> ErrorText -> _errorBanner.Message + _errorState.Title
+[x] string - layout.resetMessage       -> GetString("layout.resetMessage","This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.") -> ResetMessage -> _resetConfirmBanner.Message
+[x] string - onboarding.charging       -> GetString("onboarding.charging","Charge Analytics") -> FeatureCards[2].Label -> _featureLabels[2].Value
+[x] string - onboarding.connect        -> GetString("onboarding.connect","Connect Tesla Account") -> OnboardingActionLabel [unauthenticated] -> _onboardingAction.Text
+[x] string - onboarding.control        -> GetString("onboarding.control","Vehicle Control") -> FeatureCards[3].Label -> _featureLabels[3].Value
+[x] string - onboarding.desc           -> GetString("onboarding.desc","The next-generation Tesla fleet intelligence platform. …") -> OnboardingDescription [unauthenticated] -> _onboardingDescription.Value
+[x] string - onboarding.drives         -> GetString("onboarding.drives","Drive History") -> FeatureCards[1].Label -> _featureLabels[1].Value
+[x] string - onboarding.sync           -> GetString("onboarding.sync","Sync Vehicles") -> OnboardingActionLabel [authenticated] -> _onboardingAction.Text
+[x] string - onboarding.syncDesc       -> GetString("onboarding.syncDesc","Your Tesla account is connected. Sync your vehicles to start tracking.") -> OnboardingDescription [authenticated]
+[x] string - onboarding.syncTitle      -> GetString("onboarding.syncTitle","Sync Your Vehicles") -> OnboardingHeading [authenticated] -> _onboardingHeading.Value
+[x] string - onboarding.title          -> GetString("onboarding.title","Welcome to TeslaSync") -> OnboardingHeading [unauthenticated] -> _onboardingHeading.Value
+[x] string - onboarding.tracking       -> GetString("onboarding.tracking","Real-time Tracking") -> FeatureCards[0].Label -> _featureLabels[0].Value
+[x] string - subtitle                  -> DashboardProjection.Project / DashboardRegistration.Subtitle GetString("subtitle","Real-time fleet intelligence and control") -> Subtitle -> _subtitle.Value
+[x] string - theme.firstRunBody        -> GetString("theme.firstRunBody","Pick a color theme that fits your style.") -> ThemeFirstRunBody -> _themeBanner.Message
+[x] string - theme.firstRunLater       -> GetString("theme.firstRunLater","Maybe later") -> ThemeFirstRunLater -> _themeBanner.SecondaryActionText
+[x] string - theme.firstRunOpen        -> GetString("theme.firstRunOpen","Open theme picker") -> ThemeFirstRunOpen -> _themeBanner.ActionText
+[x] string - theme.firstRunTitle       -> GetString("theme.firstRunTitle","Personalize TeslaSync") -> ThemeFirstRunTitle -> _themeBanner.Title
+[x] string - title                     -> DashboardProjection.Project / DashboardRegistration.Title GetString("title","Command Center") -> Title -> _title.Value (+ DocumentTitle)
+
+PARITY_COVERED=41
+# Coverage asserted headlessly: DashboardPageTests.Projection_resolves_every_required_string_key records every key
+# above through a RecordingLocalizer (Manifest_requires_thirty_six_strings pins the count at 36); the three state
+# tests (Loading/Failed/Resolved + Sync_error_is_additive_banner_over_success) assert each region renders from the
+# bound DashboardDisplay; the onboarding-branch tests + Feature_cards_carry_labels_and_accents assert the two panels;
+# the ViewModel_* tests assert the auth-load (useAuthStatus) loading→success/error matrix, the vehicle-sync
+# (useSyncVehicles) gateway call + reload + failure banner, and the edit-mode toggle; Auth_status_parses_authenticated_flag
+# pins the /auth/status parse; Registration_exposes_route_and_slug + Diagnostics_records_view_opened_with_slug pin
+# the route name / slug / header strings.
+
+=== DATA SOURCES (manifest, P1/S8 bound to the generated C# client) ===
+[x] useAuthStatus  → GET  /auth/status   -> AuthStatusClientSource (DashboardPage.Source.cs) op get_api_v1_auth_status
+                                            via CacheThenNetworkEngine; IAuthStatusSource consumed by
+                                            DashboardPageViewModel.LoadAsync; test ViewModel_load_transitions_to_success_with_auth
+[x] useSyncVehicles → POST /vehicles/sync -> VehicleSyncClientGateway (DashboardPage.Source.cs) op
+                                            post_api_v1_vehicles_sync; IVehicleSyncGateway driven by
+                                            DashboardPageViewModel.SyncAsync; test ViewModel_sync_invokes_gateway_then_reloads
+# Both operation ids resolve against Generated/Api/ApiEndpoints.cs (get_api_v1_auth_status L177, post_api_v1_vehicles_sync L513).
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DashboardPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Dashboard path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s), 0 Warning(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <DashboardPage Model/Source/ViewModel/view
+#   + DashboardPageTests + ShellWindow.xaml.cs>  -> 0 issues (all LF/utf-8 after LF normalization)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 26375, Failed: 0, Skipped: 0
+#   (incl. 20 DashboardPageTests)
+TEST_EXIT=0
+PARITY_COVERED=41
+PARITY_REQUIRED=41
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/DashboardPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/DashboardPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-dashboard-DashboardPage.log
+# git commit -m "feat(apps/windows): DashboardPage at web parity (W7 dashboard)"
+
+EXIT=0
+STATUS=DONE

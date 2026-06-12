@@ -61,5 +61,14 @@
     "requiredCount": 51,
     "promptId": "p2-windows/W7/windows-page-battery-EnergyProductsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-EnergyProductsPage.log"
+  },
+  {
+    "unitId": "page:dashboard/Dashboard",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 41,
+    "requiredCount": 41,
+    "promptId": "p2-windows/W7/windows-page-dashboard-DashboardPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-dashboard-DashboardPage.log"
   }
 ]
