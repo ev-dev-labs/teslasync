@@ -1,0 +1,93 @@
+=== P2 Shared surface 0137 RequiresAuth (Windows) ===
+runner: ATUL-THINK-I9  date: 2026-06-11T17:13:02.1560224-07:00
+dotnet sdk: 10.0.300
+
+### dotnet build apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-08\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-08\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:04:23.28
+BUILD_EXIT=0
+
+### dotnet test apps/windows/TeslaSync.sln -c Release
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 1 s - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 22190, Skipped:     0, Total: 22190, Duration: 25 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=1
+
+### dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+### check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/RequiresAuth
+PLACEHOLDER_EXIT=0
+PLACEHOLDER_EXIT_SHIPPED_FILES=0
+
+### headless unit suite (Category!=UIAutomation) - the surface's own tests
+Passed!  - Failed:     0, Passed: 22190, Skipped:     0, Total: 22190, Duration: 14 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_SUITE_EXIT=0
+RequiresAuthTests: Passed!  - Failed:     0, Passed:    48, Skipped:     0, Total:    48, Duration: 136 ms - TeslaSync.App.Tests.dll (net10.0)
+REQUIRESAUTH_TESTS_EXIT=0
+
+EVIDENCE
+  - BUILD_EXIT=0 : the WinUI 3 surface + the regenerated headless test project compile clean
+    under TreatWarningsAsErrors (net10.0-windows10.0.19041.0, Windows App SDK).
+  - HEADLESS_SUITE_EXIT=0 : the entire headless unit suite passes, including the new
+    RequiresAuthTests (REQUIRESAUTH_TESTS_EXIT=0) covering the JSON adapter, per-state projection
+    (loading / open / forward-auth-enabled / forward-auth-disabled), provider-hint vs vendor-neutral
+    copy, feature-name resolution, the per-capability automation id, the accessible-name contract,
+    the view-model reprojection, the source, and the diagnostics.
+  - FORMAT_EXIT=0 ; PLACEHOLDER_EXIT=0 (PLACEHOLDER_EXIT_SHIPPED_FILES=0): the
+    shipped files carry no TODO/FIXME/stub/placeholder/Lorem markers and need no formatting changes.
+  - TEST_EXIT=1 : the literal full-solution 'dotnet test' is RED solely because the
+    TeslaSync.App.UITests suite (147 tests, [Trait Category=UIAutomation]) drives the packaged app
+    out-of-process over WinAppDriver, which - with the deployed MSIX app - is supplied by the
+    environment / apps/windows/run-ui-automation.ps1 and is ABSENT on this runner. Per the project's
+    own UITests contract those tests fail fast (never silently skip) when the driver is missing; they
+    are unrelated to this surface (no UITests file was touched).
+
+REPAIR PERFORMED (required to run any gate step)
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed in the documented
+  merge=union MULTI-ROOT corruption state (MSB4025: multiple root elements, line 1255), which blocked
+  the whole-solution build/test independent of this surface. It was regenerated into ONE canonical
+  Project root holding the case-insensitive ordinal path-sorted, Include-deduplicated union of every
+  Microsoft.UI-free .cs under the surface dirs (1118 entries, all verified on disk) PLUS the three new
+  RequiresAuth Model/Source/ViewModel links (1121 total) - exactly the repair the file's own header
+  mandates and the predecessor surfaces (0118/0120/0126) performed.
+
+SURFACE SUMMARY (parity with web/src/components/feedback/RequiresAuth.tsx)
+  Output: apps/windows/TeslaSync.App/shared-surfaces/RequiresAuth.{Model,Source,ViewModel}.cs + RequiresAuth.cs
+  - Data: useAuthMode() -> IAuthModeSource (P1/S8 seam) + AuthModeResponseAdapter (JSON envelope from
+    /system/auth-mode -> RequiresAuthSnapshot). The view issues no HTTP; the composition root pushes
+    resolved snapshots through StaticAuthModeSource.Set (the TanStack query settling).
+  - Render branches reproduced verbatim from the web source: (1) loading/unresolved -> gated notice with
+    vendor-neutral copy (no provider hint, the web isLoading||!data guard that never flashes children);
+    (2) forward_auth + capabilities[capability] -> mount the children; (3) open mode OR capability
+    disabled -> gated notice surfacing the operator provider_hint verbatim. Transport errors fold into
+    branch 1 exactly as the web reads data===null. The auth-mode contract is a fixed deployment-time
+    value (no list/empty/stale data branch exists in the source).
+  - Components: web Typography Heading 'panel' + Text 'bodySm' -> Fluent TextBlocks at the mapped sizes;
+    web Lucide LockKeyhole -> Segoe Fluent Lock glyph; tokens from W1 DisplayTokens (no Tailwind classes).
+  - i18n: translation.requiresAuth.title|body|bodyWithHint + featureName.{stepUpReauth,totpEnrollment,
+    sessionList,impersonation,rbac} - all already present in apps/windows/Strings/en/Resources.resw
+    (no catalog change required); zero hardcoded English in the view (every string via ILocalizer).
+  - a11y: gated notice is a polite status live region, Narrator name = '<title>. <body>', lock glyph
+    marked decorative, per-capability AutomationId 'requires-auth-empty-{wire}' (web data-testid parity);
+    no entrance animation (mirrors the web wrapper) so the OS reduce-motion preference is honoured.
+  - Telemetry: view.opened slug=RequiresAuth emitted once on first Loaded (P1/S11).
+
+CONCLUSION
+  The RequiresAuth surface is COMPLETE and production-polished. Every gate step this runner can execute
+  is green (BUILD_EXIT=0, headless suite + RequiresAuth tests pass, FORMAT_EXIT=0,
+  PLACEHOLDER_EXIT=0). The literal full-solution 'dotnet test' is EXIT=1 solely because the
+  WinAppDriver UI-automation host (and a deployed MSIX) are absent on this runner. Per the prompt
+  capability clause ('requires WinUI 3 ... If unavailable on the runner -> STATUS=BLOCKED with API
+  evidence') and the established predecessor convention (0114/0115/0126), the honest gate result is
+  recorded as BLOCKED. Re-run apps/windows/run-ui-automation.ps1 on a WinAppDriver-provisioned runner
+  to exercise the 147 E2E tests.
+
+EXIT=1
+STATUS=BLOCKED
