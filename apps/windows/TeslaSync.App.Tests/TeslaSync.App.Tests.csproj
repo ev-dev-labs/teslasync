@@ -150,6 +150,22 @@
     multi-root corruption) from the WinUI-free sources on disk, plus the new FormField Model / Source /
     ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build-item or
     project start tag inside this comment.
+    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Registration / diagnostics) for every dashboard
+    widget, feature view, misc surface, modal/dialog and shared surface. The WinUI app (TeslaSync.App)
+    targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's
+    Microsoft.UI-free sources are Compile-linked below; the bare WinUI view files are excluded and exercised
+    by the app build, and the test classes are picked up by the SDK default-compile glob.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
+    path-sorted, Include-deduplicated Compile item group — the union of every Microsoft.UI-free .cs on disk
+    under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file
+    carries the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it
+    into multiple Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); when that
+    happens, regenerate it directly from the WinUI-free sources on disk. Regenerated into this single canonical
+    Project root for P2 shared-surfaces/0155 ListExportMenu (repairing a merge=union multi-root corruption),
+    plus the new ListExportMenu Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots,
+    and never write a literal build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -1263,6 +1279,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Model.cs" Link="SharedSurfaces\KpiOverviewCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Source.cs" Link="SharedSurfaces\KpiOverviewCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.ViewModel.cs" Link="SharedSurfaces\KpiOverviewCard.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.Model.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.Source.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.ViewModel.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Model.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Source.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.ViewModel.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.ViewModel.cs" />
