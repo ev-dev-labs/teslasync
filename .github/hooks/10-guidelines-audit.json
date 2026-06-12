@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "type": "command",
+        "matcher": "edit|create",
+        "command": "node .github/hooks/scripts/guidelines-audit.js",
+        "timeoutSec": 15
+      }
+    ]
+  }
+}
