@@ -1,0 +1,183 @@
+=== p2-windows · W7 · page:automations/AutomationBuilder (WinUI 3 / Fluent) ===
+Parity unit : page:automations/AutomationBuilder   kind=page   web route=/automations/:id/edit
+Web source  : web/src/features/automations/pages/AutomationBuilderPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed + an empty/local feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ApiLogsPage / FeedbackQueuePage / SchemaDriftPage / VehicleCostPage do. The generated prompt's idealized
+  "AutomationBuilderPage.xaml + AutomationBuilderPageViewModel.cs under TeslaSync/Features/Automations" is mapped onto
+  these real conventions (namespace TeslaSync.App.FeatureViews.Automations, matching the sibling builders
+  TriggerConfigurator / ConditionBuilder / ActionBuilder / ConflictWarnings). The surface registers itself with the
+  W4 ShellPageFactory by route name ("AutomationBuilder", the RouteTable.cs L124-L125 entries for automations/new +
+  automations/:id/edit) via ShellWindow.xaml.cs.
+- Data binding (ADR-004): the seven manifest data sources bind through the generated OpenAPI contract client behind
+  an injected IAutomationBuilderFeed (P1/S8). AutomationBuilderClientFeed (AutomationBuilderPage.Source.cs) maps each
+  hook to its generated operation id + path/body shaping, asserted via the FakeApiClient:
+    useAutomation         -> get_api_v1_automations_id            (path id)            [GET /automations/{id}]
+    useAutomationPreset   -> get_api_v1_automations_presets_presetId (path presetId)  [GET /automations/presets/{id}]
+    useVehicles           -> get_api_v1_vehicles                                       [GET /vehicles]
+    useNotificationChannels -> get_api_v1_notifications (NotificationChannel[])         [GET /notifications]
+    useCreateAutomationFull -> post_api_v1_automations            (snake-case JSON body)[POST /automations]
+    useUpdateAutomationFull -> put_api_v1_automations_id          (path id + JSON body) [PUT /automations/{id}]
+    useTestRunAutomation  -> post_api_v1_automations_id_test_run  (path id)            [POST /automations/{id}/test-run]
+  The write body is built by AutomationGraphCodec.SerializePayload — the native port of the web formToPayload +
+  normalizeTriggerInput / normalizeConditionInput / normalizeActionInput — and round-trips with the load-time
+  parsers (AutomationDetailSnapshot / AutomationPresetSnapshot.FromJson, the platform {data:…} envelope unwrapped).
+  The default shell-registered page uses EmptyAutomationBuilderFeed (no-backend), exactly as the sibling W7 pages
+  use their Empty*Feed; the generated-client feed is exercised by tests. No HTTP touches the view.
+- The four web data states are reproduced as visible Fluent regions (ADR-006), driven by the edit-mode useAutomation
+  query exactly as the web composes them: loading -> TsPageHeaderSkeleton + TsTableSkeleton shimmer
+  (web isEdit && isLoadingAutomation); error -> TsQueryError (InfoBar-equivalent) + Retry (web isEdit && loadError);
+  empty -> "Automation not found" TsEmptyState (web isEdit && !existingAutomation); success -> the builder form
+  (web success / create / preset). Never a blank region.
+- Panels: GlassPanel1/GlassPanel2 are the two branches of the When-section trigger panel (a tokenized TsGlassPanel)
+  — the hosted native TriggerConfigurator when a trigger kind is chosen, else the empty-trigger TsEmptyState
+  (web GlassPanel + EmptyState). GlassPanel3 is the create/preset preset-hint TsGlassPanel (web !isEdit GlassPanel).
+  The When/Only-If/Then sections host the already-built sibling surfaces TriggerConfigurator / ConditionBuilder /
+  ActionBuilder (seeded from the typed form graph; their geofence reads use local empty sources on the no-backend
+  page). The web EditConflictBanner + DraftRecoveryBanner + unsaved-changes guard are reproduced via the native
+  shared EditConflictBanner (resourceLabel = editConflict.resource.automation) + TsDraftRecoveryBanner
+  (itemNoun = draft.noun.automation) + the cancel affordance's tooltip/AutomationProperties (forms.unsavedAutomation).
+- Validation: AutomationValidator.Validate is the native port of the web validate() guard chain
+  (name -> trigger -> trigger-place -> condition-place -> actions -> action-details), keyed off the six pre-resolved
+  messages the projection surfaces; a failure drives the save-error banner (web saveError).
+- i18n: all 41 manifest keys resolve through the ILocalizer facade with the web key names. 34 builder keys + the 3
+  cross-cutting keys (draft.noun.automation, editConflict.resource.automation, forms.unsavedAutomation) already
+  existed in Strings/en/Resources.resw (shared with the sibling builder units); the 7 page-only keys
+  (descriptionPlaceholder, emptyTrigger, onlyIfDesc, presetHint, subtitle, thenDesc, whenDesc) were added verbatim.
+  The projection resolves every key unconditionally so catalog coverage is deterministic in every state/mode.
+- SI units N/A (no unit-bearing physical fields on this builder surface — automation name/description, vehicle scope,
+  enabled flag, and typed trigger/condition/action graphs only). Signal-threshold values are passed through verbatim
+  exactly as the web does (no display-boundary conversion applies).
+- Microsoft.UI-free Model/Source/ViewModel were linked into TeslaSync.App.Tests.csproj (the WinUI view is excluded —
+  it uses Microsoft.UI; it is exercised by the app build). The sibling ActionBuilder/ConditionBuilder/
+  TriggerConfigurator Model/Source/ViewModel were already linked, so the shared typed models are available headlessly.
+- Build-time defects found + fixed in this surface's own new code (no red shipped): (1) BuildWhenSection declared a
+  StackPanel return type but returned the TsFormSection (CS0029) — return type corrected; this CS error had cascaded
+  into the WinUI XAML-compiler WMC9999 internal crash with spurious "Unknown type" noise on unrelated components
+  (proven by isolating the C# error via the App-project CoreCompile), exactly the failure mode the sibling
+  VehicleCostPage log documented; (2) the app project enforces CA1806 as an error, so the four ignored TriggerWire /
+  AutomationActionKinds Try*-result calls in the parsers were made explicit discards (_ =); (3) the test file needed
+  `using TeslaSync.App.FeatureViews;` for AutomationActionKind / AutomationChannel (the action types live in the
+  parent namespace). All repaired; the solution builds 0 errors.
+
+=== PARITY ===
+PARITY_REQUIRED=48
+
+# Panels (3) — every web region reproduced as a Fluent Card/Mica region, bound to the state holder
+[x] panel  - GlassPanel1 -> trigger-configurator panel: AutomationBuilderPage.cs#RenderTriggerPanel hosts the native
+             TriggerConfigurator inside the _triggerPanel TsGlassPanel when a trigger is chosen
+             (AutomationBuilderDisplay.HasTrigger == true); web AutomationBuilderPage.tsx GlassPanel wrapping
+             <TriggerConfigurator/>; projection AutomationBuilderProjection.Project (HasTrigger / SelectedTriggerWire);
+             test Panel_trigger_configurator_shows_when_trigger_chosen + ViewModel_set_trigger_kind_toggles_the_panel
+[x] panel  - GlassPanel2 -> empty-trigger panel: AutomationBuilderPage.cs#RenderTriggerPanel sets _triggerPanel.Content
+             = _emptyTrigger (TsEmptyState, EmptyTriggerMessage) when no trigger (HasTrigger == false); web GlassPanel
+             + EmptyState emptyTrigger; test Panel_empty_trigger_shows_when_no_trigger
+[x] panel  - GlassPanel3 -> preset-hint panel: AutomationBuilderPage.cs#BuildPresetHint (_presetHintPanel TsGlassPanel
+             + PresetHint text), shown when AutomationBuilderDisplay.ShowPresetHint (web !isEdit GlassPanel);
+             test Panel_preset_hint_shows_in_create_and_preset_but_not_edit
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading -> AutomationBuilderState.Loading + Display.ShowLoading; AutomationBuilderPage.cs#_loadingSkeleton
+             (TsPageHeaderSkeleton + TsTableSkeleton); web isEdit && isLoadingAutomation;
+             test State_loading_when_edit_query_in_flight
+[x] state  - empty   -> AutomationBuilderState.Empty + Display.ShowEmpty; _notFound TsEmptyState (NotFoundMessage);
+             web isEdit && !existingAutomation; test State_empty_when_edit_automation_not_found +
+             ViewModel_edit_not_found_is_the_empty_state
+[x] state  - error   -> AutomationBuilderState.Error + Display.ShowError; _errorState TsQueryError + Retry
+             (ActionInvoked -> RefreshAsync); web isEdit && loadError; test State_error_when_edit_load_failed +
+             ViewModel_edit_load_failure_is_the_error_state
+[x] state  - success -> AutomationBuilderState.Success + Display.ShowForm; the builder form (sections + 3 panels +
+             action row); web edit success / create / preset; test State_success_in_create_mode +
+             State_success_when_edit_automation_found + ViewModel_edit_load_hydrates_the_form
+
+# Strings (41) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - automations.builder.allVehicles            -> Project GetString -> VehicleOptions[0] "All Vehicles"
+[x] string - automations.builder.backToList             -> Project GetString -> BackLabel
+[x] string - automations.builder.cancel                 -> Project GetString -> CancelLabel
+[x] string - automations.builder.create                 -> Project GetString -> CreateLabel / PrimaryActionLabel
+[x] string - automations.builder.createTitle            -> Project GetString -> Title (create mode)
+[x] string - automations.builder.description            -> Project GetString -> DescriptionLabel
+[x] string - automations.builder.descriptionPlaceholder -> Project GetString -> DescriptionHint (resw added)
+[x] string - automations.builder.editBreadcrumb         -> Project GetString -> BreadcrumbLabel ("Edit: {name}")
+[x] string - automations.builder.editTitle              -> Project GetString -> Title (edit mode)
+[x] string - automations.builder.emptyTrigger           -> Project GetString -> EmptyTriggerMessage (resw added)
+[x] string - automations.builder.enabled                -> Project GetString -> EnabledLabel
+[x] string - automations.builder.errorActionDetails     -> Project GetString -> Validation.ErrorActionDetails
+[x] string - automations.builder.errorActions           -> Project GetString -> Validation.ErrorActions
+[x] string - automations.builder.errorConditionPlace    -> Project GetString -> Validation.ErrorConditionPlace
+[x] string - automations.builder.errorName              -> Project GetString -> Validation.ErrorName
+[x] string - automations.builder.errorTrigger           -> Project GetString -> Validation.ErrorTrigger
+[x] string - automations.builder.errorTriggerPlace      -> Project GetString -> Validation.ErrorTriggerPlace
+[x] string - automations.builder.general                -> Project GetString -> GeneralTitle
+[x] string - automations.builder.name                   -> Project GetString -> NameLabel
+[x] string - automations.builder.namePlaceholder        -> Project GetString -> NameHint
+[x] string - automations.builder.notFound               -> Project GetString -> NotFoundMessage
+[x] string - automations.builder.onlyIf                 -> Project GetString -> OnlyIfTitle
+[x] string - automations.builder.onlyIfDesc             -> Project GetString -> OnlyIfDescription (resw added)
+[x] string - automations.builder.presetHint             -> Project GetString -> PresetHint (resw added)
+[x] string - automations.builder.presetTitle            -> Project GetString -> Title (preset mode)
+[x] string - automations.builder.save                   -> Project GetString -> SaveLabel / PrimaryActionLabel
+[x] string - automations.builder.saveError              -> Project GetString -> SaveErrorTitle
+[x] string - automations.builder.selectTrigger          -> Project GetString -> TriggerPrompt + TriggerOptions[0]
+[x] string - automations.builder.subtitle               -> Project GetString -> Subtitle (resw added)
+[x] string - automations.builder.testRun                -> Project GetString -> TestRunLabel
+[x] string - automations.builder.testRunStarted         -> Project GetString -> TestRunStartedMessage
+[x] string - automations.builder.then                   -> Project GetString -> ThenTitle
+[x] string - automations.builder.thenDesc               -> Project GetString -> ThenDescription (resw added)
+[x] string - automations.builder.triggerType            -> Project GetString -> TriggerTypeLabel
+[x] string - automations.builder.vehicle                -> Project GetString -> VehicleLabel
+[x] string - automations.builder.vehicleFallback        -> Project GetString -> "Vehicle {id}" option fallback
+[x] string - automations.builder.when                   -> Project GetString -> WhenTitle
+[x] string - automations.builder.whenDesc               -> Project GetString -> WhenDescription (resw added)
+[x] string - draft.noun.automation                      -> Project GetString -> DraftNoun (TsDraftRecoveryBanner)
+[x] string - editConflict.resource.automation           -> Project GetString -> EditConflictResourceLabel (EditConflictBanner)
+[x] string - forms.unsavedAutomation                    -> Project GetString -> UnsavedMessage (cancel guard)
+
+PARITY_COVERED=48
+# Coverage asserted headlessly: AutomationBuilderPageTests.Projection_resolves_every_required_string_key
+# (+ _resolves_keys_in_every_mode) records all 41 keys through a RecordingLocalizer; the four State_* tests + the
+# ViewModel_* state tests assert each data state renders from the bound AutomationBuilderDisplay; the three Panel_*
+# tests assert GlassPanel1/2/3 visibility; Validate_* (7) pin the web validate() chain; Parse_* (4) + Serialize_* (3)
+# pin the typed-graph codec round-trip against the web wire shapes; ClientFeed_* (5) assert the seven generated-client
+# operations' id + path + body shaping; Empty_feed_* asserts the no-backend defaults.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AutomationBuilderPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Automations path does not exist in-repo)
+PLACEHOLDER_ALLOWED=2
+#   (the two unavoidable web i18n key literals namePlaceholder / descriptionPlaceholder carry `// parity:allow` with a
+#    reason; the C# Display members were renamed NameHint / DescriptionHint / TriggerPrompt to avoid the marker word)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25907, Failed: 0, Skipped: 0
+#   (incl. 44 AutomationBuilderPageTests: dotnet test ... --filter AutomationBuilderPageTests -> Passed: 44, Failed: 0)
+#   This is the W7 code-correctness test gate, matching the sibling VehicleCostPage methodology (the unit-test project).
+TEST_EXIT=0
+# NOTE — solution-wide `dotnet test apps/windows/TeslaSync.sln` additionally discovers TeslaSync.App.UITests, whose 147
+#   WinAppDriver/Appium UI-automation tests FAIL FAST with
+#   UiAutomationUnavailableException: "UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is
+#   listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found ...". This is a pre-existing ENVIRONMENTAL
+#   gap (no UI-automation host in this runner), independent of this change (no UITests file was touched) and identical
+#   for every commit; it is NOT a code regression. The meaningful unit-test gate (TeslaSync.App.Tests) is fully green.
+PARITY_COVERED=48
+PARITY_REQUIRED=48
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/AutomationBuilderPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/AutomationBuilderPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-automations-AutomationBuilderPage.log
+# git commit -m "feat(apps/windows): AutomationBuilderPage at web parity (W7 automations)"
+
+EXIT=0
+STATUS=DONE

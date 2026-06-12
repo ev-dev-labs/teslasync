@@ -3501,6 +3501,9 @@
   <data name="translation.automations.builder.description" xml:space="preserve">
     <value>Description</value>
   </data>
+  <data name="translation.automations.builder.descriptionPlaceholder" xml:space="preserve">
+    <value>Prepare the car for the morning commute</value>
+  </data>
   <data name="translation.automations.builder.dwellHint" xml:space="preserve">
     <value>Required for dwell triggers</value>
   </data>
@@ -3515,6 +3518,9 @@
   </data>
   <data name="translation.automations.builder.enabled" xml:space="preserve">
     <value>Enabled</value>
+  </data>
+  <data name="translation.automations.builder.emptyTrigger" xml:space="preserve">
+    <value>Select a supported trigger type to configure when this automation starts.</value>
   </data>
   <data name="translation.automations.builder.endTime" xml:space="preserve">
     <value>End</value>
@@ -3588,6 +3594,9 @@
   <data name="translation.automations.builder.onlyIf" xml:space="preserve">
     <value>Only If (Conditions)</value>
   </data>
+  <data name="translation.automations.builder.onlyIfDesc" xml:space="preserve">
+    <value>Optional checks that must pass before actions run.</value>
+  </data>
   <data name="translation.automations.builder.operator" xml:space="preserve">
     <value>Operator</value>
   </data>
@@ -3596,6 +3605,9 @@
   </data>
   <data name="translation.automations.builder.presetTitle" xml:space="preserve">
     <value>Install Preset</value>
+  </data>
+  <data name="translation.automations.builder.presetHint" xml:space="preserve">
+    <value>Not sure where to start? Browse typed automation templates.</value>
   </data>
   <data name="translation.automations.builder.removeAction" xml:space="preserve">
     <value>Remove action</value>
@@ -3617,6 +3629,9 @@
   </data>
   <data name="translation.automations.builder.selectTrigger" xml:space="preserve">
     <value>Select trigger type...</value>
+  </data>
+  <data name="translation.automations.builder.subtitle" xml:space="preserve">
+    <value>Configure supported typed triggers, conditions, and actions for your automation.</value>
   </data>
   <data name="translation.automations.builder.settingKey" xml:space="preserve">
     <value>Setting Key</value>
@@ -3650,6 +3665,9 @@
   </data>
   <data name="translation.automations.builder.then" xml:space="preserve">
     <value>Then (Actions)</value>
+  </data>
+  <data name="translation.automations.builder.thenDesc" xml:space="preserve">
+    <value>Actions are executed in order.</value>
   </data>
   <data name="translation.automations.builder.time" xml:space="preserve">
     <value>Time</value>
@@ -3689,6 +3707,9 @@
   </data>
   <data name="translation.automations.builder.when" xml:space="preserve">
     <value>When (Trigger)</value>
+  </data>
+  <data name="translation.automations.builder.whenDesc" xml:space="preserve">
+    <value>Choose the supported typed contract that starts this automation.</value>
   </data>
   <data name="translation.automations.conflictWith" xml:space="preserve">
     <value>Conflict with</value>

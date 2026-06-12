@@ -98,6 +98,10 @@ public sealed partial class ShellWindow : Window
             page.NavigationRequested += (_, e) => NavigateTo(e.Path);
             return page;
         });
+
+        // Automations / AutomationBuilder page (P2/W7) — parity port of web AutomationBuilderPage at routes
+        // automations/new + automations/:id/edit.
+        _viewModel.PageFactory.Register("AutomationBuilder", static () => new FeatureViews.Automations.AutomationBuilderPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
