@@ -533,3 +533,4 @@ p3-android/feature-views/A-0283-PowertrainPanel.prompt.md
 p3-android/feature-views/A-0288-BatteryRangeCharts.prompt.md
 p3-android/feature-views/A-0291-ClimateSection.prompt.md
 p3-android/feature-views/A-0285-TelemetryGrid.prompt.md
+p3-android/feature-views/A-0287-VehicleStatePanel.prompt.md
