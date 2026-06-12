@@ -341,3 +341,4 @@ p3-android/feature-views/A-0083-ConditionBuilder.prompt.md
 p3-android/feature-views/A-0091-SessionDetailPanel.prompt.md
 p3-android/feature-views/A-0095-YearlyTrendChart.prompt.md
 p3-android/feature-views/A-0098-ChargerSpecsPanel.prompt.md
+p3-android/feature-views/A-0097-BatteryLevelChart.prompt.md
