@@ -325,3 +325,4 @@ p3-android/feature-views/A-0069-SummarySlide.prompt.md
 p3-android/feature-views/A-0075-DrivingSection.prompt.md
 p3-android/feature-views/A-0077-SummaryHeroCards.prompt.md
 p3-android/feature-views/A-0079-WeekSelector.prompt.md
+p3-android/feature-views/A-0078-WeekOverWeekSummary.prompt.md
