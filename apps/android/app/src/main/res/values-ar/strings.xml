@@ -6129,6 +6129,7 @@
   <string name="translation_telemetry_active">Active</string>
   <string name="translation_telemetry_allClosed">All Closed</string>
   <string name="translation_telemetry_allNormal">All Normal</string>
+  <string name="translation_telemetry_attentionNeeded">Attention Needed</string>
   <string name="translation_telemetry_batHeater">Bat Heater</string>
   <string name="translation_telemetry_batteryLevel">Battery Level</string>
   <string name="translation_telemetry_cabin">Cabin</string>
@@ -6200,6 +6201,7 @@
   <string name="translation_telemetry_unknownArtist">Unknown artist</string>
   <string name="translation_telemetry_unlocked">Unlocked</string>
   <string name="translation_telemetry_userPresent">User Present</string>
+  <string name="translation_telemetry_vehicleState">Vehicle State</string>
   <string name="translation_telemetry_volume">Volume</string>
   <string name="translation_telemetry_warning">Warning</string>
   <string name="translation_telemetry_windows">Windows</string>
