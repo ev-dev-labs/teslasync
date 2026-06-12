@@ -7951,4 +7951,20 @@
   <string name="translation_yearReview_treesEquiv">Like planting %1$s trees</string>
   <string name="translation_yearReview_vsGas">vs. driving a gas car</string>
   <string name="translation_yearReview_youSaved">You saved</string>
+  <string name="translation_notifications_alertStudio_editor_includeTitleLabel">Include title in notifications</string>
+  <string name="translation_notifications_alertStudio_editor_includeTitleHelp">When unchecked, Discord/Slack/Telegram/ntfy/webhook deliver only the body. WebPush, email, and Pushover always include a title.</string>
+  <string name="translation_notifications_alertStudio_editor_messageTemplateLabel">Message Template</string>
+  <string name="translation_notifications_alertStudio_editor_messageTemplateHint">Type {{ to insert a placeholder</string>
+  <string name="translation_notifications_alertStudio_editor_messageTemplateHelp">Per-rule body template. Reference live signals with double-brace placeholders like {{BatteryLevel}}. Leave blank to use the op-aware default body.</string>
+  <string name="translation_notifications_alertStudio_editor_messageTemplatePlaceholder">Battery at {{BatteryLevel}}% — leave blank for the smart default</string>
+  <string name="translation_notifications_alertStudio_editor_presetButton">Pick a preset</string>
+  <string name="translation_notifications_alertStudio_editor_autocompleteLabel">Placeholder suggestions</string>
+  <string name="translation_notifications_alertStudio_editor_autocompleteEmpty">No matching placeholders</string>
+  <string name="translation_notifications_alertStudio_editor_previewLabel">Preview</string>
+  <string name="translation_notifications_alertStudio_editor_previewEmpty">Start typing to see a preview</string>
+  <string name="translation_notifications_alertStudio_editor_previewEmptyBody">(no body — title carries the alert)</string>
+  <string name="translation_notifications_alertStudio_editor_presetModalTitle">Message Presets</string>
+  <string name="translation_notifications_alertStudio_editor_presetModalIntro">Curated templates for common alert shapes. Click one to apply it; you can edit it afterwards.</string>
+  <string name="translation_notifications_alertStudio_editor_presetAllTag">All</string>
+  <string name="translation_notifications_alertStudio_editor_presetEmpty">No presets match this filter</string>
 </resources>
