@@ -1,4 +1,17 @@
 {
+  "timezones": {
+    "utc": "UTC (Default)",
+    "America/New_York": "Eastern (US)",
+    "America/Chicago": "Central (US)",
+    "America/Denver": "Mountain (US)",
+    "America/Los_Angeles": "Pacific (US)",
+    "Europe/London": "London (UK)",
+    "Europe/Berlin": "Berlin (EU)",
+    "Europe/Paris": "Paris (EU)",
+    "Asia/Tokyo": "Tokyo (JP)",
+    "Asia/Shanghai": "Shanghai (CN)",
+    "Australia/Sydney": "Sydney (AU)"
+  },
   "global": {
     "loading": "Loading"
   },
@@ -642,6 +655,17 @@
     }
   },
   "common": {
+    "days": {
+      "short": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      }
+    },
     "loading": "Loading...",
     "noData": "No data available",
     "noDataForPeriod": "No data available for this period",
@@ -3842,7 +3866,34 @@
     }
   },
   "automations": {
+    "conditions": {
+      "signal": "Signal Check",
+      "timeWindow": "Time Window",
+      "geofence": "Geofence State",
+      "otherAutomation": "Other Automation"
+    },
+    "operators": {
+      "equals": "=",
+      "notEquals": "!=",
+      "lessThan": "<",
+      "lessThanOrEqual": "<=",
+      "greaterThan": ">",
+      "greaterThanOrEqual": ">=",
+      "between": "Between",
+      "in": "In"
+    },
+    "geofence": {
+      "inside": "Inside",
+      "outside": "Outside",
+      "dwell": "Dwell"
+    },
+    "otherAutomation": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "recentlyTriggered": "Recently Triggered"
+    },
     "builder": {
+      "noConditions": "No conditions yet. Add one to gate when this automation runs.",
       "aiBuilder": {
         "title": "Draft from natural language",
         "description": "Describe the automation you want and get a typed graph draft you can review and save below.",

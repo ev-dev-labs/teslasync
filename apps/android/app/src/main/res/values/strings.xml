@@ -1180,6 +1180,7 @@
   <string name="translation_automations_builder_name">Name</string>
   <string name="translation_automations_builder_namePlaceholder">Morning Commute Prep</string>
   <string name="translation_automations_builder_noChannels">No channels configured</string>
+  <string name="translation_automations_builder_noConditions">No conditions yet. Add one to gate when this automation runs.</string>
   <string name="translation_automations_builder_noTrigger">No trigger configured</string>
   <string name="translation_automations_builder_notFound">Automation not found</string>
   <string name="translation_automations_builder_notifyMessage">Message</string>
@@ -1210,6 +1211,24 @@
   <string name="translation_automations_builder_timezone">Timezone</string>
   <string name="translation_automations_builder_triggerType">Trigger Type</string>
   <string name="translation_automations_builder_value">Value</string>
+  <string name="translation_automations_conditions_signal">Signal Check</string>
+  <string name="translation_automations_conditions_timeWindow">Time Window</string>
+  <string name="translation_automations_conditions_geofence">Geofence State</string>
+  <string name="translation_automations_conditions_otherAutomation">Other Automation</string>
+  <string name="translation_automations_operators_equals">=</string>
+  <string name="translation_automations_operators_notEquals">!=</string>
+  <string name="translation_automations_operators_lessThan">&lt;</string>
+  <string name="translation_automations_operators_lessThanOrEqual">&lt;=</string>
+  <string name="translation_automations_operators_greaterThan">&gt;</string>
+  <string name="translation_automations_operators_greaterThanOrEqual">&gt;=</string>
+  <string name="translation_automations_operators_between">Between</string>
+  <string name="translation_automations_operators_in">In</string>
+  <string name="translation_automations_geofence_inside">Inside</string>
+  <string name="translation_automations_geofence_outside">Outside</string>
+  <string name="translation_automations_geofence_dwell">Dwell</string>
+  <string name="translation_automations_otherAutomation_enabled">Enabled</string>
+  <string name="translation_automations_otherAutomation_disabled">Disabled</string>
+  <string name="translation_automations_otherAutomation_recentlyTriggered">Recently Triggered</string>
   <string name="translation_automations_builder_valueBoolean">Boolean</string>
   <string name="translation_automations_builder_valueNumber">Number</string>
   <string name="translation_automations_builder_valueNumberPlaceholder">80</string>
@@ -2095,6 +2114,13 @@
   <string name="translation_common_estimatedRange">Estimated Range</string>
   <string name="translation_common_export">Export</string>
   <string name="translation_common_false">False</string>
+  <string name="translation_common_days_short_0">Sun</string>
+  <string name="translation_common_days_short_1">Mon</string>
+  <string name="translation_common_days_short_2">Tue</string>
+  <string name="translation_common_days_short_3">Wed</string>
+  <string name="translation_common_days_short_4">Thu</string>
+  <string name="translation_common_days_short_5">Fri</string>
+  <string name="translation_common_days_short_6">Sat</string>
   <string name="translation_common_free">Free</string>
   <string name="translation_common_fullscreen_enter">Enter fullscreen</string>
   <string name="translation_common_fullscreen_exit">Exit fullscreen</string>
@@ -7941,4 +7967,15 @@
   <string name="translation_yearReview_treesEquiv">Like planting %1$s trees</string>
   <string name="translation_yearReview_vsGas">vs. driving a gas car</string>
   <string name="translation_yearReview_youSaved">You saved</string>
+  <string name="translation_timezones_utc">UTC (Default)</string>
+  <string name="translation_timezones_America_New_York">Eastern (US)</string>
+  <string name="translation_timezones_America_Chicago">Central (US)</string>
+  <string name="translation_timezones_America_Denver">Mountain (US)</string>
+  <string name="translation_timezones_America_Los_Angeles">Pacific (US)</string>
+  <string name="translation_timezones_Europe_London">London (UK)</string>
+  <string name="translation_timezones_Europe_Berlin">Berlin (EU)</string>
+  <string name="translation_timezones_Europe_Paris">Paris (EU)</string>
+  <string name="translation_timezones_Asia_Tokyo">Tokyo (JP)</string>
+  <string name="translation_timezones_Asia_Shanghai">Shanghai (CN)</string>
+  <string name="translation_timezones_Australia_Sydney">Sydney (AU)</string>
 </resources>
