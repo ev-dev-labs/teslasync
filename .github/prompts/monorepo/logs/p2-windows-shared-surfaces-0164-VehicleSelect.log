@@ -1,0 +1,149 @@
+=== P2 Shared surface 0164 VehicleSelect (Windows) ===
+Date:          2026-06-11
+Web source:    web/src/components/forms/VehicleSelect.tsx   (THE specification)
+Native output: apps/windows/TeslaSync.App/shared-surfaces/VehicleSelect.{cs,Model.cs,Source.cs,ViewModel.cs}
+Tests:         apps/windows/TeslaSync.App.Tests/SharedSurfaces/VehicleSelectTests.cs
+i18n:          apps/windows/Strings/{en,ar,he}/Resources.resw  (translation.vehicleSelect.* — 7 keys × 3 languages)
+ADR refs:      ADR-002 (WinUI shell), ADR-005, ADR-009
+Toolchain:     .NET SDK 10.0.300, WinUI 3 (Microsoft.WindowsAppSDK 2.1.3 via UseWinUI), Fluent Design System
+Runner:        ATUL-THINK-I9
+
+--------------------------------------------------------------------------------------------------
+CAPABILITY (per prompt capability clause)
+--------------------------------------------------------------------------------------------------
+The REQUIRED capability — WinUI 3 (Windows App SDK 2.1.3, >= 1.6) + .NET 10 (SDK 10.0.300), Fluent
+Design System — is AVAILABLE on this runner: the Release solution, including the WinUI app project
+TeslaSync.App and this surface's WinUI view VehicleSelect.cs, builds with 0 errors. STATUS is therefore
+DONE. The separately-provisioned out-of-process WinAppDriver/Appium UI-automation runtime is the only
+thing absent; those tests carry [Trait("Category","UIAutomation")] and are contractually excluded from
+this headless gate, exactly as for every shipped sibling surface log (see 0148 Combobox, 0152
+DateRangeFilter). Evidence of the exclusion is recorded under GATE below.
+
+--------------------------------------------------------------------------------------------------
+SURFACE
+--------------------------------------------------------------------------------------------------
+VehicleSelect is the web canonical per-page vehicle scope picker (web/src/components/forms/
+VehicleSelect.tsx). The web component is a controlled <Select> wired to the global useSelectedVehicle()
+store: it maps each fleet vehicle to an option whose value is String(v.id) and whose label is
+`v.display_name || v.vin || \`Vehicle ${v.id}\``, reflects the current scope via
+value={vehicleId != null ? String(vehicleId) : ''}, writes the chosen id back with
+setVehicleId(Number.isFinite(next) && next > 0 ? next : null), renders nothing when the fleet is empty,
+and can be prefixed with a small decorative <Car/> icon (withIcon). The only key it passes to t() is
+t('vehicleSelect.aria', 'Select vehicle').
+
+Data sources (web): useSelectedVehicle (the fleet + scope store) and useTranslation (the i18n facade).
+The web store is a plain scope value with NO query-freshness or connectivity dimension, so the web
+source has NO stale / offline chrome — fabricating it would be parity drift (the Combobox / DateRangeFilter
+presentational-surface precedent). A native scope picker, however, binds the fleet load directly, so it
+renders the shared VehicleSelectState holder's loading / empty / error / loaded transitions inline (the
+states the web component delegates to its page). The branches reproduced and verified headlessly:
+  - loading  — busy chrome (TsSpinner) while the fleet is in flight (and the Idle pre-load state)
+  - empty    — friendly empty surface (TsEmptyState), never a blank box (web returns nothing here)
+  - error    — TsErrorDisplay with a retry affordance wired to VehicleSelectState.Retry()
+  - ready    — the populated ComboBox (the Fluent equivalent of the web <Select>), with the label
+               fallback rule, value round-trip, positive-finite commit guard and clamp-to-known-id
+  - withIcon — optional leading decorative Segoe Fluent "Car" glyph (\uE804), hidden from Narrator
+               (AccessibilityView.Raw) exactly as the web aria-hidden icon
+No stale / offline chrome is invented (documented above).
+
+Native decomposition (the shipped 4-file shared-surface pattern; the 3 Microsoft.UI-free files are
+compile-linked into TeslaSync.App.Tests and unit-tested headlessly, the WinUI view is exercised by the
+app build):
+  - VehicleSelect.Model.cs      VehicleSelectRegistration (Slug "VehicleSelect"; translation.vehicleSelect.*
+                                keys + English fallbacks — aria is web-verbatim, the rest caption the native
+                                loading/empty/error/prompt chrome); VehicleSelectStatus enum; PII-safe
+                                VehicleSelectDiagnostics (view.opened slug=VehicleSelect, no fleet/label/id).
+  - VehicleSelect.Source.cs     VehicleSelectItem (web {value,label} + id); VehicleSelectProjection — the
+                                cached → projection adapter (ToItems reuses the shared VehicleLabels.Short
+                                rule = web display_name||vin||`Vehicle ${id}`; ParseValue applies the web
+                                Number.isFinite && >0 commit guard).
+  - VehicleSelect.ViewModel.cs  VehicleSelectViewModel — the UI-thread-free state holder over the shared
+                                P1/S8 VehicleSelectState (web useSelectedVehicle) + ILocalizer (P1/S10):
+                                Items, SelectedId/SelectedValue, Status, every resolved caption + AriaLabel
+                                (override-or-key), SelectByValue (commit + clamp), Retry, WithIcon.
+  - VehicleSelect.cs            The WinUI view: a ComboBox + the shared TsSpinner/TsErrorDisplay/TsEmptyState
+                                surfaces + the optional decorative Car FontIcon; binds the view-model,
+                                carries the trigger accessible name, and emits view.opened once on Loaded.
+
+Bindings: the view performs NO I/O. It binds the shared P1/S8 state holder
+(TeslaSync.App.Core.Forms.VehicleSelectState) and the P1/S10 i18n facade
+(TeslaSync.App.Core.Notifications.ILocalizer); the view-model + projection are pure and headless.
+
+--------------------------------------------------------------------------------------------------
+PRE-EXISTING REPAIR (required for the gate to load)
+--------------------------------------------------------------------------------------------------
+TeslaSync.App.Tests.csproj was already corrupted at HEAD by its .gitattributes merge=union strategy into
+TWO concatenated <Project> roots plus stray non-element text in the comment header (MSB4025 on XML load;
+MSB4067 "<#text> beneath <Project>" once the duplicate root was removed). The baseline build was RED
+before any change here. Per the file's own documented INVARIANT ("regenerate it directly from the
+WinUI-free sources on disk"), it was regenerated into exactly ONE <Project> root with a single,
+case-insensitive ordinal path-sorted, Include-deduplicated Compile ItemGroup = the union of every
+Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and
+shared-surfaces/ (1180 entries; classifier validated to exactly reproduce the prior 1177-entry set plus
+the 3 new VehicleSelect Model/Source/ViewModel links). The bare WinUI view files (incl. VehicleSelect.cs)
+remain excluded and are exercised by the app build.
+
+--------------------------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------------------------
+$ dotnet build  apps/windows/TeslaSync.sln -c Release
+    17 Warning(s)   0 Error(s)        (the 17 warnings are pre-existing CA* in TeslaSync.App.Core;
+                                       none originate from the new VehicleSelect files)
+BUILD_EXIT=0
+
+$ dotnet test  apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+    TeslaSync.App.Tests  -> Passed! Failed: 0, Passed: 23081, Skipped: 0, Total: 23081   (incl. the 40
+                            executed VehicleSelectTests cases, 29 [Fact]/[Theory] methods)
+    TeslaSync.App.UITests -> No test matches the filter `Category!=UIAutomation` (all are UIAutomation)
+TEST_EXIT=0
+
+$ dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    (whole solution; no formatting changes required)
+FORMAT_EXIT=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/VehicleSelect
+    PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+    (definitive per-file isolation scan of the 4 surface files + the test file:
+     PLACEHOLDER_ALLOWED=1 PLACEHOLDER_COUNT=0 — the single ALLOWED line is the WinUI
+     ComboBox.PlaceholderText API, suppressed with `// parity:allow`. Zero violations in shipped code.)
+PLACEHOLDER_EXIT=0
+
+UI-AUTOMATION EXCLUSION EVIDENCE
+    The only red on this runner is the out-of-process WinAppDriver/Appium harness (TeslaSync.App.UITests,
+    every class [Trait("Category","UIAutomation")] + [Collection(WinAppDriverCollection)]). It is a HARD
+    failure by design when no driver/app is present (UiAutomationUnavailableException — "deliberately a
+    hard failure, not an xUnit skip"), so the full-solution `dotnet test` with no filter is red SOLELY
+    because no WinAppDriver endpoint / WinAppDriver.exe / deployed MSIX exists on this headless runner.
+    That E2E runtime is not the WinUI 3 / .NET 10 capability this prompt requires; it is deferred to a
+    provisioned UI runner, exactly as every shipped sibling surface recorded.
+
+--------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------------------------
+[x] Surface renders every state the web source has — empty (friendly empty surface, not a blank box) and
+    the populated ComboBox with the web label-fallback + value round-trip + positive-finite commit — plus
+    the native loading / error(+retry) chrome bound from the shared fleet holder. No stale/offline chrome
+    invented (the web store has no freshness/connectivity dimension; documented under SURFACE).
+[x] Hooks bind to the shared P1/S8 state-holder layer: useSelectedVehicle -> VehicleSelectState,
+    useTranslation -> ILocalizer; both injected into the view-model. The view performs no HTTP / I/O.
+[x] Every i18n key from source resolves in the P1/S10 catalog: translation.vehicleSelect.aria (web
+    verbatim) plus the 6 native-chrome keys, all present in en/ar/he (7/7 × 3).
+[x] Accessibility: the ComboBox carries the trigger accessible name (web aria-label, override-or-key); the
+    decorative Car glyph is AccessibilityView.Raw (web aria-hidden); the shared spinner/empty/error
+    surfaces announce; selection is announced natively by the ComboBox; system font scale via WinUI.
+[x] Tests: adapter unit tests (cached -> projection label rule + ParseValue commit guard) + per-state
+    view-model tests (loading/empty/error/ready/idle, selection commit + clamp, auto-select-single, retry,
+    items refresh, dispose) + i18n/accessibility (every caption resolves through its key; aria override) +
+    registration + PII-safe diagnostics. 40 headless cases, all green.
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (per-file PLACEHOLDER_COUNT=0; the lone
+    WinUI ComboBox.PlaceholderText API line is parity:allow-suppressed).
+[x] Telemetry: view.opened slug=VehicleSelect emitted once on Loaded via PII-safe diagnostics (P1/S11).
+[x] Authoritative headless gate green (BUILD_EXIT=0, TEST_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0);
+    full-solution red is solely the absent-WinAppDriver E2E harness (evidence above).
+
+BUILD_EXIT=0
+TEST_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
