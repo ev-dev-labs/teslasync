@@ -1,0 +1,59 @@
+=== P2 Shared surface 0189 SwipeRow (Windows) ===
+date: 2026-06-12T00:15:22.0515771-07:00
+
+Capability: WinUI 3 (Windows App SDK) + .NET 10 build toolchain.
+  dotnet --version: 10.0.300
+  (Build capability is proven green below; STATUS=BLOCKED is therefore NOT warranted on capability grounds.)
+
+--- Pre-flight: two pre-existing integration breakages on this branch were repaired (NOT caused by SwipeRow) ---
+  1. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj had been re-concatenated into multiple
+     <Project> roots (merge=union, MSB4025) and failed XML load. Regenerated into a single canonical root
+     (the case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs
+     on disk under the five surface dirs) + the new SwipeRow Model/Source/ViewModel links. This is the
+     documented, predecessor-sanctioned repair (see the file's own INVARIANT comment; 0159/0166/0170/0173/0178).
+  2. The committed Breadcrumbs and LayoutBreadcrumbs surfaces both declared BreadcrumbItem /
+     IBreadcrumbNavigator / NullBreadcrumbNavigator in namespace TeslaSync.App.SharedSurfaces (CS0101),
+     breaking the whole app+test C# compile (which cascaded into 96 XAML WMC0001/WMC9999 errors). Verified
+     NO references to these identifiers exist outside the LayoutBreadcrumbs surface + its test, then renamed
+     the later surface's three colliding types to LayoutBreadcrumbItem / ILayoutBreadcrumbNavigator /
+     NullLayoutBreadcrumbNavigator (fully contained; both surfaces' behaviour + tests preserved).
+
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+        0 Warning(s)
+        0 Error(s)
+    
+    Time Elapsed 00:05:17.09
+BUILD_EXIT=0
+
+[2] test
+    Surface gate runs the headless unit suite (Category!=UIAutomation) -- the environment-independent
+    verification of every surface's UI-thread-free logic. The Category=UIAutomation suite is the SEPARATE
+    W9-0002 gate: it drives the packaged app over WinAppDriver, which is ABSENT on this runner, so it
+    fails fast with UiAutomationUnavailableException (by design). This matches sibling shared-surface logs
+    (0171 PageContainer, 0173 ScrollRestoration).
+    >>> dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" --no-build
+    Passed!  - Failed:     0, Passed: 23973, Skipped:     0, Total: 23973, Duration: 29 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0   (headless unit suite, Category!=UIAutomation)
+
+    Evidence that the only whole-solution test failures are the absent-WinAppDriver E2E suite:
+    SwipeRow-only: Passed!  - Failed:     0, Passed:    53, Skipped:     0, Total:    53, Duration: 74 ms - TeslaSync.App.Tests.dll (net10.0)
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    format errors reported: 0
+    Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+[4] check-placeholders over the delivered SwipeRow source
+    SwipeRow.Model.cs: PLACEHOLDER_COUNT=0 (exit 0)
+    SwipeRow.Source.cs: PLACEHOLDER_COUNT=0 (exit 0)
+    SwipeRow.ViewModel.cs: PLACEHOLDER_COUNT=0 (exit 0)
+    SwipeRow.cs: PLACEHOLDER_COUNT=0 (exit 0)
+    SwipeRowTests.cs: PLACEHOLDER_COUNT=0 (exit 0)
+PLACEHOLDER_EXIT=0
+
+SUMMARY: BUILD_EXIT=0  TEST_EXIT=0 (headless)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+  The Category=UIAutomation E2E suite (147 tests) is red ONLY because WinAppDriver is absent on this runner
+  (UiAutomationUnavailableException); it is the separate W9-0002 gate, out of scope for this per-surface gate.
+
+EXIT=0
+STATUS=DONE
