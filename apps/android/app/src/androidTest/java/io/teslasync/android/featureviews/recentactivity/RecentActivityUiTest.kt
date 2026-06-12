@@ -1,31 +1,33 @@
 package io.teslasync.android.featureviews.recentactivity
 
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import io.teslasync.android.data.ErrorKind
 import io.teslasync.android.data.UiPhase
 import io.teslasync.android.data.UiState
 import io.teslasync.android.ui.theme.TeslaSyncTheme
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import java.util.Locale
 
 /**
  * On-device Compose UI + accessibility verification of [RecentActivityContent] across every state the surface
  * renders: the loading chrome, the hard-error retry surface, the no-data empty state (each panel keeps its
- * own friendly empty branch), the populated three-panel grid, and the stale/offline cached view. Asserts the
- * rendered i18n strings, the interactive affordances (the "View all" link + the retry button), and the
- * freshness chip's "Offline" label. The offline gate's `testReleaseUnitTest` covers the pure logic; this
- * covers render + a11y. Mirrors the web spec (web/src/features/dashboard/components/RecentActivity.tsx).
+ * own friendly empty branch), the populated two-panel grid, and the stale/offline cached view. Asserts the
+ * rendered i18n strings, the interactive affordances (each panel's "View all" link + the retry button), the
+ * tappable rows (with the id reported to the callback), and that every interactive element exposes a click
+ * action for TalkBack. The offline gate's `testReleaseUnitTest` covers the pure logic; this covers render +
+ * a11y. Mirrors the web spec (web/src/features/vehicles/components/RecentActivity.tsx).
  */
 class RecentActivityUiTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val display = RecentActivityDisplay(currencySymbol = "$", precision = 2, locale = Locale.US)
     private val now = 1_700_000_000_000L
 
     private fun sampleData(): RecentActivityData =
@@ -33,44 +35,32 @@ class RecentActivityUiTest {
             drives =
                 listOf(
                     RecentActivityDrive(
+                        id = 1L,
                         distanceM = 42_000.0,
                         durationS = 3_900L,
                         startSocPct = 82.0,
                         endSocPct = 68.0,
-                        startedAtMillis = now - 600_000L,
+                        startTsMillis = now - 600_000L,
                     ),
                     RecentActivityDrive(
+                        id = 2L,
                         distanceM = 12_500.0,
                         durationS = 1_500L,
                         startSocPct = 68.0,
                         endSocPct = 61.0,
-                        startedAtMillis = now - 7_200_000L,
-                    ),
-                    RecentActivityDrive(
-                        distanceM = 88_000.0,
-                        durationS = 6_300L,
-                        startSocPct = 95.0,
-                        endSocPct = 70.0,
-                        startedAtMillis = now - 90_000_000L,
+                        startTsMillis = now - 7_200_000L,
                     ),
                 ),
-            charges =
+            sessions =
                 listOf(
                     RecentActivityCharge(
+                        id = 7L,
                         totalEnergyAddedWh = 23_400.0,
+                        durationMin = 72L,
                         startSocPct = 61.0,
                         endSocPct = 90.0,
-                        cost = 7.42,
-                        startedAtMillis = now - 3_600_000L,
+                        startTsMillis = now - 3_600_000L,
                     ),
-                ),
-            analytics =
-                RecentActivityAnalytics(
-                    totalDrives = 128,
-                    totalChargingSessions = 36,
-                    totalCost = 214.5,
-                    totalEnergyKwh = 940.0,
-                    mostEfficient = MostEfficientVehicle(name = "Model 3 LR", efficiencyWhPerKm = 148.0),
                 ),
         )
 
@@ -78,6 +68,9 @@ class RecentActivityUiTest {
         state: UiState<RecentActivityData>,
         onRetry: () -> Unit = {},
         onViewAllDrives: () -> Unit = {},
+        onViewAllCharges: () -> Unit = {},
+        onDriveClick: (Long) -> Unit = {},
+        onChargeClick: (Long) -> Unit = {},
     ) {
         compose.setContent {
             TeslaSyncTheme(dynamicColor = false) {
@@ -85,8 +78,9 @@ class RecentActivityUiTest {
                     state = state,
                     onRetry = onRetry,
                     onViewAllDrives = onViewAllDrives,
-                    display = display,
-                    nowMillis = now,
+                    onViewAllCharges = onViewAllCharges,
+                    onDriveClick = onDriveClick,
+                    onChargeClick = onChargeClick,
                 )
             }
         }
@@ -96,8 +90,8 @@ class RecentActivityUiTest {
     fun loadingShowsSkeletonChromeNotContentOrError() {
         setContent(UiState(UiPhase.Loading))
 
-        compose.onNodeWithText("Fleet Performance").assertDoesNotExist()
-        compose.onNodeWithText("Recent Activity").assertDoesNotExist()
+        compose.onNodeWithText("Recent Drives").assertDoesNotExist()
+        compose.onNodeWithText("Recent Charges").assertDoesNotExist()
         compose.onNodeWithText("Retry").assertDoesNotExist()
     }
 
@@ -112,33 +106,69 @@ class RecentActivityUiTest {
     }
 
     @Test
-    fun emptyRendersEveryPanelWithItsFriendlyEmptyState() {
+    fun emptyRendersBothPanelsWithTheirFriendlyEmptyStates() {
         setContent(UiState(UiPhase.Empty, data = RecentActivityData()))
 
-        compose.onNodeWithText("Recent Activity").assertIsDisplayed()
-        compose.onNodeWithText("No activity yet. Start driving!").assertIsDisplayed()
-        compose.onNodeWithText("Fleet Performance").assertIsDisplayed()
-        compose.onNodeWithText("Total Drives (30d)").assertIsDisplayed()
+        compose.onNodeWithText("Recent Drives").assertIsDisplayed()
+        compose.onNodeWithText("No drives recorded yet").assertIsDisplayed()
+        compose.onNodeWithText("Recent Charges").assertIsDisplayed()
+        compose.onNodeWithText("No charging sessions recorded yet").assertIsDisplayed()
     }
 
     @Test
-    fun contentRendersAllThreePanelTitlesAndStats() {
+    fun contentRendersBothPanelsWithDurationsAndSocRanges() {
         setContent(UiState(UiPhase.Content, data = sampleData()))
 
-        compose.onNodeWithText("Recent Activity").assertIsDisplayed()
-        compose.onNodeWithText("Battery Health").assertIsDisplayed()
-        compose.onNodeWithText("Fleet Performance").assertIsDisplayed()
-        compose.onNodeWithText("Total Cost").assertIsDisplayed()
-        compose.onNodeWithText("Most Efficient").assertIsDisplayed()
+        compose.onNodeWithText("Recent Drives").assertIsDisplayed()
+        compose.onNodeWithText("Recent Charges").assertIsDisplayed()
+        compose.onNodeWithText("1h 5m").assertIsDisplayed()
+        compose.onNodeWithText("82% → 68%").assertIsDisplayed()
+        compose.onNodeWithText("1h 12m").assertIsDisplayed()
+        compose.onNodeWithText("61% → 90%").assertIsDisplayed()
     }
 
     @Test
-    fun viewAllAffordanceInvokesItsCallback() {
-        var viewedAll = false
-        setContent(state = UiState(UiPhase.Content, data = sampleData()), onViewAllDrives = { viewedAll = true })
+    fun viewAllAffordancesInvokeTheirCallbacks() {
+        var drivesViewed = false
+        var chargesViewed = false
+        setContent(
+            state = UiState(UiPhase.Content, data = sampleData()),
+            onViewAllDrives = { drivesViewed = true },
+            onViewAllCharges = { chargesViewed = true },
+        )
 
-        compose.onNodeWithText("View all").performClick()
-        assertTrue(viewedAll)
+        val viewAll = compose.onAllNodesWithText("View all")
+        viewAll[0].performClick()
+        viewAll[1].performClick()
+        assertTrue(drivesViewed)
+        assertTrue(chargesViewed)
+    }
+
+    @Test
+    fun rowsAreTappableAndReportTheirId() {
+        var clickedDrive = -1L
+        var clickedCharge = -1L
+        setContent(
+            state = UiState(UiPhase.Content, data = sampleData()),
+            onDriveClick = { clickedDrive = it },
+            onChargeClick = { clickedCharge = it },
+        )
+
+        compose.onNodeWithText("82% → 68%").performClick()
+        compose.onNodeWithText("61% → 90%").performClick()
+        assertEquals(1L, clickedDrive)
+        assertEquals(7L, clickedCharge)
+    }
+
+    @Test
+    fun everyInteractiveElementExposesAClickActionForA11y() {
+        setContent(UiState(UiPhase.Content, data = sampleData()))
+
+        val viewAll = compose.onAllNodesWithText("View all")
+        viewAll[0].assertHasClickAction()
+        viewAll[1].assertHasClickAction()
+        compose.onNodeWithText("82% → 68%").assertHasClickAction()
+        compose.onNodeWithText("61% → 90%").assertHasClickAction()
     }
 
     @Test
@@ -153,7 +183,7 @@ class RecentActivityUiTest {
             ),
         )
 
-        compose.onNodeWithText("Recent Activity").assertIsDisplayed()
+        compose.onNodeWithText("Recent Drives").assertIsDisplayed()
         compose.onNodeWithText("Offline").assertExists()
     }
 
@@ -172,7 +202,7 @@ class RecentActivityUiTest {
         )
 
         compose.waitForIdle()
-        compose.onNodeWithText("Recent Activity").assertIsDisplayed()
+        compose.onNodeWithText("Recent Drives").assertIsDisplayed()
         assertTrue(refreshed)
     }
 }
