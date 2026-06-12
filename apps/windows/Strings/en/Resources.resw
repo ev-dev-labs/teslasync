@@ -12729,6 +12729,15 @@
   <data name="translation.nav.expandAll" xml:space="preserve">
     <value>Expand all sections</value>
   </data>
+  <data name="translation.nav.favorites" xml:space="preserve">
+    <value>Favorites</value>
+  </data>
+  <data name="translation.nav.filterClear" xml:space="preserve">
+    <value>Clear filter</value>
+  </data>
+  <data name="translation.nav.filterNoMatch" xml:space="preserve">
+    <value>No matches.</value>
+  </data>
   <data name="translation.nav.geofences" xml:space="preserve">
     <value>Geofences</value>
   </data>
@@ -12867,6 +12876,9 @@
   <data name="translation.nav.pinCurrent" xml:space="preserve">
     <value>Pin current page</value>
   </data>
+  <data name="translation.nav.pinPage" xml:space="preserve">
+    <value>Pin {0} to favorites</value>
+  </data>
   <data name="translation.nav.pinned" xml:space="preserve">
     <value>Pinned</value>
   </data>
@@ -12903,11 +12915,17 @@
   <data name="translation.nav.settings" xml:space="preserve">
     <value>Settings</value>
   </data>
+  <data name="translation.nav.sidebar" xml:space="preserve">
+    <value>Sidebar navigation</value>
+  </data>
   <data name="translation.nav.softwareUpdates" xml:space="preserve">
     <value>Software Updates</value>
   </data>
   <data name="translation.nav.speedProfile" xml:space="preserve">
     <value>Speed Profile</value>
+  </data>
+  <data name="translation.nav.staleCount" xml:space="preserve">
+    <value>{0} stale rows</value>
   </data>
   <data name="translation.nav.statistics" xml:space="preserve">
     <value>Statistics</value>
@@ -12944,6 +12962,9 @@
   </data>
   <data name="translation.nav.vehicleComparison" xml:space="preserve">
     <value>Fleet Comparison</value>
+  </data>
+  <data name="translation.nav.vehicleCount" xml:space="preserve">
+    <value>{0} vehicles</value>
   </data>
   <data name="translation.nav.vehicles" xml:space="preserve">
     <value>Fleet</value>
