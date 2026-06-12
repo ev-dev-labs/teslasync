@@ -1,7 +1,260 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "playground.title": {
+    "admin.diskForecast.chunkCount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld chunks"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.colDays" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Days to quota"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.colGrowth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Growth (per day)"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.colSeverity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Severity"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.colSplit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uncompressed / compressed"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.colTable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hypertable"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.colTotal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.compressedSuffix" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "compressed"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.emptyMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hypertables found in this database. The disk forecast surfaces TimescaleDB hypertables only."
+          }
+        }
+      }
+    },
+    "admin.diskForecast.emptyTable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hypertables"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.emptyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hypertables"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.fleetCompressed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compressed"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.fleetGrowth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Growth (per day)"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.fleetTotal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total disk"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.fleetUncompressed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uncompressed"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.growthSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sum across all hypertables"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.notConfigured" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TimescaleDB hypertable metrics are unavailable on this deployment. This page requires TimescaleDB to be installed and accessible."
+          }
+        }
+      }
+    },
+    "admin.diskForecast.pageTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disk Forecast"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.percentSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@%% of total"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per-hypertable disk usage with compressed/uncompressed split and days-to-quota estimate. Severity reflects the configured quota threshold."
+          }
+        }
+      }
+    },
+    "admin.diskForecast.tableCount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld hypertables"
+          }
+        }
+      }
+    },
+    "admin.diskForecast.tableTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hypertables"
+          }
+        }
+      }
+    },
+    "admin.subsystem.unavailableTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subsystem unavailable"
+          }
+        }
+      }
+    },
+    "playground.title" : {
       "extractionState": "manual",
       "localizations": {
         "en": {
