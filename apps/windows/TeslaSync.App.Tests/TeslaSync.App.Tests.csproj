@@ -8,33 +8,15 @@
     sources are Compile-linked below; the bare WinUI view files are excluded and exercised by the app build,
     and the test classes are picked up by the SDK default-compile glob. The Content links copy the
     units-golden, Package.appxmanifest and widget-template fixtures the tests read from the output directory.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
-    Include-deduplicated Compile ItemGroup — the union of every Microsoft.UI-free .cs on disk under
-    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file carries
-    the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it into
-    multiple Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); when that
-    happens, regenerate it directly from the WinUI-free sources on disk. Regenerated into this single canonical
-    Project root for P2 shared-surfaces/0159 SortControl (repairing a merge=union multi-root corruption), plus
-    the new SortControl Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never
-    write a literal build item or project start tag inside this comment.
-    TeslaSync.App.Tests is the headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's
     UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
-    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app project
+    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
     (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so
-    each surface's Microsoft.UI-free sources are Compile-linked here instead; the bare WinUI view files are
-    excluded and exercised by the app build.
-    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
-    logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every dashboard-widget,
-    feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
-    TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's Microsoft.UI-free
-    sources are Compile-linked into the single, case-insensitive ordinal path-sorted, Include-deduplicated Compile
-    ItemGroup below (the Link mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces,
-    item group below (the Link mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces,
-    ModalsDialogs or SharedSurfaces). The bare WinUI view files are excluded and exercised by the app build; the
-    test classes are picked up by the SDK default-compile glob; the Content links copy the units-golden,
-    Package.appxmanifest and widget-template fixtures.
+    each surface's Microsoft.UI-free sources are Compile-linked below (the Link mirrors each source's real
+    location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces). The bare WinUI view
+    files are excluded and exercised by the app build; the test classes are picked up by the SDK
+    default-compile glob; the Content links copy the units-golden, Package.appxmanifest and widget-template
+    fixtures the tests read out of the output directory.
 
     INVARIANT: keep this file as exactly ONE Project root with a single PropertyGroup, the package /
     project-reference / content ItemGroups, and ONE Compile ItemGroup (the case-insensitive ordinal path-sorted,
@@ -134,6 +116,14 @@
     shared-surfaces/0207 CopyButton (repairing a merge=union multi-root corruption), plus the new CopyButton
     Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal
     build item or project start tag inside this comment.
+    project-reference / content item groups, and ONE Compile item group — the case-insensitive ordinal
+    path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/,
+    feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. The .gitattributes merge=union
+    strategy can re-concatenate this file into multiple roots plus duplicate Compile items (failing XML load,
+    MSB4025 / MSB4067); when that happens, regenerate it directly from the Microsoft.UI-free sources on disk.
+    Regenerated into this single canonical root for P2 shared-surfaces/0212 DataTableResizer (repairing a
+    merge=union multi-root corruption), plus the new DataTableResizer Model / ViewModel links. Do NOT
+    re-concatenate into multiple roots, and never write a literal build item or project start tag in here.
   -->
 
     INVARIANT: keep this as exactly ONE project root with a single, case-insensitive ordinal path-sorted,
@@ -177,7 +167,7 @@
     </Content>
   </ItemGroup>
 
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App; single-root / case-insensitive ordinal sort / Include-dedupe invariant (see header). -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App: a single, case-insensitive ordinal path-sorted, Include-deduplicated item group. See the header invariant before editing. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -1082,6 +1072,8 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.Model.cs" Link="ModalsDialogs\WidgetSettingsModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.Source.cs" Link="ModalsDialogs\WidgetSettingsModal.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.ViewModel.cs" Link="ModalsDialogs\WidgetSettingsModal.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Accordion.Model.cs" Link="SharedSurfaces\Accordion.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Accordion.ViewModel.cs" Link="SharedSurfaces\Accordion.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActionItem.Model.cs" Link="SharedSurfaces\ActionItem.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Model.cs" Link="SharedSurfaces\ActiveFilterChips.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Source.cs" Link="SharedSurfaces\ActiveFilterChips.Source.cs" />
@@ -1228,6 +1220,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Model.cs" Link="SharedSurfaces\DataFreshness.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Source.cs" Link="SharedSurfaces\DataFreshness.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.ViewModel.cs" Link="SharedSurfaces\DataFreshness.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataTableResizer.Model.cs" Link="SharedSurfaces\DataTableResizer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataTableResizer.ViewModel.cs" Link="SharedSurfaces\DataTableResizer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DateGroupedList\DateGroupedList.Model.cs" Link="SharedSurfaces\DateGroupedList\DateGroupedList.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DateGroupedList\DateGroupedList.Source.cs" Link="SharedSurfaces\DateGroupedList\DateGroupedList.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DateGroupedList\DateGroupedList.ViewModel.cs" Link="SharedSurfaces\DateGroupedList\DateGroupedList.ViewModel.cs" />

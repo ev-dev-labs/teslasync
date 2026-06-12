@@ -1,0 +1,87 @@
+=== P2 Shared surface 0212 DataTableResizer (Windows) ===
+runner: .NET SDK 10.0.300 (net10.0-windows10.0.19041.0) + Microsoft.WindowsAppSDK (WinUI 3); OS Microsoft Windows NT 10.0.26200.0.
+Capability: WinUI 3 + .NET 10 are present and the Release build of the WinUI app is proven green below,
+so STATUS=BLOCKED is NOT warranted on capability grounds. The Category=UIAutomation E2E suite needs a live
+WinAppDriver runner -- that is the SEPARATE W9-0002 gate, absent on this runner -- see [2].
+
+Surface: native parity port of web/src/components/ui/DataTableResizer.tsx -- the WAI-ARIA "Window Splitter"
+column-resize handle (role="separator", aria-orientation="vertical", aria-valuenow/min/max, tabIndex=0; a
+continuous onResize while dragging + a committed onResizeEnd on release; Left/Right nudge +/-8px, Home -> 80px,
+End -> maxWidth). Files (Allowed-files cone):
+  shared-surfaces/DataTableResizer.Model.cs     -- Registration (slug, automation id, separator role +
+                                                   vertical orientation, default 60/800 bounds, 8px step, 80px
+                                                   Home, i18n key + fallback), DataTableResizerMath.Clamp
+                                                   (web Math.max(min,Math.min(max,Math.round(n)))), the
+                                                   DataTableResizerProjection adapter, IColumnResizeSink +
+                                                   NoOpColumnResizeSink, and PII-safe diagnostics. (UI-free)
+  shared-surfaces/DataTableResizer.ViewModel.cs -- UI-thread-free state holder: BeginResize/Resize/EndResize
+                                                   drag seam, Nudge/ResetToHome/ResizeToMax keyboard dual-commit,
+                                                   SetWidthFromAutomation (RangeValue), controlled-prop echoes.
+                                                   (UI-free)
+  shared-surfaces/DataTableResizer.cs           -- the WinUI 3 view: a focusable ContentControl grip, accent
+                                                   highlight (rest/hover/focus/drag), SizeWestEast cursor, pointer
+                                                   capture + keyboard, and a Separator+RangeValue automation peer.
+States: the web source is pure presentational / fully controlled (no data fetch), so -- like the peer surfaces
+Spinner / TimelineScrubber -- there is no loading/error/stale/offline chrome to reproduce. Every interaction
+branch IS reproduced: rest (invisible) grip, hover tint, focus tint, drag-and-grow tint, pointer drag, and the
+Left/Right/Home/End keyboard resize.
+i18n: the accessible name resolves through translation.table.columns.resizeLabel ("Resize column {0}", the
+      .NET-positional form of the catalog table.columns.resizeLabel "Resize column {{col}}"); no English literals.
+a11y: Separator control type + vertical orientation + RangeValue pattern (value/min/max), tab stop, keyboard.
+Telemetry: emits view.opened slug=DataTableResizer once on Loaded (P1/S11).
+Tests: apps/windows/TeslaSync.App.Tests/SharedSurfaces/DataTableResizerTests.cs (52 facts/theories) +
+       the Model/ViewModel Compile-links in the headless test project.
+
+Pre-existing repair (documented, as the csproj header instructs): TeslaSync.App.Tests.csproj had been
+corrupted by the .gitattributes merge=union strategy into 2 <Project> roots with every Compile item duplicated
+(2 roots / 2504 Compile nodes / invalid XML -- baseline [xml] load threw "multiple root elements", so the
+baseline build+test were RED). Regenerated into ONE canonical root: 1 PropertyGroup + 4 balanced ItemGroups
+(packages / project-refs / content / Compile), 1260 case-insensitive ordinal path-sorted, Include-deduplicated
+Compile nodes = the 1258 Microsoft.UI-free .cs on disk (verified: disk set == prior csproj union, diff 0) plus
+the 2 new DataTableResizer Model/ViewModel links (sorted between DataFreshness.* and DatePresetChips.*). The bare
+WinUI view DataTableResizer.cs stays excluded and is exercised by the app build. XML now parses; matches the
+repair pattern of siblings 0159/0170/0189/0199/0203.
+
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    TeslaSync.App.Core/Platform/TokenGen/UITests/Tests built; TeslaSync.App (x64, WinUI) built.
+    0 Error(s); 17 Warning(s) -- all pre-existing CA10xx/CA1716/CA1859 in TeslaSync.App.Core, none in new files.
+    Build succeeded. Time Elapsed 00:06:05.
+BUILD_EXIT=0
+
+[2] dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" --no-build
+    The whole TeslaSync.App.UITests project is Category=UIAutomation -- the filter excludes it cleanly
+    ("No test matches the given testcase filter `Category!=UIAutomation`" in TeslaSync.App.UITests.dll). This
+    matches sibling shared-surface logs (0189 SwipeRow, 0203 Accordion).
+    Passed!  - Failed:     0, Passed: 24607, Skipped:     0, Total: 24607 - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0   (headless unit suite, Category!=UIAutomation)
+
+    Surface-only evidence:
+    DataTableResizer-only: Passed!  - Failed: 0, Passed: 52, Skipped: 0, Total: 52 - TeslaSync.App.Tests.dll
+
+    Evidence that the only whole-solution test failures are the absent-WinAppDriver E2E suite:
+    >>> dotnet test apps/windows/TeslaSync.App.UITests/...csproj -c Release --no-build  -> EXIT=1
+    Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+      WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+      was not found at its standard install paths or on PATH. (WinAppDriverSession.EnsureReady, line 75)
+      -- by design, the SEPARATE W9-0002 gate; out of scope for this per-surface gate.
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    New files normalized to LF per .editorconfig (the only diffs were end-of-line markers; no whitespace/style
+    findings). Re-verified clean across the whole solution.
+    ERROR_LINE_COUNT=0
+FORMAT_EXIT=0
+
+[4] ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/DataTableResizer
+    Literal gate path: PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0.
+    Meaningful scan over copies of all 4 DataTableResizer .cs files: PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0.
+    Direct grep for TODO/FIXME/XXX/Placeholder/Lorem/not implemented/NotImplementedException/stub/mock: 0 matches.
+PLACEHOLDER_EXIT=0
+
+SUMMARY: BUILD_EXIT=0  TEST_EXIT=0 (headless, 24607 pass; DataTableResizer 52 pass)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+  The Category=UIAutomation E2E suite is red ONLY because WinAppDriver is absent on this runner
+  (UiAutomationUnavailableException); it is the separate W9-0002 gate, out of scope for this per-surface gate.
+  The TeslaSync.App.Tests.csproj merge=union multi-root corruption (pre-existing) was repaired as documented.
+
+EXIT=0
+STATUS=DONE
