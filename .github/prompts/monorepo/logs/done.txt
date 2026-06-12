@@ -521,3 +521,4 @@ p3-android/feature-views/A-0273-TripReplayCharts.prompt.md
 p3-android/feature-views/A-0278-ClimatePanel.prompt.md
 p3-android/feature-views/A-0274-TripReplayMap.prompt.md
 p3-android/feature-views/A-0275-BatteryComparison.prompt.md
+p3-android/feature-views/A-0276-FleetSummary.prompt.md
