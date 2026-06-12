@@ -1,0 +1,56 @@
+/*
+  DataTableColumnMenu.strings
+  TeslaSync — P4 shared surface · 0210 · DataTableColumnMenu (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface — the native peer of every routed literal in
+  `components/ui/DataTableColumnMenu.tsx` plus the native friendly-empty addition. The native surface routes
+  every string through the facade per the no-hardcoded-English rule.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("DataTableColumnMenu") so each parallel surface prompt owns its own strings. In
+  test / preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+
+  `{{col}}` is the i18next interpolation token, substituted at the display boundary by the facade
+  (DataTableColumnMenuStrings.toggleColumn / moveUp / moveDown).
+*/
+
+/* --- Web keys (from components/ui/DataTableColumnMenu.tsx) --- */
+
+/* Trigger / menu accessible name when reordering is enabled (web `t('table.columns.menuReorder', 'Reorder
+   or hide columns')`). */
+"table.columns.menuReorder" = "Reorder or hide columns";
+
+/* Trigger / menu accessible name for a pure visibility checklist (web `t('table.columns.menu', 'Show or
+   hide columns')`). */
+"table.columns.menu" = "Show or hide columns";
+
+/* The default trigger chip's visible label (web `t('table.columns.button', 'Columns')`). */
+"table.columns.button" = "Columns";
+
+/* The popover heading when reordering is enabled (web `t('table.columns.headingReorder', 'Columns')`). */
+"table.columns.headingReorder" = "Columns";
+
+/* The popover heading for a pure visibility checklist (web `t('table.columns.heading', 'Visible
+   columns')`). */
+"table.columns.heading" = "Visible columns";
+
+/* The reset-to-defaults control label (web `t('table.columns.reset', 'Reset')`). */
+"table.columns.reset" = "Reset";
+
+/* The visibility checkbox accessible name for a column (web `t('table.columns.toggleColumn', 'Show or hide
+   {{col}}', { col })`). */
+"table.columns.toggleColumn" = "Show or hide {{col}}";
+
+/* The move-up button accessible name for a column (web `t('table.columns.moveUp', 'Move {{col}} up',
+   { col })`). */
+"table.columns.moveUp" = "Move {{col}} up";
+
+/* The move-down button accessible name for a column (web `t('table.columns.moveDown', 'Move {{col}} down',
+   { col })`). */
+"table.columns.moveDown" = "Move {{col}} down";
+
+/* --- Native a11y addition --- */
+
+/* Friendly body shown when the menu is opened with no columns, so the surface never renders a blank box.
+   The web renders an empty list. */
+"table.columns.empty" = "No columns to configure";
