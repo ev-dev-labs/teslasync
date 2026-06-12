@@ -83,6 +83,8 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("TrueCostOwnership", static () => new FeatureViews.Analytics.TrueCostPage());
         // Analytics / Weekly digest page (P2/W7) — parity port of web WeeklyDigestPage at route /weekly-digest.
         _viewModel.PageFactory.Register("WeeklyDigest", static () => new FeatureViews.Analytics.WeeklyDigestPage());
+        // Charging / Cost analysis page (P2/W7) — parity port of web CostAnalysisPage at route /charging/costs.
+        _viewModel.PageFactory.Register("CostAnalysis", static () => new FeatureViews.Charging.CostAnalysisPage());
 
         // Analytics / Year-in-Review story player (P2/W7) — parity port of web YearReviewPage at route
         // /year-review/:year. The route year is read from the live match and close/Esc maps to back-navigation
