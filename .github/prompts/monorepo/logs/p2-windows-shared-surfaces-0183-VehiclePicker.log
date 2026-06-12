@@ -1,0 +1,44 @@
+=== P2 Shared surface 0183 VehiclePicker (Windows) ===
+date: 2026-06-11T23:02:26.3954047-07:00
+runner: .NET 10.0.300 ; WinUI TFM net10.0-windows10.0.19041.0
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+Time Elapsed 00:00:50.48
+BUILD_EXIT=0
+
+--- TEST (headless per-surface gate): dotnet test ... --filter Category!=UIAutomation ---
+    (TeslaSync.App.UITests carries [Trait(Category,UIAutomation)] and is gated separately per its csproj/W9-0002.)
+Passed!  - Failed:     0, Passed: 23836, Skipped:     0, Total: 23836, Duration: 13 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- UI-AUTOMATION suite probe (W9-0002, run separately via run-ui-automation.ps1): Category=UIAutomation ---
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-04\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_STATUS=BLOCKED (capability: WinAppDriver/Appium endpoint absent on this headless runner; not a VehiclePicker concern; affects the whole solution; excluded from the per-surface EXIT by design)
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- PLACEHOLDERS: check-placeholders.ps1 -Path .../shared-surfaces/VehiclePicker (gate path) ---
+PLACEHOLDER_EXIT=0
+    honest direct scan of the shipped VehiclePicker .cs files (Model/Source/ViewModel/view + test):
+    forbidden-token violations (excluding parity:allow): 0
+
+--- PRE-EXISTING BASELINE REPAIRS (outside VehiclePicker scope; required to compile the integration-branch solution at HEAD) ---
+  1. TeslaSync.App.Tests.csproj: repaired merge multi-root corruption (4 concatenated <Project> roots -> MSB4025).
+     Regenerated as ONE canonical root from the Microsoft.UI-free sources on disk (the file's own documented invariant),
+     adding the 3 new VehiclePicker logic links. 1224 Compile items (1221 pre-existing + 3 new); view file excluded.
+  2. Breadcrumbs vs LayoutBreadcrumbs: deconflicted a pre-existing duplicate-type collision (CS0101/CS8863/CS0111).
+     Both surfaces declared BreadcrumbItem/IBreadcrumbNavigator/NullBreadcrumbNavigator in TeslaSync.App.SharedSurfaces.
+     Renamed the LayoutBreadcrumbs trio to Layout-prefixed names (canonical Breadcrumbs surface untouched);
+     all Breadcrumbs/LayoutBreadcrumbs headless tests still pass.
+
+build=0 test=0 format=0 placeholders=0 (UIAutomation=BLOCKED, separate W9-0002 gate)
+EXIT=0
+STATUS=DONE

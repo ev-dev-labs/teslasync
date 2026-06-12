@@ -64,7 +64,7 @@ public sealed partial class LayoutBreadcrumbs : ContentControl, IDisposable
         IBreadcrumbRouteContext route,
         IBreadcrumbOverrideSource overrides,
         ILocalizer localizer,
-        IBreadcrumbNavigator? navigator = null,
+        ILayoutBreadcrumbNavigator? navigator = null,
         LayoutBreadcrumbsDiagnostics? diagnostics = null)
         : this(new LayoutBreadcrumbsViewModel(route, overrides, localizer, navigator, routeMeta: null, diagnostics))
     {
@@ -165,7 +165,7 @@ public sealed partial class LayoutBreadcrumbs : ContentControl, IDisposable
         _row.Children.Clear();
         _middles.Clear();
 
-        IReadOnlyList<BreadcrumbItem> items = _viewModel.Items;
+        IReadOnlyList<LayoutBreadcrumbItem> items = _viewModel.Items;
         if (items.Count <= 1)
         {
             // Suppressed: a top-level page renders an empty slot (web `return null`).
@@ -176,7 +176,7 @@ public sealed partial class LayoutBreadcrumbs : ContentControl, IDisposable
 
         for (int i = 0; i < items.Count; i++)
         {
-            BreadcrumbItem item = items[i];
+            LayoutBreadcrumbItem item = items[i];
             bool isLast = i == items.Count - 1;
             bool isMiddle = i > 0 && !isLast;
 
@@ -233,7 +233,7 @@ public sealed partial class LayoutBreadcrumbs : ContentControl, IDisposable
         return separator;
     }
 
-    private HyperlinkButton BuildCrumbLink(BreadcrumbItem item)
+    private HyperlinkButton BuildCrumbLink(LayoutBreadcrumbItem item)
     {
         var text = new TextBlock
         {
@@ -259,7 +259,7 @@ public sealed partial class LayoutBreadcrumbs : ContentControl, IDisposable
         return link;
     }
 
-    private static TextBlock BuildCurrentLabel(BreadcrumbItem item, bool isCurrent)
+    private static TextBlock BuildCurrentLabel(LayoutBreadcrumbItem item, bool isCurrent)
     {
         var text = new TextBlock
         {
