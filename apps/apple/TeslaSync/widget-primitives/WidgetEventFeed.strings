@@ -1,0 +1,42 @@
+/*
+  WidgetEventFeed.strings
+  TeslaSync — P4 widget primitive · 0005 · WidgetEventFeed (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The empty-state key mirrors the web source
+  (features/dashboard/widgets/shared/WidgetEventFeed.tsx) one-for-one (`widget.noEvents`). The
+  relative-time keys localize the strings the web source hardcodes inline (`Just now`, `{n}m ago`,
+  `{n}h ago`) — with the i18next-style `{{minutes}}` / `{{hours}}` tokens preserved verbatim, since
+  the surface interpolates them — so the Swift sources hold no English literals. The remaining entries
+  are the native P4 leaf chrome (loading / error / freshness), the drill-through hint, and the spoken
+  severity prefixes. These fold into the app `Localizable.xcstrings` master catalog at integration
+  time; they are kept in a per-surface table ("WidgetEventFeed") so each parallel surface prompt owns
+  its own strings without editing the shared catalog.
+*/
+
+/* --- Empty state (web `WidgetEventFeed.tsx` `t(...)` key) --- */
+"widget.noEvents" = "No events yet";
+
+/* --- Relative time (web inline `formatRelativeTime` strings) --- */
+"widgetEventFeed.justNow" = "Just now";
+"widgetEventFeed.minutesAgo" = "{{minutes}}m ago";
+"widgetEventFeed.hoursAgo" = "{{hours}}h ago";
+
+/* --- Loading / error chrome (P4 leaf contract) --- */
+"widgetEventFeed.loadingA11y" = "Loading recent events";
+"widgetEventFeed.errorTitle" = "Couldn't load events";
+"widgetEventFeed.retry" = "Retry";
+
+/* --- Row drill-through (web row `<Link>`) --- */
+"widgetEventFeed.openHint" = "Opens details";
+
+/* --- Severity (spoken VoiceOver prefix; web `EventFeedItem.severity`) --- */
+"widgetEventFeed.severity.info" = "Info";
+"widgetEventFeed.severity.warning" = "Warning";
+"widgetEventFeed.severity.critical" = "Critical";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"widgetEventFeed.live" = "Live";
+"widgetEventFeed.stale" = "Stale";
+"widgetEventFeed.offline" = "Offline";
+"widgetEventFeed.staleA11y" = "Stale — tap to refresh";
+"widgetEventFeed.offlineA11y" = "Offline — showing the last known events";
