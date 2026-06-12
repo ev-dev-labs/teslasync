@@ -1,0 +1,88 @@
+=== p2-windows · W7 · page:automations/AutomationActivityFeed (WinUI 3 / Fluent) ===
+Parity unit : page:automations/AutomationActivityFeed   kind=page   web route=(unrouted)
+Web source  : web/src/features/automations/pages/AutomationActivityFeed.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) + maui-windows workload — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection +
+  records + diagnostics + registration, unit-tested headlessly) and <Name>.cs (the Fluent view). The generated
+  prompt's idealized "AutomationActivityFeed.xaml + AutomationActivityFeedViewModel.cs under TeslaSync/Features/
+  Automations" is mapped onto these real conventions — exactly as the peer presentational section AutomationCard
+  (feature-views/AutomationCard/{.Model.cs,.cs}) and the W7 ApiLogsPage precedent already are.
+- This unit is a presentational leaf, not a routed page: the web source is a component that takes props
+  (history / historyStats / isLoading / liveEvents / connectionState) and renders one GlassPanel; manifest route is
+  (unrouted). The native AutomationActivityFeed is therefore a ContentControl whose Model property re-projects and
+  re-renders on assignment (no fetching, no ViewModel state holder) — the fetch-driven error / stale / offline
+  branches are owned by the parent automations page, exactly as in the web source. Because it is unrouted there is
+  no NavigationView / ShellPageFactory entry to add (the conditional "if routed" requirement does not apply); the
+  peer AutomationCard is wired the same way.
+- Manifest models this unit with no API data sources (renders from navigation params / local state), so the
+  generated C# client (ADR-004) is not consulted; all branch selection, number/date formatting and label
+  resolution happen in the WinUI-free AutomationActivityFeedProjection (web statusConfig / typeMap / timeAgo /
+  formatDurationMs / fmtPercent reproduced verbatim, with the web safeNumber() non-finite guard). SI units N/A on
+  this surface (no unit-bearing fields); the success rate uses the shared NumberFormatting port (web fmtPercent
+  → fmtNumber(_,0)+'%') and the duration the web formatDurationMs tiers.
+- All 7 i18n keys already exist verbatim in Strings/en|ar|he/Resources.resw (translation.automations.avgDuration /
+  live / noHistory / recentActivity / reconnecting / successRate / totalRuns — 7/7/7 across the three catalogs);
+  the surface resolves them through the ILocalizer facade with the web key names (no new catalog rows required).
+- a11y: the surface, its glass panel, the connection chip, the stats strip and every live/history row carry an
+  AutomationProperties name; decorative glyphs are AccessibilityView.Raw; the loading branch announces via
+  LiveRegion. Reduce-motion is honoured by the shared TsFadeIn (web FadeIn delay=0.1). PII-safe diagnostics emit
+  only "view.opened slug=AutomationActivityFeed" — never an automation name, error, reason, duration or rate.
+
+=== PARITY ===
+PARITY_REQUIRED=11
+
+# Panel (1) — the single web GlassPanel wrapping the whole feed
+[x] panel  - GlassPanel1   -> AutomationActivityFeed.cs#Render builds TsGlassPanel{ Padding=24 (web p-6), Content=BuildContent(display) } wrapped in TsFadeIn{ DelayMs=100 } (web FadeIn delay={0.1} <GlassPanel className="p-6">); header + live strip + history compose inside it (BuildContent/BuildHeader/BuildLiveStrip/BuildHistory)
+
+# Data states (3) — loading / empty / success, each a visible region (never blank)
+[x] state  - loading       -> AutomationActivityFeedProjection.Project selects AutomationHistorySection.Loading when model.Loading (web isLoading); rendered AutomationActivityFeed.cs#BuildLoading (TsSkeleton × SkeletonRowCount=5, LiveRegion announce); tests Loading_when_model_is_loading / Loading_takes_precedence_over_present_history / Skeleton_row_count_matches_the_web_five
+[x] state  - empty         -> AutomationHistorySection.Empty (web items.length === 0 → EmptyState); rendered BuildEmpty (TsEmptyState IconGlyph=ActivityGlyph, Message=EmptyMessage); tests Empty_when_resolved_without_history / Empty_message_uses_the_automations_catalog_key / Empty_automation_name_carries_the_empty_message
+[x] state  - success       -> AutomationHistorySection.Populated (web items.length > 0 → HistoryRow list); rendered BuildHistoryRows → BuildHistoryRow (status glyph/accent, inline error, timeAgo, formatDurationMs, actions ratio); tests Populated_when_resolved_with_history / History_* (status map, error, ratio, time tiers, duration)
+
+# Strings (7) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names (en/ar/he 7/7/7)
+[x] string - automations.avgDuration   -> AutomationActivityFeedProjection.BuildStats localizer.GetString("translation.automations.avgDuration", "avg") (web `{formatDurationMs(avg_duration_ms)} {t('avgDuration','avg')}`)
+[x] string - automations.live          -> AutomationActivityFeedProjection.Project localizer.GetString("translation.automations.live", "Live") (web connected chip)
+[x] string - automations.noHistory     -> AutomationActivityFeedProjection.Project localizer.GetString("translation.automations.noHistory", "No execution history yet") (web EmptyState message)
+[x] string - automations.recentActivity-> AutomationActivityFeedProjection.Project localizer.GetString("translation.automations.recentActivity", "Recent Activity") (web header <h2>)
+[x] string - automations.reconnecting  -> AutomationActivityFeedProjection.Project localizer.GetString("translation.automations.reconnecting", "Reconnecting") (web reconnecting chip)
+[x] string - automations.successRate   -> AutomationActivityFeedProjection.BuildStats localizer.GetString("translation.automations.successRate", "success") (web `{fmtPercent(success_rate,0)} {t('successRate','success')}`)
+[x] string - automations.totalRuns     -> AutomationActivityFeedProjection.BuildStats localizer.GetString("translation.automations.totalRuns", "total") (web `{total_executions} {t('totalRuns','total')}`)
+
+PARITY_COVERED=11
+# Coverage asserted headlessly by TeslaSync.App.Tests/FeatureViews/AutomationActivityFeedTests.cs (62 tests):
+# the three HistorySection branches, the connected/reconnecting chip (label/glyph/accent), the stats strip
+# (verbatim total, fmtPercent(_,0) success, formatDurationMs avg, gated on total_executions>0), the live strip
+# (slice(0,5) cap, type→glyph/accent/badge, #id fallback, error/reason detail), the history rows (status→glyph/
+# accent, inline error, timeAgo tiers, formatDurationMs, actions ratio), the i18n key resolution, the per-state
+# Narrator names, and the PII-safe diagnostics. The WinUI view (AutomationActivityFeed.cs) is exercised by the
+# Release app build.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AutomationActivityFeed -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Automations path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Error(s)
+#   (17 pre-existing TeslaSync.App.Core CA warnings only — CA1000/CA1716/CA1720/CA1859, unrelated to this unit;
+#    TeslaSync.App WinUI app + App.Core + App.Platform + App.Tests + App.UITests all built)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes (benign workspace-load warnings only)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25863, Failed: 0, Skipped: 0, Total: 25863
+#   (filtered AutomationActivityFeedTests -> Passed: 62, Failed: 0, Skipped: 0)
+TEST_EXIT=0
+PARITY_COVERED=11
+PARITY_REQUIRED=11
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/Automations apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-automations-AutomationActivityFeed.log
+# git commit -m "feat(apps/windows): AutomationActivityFeed at web parity (W7 automations)"
+
+EXIT=0
+STATUS=DONE
