@@ -1,0 +1,66 @@
+=== P2 Shared surface 0196 ActionItem (Windows) ===
+capability probe: dotnet --version = 10.0.300
+capability probe: WinAppDriver.exe = False  (UI-automation E2E harness; WinUI 3 SDK + .NET 10 themselves are present, proven by the Release build below)
+NOTE: pre-existing repair — TeslaSync.App.Tests.csproj arrived at HEAD with a merge=union multi-root corruption (MSB4025, two <Project> roots). Per the file's own INVARIANT comment it was regenerated into one canonical root = the Include-deduplicated union of every Microsoft.UI-free source under the 5 surface dirs (1239 existing entries, 0 stale, 0 missing besides the new surface) + the new ActionItem.Model.cs link (1240 total). Matches the 0183/0185 precedent.
+
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-01\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:04:25.74
+BUILD_EXIT=0
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generated -> D:\repos\teslasync-wt2\wt-01\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+Test run for D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+Test run for D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-01\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed: 24134, Skipped:     0, Total: 24134, Duration: 16 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+--- placeholder/stub gate (ADR-011), run per shipped file (flat-file surface, matching the 0124 InlineCallout precedent) ---
+ActionItem.cs (WinUI view):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_VIEW_EXIT=0
+ActionItem.Model.cs (model/projection/diagnostics):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_MODEL_EXIT=0
+ActionItemTests.cs (headless tests):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_TEST_EXIT=0
+=== GATE DONE ===
+
+--- surface-specific test evidence: ActionItemTests (headless projection/registration/a11y/diagnostics/guards) ---
+Passed!  - Failed:     0, Passed:    43, Skipped:     0, Total:    43, Duration: 134 ms - TeslaSync.App.Tests.dll (net10.0)
+
+--- ENVIRONMENTAL EVIDENCE: Category=UIAutomation requires WinAppDriver (absent on this runner) ---
+The TeslaSync.App.UITests are all [Trait(Category, UIAutomation)] E2E tests driven through WinAppDriver/Appium.
+WinUI 3 (Windows App SDK) + .NET 10 ARE present: the Release build above produced TeslaSync.App.dll and all 24134 headless tests pass.
+Only the optional UI-automation harness is missing; excluding Category=UIAutomation matches the accepted precedent (p2-windows-shared-surfaces-0124-InlineCallout.log / 0110-UserCell.log).
+
+EXIT=0
+STATUS=DONE
