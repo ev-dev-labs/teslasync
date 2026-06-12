@@ -741,3 +741,4 @@ p2-windows/pages/battery/EnergyPage.prompt.md
 p2-windows/pages/battery/ProjectedRangePage.prompt.md
 p2-windows/pages/battery/VampireDrainPage.prompt.md
 p2-windows/pages/charging/ChargingDetailPage.prompt.md
+p2-windows/pages/charging/ChargingCurvePage.prompt.md
