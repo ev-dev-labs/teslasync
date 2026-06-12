@@ -367,3 +367,4 @@ p3-android/feature-views/A-0122-DashboardGrid.prompt.md
 p3-android/feature-views/A-0119-TimeOfUseAnalysis.prompt.md
 p3-android/feature-views/A-0118-SavingsCalculator.prompt.md
 p3-android/feature-views/A-0121-AddWidgetButton.prompt.md
+p3-android/feature-views/A-0123-FleetStatsBar.prompt.md
