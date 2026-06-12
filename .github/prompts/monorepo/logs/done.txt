@@ -320,3 +320,4 @@ p3-android/feature-views/A-0071-AlertsSection.prompt.md
 p3-android/feature-views/A-0073-BatteryPill.prompt.md
 p3-android/feature-views/A-0072-BatteryHealthSection.prompt.md
 p3-android/feature-views/A-0076-HighlightCard.prompt.md
+p3-android/feature-views/A-0074-ChargingSection.prompt.md
