@@ -175,6 +175,7 @@
   <string name="translation_Never">Never</string>
   <string name="translation_Next">Next</string>
   <string name="translation_No">No</string>
+  <string name="translation_No_stats_available">No stats available</string>
   <string name="translation_Nominal">Nominal</string>
   <string name="translation_None">None</string>
   <string name="translation_Not_Authenticated">Not Authenticated</string>
@@ -257,6 +258,7 @@
   <string name="translation_Standby">Standby</string>
   <string name="translation_Start">Start</string>
   <string name="translation_State">State</string>
+  <string name="translation_Stats_Summary">Stats Summary</string>
   <string name="translation_Status">Status</string>
   <string name="translation_Stopped">Stopped</string>
   <string name="translation_Streaming">Streaming</string>
@@ -5869,6 +5871,8 @@
   <string name="translation_signalQuery_quickRange">Quick Range</string>
   <string name="translation_signalQuery_rows">Rows</string>
   <string name="translation_signalQuery_to">To</string>
+  <string name="translation_signalStats_hideEmpty">Hide empty (%1$s)</string>
+  <string name="translation_signalStats_noDataInRange">No data in range</string>
   <string name="translation_sleep_avgBatteryLost">Avg Battery Lost (%)</string>
   <string name="translation_sleep_avgTimeToSleep">Avg Time to Sleep</string>
   <string name="translation_sleep_batteryLost">Battery Lost</string>

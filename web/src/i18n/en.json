@@ -1,4 +1,10 @@
 {
+  "No stats available": "No stats available",
+  "Stats Summary": "Stats Summary",
+  "signalStats": {
+    "hideEmpty": "Hide empty ({{count}})",
+    "noDataInRange": "No data in range"
+  },
   "timezones": {
     "utc": "UTC (Default)",
     "America/New_York": "Eastern (US)",
