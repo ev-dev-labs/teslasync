@@ -393,3 +393,4 @@ p3-android/feature-views/A-0142-EnergySummaryPanel.prompt.md
 p3-android/feature-views/A-0144-JourneyDetailsPanel.prompt.md
 p3-android/feature-views/A-0145-MoreDetailsPanel.prompt.md
 p3-android/feature-views/A-0143-HeroGauges.prompt.md
+p3-android/feature-views/A-0147-RouteMapSection.prompt.md
