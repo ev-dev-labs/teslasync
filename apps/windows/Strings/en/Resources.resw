@@ -24488,4 +24488,16 @@
   <data name="translation.energy.table.cost_decimal" xml:space="preserve">
     <value>Cost</value>
   </data>
+  <data name="translation.tesla_sessions.businessNote" xml:space="preserve">
+    <value>Fleet charging session data is only available for Tesla business accounts. Personal accounts will receive a 403 error when syncing.</value>
+  </data>
+  <data name="translation.tesla_sessions.monthlyCost.aria" xml:space="preserve">
+    <value>Monthly Tesla charging cost bar chart</value>
+  </data>
+  <data name="translation.tesla_sessions.stats.cost_decimal" xml:space="preserve">
+    <value>Total Cost</value>
+  </data>
+  <data name="translation.tesla_sessions.col.cost_decimal" xml:space="preserve">
+    <value>Cost</value>
+  </data>
 </root>

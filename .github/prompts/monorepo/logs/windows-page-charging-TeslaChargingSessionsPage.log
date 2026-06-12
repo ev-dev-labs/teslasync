@@ -1,0 +1,182 @@
+=== p2-windows · W7 · page:charging/TeslaChargingSessions (WinUI 3 / Fluent) ===
+Parity unit : page:charging/TeslaChargingSessions   kind=page   web route=/tesla-charging-sessions
+Web source  : web/src/features/charging/pages/TeslaChargingSessionsPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ApiLogsPage / VehicleCostPage do. The generated prompt's idealized "TeslaChargingSessionsPage.xaml +
+  ViewModel.cs under TeslaSync/Features/Charging" is mapped onto these real conventions. The surface registers
+  itself with the W4 ShellPageFactory by route name ("TeslaChargingSessions") in ShellWindow.xaml.cs.
+- Data binding (ADR-004): the three manifest data sources are bound through the generated OpenAPI contract client
+  (TeslaChargingSessionsPage.Source.cs / TeslaChargingSessionsClientFeed) — useTeslaChargingSessions →
+  get_api_v1_tesla_charging_sessions (GET /tesla/charging/sessions/, snake_case `vin` query, omitted for "All
+  Vehicles"); useVehicles → get_api_v1_vehicles (GET /vehicles/); useRefreshTeslaChargingSessions →
+  post_api_v1_tesla_charging_sessions_refresh (POST /tesla/charging/sessions/refresh, `vin` query). All three
+  operation ids are confirmed present in apps/windows/Generated/Api/ApiEndpoints.cs. No HTTP touches the view; the
+  ViewModel reads through the injected ITeslaChargingSessionsFeed (default EmptyTeslaChargingSessionsFeed = empty
+  state). A refresh that returns HTTP 403 surfaces as ApiException(StatusCode=403) → the distinct "business account
+  required" note (web is403); other failures are non-fatal to the page and keep the existing data.
+- Envelope/SI: TeslaChargingSessionsSnapshot.FromJson unwraps the platform httputil.Respond {data:{sessions,summary}}
+  envelope before reading the snake_case sessions[]/summary so the wire shape round-trips losslessly. Energy is read
+  as SI watt-hours and converted ONLY at the display boundary: the Total-Energy card via the shared
+  UnitFormatters.FormatEnergy(total_wh, units) and the table Energy(kWh) column via
+  UnitConverters.EnergyFromSi(wh, Kwh) + NumberFormatting (web convertEnergyFromSI(_, 'kWh')). Cost/rate format
+  through ScalarFormatters.FormatCurrency (web formatCurrency / formatCurrencyValue); the duration column reproduces
+  web formatDurationSeconds; the monthly chart reproduces web buildMonthlyCost (YYYY-MM bucket, summed cost, sorted).
+- Maps=0 for this unit (the slippy map is the SEPARATE parity unit feature-views/TeslaChargingSessionsMap, whose
+  data source is a heavily-coupled cache-then-network pipeline). GlassPanel9 ("Session Locations") is therefore
+  reproduced as the Fluent locations data region the web map plots — each geolocated session's site name + "lat, lng"
+  (TeslaChargingMapPoint) in a scroller — with the web noMapData TsEmptyState when no session has coordinates. Never
+  a blank region, no web pixel-cloning, and the dedicated map widget is not duplicated here.
+- States (ADR-006): the web renders its regions inside PageContainer (loading/error). The native port reproduces the
+  four data states as visible Fluent regions — loading -> TsStatGridSkeleton(5)+TsTableSkeleton shimmer; error ->
+  TsQueryError (InfoBar-equivalent) + Retry (ActionInvoked -> RefreshAsync); success/empty content -> the info banner
+  + controls bar + five TsStatCards + the monthly-cost TsChartContainer + the locations panel + the session
+  TsDataTable, each region with its own empty state. The stat cards/controls render in BOTH success and empty
+  (matching the web, which only swaps the chart/map/table bodies for empty states), so the user can still Refresh.
+- i18n (ADR-014): all 32 manifest keys resolve through the ILocalizer facade with the verbatim web key names. 28 were
+  already present in Strings/en/Resources.resw (translation.tesla_sessions.* / translation.table.bulkActions.exportCsv);
+  the 4 the web page uses that the catalog lacked — tesla_sessions.businessNote, tesla_sessions.monthlyCost.aria,
+  tesla_sessions.stats.cost_decimal, tesla_sessions.col.cost_decimal (the catalog still carried the older
+  stats.cost / col.cost variants) — were added verbatim. No literal is hardcoded. The ar/he catalogs lag en by
+  design; the app falls back to the English default via ILocalizer until translated.
+- Microsoft.UI-free Model/Source/ViewModel links were added to TeslaSync.App.Tests.csproj (the bare WinUI view is
+  excluded — it uses Microsoft.UI). A namespace-local internal JsonReadHelpers provides null-tolerant parsing.
+- Build/lint defects found + fixed in this surface's own new code (no red shipped): (1) a PRE-EXISTING build break —
+  Shell/ShellWindow.xaml.cs's AutomationList PageFactory.Register lambda was missing its `return page; });`, a C#
+  syntax error that cascaded into 160+ XAML-compiler WMC0001/WMC0110 + a WMC9999 internal crash across the whole app;
+  repaired (the nav-registration area is in scope) so the solution compiles; (2) the app project enforces CA1859 as an
+  error, so three private helpers (BuildChartSeries / BuildMapPoints / VinQuery) were given concrete return types;
+  (3) the new files were normalised from CRLF to LF to satisfy dotnet format ENDOFLINE. All repaired; the app +
+  solution build 0 errors and dotnet format reports 0 changes.
+
+=== PARITY ===
+PARITY_REQUIRED=48
+
+# Panels (10) — every web region reproduced as a Fluent Card/Mica region, bound to the TeslaChargingSessionsDisplay holder
+[x] panel  - GlassPanel1          -> info banner: TeslaChargingSessionsPage.cs#BuildInfoBanner (_infoPanel TsGlassPanel +
+             Building glyph FontIcon + _businessNote Text); projection BusinessNote (GetString tesla_sessions.businessNote);
+             web TeslaChargingSessionsPage.tsx Building2 GlassPanel; test Info_banner_resolves_the_business_note
+[x] panel  - GlassPanel2          -> controls bar: TeslaChargingSessionsPage.cs#BuildControlsBar (_controlsPanel TsGlassPanel:
+             _vehicleSelect TsSelect + _refreshButton TsButton + _businessOnly Text + _lastSync Caption); projection
+             VehicleOptions / RefreshButtonLabel / ShowBusinessOnly / ShowLastSync; web controls GlassPanel; tests
+             Vehicle_options_lead_with_all_vehicles_then_each_vehicle + Refresh_button_label_toggles_with_the_pending_flag +
+             Business_only_note_shows_only_after_a_403_refresh + Last_sync_caption_shows_when_a_session_carries_a_fetched_at
+[x] panel  - Total-Sessions       -> _sessionsCard TsStatCard (Render); projection SessionsStatLabel/SessionsStatValue
+             (ScalarFormatters.FormatNumber); web StatCard "Total Sessions"; test Stat_cards_project_labels_and_values
+[x] panel  - Total-Energy         -> _energyCard TsStatCard; projection EnergyStatLabel/EnergyStatValue
+             (UnitFormatters.FormatEnergy, SI Wh at the display preference); web StatCard "Total Energy"; tests
+             Stat_cards_project_labels_and_values + Stat_card_values_fall_back_to_em_dash_when_null
+[x] panel  - Total-Cost           -> _costCard TsStatCard; projection CostStatLabel/CostStatValue
+             (ScalarFormatters.FormatCurrency, 2dp); web StatCard "Total Cost"; test Stat_cards_project_labels_and_values
+[x] panel  - Avg-Cost-kWh         -> _avgCostCard TsStatCard; projection AvgCostStatLabel/AvgCostStatValue
+             (FormatCurrency, 3dp); web StatCard "Avg Cost/kWh"; test Stat_cards_project_labels_and_values
+[x] panel  - Peak-Power           -> _peakPowerCard TsStatCard; projection PeakPowerStatLabel/PeakPowerStatValue
+             (FormatNumber + kW unit label); web StatCard "Peak Power" unit=kW; test Stat_cards_project_labels_and_values
+[x] panel  - Monthly-Charging-Cost-> _chartContainer TsChartContainer (BuildChartPanel); projection MonthlyCostTitle;
+             web ChartContainer title; tests Chart_is_ready_with_one_series_when_sessions_have_cost + Chart_is_empty_with_no_cost_data
+[x] panel  - GlassPanel9          -> session locations: TeslaChargingSessionsPage.cs#BuildLocationsPanel (_mapPanel TsGlassPanel +
+             _mapTitle PanelTitle + _mapList of TeslaChargingMapPoint rows OR _mapEmpty TsEmptyState); projection MapTitle /
+             MapPoints / ShowMapPoints / NoMapDataMessage; web "Session Locations" GlassPanel; tests
+             Map_points_keep_only_geolocated_sessions + Map_empty_message_when_no_session_has_coordinates
+[x] panel  - GlassPanel10         -> session table: TeslaChargingSessionsPage.cs#BuildTablePanel (_tablePanel TsGlassPanel +
+             _tableTitle PanelTitle + _exportButton TsButton + _table TsDataTable OR _tableEmpty TsEmptyState); projection
+             TableTitle / Columns / Rows / ShowTable; web "Charging Sessions" GlassPanel; tests
+             Table_has_the_nine_web_columns + Table_rows_format_every_cell + Table_row_nullable_cells_fall_back_to_em_dash
+
+# Charts (2) — native W3 chart wrappers (LiveCharts/WinUI), never a web canvas
+[x] chart  - ChartContainer       -> _chartContainer TsChartContainer (Render sets Title/AccessibleSummary(=monthlyCost.aria)/
+             State(Ready|Empty)/EmptyMessage(=noChartData)/DataView.XLabel(=col.month)/DataView.Series); the W3 framing surface
+             that mirrors the web ChartContainer + its accessible Month/Total table; tests
+             Chart_is_ready_with_one_series_when_sessions_have_cost + Chart_is_empty_with_no_cost_data
+[x] chart  - BarChart             -> _barChart TsBarChart (Body of the container; Series = TeslaChargingSessionsDisplay.ChartSeries,
+             ChartSeriesKind.Bar, one cost series over the monthly buckets); projection BuildChartSeries + BuildMonthlyCost;
+             web <BarChart><Bar dataKey="total"/>; tests Chart_is_ready_with_one_series_when_sessions_have_cost
+             (series.Kind==Bar) + Monthly_cost_aggregates_by_month_and_sorts_ascending
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading              -> TeslaChargingSessionsState.Loading + Display.ShowLoading; rendered _loadingSkeleton
+             (TsStatGridSkeleton(5) + TsTableSkeleton shimmer); test State_loading_when_query_in_flight
+[x] state  - empty                -> TeslaChargingSessionsState.Empty + ShowContent && !ShowTable/!ShowChart/!ShowMapPoints; the
+             chart/map/table bodies render their TsEmptyState (noChartData / noMapData / noData) while the cards + controls still
+             render (web sessions.length===0); tests State_empty_when_resolved_with_no_sessions + ViewModel_empty_snapshot_is_the_empty_state
+[x] state  - error                -> TeslaChargingSessionsState.Error + ShowError; _errorState (TsQueryError InfoBar-equivalent +
+             Retry via ActionInvoked -> RefreshAsync); tests State_error_when_query_failed + ViewModel_feed_failure_is_the_error_state
+[x] state  - success              -> TeslaChargingSessionsState.Success + ShowTable; _table (TsDataTable, nine columns over the rows)
+             + cards + chart + locations; tests State_success_when_sessions_present + ViewModel_loads_sessions_into_the_success_state
+
+# Strings (32) — every visible literal resolves from Strings/*.resw via ILocalizer with the verbatim web key names
+[x] string - table.bulkActions.exportCsv        -> GetString("table.bulkActions.exportCsv","Export CSV") -> ExportCsvLabel (_exportButton.Text)
+[x] string - tesla_sessions.allVehicles         -> GetString(...,"All Vehicles") -> AllVehiclesLabel / VehicleOptions[0].Label
+[x] string - tesla_sessions.businessNote        -> GetString(...,"Fleet charging session data is only available…") -> BusinessNote
+[x] string - tesla_sessions.businessOnly        -> GetString(...,"Business account required") -> BusinessOnlyLabel
+[x] string - tesla_sessions.col.cost_decimal    -> GetString(...,"Cost") -> Columns[cost].Header
+[x] string - tesla_sessions.col.date            -> GetString(...,"Date") -> Columns[date].Header
+[x] string - tesla_sessions.col.duration        -> GetString(...,"Duration") -> Columns[duration].Header
+[x] string - tesla_sessions.col.energy          -> GetString(...,"Energy (kWh)") -> Columns[energy].Header
+[x] string - tesla_sessions.col.location        -> GetString(...,"Location") -> Columns[location].Header
+[x] string - tesla_sessions.col.month           -> GetString(...,"Month") -> MonthColumnLabel (chart DataView X header)
+[x] string - tesla_sessions.col.peakPower       -> GetString(...,"Peak (kW)") -> Columns[peakPower].Header
+[x] string - tesla_sessions.col.rate            -> GetString(...,"Rate/kWh") -> Columns[rate].Header
+[x] string - tesla_sessions.col.total           -> GetString(...,"Total ($)") -> TotalColumnLabel (chart series name / DataView value header)
+[x] string - tesla_sessions.col.type            -> GetString(...,"Type") -> Columns[type].Header
+[x] string - tesla_sessions.col.vin             -> GetString(...,"VIN") -> Columns[vin].Header
+[x] string - tesla_sessions.lastSync            -> GetString(...,"Last synced") -> LastSyncText prefix
+[x] string - tesla_sessions.map                 -> GetString(...,"Session Locations") -> MapTitle
+[x] string - tesla_sessions.monthlyCost         -> GetString(...,"Monthly Charging Cost") -> MonthlyCostTitle
+[x] string - tesla_sessions.monthlyCost.aria    -> GetString(...,"Monthly Tesla charging cost bar chart") -> MonthlyCostAria (TsChartContainer.AccessibleSummary)
+[x] string - tesla_sessions.noChartData         -> GetString(...,"No cost data yet. Click \"Refresh from Tesla\" to sync.") -> NoChartDataMessage
+[x] string - tesla_sessions.noData              -> GetString(...,"No fleet charging sessions yet. …") -> NoDataMessage
+[x] string - tesla_sessions.noMapData           -> GetString(...,"No location data available yet.") -> NoMapDataMessage
+[x] string - tesla_sessions.refresh             -> GetString(...,"Refresh from Tesla") -> RefreshLabel / RefreshButtonLabel(idle)
+[x] string - tesla_sessions.refreshing          -> GetString(...,"Syncing...") -> RefreshingLabel / RefreshButtonLabel(pending)
+[x] string - tesla_sessions.stats.avgCost       -> GetString(...,"Avg Cost/kWh") -> AvgCostStatLabel
+[x] string - tesla_sessions.stats.cost_decimal  -> GetString(...,"Total Cost") -> CostStatLabel
+[x] string - tesla_sessions.stats.energy        -> GetString(...,"Total Energy") -> EnergyStatLabel
+[x] string - tesla_sessions.stats.peakPower     -> GetString(...,"Peak Power") -> PeakPowerStatLabel
+[x] string - tesla_sessions.stats.sessions      -> GetString(...,"Total Sessions") -> SessionsStatLabel
+[x] string - tesla_sessions.subtitle            -> GetString(...,"Detailed charging session data from Tesla …") -> Subtitle
+[x] string - tesla_sessions.table               -> GetString(...,"Charging Sessions") -> TableTitle
+[x] string - tesla_sessions.title               -> GetString(...,"Fleet Charging Sessions") -> Title / AutomationName
+
+PARITY_COVERED=48
+# Coverage asserted headlessly in TeslaSync.App.Tests/FeatureViews/TeslaChargingSessionsPageTests.cs (43 tests, all green):
+# Projection_resolves_every_required_string_key (+ _even_in_the_loading_state) records every one of the 32 keys above
+# through a RecordingLocalizer; the four state tests + the ViewModel_* matrix assert each region renders from the bound
+# TeslaChargingSessionsDisplay holder (loading/empty/error/success, set-vehicle reload, refresh, 403 business-only);
+# the stat-card / chart / monthly-aggregation / map-points / table-columns+rows / vehicle-options / refresh-label /
+# last-sync tests pin every panel's projected values; ClientFeed_* assert the three generated-client GET/POST request
+# shapes (with/without the vin query); Snapshot_*/Vehicles_* assert the {data:…} envelope unwrap + tolerant parsing.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TeslaChargingSessionsPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Charging path does not exist in-repo)
+#   + the test file scanned the same way
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App project also built; pre-existing TeslaSync.App.Core CA warnings only, none in the new code)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (whole solution; all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 26354, Failed: 0, Skipped: 0
+#   (incl. 43 TeslaChargingSessionsPageTests)
+TEST_EXIT=0
+PARITY_COVERED=48
+PARITY_REQUIRED=48
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TeslaChargingSessionsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/TeslaChargingSessionsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-charging-TeslaChargingSessionsPage.log
+# git commit -m "feat(apps/windows): TeslaChargingSessionsPage at web parity (W7 charging)"
+
+EXIT=0
+STATUS=DONE

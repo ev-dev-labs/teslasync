@@ -145,6 +145,9 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("Powershare", static () => new FeatureViews.Charging.PowersharePage());
         // Charging / Smart Charge page (P2/W7) — parity port of web SmartChargePage at routes /charging/schedule + /smart-charge.
         _viewModel.PageFactory.Register("SmartCharge", static () => new FeatureViews.Charging.SmartChargePage());
+        // Charging / Tesla fleet charging sessions page (P2/W7) — parity port of web TeslaChargingSessionsPage at
+        // route /tesla-charging-sessions.
+        _viewModel.PageFactory.Register("TeslaChargingSessions", static () => new FeatureViews.Charging.TeslaChargingSessionsPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
