@@ -492,3 +492,4 @@ p3-android/feature-views/A-0241-BackupActionsCard.prompt.md
 p3-android/feature-views/A-0239-BackendStatusSection.prompt.md
 p3-android/feature-views/A-0246-IncidentForm.prompt.md
 p3-android/feature-views/A-0247-IncidentsCard.prompt.md
+p3-android/feature-views/A-0254-StatusPageSkeleton.prompt.md
