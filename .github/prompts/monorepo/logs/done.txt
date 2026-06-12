@@ -729,3 +729,4 @@ p2-windows/pages/automations/ConditionBuilder.prompt.md
 p2-windows/pages/analytics/YearReviewPage.prompt.md
 p2-windows/pages/automations/ConflictWarnings.prompt.md
 p2-windows/pages/automations/ActionBuilder.prompt.md
+p2-windows/pages/automations/TriggerConfigurator.prompt.md
