@@ -1,0 +1,44 @@
+/*
+  WidgetTipCards.strings
+  TeslaSync — P4 widget primitive · 0012 · WidgetTipCards (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web
+  `features/dashboard/widgets/shared/WidgetTipCards.tsx` renders exactly one copy string of its own — the
+  empty-state default `'No recommendations'` (a literal, not a `t()` call); its `title` / `description` /
+  `impactLabel` are caller-supplied, already-localized props rendered verbatim. The first entry below
+  mirrors that single literal. The impact labels localize the web `tip.impact` fallback (the web shows the
+  raw enum value — "high" — when no `impactLabel` is given; the native peer must not ship raw English). The
+  rest are native a11y / HIG additions: the empty-leaf supporting hint and the card's combined VoiceOver
+  reading.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("WidgetTipCards") so each parallel surface prompt owns its own strings. In test /
+  preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web copy (verbatim port of the web literal) --- */
+
+/* Empty-state default message — the web `emptyMessage ?? 'No recommendations'`. */
+"widgetTipCards.empty" = "No recommendations";
+
+/* --- Localized impact labels (the web `tip.impact` raw-enum fallback, localized) --- */
+
+/* High-impact badge label. */
+"widgetTipCards.impact.high" = "High";
+
+/* Medium-impact badge label. */
+"widgetTipCards.impact.medium" = "Medium";
+
+/* Low-impact badge label. */
+"widgetTipCards.impact.low" = "Low";
+
+/* --- Native a11y / HIG additions (no web `t()` key exists) --- */
+
+/* Supporting line of the empty leaf, so the surface never renders a bare box. */
+"widgetTipCards.emptyHint" = "Recommendations appear here once there is something to suggest.";
+
+/* A card's combined VoiceOver reading with an impact — "{title}, {impact}. {description}". Positional. */
+"widgetTipCards.cardLabelWithImpact" = "%1$@, %2$@. %3$@";
+
+/* A card's combined VoiceOver reading without an impact — "{title}. {description}". Positional. */
+"widgetTipCards.cardLabel" = "%1$@. %2$@";
