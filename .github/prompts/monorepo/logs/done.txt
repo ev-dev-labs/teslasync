@@ -712,3 +712,4 @@ p2-windows/widget-primitives/W-0007-WidgetGaugeHero.prompt.md
 p2-windows/widget-primitives/W-0009-WidgetRankedList.prompt.md
 p2-windows/widget-primitives/W-0012-WidgetTipCards.prompt.md
 p2-windows/widget-primitives/W-0013-WidgetShell.prompt.md
+p2-windows/pages/admin/ApiLogsPage.prompt.md
