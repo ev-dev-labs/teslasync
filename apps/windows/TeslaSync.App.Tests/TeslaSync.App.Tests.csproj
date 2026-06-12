@@ -1466,8 +1466,8 @@
     .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it into multiple
     Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); when that happens, regenerate
     it directly from the WinUI-free sources on disk. Regenerated into this single canonical Project root for P2
-    shared-surfaces/0160 TagInput (repairing a merge=union multi-root corruption) from the WinUI-free sources on disk,
-    plus the new TagInput Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write
+    shared-surfaces/0169 Layout (repairing a merge=union multi-root corruption) from the WinUI-free sources on disk,
+    plus the new Layout Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write
     a literal build-item or project start tag inside this comment.
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
     Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk under
@@ -2635,6 +2635,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Model.cs" Link="SharedSurfaces\KpiOverviewCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Source.cs" Link="SharedSurfaces\KpiOverviewCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.ViewModel.cs" Link="SharedSurfaces\KpiOverviewCard.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Layout.Model.cs" Link="SharedSurfaces\Layout.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Layout.Source.cs" Link="SharedSurfaces\Layout.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Layout.ViewModel.cs" Link="SharedSurfaces\Layout.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.Model.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.Source.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.ViewModel.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.ViewModel.cs" />
