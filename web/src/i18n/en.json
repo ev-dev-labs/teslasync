@@ -7284,6 +7284,22 @@
         "critical": "Critical"
       },
       "editor": {
+        "includeTitleLabel": "Include title in notifications",
+        "includeTitleHelp": "When unchecked, Discord/Slack/Telegram/ntfy/webhook deliver only the body. WebPush, email, and Pushover always include a title.",
+        "messageTemplateLabel": "Message Template",
+        "messageTemplateHint": "Type {{ to insert a placeholder",
+        "messageTemplateHelp": "Per-rule body template. Reference live signals with double-brace placeholders like {{BatteryLevel}}. Leave blank to use the op-aware default body.",
+        "messageTemplatePlaceholder": "Battery at {{BatteryLevel}}% — leave blank for the smart default",
+        "presetButton": "Pick a preset",
+        "autocompleteLabel": "Placeholder suggestions",
+        "autocompleteEmpty": "No matching placeholders",
+        "previewLabel": "Preview",
+        "previewEmpty": "Start typing to see a preview",
+        "previewEmptyBody": "(no body — title carries the alert)",
+        "presetModalTitle": "Message Presets",
+        "presetModalIntro": "Curated templates for common alert shapes. Click one to apply it; you can edit it afterwards.",
+        "presetAllTag": "All",
+        "presetEmpty": "No presets match this filter",
         "enabled": "Enabled",
         "disabled": "Disabled",
         "alertBehavior": {
