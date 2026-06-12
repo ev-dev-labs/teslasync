@@ -386,3 +386,4 @@ p3-android/feature-views/A-0133-VehicleHero.prompt.md
 p3-android/feature-views/A-0135-AddressInput.prompt.md
 p3-android/feature-views/A-0136-CostSavingsPanel.prompt.md
 p3-android/feature-views/A-0130-RecentActivity.prompt.md
+p3-android/feature-views/A-0148-SocChart.prompt.md
