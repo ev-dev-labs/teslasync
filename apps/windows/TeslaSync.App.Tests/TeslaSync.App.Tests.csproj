@@ -1376,6 +1376,25 @@
     merge=union multi-root corruption) from the WinUI-free sources on disk, plus the new ReloadPrompt
     Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal
     build item or project start tag inside this comment.
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
+    logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every dashboard-widget,
+    feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
+    TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's Microsoft.UI-free
+    sources are Compile-linked into the single, case-insensitive ordinal path-sorted, Include-deduplicated
+    ItemGroup below (the Link mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces,
+    ModalsDialogs or SharedSurfaces); the bare WinUI view files are excluded and exercised by the app build,
+    and the test classes are picked up by the SDK default-compile glob. The Content links copy the units-golden,
+    Package.appxmanifest and widget-template fixtures.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
+    Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk under
+    dashboard-widgets, feature-views, misc-surfaces, modals-dialogs and shared-surfaces. This file carries the
+    .gitattributes merge=union strategy, which can re-concatenate it into multiple roots plus duplicate Compile
+    items (failing XML load, MSB4025 / MSB4067); when that happens, regenerate it directly from the WinUI-free
+    sources on disk. Regenerated into this single canonical root for P2 shared-surfaces/0143 TimeMachineBanner
+    (repairing a merge=union multi-root corruption), plus the new TimeMachineBanner Model / Source / ViewModel
+    links. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag
+    inside this comment.
   -->
 
   <PropertyGroup>
@@ -2519,6 +2538,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\QueryError.ViewModel.cs" Link="SharedSurfaces\QueryError.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Range.Model.cs" Link="SharedSurfaces\Range.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Range.ViewModel.cs" Link="SharedSurfaces\Range.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.Model.cs" Link="SharedSurfaces\ReleaseNotes.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.ViewModel.cs" Link="SharedSurfaces\ReleaseNotes.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SavedViewMenu\SavedViewMenu.Model.cs" Link="SharedSurfaces\SavedViewMenu\SavedViewMenu.Model.cs" />
@@ -2551,6 +2572,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimelineScrubber.Model.cs" Link="SharedSurfaces\TimelineScrubber.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimelineScrubber.Source.cs" Link="SharedSurfaces\TimelineScrubber.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimelineScrubber.ViewModel.cs" Link="SharedSurfaces\TimelineScrubber.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMachineBanner\TimeMachineBanner.Model.cs" Link="SharedSurfaces\TimeMachineBanner\TimeMachineBanner.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMachineBanner\TimeMachineBanner.Source.cs" Link="SharedSurfaces\TimeMachineBanner\TimeMachineBanner.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMachineBanner\TimeMachineBanner.ViewModel.cs" Link="SharedSurfaces\TimeMachineBanner\TimeMachineBanner.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.Model.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.Source.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TimeMarker\TimeMarker.ViewModel.cs" Link="SharedSurfaces\TimeMarker\TimeMarker.ViewModel.cs" />
