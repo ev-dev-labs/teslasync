@@ -1,6 +1,68 @@
 {
   "direction": "ltr",
   "entries": {
+    "translation.ai.settings.provider.azureApiVersion": {
+      "tokens": [],
+      "translated": true,
+      "value": "API version"
+    },
+    "translation.ai.settings.provider.azureApiVersionHint": {
+      "tokens": [],
+      "translated": true,
+      "value": "Leave blank to use the adapter default."
+    },
+    "translation.ai.settings.provider.azureBaseUrl": {
+      "tokens": [],
+      "translated": true,
+      "value": "Resource endpoint URL"
+    },
+    "translation.ai.settings.provider.azureBaseUrlHint": {
+      "tokens": [],
+      "translated": true,
+      "value": "The Azure OpenAI resource endpoint or Azure AI Foundry endpoint."
+    },
+    "translation.ai.settings.provider.azureDeployment": {
+      "tokens": [],
+      "translated": true,
+      "value": "Chat deployment name"
+    },
+    "translation.ai.settings.provider.azureDeploymentHint": {
+      "tokens": [],
+      "translated": true,
+      "value": "Leave blank to reuse the Model field."
+    },
+    "translation.ai.settings.provider.azureEmbeddingDeployment": {
+      "tokens": [],
+      "translated": true,
+      "value": "Embedding deployment name (optional)"
+    },
+    "translation.ai.settings.provider.azureFlavor": {
+      "tokens": [],
+      "translated": true,
+      "value": "Azure surface"
+    },
+    "translation.ai.settings.provider.azureModelHint": {
+      "tokens": [],
+      "translated": true,
+      "value": "Used for cost tracking. Leave Deployment blank if your Azure deployment is named the same."
+    },
+    "translation.ai.settings.provider.azureModelLabel": {
+      "tokens": [],
+      "translated": true,
+      "value": "Model identifier (e.g. gpt-4o-mini)"
+    },
+    "translation.ai.settings.validate.cloudButton": {
+      "tokens": [],
+      "translated": true,
+      "value": "Validate connection"
+    },
+    "translation.ai.settings.validate.successProbed": {
+      "tokens": [
+        "model"
+      ],
+      "translated": true,
+      "value": "OK — {{model}} reachable"
+    },
     "translation.AC": {
       "tokens": [],
       "translated": true,

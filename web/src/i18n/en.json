@@ -2421,13 +2421,25 @@
         "costCap": "Daily cost cap (USD)",
         "costCapHint": "Daily cap on cloud spending. 0 disables the cap.",
         "localExplainer": "Local-only mode never sends data outside your network. The validator pins the resolved IP at save time to defend against later DNS rebinding.",
-        "validateOptional": "Validation is optional but recommended — it catches mis-typed URLs and confirms the model is reachable."
+        "validateOptional": "Validation is optional but recommended — it catches mis-typed URLs and confirms the model is reachable.",
+        "azureModelLabel": "Model identifier (e.g. gpt-4o-mini)",
+        "azureModelHint": "Used for cost tracking. Leave Deployment blank if your Azure deployment is named the same.",
+        "azureFlavor": "Azure surface",
+        "azureApiVersion": "API version",
+        "azureApiVersionHint": "Leave blank to use the adapter default.",
+        "azureDeployment": "Chat deployment name",
+        "azureDeploymentHint": "Leave blank to reuse the Model field.",
+        "azureEmbeddingDeployment": "Embedding deployment name (optional)",
+        "azureBaseUrl": "Resource endpoint URL",
+        "azureBaseUrlHint": "The Azure OpenAI resource endpoint or Azure AI Foundry endpoint."
       },
       "validate": {
         "button": "Validate",
         "running": "Validating…",
         "success": "OK — provider reachable",
         "successPinned": "OK — pinned to {{ip}}",
+        "successProbed": "OK — {{model}} reachable",
+        "cloudButton": "Validate connection",
         "failure": "Validation failed"
       },
       "feature": {

@@ -1,6 +1,80 @@
 {
   "direction": "rtl",
   "entries": {
+    "translation.ai.settings.provider.azureApiVersion": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "API version"
+    },
+    "translation.ai.settings.provider.azureApiVersionHint": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Leave blank to use the adapter default."
+    },
+    "translation.ai.settings.provider.azureBaseUrl": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Resource endpoint URL"
+    },
+    "translation.ai.settings.provider.azureBaseUrlHint": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "The Azure OpenAI resource endpoint or Azure AI Foundry endpoint."
+    },
+    "translation.ai.settings.provider.azureDeployment": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Chat deployment name"
+    },
+    "translation.ai.settings.provider.azureDeploymentHint": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Leave blank to reuse the Model field."
+    },
+    "translation.ai.settings.provider.azureEmbeddingDeployment": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Embedding deployment name (optional)"
+    },
+    "translation.ai.settings.provider.azureFlavor": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Azure surface"
+    },
+    "translation.ai.settings.provider.azureModelHint": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Used for cost tracking. Leave Deployment blank if your Azure deployment is named the same."
+    },
+    "translation.ai.settings.provider.azureModelLabel": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Model identifier (e.g. gpt-4o-mini)"
+    },
+    "translation.ai.settings.validate.cloudButton": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Validate connection"
+    },
+    "translation.ai.settings.validate.successProbed": {
+      "fallbackFrom": "en",
+      "tokens": [
+        "model"
+      ],
+      "translated": false,
+      "value": "OK — {{model}} reachable"
+    },
     "translation.AC": {
       "fallbackFrom": "en",
       "tokens": [],
