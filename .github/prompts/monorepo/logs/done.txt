@@ -347,3 +347,4 @@ p3-android/feature-views/A-0094-TimeToChargeSection.prompt.md
 p3-android/feature-views/A-0099-ChartsRow.prompt.md
 p3-android/feature-views/A-0102-EfficiencyPanel.prompt.md
 p3-android/feature-views/A-0100-CostHeatmap.prompt.md
+p3-android/feature-views/A-0101-DetailedStatistics.prompt.md
