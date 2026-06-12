@@ -2303,6 +2303,7 @@
   <string name="translation_costAnalysis_charts_noData">Not enough data</string>
   <string name="translation_costAnalysis_charts_rateLabel">$/kWh</string>
   <string name="translation_costAnalysis_empty_title">No Charging Data</string>
+  <string name="translation_costAnalysis_environment_desc">By driving electric instead of a gas car, you have avoided the equivalent of</string>
   <string name="translation_costAnalysis_environment_dollarsSaved">$ saved total</string>
   <string name="translation_costAnalysis_environment_gallons">gallons avoided</string>
   <string name="translation_costAnalysis_environment_kgCo2">kg CO₂ saved</string>
@@ -2312,6 +2313,7 @@
   <string name="translation_costAnalysis_environment_title">Environmental Impact</string>
   <string name="translation_costAnalysis_environment_treeEquiv">tree-years equivalent</string>
   <string name="translation_costAnalysis_environment_treeNote">That\'s the same as</string>
+  <string name="translation_costAnalysis_environment_treesAbsorbing">trees absorbing carbon for a full year.</string>
   <string name="translation_costAnalysis_forecast_actual">Actual Cost</string>
   <string name="translation_costAnalysis_forecast_annual">Annual</string>
   <string name="translation_costAnalysis_forecast_avgKm">Avg km/mo</string>
