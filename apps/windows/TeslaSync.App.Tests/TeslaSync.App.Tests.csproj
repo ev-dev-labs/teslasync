@@ -138,6 +138,16 @@
     strategy can re-concatenate this file into multiple roots plus duplicate items (failing XML load,
     MSB4025 / MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk. Never
     write a literal build item or project start tag inside this comment.
+
+    INVARIANT: keep this file as exactly ONE project root with a single PropertyGroup, the package /
+    project-reference / content item groups, and ONE Compile item group (the case-insensitive ordinal
+    path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/,
+    feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/). The .gitattributes merge=union
+    strategy can re-concatenate this file into multiple roots plus duplicate items (failing XML load, MSB4025 /
+    MSB4067); when that happens, regenerate it directly from the Microsoft.UI-free sources on disk. Regenerated
+    into this single canonical root for P2 shared-surfaces/0223 PrintButton (repairing a merge=union multi-root
+    corruption), plus the new PrintButton Model / Source / ViewModel links. Do NOT re-concatenate into multiple
+    roots, and never write a literal build item or project start tag inside this comment.
   -->
 
     INVARIANT: keep this file as exactly ONE Project root with a single PropertyGroup, the package /
@@ -1238,6 +1248,11 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Model.cs" Link="SharedSurfaces\DataFreshness.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.Source.cs" Link="SharedSurfaces\DataFreshness.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DataFreshness.ViewModel.cs" Link="SharedSurfaces\DataFreshness.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataTableBulkBar.Model.cs" Link="SharedSurfaces\DataTableBulkBar.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataTableBulkBar.ViewModel.cs" Link="SharedSurfaces\DataTableBulkBar.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataTableColumnsMenu.Model.cs" Link="SharedSurfaces\DataTableColumnsMenu.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataTableColumnsMenu.Source.cs" Link="SharedSurfaces\DataTableColumnsMenu.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DataTableColumnsMenu.ViewModel.cs" Link="SharedSurfaces\DataTableColumnsMenu.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DataTableResizer.Model.cs" Link="SharedSurfaces\DataTableResizer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DataTableResizer.ViewModel.cs" Link="SharedSurfaces\DataTableResizer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DateGroupedList\DateGroupedList.Model.cs" Link="SharedSurfaces\DateGroupedList\DateGroupedList.Model.cs" />
@@ -1282,6 +1297,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Model.cs" Link="SharedSurfaces\FreshnessIndicator.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Source.cs" Link="SharedSurfaces\FreshnessIndicator.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.ViewModel.cs" Link="SharedSurfaces\FreshnessIndicator.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\FullscreenButton\FullscreenButton.Model.cs" Link="SharedSurfaces\FullscreenButton\FullscreenButton.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\FullscreenButton\FullscreenButton.Source.cs" Link="SharedSurfaces\FullscreenButton\FullscreenButton.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\FullscreenButton\FullscreenButton.ViewModel.cs" Link="SharedSurfaces\FullscreenButton\FullscreenButton.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Model.cs" Link="SharedSurfaces\HealthRow\HealthRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Source.cs" Link="SharedSurfaces\HealthRow\HealthRow.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.ViewModel.cs" Link="SharedSurfaces\HealthRow\HealthRow.ViewModel.cs" />
@@ -1341,6 +1359,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\Pressure.Model.cs" Link="SharedSurfaces\Pressure.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Pressure.Source.cs" Link="SharedSurfaces\Pressure.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Pressure.ViewModel.cs" Link="SharedSurfaces\Pressure.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\PrintButton.Model.cs" Link="SharedSurfaces\PrintButton.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\PrintButton.Source.cs" Link="SharedSurfaces\PrintButton.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\PrintButton.ViewModel.cs" Link="SharedSurfaces\PrintButton.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\QueryError.Model.cs" Link="SharedSurfaces\QueryError.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\QueryError.Source.cs" Link="SharedSurfaces\QueryError.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\QueryError.ViewModel.cs" Link="SharedSurfaces\QueryError.ViewModel.cs" />
