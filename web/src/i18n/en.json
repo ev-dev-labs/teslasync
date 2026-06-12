@@ -6220,6 +6220,7 @@
     "elevLoss": "Elev. Loss",
     "inProgress": "In progress",
     "elevProfile": "Elevation Profile",
+    "elevProfileAria": "Elevation and speed area+line chart over the drive timeline",
     "gain": "gain",
     "loss": "loss",
     "net": "Net",
