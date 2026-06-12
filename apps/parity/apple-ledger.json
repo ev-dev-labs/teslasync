@@ -55,6 +55,24 @@
       "requiredCount": 51,
       "promptId": "p4-apple/P7/page:admin/FleetTelemetryCoverage",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-FleetTelemetryCoveragePage.log"
+    },
+    {
+      "unitId": "page:admin/LiveSignalInspector",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 13,
+      "requiredCount": 13,
+      "promptId": "p4-apple/P7/page:admin/LiveSignalInspector",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-LiveSignalInspectorPage.log"
+    },
+    {
+      "unitId": "page:admin/LiveSignalInspector",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 13,
+      "requiredCount": 13,
+      "promptId": "p4-apple/P7/page:admin/LiveSignalInspector",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-LiveSignalInspectorPage.log"
     }
   ]
 }
