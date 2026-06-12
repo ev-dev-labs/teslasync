@@ -315,3 +315,4 @@ p3-android/feature-views/A-0062-DriveHighlightSlide.prompt.md
 p3-android/feature-views/A-0067-StatChartSlide.prompt.md
 p3-android/feature-views/A-0065-SavingsSlide.prompt.md
 p3-android/feature-views/A-0070-TitleSlide.prompt.md
+p3-android/feature-views/A-0068-StatHeroSlide.prompt.md
