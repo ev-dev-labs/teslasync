@@ -730,3 +730,4 @@ p2-windows/pages/analytics/YearReviewPage.prompt.md
 p2-windows/pages/automations/ConflictWarnings.prompt.md
 p2-windows/pages/automations/ActionBuilder.prompt.md
 p2-windows/pages/automations/TriggerConfigurator.prompt.md
+p2-windows/pages/automations/PresetGallery.prompt.md
