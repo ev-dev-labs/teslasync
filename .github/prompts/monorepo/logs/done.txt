@@ -403,3 +403,4 @@ p3-android/feature-views/A-0156-HealthRecommendations.prompt.md
 p3-android/feature-views/A-0154-HealthGaugeGrid.prompt.md
 p3-android/feature-views/A-0157-LiveMotorStatus.prompt.md
 p3-android/feature-views/A-0155-HealthOverview.prompt.md
+p3-android/feature-views/A-0158-PowerOutputChart.prompt.md
