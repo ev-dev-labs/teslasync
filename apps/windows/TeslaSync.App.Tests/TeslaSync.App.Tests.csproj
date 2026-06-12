@@ -1487,17 +1487,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
     Microsoft.UI-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
-    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. TeslaSync.App targets a WinUI
-    TFM and cannot be project-referenced from a plain net10.0 host, so each surface's Microsoft.UI-free sources
-    are Compile-linked below (the Link mirrors each source's real location under Widgets, FeatureViews,
-    MiscSurfaces, ModalsDialogs or SharedSurfaces). The bare WinUI view files are excluded and exercised by the
-    app build; the test classes are picked up by the SDK default-compile glob; the Content links copy the
-    units-golden, Package.appxmanifest and widget-template fixtures the tests read out of the output directory.
+    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. TeslaSync.App targets a
+    WinUI TFM and cannot be project-referenced from a plain net10.0 host, so each surface's Microsoft.UI-free
+    sources are Compile-linked below (the Link mirrors each source's real location under Widgets, FeatureViews,
+    MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are excluded and exercised by the
+    app build, and the test classes are picked up by the SDK default-compile glob. The Content links copy the
+    units-golden, Package.appxmanifest and widget-template fixtures the tests read from the output directory.
 
     INVARIANT: keep this file as exactly ONE Project root with a single PropertyGroup, the package /
-    project-reference / content ItemGroups, and ONE Compile ItemGroup - the case-insensitive ordinal
+    project-reference / content item groups, and ONE Compile item group - the case-insensitive ordinal
     path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/,
     feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file carries the .gitattributes
     merge=union strategy, so a chain of integration merges can re-concatenate it into multiple roots plus
@@ -1582,6 +1582,10 @@
     directly from the Microsoft.UI-free sources on disk. Regenerated into this single canonical Project
     root for P2 shared-surfaces/0224 RangeSlider, plus the new RangeSlider Model / ViewModel links. Do NOT
     re-concatenate into multiple roots, and never write a literal build item or project start tag here.
+    Microsoft.UI-free sources on disk. Regenerated into this single canonical root for P2 shared-surfaces/0230
+    Toggle (repairing a merge=union multi-root and comment corruption), plus the new Toggle Model / ViewModel
+    links. Do NOT re-concatenate into multiple roots, and never write a literal build item or project start tag
+    inside this comment.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -1615,10 +1619,6 @@
     </Content>
   </ItemGroup>
 
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App; see the header comment for the single-root / sort / dedupe invariant. -->
-  <ItemGroup>    <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App: a single, case-insensitive ordinal path-sorted, Include-deduplicated item group (the union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/). -->
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App; single-root / case-insensitive ordinal sort / Include-dedupe invariant (see header). -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App: a single, case-insensitive ordinal path-sorted, Include-deduplicated item group. See the header invariant before editing. -->
   <ItemGroup>
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App: a single, case-insensitive ordinal path-sorted, Include-deduplicated item group. See the header invariant before editing. -->
@@ -2185,8 +2185,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\LiveStateIndicators\LiveStateIndicators.Source.cs" Link="FeatureViews\LiveStateIndicators\LiveStateIndicators.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveStateIndicators\LiveStateIndicators.ViewModel.cs" Link="FeatureViews\LiveStateIndicators\LiveStateIndicators.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveStatusPill\LiveStatusPill.Model.cs" Link="FeatureViews\LiveStatusPill\LiveStatusPill.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetry\LiveTelemetry.Model.cs" Link="FeatureViews\LiveTelemetry\LiveTelemetry.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" Link="FeatureViews\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetry\LiveTelemetry.Model.cs" Link="FeatureViews\LiveTelemetry\LiveTelemetry.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.Model.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.Source.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.ViewModel.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.ViewModel.cs" />
@@ -2350,13 +2350,13 @@
     <Compile Include="..\TeslaSync.App\feature-views\SuggestedPrompts.Model.cs" Link="FeatureViews\SuggestedPrompts.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SuggestedPrompts.ViewModel.cs" Link="FeatureViews\SuggestedPrompts.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummarySlide\SummarySlide.Model.cs" Link="FeatureViews\SummarySlide\SummarySlide.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Model.cs" Link="FeatureViews\SummaryStats\SummaryStats.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Source.cs" Link="FeatureViews\SummaryStats\SummaryStats.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.ViewModel.cs" Link="FeatureViews\SummaryStats\SummaryStats.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Model.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Source.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsRow.Model.cs" Link="FeatureViews\SummaryStatsRow.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Model.cs" Link="FeatureViews\SummaryStats\SummaryStats.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Source.cs" Link="FeatureViews\SummaryStats\SummaryStats.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.ViewModel.cs" Link="FeatureViews\SummaryStats\SummaryStats.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Model.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Source.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Source.cs" />
@@ -2729,6 +2729,7 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Model.cs" Link="SharedSurfaces\HealthRow\HealthRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Source.cs" Link="SharedSurfaces\HealthRow\HealthRow.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.ViewModel.cs" Link="SharedSurfaces\HealthRow\HealthRow.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\HelpTooltip\HelpTooltip.Model.cs" Link="SharedSurfaces\HelpTooltip\HelpTooltip.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.Model.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.ViewModel.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\InlineCallout.Model.cs" Link="SharedSurfaces\InlineCallout.Model.cs" />
@@ -2738,6 +2739,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Model.cs" Link="SharedSurfaces\KpiOverviewCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Source.cs" Link="SharedSurfaces\KpiOverviewCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.ViewModel.cs" Link="SharedSurfaces\KpiOverviewCard.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Label.Model.cs" Link="SharedSurfaces\Label.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Label.ViewModel.cs" Link="SharedSurfaces\Label.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Layout.Model.cs" Link="SharedSurfaces\Layout.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Layout.Source.cs" Link="SharedSurfaces\Layout.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Layout.ViewModel.cs" Link="SharedSurfaces\Layout.ViewModel.cs" />
@@ -2883,6 +2886,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\Toast\Toast.Model.cs" Link="SharedSurfaces\Toast\Toast.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Toast\Toast.Source.cs" Link="SharedSurfaces\Toast\Toast.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Toast\Toast.ViewModel.cs" Link="SharedSurfaces\Toast\Toast.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Toggle\Toggle.Model.cs" Link="SharedSurfaces\Toggle\Toggle.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Toggle\Toggle.ViewModel.cs" Link="SharedSurfaces\Toggle\Toggle.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UnitInput.Model.cs" Link="SharedSurfaces\UnitInput.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UnitInput.Source.cs" Link="SharedSurfaces\UnitInput.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UnitInput.ViewModel.cs" Link="SharedSurfaces\UnitInput.ViewModel.cs" />
