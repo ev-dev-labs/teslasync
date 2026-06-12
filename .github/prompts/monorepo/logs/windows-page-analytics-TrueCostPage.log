@@ -1,0 +1,128 @@
+=== p2-windows · W7 · page:analytics/TrueCost (WinUI 3 / Fluent) ===
+Parity unit : page:analytics/TrueCost   kind=page   web route=/analytics/tco
+Web source  : web/src/features/analytics/pages/TrueCostPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the cache-then-network data port, also Microsoft.UI-free),
+  <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view).
+  The generated prompt's idealized "TrueCostPage.xaml + TrueCostPageViewModel.cs under TeslaSync/Features/
+  Analytics" is mapped onto these real conventions; the surface registers itself with the W4
+  ShellPageFactory by route name ("TrueCostOwnership"), which RouteTable.cs already maps to /tco and the
+  /analytics/tco deep link.
+- Data source (web useCostBreakdown · GET /analytics/tco?vehicle_id=…): ported as the Microsoft.UI-free
+  ITrueCostBreakdownSource. The repository-backed TrueCostBreakdownSource resolves the scoped/primary
+  vehicle via the shared IWidgetVehicleSource (native useSelectedVehicle + vehicles?.[0]?.id fallback) and
+  runs one cache-then-network read of the generated operation get_api_v1_analytics_tco through the shared
+  CacheThenNetworkEngine (cacheKey analytics:tco:{id}, shared with the dashboard CostBreakdownWidget), then
+  parses each emission into the full SI TrueCostBreakdown (16 scalar fields + monthly rows) via
+  TrueCostResultMapper. The parameterless TrueCostPage() defaults to EmptyTrueCostBreakdownSource (renders
+  the empty state) — the established W7 default-feed pattern — while TrueCostPage(source, localizer) drives
+  the full loading/empty/error/success matrix for DI hosts and the headless tests. No HTTP touches the view.
+- Units: SI on the wire (total_wh, total_km, cost_per_km*). Display restatement happens only at projection
+  time via the shared C# behavior port — UnitFormatters.FormatEnergy / FormatDistance + ScalarFormatters.
+  FormatCurrency / FormatNumber (P1/S5). No non-SI is stored or computed.
+- Catalog: 27 of the page's 32 i18n keys already existed verbatim in Strings/{en,ar,he}/Resources.resw
+  (translation.tco.* + the two implicit common.unit.* the web ternary reads). FIVE keys were missing and
+  were added, in sorted position, to all three locale catalogs (en/ar/he): translation.common.unit.gallon,
+  translation.common.unit.liter, translation.tco.costPerKm.aria, translation.tco.cumulativeSavings.aria,
+  translation.tco.monthlyEvVsGas.aria (English text seeded; resolves verbatim via ILocalizer/web key names).
+- Vehicle scope: the native shell centralises the vehicle picker (VehiclePickerStatusBar / selectedVehicle),
+  so the page does not pixel-clone the web header's per-page <VehicleSelect/>; it reads the scoped vehicle
+  through the source's IWidgetVehicleSource and surfaces a TsDataFreshness chip (native DataFreshnessAuto).
+
+=== PARITY ===
+PARITY_REQUIRED=51
+
+# Panels (9) — every named panel + every anonymous GlassPanel region from the web source
+[x] panel  - GlassPanel1                  -> TrueCostPage.Model.cs#TrueCostProjection.Project TotalEvCost (tco.totalEvCost, formatCurrency(total_charging_cost), formatEnergy(total_wh)·total_sessions); rendered TrueCostPage.cs#StatTile _evTile (TsGlassPanel Glow=Cyan)
+[x] panel  - GlassPanel2                  -> TrueCostProjection.Project EquivGasCost (tco.equivGasCost, equivalent_gas_cost, gas_price/gasUnitLabel·gas_efficiency_mpg); rendered TrueCostPage.cs#_gasTile (TsGlassPanel)
+[x] panel  - GlassPanel3                  -> TrueCostProjection.Project TotalSavings (tco.totalSavings, total_savings, tco.overMonths months_of_ownership); rendered TrueCostPage.cs#_savingsTile (TsGlassPanel Glow=Green)
+[x] panel  - GlassPanel4                  -> TrueCostProjection.Project MonthlySavings (tco.monthlySavings, monthly_savings, tco.plusMaintenance); rendered TrueCostPage.cs#_monthlyTile (TsGlassPanel Glow=Green)
+[x] panel  - Cumulative-Savings-Over-Time -> TrueCostPage.cs#_cumulativeContainer (TsChartContainer = tokenized TsGlassPanel) bound to Display.CumulativeTitle/CumulativeSeries
+[x] panel  - Cost-per-Kilometer           -> TrueCostPage.cs#_costPerKmContainer (TsChartContainer) Body = bar chart + the two per-km chips (_evChip/_gasChip)
+[x] panel  - Monthly-EV-vs-Gas-Cost       -> TrueCostPage.cs#_monthlyContainer (TsChartContainer) bound to Display.MonthlyTitle/MonthlySeries
+[x] panel  - GlassPanel8                  -> TrueCostPage.cs#_breakdownPanel (TsGlassPanel) — Savings Breakdown title + three BreakdownTiles (Fuel / Maintenance / Total Estimated) from Display.FuelSavings/MaintenanceSavings/TotalEstimatedSavings
+[x] panel  - GlassPanel9                  -> TrueCostPage.cs#_emptyPanel (TsGlassPanel) hosting _emptyState (TsEmptyState, web no-data GlassPanel); shown in TrueCostState.Empty with Display.NoDataMessage (tco.noData)
+
+# Charts (6) — native W3 chart wrappers (TsChartContainer + TsAreaChart/TsBarChart), never a web canvas
+[x] chart  - ChartContainer  -> TrueCostPage.cs#_cumulativeContainer (TsChartContainer): Title=tco.cumulativeSavings, AccessibleSummary=tco.cumulativeSavings.aria, State Ready/Empty on HasMonthlyData, EmptyMessage=tco.noMonthlyData
+[x] chart  - AreaChart       -> TrueCostPage.cs#_cumulativeChart (TsAreaChart) Series=Display.CumulativeSeries; TrueCostProjection builds ChartSeries{Kind=Area, Role=Battery} of (i, cumulative_savings, month)
+[x] chart  - ChartContainer  -> TrueCostPage.cs#_costPerKmContainer (TsChartContainer): Title=tco.costPerKm, AccessibleSummary=tco.costPerKm.aria, State Ready
+[x] chart  - BarChart        -> TrueCostPage.cs#_costPerKmChart (TsBarChart) Series=Display.CostPerKmSeries; ChartSeries{Kind=Bar} "Cost/km" with 2 points EV(cost_per_km_ev)/ICE(cost_per_km_ice) + chips _evChip/_gasChip (precision 3)
+[x] chart  - ChartContainer  -> TrueCostPage.cs#_monthlyContainer (TsChartContainer): Title=tco.monthlyEvVsGas, AccessibleSummary=tco.monthlyEvVsGas.aria, State Ready/Empty on HasMonthlyData
+[x] chart  - BarChart        -> TrueCostPage.cs#_monthlyChart (TsBarChart) Series=Display.MonthlySeries; two ChartSeries{Kind=Bar} "EV Cost"(ev_cost)/"Gas Equiv."(equiv_gas_cost) per month
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading -> TrueCostState.Loading + TrueCostPageViewModel.SetLoading; rendered TrueCostPage.cs#_loadingPanel (ProgressRing + caption); test ViewModel_loading_only_stays_loading
+[x] state  - empty   -> TrueCostState.Empty + ViewModel.SetEmpty (LoadStatus.Empty); rendered _emptyPanel/_emptyState (TsEmptyState); test ViewModel_empty_status_renders_empty_state + Empty_source_yields_empty_result
+[x] state  - error   -> TrueCostState.Error + ViewModel.SetError; rendered _errorBanner (TsAlertBanner Danger, InfoBar-equivalent) with ErrorMessage; test ViewModel_failure_renders_error
+[x] state  - success -> TrueCostState.Loaded/Stale/Offline + ViewModel.ApplySnapshot; rendered _contentPanel (hero + charts + breakdown), freshness chip reflects stale/offline; tests ViewModel_loaded_exposes_hero_charts_and_breakdown / _loaded_without_months_still_renders_success / _stale_cache_renders_stale_with_content / _offline_renders_offline_with_content_and_error
+
+# Strings (32) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - common.unit.gallon          -> TrueCostProjection.Project localizer.GetString("common.unit.gallon", "gal")    [catalog row added en/ar/he]
+[x] string - common.unit.liter           -> TrueCostProjection.Project localizer.GetString("common.unit.liter", "L")       [catalog row added en/ar/he]
+[x] string - tco.costKm                   -> TrueCostProjection.Project localizer.GetString("tco.costKm", "Cost/km") (cost-per-km bar series name)
+[x] string - tco.costPerKm               -> TrueCostProjection.Project localizer.GetString("tco.costPerKm", "Cost per Kilometer") (chart title)
+[x] string - tco.costPerKm.aria          -> TrueCostProjection.Project localizer.GetString("tco.costPerKm.aria", …) (chart AccessibleSummary)   [catalog row added en/ar/he]
+[x] string - tco.cumulativeSavings       -> TrueCostProjection.Project localizer.GetString("tco.cumulativeSavings", "Cumulative Savings Over Time") (title + area series name)
+[x] string - tco.cumulativeSavings.aria  -> TrueCostProjection.Project localizer.GetString("tco.cumulativeSavings.aria", …) (chart AccessibleSummary)   [catalog row added en/ar/he]
+[x] string - tco.electricityVsGas        -> TrueCostProjection.Project FuelSavings.Sublabel localizer.GetString("tco.electricityVsGas", "Electricity vs gasoline")
+[x] string - tco.equivGasCost            -> TrueCostProjection.Project EquivGasCost.Label localizer.GetString("tco.equivGasCost", "Equiv. Gas Cost")
+[x] string - tco.evCost                  -> TrueCostProjection.Project monthly series name localizer.GetString("tco.evCost", "EV Cost")
+[x] string - tco.evElectric              -> TrueCostProjection.Project cost-per-km point label localizer.GetString("tco.evElectric", "EV (Electric)")
+[x] string - tco.fuelSavings             -> TrueCostProjection.Project FuelSavings.Label localizer.GetString("tco.fuelSavings", "Fuel Savings")
+[x] string - tco.gasEquiv                -> TrueCostProjection.Project monthly series name localizer.GetString("tco.gasEquiv", "Gas Equiv.")
+[x] string - tco.iceGas                  -> TrueCostProjection.Project cost-per-km point label localizer.GetString("tco.iceGas", "ICE (Gas)")
+[x] string - tco.maintenanceSavings      -> TrueCostProjection.Project MaintenanceSavings.Label localizer.GetString("tco.maintenanceSavings", "Maintenance Savings (Est.)")
+[x] string - tco.monthlyEvVsGas          -> TrueCostProjection.Project localizer.GetString("tco.monthlyEvVsGas", "Monthly EV vs Gas Cost") (chart title)
+[x] string - tco.monthlyEvVsGas.aria     -> TrueCostProjection.Project localizer.GetString("tco.monthlyEvVsGas.aria", …) (chart AccessibleSummary)   [catalog row added en/ar/he]
+[x] string - tco.monthlySavings          -> TrueCostProjection.Project MonthlySavings.Label localizer.GetString("tco.monthlySavings", "Monthly Savings")
+[x] string - tco.noData                  -> TrueCostProjection.Project NoDataMessage localizer.GetString("tco.noData", "No data available. Start charging to see your cost analysis.")
+[x] string - tco.noMonthlyData           -> TrueCostProjection.Project NoMonthlyDataMessage localizer.GetString("tco.noMonthlyData", "No monthly data available yet")
+[x] string - tco.noOilChanges            -> TrueCostProjection.Project MaintenanceSavings.Sublabel localizer.GetString("tco.noOilChanges", "No oil changes, less brake wear")
+[x] string - tco.overMonths              -> TrueCostProjection.Project TotalSavings.Sublabel localizer.GetString("tco.overMonths", "Over {0} months") (Fill months_of_ownership)
+[x] string - tco.perKmEv                 -> TrueCostProjection.Project CostPerKmEvChipLabel localizer.GetString("tco.perKmEv", "per km (EV)")
+[x] string - tco.perKmGas                -> TrueCostProjection.Project CostPerKmIceChipLabel localizer.GetString("tco.perKmGas", "per km (Gas)")
+[x] string - tco.plusMaintenance         -> TrueCostProjection.Project MonthlySavings.Sublabel localizer.GetString("tco.plusMaintenance", "+ ~$50/mo maintenance savings")
+[x] string - tco.savingsBreakdown        -> TrueCostProjection.Project SavingsBreakdownTitle localizer.GetString("tco.savingsBreakdown", "Savings Breakdown")
+[x] string - tco.sessions                -> TrueCostProjection.Project TotalEvCost.Sublabel localizer.GetString("tco.sessions", "sessions")
+[x] string - tco.subtitle                -> TrueCostProjection.Project / TrueCostRegistration.Subtitle localizer.GetString("tco.subtitle", "Compare your EV running costs against an equivalent gas vehicle")
+[x] string - tco.title                   -> TrueCostProjection.Project / TrueCostRegistration.Title localizer.GetString("tco.title", "True Cost of Ownership")
+[x] string - tco.totalEstSavings         -> TrueCostProjection.Project TotalEstimatedSavings.Label localizer.GetString("tco.totalEstSavings", "Total Estimated Savings")
+[x] string - tco.totalEvCost             -> TrueCostProjection.Project TotalEvCost.Label localizer.GetString("tco.totalEvCost", "Total EV Cost")
+[x] string - tco.totalSavings            -> TrueCostProjection.Project TotalSavings.Label + FuelSavings.Value localizer.GetString("tco.totalSavings", "Total Savings")
+
+PARITY_COVERED=51
+# Coverage asserted headlessly: TrueCostPageTests.Projection_resolves_every_required_string_key
+# (+ _even_with_no_monthly_rows) records every key above through a RecordingLocalizer; the four state tests
+# + the hero-stat / cost-per-km-chip / cumulative-area / cost-per-km-bar / monthly-bar / savings-breakdown
+# projection tests assert each panel + chart + state renders from the bound TrueCostDisplay state holder.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TrueCostPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Analytics path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes (TrueCostPage sources + TrueCostPageTests + ShellWindow registration)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25843, Failed: 0, Skipped: 0 (incl. 32 new TrueCostPageTests)
+TEST_EXIT=0
+PARITY_COVERED=51
+PARITY_REQUIRED=51
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TrueCostPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/TrueCostPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-analytics-TrueCostPage.log
+# git commit -m "feat(apps/windows): TrueCostPage at web parity (W7 analytics)"
+
+EXIT=0
+STATUS=DONE

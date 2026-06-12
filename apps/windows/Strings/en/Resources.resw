@@ -6426,6 +6426,12 @@
   <data name="translation.common.undo" xml:space="preserve">
     <value>Undo</value>
   </data>
+  <data name="translation.common.unit.gallon" xml:space="preserve">
+    <value>gal</value>
+  </data>
+  <data name="translation.common.unit.liter" xml:space="preserve">
+    <value>L</value>
+  </data>
   <data name="translation.common.unknown" xml:space="preserve">
     <value>Unknown</value>
   </data>
@@ -18072,8 +18078,14 @@
   <data name="translation.tco.costPerKm" xml:space="preserve">
     <value>Cost per Kilometer</value>
   </data>
+  <data name="translation.tco.costPerKm.aria" xml:space="preserve">
+    <value>Cost per kilometer bar chart comparing EV electricity to gas</value>
+  </data>
   <data name="translation.tco.cumulativeSavings" xml:space="preserve">
     <value>Cumulative Savings Over Time</value>
+  </data>
+  <data name="translation.tco.cumulativeSavings.aria" xml:space="preserve">
+    <value>Cumulative EV-vs-gas savings area chart over time</value>
   </data>
   <data name="translation.tco.electricityVsGas" xml:space="preserve">
     <value>Electricity vs gasoline</value>
@@ -18104,6 +18116,9 @@
   </data>
   <data name="translation.tco.monthlyEvVsGas" xml:space="preserve">
     <value>Monthly EV vs Gas Cost</value>
+  </data>
+  <data name="translation.tco.monthlyEvVsGas.aria" xml:space="preserve">
+    <value>Monthly EV vs gas cost comparison bar chart</value>
   </data>
   <data name="translation.tco.monthlySavings" xml:space="preserve">
     <value>Monthly Savings</value>

@@ -855,6 +855,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TripReplayMap\TripReplayMap.Model.cs" Link="FeatureViews\TripReplayMap\TripReplayMap.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TripReplayMap\TripReplayMap.Source.cs" Link="FeatureViews\TripReplayMap\TripReplayMap.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TripReplayMap\TripReplayMap.ViewModel.cs" Link="FeatureViews\TripReplayMap\TripReplayMap.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TrueCostPage\TrueCostPage.Model.cs" Link="FeatureViews\TrueCostPage\TrueCostPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TrueCostPage\TrueCostPage.Source.cs" Link="FeatureViews\TrueCostPage\TrueCostPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TrueCostPage\TrueCostPage.ViewModel.cs" Link="FeatureViews\TrueCostPage\TrueCostPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.Model.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.Source.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.ViewModel.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.ViewModel.cs" />
