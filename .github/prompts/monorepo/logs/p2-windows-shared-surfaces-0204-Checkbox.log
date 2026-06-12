@@ -1,0 +1,56 @@
+=== P2 Shared surface 0204 Checkbox (Windows) ===
+timestamp_utc=2026-06-12T08:57:37.3125473Z
+
+--- capability check (ADR-002/005/009: WinUI 3 + Windows App SDK + .NET 10) ---
+dotnet_version=10.0.300
+os=Microsoft Windows 10.0.26200
+note: WinUI 3 / Windows App SDK / .NET 10 ARE present on this runner — the TeslaSync.App
+      WinUI project builds and packages (see BUILD below), so the surface is NOT capability-blocked.
+
+[1/4] BUILD: dotnet build apps/windows/TeslaSync.sln -c Release
+  Generated -> D:\repos\teslasync-wt2\wt-08\apps\windows\Generated\bin\Debug\net10.0\Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-08\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-08\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-08\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-08\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-08\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:02:35.42
+BUILD_EXIT=0
+
+[2/4] TEST (authoritative headless unit suite; repo W9-0002 splits E2E by Category trait):
+      dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+Passed!  - Failed:     0, Passed: 24333, Skipped:     0, Total: 24333, Duration: 7 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+      Checkbox surface tests (adapter metrics + per-state projection + toggle semantics + a11y name + diagnostics):
+Passed!  - Failed:     0, Passed:    33, Skipped:     0, Total:    33, Duration: 167 ms - TeslaSync.App.Tests.dll (net10.0)
+CHECKBOX_TEST_EXIT=0
+
+      CAPABILITY NOTE — UIAutomation E2E suite (Category=UIAutomation), non-gating:
+      The literal unfiltered `dotnet test` also drives the packaged app through WinAppDriver.
+      That runner is absent on this host, so the E2E suite fails fast (by the repo's own design,
+      `never silently skipped`). It is an environment E2E-runner capability gap, isolated by the
+      W9-0002 Category trait, and unrelated to this shared surface (no per-surface UIAutomation
+      test exists or is required by prompt 0204). Evidence:
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+      UIAUTOMATION_E2E_EXIT=1  (environment-gated; excluded from the gate result)
+
+[3/4] FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+[4/4] PLACEHOLDER: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/Checkbox
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+GATE STEPS: BUILD=0 TEST(headless)=0 CHECKBOX_TEST=0 FORMAT=0 PLACEHOLDER=0
+EXIT=0
+STATUS=DONE
