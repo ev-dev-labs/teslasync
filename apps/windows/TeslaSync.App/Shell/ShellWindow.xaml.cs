@@ -76,6 +76,16 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("TrueCostOwnership", static () => new FeatureViews.Analytics.TrueCostPage());
         // Analytics / Weekly digest page (P2/W7) — parity port of web WeeklyDigestPage at route /weekly-digest.
         _viewModel.PageFactory.Register("WeeklyDigest", static () => new FeatureViews.Analytics.WeeklyDigestPage());
+
+        // Analytics / Year-in-Review story player (P2/W7) — parity port of web YearReviewPage at route
+        // /year-review/:year. The route year is read from the live match and close/Esc maps to back-navigation
+        // (web navigate(-1)).
+        _viewModel.PageFactory.Register("YearReview", () =>
+        {
+            var page = new FeatureViews.Review.YearReviewPage(ParseYearParam(_viewModel.Current.Param("year")));
+            page.CloseRequested += (_, _) => GoBack();
+            return page;
+        });
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
@@ -539,6 +549,12 @@ public sealed partial class ShellWindow : Window
         AppThemePreference.Light => AppThemePreference.Dark,
         _ => AppThemePreference.System,
     };
+
+    // Parse the /year-review/:year route param (web Number(yearParam) || new Date().getFullYear()).
+    private static int ParseYearParam(string? year) =>
+        int.TryParse(year, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed) && parsed > 0
+            ? parsed
+            : DateTime.Now.Year;
 
     private void OnAuthStateChanged(object? sender, AuthState state)
     {

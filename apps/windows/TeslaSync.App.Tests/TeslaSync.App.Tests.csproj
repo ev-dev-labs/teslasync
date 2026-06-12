@@ -909,6 +909,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Model.cs" Link="FeatureViews\XRayHeader\XRayHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.Source.cs" Link="FeatureViews\XRayHeader\XRayHeader.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\XRayHeader\XRayHeader.ViewModel.cs" Link="FeatureViews\XRayHeader\XRayHeader.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\YearReviewPage\YearReviewPage.Model.cs" Link="FeatureViews\YearReviewPage\YearReviewPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\YearReviewPage\YearReviewPage.Source.cs" Link="FeatureViews\YearReviewPage\YearReviewPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\YearReviewPage\YearReviewPage.ViewModel.cs" Link="FeatureViews\YearReviewPage\YearReviewPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Model.cs" Link="MiscSurfaces\selectedVehicle.Model.cs" />
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Source.cs" Link="MiscSurfaces\selectedVehicle.Source.cs" />
