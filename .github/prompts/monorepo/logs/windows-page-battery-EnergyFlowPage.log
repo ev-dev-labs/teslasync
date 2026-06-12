@@ -1,0 +1,232 @@
+=== p2-windows · W7 · page:battery/EnergyFlow (WinUI 3 / Fluent) ===
+Parity unit : page:battery/EnergyFlow   kind=page   web route=/energy-flow
+Web source  : web/src/features/battery/pages/EnergyFlowPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/EnergyFlowPage/{EnergyFlowPage.Model.cs, .Source.cs, .ViewModel.cs, .cs}
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent UserControl view), exactly as the
+  sibling W7 VehicleCostPage / TrueCostPage do. The generated prompt's idealized "EnergyFlowPage.xaml +
+  EnergyFlowPageViewModel.cs under TeslaSync/Features/Battery" is mapped onto these real conventions; the surface
+  registers itself with the W4 ShellPageFactory by route name ("EnergyFlow", already in RouteTable.cs L270 →
+  /energy-flow, group BatteryEnergy) via ShellWindow.xaml.cs.
+- Data binding (ADR-004): the manifest data source is useEnergyFlow (GET /vehicles/{id}/energy/flow). The web page
+  ALSO runs a second, un-named query — a raw useQuery on GET /vehicles/{id}/energy?days=N — that drives the page's
+  top-level loading/empty/error state (web `isLoading = statsLoading`, `!stats`), with the real-time flow reading
+  overlaid on the diagram. Both are ported: EnergyFlowClientFeed (EnergyFlowPage.Source.cs) binds to the generated
+  OpenAPI contract client operations get_api_v1_vehicles_vehicleID_energy (path vehicleID + snake_case `days`
+  query, matching the web hook) and get_api_v1_vehicles_vehicleID_energy_flow (path vehicleID). Both operation ids
+  resolve against the generated endpoint table (ApiEndpoints.cs L525/L526) — asserted by
+  ClientFeed_operations_resolve_against_the_generated_endpoint_table + the FakeApiClient request-shaping tests.
+  The descriptors declare zero query params, so GeneratedApiClient.BuildQuery permits the trailing `days` param
+  (allowed.Count==0 path). The default EnergyFlowPage() ctor uses EmptyEnergyFlowFeed (the no-data empty state),
+  mirroring VehicleCostPage; the client feed is exercised by tests. No HTTP touches the view.
+- The flow reading is a BEST-EFFORT overlay: the web useEnergyFlow query is retry:false, so a flow failure leaves
+  the diagram on its null-safe zeros (it never errors the page). The view-model swallows flow-fetch failures and
+  only the historical stats query drives the error state (test ViewModel_flow_failure_does_not_error_the_page).
+- The web renders its states INSIDE the PageContainer body, so the native port reproduces them as visible Fluent
+  regions per ADR-006: loading -> TsStatGridSkeleton + TsChartBlockSkeleton + TsTableSkeleton shimmer; error ->
+  TsQueryError (InfoBar-equivalent) + Retry; empty -> a TsGlassPanel + TsEmptyState ("No energy flow data
+  available …"); success -> the six energy sections. Never a blank region; per-chart empty bodies cover a missing
+  daily breakdown (TsChartContainer.State = Empty).
+- SI units (ADR-002): all DB/API/struct/TS values are SI (Wh, m, Wh/m). Conversion happens ONLY at the render
+  boundary through the shared SI port — UnitFormatters.FormatEnergy (web useUnits formatEnergy, default kWh @ 2dp)
+  and FormatDistance (default km @ 1dp), and NumberFormatting.Format for fmtNumber-style values (kW @ 1dp, counts @
+  0dp, co2 @ 1dp). The web's manual Wh/m → Wh/km (×1000) / Wh/mi (×1609.344) efficiency math is reproduced verbatim
+  in EnergyFlowProjection.EfficiencyForDisplay / EfficiencyRaw (rounded half-away-from-zero, matching JS
+  toFixed/Math.round), pinned by EfficiencyForDisplay_matches_web + Metric_tiles_use_imperial_units_when_preferred.
+  Calendar daily-breakdown dates are parsed AssumeLocal so a date-only "YYYY-MM-DD" renders as that calendar day in
+  any runner timezone (web formatDateShort) — deterministic regardless of CI tz.
+- i18n (ADR-014): this web page uses the natural-language English string as the i18next key (t('Energy Flow'),
+  t('AC Power'), …) — unlike VehicleCostPage's dotted keys. All 44 manifest strings flow through ILocalizer
+  .GetString("<web key>", "<English default>") in EnergyFlowProjection (resolved UNCONDITIONALLY at the top of
+  Project so every key is recorded in every data state — tests Projection_resolves_every_required_string_key +
+  _even_in_the_loading_state). 18 of the 44 already existed in Strings/{en,ar,he}/Resources.resw (single-token
+  natural keys the i18n generator emits from web/src/i18n/en.json); the 26 multi-word keys are NOT present in the
+  web en.json (the web relies on i18next key-fallback for them, which ILocalizer.GetString reproduces by returning
+  the English fallback on a catalog miss). To satisfy the "every visible literal sourced from .resw" criterion I
+  added those 26 keys verbatim (web key names, "translation.<English>") to all three catalogs in correct
+  JS-ordinal sorted position (CO₂ uses U+2082 ₂, matching the web/manifest), preserving LF/UTF-8-no-BOM. NOTE: the
+  resw is generator-owned and sources from web en.json; these 26 hand-added keys would not be re-emitted by
+  gen-i18n until the same keys land in web en.json — documented here, not silent. The resw is not part of the
+  dotnet build, so this does not affect the build gate.
+- The 6 historical summary tiles use the shared TsStatCard (web StatCard/MetricCard family: accent glyph + label +
+  value + unit sub-line) — its glyph carries the icon and its Sublabel carries the unit, the two content-bearing
+  parts of the web MetricCard; the web's decorative per-card color is the only dropped element.
+- Charts use the W3 native wrappers (never a web canvas): TsRadialGauge (SOC), TsAreaChart (daily energy),
+  TsBarChart ×2 (daily distance, daily efficiency), each framed by TsChartContainer with its loading/empty/error/
+  ready bodies + accessible data-view. SI values are plotted directly (web parity: energy_wh, distance_m).
+- a11y (ADR-015): AutomationProperties.SetName on the page, every panel, the table, the error/empty surfaces and
+  each flow node/edge/efficiency tile; the charts publish ChartAccessibility summaries + a tabular DataView.
+- Build defects found + fixed in this surface's own new code (no red shipped): (1) the view omitted
+  `using TeslaSync.App.Core;` (StatusKind), a CS0103 that cascaded into spurious XAML-compiler WMC0001 "Unknown
+  type" noise on unrelated ComponentGallery types — same false-cascade the sibling VehicleCostPage hit; fixed by
+  the using. (2) The app project sets TreatWarningsAsErrors=true + AnalysisLevel=latest, so two analyzer findings
+  surfaced as errors: CA1859 (SortByDateDescending returned IEnumerable → changed to concrete List<>) and CA1822
+  (BuildLoadingPanel didn't touch instance state → made static). (3) Two date tests were timezone-sensitive
+  (date-only parsed UTC then shown local shifted a day on the UTC-7 runner) — fixed at the source by parsing
+  calendar dates AssumeLocal. All repaired; sln builds 0 Error(s), my files 0 Warning(s) (the 34 remaining warning
+  lines are all pre-existing TeslaSync.App.Core CA1716/CA1859, none in this surface or the App project).
+
+=== PARITY ===
+PARITY_REQUIRED=74
+
+# Panels (22) — every web region reproduced as a Fluent Card/Mica region, bound to the EnergyFlowDisplay state holder
+[x] panel  - GlassPanel1     -> Section-1 energy-flow diagram outer panel: EnergyFlowPage.cs#BuildFlowSection (_flowPanel
+             TsGlassPanel, Padding 24) hosting the header row + 5-col top row + 4-col bottom row; web Section-1 GlassPanel;
+             title EnergyFlowDisplay.FlowDiagramTitle ("Energy Flow Diagram"); test Flow_diagram_header_and_charge_badge
+[x] panel  - GlassPanel2     -> Grid node: EnergyFlowPage.cs FlowNode _gridNode (TsGlassPanel Glow=Green); Display.Grid
+             (EnergyFlowNode "Grid"); web Grid GlassPanel glow=green; test Flow_grid_and_motor_nodes_render_labels
+[x] panel  - GlassPanel3     -> Battery node: _batteryNode (TsGlassPanel Glow=Cyan) hosting _batteryGauge + _energyRemaining;
+             Display.BatteryLabel/BatterySoc/EnergyRemaining*; web Battery GlassPanel glow=cyan; test
+             Flow_battery_gauge_reads_soc_and_energy_remaining + Flow_energy_remaining_hidden_when_null
+[x] panel  - GlassPanel4     -> Motor node: FlowNode _motorNode (TsGlassPanel); Display.Motor (EnergyFlowNode "Motor"/"No
+             live data"); web Motor GlassPanel opacity-50; test Flow_grid_and_motor_nodes_render_labels
+[x] panel  - GlassPanel5     -> DC Power node: FlowNode _dcNode; Display.DcPower; web DC Power GlassPanel; test
+             Flow_dc_ac_nodes_format_power_hvac_and_accessories_are_na
+[x] panel  - GlassPanel6     -> AC Power node: FlowNode _acNode; Display.AcPower; web AC Power GlassPanel; test
+             Flow_dc_ac_nodes_format_power_hvac_and_accessories_are_na
+[x] panel  - GlassPanel7     -> HVAC node: FlowNode _hvacNode; Display.Hvac (label "HVAC", value "N/A"); web HVAC GlassPanel
+             opacity-50; test Flow_dc_ac_nodes_format_power_hvac_and_accessories_are_na
+[x] panel  - GlassPanel8     -> Accessories node: FlowNode _accessoriesNode; Display.Accessories ("Accessories"/"N/A"); web
+             Accessories GlassPanel opacity-50; test Flow_dc_ac_nodes_format_power_hvac_and_accessories_are_na
+[x] panel  - Total-Energy    -> _totalEnergyCard TsStatCard; Display.TotalEnergy (EnergyMetricTile, FormatEnergy); web
+             MetricCard "Total Energy"; test Metric_tiles_project_labels_values_and_sublabels
+[x] panel  - Total-Charged   -> _totalChargedCard TsStatCard; Display.TotalCharged (FormatEnergy); web MetricCard "Total
+             Charged"; test Metric_tiles_project_labels_values_and_sublabels
+[x] panel  - Distance        -> _distanceCard TsStatCard; Display.Distance (FormatDistance + distance-unit sub-line); web
+             MetricCard "Distance"; test Metric_tiles_project_labels_values_and_sublabels (+ imperial variant)
+[x] panel  - Efficiency      -> _efficiencyCard TsStatCard; Display.Efficiency (EfficiencyForDisplay + Wh/km|Wh/mi); web
+             MetricCard "Efficiency"; test Metric_tiles_project_… + Metric_tiles_use_imperial_units_when_preferred
+[x] panel  - CO-Saved        -> _co2Card TsStatCard; Display.Co2Saved (fmtNumber co2_saved_kg @1dp, "kg" sub); web MetricCard
+             "CO₂ Saved"; test Metric_tiles_project_labels_values_and_sublabels
+[x] panel  - Period          -> _periodCard TsStatCard; Display.Period (period_days, "days" sub); web MetricCard "Period";
+             test Metric_tiles_project_labels_values_and_sublabels
+[x] panel  - GlassPanel15    -> Daily-energy area chart frame: _energyContainer TsChartContainer (wraps a TsGlassPanel)
+             hosting _energyChart; web Section-3 GlassPanel; test Daily_energy_area_chart_has_one_series_with_a_point_per_day
+[x] panel  - GlassPanel16    -> Daily-distance bar chart frame: _distanceContainer TsChartContainer; web Section-4 left
+             GlassPanel; test Daily_distance_bar_chart_plots_distance_per_day
+[x] panel  - GlassPanel17    -> Daily-efficiency bar chart frame: _efficiencyContainer TsChartContainer; web Section-4 right
+             GlassPanel; test Daily_efficiency_bar_chart_filters_non_positive_and_scales_to_unit
+[x] panel  - GlassPanel18    -> Efficiency-metrics outer panel: _metricsPanel TsGlassPanel (BuildMetricsSection) hosting
+             _metricsTitle + 3 sub-cards; web Section-5 GlassPanel; title Display.EfficiencyMetricsTitle; test
+             Efficiency_card_badge_follows_thresholds
+[x] panel  - GlassPanel19    -> Efficiency sub-card: EfficiencyTile _efficiencyMetricTile (TsGlassPanel); Display.EfficiencyCard
+             (EnergyEfficiencyTile, value + status badge); web Section-5 card 1; test Efficiency_card_badge_follows_thresholds
+[x] panel  - GlassPanel20    -> CO₂ sub-card: EfficiencyTile _co2MetricTile; Display.Co2Card ("kg CO₂" success badge); web
+             Section-5 card 2; test Efficiency_metrics_co2_and_avg_per_day_cards
+[x] panel  - GlassPanel21    -> Avg-energy/day sub-card: EfficiencyTile _avgPerDayTile; Display.AvgPerDayCard (FormatEnergy,
+             "per day" info badge); web Section-5 card 3; test Efficiency_metrics_co2_and_avg_per_day_cards
+[x] panel  - GlassPanel22    -> Daily-energy history panel: _historyPanel TsGlassPanel (BuildHistorySection) hosting
+             _historyTitle + the TsDataTable / TsEmptyState; web Section-6 GlassPanel; test History_table_has_four_columns +
+             History_rows_are_sorted_date_descending_and_formatted + History_empty_when_no_rows
+
+# Charts (4) — native W3 chart wrappers, never a web canvas
+[x] chart  - RadialGauge     -> _batteryGauge TsRadialGauge (Value=Display.BatterySoc, Max=100, Unit="%", Label "Battery");
+             web RadialGauge SOC; test Flow_battery_gauge_reads_soc_and_energy_remaining + Flow_diagram_is_null_safe_when_no_live_reading
+[x] chart  - AreaChart       -> _energyChart TsAreaChart (Series=Display.DailyEnergySeries, ChartSeriesKind.Area, Role=Energy);
+             web Daily Energy Usage AreaChart; test Daily_energy_area_chart_has_one_series_with_a_point_per_day
+[x] chart  - BarChart        -> _distanceChart TsBarChart (Series=Display.DailyDistanceSeries, ChartSeriesKind.Bar); web Daily
+             Distance BarChart; test Daily_distance_bar_chart_plots_distance_per_day
+[x] chart  - BarChart        -> _efficiencyChart TsBarChart (Series=Display.DailyEfficiencySeries, ChartSeriesKind.Bar,
+             filters efficiency<=0); web Daily Efficiency BarChart; test
+             Daily_efficiency_bar_chart_filters_non_positive_and_scales_to_unit + Charts_are_empty_when_no_daily_breakdown
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading         -> EnergyFlowState.Loading + Display.ShowLoading; rendered EnergyFlowPage.cs#_loadingPanel
+             (TsStatGridSkeleton(3) + TsChartBlockSkeleton + TsTableSkeleton); test State_loading_when_query_in_flight
+[x] state  - empty           -> EnergyFlowState.Empty + Display.ShowEmpty; _emptyPanel TsGlassPanel + _emptyState TsEmptyState
+             ("No energy flow data available for this vehicle and time range."); incl. no-vehicle case (web disabled query);
+             tests State_empty_when_resolved_with_no_stats + ViewModel_no_vehicle_is_the_empty_state_without_fetching +
+             ViewModel_empty_feed_is_the_empty_state
+[x] state  - error           -> EnergyFlowState.Error + Display.ShowError; _errorState TsQueryError + Retry (ActionInvoked ->
+             RefreshAsync); tests State_error_when_stats_query_failed + ViewModel_stats_failure_is_the_error_state
+[x] state  - success         -> EnergyFlowState.Success + Display.ShowContent; all six sections render; the flow overlay is
+             null-safe; tests State_success_renders_all_sections + ViewModel_loads_stats_and_flow_into_the_success_state +
+             ViewModel_flow_failure_does_not_error_the_page
+
+# Strings (44) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names (English-as-key)
+[x] string - AC Power                              -> GetString("AC Power","AC Power") -> Display.AcPower.Label
+[x] string - Accessories                           -> GetString("Accessories",…) -> Display.Accessories.Label
+[x] string - Avg Energy/Day                        -> GetString("Avg Energy/Day",…) -> Display.AvgPerDayCard.Label
+[x] string - Battery                               -> GetString("Battery",…) -> Display.BatteryLabel
+[x] string - CO₂ Saved                             -> GetString("CO\u2082 Saved",…) -> Display.Co2Saved.Label / Co2Card.Label
+[x] string - Charging                              -> GetString("Charging",…) -> Display.ChargingEdge.Label (+ charge-state badge)
+[x] string - DC Power                              -> GetString("DC Power",…) -> Display.DcPower.Label
+[x] string - Daily Distance                        -> GetString("Daily Distance",…) -> Display.DailyDistanceTitle
+[x] string - Daily Efficiency                      -> GetString("Daily Efficiency",…) -> Display.DailyEfficiencyTitle
+[x] string - Daily Energy History                  -> GetString("Daily Energy History",…) -> Display.DailyHistoryTitle
+[x] string - Daily Energy Usage                    -> GetString("Daily Energy Usage",…) -> Display.DailyEnergyTitle
+[x] string - Date                                  -> GetString("Date",…) -> Display.HistoryColumns[0].Header
+[x] string - Distance                              -> GetString("Distance",…) -> Display.Distance.Label / distance column / bar name
+[x] string - Driving                               -> GetString("Driving",…) -> Display.DrivingEdge.Label
+[x] string - Efficiency                            -> GetString("Efficiency",…) -> Display.Efficiency.Label
+[x] string - Efficiency Metrics                    -> GetString("Efficiency Metrics",…) -> Display.EfficiencyMetricsTitle
+[x] string - Energy                                -> GetString("Energy",…) -> Display.DailyEnergySeries name / energy column header
+[x] string - Energy Flow                           -> GetString("Energy Flow",…) -> Display.Title + EnergyFlowRegistration.Title
+[x] string - Energy Flow Diagram                   -> GetString("Energy Flow Diagram",…) -> Display.FlowDiagramTitle
+[x] string - Excellent                             -> GetString("Excellent",…) -> Display.EfficiencyCard.BadgeText (band)
+[x] string - Good                                  -> GetString("Good",…) -> Display.EfficiencyCard.BadgeText (band)
+[x] string - Grid                                  -> GetString("Grid",…) -> Display.Grid.Label
+[x] string - HVAC                                  -> GetString("HVAC",…) -> Display.Hvac.Label
+[x] string - High                                  -> GetString("High",…) -> Display.EfficiencyCard.BadgeText (band)
+[x] string - Motor                                 -> GetString("Motor",…) -> Display.Motor.Label
+[x] string - N/A                                   -> GetString("N/A",…) -> Display.DrivingEdge.Value / Hvac.Value / Accessories.Value
+[x] string - No Data                               -> GetString("No Data",…) -> Display.EmptyTitle + efficiency "No Data" band
+[x] string - No daily distance data available.     -> GetString(…) -> Display.NoDailyDistanceMessage
+[x] string - No daily energy data available.       -> GetString(…) -> Display.NoDailyEnergyMessage
+[x] string - No efficiency data available.         -> GetString(…) -> Display.NoEfficiencyMessage
+[x] string - No energy flow data available for this vehicle and time range. -> GetString(…) -> Display.EmptyMessage
+[x] string - No energy history records available.  -> GetString(…) -> Display.HistoryEmptyMessage
+[x] string - No energy records found.              -> GetString(…) -> Display.HistoryTableEmptyMessage (TsDataTable.EmptyMessage)
+[x] string - No live data                          -> GetString("No live data",…) -> Display.Motor.Value
+[x] string - Period                                -> GetString("Period",…) -> Display.Period.Label
+[x] string - Power distribution and energy analysis -> GetString(…) -> Display.Subtitle
+[x] string - Total Charged                         -> GetString("Total Charged",…) -> Display.TotalCharged.Label
+[x] string - Total Energy                          -> GetString("Total Energy",…) -> Display.TotalEnergy.Label
+[x] string - days                                  -> GetString("days",…) -> Display.Period.Sublabel
+[x] string - kW                                    -> GetString("kW",…) -> charging edge / DC / AC value suffix
+[x] string - kWh                                   -> GetString("kWh",…) -> Display.EnergyRemainingText suffix
+[x] string - kg                                    -> GetString("kg",…) -> Display.Co2Saved.Sublabel
+[x] string - kg CO₂                                -> GetString("kg CO\u2082",…) -> Display.Co2Card.BadgeText
+[x] string - per day                               -> GetString("per day",…) -> Display.AvgPerDayCard.BadgeText
+# String coverage asserted headlessly: EnergyFlowPageTests.Projection_resolves_every_required_string_key (+
+# _even_in_the_loading_state) record every one of the 44 web keys through a RecordingLocalizer in success AND loading
+# states. The 26 not previously in the catalog were added to Strings/{en,ar,he}/Resources.resw as
+# translation.<English> in JS-ordinal sorted position (validated: 44/44 present, valid XML, LF, no BOM, "AC Power"
+# placed between "AC" and "AEB").
+
+PARITY_COVERED=74
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/EnergyFlowPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Battery path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s), 0 Warning(s) in this surface +
+#   the App project (TreatWarningsAsErrors=true). The 34 remaining warning lines are all pre-existing
+#   TeslaSync.App.Core CA1716/CA1859 — none in feature-views/EnergyFlowPage or TeslaSync.App.csproj.
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <EnergyFlowPage Model/Source/ViewModel/view
+#   + EnergyFlowPageTests + ShellWindow.xaml.cs> -> 0 issues (all LF/utf-8 after CRLF→LF normalization)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 26046, Failed: 0, Skipped: 0
+#   (incl. 51 EnergyFlowPageTests)
+TEST_EXIT=0
+PARITY_COVERED=74
+PARITY_REQUIRED=74
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/EnergyFlowPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/EnergyFlowPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-battery-EnergyFlowPage.log
+# git commit -m "feat(apps/windows): EnergyFlowPage at web parity (W7 battery)"
+
+EXIT=0
+STATUS=DONE
