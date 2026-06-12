@@ -2877,6 +2877,9 @@
   <data name="translation.analytics.weeklyDigest.funFact" xml:space="preserve">
     <value>Fun Fact</value>
   </data>
+  <data name="translation.analytics.weeklyDigest.funFactDesc" xml:space="preserve">
+    <value>≈ {0}× {1} → {2}</value>
+  </data>
   <data name="translation.analytics.weeklyDigest.nextWeek" xml:space="preserve">
     <value>Next</value>
   </data>
@@ -2888,6 +2891,9 @@
   </data>
   <data name="translation.analytics.weeklyDigest.noData" xml:space="preserve">
     <value>No Data</value>
+  </data>
+  <data name="translation.analytics.weeklyDigest.noDataMessage" xml:space="preserve">
+    <value>No driving or charging data found for this week.</value>
   </data>
   <data name="translation.analytics.weeklyDigest.noTopDrive" xml:space="preserve">
     <value>No top drive is available for this week yet.</value>

@@ -113,6 +113,7 @@ public static class RouteTable
 
         // ── Analytics ──────────────────────────────────────────────────────────
         Page("Analytics", "analytics", RouteGroup.Analytics, "Analytics", "\uE9D9"),
+        Page("WeeklyDigest", "weekly-digest", RouteGroup.Analytics, "Weekly Digest", "\uE787"),
 
         // ── System / Ops ───────────────────────────────────────────────────────
         Page("Commands", "commands", RouteGroup.SystemOps, "Commands", "\uE756"),
