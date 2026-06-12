@@ -59,6 +59,15 @@ public sealed partial class ShellWindow : Window
         // Onboarding / sign-in surface (P2/W4-0001) for the public onboarding route.
         _viewModel.PageFactory.Register("Onboarding", static () => new OnboardingView());
 
+        // Dashboard / Command Center page (P2/W7) — parity port of web DashboardPage at the index route /.
+        // The onboarding "Connect Tesla Account" action and the account-warning Settings link navigate to /settings.
+        _viewModel.PageFactory.Register("Dashboard", () =>
+        {
+            var page = new FeatureViews.Dashboard.DashboardPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
         // Battery / Energy page (P2/W7) — parity port of web EnergyPage at route /energy.
         _viewModel.PageFactory.Register("Energy", static () => new FeatureViews.Battery.EnergyPage());
 
