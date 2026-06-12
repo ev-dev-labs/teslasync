@@ -417,3 +417,4 @@ p3-android/feature-views/A-0169-GForcePanel.prompt.md
 p3-android/feature-views/A-0167-DrivingCoachSection.prompt.md
 p3-android/feature-views/A-0171-MotorEfficiencyInsights.prompt.md
 p3-android/feature-views/A-0170-LiveMotorStatus.prompt.md
+p3-android/feature-views/A-0172-MotorHistoryCharts.prompt.md
