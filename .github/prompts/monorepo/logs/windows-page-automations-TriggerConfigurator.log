@@ -1,0 +1,130 @@
+=== p2-windows · W7 · page:automations/TriggerConfigurator (WinUI 3 / Fluent) ===
+Parity unit : page:automations/TriggerConfigurator   kind=page   web route=(unrouted)
+Web source  : web/src/features/automations/pages/TriggerConfigurator.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free union +
+  catalogs + parse/projection + registration + diagnostics, unit-tested headlessly), <Name>.Source.cs (the
+  cache-then-network data port), <Name>.ViewModel.cs (the ObservableObject state holder) and <Name>.cs (the
+  Fluent view). The generated prompt's idealized "TriggerConfigurator.xaml + TriggerConfiguratorViewModel.cs
+  under TeslaSync/Features/Automations" is mapped onto these real conventions — exactly as the peer automations
+  surfaces ConditionBuilder (feature-views/ConditionBuilder/*) and AutomationActivityFeed already are. The C#
+  namespace is TeslaSync.App.FeatureViews.Automations, so the surface is logically under "Automations" as the
+  prompt's Output column intends.
+- This unit is a controlled sub-form, not a routed page: the web source is a component that takes props
+  (trigger / onChange) and renders one kind selector + the kind-specific body; manifest route is (unrouted). The
+  native TriggerConfigurator is therefore a ContentControl whose ViewModel raises TriggerChanged (web onChange);
+  it is unrouted, so there is no NavigationView / ShellPageFactory entry to add (the conditional "if routed"
+  requirement does not apply) — the peer automations sub-forms are wired the same way.
+- Manifest models one data source — useGeofences (GET /geofences). It is bound through the P1/S8 state-holder
+  seam: TriggerConfigurator.Source.cs (ITriggerGeofenceSource / TriggerGeofenceSource) runs a single
+  cache-then-network read of GET /geofences through the shared CacheThenNetworkEngine and projects each JSON
+  emission into a tolerant TriggerGeofence list, preserving lifecycle status / freshness / error; the
+  TriggerConfiguratorViewModel folds those emissions into a TriggerGeofenceLoadState (loading / loaded / empty /
+  error / stale / offline). The view never performs HTTP (ADR-004). The geofence operation id resolves through
+  the generated client (Operations.Locations.Geofences).
+- The four web branches are reproduced verbatim by the WinUI-free Model union + the view's BuildBody switch:
+  trigger_schedule (TimePicker + weekday ToggleButtons in simple mode, or a cron TsInput in advanced mode, plus
+  the mode toggle and a timezone TsSelect — web buildCronExpr/parseCronExpr/handleDayToggle reproduced in
+  TriggerCron), trigger_event (event TsSelect over VEHICLE_EVENTS), trigger_geofence (geofence TsSelect +
+  transition TsSelect + conditional dwell NumberBox), trigger_signal (signal + operator TsSelect, a
+  bool/text/number value editor, and the "fire on any change" TsToggle — web signalValueFromInput reproduced in
+  TriggerSignalCatalog/SignalTrigger). createDefaultTrigger, SIGNAL_FIELD_OPTIONS/BOOL_FIELD_KEYS, DAYS and
+  COMMON_TIMEZONES are ported and asserted headlessly.
+- 3 data states for the one source: loading -> TsSkeleton + LiveRegion announce (BuildGeofenceLoading); empty ->
+  TsEmptyState (BuildGeofenceEmpty, the manifest "empty" state); success/loaded -> populated TsSelect
+  (BuildGeofenceSelect, the manifest "success" state). Beyond the two manifest-declared states the surface also
+  renders error (TsQueryError + Retry, attempt count) and the >2 min staleness / offline freshness chips
+  (TsDataFreshness / offline Caption) per ADR-013 — never a blank region.
+- Strings: all 21 web i18n keys resolve through the ILocalizer facade with the web key names (the codebase's
+  dominant bare-key convention, matching the peer ConditionBuilder and the acceptance criterion "key names match
+  web"); en/ar/he Resources.resw carry translation.<key> rows for all 21. The single previously-absent row,
+  translation.automations.builder.cronHint, was added to all three catalogs (21/21/21) with the verbatim web
+  default "minute hour day-of-month month day-of-week" (the web key is itself absent from web/src/i18n/en.json
+  and rendered from the t() fallback, so the value matches what the web shows in every locale).
+- a11y: the surface root, the kind-selector grid, every ToggleButton/TimePicker/TsSelect/NumberBox/TsToggle and
+  the geofence label carry an AutomationProperties name; the loading branch announces via LiveRegion; the
+  freshness/offline glyphs are decorative. The only motion is the shared TsFadeIn entrance, which honours
+  reduce-motion by construction. PII-safe diagnostics emit only "view.opened" — never a trigger value, signal,
+  geofence name or cron expression. SI units N/A on this surface (no unit-bearing fields; dwell minutes and the
+  cron clock are bare scheduling integers, not SI-converted quantities).
+
+=== PARITY ===
+PARITY_REQUIRED=23
+
+# Data states (2 declared: empty -> success) — each a visible region (never blank)
+[x] state  - empty    -> TriggerConfiguratorViewModel folds an empty GET /geofences body to
+                         TriggerGeofenceLoadState.Empty (TriggerConfigurator.ViewModel.cs); the view renders
+                         TriggerConfigurator.cs#BuildGeofenceEmpty (L429) — geofence label + TsSelect (prompt
+                         option) + TsEmptyState{ IconGlyph=MapPinGlyph, Message=GeofenceEmptyMessage }. Source
+                         collapse in TriggerGeofenceSource.IsEmpty (non-array / zero-length). Tests:
+                         ViewModel_empty_renders_empty_without_geofences, Source_project_empty_carries_no_value.
+[x] state  - success  -> Loaded body folds to TriggerGeofenceLoadState.Loaded; the view renders
+                         TriggerConfigurator.cs#BuildGeofenceSelect (L442) — the populated geofence TsSelect
+                         (GeofenceOptions lead with the SelectGeofence prompt, then one TriggerOption per fence).
+                         Tests: ViewModel_loaded_exposes_geofences, Source_project_parses_loaded_value,
+                         ViewModel_folds_loading_cached_loaded_to_loaded, ViewModel_geofence_options_lead_with_prompt.
+
+# Strings (21) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names (en/ar/he 21/21/21)
+[x] string - automations.builder.advancedCron    -> ViewModel.AdvancedCronLabel (L326) via ScheduleModeToggleLabel (L332) -> TriggerConfigurator.cs#BuildModeToggle (web "Use advanced cron expression")
+[x] string - automations.builder.changedOnly     -> ViewModel.ChangedOnlyLabel (L379) -> TriggerConfigurator.cs#BuildChangedOnlyToggle (L599) (web Toggle "Fire on any change")
+[x] string - automations.builder.cronExpr        -> ViewModel.CronExprLabel (L312) -> BuildCronField header + select Header (L337/341) (web UiInput label "Cron Expression")
+[x] string - automations.builder.cronHint        -> ViewModel.CronHint (L318) -> BuildCronField Caption (L343) (web UiInput hint); catalog row added to en/ar/he this change
+[x] string - automations.builder.cronPlaceholder -> ViewModel.CronExample (L315) -> BuildCronField TsInput.Hint (L333) (web UiInput placeholder "0 8 * * 1-5")
+[x] string - automations.builder.days            -> ViewModel.DaysLabel (L309) -> BuildDaysField Label (L302) (web "Days")
+[x] string - automations.builder.dwellHint       -> ViewModel.DwellHint (L353) -> BuildDwellField Caption (L519) (web hint "Required for dwell triggers")
+[x] string - automations.builder.dwellMinutes    -> ViewModel.DwellMinutesLabel (L350) -> BuildDwellField header + NumberBox name (L507/517) (web "Dwell Minutes")
+[x] string - automations.builder.event           -> ViewModel.EventLabel (L338) -> BuildEventForm TsSelect (L367) (web UiSelect label "Event")
+[x] string - automations.builder.geofence        -> ViewModel.GeofenceLabel (L341) -> BuildGeofenceSelect/Empty/Loading labels (L432/449/406) (web UiSelect label "Geofence")
+[x] string - automations.builder.geofenceEvent   -> ViewModel.GeofenceEventLabel (L347) -> BuildGeofenceForm transition TsSelect (L382) (web UiSelect label "Event")
+[x] string - automations.builder.operator        -> ViewModel.OperatorLabel (L364) -> BuildSignalForm operator TsSelect (L536) (web UiSelect label "Operator")
+[x] string - automations.builder.selectGeofence  -> ViewModel.SelectGeofenceLabel (L344) -> GeofenceOptions prompt option (L288) (web "Select geofence...")
+[x] string - automations.builder.signal          -> ViewModel.SignalLabel (L361) -> BuildSignalForm signal TsSelect (L530) (web UiSelect label "Signal")
+[x] string - automations.builder.simpleCron      -> ViewModel.SimpleCronLabel (L329) via ScheduleModeToggleLabel (L332) -> BuildModeToggle (web "Switch to simple mode")
+[x] string - automations.builder.statePlaceholder-> ViewModel.StateExample (L376) -> BuildSignalValueField state TsInput.Hint (L566) (web UiInput placeholder "online")
+[x] string - automations.builder.time            -> ViewModel.TimeLabel (L306) -> BuildTimeField TimePicker.Header (L282) (web UiInput label "Time")
+[x] string - automations.builder.timezone        -> ViewModel.TimezoneLabel (L335) -> BuildScheduleForm timezone TsSelect (L271) (web UiSelect label "Timezone")
+[x] string - automations.builder.value           -> ViewModel.ValueLabel (L367) -> BuildSignalValueField bool/state/number editors (L555/565/577) (web UiSelect/UiInput label "Value")
+[x] string - common.false                         -> ViewModel.FalseLabel (L373) -> BoolValueOptions (L275) -> BuildSignalValueField bool TsSelect (web common.false "False")
+[x] string - common.true                          -> ViewModel.TrueLabel (L370) -> BoolValueOptions (L274) -> BuildSignalValueField bool TsSelect (web common.true "True")
+
+PARITY_COVERED=23
+# Coverage asserted headlessly by TeslaSync.App.Tests/FeatureViews/TriggerConfiguratorTests.cs (102 tests):
+# the trigger union + defaults (createDefaultTrigger), TriggerCron build/parse/toggle-day, signalValueFromInput
+# coercion, the canonical catalogs (SIGNAL_FIELDS / SIGNAL_OPERATORS / VEHICLE_EVENTS / GEOFENCE_EVENTS /
+# TRIGGER_TYPES / DAYS / COMMON_TIMEZONES), the geofence parse + cache-then-network projection adapter
+# (loaded / cached-stale / loading / empty / error / offline), the ViewModel per-state folds + every edit
+# mutator, the registry + PII-safe diagnostics, and the i18n label/option surface. The WinUI view
+# (TriggerConfigurator.cs) is exercised by the Release app build.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TriggerConfigurator -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Automations path does not exist in-repo)
+PLACEHOLDER_ALLOWED=2
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+#   (the 2 allowed are // parity:allow markers on CronExample / StateExample, whose web i18n keys
+#    "cronPlaceholder" / "statePlaceholder" literally contain "placeholder" — a catalog key name, not a stub)
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Error(s)
+#   (17 pre-existing TeslaSync.App.Core CA warnings only — CA1000/CA1716/CA1720/CA1859, unrelated to this unit;
+#    TeslaSync.App WinUI app + App.Core + App.Platform + App.Tests + App.UITests + Generated + TokenGen built)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes (benign workspace-load warnings only)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25934, Failed: 0, Skipped: 0, Total: 25934
+#   (filtered FullyQualifiedName~TriggerConfigurator -> Passed: 102, Failed: 0, Skipped: 0)
+TEST_EXIT=0
+PARITY_COVERED=23
+PARITY_REQUIRED=23
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TriggerConfigurator apps/windows/Strings \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-automations-TriggerConfigurator.log
+# git commit -m "feat(apps/windows): TriggerConfigurator at web parity (W7 automations)"
+
+EXIT=0
+STATUS=DONE

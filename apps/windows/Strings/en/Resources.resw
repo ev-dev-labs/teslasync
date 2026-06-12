@@ -3459,6 +3459,9 @@
   <data name="translation.automations.builder.cronExpr" xml:space="preserve">
     <value>Cron Expression</value>
   </data>
+  <data name="translation.automations.builder.cronHint" xml:space="preserve">
+    <value>minute hour day-of-month month day-of-week</value>
+  </data>
   <data name="translation.automations.builder.cronPlaceholder" xml:space="preserve">
     <value>0 8 * * 1-5</value>
   </data>
