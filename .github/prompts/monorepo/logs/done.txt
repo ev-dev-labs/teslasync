@@ -535,3 +535,4 @@ p3-android/feature-views/A-0291-ClimateSection.prompt.md
 p3-android/feature-views/A-0285-TelemetryGrid.prompt.md
 p3-android/feature-views/A-0287-VehicleStatePanel.prompt.md
 p3-android/feature-views/A-0286-TirePressurePanel.prompt.md
+p3-android/feature-views/A-0290-ChargingTelemetrySection.prompt.md
