@@ -58,6 +58,10 @@ targets:
         excludes:
           - "**/*Tests.swift"
           - "*Tests.swift"
+      - path: TeslaSync/widget-primitives
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
       - path: Localization
       - path: ../design/generated/apple
         name: DesignTokens
@@ -108,6 +112,10 @@ targets:
           - "**/*Tests.swift"
           - "*Tests.swift"
       - path: TeslaSync/shared-surfaces
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
+      - path: TeslaSync/widget-primitives
         excludes:
           - "**/*Tests.swift"
           - "*Tests.swift"
