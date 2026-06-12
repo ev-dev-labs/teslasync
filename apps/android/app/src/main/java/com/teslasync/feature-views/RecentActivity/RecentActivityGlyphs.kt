@@ -1,12 +1,13 @@
-// Line-style icon set for the RecentActivity surface, drawn as Material [ImageVector]s.
+// Line-style icon set for the RecentActivity surface, drawn as a Material [ImageVector].
 //
-// The web component (dashboard/RecentActivity.tsx) uses six `lucide-react` glyphs — Activity / Route / Zap /
-// Clock / BatteryCharging / TrendingUp. The shared `datadisplay.DataDisplayGlyphs` set already carries Zap
-// (Bolt), Clock and BatteryCharging, so only the three the shared sets lack are authored here as 24x24
-// stroked vectors in the same monochrome style as the sibling glyph sets (EventTimelineGlyphs /
-// AutomationActivityFeedGlyphs). Android has no bundled lucide equivalent without the frozen
-// `material-icons-extended` artifact, so authoring them keeps the surface dependency-free. Each is recolored
-// at render time by the `Icon` composable's `tint`, so it inherits the panel/marker accent.
+// The web component (vehicles/RecentActivity.tsx) uses five `lucide-react` glyphs — Route / Zap / Clock /
+// BatteryCharging / ChevronRight. The shared sets already carry the other four (datadisplay carries Zap
+// (Bolt), Clock and BatteryCharging; ui carries ChevronRight via TeslaGlyphs), so only Route — which both
+// the drives panel title and each drive row marker use — is authored here as a 24x24 stroked vector in the
+// same monochrome style as the sibling glyph sets. Android has no bundled lucide equivalent without the
+// frozen `material-icons-extended` artifact, so authoring it keeps the surface dependency-free. It is
+// recolored at render time by the `Icon` composable's `tint` (or the enclosing `IconBox` content color), so
+// it inherits the panel/marker accent.
 //
 // `InvalidPackageDeclaration` is suppressed because this surface's mandated directory
 // (com/teslasync/feature-views/RecentActivity) cannot form a valid Kotlin package, so the package
@@ -25,41 +26,18 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 /**
- * The three RecentActivity glyphs the shared sets do not carry, mapped 1:1 onto their web lucide icons. The
- * activity-feed rows reuse [Route] (drive) and the shared Bolt (charge); the panel titles use [Activity],
- * the shared BatteryCharging, and [TrendingUp].
+ * The single RecentActivity glyph the shared sets do not carry, mapped 1:1 onto its web lucide icon. Both
+ * the drives panel title and each drive activity-row marker reuse [Route]; charges reuse the shared Bolt
+ * (Zap) + BatteryCharging, and the "View all" links reuse the shared ChevronRight.
  */
 object RecentActivityGlyphs {
-    /** Heartbeat pulse line — web lucide `Activity`, the activity-feed panel title icon. */
-    val Activity: ImageVector =
-        stroked("Activity") {
-            moveTo(22f, 12f)
-            lineTo(18f, 12f)
-            lineTo(15f, 21f)
-            lineTo(9f, 3f)
-            lineTo(6f, 12f)
-            lineTo(2f, 12f)
-        }
-
-    /** Two waypoints joined by a path — web lucide `Route`, the drive activity-row marker. */
+    /** Two waypoints joined by a path — web lucide `Route`, the drive panel title + row marker. */
     val Route: ImageVector =
         stroked("Route") {
             circle(6f, 18.5f, 2.5f)
             moveTo(6f, 16f)
             curveTo(6f, 11.5f, 18f, 12.5f, 18f, 8f)
             circle(18f, 5.5f, 2.5f)
-        }
-
-    /** Up-and-to-the-right trend arrow — web lucide `TrendingUp`, the fleet-performance panel title icon. */
-    val TrendingUp: ImageVector =
-        stroked("TrendingUp") {
-            moveTo(22f, 7f)
-            lineTo(13.5f, 15.5f)
-            lineTo(8.5f, 10.5f)
-            lineTo(2f, 17f)
-            moveTo(16f, 7f)
-            lineTo(22f, 7f)
-            lineTo(22f, 13f)
         }
 
     private fun stroked(
