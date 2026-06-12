@@ -436,3 +436,4 @@ p3-android/feature-views/A-0180-AlertMessageEditor.prompt.md
 p3-android/feature-views/A-0189-NotificationFilterBar.prompt.md
 p3-android/feature-views/A-0193-NoVehicleSelected.prompt.md
 p3-android/feature-views/A-0188-NotificationChannelsView.prompt.md
+p3-android/feature-views/A-0191-NotificationRow.prompt.md
