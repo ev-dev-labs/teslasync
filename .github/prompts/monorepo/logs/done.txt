@@ -343,3 +343,4 @@ p3-android/feature-views/A-0095-YearlyTrendChart.prompt.md
 p3-android/feature-views/A-0098-ChargerSpecsPanel.prompt.md
 p3-android/feature-views/A-0097-BatteryLevelChart.prompt.md
 p3-android/feature-views/A-0096-AcDcStatsPanel.prompt.md
+p3-android/feature-views/A-0094-TimeToChargeSection.prompt.md
