@@ -699,3 +699,4 @@ p2-windows/shared-meaningful/W-0223-PrintButton.prompt.md
 p2-windows/shared-meaningful/W-0224-RangeSlider.prompt.md
 p2-windows/shared-meaningful/W-0226-Slider.prompt.md
 p2-windows/shared-meaningful/W-0230-Toggle.prompt.md
+p2-windows/shared-meaningful/W-0225-Select.prompt.md
