@@ -202,6 +202,22 @@
     shared-surfaces/0150 CurrencyInput (repairing a merge=union multi-root corruption) from the WinUI-free
     sources on disk, plus the new CurrencyInput Model / Source / ViewModel links. Do NOT re-concatenate into
     multiple roots, and never write a literal build-item or project start tag inside this comment.
+    so each surface's Microsoft.UI-free sources are Compile-linked into the single, case-insensitive
+    ordinal path-sorted, Include-deduplicated item group below (the Link mirrors each source's real
+    location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI
+    view files are excluded and exercised by the app build, and the test classes are picked up by the SDK
+    default-compile glob. The Content links copy the units-golden, manifest and widget-template fixtures.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
+    path-sorted, Include-deduplicated compile item group - the union of every Microsoft.UI-free .cs on disk
+    under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare
+    WinUI view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
+    integration merges can re-concatenate it into multiple roots plus duplicate items, failing XML load
+    (MSB4025 / MSB4067); when that happens regenerate it directly from the WinUI-free sources on disk.
+    Regenerated into this single canonical root for P2 shared-surfaces/0148 Combobox (repairing a merge=union
+    multi-root corruption) from the WinUI-free sources on disk, plus the new Combobox Model / Source /
+    ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build item or
+    project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -1254,6 +1270,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Model.cs" Link="SharedSurfaces\ChartTooltip.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Source.cs" Link="SharedSurfaces\ChartTooltip.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.ViewModel.cs" Link="SharedSurfaces\ChartTooltip.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Combobox.Model.cs" Link="SharedSurfaces\Combobox.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Combobox.Source.cs" Link="SharedSurfaces\Combobox.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Combobox.ViewModel.cs" Link="SharedSurfaces\Combobox.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.Model.cs" Link="SharedSurfaces\CookieConsentBanner.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.Source.cs" Link="SharedSurfaces\CookieConsentBanner.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.ViewModel.cs" Link="SharedSurfaces\CookieConsentBanner.ViewModel.cs" />
