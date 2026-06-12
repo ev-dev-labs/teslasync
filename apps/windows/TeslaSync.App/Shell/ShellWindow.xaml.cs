@@ -86,12 +86,16 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Review.YearReviewPage(ParseYearParam(_viewModel.Current.Param("year")));
             page.CloseRequested += (_, _) => GoBack();
+            return page;
+        });
 
         // Automations / list page (P2/W7) — parity port of web AutomationListPage at route /automations/list.
         _viewModel.PageFactory.Register("AutomationList", () =>
         {
             var page = new FeatureViews.Automations.AutomationListPage();
             page.NavigationRequested += (_, e) => NavigateTo(e.Route);
+            return page;
+        });
 
         // Automations hub page (P2/W7) — parity port of web AutomationsListPage at route /automations.
         _viewModel.PageFactory.Register("Automations", () =>
@@ -106,6 +110,15 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("AutomationBuilder", static () => new FeatureViews.Automations.AutomationBuilderPage());
         // Battery / Degradation page (P2/W7) — parity port of web BatteryDegradationPage at route /battery-degradation.
         _viewModel.PageFactory.Register("BatteryDegradation", static () => new FeatureViews.Battery.BatteryDegradationPage());
+
+        // Charging / ChargingDetail page (P2/W7) — parity port of web ChargingDetailPage at route /charging/:id.
+        // The route session id is read from the live match and the back affordance maps to the charging list.
+        _viewModel.PageFactory.Register("ChargeDetail", () =>
+        {
+            var page = new FeatureViews.Charging.ChargingDetailPage(ParseSessionId(_viewModel.Current.Param("id")));
+            page.BackRequested += (_, _) => NavigateTo("charging");
+            return page;
+        });
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
@@ -575,6 +588,12 @@ public sealed partial class ShellWindow : Window
         int.TryParse(year, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed) && parsed > 0
             ? parsed
             : DateTime.Now.Year;
+
+    // Parse the /charging/:id route param (web Number(id)); 0 when absent so the page renders its empty state.
+    private static long ParseSessionId(string? id) =>
+        long.TryParse(id, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed) && parsed > 0
+            ? parsed
+            : 0;
 
     private void OnAuthStateChanged(object? sender, AuthState state)
     {

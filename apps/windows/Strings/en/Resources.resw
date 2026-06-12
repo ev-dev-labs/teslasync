@@ -11613,6 +11613,9 @@
   <data name="translation.help.charging.chargeCurve" xml:space="preserve">
     <value>Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits.</value>
   </data>
+  <data name="translation.help.charging.chargeCurve.aria" xml:space="preserve">
+    <value>More info about taper and derating</value>
+  </data>
   <data name="translation.help.charging.kwhPerHour" xml:space="preserve">
     <value>Average kWh added per hour across the session. Useful for estimating how long a future session will take at the same charger.</value>
   </data>
@@ -11621,6 +11624,9 @@
   </data>
   <data name="translation.help.charging.socRange" xml:space="preserve">
     <value>The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper.</value>
+  </data>
+  <data name="translation.help.charging.socRange.aria" xml:space="preserve">
+    <value>More info about state-of-charge range</value>
   </data>
   <data name="translation.help.cooldownMin.body" xml:space="preserve">
     <value>Minimum minutes between consecutive alerts from this rule, regardless of how often the underlying signal crosses the threshold.</value>

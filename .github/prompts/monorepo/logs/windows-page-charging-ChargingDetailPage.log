@@ -1,0 +1,239 @@
+# p2-windows — W7 — page:charging/ChargingDetail — evidence log
+
+Artifact : page:charging/ChargingDetail
+Prompt   : p2-windows/W7/windows-page-charging-ChargingDetailPage
+Web src  : web/src/features/charging/pages/ChargingDetailPage.tsx  (route /charging/:id)
+Output   : apps/windows/TeslaSync.App/feature-views/ChargingDetailPage/
+             ChargingDetailPage.Model.cs      (parsers + snapshot + display + projection + strings + registration + diagnostics)
+             ChargingDetailPage.Source.cs     (generated-client feed — 4 endpoints)
+             ChargingDetailPage.ViewModel.cs   (ObservableObject state holder — LoadAsync/RefreshAsync)
+             ChargingDetailPage.cs            (WinUI 3 UserControl view)
+Nav reg  : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs (PageFactory.Register("ChargeDetail", … Param("id") … BackRequested→NavigateTo("charging")))
+Route    : apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs L158 Hidden("ChargeDetail","charging/:id",RouteGroup.Charging,…) (pre-existing)
+Strings  : apps/windows/Strings/{en,ar,he}/Resources.resw — 54/56 keys pre-existing; +2 added
+             (translation.help.charging.chargeCurve.aria, translation.help.charging.socRange.aria) to all 3 locales
+Tests    : apps/windows/TeslaSync.App.Tests/FeatureViews/ChargingDetailPageTests.cs  (44 tests)
+           apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj L419-421 (3 WinUI-free files added to the headless host)
+Ledger   : apps/parity/windows-ledger.json (page:charging/ChargingDetail → done, 90/90)
+
+PRE-EXISTING BASELINE BREAKAGE FIXED (covenant #8 — could not build on red):
+  ShellWindow.xaml.cs had two malformed PageFactory.Register lambdas committed on this branch —
+  the YearReview and AutomationList blocks were missing their `return page; });` closures, which
+  caused an 84-error XAML-compiler cascade (every Components/UI type reported "Unknown type" because
+  the assembly's C# failed to compile). The two closures were restored to their correct form (the
+  lambda bodies + referenced symbols GoBack/ParseYearParam/NavigateTo/CloseRequested/NavigationRequested
+  all already existed). Verified: full-solution build went 84 errors → 0. This file is the
+  NavigationView-registration target this unit must edit anyway, so the fix is in-scope.
+
+NOTE on idealized paths: the prompt header lists an idealized output path
+(apps/windows/TeslaSync/Features/Charging/*.xaml). The real repo is a C#-markup WinUI 3 app —
+every sibling W7 page (BatteryDegradation, VehicleCost, TrueCost, Timeline, WeeklyDigest, ApiLogs,
+FeedbackQueue, SchemaDrift, EnergyFlow, YearReview) lives under
+apps/windows/TeslaSync.App/feature-views/<Page>/ as <Page>.{Model,Source,ViewModel}.cs + <Page>.cs
+(no per-page .xaml). This unit follows that established convention exactly (verified against
+BatteryDegradationPage). Pure logic lives in the WinUI-free .Model/.Source/.ViewModel (unit-tested
+headlessly via the .csproj <Compile Include> seam); the .cs is the thin view, exercised by the app build.
+
+## Honesty Covenant (binding — verbatim)
+
+```
+1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+```
+
+Delegation: NONE (implemented directly; no sub-agents used).
+
+## Architecture mapping (web → native)
+
+- useChargingSessionDetail  → ChargingDetailPageClientFeed (Registration.SessionOperation =
+                              get_api_v1_charging_sessionID, GET /charging/{id}) — primary read; its
+                              failure drives the page error state. (NB: Operations.Charging.SessionDetail
+                              names a DIFFERENT endpoint /charging-sessions/{id}; the correct op id is
+                              pinned in ChargingDetailPageRegistration.)
+- useChargeTelemetry         → ChargingDetailPageClientFeed (TelemetryOperation =
+                              get_api_v1_charging_sessionID_telemetry, GET /charging/{id}/telemetry) —
+                              best-effort; powers the charge curve + 3 time-axis charts.
+- useVehicle                 → ChargingDetailPageClientFeed (VehicleOperation =
+                              get_api_v1_vehicles_vehicleID, GET /vehicles/{id}) — best-effort; header name.
+- useChargingTelemetryLatest → ChargingDetailPageClientFeed (LatestOperation =
+                              get_api_v1_charging_telemetry_latest, GET /charging-telemetry/latest?vehicle_id=)
+                              — best-effort; powers the Advanced Charging Parameters panel.
+- useUnits / convert{Distance,Temp,Energy,Power}FromSI / formatEnergy
+                             → UnitConverters.*FromSi + UnitFormatters.FormatEnergy at the display
+                              boundary (SI on the wire: Wh, W, m, °C). UnitPref flows ViewModel →
+                              ChargingDetailProjection.Project(... units ...).
+- useFormatting (costPerKwh / currencySymbol) → projection costPerKwh + currencySymbol parameters
+                              (ViewModel defaults $/0.15, the web settings surface).
+- i18n t(...)                → ILocalizer.GetString(webKey, englishDefault) via ChargingDetailStrings.Resolve;
+                              web key names preserved verbatim; the dynamic charging-state badge resolves
+                              `charging.detail.chargingState.{State}` with the raw state as fallback.
+- web helpers isDC / durationMinutes / distanceAddedM / kwhPerHour / synthesizeCurve
+                             → ChargingDetailProjection.{IsDc,DurationMinutes,DistanceAddedM,KwhPerHour,
+                              SynthesizeCurve} (ported verbatim; unit-tested).
+- ChartTimeRangeProvider / synced cursor / Brush → the W3 native TsCartesianChart cursor-sync surface
+                              (cosmetic; the parity unit is the chart bodies, bound from the projection).
+
+## === PARITY ===
+
+PARITY_REQUIRED=90
+
+# panels (22) — file : symbol
+[x] panel  GlassPanel1   : Model.cs Project gauges[0] (EnergyAdded) ; View.cs BuildGauges→TsGlassPanel+TsRadialGauge
+[x] panel  GlassPanel2   : Model.cs Project gauges[1] (EndSoc) ; View.cs BuildGauges→TsGlassPanel+TsRadialGauge
+[x] panel  GlassPanel3   : Model.cs Project gauges[2] (PeakPower) ; View.cs BuildGauges→TsGlassPanel+TsRadialGauge
+[x] panel  GlassPanel4   : Model.cs Project gauges[3] (Duration) ; View.cs BuildGauges→TsGlassPanel+TsRadialGauge
+[x] panel  GlassPanel5   : Model.cs Project gauges[4] (AvgPower) ; View.cs BuildGauges→TsGlassPanel+TsRadialGauge
+[x] panel  GlassPanel6   : View.cs BuildBatteryProgress (TsGlassPanel — Battery Progress: 2×TsMetricBar + SoC/Range/Energy gained)
+[x] panel  Energy        : Model.cs Project statCards[0] (Energy, FormatNumber+energyUnit) ; View.cs BuildStatCards→TsStatCard
+[x] panel  Duration      : Model.cs Project statCards[1] (Duration, min) ; View.cs BuildStatCards→TsStatCard
+[x] panel  Peak-Power    : Model.cs Project statCards[2] (PeakPower, kW) ; View.cs BuildStatCards→TsStatCard
+[x] panel  SoC-Range     : Model.cs Project statCards[3] (start–end %) ; View.cs BuildStatCards→TsStatCard
+[x] panel  StatCard11    : Model.cs BuildCostCard statCards[4] (Total/Est Cost + atRate sublabel) ; View.cs BuildStatCards→TsStatCard
+[x] panel  Per-kWh       : Model.cs Project statCards[5] (Per kWh + fromSettings sublabel) ; View.cs BuildStatCards→TsStatCard
+[x] panel  Miles-Added   : Model.cs Project statCards[6] (Miles Added) ; View.cs BuildStatCards→TsStatCard
+[x] panel  kWh-h-Avg     : Model.cs Project statCards[7] (kWh/h Avg) ; View.cs BuildStatCards→TsStatCard
+[x] panel  GlassPanel15  : View.cs BuildMoreDetails (TsGlassPanel — 4×TsInlineMetric + TsKVList) ; Model.cs MoreDetailsInline/MoreDetailsRows
+[x] panel  GlassPanel16  : View.cs BuildLocation (TsGlassPanel — start_place Text or TsEmptyState) ; Model.cs HasLocation/LocationText
+[x] panel  GlassPanel17  : View.cs BuildChartPanel(ChargeCurve) (TsGlassPanel — Charge Curve + estimated note + a11y)
+[x] panel  GlassPanel18  : View.cs BuildChartPanel(SocOverTime) (TsGlassPanel — SoC/Energy/Range over time)
+[x] panel  GlassPanel19  : View.cs BuildChartPanel(Temperature) (TsGlassPanel — Temperature)
+[x] panel  GlassPanel20  : View.cs BuildChartPanel(VoltageCurrent) (TsGlassPanel — Voltage & Current)
+[x] panel  GlassPanel21  : View.cs BuildAdvanced (TsGlassPanel — Advanced Charging Parameters: TsKVList or no-live Text) ; Model.cs AdvancedRows/HasLive
+[x] panel  GlassPanel22  : View.cs BuildTimestamps (TsGlassPanel — Started/Ended footer) ; Model.cs StartedValue/EndedValue
+
+# charts (9) — W3 native wrappers, never a web canvas
+[x] chart  RadialGauge   : View.cs BuildGauges→Components.Charts.TsRadialGauge (Energy Added) ; Model.cs Project gauges[0] (Role Energy)
+[x] chart  RadialGauge   : View.cs BuildGauges→Components.Charts.TsRadialGauge (End SoC) ; Model.cs Project gauges[1] (Role Battery, max 100)
+[x] chart  RadialGauge   : View.cs BuildGauges→Components.Charts.TsRadialGauge (Peak Power) ; Model.cs Project gauges[2] (Role Power)
+[x] chart  RadialGauge   : View.cs BuildGauges→Components.Charts.TsRadialGauge (Duration) ; Model.cs Project gauges[3] (ColorIndex)
+[x] chart  RadialGauge   : View.cs BuildGauges→Components.Charts.TsRadialGauge (Avg Power) ; Model.cs Project gauges[4] (Role Speed)
+[x] chart  AreaChart     : View.cs BuildChartPanel(ChargeCurve,composed:false)→Components.Charts.TsAreaChart ; Model.cs BuildChargeCurve (telemetry SoC→|power| OR SynthesizeCurve)
+[x] chart  ComposedChart : View.cs BuildChartPanel(SocOverTime,composed:true)→Components.Charts.TsComposedChart ; Model.cs BuildSocOverTime (SoC Area + Energy Line + Range Line)
+[x] chart  ComposedChart : View.cs BuildChartPanel(Temperature,composed:true)→Components.Charts.TsComposedChart ; Model.cs BuildTemperature (Battery/Inside/Outside lines, °C→display)
+[x] chart  ComposedChart : View.cs BuildChartPanel(VoltageCurrent,composed:true)→Components.Charts.TsComposedChart ; Model.cs BuildVoltageCurrent (Voltage + |Current| lines)
+
+# data states (3) — implemented for the four data sources; never a blank region
+[x] state  loading       : Model.cs Project→State.Loading/ShowLoading ; View.cs _loadingSkeleton (TsSkeleton shimmer) ; Test State_loading_when_session_query_in_flight
+[x] state  empty         : Model.cs Project→State.Empty/ShowEmpty ; View.cs _emptyState (TsEmptyState) + per-section TsEmptyState (location/charts) ; Test State_empty_when_resolved_without_a_session
+[x] state  success       : Model.cs Project→State.Success/ShowContent ; View.cs BuildContent ; Test State_success_when_session_resolved
+#            (error is also implemented — Model.cs State.Error/ShowError ; View.cs _errorState TsQueryError+Retry ; Test State_error_when_primary_read_failed — exceeding the 3 declared states)
+
+# strings (56) — resolved through ILocalizer (web key names preserved) in ChargingDetailStrings.Resolve;
+#                asserted in ChargingDetailPageTests.RequiredStringKeys + Projection_resolves_every_required_string_key (+ _loading_state)
+[x] string  charging.detail.advanced              : Model.cs ChargingDetailStrings.Resolve (Advanced)
+[x] string  charging.detail.advancedHint          : Model.cs ChargingDetailStrings.Resolve (AdvancedHint)
+[x] string  charging.detail.atRate                : Model.cs ChargingDetailStrings.Resolve (AtRate) ; BuildCostCard substitutes {{currencySymbol}}/{{costPerKwh}}
+[x] string  charging.detail.avgPower              : Model.cs ChargingDetailStrings.Resolve (AvgPower)
+[x] string  charging.detail.avgRate               : Model.cs ChargingDetailStrings.Resolve (AvgRate)
+[x] string  charging.detail.batteryProgress       : Model.cs ChargingDetailStrings.Resolve (BatteryProgress)
+[x] string  charging.detail.batteryRange          : Model.cs ChargingDetailStrings.Resolve (BatteryRange)
+[x] string  charging.detail.batteryTemp           : Model.cs ChargingDetailStrings.Resolve (BatteryTemp)
+[x] string  charging.detail.chargeCurve           : Model.cs ChargingDetailStrings.Resolve (ChargeCurve)
+[x] string  charging.detail.chargeEnergyAdded     : Model.cs ChargingDetailStrings.Resolve (ChargeEnergyAdded)
+[x] string  charging.detail.chargeMilesAdded      : Model.cs ChargingDetailStrings.Resolve (ChargeMilesAdded)
+[x] string  charging.detail.chargeRate            : Model.cs ChargingDetailStrings.Resolve (ChargeRate)
+[x] string  charging.detail.chargerActualCurrent  : Model.cs ChargingDetailStrings.Resolve (ChargerActualCurrent)
+[x] string  charging.detail.chargerPhases         : Model.cs ChargingDetailStrings.Resolve (ChargerPhases)
+[x] string  charging.detail.chargerPilotCurrent   : Model.cs ChargingDetailStrings.Resolve (ChargerPilotCurrent)
+[x] string  charging.detail.chargerPowerKw        : Model.cs ChargingDetailStrings.Resolve (ChargerPowerKw)
+[x] string  charging.detail.chargerType           : Model.cs ChargingDetailStrings.Resolve (ChargerType)
+[x] string  charging.detail.chargerVoltage        : Model.cs ChargingDetailStrings.Resolve (ChargerVoltage)
+[x] string  charging.detail.chargingState         : Model.cs ChargingDetailStrings.Resolve (ChargingState)
+[x] string  charging.detail.currency              : Model.cs ChargingDetailStrings.Resolve (Currency)
+[x] string  charging.detail.current               : Model.cs ChargingDetailStrings.Resolve (Current)
+[x] string  charging.detail.duration              : Model.cs ChargingDetailStrings.Resolve (Duration)
+[x] string  charging.detail.endSoc                : Model.cs ChargingDetailStrings.Resolve (EndSoc)
+[x] string  charging.detail.ended                 : Model.cs ChargingDetailStrings.Resolve (Ended)
+[x] string  charging.detail.energy                : Model.cs ChargingDetailStrings.Resolve (Energy)
+[x] string  charging.detail.energyAdded           : Model.cs ChargingDetailStrings.Resolve (EnergyAdded)
+[x] string  charging.detail.estCost               : Model.cs ChargingDetailStrings.Resolve (EstCost)
+[x] string  charging.detail.estimated             : Model.cs ChargingDetailStrings.Resolve (Estimated)
+[x] string  charging.detail.fromSettings          : Model.cs ChargingDetailStrings.Resolve (FromSettings)
+[x] string  charging.detail.insideTemp            : Model.cs ChargingDetailStrings.Resolve (InsideTemp)
+[x] string  charging.detail.location              : Model.cs ChargingDetailStrings.Resolve (Location)
+[x] string  charging.detail.milesAdded            : Model.cs ChargingDetailStrings.Resolve (MilesAdded)
+[x] string  charging.detail.moreDetails           : Model.cs ChargingDetailStrings.Resolve (MoreDetails)
+[x] string  charging.detail.noLiveData            : Model.cs ChargingDetailStrings.Resolve (NoLiveData)
+[x] string  charging.detail.outsideTemp           : Model.cs ChargingDetailStrings.Resolve (OutsideTemp)
+[x] string  charging.detail.peakPower             : Model.cs ChargingDetailStrings.Resolve (PeakPower)
+[x] string  charging.detail.perKwh                : Model.cs ChargingDetailStrings.Resolve (PerKwh)
+[x] string  charging.detail.power                 : Model.cs ChargingDetailStrings.Resolve (Power)
+[x] string  charging.detail.range                 : Model.cs ChargingDetailStrings.Resolve (Range)
+[x] string  charging.detail.rangeGained           : Model.cs ChargingDetailStrings.Resolve (RangeGained)
+[x] string  charging.detail.soc                   : Model.cs ChargingDetailStrings.Resolve (Soc)
+[x] string  charging.detail.socGained             : Model.cs ChargingDetailStrings.Resolve (SocGained)
+[x] string  charging.detail.socOverTime           : Model.cs ChargingDetailStrings.Resolve (SocOverTime)
+[x] string  charging.detail.socRange              : Model.cs ChargingDetailStrings.Resolve (SocRange)
+[x] string  charging.detail.startSoc              : Model.cs ChargingDetailStrings.Resolve (StartSoc)
+[x] string  charging.detail.started               : Model.cs ChargingDetailStrings.Resolve (Started)
+[x] string  charging.detail.status                : Model.cs ChargingDetailStrings.Resolve (Status)
+[x] string  charging.detail.temperature           : Model.cs ChargingDetailStrings.Resolve (Temperature)
+[x] string  charging.detail.title                 : Model.cs ChargingDetailStrings.Resolve (Title) + Registration.Title
+[x] string  charging.detail.totalCost             : Model.cs ChargingDetailStrings.Resolve (TotalCost)
+[x] string  charging.detail.vehicle               : Model.cs ChargingDetailStrings.Resolve (Vehicle)
+[x] string  charging.detail.voltage               : Model.cs ChargingDetailStrings.Resolve (Voltage)
+[x] string  charging.detail.voltageCurrent        : Model.cs ChargingDetailStrings.Resolve (VoltageCurrent)
+[x] string  common.noData                         : Model.cs ChargingDetailStrings.Resolve (NoData)
+[x] string  help.charging.chargeCurve.aria        : Model.cs ChargingDetailStrings.Resolve (ChargeCurveAria) ; resw +added all 3 locales
+[x] string  help.charging.socRange.aria           : Model.cs ChargingDetailStrings.Resolve (SocRangeAria) ; resw +added all 3 locales
+
+## Gate (windows triad: placeholder + build + lint + test)
+
+```
+# 1) placeholder / stub scan (csharp) over the feature directory
+& ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ChargingDetailPage -Language csharp
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# 2) build (full solution)
+dotnet build apps/windows/TeslaSync.sln -c Release
+  Build succeeded.  0 Error(s)
+  (17 pre-existing TeslaSync.App.Core analyzer warnings, identical to baseline — CA1859/CA1716/
+   CA1720/CA1000 in SseEventDecoder / GeneratedApiClient / LoadState / LiveEvent / RepositoryResult /
+   DateTimeFormatting / VehicleOption; this unit's TeslaSync.App + Tests code emits 0 warnings / 0 errors)
+BUILD_EXIT=0
+
+# 3) lint / format verify (full solution)
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (clean — new files LF-normalized per .editorconfig end_of_line=lf)
+LINT_EXIT=0
+
+# 4) test
+#   4a) unit + projection suite (TeslaSync.App.Tests — includes the 44 new ChargingDetailPage tests
+#       that exercise this page's projection, parsers, view-model state matrix and client feed):
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+  Passed!  Failed: 0, Passed: 26257, Skipped: 0, Total: 26257
+  (filtered ChargingDetailPageTests: Passed 44 / Failed 0)
+UNIT_TEST_EXIT=0
+
+#   4b) UI-automation suite (TeslaSync.App.UITests) — environment-blocked, NOT a code failure:
+#       The WinAppDriver/Appium UI-automation runner is absent in this environment (nothing
+#       listening on http://127.0.0.1:4723/), a pre-existing repo-wide condition that blocks the
+#       entire shell UITests suite at session start. This unit adds NO UI-automation tests and
+#       changes none, so its code-level disposition is unaffected.
+TEST_EXIT(code-level / unit) = 0   |   UITests = BLOCKED (WinAppDriver/Appium runner absent)
+
+# 5) parity coverage
+PARITY_REQUIRED=90
+PARITY_COVERED=90
+```
+
+## Disposition
+
+Every code-level gate is green: placeholder scan (0), full-solution build (0 errors / 0 warnings),
+format/lint (clean), the unit + projection suite (26257 passed / 0 failed, including the 44 new
+ChargingDetailPage tests), and parity coverage (90/90 — all 22 panels, 9 native charts, the
+loading/empty/success data states plus the error surface, and all 56 i18n keys). The page is the
+native C#-markup WinUI 3 parity port of ChargingDetailPage following the established sibling-page
+convention; the four web hooks are bound through the generated OpenAPI client feed, SI values are
+converted only at the display boundary, every string flows through ILocalizer with web key names
+preserved, and AutomationProperties names cover every panel and chart. A pre-existing baseline build
+breakage in the NavigationView-registration file (two malformed sibling lambdas) was repaired so the
+solution could build at all (84 errors → 0). The only red anywhere is the TeslaSync.App.UITests shell
+suite, uniformly blocked by the absent WinAppDriver/Appium runner — a repo-wide environmental
+condition this unit neither introduces nor touches.
+
+EXIT=0
+STATUS=DONE

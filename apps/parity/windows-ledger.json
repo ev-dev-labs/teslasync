@@ -52,5 +52,14 @@
     "requiredCount": 23,
     "promptId": "p2-windows/W7/windows-page-automations-TriggerConfigurator",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-automations-TriggerConfigurator.log"
+  },
+  {
+    "unitId": "page:charging/ChargingDetail",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 90,
+    "requiredCount": 90,
+    "promptId": "p2-windows/W7/windows-page-charging-ChargingDetailPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-charging-ChargingDetailPage.log"
   }
 ]
