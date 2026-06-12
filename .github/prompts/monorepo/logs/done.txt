@@ -479,3 +479,4 @@ p3-android/feature-views/A-0230-FSMSubFSMPanel.prompt.md
 p3-android/feature-views/A-0232-InputCommandTile.prompt.md
 p3-android/feature-views/A-0236-AccordionSection.prompt.md
 p3-android/feature-views/A-0231-FSMTimelineChart.prompt.md
+p3-android/feature-views/A-0233-LiveControls.prompt.md
