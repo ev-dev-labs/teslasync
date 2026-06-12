@@ -1,0 +1,229 @@
+# p2-windows — W7 — page:battery/BatteryDegradation — evidence log
+
+Artifact : page:battery/BatteryDegradation
+Prompt   : p2-windows/W7/windows-page-battery-BatteryDegradationPage
+Web src  : web/src/features/battery/pages/BatteryDegradationPage.tsx  (route /battery-degradation)
+Output   : apps/windows/TeslaSync.App/feature-views/BatteryDegradationPage/
+             BatteryDegradationPage.Model.cs      (records + projection + diagnostics + registration)
+             BatteryDegradationPage.Source.cs     (generated-client feed — 2 endpoints)
+             BatteryDegradationPage.ViewModel.cs   (ObservableObject state holder — LoadAsync/RefreshAsync)
+             BatteryDegradationPage.cs            (WinUI 3 UserControl view)
+Nav reg  : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs (PageFactory.Register("BatteryDegradation", …))
+Route    : apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs L283 (pre-existing)
+Tests    : apps/windows/TeslaSync.App.Tests/FeatureViews/BatteryDegradationPageTests.cs  (47 tests)
+Ledger   : apps/parity/windows-ledger.json (page:battery/BatteryDegradation → done, 89/89)
+
+NOTE on idealized paths: the prompt header lists an idealized output path
+(apps/windows/TeslaSync/Features/Battery/*.xaml). The real repo is a C#-markup WinUI 3
+app — every sibling W7 page (VehicleCost, TrueCost, Timeline, WeeklyDigest, ApiLogs,
+FeedbackQueue, SchemaDrift) lives under apps/windows/TeslaSync.App/feature-views/<Page>/
+as <Page>.{Model,Source,ViewModel}.cs + <Page>.cs (no per-page .xaml). This unit follows
+that established convention exactly (verified against VehicleCostPage). Pure logic lives in
+the WinUI-free .Model/.Source/.ViewModel (unit-tested headlessly); the .cs is the thin view.
+
+## Honesty Covenant (binding — verbatim)
+
+```
+1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+```
+
+Delegation: NONE (implemented directly; no sub-agents used).
+
+## Architecture mapping (web → native)
+
+- useBatteryHealthAnalytics  → BatteryDegradationClientFeed (Operations.Analytics.BatteryHealth,
+                                GET /analytics/battery-health?vehicle_id=) — primary read; drives the
+                                page loading/error/empty state.
+- useBatteryDegradation      → BatteryDegradationClientFeed (Operations.Analytics.BatteryDegradation,
+                                GET /analytics/battery-degradation?vehicle_id=) — best-effort
+                                supplementary read (prediction / risk / projections).
+- useSelectedVehicle         → vehicleId passed to the feed (the shell owns the global picker, matching
+                                every sibling W7 page; the default shell registration uses the empty feed).
+- useUnits / convertDistanceFromSI / formatEnergy → UnitFormatters.FormatDistance/FormatEnergy +
+                                UnitConverters.DistanceFromSi at the display boundary (SI on the wire:
+                                km*1000 → metres → user unit; capacity_wh → Wh/kWh). UnitPref flows
+                                ViewModel → BatteryDegradationProjection.Project(... units ...).
+- useHiddenSeries            → native TsCartesianChart legend hidden-series state (W3 chart wrapper).
+- i18n t(...)                → ILocalizer.GetString(webKey, englishDefault) via BatteryStrings.Resolve;
+                                web key names preserved verbatim (the established sibling convention).
+
+## === PARITY ===
+
+PARITY_REQUIRED=89
+
+# panels (21) — file : symbol
+[x] panel  Current-SOH               : Model.cs BatteryDegradationProjection.BuildSummaryMetrics[0] (CurrentSoh, Pct) ; View.cs BuildSummary→TsStatCard
+[x] panel  Estimated-Capacity        : Model.cs BuildSummaryMetrics[1] (EstimatedCapacity + " kWh") ; View.cs BuildSummary→TsStatCard
+[x] panel  Degradation-Rate          : Model.cs BuildSummaryMetrics[2] (DegradationRateYr + "%/yr") ; View.cs BuildSummary→TsStatCard
+[x] panel  Battery-Age               : Model.cs BuildSummaryMetrics[3] + AgeLabel() ; View.cs BuildSummary→TsStatCard
+[x] panel  GlassPanel5               : View.cs BuildGaugePanel (TsGlassPanel hosting TsRadialGauge + TsBadge)
+[x] panel  GlassPanel6               : View.cs BuildPredictionPanel (TsGlassPanel — prediction section)
+[x] panel  Degradation-Rate-2        : Model.cs BuildPredictionMetrics[0] (abs SlopePerYear) ; View.cs BuildMetricCards→TsMetricCard
+[x] panel  Stress-Level              : Model.cs BuildPredictionMetrics[1] (StressLevel, accent) ; View.cs BuildMetricCards
+[x] panel  Total-Cycles              : Model.cs BuildPredictionMetrics[2] (TotalCycles) ; View.cs BuildMetricCards
+[x] panel  Avg-Depth-of-Discharge    : Model.cs BuildPredictionMetrics[3] (AvgDepthOfDischarge) ; View.cs BuildMetricCards
+[x] panel  Health-Trend-Projection   : View.cs BuildTrendChart (TsChartContainer + TsComposedChart) ; Model.cs BuildTrend
+[x] panel  GlassPanel12              : View.cs BuildRangeChart (TsGlassPanel — Range Loss Over Time)
+[x] panel  GlassPanel13              : View.cs BuildRiskFactors (TsGlassPanel — Risk Factors)
+[x] panel  GlassPanel14              : View.cs BuildRecommendations (TsGlassPanel — Recommendations)
+[x] panel  GlassPanel15              : View.cs BuildChargingImpact (TsGlassPanel — Charging Habits Impact)
+[x] panel  GlassPanel16              : View.cs BuildFactors (TsGlassPanel — Battery Health Factors)
+[x] panel  GlassPanel17              : Model.cs BuildFactorCards[0] (Charge Habits) ; View.cs BuildFactorCard
+[x] panel  GlassPanel18              : Model.cs BuildFactorCards[1] (Temperature Exposure + footer) ; View.cs BuildFactorCard
+[x] panel  GlassPanel19              : Model.cs BuildFactorCards[2] (Cycle Depth, CycleDepthScore) ; View.cs BuildFactorCard
+[x] panel  GlassPanel20              : View.cs BuildHistory (TsGlassPanel — Degradation History + TsDataTable)
+[x] panel  GlassPanel21              : View.cs BuildRiskCard (per-risk-factor TsGlassPanel inside the Risk Factors grid)
+
+# charts (4) — W3 native wrappers, never a web canvas
+[x] chart  RadialGauge               : View.cs BuildGaugePanel → Components.Charts.TsRadialGauge (Value/Max/Label/Unit/ColorIndex)
+[x] chart  ChartContainer            : View.cs BuildTrendChart → Components.Charts.TsChartContainer (State Ready/Empty, AccessibleSummary)
+[x] chart  ComposedChart             : View.cs BuildTrendChart → Components.Charts.TsComposedChart ; Model.cs BuildTrend (confidence Area + actual/projected Line + 80/70 ChartAnnotation reference lines)
+[x] chart  AreaChart                 : View.cs BuildRangeChart → Components.Charts.TsAreaChart ; Model.cs BuildRange (Original/Current series)
+
+# data states (4) — implemented for the data sources; never a blank region
+[x] state  loading                   : Model.cs Project→State.Loading/ShowLoading ; View.cs _loadingSkeleton (TsSkeleton shimmer) ; Test State_loading_when_query_in_flight
+[x] state  empty                     : Model.cs Project→State.Empty/ShowEmpty ; View.cs _emptyState (TsEmptyState) + per-section TsEmptyState (range/risk/recs/history) ; Test State_empty_when_resolved_with_no_health_object
+[x] state  error                     : Model.cs Project→State.Error/ShowError ; View.cs _errorState (TsQueryError + Retry) ; Test State_error_when_health_query_failed
+[x] state  success                   : Model.cs Project→State.Success/ShowContent ; View.cs BuildContent ; Test State_success_when_health_present
+
+# strings (60) — resolved through ILocalizer (web key names preserved) in BatteryStrings.Resolve;
+#                asserted in BatteryDegradationPageTests.RequiredStringKeys + Projection_resolves_every_required_string_key
+[x] string  Avg DoD                                                                   : Model.cs BatteryStrings.Resolve (AvgDoDShort)
+[x] string  Battery Age                                                               : Model.cs BatteryStrings.Resolve (BatteryAge)
+[x] string  Battery Degradation                                                       : Model.cs BatteryStrings.Resolve (Title) + Registration.Title
+[x] string  Battery Health                                                            : Model.cs BatteryStrings.Resolve (BatteryHealth)
+[x] string  Battery Health Factors                                                    : Model.cs BatteryStrings.Resolve (FactorsTitle)
+[x] string  Capacity                                                                  : Model.cs BatteryStrings.Resolve (Capacity)
+[x] string  Charge Habits                                                             : Model.cs BatteryStrings.Resolve (ChargeHabits)
+[x] string  Current Range                                                             : Model.cs BatteryStrings.Resolve (CurrentRange)
+[x] string  Current SOH                                                               : Model.cs BatteryStrings.Resolve (CurrentSoh)
+[x] string  Cycle Depth                                                               : Model.cs BatteryStrings.Resolve (CycleDepth)
+[x] string  Date                                                                      : Model.cs BatteryStrings.Resolve (Date)
+[x] string  Degradation History                                                       : Model.cs BatteryStrings.Resolve (HistoryTitle)
+[x] string  Degradation Rate                                                          : Model.cs BatteryStrings.Resolve (DegradationRate)
+[x] string  Degraded                                                                  : Model.cs BatteryStrings.Resolve (Degraded)
+[x] string  Estimated Capacity                                                        : Model.cs BatteryStrings.Resolve (EstimatedCapacity)
+[x] string  Excellent                                                                 : Model.cs BatteryStrings.Resolve (Excellent)
+[x] string  Fast Charge                                                               : Model.cs BatteryStrings.Resolve (FastCharge)
+[x] string  Full Charge                                                               : Model.cs BatteryStrings.Resolve (FullCharge)
+[x] string  Good                                                                      : Model.cs BatteryStrings.Resolve (Good)
+[x] string  Health trends, degradation predictions, and charging habit impact         : Model.cs BatteryStrings.Resolve (Subtitle)
+[x] string  Lower is better for longevity                                             : Model.cs BatteryStrings.Resolve (LowerIsBetter)
+[x] string  No degradation records found.                                             : Model.cs BatteryStrings.Resolve (NoRecordsFound)
+[x] string  Odometer                                                                  : Model.cs BatteryStrings.Resolve (Odometer)
+[x] string  Original Range                                                            : Model.cs BatteryStrings.Resolve (OriginalRange)
+[x] string  Range                                                                     : Model.cs BatteryStrings.Resolve (Range)
+[x] string  SOH %                                                                     : Model.cs BatteryStrings.Resolve (SohHeader)
+[x] string  Temperature Exposure                                                      : Model.cs BatteryStrings.Resolve (TemperatureExposure)
+[x] string  battery.degradation.actualHealth                                          : Model.cs BatteryStrings.Resolve (ActualHealth)
+[x] string  battery.degradation.avgDoD                                                : Model.cs BatteryStrings.Resolve (AvgDoD)
+[x] string  battery.degradation.chargingImpact                                        : Model.cs BatteryStrings.Resolve (ChargingImpact)
+[x] string  battery.degradation.confidence                                            : Model.cs BatteryStrings.Resolve (Confidence)
+[x] string  battery.degradation.deepDischarges                                        : Model.cs BatteryStrings.Resolve (DeepDischarges)
+[x] string  battery.degradation.fastCharges                                           : Model.cs BatteryStrings.Resolve (FastCharges)
+[x] string  battery.degradation.inApprox                                              : Model.cs BatteryStrings.Resolve (InApprox)
+[x] string  battery.degradation.needMore                                              : Model.cs BatteryStrings.Resolve (NeedMore)
+[x] string  battery.degradation.noHistory                                             : Model.cs BatteryStrings.Resolve (NoHistory)
+[x] string  battery.degradation.noRange                                               : Model.cs BatteryStrings.Resolve (NoRange)
+[x] string  battery.degradation.noRecommendations                                     : Model.cs BatteryStrings.Resolve (NoRecommendations)
+[x] string  battery.degradation.noRiskData                                            : Model.cs BatteryStrings.Resolve (NoRiskData)
+[x] string  battery.degradation.prediction                                            : Model.cs BatteryStrings.Resolve (Prediction)
+[x] string  battery.degradation.predictionDesc                                        : Model.cs BatteryStrings.Resolve (PredictionDesc)
+[x] string  battery.degradation.projected                                             : Model.cs BatteryStrings.Resolve (Projected)
+[x] string  battery.degradation.rangeLoss                                             : Model.cs BatteryStrings.Resolve (RangeLoss)
+[x] string  battery.degradation.rate                                                  : Model.cs BatteryStrings.Resolve (Rate)
+[x] string  battery.degradation.recommendations                                       : Model.cs BatteryStrings.Resolve (Recommendations)
+[x] string  battery.degradation.riskFactors                                           : Model.cs BatteryStrings.Resolve (RiskFactors)
+[x] string  battery.degradation.stress                                                : Model.cs BatteryStrings.Resolve (Stress)
+[x] string  battery.degradation.stressHigh                                            : Model.cs BatteryStrings.Resolve (StressHigh)
+[x] string  battery.degradation.stressLabel                                           : Model.cs BatteryStrings.Resolve (StressLabel)
+[x] string  battery.degradation.stressLow                                             : Model.cs BatteryStrings.Resolve (StressLow)
+[x] string  battery.degradation.stressMedium                                          : Model.cs BatteryStrings.Resolve (StressMedium)
+[x] string  battery.degradation.title                                                 : Model.cs BatteryStrings.Resolve (TitleKey)
+[x] string  battery.degradation.totalCycles                                           : Model.cs BatteryStrings.Resolve (TotalCycles)
+[x] string  battery.degradation.trendTitle                                            : Model.cs BatteryStrings.Resolve (TrendTitle)
+[x] string  battery.degradation.trendTitle.aria                                       : Model.cs BatteryStrings.Resolve (TrendAria)
+[x] string  battery.degradation.warranty                                              : Model.cs BatteryStrings.Resolve (Warranty)
+[x] string  battery.degradation.years                                                 : Model.cs BatteryStrings.Resolve (Years)
+[x] string  {{count}} months                                                          : Model.cs BatteryStrings.Resolve (CountMonths) + AgeLabel interpolation
+[x] string  {{y}} years                                                               : Model.cs BatteryStrings.Resolve (YearsTemplate) + AgeLabel interpolation
+[x] string  {{y}}y {{m}}m                                                             : Model.cs BatteryStrings.Resolve (YearsMonths) + AgeLabel interpolation
+
+PARITY_COVERED=89
+
+## Implementation-spec conformance
+
+- Navigation entry         : ShellWindow.xaml.cs PageFactory.Register("BatteryDegradation", …); route in RouteTable.cs L283.
+- Page scaffold            : BatteryDegradationPage : UserControl + BatteryDegradationPageViewModel : INotifyPropertyChanged
+                             (LoadAsync/RefreshAsync, NotifyOpened); no business logic in the view (thin renderer).
+- Panels via design tokens : DisplayTokens.* brushes + TsGlassPanel (Mica/Acrylic glass) — no hardcoded colours.
+- 3 data states / source   : loading/empty/error implemented page-level (TsSkeleton / TsEmptyState / TsQueryError) AND
+                             per-section (Range/Risk/Recommendations/History each render TsEmptyState; Prediction renders
+                             the "need more data" fallback) — never a blank region.
+- i18n                     : every visible literal flows through ILocalizer (BatteryStrings) with web key names; zero
+                             hardcoded literals in the view.
+- a11y                     : AutomationProperties.SetName on the page, every panel/metric/badge/chart; decorative bars
+                             marked AccessibilityView.Raw; TsChartContainer publishes an AccessibleSummary; AutomationPeer
+                             reports Group.
+- Units                    : SI converted only at the render boundary via UnitFormatters/UnitConverters (km*1000→metres,
+                             capacity_wh→Wh/kWh); ViewModel sources UnitPref; nothing non-SI stored/computed.
+
+## Gate
+
+```
+# 1) placeholder / stub scan (ADR-011) — actual feature dir
+& ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/BatteryDegradationPage -Language csharp
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# 2) build (full solution)
+dotnet build apps/windows/TeslaSync.sln -c Release
+  Build succeeded.  0 Error(s)  (17 pre-existing Core warnings, identical to baseline)
+BUILD_EXIT=0
+
+# 3) lint / format verify (full solution)
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (clean after LF line-ending normalization of the 5 new files)
+LINT_EXIT=0
+
+# 4) test
+#   4a) unit + projection suite (TeslaSync.App.Tests — includes the 47 BatteryDegradationPage tests
+#       that exercise this page's projection, parsers, view-model state matrix and client feed):
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+  Passed!  Failed: 0, Passed: 26011, Skipped: 0, Total: 26011
+UNIT_TEST_EXIT=0
+
+#   4b) UI-automation suite (TeslaSync.App.UITests) — environment-blocked, NOT a code failure:
+dotnet test apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App.Tests : Passed 26011 / Failed 0
+  TeslaSync.App.UITests: Failed 147 / 147 — ALL with the identical environment error
+    "UiAutomationUnavailableException: WinAppDriver/Appium runner is absent: nothing is
+     listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found"
+  → The WinAppDriver/Appium UI-automation runner is not installed in this environment, so the
+    whole TeslaSync.App.UITests shell suite cannot start a session. This is a pre-existing,
+    repo-wide environmental condition (every one of the 147 fails identically at
+    WinAppDriverSession.EnsureReady()); it is unrelated to this unit, which adds NO UI-automation
+    tests and changes none. SLN_TEST_EXIT=1 is attributable solely to this absent runner.
+  NOT reported as green (covenant #1): UITests = BLOCKED-on-environment (WinAppDriver absent).
+TEST_EXIT(code-level / unit) = 0   |   UITests = BLOCKED (WinAppDriver/Appium runner absent)
+
+# 5) parity coverage
+PARITY_REQUIRED=89
+PARITY_COVERED=89
+```
+
+## Disposition
+
+Every code-level gate is green: placeholder scan (0), full-solution build (0 errors), format/lint
+(clean), the unit + projection suite (26011 passed / 0 failed, including the 47 new
+BatteryDegradationPage tests), and parity coverage (89/89). The only red in `dotnet test <sln>` is
+the TeslaSync.App.UITests shell suite, which is uniformly blocked by the absent WinAppDriver/Appium
+runner (no interactive UI-automation host in this environment) — a pre-existing, repo-wide condition
+that this parity unit neither introduces nor touches (no UITests added/changed). Consistent with the
+sibling W7 page ledger entries, the page-parity unit is complete and verified at the code level.
+
+EXIT=0
+STATUS=DONE

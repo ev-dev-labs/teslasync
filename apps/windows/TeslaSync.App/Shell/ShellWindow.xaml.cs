@@ -102,6 +102,8 @@ public sealed partial class ShellWindow : Window
         // Automations / AutomationBuilder page (P2/W7) — parity port of web AutomationBuilderPage at routes
         // automations/new + automations/:id/edit.
         _viewModel.PageFactory.Register("AutomationBuilder", static () => new FeatureViews.Automations.AutomationBuilderPage());
+        // Battery / Degradation page (P2/W7) — parity port of web BatteryDegradationPage at route /battery-degradation.
+        _viewModel.PageFactory.Register("BatteryDegradation", static () => new FeatureViews.Battery.BatteryDegradationPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
