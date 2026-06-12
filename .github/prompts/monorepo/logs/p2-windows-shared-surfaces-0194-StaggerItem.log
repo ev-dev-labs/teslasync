@@ -1,0 +1,124 @@
+=== P2 Shared surface 0194 StaggerItem (Windows) ===
+
+SURFACE   : apps/windows/TeslaSync.App/shared-surfaces/StaggerItem.{cs,Model.cs,ViewModel.cs}
+TEST      : apps/windows/TeslaSync.App.Tests/SharedSurfaces/StaggerItemTests.cs (28 tests, all green)
+WEB SOURCE: web/src/components/motion/StaggerItem.tsx
+CAPABILITY: WinUI 3 (Microsoft.WindowsAppSDK) + .NET 10.0.300 — PRESENT (app builds 0/0, headless suite runs).
+            UI-automation harness (WinAppDriver/Appium) — ABSENT on this runner (see TEST breakdown / BLOCKED note).
+
+--- WHAT SHIPPED (parity port of the web StaggerItem) ---
+The web StaggerItem is an anonymous entrance wrapper: a `motion.div` whose variants animate its child in from a
+faded, slightly-below resting position (`hidden = { opacity: 0, y: 15 }`) up to its final place
+(`show = { opacity: 1, y: 0 }`) over the duration `useMotionPreference(350)` returns — `reduce ? 0 : 350` ms — and
+which, under `prefers-reduced-motion`, sets the hidden variant itself to `{ opacity: 1, y: 0 }` so the child
+renders straight in place. It reads no network data, exposes no labels/titles, and has no t() calls (the child
+carries all semantics). Ported with the established AnimatedNumber/AIThinkingIndicator 3-file pattern, bound to
+the shared P1/S8 reduce-motion seam (IMotionPreferenceSource, reused from AIThinkingIndicator.Source.cs); the view
+performs no I/O and renders entirely from the projection:
+  * StaggerItem.Model.cs      — StaggerItemRegistration (Slug "StaggerItem", automation id "stagger-item",
+                                DefaultDurationMs=350, HiddenOffsetY=15, ShownOffsetY=0, HiddenOpacity=0,
+                                ShownOpacity=1); the pure StaggerItemProjection (mirrors useMotionPreference: the
+                                effective DurationMs/DurationSeconds collapse to 0 under reduced motion; Animate is
+                                true only when motion is allowed AND duration > 0; the From* endpoints are the
+                                15px/0-opacity rise when animating else the resting state — tied to Animate so a
+                                non-animating wrapper renders with no flash, which is the same instant-settle the
+                                web hidden variant collapses to under reduce-motion; the To* endpoints are the
+                                invariant final state); and the PII-safe StaggerItemDiagnostics (emits only
+                                `view.opened slug=StaggerItem`, never any user content).
+  * StaggerItem.ViewModel.cs  — INotifyPropertyChanged + IDisposable holder over a fixed default duration + the
+                                IMotionPreferenceSource; projects to StaggerItemProjection, raises Projection /
+                                Animate when the user toggles reduce-motion at runtime, and unsubscribes on Dispose
+                                (the web media-query listener cleanup). No UI-thread / WinUI dependency, so it is
+                                Compile-linked into the headless test host.
+  * StaggerItem.cs            — WinUI 3 ContentControl hosting the caller's content (the web `children`). On Loaded
+                                it emits the view.opened diagnostic once and runs a one-shot Storyboard over the
+                                host Opacity + a TranslateTransform.Y from the projection's From* to To* endpoints
+                                (linear fade + cubic ease-out rise, the native FadeIn convention). Reduce-motion /
+                                zero-duration snaps straight to the final state; a runtime reduce-motion toggle is
+                                honoured (the entrance is one-shot — once settled it stays settled). Presentational
+                                wrapper: it stamps the stable automation id and is exposed as a transparent Group
+                                peer with no name of its own so the hosted child's semantics flow through unchanged.
+                                System reduce-motion read once via Components.Motion.MotionPreference (the read-once
+                                policy the peer motion-aware surfaces use).
+
+STATES REPRODUCED (every branch renders): the web source reads NO network data and is a pure motion wrapper, so it
+has no loading / empty / error / stale / offline matrix (identical to the sibling AnimatedNumber / AIThinkingIndicator
+surfaces, whose logs document the same). The branches it DOES have are reproduced and tested: the full-motion
+fade-and-rise (Animate=true: from opacity 0 / y 15 -> opacity 1 / y 0 over 350 ms) and the reduced-motion /
+zero-duration instant settle (Animate=false: from == to == final state, no flash). Per-state snapshot values are
+asserted for { 350/full, 350/reduced, 0/full, 600/full, 600/reduced }. Accessibility: stable automation id
+"stagger-item"; the wrapper exposes no redundant name (transparent Group), reduce-motion honoured. Telemetry:
+view.opened slug=StaggerItem (P1/S11), asserted PII-safe (slug only).
+
+i18n (P1/S10): the web source has ZERO t() calls and renders no surface-owned strings (it is an anonymous wrapper
+of arbitrary children), so there are no i18n keys to add and no English literals in the native code. Nothing to map
+in the catalogue.
+
+PRE-REQ REPAIR (test csproj merge=union corruption): apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was
+committed-corrupt at HEAD — the .gitattributes merge=union strategy had re-concatenated it into TWO <Project> roots
+(MSB4025 "multiple root elements", line 1343; baseline `dotnet msbuild` aborts before compiling anything), which
+blocks the whole-solution build/test/format for ANY surface. Per the file's own embedded INVARIANT and exactly as
+predecessors MapTileLayer 0185 / LinearSidebar 0174 / ConnectionSegment 0178 / Layout 0169 did, it was regenerated
+into ONE canonical root with the case-insensitive ordinal (StringComparer.OrdinalIgnoreCase) path-sorted,
+Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/ feature-views/ misc-surfaces/
+modals-dialogs/ shared-surfaces/. The repair was verified: the prior union was 1233 unique Compile links, every one
+exists on disk (0 stale, 0 conflicting Links), and that set is EXACTLY equal to the on-disk Microsoft.UI-free .cs
+enumeration (cross-checked: 0 to add, 0 to remove); + the 2 new StaggerItem Model/ViewModel links = 1235 total. The
+bare WinUI view StaggerItem.cs (and the other view files) reference Microsoft.UI and are correctly excluded
+(exercised by the app build). Single <Project> root + XML load + full headless test run (24035 pass) verified.
+
+=== GATE ===
+
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    Build succeeded.
+        0 Warning(s)
+        0 Error(s)
+    (TeslaSync.App WinUI app — compiles StaggerItem.cs under TreatWarningsAsErrors — + TeslaSync.App.Tests + all libs)
+    BUILD_EXIT=0
+
+[2] dotnet test apps/windows/TeslaSync.sln -c Release
+    Passed!  - Failed:     0, Passed: 24035, Skipped:     0, Total: 24035 - TeslaSync.App.Tests.dll (net10.0)
+    Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+    -> The headless logic suite PASSES in full (24035/0/0). It contains the 28 StaggerItem tests: registration
+       constants, the pure projection (useMotionPreference duration collapse, the Animate decision, full-motion and
+       reduced-motion / zero-duration / negative-duration / custom-duration endpoints, per-state snapshots, value
+       equality), the view-model (defaults, reduced start, explicit duration, runtime reduce-motion toggle + no-op,
+       Dispose unsubscribe, null-guard), the accessibility automation-id hook, and the PII-safe diagnostics.
+       Filtered count: 28 StaggerItemTests, 0 failed.
+    -> All 147 TeslaSync.App.UITests failures occur at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady()
+       — the shared fixture across EVERY surface's UI suite (AuthenticationFlowTests, PlatformPolishTests,
+       ShellNavigationTests, ...), NOT in any StaggerItem test. The fixture is designed to hard-fail (never silently
+       skip) when the runner is absent. Capability evidence (verbatim):
+         TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+         WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+         WinAppDriver.exe was not found at its standard install paths or on PATH.
+       Probe on this runner: TCP 127.0.0.1:4723 closed; WinAppDriver.exe absent from both standard install paths and
+       PATH; TESLASYNC_UIA_APP unset; no interactive desktop session for UI automation.
+    TEST_EXIT=1   (whole-solution; caused exclusively by the absent WinAppDriver/Appium UI-automation runner)
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    clean across the whole solution (the 4 new files are LF + formatted to the repo style; the regenerated csproj is
+    a single LF root)
+    FORMAT_EXIT=0
+
+[4] ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/StaggerItem
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0   (direct content scan of the 4 shipped files confirms zero TODO/FIXME/XXX/Coming soon/
+                           Placeholder/Lorem/not implemented/NotImplementedException/stub/mock tokens)
+    PLACEHOLDER_EXIT=0
+
+--- VERDICT ---
+BUILD_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  TEST_EXIT=1.
+The StaggerItem deliverable is complete and green on every gate within this runner's reach: the solution builds
+clean (0/0), the full headless test suite passes (24035/0/0, incl. 28 StaggerItem tests covering both motion
+branches and every projection edge), the solution is format-clean, and the surface carries zero placeholders. The
+pre-existing merge=union csproj multi-root corruption that blocked the whole-solution gate for ANY surface was
+repaired as documented (unrelated to StaggerItem but required for the mandated gate to run). The only non-zero step
+is the whole-solution TEST, failing solely because the WinAppDriver/Appium UI-automation runner is unavailable on
+this runner (no interactive desktop session) — a platform-capability gap that fails all 147 UITests identically
+regardless of surface. Per the prompt's capability clause ("If unavailable on the runner -> STATUS=BLOCKED with API
+evidence") and matching the adjacent sibling shared-surface logs (0185 MapTileLayer, 0174 LinearSidebar, 0178
+ConnectionSegment), this is recorded as BLOCKED with the evidence above.
+
+EXIT=1
+STATUS=BLOCKED
