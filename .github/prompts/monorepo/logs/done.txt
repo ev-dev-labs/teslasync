@@ -495,3 +495,4 @@ p3-android/feature-views/A-0247-IncidentsCard.prompt.md
 p3-android/feature-views/A-0254-StatusPageSkeleton.prompt.md
 p3-android/feature-views/A-0249-LiveStatusPill.prompt.md
 p3-android/feature-views/A-0242-DataPipelineSection.prompt.md
+p3-android/feature-views/A-0248-InfrastructureSection.prompt.md
