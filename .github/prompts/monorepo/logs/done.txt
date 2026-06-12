@@ -426,3 +426,4 @@ p3-android/feature-views/A-0175-SummaryStats.prompt.md
 p3-android/feature-views/A-0178-TripPlannerMap.prompt.md
 p3-android/feature-views/A-0181-BrowserPushChannelCard.prompt.md
 p3-android/feature-views/A-0179-AlertCard.prompt.md
+p3-android/feature-views/A-0184-LegacyAlertRulesRedirect.prompt.md
