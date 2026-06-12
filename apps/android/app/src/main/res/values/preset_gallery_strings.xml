@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App-owned strings (not part of the auto-generated i18n translation_* catalog).
+
+  The web PresetGallery (web/src/features/automations/pages/PresetGallery.tsx) renders the
+  first-trigger label via t('automations.builder.triggerSchedule', 'Schedule') (and the Event /
+  Geofence / Signal peers). Those four keys do NOT exist in the web react-i18next catalog, so the
+  web app renders the i18next *fallback* string in every locale (including ar/he). The neutral
+  P1/S10 catalog (apps/shared/i18n, generated into the translation_* resources) therefore has no
+  matching key to bind, and that catalog is auto-generated — it must never be hand-edited.
+
+  To keep the native surface free of hardcoded English while reproducing the web verbatim, the four
+  trigger labels live here as app-owned resources, mirroring the established nav_strings / auth_strings
+  / live_strings pattern. They are English-only in values/ on purpose: Android falls back to values/
+  for ar/he, which reproduces the web's missing-key fallback (English shown in every locale) exactly.
+-->
+<resources>
+    <string name="preset_gallery_trigger_schedule">Schedule</string>
+    <string name="preset_gallery_trigger_event">Vehicle Event</string>
+    <string name="preset_gallery_trigger_geofence">Geofence</string>
+    <string name="preset_gallery_trigger_signal">Signal Threshold</string>
+</resources>
