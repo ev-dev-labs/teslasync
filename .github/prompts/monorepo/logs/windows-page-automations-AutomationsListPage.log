@@ -1,0 +1,121 @@
+=== p2-windows · W7 · page:automations/AutomationsList (WinUI 3 / Fluent) ===
+Parity unit : page:automations/AutomationsList   kind=page   web route=/automations
+Web source  : web/src/features/automations/pages/AutomationsListPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) + Windows App SDK / WinUI workload — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (generated-client data adapter), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ApiLogsPage / FeedbackQueuePage do. The generated prompt's idealized
+  "AutomationsListPage.xaml + AutomationsListPageViewModel.cs under TeslaSync/Features/Automations" is mapped onto
+  these real conventions; the surface registers itself with the W4 ShellPageFactory by route name ("Automations",
+  already in RouteTable.cs → /automations) in ShellWindow.xaml.cs, wiring its NavigationRequested event to the
+  shell NavigateTo (web navigate('/automations/new') Create / empty CTA).
+- Data binding (ADR-004): the 8 manifest data sources are useAutomations (GET /automations), useAutomationHistory
+  (GET /automations/history?limit), useVehicles (GET /vehicles), usePinned (GET /pinned?type=automation),
+  useToggleAutomation (PATCH /automations/{id}/toggle), useReEnableAutomation (PATCH /automations/{id}/re-enable),
+  useDeleteAutomation (DELETE /automations/{id}) and useTestRunAutomation (POST /automations/{id}/test-run). The
+  view-model reads/writes through an injected IAutomationsListFeed; the default EmptyAutomationsListFeed resolves
+  the empty state (matching the ApiLogsPage/FeedbackQueuePage host-injection precedent), and the generated-client
+  AutomationsListClientFeed (AutomationsListPage.Source.cs) binds to the generated OpenAPI operations
+  (get_api_v1_automations, get_api_v1_vehicles, get_api_v1_pinned [type=automation], get_api_v1_automations_history
+  [limit], patch_api_v1_automations_id_toggle {enabled}, patch_api_v1_automations_id_re_enable,
+  delete_api_v1_automations_id, post_api_v1_automations_id_test_run, post_api_v1_automations_import) and is asserted
+  in tests via the FakeApiClient. No HTTP touches the view.
+- Status/search filtering and pin ordering are client-side (web filteredItems → sortedItems): the projection mirrors
+  computeStats, the active/disabled/auto-disabled predicates, the name/description search, and floats pinned ids to
+  the top in pin order. Each surviving automation is projected into the shared AutomationCard's AutomationCardModel
+  (vehicle scope label resolved from useVehicles, pin flag from usePinned). The recent-activity feed reuses the
+  shared AutomationActivityFeed leaf, fed the history slice + summary; live SSE events are out of scope for this
+  page (no SSE hook in the manifest data sources) so it composes with an empty live-event set.
+- The collapsible Quick-Start-Templates panel (web <details> wrapping <PresetGallery/>) hosts the shared
+  PresetGalleryView, wired to the page's default (empty) preset source so the gallery renders its own empty branch
+  until a real presets read is injected — mirroring the page's EmptyAutomationsListFeed default.
+- The typed-import handler is faithfully reproduced: the view opens a .json FileOpenPicker (the web file input),
+  the pure AutomationImportEnvelope.IsValid gate rejects untyped/legacy exports (web isAutomationImportEnvelope)
+  before POST /automations/import, and failures surface in a ContentDialog using the localized import strings.
+- SI units N/A (no unit-bearing fields on this surface). All 23 i18n keys resolve through the ILocalizer facade
+  with the web key names; 6 previously-absent keys were added to Strings/en/Resources.resw
+  (translation.automations.autoDisabledWarning, .empty.cta, .filters.all, .importFailedWithReason,
+  .importTypedEnvelopeRequired, .noMatch.cta); the other 17 already existed verbatim.
+
+=== PARITY ===
+PARITY_REQUIRED=33
+
+# Panels (7) — the four web StatCards + three web GlassPanels, every sub-region reproduced
+[x] panel  - Total          -> AutomationsListPage.cs#_totalCard (TsStatCard) bound to AutomationsListDisplay.TotalLabel/TotalValue (AutomationsListProjection.Project → AutomationStatCounts.Compute); test Stat_bar_counts_match_web_compute_stats
+[x] panel  - Active         -> AutomationsListPage.cs#_activeCard (TsStatCard) bound to ActiveLabel/ActiveValue; test Stat_bar_counts_match_web_compute_stats
+[x] panel  - Disabled       -> AutomationsListPage.cs#_disabledCard (TsStatCard) bound to DisabledLabel/DisabledValue; test Stat_bar_counts_match_web_compute_stats
+[x] panel  - Auto-Disabled  -> AutomationsListPage.cs#_autoDisabledCard (TsStatCard) bound to AutoDisabledLabel/AutoDisabledValue + auto-disabled warning banner (_warningBanner, Display.ShowAutoDisabledWarning); tests Stat_bar_counts_match_web_compute_stats + Auto_disabled_warning_shows_only_when_any_auto_disabled
+[x] panel  - GlassPanel5    -> AutomationsListPage.cs#BuildFiltersPanel (TsGlassPanel): status TsSelect (Display.StatusFilterOptions/SelectedStatusFilter) + search TsInput (SearchHint) + filtered/total TsBadge (ShowFilterCount/FilterCountText); tests Status_filter_options_match_web_with_all_head + Filter_count_badge_visible_only_when_filtering
+[x] panel  - GlassPanel6    -> AutomationsListPage.cs#BuildPresetsPanel (TsGlassPanel): collapsible Expander (PresetsTitle/PresetsHint/PresetsExpand|Collapse/PresetsToggleAria) hosting the shared PresetGalleryView (web <details><PresetGallery/>); strings via Projection
+[x] panel  - GlassPanel7    -> AutomationsListPage.cs#BuildCardsPanel (TsGlassPanel): loading spinner / TsQueryError / TsEmptyState (empty) / TsEmptyState (no-match) / AutomationCard list (_cardsPanel); tests State_* + No_match_state_when_filter_excludes_everything
+# (anonymous region also reproduced: AutomationActivityFeed leaf — _activityFeed bound to Display.ActivityFeed)
+
+# Data states (3 declared: loading / empty / success — error surface also implemented), each a visible region (never blank)
+[x] state  - loading        -> AutomationsListState.Loading + AutomationsListDisplay.ShowLoading (AutomationsListProjection.SelectState); rendered AutomationsListPage.cs#_loadingPanel (ProgressRing + LoadingText); test State_loading_when_query_in_flight
+[x] state  - empty          -> AutomationsListState.Empty + ShowEmpty; rendered _emptyState (TsEmptyState, EmptyMessage + EmptyCtaLabel → NavigationRequested automations/new); test State_empty_when_resolved_with_no_automations
+[x] state  - success        -> AutomationsListState.Success + ShowCards; rendered _cardsPanel (AutomationCard rows wired to Toggle/ReEnable/Delete/TestRun); test State_success_when_automations_present
+# (error: AutomationsListState.Error + HasError/ErrorText; _errorState TsQueryError + Retry via ActionInvoked → RefreshAsync; tests State_error_shows_query_error_with_detail + ViewModel_feed_failure_is_the_error_state)
+
+# Strings (23) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - automations.autoDisabledWarning         -> AutomationsListProjection.Project localizer.GetString("automations.autoDisabledWarning", "{0} automation(s) have been auto-disabled due to repeated failures.")
+[x] string - automations.create                      -> AutomationsListProjection.Project localizer.GetString("automations.create", "Create")
+[x] string - automations.empty                       -> AutomationsListProjection.Project localizer.GetString("automations.empty", "No automations yet. Create a typed automation to get started!")
+[x] string - automations.empty.cta                   -> AutomationsListProjection.Project localizer.GetString("automations.empty.cta", "Create automation")
+[x] string - automations.filterStatus                -> AutomationsListProjection.Project localizer.GetString("automations.filterStatus", "Filter by status")
+[x] string - automations.import                      -> AutomationsListProjection.Project localizer.GetString("automations.import", "Import")
+[x] string - automations.importFailedWithReason      -> AutomationsListProjection.Project localizer.GetString("automations.importFailedWithReason", "Typed automation import failed: {0}")
+[x] string - automations.importTypedEnvelopeRequired -> AutomationsListProjection.Project localizer.GetString("automations.importTypedEnvelopeRequired", "Import a typed TeslaSync CTI automation export file. Legacy automation exports are rejected rather than translated.")
+[x] string - automations.importUnknownError          -> AutomationsListProjection.Project localizer.GetString("automations.importUnknownError", "Unknown error")
+[x] string - automations.noMatch                     -> AutomationsListProjection.Project localizer.GetString("automations.noMatch", "No automations match your filters")
+[x] string - automations.noMatch.cta                 -> AutomationsListProjection.Project localizer.GetString("automations.noMatch.cta", "Reset filters")
+[x] string - automations.presets.collapse            -> AutomationsListProjection.Project localizer.GetString("automations.presets.collapse", "Click to collapse")
+[x] string - automations.presets.expand              -> AutomationsListProjection.Project localizer.GetString("automations.presets.expand", "Click to expand")
+[x] string - automations.presets.hint                -> AutomationsListProjection.Project localizer.GetString("automations.presets.hint", "One-click install")
+[x] string - automations.presets.title               -> AutomationsListProjection.Project localizer.GetString("automations.presets.title", "Quick Start Templates")
+[x] string - automations.presets.toggleAria          -> AutomationsListProjection.Project localizer.GetString("automations.presets.toggleAria", "Show or hide quick start templates")
+[x] string - automations.search                      -> AutomationsListProjection.Project localizer.GetString("automations.search", "Search automations...")
+[x] string - automations.stats.active                -> AutomationsListProjection.Project localizer.GetString("automations.stats.active", "Active")
+[x] string - automations.stats.autoDisabled          -> AutomationsListProjection.Project localizer.GetString("automations.stats.autoDisabled", "Auto-Disabled")
+[x] string - automations.stats.disabled              -> AutomationsListProjection.Project localizer.GetString("automations.stats.disabled", "Disabled")
+[x] string - automations.stats.total                 -> AutomationsListProjection.Project localizer.GetString("automations.stats.total", "Total")
+[x] string - automations.subtitle                    -> AutomationsListProjection.Project localizer.GetString("automations.subtitle", "Automate vehicle actions with typed triggers, conditions, and action chains")
+[x] string - automations.title                       -> AutomationsListProjection.Project / AutomationsListRegistration.Title localizer.GetString("automations.title", "Automations")
+
+PARITY_COVERED=33
+# Coverage asserted headlessly: AutomationsListPageTests.Projection_resolves_every_required_string_key
+# (+ _resolves_all_keys_even_in_the_loading_state) records every key above through a RecordingLocalizer; the four
+# state tests + Stat_bar/Status_filter/Search/No_match/Pinned/Card_model tests assert each region renders from the
+# bound AutomationsListDisplay state holder; Import_envelope_validation_matches_web asserts the typed-envelope gate;
+# the ClientFeed_* tests assert the generated-client GET/PATCH/POST/DELETE request shaping (web useAutomations +
+# sibling queries / mutations / import); the ViewModel_* tests assert the loading/empty/error/success matrix +
+# client-side filter/search/reset, the mutate-then-reload flow, and the import accept/reject paths.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AutomationsListPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Automations path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (new AutomationsListPage sources + ShellWindow registration + test csproj link + en resw, all LF)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25940, Failed: 0, Skipped: 0 (incl. 38 AutomationsListPageTests)
+TEST_EXIT=0
+PARITY_COVERED=33
+PARITY_REQUIRED=33
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/AutomationsListPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/AutomationsListPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-automations-AutomationsListPage.log
+# git commit -m "feat(apps/windows): AutomationsListPage at web parity (W7 automations)"
+
+EXIT=0
+STATUS=DONE

@@ -72,6 +72,14 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("VehicleCost", static () => new FeatureViews.Admin.VehicleCostPage());
         // Analytics / Timeline page (P2/W7) — parity port of web TimelinePage at route /timeline.
         _viewModel.PageFactory.Register("Timeline", static () => new FeatureViews.Analytics.TimelinePage());
+
+        // Automations hub page (P2/W7) — parity port of web AutomationsListPage at route /automations.
+        _viewModel.PageFactory.Register("Automations", () =>
+        {
+            var page = new FeatureViews.Automations.AutomationsListPage();
+            page.NavigationRequested += (_, e) => NavigateTo(e.Path);
+            return page;
+        });
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
