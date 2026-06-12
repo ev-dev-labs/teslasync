@@ -1,0 +1,106 @@
+=== p2-windows · W7 · page:admin/ApiLogs (WinUI 3 / Fluent) ===
+Parity unit : page:admin/ApiLogs   kind=page   web route=/api-logs
+Web source  : web/src/features/admin/pages/ApiLogsPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder, the
+  established testable observable-view-model pattern — see AcDcStatsViewModel) and <Name>.cs (the Fluent view).
+  The generated prompt's idealized "ApiLogsPage.xaml + ViewModel.cs under TeslaSync/Features/Admin" is mapped onto
+  these real conventions; the surface registers itself with the W4 ShellPageFactory by route name ("ApiLogs").
+- Manifest models this unit as rendering from navigation/local state ("no API data sources"): the generated C#
+  client (ADR-004) exposes no /api-logs endpoint, so the view-model reads pages through an injected IApiLogsFeed
+  (default EmptyApiLogsFeed resolves the empty state) rather than a fabricated client call. SI units N/A (no
+  unit-bearing fields on this admin surface); display formatting still flows through the shared NumberFormatting /
+  DateTimeFormatting ports (web fmtInt/fmtNumber + <DateTime>).
+- All 30 i18n keys already exist verbatim in Strings/en/Resources.resw (translation.apiLogs.* + translation.error.loadFailed);
+  the surface resolves them through the ILocalizer facade with the web key names (no new catalog rows required).
+- Pre-existing blocker repaired: TeslaSync.App.Tests.csproj had been corrupted by its documented .gitattributes
+  merge=union strategy into two <Project> roots + duplicated <ItemGroup>/Compile items (MSB4025), which broke the
+  whole-solution load. Regenerated it into the single canonical Project root the file's own INVARIANT comment
+  mandates: case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free source
+  (1312 distinct) plus the two new ApiLogsPage links (1314 total). No linked source dropped.
+
+=== PARITY ===
+PARITY_REQUIRED=43
+
+# Panels (9) — every named panel + every anonymous GlassPanel region from the web source
+[x] panel  - GlassPanel1   -> ApiLogsPage.Model.cs#ApiLogJsonDisplay + ApiLogsProjection.BuildJson (request/response JSON viewer); rendered ApiLogsPage.cs#BuildJsonBlock (TsGlassPanel)
+[x] panel  - Total-Calls   -> ApiLogsPage.Model.cs#ApiLogsProjection.Project StatCards[0] (fmtInt total_calls); rendered ApiLogsPage.cs#_totalCallsCard (TsStatCard)
+[x] panel  - Error-Rate    -> ApiLogsProjection.Project StatCards[1] (fmtNumber error_rate + '%', error_count trend>5); rendered _errorRateCard (TsStatCard)
+[x] panel  - Avg-Duration  -> ApiLogsProjection.Project StatCards[2] (fmtInt avg_duration_ms + 'ms'); rendered _avgDurationCard (TsStatCard)
+[x] panel  - Last-24h      -> ApiLogsProjection.Project StatCards[3] (fmtInt last_24h); rendered _last24hCard (TsStatCard)
+[x] panel  - GlassPanel6   -> ApiLogsPage.cs#BuildFiltersPanel (TsGlassPanel): service/method/status selects + endpoint input + clear (web Filters GlassPanel)
+[x] panel  - GlassPanel7   -> ApiLogsPage.cs#BuildTablePanel (TsGlassPanel): summary header + Export + body branch + pagination (web Table GlassPanel)
+[x] panel  - GlassPanel8   -> ApiLogsPage.cs#BuildDetailBlock(labels.RequestUrl, row.RequestUrlText) (TsGlassPanel); ApiLogRowDisplay.RequestUrlText (web Request URL detail)
+[x] panel  - GlassPanel9   -> ApiLogsPage.cs#BuildDetailBlock(labels.Error, row.ErrorBody) (TsGlassPanel); ApiLogRowDisplay.ErrorBody (web expanded Error detail)
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading       -> ApiLogsState.Loading + ApiLogsDisplay.ShowLoading (ApiLogsProjection.SelectState); rendered ApiLogsPage.cs#_loadingPanel (ProgressRing + LoadingText); test State_loading_when_query_in_flight
+[x] state  - empty         -> ApiLogsState.Empty + ShowEmpty/ShowEmptyHint; rendered _emptyState (TsEmptyState); tests State_empty_when_resolved_with_no_rows / State_empty_with_filters_shows_adjust_hint
+[x] state  - error         -> ApiLogsState.Error + ApiLogsDisplay.HasError/ErrorBannerText; rendered _errorBanner (TsAlertBanner Danger, InfoBar-equivalent + retry via reload); test State_error_shows_banner_with_detail
+[x] state  - success       -> ApiLogsState.Success + ShowRows; rendered _rowsPanel (Expander rows); test State_success_when_rows_present
+
+# Strings (30) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - apiLogs.adjustFilters     -> ApiLogsProjection.Project localizer.GetString("apiLogs.adjustFilters", "Try adjusting your filters")
+[x] string - apiLogs.allMethods        -> ApiLogsProjection.Project localizer.GetString("apiLogs.allMethods", "All Methods")
+[x] string - apiLogs.allServices       -> ApiLogsProjection.Project localizer.GetString("apiLogs.allServices", "All Services")
+[x] string - apiLogs.allStatus         -> ApiLogsProjection.Project localizer.GetString("apiLogs.allStatus", "All Status")
+[x] string - apiLogs.avgDuration       -> ApiLogsProjection.Project localizer.GetString("apiLogs.avgDuration", "Avg Duration")
+[x] string - apiLogs.byService         -> ApiLogsProjection.Project localizer.GetString("apiLogs.byService", "By Service")
+[x] string - apiLogs.clear             -> ApiLogsProjection.Project localizer.GetString("apiLogs.clear", "Clear")
+[x] string - apiLogs.error             -> ApiLogsProjection.DetailLabels localizer.GetString("apiLogs.error", "Error")
+[x] string - apiLogs.errorRate         -> ApiLogsProjection.Project localizer.GetString("apiLogs.errorRate", "Error Rate")
+[x] string - apiLogs.exportJson        -> ApiLogsProjection.Project localizer.GetString("apiLogs.exportJson", "Export JSON")
+[x] string - apiLogs.filterEndpoint    -> ApiLogsProjection.Project localizer.GetString("apiLogs.filterEndpoint", "Filter by endpoint...")
+[x] string - apiLogs.filters           -> ApiLogsProjection.Project localizer.GetString("apiLogs.filters", "Filters")
+[x] string - apiLogs.last24h           -> ApiLogsProjection.Project localizer.GetString("apiLogs.last24h", "Last 24h")
+[x] string - apiLogs.loading           -> ApiLogsProjection.Project localizer.GetString("apiLogs.loading", "Loading logs...")
+[x] string - apiLogs.next              -> ApiLogsProjection.Project localizer.GetString("apiLogs.next", "Next")
+[x] string - apiLogs.noData            -> ApiLogsProjection.Project localizer.GetString("apiLogs.noData", "No {0}") (JsonViewer no-data note)
+[x] string - apiLogs.noLogs            -> ApiLogsProjection.Project localizer.GetString("apiLogs.noLogs", "No logs found")
+[x] string - apiLogs.noLogsFound       -> ApiLogsProjection.Project localizer.GetString("apiLogs.noLogsFound", "No API call logs found")
+[x] string - apiLogs.pageOf            -> ApiLogsProjection.Project localizer.GetString("apiLogs.pageOf", "Page {0} of {1}")
+[x] string - apiLogs.previous          -> ApiLogsProjection.Project localizer.GetString("apiLogs.previous", "Previous")
+[x] string - apiLogs.requestBody       -> ApiLogsProjection.Project localizer.GetString("apiLogs.requestBody", "Request Body")
+[x] string - apiLogs.requestUrl        -> ApiLogsProjection.DetailLabels localizer.GetString("apiLogs.requestUrl", "Request URL")
+[x] string - apiLogs.responseBody      -> ApiLogsProjection.Project localizer.GetString("apiLogs.responseBody", "Response Body")
+[x] string - apiLogs.serviceCount      -> ApiLogsProjection.Project localizer.GetString("apiLogs.serviceCount", "{0} with data · {1} known")
+[x] string - apiLogs.serviceFilterAria -> ApiLogsProjection.Project localizer.GetString("apiLogs.serviceFilterAria", "Filter by service") (AutomationProperties name on service select)
+[x] string - apiLogs.showing           -> ApiLogsProjection.Project localizer.GetString("apiLogs.showing", "Showing {0}–{1} of {2}")
+[x] string - apiLogs.subtitle          -> ApiLogsProjection.Project / ApiLogsRegistration.Subtitle localizer.GetString("apiLogs.subtitle", "Record of all API calls with request/response details")
+[x] string - apiLogs.title             -> ApiLogsProjection.Project / ApiLogsRegistration.Title localizer.GetString("apiLogs.title", "API Logs")
+[x] string - apiLogs.totalCalls        -> ApiLogsProjection.Project localizer.GetString("apiLogs.totalCalls", "Total Calls")
+[x] string - error.loadFailed          -> ApiLogsProjection.Project localizer.GetString("error.loadFailed", "Failed to load data") (failure banner)
+
+PARITY_COVERED=43
+# Coverage asserted headlessly: ApiLogsPageTests.Projection_resolves_every_required_string_key (+_even_in_the_loading_state)
+# records every key above through a RecordingLocalizer; the four state tests + StatCards/ByService/ServiceOptions/
+# Pagination/Row tests assert each panel + state renders from the bound ApiLogsDisplay state holder.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ApiLogsPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes (ApiLogsPage sources + ShellWindow registration)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25520, Failed: 0, Skipped: 0
+TEST_EXIT=0
+PARITY_COVERED=43
+PARITY_REQUIRED=43
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ApiLogsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ApiLogsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-ApiLogsPage.log
+# git commit -m "feat(apps/windows): ApiLogsPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE
