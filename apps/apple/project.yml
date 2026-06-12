@@ -38,6 +38,10 @@ targets:
         excludes:
           - "**/*Tests.swift"
           - "*Tests.swift"
+      - path: TeslaSync/widget-primitives
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
       - path: TeslaSync/dashboard-widgets
         excludes:
           - "**/*Tests.swift"
@@ -84,6 +88,10 @@ targets:
     sources:
       # Co-located *Tests.swift belong to the XCTest bundles, not the app target.
       - path: Sources
+        excludes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
+      - path: TeslaSync/widget-primitives
         excludes:
           - "**/*Tests.swift"
           - "*Tests.swift"
@@ -276,6 +284,10 @@ targets:
         includes:
           - "**/*Tests.swift"
           - "*Tests.swift"
+      - path: TeslaSync/widget-primitives
+        includes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
     dependencies:
       - target: TeslaSync
       - framework: Frameworks/Shared.xcframework
@@ -310,6 +322,10 @@ targets:
           - "**/*Tests.swift"
           - "*Tests.swift"
       - path: TeslaSync/shared-surfaces
+        includes:
+          - "**/*Tests.swift"
+          - "*Tests.swift"
+      - path: TeslaSync/widget-primitives
         includes:
           - "**/*Tests.swift"
           - "*Tests.swift"

@@ -1,0 +1,32 @@
+/*
+  WidgetComparisonCard.strings
+  TeslaSync — P4 widget primitive · 0003 · WidgetComparisonCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web
+  `features/dashboard/widgets/shared/WidgetComparisonCard.tsx` renders exactly one copy string of its own —
+  the empty leaf `<p>No comparison data</p>` (a literal, not a `t()` call); its row `label` / `unit` /
+  `formattedCurrent` are caller-supplied, already-localized props rendered verbatim. The first entry below
+  mirrors that single literal; the rest are native a11y additions: the row's combined label/value reading,
+  the value-with-unit join, and the empty-leaf supporting hint (the "never a blank box" peer of the web's
+  single muted line).
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("WidgetComparisonCard") so each parallel surface prompt owns its own strings. In
+  test / preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web copy (verbatim port of the web literal) --- */
+
+/* Empty-leaf headline — the web `<p>No comparison data</p>`. */
+"widgetComparisonCard.empty" = "No comparison data";
+
+/* --- Native a11y / HIG additions (no web `t()` key exists) --- */
+
+/* Supporting line of the empty leaf, so the surface never renders a bare box. */
+"widgetComparisonCard.emptyHint" = "Comparison metrics appear here once a current and previous period are available.";
+
+/* A row's combined VoiceOver reading — "{label}, {value}". Positional so translators can reorder. */
+"widgetComparisonCard.rowLabel" = "%1$@, %2$@";
+
+/* Joins a formatted value with its optional unit affix — "{value} {unit}" — for the row's spoken value. */
+"widgetComparisonCard.valueUnit" = "%1$@ %2$@";
