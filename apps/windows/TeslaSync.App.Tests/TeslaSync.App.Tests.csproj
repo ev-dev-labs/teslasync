@@ -157,6 +157,26 @@
     corruption) from the WinUI-free sources on disk, plus the new Toast Model / Source / ViewModel links. Do NOT
     re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this
     comment.
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
+    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
+    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so
+    each surface's Microsoft.UI-free sources are Compile-linked into the single, case-insensitive ordinal
+    path-sorted, Include-deduplicated item group below (the Link mirrors each source's real location under
+    Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are
+    excluded and exercised by the app build, and the test classes are picked up by the SDK default-compile
+    glob. The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures.
+
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
+    path-sorted, Include-deduplicated item group - the union of every Microsoft.UI-free .cs on disk under
+    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (the bare WinUI
+    view files are excluded). This file carries the .gitattributes merge=union strategy, so a chain of
+    integration merges can re-concatenate it into multiple roots plus duplicate items, failing XML load
+    (MSB4025 / MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk.
+    Regenerated into this single canonical root for P2 shared-surfaces/0147 ActiveFilterChips (repairing a
+    merge=union multi-root corruption) from the WinUI-free sources on disk, plus the new ActiveFilterChips
+    Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal
+    build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -1099,6 +1119,9 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.Model.cs" Link="ModalsDialogs\WidgetSettingsModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.Source.cs" Link="ModalsDialogs\WidgetSettingsModal.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.ViewModel.cs" Link="ModalsDialogs\WidgetSettingsModal.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Model.cs" Link="SharedSurfaces\ActiveFilterChips.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Source.cs" Link="SharedSurfaces\ActiveFilterChips.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.ViewModel.cs" Link="SharedSurfaces\ActiveFilterChips.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AICabinTemperatureImpactNarrative.Model.cs" Link="SharedSurfaces\AICabinTemperatureImpactNarrative.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AICabinTemperatureImpactNarrative.Source.cs" Link="SharedSurfaces\AICabinTemperatureImpactNarrative.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AICabinTemperatureImpactNarrative.ViewModel.cs" Link="SharedSurfaces\AICabinTemperatureImpactNarrative.ViewModel.cs" />
@@ -1279,11 +1302,11 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\QueryError.ViewModel.cs" Link="SharedSurfaces\QueryError.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Range.Model.cs" Link="SharedSurfaces\Range.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Range.ViewModel.cs" Link="SharedSurfaces\Range.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.Model.cs" Link="SharedSurfaces\ReleaseNotes.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.ViewModel.cs" Link="SharedSurfaces\ReleaseNotes.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RateLimitBanner.Model.cs" Link="SharedSurfaces\RateLimitBanner.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RateLimitBanner.Source.cs" Link="SharedSurfaces\RateLimitBanner.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RateLimitBanner.ViewModel.cs" Link="SharedSurfaces\RateLimitBanner.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.Model.cs" Link="SharedSurfaces\ReleaseNotes.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.ViewModel.cs" Link="SharedSurfaces\ReleaseNotes.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RequiresAuth.Model.cs" Link="SharedSurfaces\RequiresAuth.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RequiresAuth.Source.cs" Link="SharedSurfaces\RequiresAuth.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RequiresAuth.ViewModel.cs" Link="SharedSurfaces\RequiresAuth.ViewModel.cs" />
@@ -1296,6 +1319,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ServiceStatus.Model.cs" Link="SharedSurfaces\ServiceStatus.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ServiceStatus.Source.cs" Link="SharedSurfaces\ServiceStatus.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ServiceStatus.ViewModel.cs" Link="SharedSurfaces\ServiceStatus.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SkipToContent.Model.cs" Link="SharedSurfaces\SkipToContent.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SkipToContent.ViewModel.cs" Link="SharedSurfaces\SkipToContent.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SmallMultiplesChart.Model.cs" Link="SharedSurfaces\SmallMultiplesChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SmallMultiplesChart.Source.cs" Link="SharedSurfaces\SmallMultiplesChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SmallMultiplesChart.ViewModel.cs" Link="SharedSurfaces\SmallMultiplesChart.ViewModel.cs" />
