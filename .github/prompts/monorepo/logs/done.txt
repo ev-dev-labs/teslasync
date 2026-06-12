@@ -363,3 +363,4 @@ p3-android/feature-views/A-0114-LifetimeSummary.prompt.md
 p3-android/feature-views/A-0116-MonthlyCostChart.prompt.md
 p3-android/feature-views/A-0115-LoadingSkeleton.prompt.md
 p3-android/feature-views/A-0117-MonthlyCostTable.prompt.md
+p3-android/feature-views/A-0122-DashboardGrid.prompt.md
