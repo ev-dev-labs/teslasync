@@ -19,7 +19,7 @@ on:
 
 jobs:
   copilot-setup-steps:
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     timeout-minutes: 15
 
     permissions:
