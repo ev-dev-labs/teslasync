@@ -664,7 +664,7 @@ public static class ActionBuilderProjection
     private const string ParamsObjectErrorFallback = "Params must be a JSON object.";
     private const string InvalidJsonKey = "automations.builder.invalidJson";
     private const string InvalidJsonFallback = "Invalid JSON";
-    private const string ParamsHintKey = "automations.builder.commandParamsHint";
+    private const string ParamsHintKey = "automations.builder.commandParamsPlaceholder"; // parity:allow web i18n key name, not a stub marker
     private const string ParamsHintFallback = "{\"temp\": 21}";
     private const string ChannelKey = "automations.builder.channel";
     private const string ChannelFallback = "Channel";
@@ -672,11 +672,11 @@ public static class ActionBuilderProjection
     private const string NoChannelsFallback = "No channels configured";
     private const string MessageKey = "automations.builder.notifyMessage";
     private const string MessageFallback = "Message";
-    private const string MessageHintKey = "automations.builder.notifyHint";
+    private const string MessageHintKey = "automations.builder.notifyPlaceholder"; // parity:allow web i18n key name, not a stub marker
     private const string MessageHintFallback = "Car is warming up!";
     private const string SettingKeyKey = "automations.builder.settingKey";
     private const string SettingKeyFallback = "Setting Key";
-    private const string SettingKeyHintKey = "automations.builder.settingKeyHint";
+    private const string SettingKeyHintKey = "automations.builder.settingKeyPlaceholder"; // parity:allow web i18n key name, not a stub marker
     private const string SettingKeyHintFallback = "charge_limit";
     private const string ValueTypeKey = "automations.builder.valueType";
     private const string ValueTypeFallback = "Value Type";
@@ -692,9 +692,9 @@ public static class ActionBuilderProjection
     private const string TrueFallback = "True";
     private const string FalseKey = "common.false";
     private const string FalseFallback = "False";
-    private const string ValueNumberHintKey = "automations.builder.valueNumberHint";
+    private const string ValueNumberHintKey = "automations.builder.valueNumberPlaceholder"; // parity:allow web i18n key name, not a stub marker
     private const string ValueNumberHintFallback = "80";
-    private const string ValueTextHintKey = "automations.builder.valueTextHint";
+    private const string ValueTextHintKey = "automations.builder.valueTextPlaceholder"; // parity:allow web i18n key name, not a stub marker
     private const string ValueTextHintFallback = "enabled";
     private const string TargetKey = "automations.builder.targetAutomationId";
     private const string TargetFallback = "Target Automation ID";

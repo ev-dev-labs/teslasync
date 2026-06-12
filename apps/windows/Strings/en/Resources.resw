@@ -3441,6 +3441,15 @@
   <data name="translation.automations.builder.commandParams" xml:space="preserve">
     <value>Params (JSON, optional)</value>
   </data>
+  <data name="translation.automations.builder.commandParamsObjectError" xml:space="preserve">
+    <value>Params must be a JSON object.</value>
+  </data>
+  <data name="translation.automations.builder.empty" xml:space="preserve">
+    <value>No actions yet. Add one to get started.</value>
+  </data>
+  <data name="translation.automations.builder.region" xml:space="preserve">
+    <value>Action Builder</value>
+  </data>
   <data name="translation.automations.builder.commandParamsPlaceholder" xml:space="preserve">
     <value>{"temp": 21}</value>
   </data>

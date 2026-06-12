@@ -764,10 +764,87 @@ public sealed class ActionBuilderTests
     public void Registration_slug_is_stable() =>
         Assert.Equal("ActionBuilder", ActionBuilderRegistration.Slug);
 
+    // ---- Parity: every manifest string key is resolved (web key names, verbatim) ---
+
+    // The 27 i18n keys the W7 parity manifest requires the surface to resolve, with the web key names
+    // (web/src/features/automations/pages/ActionBuilder.tsx). Pins the placeholder keys to the web
+    // *Placeholder names — guarding against any regression back to non-web *Hint keys.
+    private static readonly string[] ManifestStringKeys =
+    {
+        "automations.builder.actionType",
+        "automations.builder.addAction",
+        "automations.builder.channel",
+        "automations.builder.command",
+        "automations.builder.commandParams",
+        "automations.builder.commandParamsObjectError",
+        "automations.builder.commandParamsPlaceholder",
+        "automations.builder.invalidJson",
+        "automations.builder.moveDown",
+        "automations.builder.moveUp",
+        "automations.builder.noChannels",
+        "automations.builder.notifyMessage",
+        "automations.builder.notifyPlaceholder",
+        "automations.builder.removeAction",
+        "automations.builder.selectCommand",
+        "automations.builder.settingKey",
+        "automations.builder.settingKeyPlaceholder",
+        "automations.builder.targetAutomationId",
+        "automations.builder.value",
+        "automations.builder.valueBoolean",
+        "automations.builder.valueNumber",
+        "automations.builder.valueNumberPlaceholder",
+        "automations.builder.valueText",
+        "automations.builder.valueTextPlaceholder",
+        "automations.builder.valueType",
+        "common.true",
+        "common.false",
+    };
+
+    [Fact]
+    public void Surface_resolves_every_manifest_string_key()
+    {
+        var recorder = new RecordingLocalizer();
+
+        // One row of each kind (with both numeric and text set-setting values) and no channels, so every
+        // owned label, option and placeholder key flows through the localizer at least once.
+        var actions = new[]
+        {
+            AutomationActionStepInput.CreateDefault(AutomationActionKind.Command),
+            AutomationActionStepInput.CreateDefault(AutomationActionKind.Notify),
+            new AutomationActionStepInput(AutomationActionKind.SetSetting) { ValueText = "enabled" },
+            new AutomationActionStepInput(AutomationActionKind.SetSetting) { ValueNum = 80 },
+            new AutomationActionStepInput(AutomationActionKind.SetSetting) { ValueBool = true },
+            AutomationActionStepInput.CreateDefault(AutomationActionKind.CallAutomation),
+        };
+        var edits = actions.Select(_ => ActionRowEditState.Empty).ToArray();
+
+        ActionBuilderProjection.Project(actions, edits, Array.Empty<AutomationChannel>(), recorder);
+
+        // The two command-params validation messages are resolved by the parser (the error data state).
+        ActionBuilderProjection.ParseCommandParams("[1]", recorder);
+        ActionBuilderProjection.ParseCommandParams("{bad", recorder);
+
+        foreach (string key in ManifestStringKeys)
+        {
+            Assert.Contains(key, recorder.Keys);
+        }
+    }
+
     // ---- Helpers -------------------------------------------------------------------
 
     private sealed class PrefixLocalizer : ILocalizer
     {
         public string GetString(string key, string fallback) => "L:" + key;
+    }
+
+    private sealed class RecordingLocalizer : ILocalizer
+    {
+        public List<string> Keys { get; } = new();
+
+        public string GetString(string key, string fallback)
+        {
+            Keys.Add(key);
+            return fallback;
+        }
     }
 }
