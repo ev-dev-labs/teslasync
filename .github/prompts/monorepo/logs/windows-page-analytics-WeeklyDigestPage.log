@@ -1,0 +1,109 @@
+=== p2-windows · W7 · page:analytics/WeeklyDigest (WinUI 3 / Fluent) ===
+Parity unit : page:analytics/WeeklyDigest   kind=page   web route=/weekly-digest
+Web source  : web/src/features/analytics/pages/WeeklyDigestPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300), maui-windows workload installed — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ApiLogsPage / FeedbackQueuePage / SchemaDriftPage do. The generated prompt's idealized "WeeklyDigestPage.xaml +
+  WeeklyDigestPageViewModel.cs under TeslaSync/Features/Analytics" is mapped onto these real conventions; the
+  surface registers itself with the W4 ShellPageFactory by route name ("WeeklyDigest").
+- Route: the manifest route /weekly-digest had no native RouteDefinition yet, so one was added to
+  TeslaSync.App.Core/Navigation/RouteTable.cs — Page("WeeklyDigest","weekly-digest",RouteGroup.Analytics,
+  "Weekly Digest","\uE787") — and the page factory was registered in Shell/ShellWindow.xaml.cs
+  (_viewModel.PageFactory.Register("WeeklyDigest", () => new FeatureViews.Analytics.WeeklyDigestPage())), next to
+  the sibling W7 admin pages. This is the W4 NavigationView registration seam the prompt's allowed-files list calls
+  out.
+- Data binding (ADR-004): the manifest extracted no API data source because the web page reads through the local
+  useWeeklyDigest hook rather than a generated @/api hook. The native port reproduces that hook's full data flow
+  through an injected IWeeklyDigestFeed: the default EmptyWeeklyDigestFeed resolves the empty state (matching the
+  sibling-page host-injection precedent — the shell registers the parameterless ctor), and the generated-client
+  WeeklyDigestClientFeed (WeeklyDigestPage.Source.cs) binds to the generated OpenAPI operations get_api_v1_vehicles
+  (web useVehicles), get_api_v1_drives + get_api_v1_charging_sessions (with vehicle_id), and get_api_v1_alerts — the
+  web /drives, /charging and /alerts reads — resolving the requested-or-first vehicle exactly like the web
+  selectedVehicleId fallback. No HTTP touches the view; a failing fetch surfaces as the retriable error branch.
+- SI cutover (ADR; frontend-si-cutover): the generated Drive/ChargingSession models are SI-canonical (Phase-48) —
+  distance_m, duration_s, energy_used_wh, started_at/ended_at, total_energy_added_wh, start_soc_pct/end_soc_pct,
+  cost_decimal. The projection reads SI off the wire and converts to the digest's display units (km, min, kWh,
+  Wh/km, kW) at the display boundary only (WeeklyDigestProjection.Aggregate), never storing/computing non-SI — the
+  presentational sections then render those values verbatim with their hard-coded unit suffixes, matching the web.
+- The web page renders all four branches inside the PageContainer body. The native port reproduces them as visible
+  Fluent regions per ADR-006: loading -> TsStatGridSkeleton shimmer stack (web DigestSkeleton); error -> TsQueryError
+  (InfoBar-equivalent) + Retry (web PageContainer error); empty -> TsGlassPanel + TsEmptyState with the Calendar
+  glyph (web EmptyState); ready -> the FadeIn digest: an inline WeekSelector (prev/next TsButton + week label +
+  Current TsBadge), an inline SummaryHeroCards grid of HighlightCard components, and the pre-built DrivingSection,
+  ChargingSection, BatteryHealthSection, AlertsSection and the self-driving WeekOverWeekSummary (fed the page's
+  already-computed metrics through a StaticWeekOverWeekSource). Never a blank region.
+- The two web sub-components with no standalone native feature-view (WeekSelector, SummaryHeroCards) are reproduced
+  inline as page-internal composition; the five sections that already exist as W3 feature-views are composed and
+  fed render-ready models built by the projection. The web AIDigestNarration is a withAiFeature(...) no-op when
+  ai_mode='off' (its own AI-feature unit) and is out of this page-shell unit's scope.
+- All five manifest i18n keys resolve through the ILocalizer facade with the exact web key names. Four
+  (analytics.weeklyDigest.title / .subtitle / .selectVehicle / .noData) were already present in
+  Strings/en/Resources.resw (added by the WeeklyDigest string-group + sibling section units); the fifth,
+  analytics.weeklyDigest.noDataMessage, was added (plus analytics.weeklyDigest.funFactDesc for the inline hero fun
+  fact). The ar/he catalogs lag en by design; the app falls back to the English default via ILocalizer.
+
+=== PARITY ===
+PARITY_REQUIRED=8
+
+# Data states (3) — loading / empty / error, each a visible region (never blank)
+[x] state  - loading  -> WeeklyDigestState.Loading + WeeklyDigestDisplay.ShowLoading; rendered
+             WeeklyDigestPage.cs#_loadingSkeleton (the TsStatGridSkeleton shimmer stack, web DigestSkeleton); gated by
+             WeeklyDigestProjection.Project (model.Loading precedence); tests State_loading_when_query_in_flight,
+             Loading_precedence_beats_error_and_empty
+[x] state  - empty    -> WeeklyDigestState.Empty + ShowEmpty; rendered WeeklyDigestPage.cs#_emptyPanel
+             (TsGlassPanel + TsEmptyState, Calendar glyph + noData title + noDataMessage), web EmptyState; gated by
+             !hasData (weekDrives.Count==0 && weekCharging.Count==0); tests State_empty_when_resolved_with_no_activity,
+             Week_filtering_excludes_other_weeks, ViewModel_empty_feed_is_the_empty_state
+[x] state  - error    -> WeeklyDigestState.Error + ShowError; rendered WeeklyDigestPage.cs#_errorState
+             (TsQueryError + Retry via ActionInvoked -> RefreshAsync), web PageContainer error; gated by
+             model.HasError; tests State_error_when_query_failed_shows_retry, ViewModel_feed_failure_is_the_error_state
+
+# Strings (5) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - analytics.weeklyDigest.noData        -> WeeklyDigestProjection.Project localizer.GetString("analytics.weeklyDigest.noData", "No Data") -> EmptyTitle
+[x] string - analytics.weeklyDigest.noDataMessage -> WeeklyDigestProjection.Project localizer.GetString("analytics.weeklyDigest.noDataMessage", "No driving or charging data found for this week.") -> EmptyMessage
+[x] string - analytics.weeklyDigest.selectVehicle -> WeeklyDigestProjection.Project localizer.GetString("analytics.weeklyDigest.selectVehicle", "Select vehicle") -> SelectVehicleHint
+[x] string - analytics.weeklyDigest.subtitle      -> WeeklyDigestProjection.Project localizer.GetString("analytics.weeklyDigest.subtitle", "Your driving and charging summary for the week") -> Subtitle
+[x] string - analytics.weeklyDigest.title         -> WeeklyDigestProjection.Project / WeeklyDigestRegistration.Title localizer.GetString("analytics.weeklyDigest.title", "Weekly Digest") -> Title
+
+PARITY_COVERED=8
+# Coverage asserted headlessly: WeeklyDigestPageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records all five keys above through a RecordingLocalizer; the three state tests
+# (State_loading_when_query_in_flight / State_empty_when_resolved_with_no_activity /
+# State_error_when_query_failed_shows_retry) plus Loading_precedence_beats_error_and_empty assert each branch renders
+# from the bound WeeklyDigestDisplay state holder; the ViewModel_* tests assert the loading/empty/error/ready matrix
+# with vehicle selection + week navigation; ClientFeed_reads_vehicles_then_the_selected_vehicle_data_in_order asserts
+# the generated-client GET request shaping (web useWeeklyDigest); Aggregation_converts_si_inputs_to_display_units
+# asserts the SI->display boundary conversion.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/WeeklyDigestPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Analytics path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (WeeklyDigestPage Model/Source/ViewModel/view
+#   + WeeklyDigestPageTests + RouteTable + ShellWindow registration + Resources.resw + test csproj links, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25841, Failed: 0, Skipped: 0 (incl. 30 WeeklyDigestPageTests)
+TEST_EXIT=0
+PARITY_COVERED=8
+PARITY_REQUIRED=8
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/WeeklyDigestPage \
+#         apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/WeeklyDigestPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-analytics-WeeklyDigestPage.log
+# git commit -m "feat(apps/windows): WeeklyDigestPage at web parity (W7 analytics)"
+
+EXIT=0
+STATUS=DONE

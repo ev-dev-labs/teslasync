@@ -25,5 +25,14 @@
     "requiredCount": 32,
     "promptId": "p2-windows/W7/windows-page-admin-SchemaDriftPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-SchemaDriftPage.log"
+  },
+  {
+    "unitId": "page:analytics/WeeklyDigest",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 8,
+    "requiredCount": 8,
+    "promptId": "p2-windows/W7/windows-page-analytics-WeeklyDigestPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-analytics-WeeklyDigestPage.log"
   }
 ]
