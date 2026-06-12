@@ -420,8 +420,12 @@ public static class TeslaChargingSessionsMapRegistration
     public static string MarkerLabel(ILocalizer localizer, string name)
     {
         ArgumentNullException.ThrowIfNull(name);
-        string template = Require(localizer).GetString("tesla_sessions.markerLabel", "{{name}} charging session");
-        return template.Replace("{{name}}", name, StringComparison.Ordinal);
+
+        // The generated Windows catalog renders the web i18next "{{name}}" token as the positional
+        // string.Format slot "{0}" (apps/shared/i18n/generators/gen-i18n.ts), so the marker's
+        // accessible label is composed with string.Format — mirroring the web t('…', { name }) call.
+        string template = Require(localizer).GetString("tesla_sessions.markerLabel", "{0} charging session");
+        return string.Format(CultureInfo.CurrentCulture, template, name);
     }
 
     /// <summary>The stale freshness-chip label.</summary>
