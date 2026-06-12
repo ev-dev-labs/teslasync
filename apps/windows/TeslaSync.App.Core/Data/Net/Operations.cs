@@ -69,6 +69,7 @@ public static class Operations
         public const string RouteEfficiency = "get_api_v1_analytics_route_efficiency";
         public const string Lifetime = "get_api_v1_analytics_lifetime";
         public const string YearReview = "get_api_v1_analytics_year_review";
+        public const string RangeProjection = "get_api_v1_analytics_range_projection";
     }
 
     /// <summary>Saved locations, geofences and the latest per-vehicle location snapshot.</summary>
