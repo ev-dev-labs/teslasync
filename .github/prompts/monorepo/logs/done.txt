@@ -331,3 +331,4 @@ p3-android/feature-views/A-0080-ActionBuilder.prompt.md
 p3-android/feature-views/A-0082-AutomationCard.prompt.md
 p3-android/feature-views/A-0081-AutomationActivityFeed.prompt.md
 p3-android/feature-views/A-0087-ChargerTypeChart.prompt.md
+p3-android/feature-views/A-0088-LoadingSkeleton.prompt.md
