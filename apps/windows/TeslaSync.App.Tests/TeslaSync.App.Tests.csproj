@@ -1511,6 +1511,9 @@
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetChartSummary.Model.cs" Link="WidgetPrimitives\WidgetChartSummary.Model.cs" />
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetChartSummary.Source.cs" Link="WidgetPrimitives\WidgetChartSummary.Source.cs" />
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetChartSummary.ViewModel.cs" Link="WidgetPrimitives\WidgetChartSummary.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\widget-primitives\WidgetShell.Model.cs" Link="WidgetPrimitives\WidgetShell.Model.cs" />
+    <Compile Include="..\TeslaSync.App\widget-primitives\WidgetShell.Source.cs" Link="WidgetPrimitives\WidgetShell.Source.cs" />
+    <Compile Include="..\TeslaSync.App\widget-primitives\WidgetShell.ViewModel.cs" Link="WidgetPrimitives\WidgetShell.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
