@@ -2,14 +2,12 @@
 
   <!--
     TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
-    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
-    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so
-    each surface's Microsoft.UI-free sources are Compile-linked below (the Link mirrors each source's real
-    location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces). The bare WinUI view
-    files are excluded and exercised by the app build; the test classes are picked up by the SDK
-    default-compile glob; the Content links copy the units-golden, Package.appxmanifest and widget-template
-    fixtures the tests read out of the output directory.
+    Microsoft.UI-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
+    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. TeslaSync.App targets a
+    WinUI TFM and cannot be project-referenced from a plain net10.0 host, so each surface's Microsoft.UI-free
+    sources are Compile-linked below; the bare WinUI view files are excluded and exercised by the app build,
+    and the test classes are picked up by the SDK default-compile glob. The Content links copy the
+    units-golden, Package.appxmanifest and widget-template fixtures the tests read from the output directory.
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
     Include-deduplicated Compile ItemGroup — the union of every Microsoft.UI-free .cs on disk under
@@ -124,6 +122,15 @@
     build-item or project start tag inside this comment.
   -->
 
+    INVARIANT: keep this as exactly ONE project root with a single, case-insensitive ordinal path-sorted,
+    Include-deduplicated Compile item group - the union of every Microsoft.UI-free .cs under dashboard-widgets,
+    feature-views, misc-surfaces, modals-dialogs and shared-surfaces. The .gitattributes merge=union strategy
+    can re-concatenate this into multiple roots plus duplicate items (failing XML load, MSB4025 / MSB4067);
+    when that happens, regenerate it from the Microsoft.UI-free sources on disk. Regenerated into this single
+    canonical root for P2 shared-surfaces/0206 ContextMenu (repairing a merge=union multi-root corruption),
+    plus the new ContextMenu Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and
+    never write a literal build item or project start tag inside this comment.
+  -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -1061,6 +1068,7 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.Model.cs" Link="ModalsDialogs\WidgetSettingsModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.Source.cs" Link="ModalsDialogs\WidgetSettingsModal.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.ViewModel.cs" Link="ModalsDialogs\WidgetSettingsModal.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ActionItem.Model.cs" Link="SharedSurfaces\ActionItem.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Model.cs" Link="SharedSurfaces\ActiveFilterChips.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Source.cs" Link="SharedSurfaces\ActiveFilterChips.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.ViewModel.cs" Link="SharedSurfaces\ActiveFilterChips.ViewModel.cs" />
@@ -1188,6 +1196,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ConnectionSegment\ConnectionSegment.Model.cs" Link="SharedSurfaces\ConnectionSegment\ConnectionSegment.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ConnectionSegment\ConnectionSegment.Source.cs" Link="SharedSurfaces\ConnectionSegment\ConnectionSegment.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ConnectionSegment\ConnectionSegment.ViewModel.cs" Link="SharedSurfaces\ConnectionSegment\ConnectionSegment.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ContextMenu.Model.cs" Link="SharedSurfaces\ContextMenu.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ContextMenu.Source.cs" Link="SharedSurfaces\ContextMenu.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ContextMenu.ViewModel.cs" Link="SharedSurfaces\ContextMenu.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.Model.cs" Link="SharedSurfaces\CookieConsentBanner.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.Source.cs" Link="SharedSurfaces\CookieConsentBanner.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.ViewModel.cs" Link="SharedSurfaces\CookieConsentBanner.ViewModel.cs" />
