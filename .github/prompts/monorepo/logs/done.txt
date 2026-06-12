@@ -371,3 +371,4 @@ p3-android/feature-views/A-0123-FleetStatsBar.prompt.md
 p3-android/feature-views/A-0120-TeslaChargingSessionsMap.prompt.md
 p3-android/feature-views/A-0125-LayoutManager.prompt.md
 p3-android/feature-views/A-0128-MiniGridPreview.prompt.md
+p3-android/feature-views/A-0129-QuickNav.prompt.md
