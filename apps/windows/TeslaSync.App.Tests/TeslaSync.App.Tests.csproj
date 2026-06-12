@@ -44,13 +44,14 @@
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
     Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk under
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
+    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
     (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host,
-    so each surface's Microsoft.UI-free sources are Compile-linked into the single, case-insensitive
-    ordinal path-sorted, Include-deduplicated ItemGroup below (the Link mirrors each source's real location
-    under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files
-    are excluded and exercised by the app build, and the test classes are picked up by the SDK
-    default-compile glob. The Content links copy the units-golden, Package.appxmanifest and widget-template
-    fixtures the tests read out of the test output directory.
+    so each surface's Microsoft.UI-free sources are Compile-linked into the single ItemGroup below (the
+    Link mirrors each source's real location); the bare WinUI view files are excluded and exercised by the
+    app build. The matching test classes live under this project and are picked up by the SDK default
+    compile glob. The Content links copy the units-golden, app-manifest and widget-template fixtures.
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
     Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk under
@@ -177,6 +178,15 @@
     merge=union multi-root corruption) from the WinUI-free sources on disk, plus the new ActiveFilterChips
     Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal
     build-item or project start tag inside this comment.
+    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
+    path-sorted, Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk
+    under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This
+    file carries the .gitattributes merge=union strategy, so a chain of integration merges can
+    re-concatenate it into multiple roots plus duplicate items, failing XML load (MSB4025 / MSB4067);
+    if that happens, regenerate it directly from the WinUI-free sources on disk. Do NOT re-concatenate
+    into multiple roots, and never write a literal build-item or project start tag inside this comment.
+    Regenerated into this single canonical Project root for P2 shared-surfaces/0146 FormatterPrefsBridge,
+    plus the new FormatterPrefsBridge Model / Source / ViewModel links.
   -->
 
   <PropertyGroup>
@@ -1261,6 +1271,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ErrorDisplay.Model.cs" Link="SharedSurfaces\ErrorDisplay.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ErrorDisplay.Source.cs" Link="SharedSurfaces\ErrorDisplay.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ErrorDisplay.ViewModel.cs" Link="SharedSurfaces\ErrorDisplay.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\FormatterPrefsBridge\FormatterPrefsBridge.Model.cs" Link="SharedSurfaces\FormatterPrefsBridge\FormatterPrefsBridge.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\FormatterPrefsBridge\FormatterPrefsBridge.Source.cs" Link="SharedSurfaces\FormatterPrefsBridge\FormatterPrefsBridge.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\FormatterPrefsBridge\FormatterPrefsBridge.ViewModel.cs" Link="SharedSurfaces\FormatterPrefsBridge\FormatterPrefsBridge.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Model.cs" Link="SharedSurfaces\FreshnessIndicator.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Source.cs" Link="SharedSurfaces\FreshnessIndicator.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.ViewModel.cs" Link="SharedSurfaces\FreshnessIndicator.ViewModel.cs" />
