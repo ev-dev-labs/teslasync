@@ -1,0 +1,29 @@
+/*
+  ListExportMenu.strings
+  TeslaSync — P4 shared surface · 0155 · ListExportMenu (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native surface resolves
+  (table "ListExportMenu") lives here with its web `t(key, default)` English value, taken verbatim
+  from the web source `components/forms/ListExportMenu.tsx`. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table
+  so each parallel surface prompt owns its own strings without editing the shared catalog. The
+  `{{count}}` tokens are interpolated at the display boundary, matching the web `t(key, default,
+  { count })`.
+*/
+
+/* --- Trigger labels (web `disabled ? disabledTooltip : menuLabel`) --- */
+"listExport.disabledTooltip" = "No data to export";
+"listExport.menuLabel" = "Export list";
+
+/* --- Trigger caption (web `t('listExport.button', 'Export')`) --- */
+"listExport.button" = "Export";
+
+/* --- Scope chooser (web `<fieldset>` legend + the two radios) --- */
+"listExport.scopeLegend" = "Export scope";
+"listExport.visibleWithCount" = "Visible ({{count}})";
+"listExport.visible" = "Visible";
+"listExport.selectedWithCount" = "Selected ({{count}})";
+
+/* --- Format items (web `role="menuitem"` rows) --- */
+"listExport.csv" = "Download as CSV";
+"listExport.json" = "Download as JSON";
