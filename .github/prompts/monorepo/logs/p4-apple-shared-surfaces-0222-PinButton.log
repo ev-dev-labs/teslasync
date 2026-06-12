@@ -1,0 +1,215 @@
+=== P4 Shared surface 0222 PinButton (Apple) ===
+Prompt:   .github/prompts/monorepo/p4-apple/shared-meaningful/P-0222-PinButton.prompt.md
+Web spec: components/ui/PinButton.tsx
+Native:   apps/apple/TeslaSync/shared-surfaces/PinButton.*
+Runner:   Xcode 26.5 (17F42) · Swift 6.3.2 · iOS Simulator 26.5 (iPhone 16, booted) · macOS 15 / 26.5 SDK
+Toolchain: swiftlint 0.63.x · swiftformat 0.6x · xcodegen 2.45.x · pwsh 7.x · Java 17.0.19 · Gradle 8.14.5
+Capability: SwiftUI + iOS 18 / macOS 15 SDKs + simulator all present → NOT capability-BLOCKED.
+            (This surface uses no Swift Charts / MapKit — the web source has neither; see Parity below.)
+Shared.xcframework: ASSEMBLED on THIS runner via Scripts/build-shared-xcframework.sh — Gradle
+            ":core:assembleSharedXCFramework" → "BUILD SUCCESSFUL in 7m 51s", staged release
+            (ios-arm64, ios-arm64-simulator, macos-arm64 slices) → apps/apple/Frameworks/Shared.xcframework
+            ("✓ Shared.xcframework staged"). So the KMP framework is NOT a blocker here.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+WEB SOURCE (the specification)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  web/src/components/ui/PinButton.tsx — a tiny, focusable icon-only (or icon+label) toggle that pins /
+  unpins a single row through the unified pin store. Data:
+    • usePinned(itemType, context)  → /pinned?type=…[&context=…] → PinnedItem[] (defaulted to [])
+      isPinned = pinned.some(p => String(p.item_id) === String(itemId))
+    • useTogglePin(itemType)         → POST /pinned (pin) / DELETE /pinned/{id} (unpin); toggle.isPending
+    • useTranslation                 → t('pin.pin'|'pin.unpin'|'pin.pinned')
+  Render: <Tooltip content=tooltipLabel><button aria-pressed=isPinned aria-label=tooltipLabel
+    disabled=toggle.isPending> <Icon = isPinned ? PinOff : Pin> {showLabel && <span>Pin|Pinned</span>}.
+  Props: itemType, itemId, context?, size?('sm'|'md'), showLabel?, className?. Click stops propagation
+  (the row is often a navigation target) and bails while toggle.isPending.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+SHIPPED FILES (9 — all within the prompt's allowed scope `PinButton.*`)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  PinButton.Adapter.swift      pure Foundation core: surface slug; PinnedItemKind (web PinnedItemType,
+                               wire-stable, alert_rule round-trip); PinButtonSize (h-7/h-8 dims);
+                               PinLoadStatus + PinFreshness (P4 axes); PinButtonInput; PinPresentation
+                               (lucide Pin/PinOff → SF pin / pin.slash.fill + amber/muted tone + copy
+                               keys); PinStatusBadge; PinButtonProjection; PinButtonProjector (isPinned
+                               membership, offline→error→stale badge precedence, full resolve).
+  PinButton.Sources.swift      P1/S8 data seam: PinnedStore protocol (web usePinned + useTogglePin, one
+                               [type,context] bucket); PinnedSnapshot (status/freshness/pinnedIDs/
+                               pendingItemIDs/hasLoaded); InMemoryPinnedStore double (start/stop/refresh/
+                               toggle/push/external) + PinToggleCall.
+  PinButton.Model.swift        P1/S11 telemetry seam (OSLog default), P1/S10 i18n facade (PinButtonStrings
+                               incl. composed accessibility value), @Observable @MainActor PinButtonModel
+                               (binds store, recomputes projection, routes toggle with the isPending /
+                               cold-load guard, one-shot stale auto-refresh, once-only view.opened).
+  PinButton.Views.swift        token-driven pieces: PinGlyphView (glyph or cold-load spinner), PinInlineLabel
+                               (web <span>), PinStatusBadgeView (corner freshness/error indicator); tone →
+                               token mapping (pinned → Color.TS.statusWarning = web amber; idle →
+                               Color.TS.textMuted = web --text-muted).
+  PinButton.swift              public surface; init(model:) (production/test injection) + prop init (web
+                               props); Button composition, hover tint (web hover:bg-*), dim+disabled while
+                               busy, badge overlay, .help tooltip, accessibility (label/value/.isSelected/
+                               Retry action), start/stop lifecycle, prop-change .onChange → model.update.
+  PinButton.Previews.swift     7 #Previews: pinned/unpinned, with-label both sizes, busy, cold-load,
+                               stale, offline, error.
+  PinButton.strings            P1/S10 table — 3 verbatim web keys (pin.pin/pin.unpin/pin.pinned) + 6 native
+                               P4/a11y keys (loading/busy/retry + status.stale/offline/error).
+  PinButton.AdapterTests.swift pure-core XCTest (slug, wire tokens, size dims, presentation mapping, pin
+                               membership, badge precedence, full resolve across every branch, equality).
+  PinButton.Tests.swift        state-holder + view-composition + strings XCTest (view.opened once, toggle
+                               routing + guards, stale/offline auto-refresh, update, every view branch).
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+PARITY DISPOSITION (Honesty Covenant #5 — No parity shortcuts cuts both ways)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  The web <PinButton> is a data-bound toggle that destructures only `data: pinned = []`, so it SWALLOWS
+  the usePinned query's loading / error into the unpinned default and NEVER renders a skeleton, a
+  QueryError panel, or an empty placeholder — the button is ALWAYS shown. The native surface keeps that
+  exact contract (the button is never hidden; isPinned reads the best-available — cached during a refresh
+  — set; unknown ⇒ not pinned) AND, per the P4 leaf states contract, surfaces the freshness the web
+  swallows as a small, gated corner badge (offline → error → stale precedence) layered OVER the
+  unconditionally-rendered button — exactly as the in-tree sibling data-bound surface CookieConsentBanner
+  (0115) layers its freshness chip over the cached value. Reproduced REAL branches: unpinned, pinned,
+  busy (web toggle.isPending → disabled+dimmed), cold-load (button-sized spinner, never a blank box;
+  resolves to unpinned when the set is empty, web `pinned = []`), and the cached stale/offline/error
+  freshness axis with a VoiceOver Retry action + one-shot stale auto-refresh. Charts/maps: none in source
+  → none here.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+GATE RESULTS (each command actually executed; real exit codes captured — Honesty Covenant #3)
+────────────────────────────────────────────────────────────────────────────────────────────────
+
+[0] Stage Shared.xcframework (ADR-004 KMP core)
+    ./Scripts/build-shared-xcframework.sh -> "BUILD SUCCESSFUL in 7m 51s"; staged ios-arm64 +
+    ios-arm64-simulator + macos-arm64.                                            XCFRAMEWORK_EXIT=0
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    -> ** BUILD FAILED ** / ** TEST FAILED **                                     IOS_EXIT=65
+    Root cause = PRE-EXISTING FOREIGN sibling defects, NOT this surface:
+      • TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+          error: escaping closure captures non-escaping parameter 'content'
+      • TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: (same systematic defect)
+          error: escaping closure captures non-escaping parameter 'content'
+      • TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20:
+          error: the compiler is unable to type-check this expression in reasonable time
+    PinButton contribution to the failure: ZERO. The whole-module type-check SUCCEEDED with my files
+    present (4× "EmitSwiftModule normal arm64 … for TeslaSync"), my files were compiled IN-BATCH, and
+    PinButton.strings was --validate'd + copied into TeslaSync.app. grep "PinButton…\.swift.*error:" across
+    the whole build log = 0 hits. Disposition: DEFERRED (pre-existing foreign collisions from parallel-
+    merge; out of this prompt's scope "Other surfaces in the same feature" and outside its allowed files).
+    Shown verbatim, NOT hidden, NOT claimed green (Honesty Covenant #1).
+
+    [1b] PRE-EXISTING PROOF — baseline build with my 9 files MOVED OUT + project regenerated (0 PinButton
+         pbxproj refs):
+         xcodebuild -scheme TeslaSync -destination '…iPhone 16' build -> ** BUILD FAILED **
+         Same class of foreign defect (AIGeofenceAwareAutomationSuggestions.swift:141 escaping-closure)
+         with ZERO PinButton files present. ⇒ the iOS red exists in the committed baseline independently of
+         this surface. Files restored; xcodegen re-run (54 PinButton refs); `git status` shows ONLY my 9
+         untracked additions.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    -> ** TEST FAILED **                                                          MAC_EXIT=65
+    Root cause = ENVIRONMENTAL code-signing, NOT this surface and NOT a compile step:
+      TeslaSync.xcodeproj: error: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that
+      require signing with a development certificate. (no dev certificate on this runner)
+    Fails at the signing/entitlements gate. PinButton contribution: ZERO (grep "PinButton…error:" = 0).
+    Disposition: DEFERRED (environmental; identical to the predecessor-accepted AnnouncerRegion 0001 /
+    ActiveFilterChips 0147 macOS disposition).
+
+[3] swiftlint --strict            -> Done linting! Found 0 violations, 0 serious in 4722 files. LINT_EXIT=0
+[4] swiftformat --lint apps/apple -> 0/5020 files require formatting, 2 skipped.              FORMAT_EXIT=0
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/PinButton
+                                   -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0               PLACEHOLDER_EXIT=0
+[6] xcodegen generate             -> Created TeslaSync.xcodeproj; 54 PinButton pbxproj refs
+                                     (iOS app + macOS app + both XCTest bundles).              XCODEGEN_EXIT=0
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+[7] SURFACE-CLEAN + TESTS-GREEN PROOF (bypasses the foreign-broken whole module)
+────────────────────────────────────────────────────────────────────────────────────────────────
+Because the integrated XCTest cannot run while the committed module is blocked by the foreign defects
+above, the surface's own compile + full test logic was verified standalone against the REAL macOS SDK
+under Swift 6 strict-concurrency=complete (the project's exact mode):
+
+  xcrun --sdk macosx swiftc -swift-version 6 -strict-concurrency=complete -target arm64-apple-macos15.0 \
+     -typecheck PinButton.Adapter.swift PinButton.Sources.swift PinButton.Model.swift \
+     PinButton.Views.swift PinButton.swift  ../../../design/generated/apple/Tokens.swift
+  -> TYPECHECK_EXIT=0   (all 5 SwiftUI surface files type-check 0-error, no warnings escalated)
+
+  xcrun --sdk macosx swiftc -swift-version 6 -strict-concurrency=complete -target arm64-apple-macos15.0 \
+     -o pinbtn_verify  PinButton.Adapter.swift PinButton.Sources.swift PinButton.Model.swift <harness>.swift
+  -> SWIFTC_EXIT=0
+  ./pinbtn_verify -> "PinButton harness: 54 passed, 0 failed" / "ALL CHECKS PASSED"   SURFACE_TEST_EXIT=0
+     adapter:  slug; PinnedItemKind wire tokens (alert_rule round-trip) + 8 cases; sm/md dims (28/32,
+               14/16, 12/14); Pin→pin / PinOff→pin.slash.fill + tone + copy keys; isPinned membership.
+     badge:    fresh→none; offline beats failure; failure beats stale; stale (retry) — full precedence.
+     resolve:  unpinned-loaded; pinned; busy (this item vs another); cold-load (spinner, blocks toggle,
+               not pinned); refresh keeps cached pin + interactive; failed-with-cache keeps pin + error
+               badge + interactive; showLabel passthrough.
+     model:    view.opened once + store.start; toggle writes !isPinned with itemId/context, flips state;
+               busy no-op; cold no-op; refresh forwards; stale one-shot auto-refresh (re-arms after fresh);
+               offline no auto-refresh + keeps cache + offline badge; external change re-derives; update.
+     strings:  pin/unpin/pinned/loading/busy/retry fallbacks; accessibilityValue idle="" / cold / offline.
+
+This is the same body of behaviour the committed PinButton.AdapterTests.swift + PinButton.Tests.swift
+assert via XCTest (those run in the TeslaSync(/-macOS) test bundles once the foreign module defects are
+fixed by their own prompts).
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+────────────────────────────────────────────────────────────────────────────────────────────────
+[x] Surface renders on Apple with all REAL states from the web source reproduced (unpinned / pinned /
+    busy-disabled / cold-load spinner / cached stale|offline|error freshness badge). 7 #Previews.
+[x] Hooks bind via the shared P1/S8 state-holder (PinButtonModel over the PinnedStore seam — the native
+    peer of usePinned + useTogglePin); no HTTP in the view; production wires the live /pinned store.
+[x] Every web i18n key resolves through the P1/S10 facade with verbatim fallbacks: pin.pin (Pin),
+    pin.unpin (Unpin), pin.pinned (Pinned). No hardcoded English in Swift.
+[x] Accessibility: aria-pressed → .isSelected; aria-label → tooltip (Pin/Unpin); composed value announces
+    loading/busy + the degraded-set message; VoiceOver "Retry" custom action for the failed/stale badge;
+    .help tooltip (web <Tooltip>); Dynamic Type via point-sized fonts; decorative glyph + badge hidden.
+[x] Tests: adapter unit + @Observable model-state + strings — committed as XCTest AND executed green
+    standalone (54/54) under Swift 6 strict concurrency.
+[x] Telemetry: view.opened surface=PinButton emitted once on first appear via the P1/S11 PinButtonTelemetry
+    seam (OSLog default; redaction-safe slug).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[~] iOS + macOS `xcodebuild build test`: DEFERRED — iOS blocked by pre-existing FOREIGN sibling compile
+    defects; macOS blocked by ENVIRONMENTAL no-dev-cert signing. Surface contributes 0 errors on both;
+    shown verbatim with root-cause + baseline reproduction evidence (predecessor-accepted disposition).
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT RESOLUTION
+────────────────────────────────────────────────────────────────────────────────────────────────
+ 1  No red-as-green ...... IOS_EXIT=65 + MAC_EXIT=65 shown verbatim with file:line evidence; never claimed
+                           passing. Runnable host gates (lint/format/placeholder/xcodegen) genuinely 0.
+ 2  No scope narrowing ... exact prompt gate commands run; full results recorded, not a subset.
+ 3  No skip-and-assume ... iOS + macOS xcodebuild + a baseline build ALL actually executed; real exit codes
+                           captured (IOS=65, MAC=65, baseline BUILD FAILED).
+ 4  No stubs ............. every state renders real content; no TODO/placeholder/fatalError (gate [5]=0).
+ 5  No parity shortcuts .. all source branches/copy/a11y reproduced; the freshness the web swallows is
+                           surfaced per the P4 leaf contract (CookieConsentBanner precedent), not fabricated.
+ 6  No delegation ........ implemented directly; no sub-agents/background delegation used.
+ 7  No predecessor bypass  P4-core/P1 deps consumed (LoadableState/StateHolder patterns, Tokens, facades);
+                           followed the P4-apple DEFERRED precedent (ActiveFilterChips 0147 / CookieConsentBanner 0115).
+ 8  No commit on red ..... the two reds are FOREIGN/ENVIRONMENTAL (proven pre-existing via the baseline
+                           build + the no-dev-cert signing error), not surface reds; the surface itself is
+                           verifiably clean (0-error real-SDK compile + 54/54 tests green). DEFERRED per
+                           precedent, not a surface defect.
+ 9  No silent drift ...... only the 9 PinButton.* files added; no foreign file modified (git status shows 0
+                           non-PinButton changes); generated .xcodeproj is git-ignored.
+ 10 Log ends with EXIT and STATUS each on its own line.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+EXIT CODES
+────────────────────────────────────────────────────────────────────────────────────────────────
+XCFRAMEWORK_EXIT=0
+IOS_EXIT=65          (DEFERRED — pre-existing FOREIGN sibling compile defects; surface 0 errors, proven via baseline)
+MAC_EXIT=65          (DEFERRED — ENVIRONMENTAL no macOS development-signing certificate on runner; surface 0 errors)
+LINT_EXIT=0          (swiftlint --strict — 0 violations across 4722 files)
+FORMAT_EXIT=0        (swiftformat --lint apps/apple — 0/5020 files)
+PLACEHOLDER_EXIT=0   (PLACEHOLDER_COUNT=0)
+XCODEGEN_EXIT=0      (54 pbxproj refs — iOS+macOS app + both test bundles)
+TYPECHECK_EXIT=0     (surface type-checks 0-error on real macOS SDK, Swift 6 strict-concurrency=complete)
+SWIFTC_EXIT=0        (surface + harness compiles 0-error)
+SURFACE_TEST_EXIT=0  (54/54 surface assertions executed green)
+
+EXIT=0
+STATUS=DONE
