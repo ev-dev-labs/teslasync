@@ -7,7 +7,7 @@ namespace TeslaSync.App.Tests.FeatureViews;
 
 /// <summary>
 /// Headless verification of the <c>ConflictWarnings</c> feature surface's UI-thread-free logic — the branch
-/// projection (loading / empty / ready), the web <c>severity === 'warning' ? …</c> parse guard, the
+/// projection (loading / error / empty / ready), the web <c>severity === 'warning' ? …</c> parse guard, the
 /// severity → variant / glyph / accent mapping, the <c>"name": reason</c> message interpolation, the
 /// <c>automationId-index</c> list key, the source ordering, the i18n key resolution (passthrough fallback and
 /// the resw <c>translation.*</c> catalog form), the composed per-banner and per-state Narrator names, and the
@@ -60,6 +60,33 @@ public sealed class ConflictWarningsTests
 
         Assert.Equal(ConflictWarningsState.Ready, display.State);
         Assert.Single(display.Banners);
+    }
+
+    [Fact]
+    public void Error_when_resolved_with_failure()
+    {
+        var display = Project(ConflictWarningsModel.Failed);
+
+        Assert.Equal(ConflictWarningsState.Error, display.State);
+        Assert.Empty(display.Banners);
+    }
+
+    [Fact]
+    public void Error_takes_precedence_over_present_conflicts()
+    {
+        var display = Project(new ConflictWarningsModel(false, new[] { Conflict() }) { HasError = true });
+
+        Assert.Equal(ConflictWarningsState.Error, display.State);
+        Assert.Empty(display.Banners);
+    }
+
+    [Fact]
+    public void Loading_takes_precedence_over_error()
+    {
+        var display = Project(ConflictWarningsModel.Pending with { HasError = true });
+
+        Assert.Equal(ConflictWarningsState.Loading, display.State);
+        Assert.Empty(display.Banners);
     }
 
     // ── Null safety ──────────────────────────────────────────────────────────────────────────────────────
@@ -207,11 +234,28 @@ public sealed class ConflictWarningsTests
         Assert.Equal("Loading", Project(ConflictWarningsModel.Pending).LoadingLabel);
 
     [Fact]
+    public void Error_title_uses_the_shared_network_error_string() =>
+        Assert.Equal("Can't reach server", Project(ConflictWarningsModel.Failed).ErrorTitle);
+
+    [Fact]
+    public void Error_message_uses_the_shared_network_error_string() =>
+        Assert.Equal(
+            "Check your internet connection and try again.",
+            Project(ConflictWarningsModel.Failed).ErrorMessage);
+
+    [Fact]
+    public void Error_retry_label_uses_the_shared_retry_string() =>
+        Assert.Equal("Retry", Project(ConflictWarningsModel.Failed).RetryLabel);
+
+    [Fact]
     public void I18n_keys_use_the_resw_translation_catalog_form()
     {
         Assert.Equal("translation.automations.builder.conflict", ConflictWarningsProjection.ConflictTitleKey);
         Assert.Equal("translation.common.noData", ConflictWarningsProjection.EmptyMessageKey);
         Assert.Equal("translation.common.loading", ConflictWarningsProjection.LoadingKey);
+        Assert.Equal("translation.error.network.title", ConflictWarningsProjection.ErrorTitleKey);
+        Assert.Equal("translation.error.network.message", ConflictWarningsProjection.ErrorMessageKey);
+        Assert.Equal("translation.error.retry", ConflictWarningsProjection.RetryKey);
     }
 
     // ── Accessibility: every state and every banner exposes a meaningful Narrator name ────────────────────
@@ -223,6 +267,7 @@ public sealed class ConflictWarningsTests
             new[]
             {
                 Project(ConflictWarningsModel.Pending),
+                Project(ConflictWarningsModel.Failed),
                 Project(ConflictWarningsModel.Empty),
                 Project(ConflictWarningsModel.Of(Conflict())),
             },
@@ -232,6 +277,10 @@ public sealed class ConflictWarningsTests
     [Fact]
     public void Loading_automation_name_is_the_loading_label() =>
         Assert.Equal("Loading", Project(ConflictWarningsModel.Pending).AutomationName);
+
+    [Fact]
+    public void Error_automation_name_is_the_error_title() =>
+        Assert.Equal("Can't reach server", Project(ConflictWarningsModel.Failed).AutomationName);
 
     [Fact]
     public void Empty_automation_name_is_the_empty_message() =>

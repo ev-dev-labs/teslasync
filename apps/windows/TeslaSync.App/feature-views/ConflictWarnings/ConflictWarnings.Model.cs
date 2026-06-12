@@ -44,20 +44,25 @@ public sealed record AutomationConflict(
 /// The mutually-exclusive render branch of the <c>ConflictWarnings</c> surface — the native union of the states
 /// the web component renders (<c>web/src/features/automations/pages/ConflictWarnings.tsx</c>). The web source is
 /// a pure presentational list: it takes an already-resolved <c>conflicts</c> array and renders one
-/// <c>AlertBanner</c> per entry, returning <c>null</c> when the array is empty. It performs no fetching, so
-/// there is no fetch-driven error / stale / offline branch to reproduce here — the hosting
-/// <c>AutomationBuilderPage</c> owns the conflict-check lifecycle (it derives <c>conflicts</c> from the save
-/// mutation and renders the save-error / network surfaces itself, then re-renders this control with
-/// already-resolved props, exactly as React only mounts the list with resolved data). The
-/// <see cref="Loading"/> branch is the card-local skeleton a parent drives while it is still resolving the
-/// check, and the <see cref="Empty"/> branch is the native always-render-a-surface replacement for the web's
-/// bare <c>return null</c> (a region never collapses to an invisible box). Every branch maps onto a visible
-/// surface; none is ever hidden.
+/// <c>AlertBanner</c> per entry, returning <c>null</c> when the array is empty. The hosting
+/// <c>AutomationBuilderPage</c> owns the conflict-check lifecycle: it derives <c>conflicts</c> from the save /
+/// validate mutation and re-renders this control with already-resolved props. The page-parity manifest declares
+/// two data states for this unit (<c>empty</c> · <c>error</c>), so the native surface reproduces each as a
+/// visible region (ADR-006 — never a blank box): the <see cref="Loading"/> branch is the card-local skeleton a
+/// parent drives while it is still resolving the check; the <see cref="Error"/> branch is the InfoBar-equivalent
+/// + Retry surface a parent shows when that conflict-check mutation fails (the web parent owns that failure, so
+/// the model is purely a projection input via <see cref="ConflictWarningsModel.HasError"/>); the
+/// <see cref="Empty"/> branch is the native always-render-a-surface replacement for the web's bare
+/// <c>return null</c>; and the <see cref="Ready"/> branch is the web render itself. Every branch maps onto a
+/// visible surface; none is ever hidden.
 /// </summary>
 public enum ConflictWarningsState
 {
     /// <summary>The parent is still resolving the conflict check — tokenized skeleton chrome.</summary>
     Loading,
+
+    /// <summary>The parent's conflict-check mutation failed — an InfoBar-equivalent error surface with a Retry affordance.</summary>
+    Error,
 
     /// <summary>Resolved with no conflicts (web <c>conflicts.length === 0</c>) — a friendly empty surface, never a blank box.</summary>
     Empty,
@@ -98,7 +103,8 @@ public sealed record ConflictBannerDisplay(
 /// The render-time data model the <c>ConflictWarnings</c> view binds to — the native analogue of the web
 /// <c>ConflictWarningsProps</c> (<c>web/src/features/automations/pages/ConflictWarnings.tsx</c>). The web
 /// <c>conflicts</c> prop becomes <see cref="Conflicts"/>; <see cref="Loading"/> is the card-local flag a parent
-/// grid drives while the conflict check is still resolving (the web parent owns that lifecycle, so the model is
+/// grid drives while the conflict check is still resolving and <see cref="HasError"/> is the flag the parent
+/// sets when that conflict-check mutation fails (the web parent owns both lifecycle outcomes, so the model is
 /// purely a projection input). Pure data — no WinUI types — so the projection is unit-tested without a UI host.
 /// </summary>
 /// <param name="Loading">When true the parent has not resolved the conflict check yet (the loading branch).</param>
@@ -107,11 +113,18 @@ public sealed record ConflictWarningsModel(
     bool Loading,
     IReadOnlyList<AutomationConflict> Conflicts)
 {
+    /// <summary>When true the parent's conflict-check mutation failed — the error branch (overrides empty / ready, but not loading).</summary>
+    public bool HasError { get; init; }
+
     /// <summary>The initial model: the parent is still resolving the check, so the loading branch renders.</summary>
     public static ConflictWarningsModel Pending { get; } = new(true, Array.Empty<AutomationConflict>());
 
     /// <summary>A resolved model with no conflicts — the empty branch (the web <c>return null</c> case).</summary>
     public static ConflictWarningsModel Empty { get; } = new(false, Array.Empty<AutomationConflict>());
+
+    /// <summary>A resolved model whose conflict-check failed — the error branch (InfoBar-equivalent + Retry).</summary>
+    public static ConflictWarningsModel Failed { get; } =
+        new(false, Array.Empty<AutomationConflict>()) { HasError = true };
 
     /// <summary>A resolved model wrapping <paramref name="conflicts"/> — the ready (or empty) branch.</summary>
     /// <param name="conflicts">The conflicts to render; null collapses to the empty branch.</param>
@@ -122,32 +135,40 @@ public sealed record ConflictWarningsModel(
 /// <summary>
 /// The fully projected, render-ready view of the whole <c>ConflictWarnings</c> surface — the active
 /// <see cref="State"/>, the projected <see cref="Banners"/> (in the web <c>conflicts</c> order), the localized
-/// empty + loading copy and the surface Narrator name. Pure data so every value is asserted without a UI host.
+/// empty + loading + error copy (heading, body and the Retry affordance label) and the surface Narrator name.
+/// Pure data so every value is asserted without a UI host.
 /// </summary>
 /// <param name="State">The resolved render branch.</param>
 /// <param name="Banners">The projected conflict banners, in source order (empty unless <see cref="ConflictWarningsState.Ready"/>).</param>
 /// <param name="EmptyMessage">The localized empty-state copy (the empty branch).</param>
 /// <param name="LoadingLabel">The localized loading copy (the loading branch).</param>
+/// <param name="ErrorTitle">The localized error-state heading (the error branch).</param>
+/// <param name="ErrorMessage">The localized error-state body copy (the error branch).</param>
+/// <param name="RetryLabel">The localized Retry affordance label (the error branch).</param>
 /// <param name="AutomationName">The composed Narrator name for the surface in the active state.</param>
 public sealed record ConflictWarningsDisplay(
     ConflictWarningsState State,
     IReadOnlyList<ConflictBannerDisplay> Banners,
     string EmptyMessage,
     string LoadingLabel,
+    string ErrorTitle,
+    string ErrorMessage,
+    string RetryLabel,
     string AutomationName);
 
 /// <summary>
 /// Pure projection from a <see cref="ConflictWarningsModel"/> to its <see cref="ConflictWarningsDisplay"/> — the
 /// native port of <c>web/src/features/automations/pages/ConflictWarnings.tsx</c>. Reproduces the web derivations
-/// exactly: the branch precedence mirrors the card lifecycle (loading → empty → ready);
+/// exactly: the branch precedence mirrors the card lifecycle (loading → error → empty → ready);
 /// <see cref="ParseSeverity"/> mirrors the web <c>severity === 'warning' ? 'warning' : 'info'</c> guard;
 /// <see cref="VariantFor"/> + <see cref="GlyphFor"/> map the severity onto the shared callout variant and the
 /// Segoe Fluent stand-ins for the web Lucide <c>AlertTriangle</c> / <c>Info</c> icons;
 /// <see cref="FormatMessage"/> reproduces the web template literal <c>`"${automation_name}": ${reason}`</c>
 /// verbatim; and the banner heading flows through the i18n facade using the exact catalog key + English
-/// fallback the web feeds into <c>t()</c>. The shared loading / empty copy uses the common catalog keys (the web
-/// renders nothing when empty, so the native empty surface borrows the shared "no data" string, exactly as the
-/// sibling presentational ports do). No WinUI types — unit-tested without a UI host.
+/// fallback the web feeds into <c>t()</c>. The shared loading / empty / error copy uses the common catalog keys
+/// (the web renders nothing when empty, so the native empty surface borrows the shared "no data" string and the
+/// error surface borrows the web <c>QueryError</c> generic-failure copy, exactly as the sibling presentational
+/// ports do). No WinUI types — unit-tested without a UI host.
 /// </summary>
 public static class ConflictWarningsProjection
 {
@@ -171,6 +192,24 @@ public static class ConflictWarningsProjection
 
     /// <summary>English fallback for <see cref="LoadingKey"/>.</summary>
     public const string LoadingFallback = "Loading";
+
+    /// <summary>i18n key for the error-state heading (the shared <c>error.network.title</c> string, the web <c>QueryError</c> generic-failure copy).</summary>
+    public const string ErrorTitleKey = "translation.error.network.title";
+
+    /// <summary>English fallback for <see cref="ErrorTitleKey"/> (matches the web <c>QueryError</c> default).</summary>
+    public const string ErrorTitleFallback = "Can't reach server";
+
+    /// <summary>i18n key for the error-state body copy (the shared <c>error.network.message</c> string).</summary>
+    public const string ErrorMessageKey = "translation.error.network.message";
+
+    /// <summary>English fallback for <see cref="ErrorMessageKey"/> (matches the web <c>QueryError</c> default).</summary>
+    public const string ErrorMessageFallback = "Check your internet connection and try again.";
+
+    /// <summary>i18n key for the Retry affordance label (the shared <c>error.retry</c> string).</summary>
+    public const string RetryKey = "translation.error.retry";
+
+    /// <summary>English fallback for <see cref="RetryKey"/>.</summary>
+    public const string RetryFallback = "Retry";
 
     /// <summary>
     /// Parse a raw severity token into a <see cref="ConflictSeverity"/>, mirroring the web
@@ -210,7 +249,7 @@ public static class ConflictWarningsProjection
 
     /// <summary>Project <paramref name="model"/> into a render-ready display using the i18n facade.</summary>
     /// <param name="model">The render-time data model (the web props).</param>
-    /// <param name="localizer">The i18n facade the heading / empty / loading copy resolves through.</param>
+    /// <param name="localizer">The i18n facade the heading / empty / loading / error copy resolves through.</param>
     public static ConflictWarningsDisplay Project(ConflictWarningsModel model, ILocalizer localizer)
     {
         ArgumentNullException.ThrowIfNull(model);
@@ -219,12 +258,16 @@ public static class ConflictWarningsProjection
         string title = localizer.GetString(ConflictTitleKey, ConflictTitleFallback);
         string emptyMessage = localizer.GetString(EmptyMessageKey, EmptyMessageFallback);
         string loadingLabel = localizer.GetString(LoadingKey, LoadingFallback);
+        string errorTitle = localizer.GetString(ErrorTitleKey, ErrorTitleFallback);
+        string errorMessage = localizer.GetString(ErrorMessageKey, ErrorMessageFallback);
+        string retryLabel = localizer.GetString(RetryKey, RetryFallback);
 
         IReadOnlyList<AutomationConflict> conflicts = model.Conflicts ?? Array.Empty<AutomationConflict>();
-        ConflictWarningsState state = SelectState(model.Loading, conflicts.Count);
+        ConflictWarningsState state = SelectState(model.Loading, model.HasError, conflicts.Count);
 
-        // Banners are projected only for the ready branch — the loading branch renders skeletons and the empty
-        // branch renders the empty surface, so neither exposes (nor renders) any conflict banner.
+        // Banners are projected only for the ready branch — the loading branch renders skeletons, the error
+        // branch renders the InfoBar + Retry surface and the empty branch renders the empty surface, so none of
+        // them exposes (nor renders) any conflict banner.
         IReadOnlyList<ConflictBannerDisplay> banners = state == ConflictWarningsState.Ready
             ? BuildBanners(conflicts, title)
             : Array.Empty<ConflictBannerDisplay>();
@@ -234,20 +277,31 @@ public static class ConflictWarningsProjection
             Banners: banners,
             EmptyMessage: emptyMessage,
             LoadingLabel: loadingLabel,
+            ErrorTitle: errorTitle,
+            ErrorMessage: errorMessage,
+            RetryLabel: retryLabel,
             AutomationName: state switch
             {
                 ConflictWarningsState.Loading => loadingLabel,
+                ConflictWarningsState.Error => errorTitle,
                 ConflictWarningsState.Empty => emptyMessage,
                 _ => title,
             });
     }
 
-    /// <summary>Branch precedence from the card lifecycle: loading → empty (no conflicts) → ready.</summary>
-    private static ConflictWarningsState SelectState(bool loading, int conflictCount)
+    /// <summary>Branch precedence from the card lifecycle: loading → error → empty (no conflicts) → ready.</summary>
+    private static ConflictWarningsState SelectState(bool loading, bool hasError, int conflictCount)
     {
         if (loading)
         {
             return ConflictWarningsState.Loading;
+        }
+
+        // A failed conflict-check has no trustworthy conflict list, so the error branch takes precedence over the
+        // resolved empty / ready branches (but never over loading — an in-flight check is not yet a failure).
+        if (hasError)
+        {
+            return ConflictWarningsState.Error;
         }
 
         // The web returns null when there are no conflicts; the native surface always renders, so a resolved
