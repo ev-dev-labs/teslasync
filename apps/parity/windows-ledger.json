@@ -7,5 +7,14 @@
     "requiredCount": 43,
     "promptId": "p2-windows/W7/windows-page-admin-ApiLogsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-ApiLogsPage.log"
+  },
+  {
+    "unitId": "page:admin/FeedbackQueue",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 43,
+    "requiredCount": 43,
+    "promptId": "p2-windows/W7/windows-page-admin-FeedbackQueuePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-FeedbackQueuePage.log"
   }
 ]

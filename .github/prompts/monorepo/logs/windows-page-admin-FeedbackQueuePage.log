@@ -1,0 +1,119 @@
+=== p2-windows · W7 · page:admin/FeedbackQueue (WinUI 3 / Fluent) ===
+Parity unit : page:admin/FeedbackQueue   kind=page   web route=/admin/feedback
+Web source  : web/src/features/admin/pages/FeedbackQueuePage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) + maui-windows workload — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs
+  (the Fluent view), exactly as the sibling W7 ApiLogsPage does. The generated prompt's idealized
+  "FeedbackQueuePage.xaml + FeedbackQueuePageViewModel.cs under TeslaSync/Features/Admin" is mapped onto these real
+  conventions; the surface registers itself with the W4 ShellPageFactory by route name ("FeedbackQueue", already in
+  RouteTable.cs → /admin/feedback).
+- Data binding (ADR-004): the manifest data sources are useFeedbackList (GET /admin/feedback) + useUpdateFeedback
+  (PATCH /admin/feedback/{id}). The view-model reads/writes through an injected IFeedbackQueueFeed; the default
+  EmptyFeedbackQueueFeed resolves the empty state (matching the ApiLogsPage host-injection precedent), and the
+  generated-client-backed FeedbackQueueClientFeed (FeedbackQueuePage.Source.cs) binds to the generated OpenAPI
+  contract client — GET get_api_v1_admin_feedback with snake_case status/category/limit/offset query params (unset
+  filters omitted, exactly as the web buildQuery), and PATCH patch_api_v1_admin_feedback_id with the touched
+  FeedbackUpdate field only — and is asserted in tests via the FakeApiClient. No HTTP touches the view.
+- SI units N/A (no unit-bearing fields on this admin surface); timestamps format through the shared
+  DateTimeFormatting port (web formatDateTime) and the reporter email is masked at the display boundary via
+  TsMaskedValue (MaskVariant.Email).
+- All 38 i18n keys already exist verbatim in Strings/en/Resources.resw (translation.feedback.* + translation.common.*);
+  the surface resolves them through the ILocalizer facade with the web key names (no new catalog rows required).
+- Pre-existing blocker repaired: TeslaSync.App.Tests.csproj had been re-corrupted by its documented .gitattributes
+  merge=union strategy into FOUR <Project> roots plus stranded Compile items (MSB4025), which failed XML load and
+  blocked the whole-solution build at baseline. Regenerated it into the single canonical Project root the file's own
+  INVARIANT mandates: case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free
+  source (1321 distinct) plus the three new FeedbackQueuePage Model/Source/ViewModel links (1324 total). No linked
+  source dropped (Stale=0).
+
+=== PARITY ===
+PARITY_REQUIRED=43
+
+# Panels (1) — the single web GlassPanel region, with every sub-region reproduced inside it
+[x] panel  - GlassPanel1   -> FeedbackQueuePage.cs#BuildPanel (TsGlassPanel) hosting the filters row
+             (FeedbackQueuePage.cs#BuildFiltersRow: status/category TsSelect + Refresh TsButton + bridge note),
+             the loading/error/empty branches, the data table (header + Expander rows) and the pagination footer;
+             projected by FeedbackQueueProjection.Project into FeedbackQueueDisplay.
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading       -> FeedbackQueueState.Loading + FeedbackQueueDisplay.ShowLoading (FeedbackQueueProjection.SelectState); rendered FeedbackQueuePage.cs#_loadingPanel (ProgressRing + LoadingText); test State_loading_when_query_in_flight
+[x] state  - empty         -> FeedbackQueueState.Empty + ShowEmpty; rendered _emptyState (TsEmptyState, title+message); test State_empty_when_resolved_with_no_rows
+[x] state  - error         -> FeedbackQueueState.Error + HasError/ErrorText; rendered _errorState (TsQueryError + Retry via ActionInvoked → RefreshAsync; InfoBar-equivalent inline surface); test State_error_shows_query_error_with_detail
+[x] state  - success       -> FeedbackQueueState.Success + ShowRows; rendered _tableHeader + _rowsPanel (Expander rows w/ expanded detail) + _paginationPanel; test State_success_when_rows_present
+
+# Strings (38) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - common.next                          -> FeedbackQueueProjection.Project localizer.GetString("common.next", "Next")
+[x] string - common.previous                      -> FeedbackQueueProjection.Project localizer.GetString("common.previous", "Previous")
+[x] string - common.refresh                       -> FeedbackQueueProjection.Project localizer.GetString("common.refresh", "Refresh")
+[x] string - feedback.category.bug                -> FeedbackQueueProjection.CategoryLabels localizer.GetString("feedback.category.bug", "Bug report")
+[x] string - feedback.category.feature            -> FeedbackQueueProjection.CategoryLabels localizer.GetString("feedback.category.feature", "Feature request")
+[x] string - feedback.category.other              -> FeedbackQueueProjection.CategoryLabels localizer.GetString("feedback.category.other", "Other / question")
+[x] string - feedback.queue.action.changeStatus   -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.action.changeStatus", "Status")
+[x] string - feedback.queue.action.forward        -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.action.forward", "Forward to GitHub")
+[x] string - feedback.queue.action.githubUrl      -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.action.githubUrl", "GitHub issue URL")
+[x] string - feedback.queue.action.saveUrl        -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.action.saveUrl", "Save URL")
+[x] string - feedback.queue.bridgeDisabled        -> FeedbackQueueProjection.Project localizer.GetString("feedback.queue.bridgeDisabled", "GitHub Issues bridge is not configured ...")
+[x] string - feedback.queue.col.category          -> FeedbackQueueProjection.Project ColumnLabels localizer.GetString("feedback.queue.col.category", "Category")
+[x] string - feedback.queue.col.created           -> FeedbackQueueProjection.Project ColumnLabels localizer.GetString("feedback.queue.col.created", "Created")
+[x] string - feedback.queue.col.github            -> FeedbackQueueProjection.Project ColumnLabels localizer.GetString("feedback.queue.col.github", "GitHub")
+[x] string - feedback.queue.col.pageRoute         -> FeedbackQueueProjection.Project ColumnLabels localizer.GetString("feedback.queue.col.pageRoute", "Page")
+[x] string - feedback.queue.col.reporter          -> FeedbackQueueProjection.Project ColumnLabels localizer.GetString("feedback.queue.col.reporter", "Reporter")
+[x] string - feedback.queue.col.status            -> FeedbackQueueProjection.Project ColumnLabels localizer.GetString("feedback.queue.col.status", "Status")
+[x] string - feedback.queue.col.title             -> FeedbackQueueProjection.Project ColumnLabels localizer.GetString("feedback.queue.col.title", "Title")
+[x] string - feedback.queue.empty                 -> FeedbackQueueProjection.Project localizer.GetString("feedback.queue.empty", "No feedback yet")
+[x] string - feedback.queue.emptyMessage          -> FeedbackQueueProjection.Project localizer.GetString("feedback.queue.emptyMessage", "User-submitted bug reports and feature requests will appear here.")
+[x] string - feedback.queue.expand.appVersion     -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.expand.appVersion", "App version")
+[x] string - feedback.queue.expand.body           -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.expand.body", "Report body")
+[x] string - feedback.queue.expand.consoleTail    -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.expand.consoleTail", "Console tail")
+[x] string - feedback.queue.expand.recentErrors   -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.expand.recentErrors", "Recent frontend errors")
+[x] string - feedback.queue.expand.submitter      -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.expand.submitter", "Submitter")
+[x] string - feedback.queue.expand.userAgent      -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.expand.userAgent", "User agent")
+[x] string - feedback.queue.expand.userEmail      -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.expand.userEmail", "Email")
+[x] string - feedback.queue.filter.allCategories  -> FeedbackQueueProjection.Project localizer.GetString("feedback.queue.filter.allCategories", "All categories") (category filter head option)
+[x] string - feedback.queue.filter.allStatuses    -> FeedbackQueueProjection.Project localizer.GetString("feedback.queue.filter.allStatuses", "All statuses") (status filter head option)
+[x] string - feedback.queue.filter.category       -> FeedbackQueueProjection.Project localizer.GetString("feedback.queue.filter.category", "Category") (category select Header)
+[x] string - feedback.queue.filter.status         -> FeedbackQueueProjection.Project localizer.GetString("feedback.queue.filter.status", "Status") (status select Header)
+[x] string - feedback.queue.maskedEmail           -> FeedbackQueueProjection.DetailLabels localizer.GetString("feedback.queue.maskedEmail", "Reporter email, click to reveal") (TsMaskedValue RevealLabel)
+[x] string - feedback.queue.openIssue             -> FeedbackQueueProjection.Project localizer.GetString("feedback.queue.openIssue", "Open issue") (GitHub HyperlinkButton)
+[x] string - feedback.queue.pageOf                -> FeedbackQueueProjection.Project localizer.GetString("feedback.queue.pageOf", "Page {0} of {1} ({2} entries)")
+[x] string - feedback.queue.status.closed         -> FeedbackQueueProjection.StatusLabels localizer.GetString("feedback.queue.status.closed", "Closed")
+[x] string - feedback.queue.status.new            -> FeedbackQueueProjection.StatusLabels localizer.GetString("feedback.queue.status.new", "New")
+[x] string - feedback.queue.status.triaged        -> FeedbackQueueProjection.StatusLabels localizer.GetString("feedback.queue.status.triaged", "Triaged")
+[x] string - feedback.queue.title                 -> FeedbackQueueProjection.Project / FeedbackQueueRegistration.Title localizer.GetString("feedback.queue.title", "Feedback queue")
+
+PARITY_COVERED=43
+# Coverage asserted headlessly: FeedbackQueuePageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records every key above through a RecordingLocalizer; the four state tests +
+# Filter/Column/Row/Detail/Pagination tests assert each region renders from the bound FeedbackQueueDisplay state
+# holder; the ClientFeed_* tests assert the generated-client GET/PATCH request shaping (web useFeedbackList /
+# useUpdateFeedback); the ViewModel_* tests assert the loading/empty/error/success matrix + filter-reset, toggle,
+# and update-then-reload flows.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/FeedbackQueuePage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (FeedbackQueuePage sources + ShellWindow registration + regenerated test csproj, all LF)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25712, Failed: 0, Skipped: 0 (incl. 37 FeedbackQueuePageTests)
+TEST_EXIT=0
+PARITY_COVERED=43
+PARITY_REQUIRED=43
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/FeedbackQueuePage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/FeedbackQueuePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-FeedbackQueuePage.log
+# git commit -m "feat(apps/windows): FeedbackQueuePage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE
