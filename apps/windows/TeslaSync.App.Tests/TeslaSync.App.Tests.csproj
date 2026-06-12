@@ -789,6 +789,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SignalSparklinePreview\SignalSparklinePreview.ViewModel.cs" Link="FeatureViews\SignalSparklinePreview\SignalSparklinePreview.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalStatsPanel\SignalStatsPanel.Model.cs" Link="FeatureViews\SignalStatsPanel\SignalStatsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SlideRenderer\SlideRenderer.Model.cs" Link="FeatureViews\SlideRenderer\SlideRenderer.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SmartChargePage\SmartChargePage.Model.cs" Link="FeatureViews\SmartChargePage\SmartChargePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SmartChargePage\SmartChargePage.Source.cs" Link="FeatureViews\SmartChargePage\SmartChargePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SmartChargePage\SmartChargePage.ViewModel.cs" Link="FeatureViews\SmartChargePage\SmartChargePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SnapshotInspector\SnapshotInspector.Model.cs" Link="FeatureViews\SnapshotInspector\SnapshotInspector.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SocChart\SocChart.Model.cs" Link="FeatureViews\SocChart\SocChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SOCRouteChart\SOCRouteChart.Model.cs" Link="FeatureViews\SOCRouteChart\SOCRouteChart.Model.cs" />

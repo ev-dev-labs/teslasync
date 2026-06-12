@@ -4818,6 +4818,9 @@
   <data name="translation.chargePlanner.cost" xml:space="preserve">
     <value>Cost</value>
   </data>
+  <data name="translation.chargePlanner.cost_decimal" xml:space="preserve">
+    <value>Cost</value>
+  </data>
   <data name="translation.chargePlanner.currentRate" xml:space="preserve">
     <value>At current rates</value>
   </data>
