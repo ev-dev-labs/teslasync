@@ -1,0 +1,107 @@
+=== P2 Shared surface 0203 Accordion (Windows) ===
+date: 2026-06-12T01:47:26-07:00
+
+Capability: WinUI 3 (Windows App SDK 1.6+) + .NET 10 build toolchain, Fluent Design System.
+  dotnet --version: 10.0.300
+  installed SDKs: 9.0.314, 10.0.300 ; runtimes incl. Microsoft.WindowsDesktop.App 10.0.8
+  TeslaSync.App.csproj: UseWinUI=true, Microsoft.WindowsAppSDK, net10.0-windows10.0.19041.0.
+  (The build capability is proven green below; STATUS=BLOCKED is therefore NOT warranted on
+  capability grounds. The Category=UIAutomation E2E suite needs a live WinAppDriver/Appium
+  runner, which is the SEPARATE W9-0002 gate, absent on this runner -- see [2].)
+
+Surface: native parity port of web/src/components/ui/Accordion.tsx -- a collapsible disclosure
+  (header: optional icon + title + optional badge + optional headerExtra; animated body reveal;
+  controlled-or-uncontrolled open state). Mapped to the platform-idiomatic disclosure: the surface
+  composes TsAccordion (a tokenized WinUI Expander), which provides the native expand/collapse
+  animation, keyboard toggling, the trailing chevron (the native counterpart of the web ChevronDown
+  + rotate-180) and the Narrator ExpandCollapse pattern. The web custom-button + framer-motion reveal
+  is reproduced through that disclosure plus a reduce-motion-gated body fade.
+  Delivered files:
+    apps/windows/TeslaSync.App/shared-surfaces/Accordion.cs          (WinUI view; app-build exercised)
+    apps/windows/TeslaSync.App/shared-surfaces/Accordion.Model.cs    (registration/model/projection/motion/diagnostics)
+    apps/windows/TeslaSync.App/shared-surfaces/Accordion.ViewModel.cs (controlled/uncontrolled open-state holder)
+    apps/windows/TeslaSync.App.Tests/SharedSurfaces/AccordionTests.cs (41 headless tests)
+
+  State coverage: the web source is purely presentational + prop-driven (its parent owns any data
+  fetch), so -- like the peer presentational surfaces (InlineCallout/SwipeRow/VisuallyHidden) -- it
+  has no loading/error/stale/offline chrome to reproduce. Every branch it DOES have is reproduced:
+  collapsed vs expanded (body hidden/revealed, chevron 0deg/180deg), optional icon, optional badge,
+  optional header-extra, controlled vs uncontrolled open, header/body padding overrides, and the
+  reduced-motion (instant) vs animated body reveal.
+  i18n: the surface is anonymous (the web component renders no inherent strings; title/badge/
+  header-extra are caller-supplied, already-localized content), so there are NO i18n keys to add to
+  the P1/S10 catalogue -- it threads the ILocalizer facade for family consistency only.
+
+--- Pre-flight: one pre-existing integration breakage on this branch was repaired (NOT caused by Accordion) ---
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj had been re-concatenated by the
+  .gitattributes merge=union strategy into TWO <Project> roots (lines 1-1398 and 1399-2689) with a
+  doubled, interleaved Compile item group, so it failed XML load:
+    error MSB4025: The project file could not be loaded. The 'ItemGroup' start tag on line 151
+    position 4 does not match the end tag of 'Project'. Line 1398, position 3.
+  This made the WHOLE solution build (and every headless test) RED at baseline. Per the file's own
+  INVARIANT comment, it was regenerated into a single canonical Project root -- the case-insensitive
+  ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under
+  dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/ (1246
+  distinct) + the new Accordion Model/ViewModel links (1248 total). This is the documented,
+  predecessor-sanctioned repair (see the file's INVARIANT comment and sibling logs
+  0159/0166/0170/0173/0178/0185/0189). The bare WinUI view (Accordion.cs) stays excluded and is
+  exercised by the app build. Verified: 1 <Project> root, 4 balanced ItemGroups, XML parses, 1248
+  Compile nodes, Accordion links sorted first in the shared-surfaces block.
+
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+        0 Error(s)
+        17 Warning(s)  (all pre-existing CA1000/CA1716/CA1720/CA1859 SUGGESTIONS in TeslaSync.App.Core;
+                        none from Accordion; TeslaSync.App builds with TreatWarningsAsErrors=true and is clean)
+    Time Elapsed 00:07:30
+BUILD_EXIT=0
+
+[2] test
+    The surface gate runs the headless unit suite (Category!=UIAutomation) -- the environment-
+    independent verification of every surface's UI-thread-free logic. The Category=UIAutomation
+    suite is the SEPARATE W9-0002 gate: it drives the packaged app over WinAppDriver, which is
+    ABSENT on this runner, so it fails fast (by design). This matches sibling shared-surface logs
+    (0173 ScrollRestoration, 0189 SwipeRow).
+    >>> dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" --no-build
+    (TeslaSync.App.UITests.dll: "No test matches the given testcase filter `Category!=UIAutomation`"
+     -- the entire UITests project is Category=UIAutomation, so the filter excludes it cleanly.)
+    Passed!  - Failed:     0, Passed: 24313, Skipped:     0, Total: 24313, Duration: 15 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0   (headless unit suite, Category!=UIAutomation)
+
+    Surface-only evidence:
+    Accordion-only: Passed!  - Failed:     0, Passed:    41, Skipped:     0, Total:    41, Duration: 126 ms - TeslaSync.App.Tests.dll (net10.0)
+      Covers: registration tokens/slug/durations/chevron/padding; AccordionPadding factories;
+      AccordionModel defaults+overrides+null guard; AccordionProjection per state (collapsed vs
+      expanded) and per branch (icon/badge/header-extra), title+container tokens, padding passthrough;
+      accessible name = title; testId -> AutomationId; AccordionMotion reduce-motion adapter
+      (200 ms full / 0 ms reduced); AccordionViewModel controlled vs uncontrolled routing, Toggle,
+      SyncControlledOpen, idempotence, INotifyPropertyChanged + OpenChanged; PII-safe diagnostics.
+
+    Evidence that the only whole-solution test failures are the absent-WinAppDriver E2E suite:
+    >>> dotnet test apps/windows/TeslaSync.App.UITests/...csproj -c Release --no-build  -> exit 1
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+      WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+      WinAppDriver.exe was not found at its standard install paths or on PATH.
+      (WinAppDriverSession.EnsureReady, WinAppDriverSession.cs:line 75) -- by design, separate gate.
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    ERROR_LINE_COUNT=0
+    Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+    (Delivered .cs files normalized to LF + UTF-8 no-BOM to satisfy apps/.editorconfig end_of_line=lf.)
+FORMAT_EXIT=0
+
+[4] check-placeholders over the delivered Accordion source
+    literal gate (-Path apps/windows/TeslaSync.App/shared-surfaces/Accordion): PLACEHOLDER_COUNT=0 EXIT=0
+    per-file evidence:
+      Accordion.cs:          PLACEHOLDER_COUNT=0 (exit 0)
+      Accordion.Model.cs:    PLACEHOLDER_COUNT=0 (exit 0)
+      Accordion.ViewModel.cs: PLACEHOLDER_COUNT=0 (exit 0)
+      AccordionTests.cs:     PLACEHOLDER_COUNT=0 (exit 0)
+PLACEHOLDER_EXIT=0
+
+SUMMARY: BUILD_EXIT=0  TEST_EXIT=0 (headless)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+  The Category=UIAutomation E2E suite is red ONLY because WinAppDriver is absent on this runner
+  (UiAutomationUnavailableException); it is the separate W9-0002 gate, out of scope for this
+  per-surface gate. The csproj multi-root corruption (pre-existing) was repaired as documented.
+
+EXIT=0
+STATUS=DONE
