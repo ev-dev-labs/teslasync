@@ -1,0 +1,25 @@
+/*
+  WidgetMapView.strings
+  TeslaSync — P4 widget primitive · 0008 · WidgetMapView (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `WidgetMapView`
+  primitive resolves (table "WidgetMapView") lives here with its English value. These entries fold into
+  the app `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface
+  table so each parallel surface prompt owns its own strings without editing the shared catalog
+  (parallel-unsafe across concurrent slots).
+
+  The web source (features/dashboard/widgets/shared/WidgetMapView.tsx) is anonymous — it extracts no
+  t() keys. Its only string literal is the empty-state default,
+  `emptyMessage = 'No location data available'`, captured here so the view holds no hardcoded literal.
+  The emptyHint + accessibilityLabel are native a11y / HIG additions (so the empty leaf is never a bare
+  box and the map canvas has a VoiceOver label).
+*/
+
+/* --- Empty leaf (web `EmptyState message={emptyMessage ?? 'No location data available'}`) --- */
+"widgetMapView.empty" = "No location data available";
+
+/* --- Empty leaf supporting line (native HIG — never a bare box) --- */
+"widgetMapView.emptyHint" = "Location appears here once a position is available.";
+
+/* --- Map canvas VoiceOver label (native a11y addition) --- */
+"widgetMapView.accessibilityLabel" = "Map showing the selected location";
