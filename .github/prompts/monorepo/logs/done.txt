@@ -308,3 +308,4 @@ p3-android/feature-views/A-0059-OverviewTab.prompt.md
 p3-android/feature-views/A-0058-HeroGauges.prompt.md
 p3-android/feature-views/A-0060-OverviewVehicleComparison.prompt.md
 p3-android/feature-views/A-0064-PatternsSlide.prompt.md
+p3-android/feature-views/A-0063-EnvironmentSlide.prompt.md
