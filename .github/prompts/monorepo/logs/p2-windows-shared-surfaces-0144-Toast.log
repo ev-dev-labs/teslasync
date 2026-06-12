@@ -1,0 +1,148 @@
+=== P2 Shared surface 0144 Toast (Windows) ===
+
+SURFACE: apps/windows/TeslaSync.App/shared-surfaces/Toast/Toast.{cs,Model.cs,Source.cs,ViewModel.cs}
+TESTS  : apps/windows/TeslaSync.App.Tests/SharedSurfaces/ToastTests.cs (60 test cases)
+WEB SRC: web/src/components/feedback/Toast.tsx (THE specification) + web/src/api/hooks/_toastHelpers.ts
+CAPABILITY: .NET 10.0.300 SDK + WinUI 3 (Windows App SDK, maui-windows workload) present -> NOT capability-blocked
+           for build/headless. E2E UI automation (WinAppDriver/Appium) absent on this non-interactive runner; see TEST.
+
+-------------------------------------------------------------------------------
+SURFACE IMPLEMENTATION (parity port; no stubs / no placeholder / no skeleton-only)
+-------------------------------------------------------------------------------
+- Native WinUI 3 port of the web ToastProvider overlay: a bottom-right stack of auto-dismissing typed cards
+  (success / error / info / warning). Each card carries the shared-callout leading glyph + accent (native
+  stand-in for the per-type Lucide icon + 300-level border), a bold title, an optional secondary message
+  (2-line clamp), an optional action, and a dismiss button. Built as a code-only ContentControl (no XAML),
+  mirroring the OfflineBanner / LiveStaleDataBanner shared-surface pattern.
+- 4-file surface: Toast.cs (WinUI view), Toast.Model.cs + Toast.Source.cs + Toast.ViewModel.cs (Microsoft.UI-free
+  -> Compile-linked into the headless test host; the bare view stays app-build-only).
+- DATA SOURCES bound (the web hooks the prompt lists), all via the P1/S8 state-holder layer, no direct HTTP/IO
+  from the view:
+    useToast          -> IToastController (Snapshot + Changed + Show/Dismiss) bound through ToastViewModel.
+    useOptionalToast  -> ToastAccess.Optional(controller?) (returns null when no overlay is hosted).
+    useToast (throw)  -> ToastAccess.Require(controller?) (throws the web message verbatim,
+                         "useToast must be used within ToastProvider").
+    useMutationToast  -> ToastMutationReporter (i18n-aware success(key,fallback) / error(err,key?,fallback?)
+                         with the web 'toast.common.error' / "Something went wrong" defaults and the
+                         err.message-as-detail coercion).
+    useMotionPreference -> Components.Motion.MotionPreference.ReduceMotion (entrance/exit snap when reduced).
+- DRY / single source of truth: the four tones reuse the shared CalloutVariant + CalloutVariants family
+  (glyph, accent brush, assertiveness) rather than a parallel enum. Web ToastType -> CalloutVariant: success ->
+  Success, error -> Danger, info -> Info, warning -> Warning. The accent COLOUR token (for the alpha-tinted
+  border) is paired in ToastColors. No duplicated tone tables.
+- Queue policy reproduces the web ToastProvider exactly: ids "toast-N" (web `toast-${++toastCounter}`), default
+  4000 ms lifetime (web `opts.duration ?? 4000`), duration <= 0 = persistent (web `if (duration > 0)`), and a
+  five-toast cap dropping the oldest from the front (web `[...prev.slice(-4), next]`). dismiss(id) filters the
+  matching toast (web `prev.filter(t => t.id !== id)`).
+- ALL authoritative web render branches reproduced + tested: the EMPTY overlay (collapsed, hit-transparent
+  region -- a toast layer's correct resting state), the four tones, with / without secondary message, and the
+  three action shapes -- navigation (HyperlinkButton "{label} ->" raising the decoupled ActionNavigationRequested
+  with the in-app route, the native analogue of the web React-Router <Link>), callback (Button invoking OnClick),
+  and no action -- plus the reduce-motion branch. This is a transient, client-only feedback primitive with NO
+  data fetch, so -- exactly like the sibling OfflineBanner surface -- the generic loading / stale / offline
+  data-states do not apply and are deliberately not fabricated.
+- Auto-dismiss: each card owns a one-shot DispatcherQueueTimer (web `setTimeout(() => dismiss(id), duration)`),
+  view-owned per the LiveStaleDataBanner precedent; the controller stays UI-thread-free and unit-testable.
+  Clicking the dismiss button or either action requests controller.Dismiss(id) (single source of truth); the
+  resulting Changed reconciles the card out with a fade/translate animation (snapped under reduce-motion).
+- i18n: every literal resolves through the P1/S10 ILocalizer facade with `translation.`-prefixed keys, no
+  hardcoded English in native code (English appears only as ILocalizer fallbacks):
+    translation.toast.dismiss        ("Dismiss notification"  -- the web dismiss aria-label, verbatim)
+    translation.toast.common.error   ("Something went wrong"  -- the web _toastHelpers default error title)
+  Toast titles/messages/action labels are caller-supplied (already localized by the caller, as on the web).
+- Accessibility: each card is a UI-Automation live region -- assertive for the error tone (web role="alert" /
+  aria-live="assertive"), polite otherwise (web role="status") -- and is Narrator-named with title + ". " +
+  message as a single atomic utterance (web aria-atomic="true"); the decorative icon/title/message are
+  AccessibilityView.Raw so the region name is authoritative while the action/dismiss buttons stay operable; the
+  dismiss button carries the localized "Dismiss notification" name + tooltip; the overlay exposes a Group
+  automation peer + the "toast-region" automation id. Reduce-motion honoured.
+- Telemetry: ToastDiagnostics emits view.opened slug=Toast once on overlay mount (P1/S11), plus PII-free
+  toast.shown slug=Toast variant=<tone> / toast.dismissed slug=Toast counters -- the tone only, NEVER the
+  user-supplied title/message.
+- Analyzer note (TreatWarningsAsErrors + Recommended): the web context's success/error/info/warning verbs are
+  provided as call-site-identical EXTENSION methods on IToastController (ToastControllerExtensions), kept off the
+  interface so the reserved 'Error' name never binds a virtual/interface member (CA1716) -- no suppressions, and
+  controller.Error(title, detail) still reads exactly like the web.
+
+-------------------------------------------------------------------------------
+GATE
+-------------------------------------------------------------------------------
+BUILD_EXIT=0
+  dotnet build apps/windows/TeslaSync.sln -c Release  =>  "Build succeeded. 0 Warning(s) 0 Error(s)."
+  The TeslaSync.App project (TreatWarningsAsErrors=true, EnableNETAnalyzers, AnalysisMode=Recommended) compiles
+  Toast.{cs,Model.cs,Source.cs,ViewModel.cs} clean; the entire WinUI app (XAML markup compiler included) builds.
+  NOTE: the test project (TeslaSync.App.Tests.csproj) was malformed at HEAD -- TWO concatenated <Project> root
+  elements (lines 1-1270 and 1271-2425) from the .gitattributes merge=union strategy (MSB4025: "multiple root
+  elements"), which blocked the ENTIRE solution build/test. Repaired exactly as every sibling surface prompt does
+  (the file's own INVARIANT comment + the 0091/0109/0110/0124/0125/0126/0129/0133/0135 history): regenerated into
+  ONE canonical <Project> root = the case-insensitive ordinal path-sorted, Include-deduplicated union of all 1129
+  existing WinUI-free compile-links (every one verified present on disk) PLUS the three new Toast Model/Source/
+  ViewModel links (the bare WinUI view stays app-build-only). 2425 -> 1193 lines, single well-formed root, 1132
+  Compile items, 0 duplicates.
+
+TEST_EXIT=1
+  dotnet test apps/windows/TeslaSync.sln -c Release:
+    Passed!  - Failed: 0,   Passed: 22385, Skipped: 0, Total: 22385 - TeslaSync.App.Tests.dll  (headless unit)
+    Failed!  - Failed: 147, Passed: 0,     Skipped: 0, Total: 147   - TeslaSync.App.UITests.dll (E2E UIAutomation)
+  ALL 147 UITest failures share ONE environmental cause (1 distinct message, 147 occurrences):
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+  These are PRE-EXISTING shell/navigation/command-palette E2E tests (Category=UIAutomation) that do not reference
+  the Toast surface; the WinAppDriverSession fixture is designed to FAIL (never silently skip) when no runner is
+  present, so they fail in EnsureReady before any test body. They cannot run on this non-interactive headless host
+  (no WinAppDriver.exe; no desktop session). The same WinAppDriver gap is logged TEST_EXIT=1 / STATUS=BLOCKED by
+  the adjacent sibling shared surfaces (e.g. 0135 ReleaseNotes).
+  Headless verification (the suite that covers this surface):
+    dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+      =>  EXIT=0, Passed: 22385, Failed: 0  (UITests: "No test matches" -> 0 run; includes the 60 new Toast cases)
+    dotnet test TeslaSync.App.Tests --filter "FullyQualifiedName~ToastTests"
+      =>  EXIT=0, Passed: 60, Failed: 0
+  ToastTests cover: registration metadata + queue policy (cap 5 / 4000 ms / id prefix) + dismiss glyph + nav
+  suffix; i18n keys/fallbacks + resolve helpers; variant -> slug / role / accent-colour maps; ToastActionModel
+  navigation-vs-callback discrimination (+ navigation-wins + non-renderable); item auto-dismiss flag; the
+  ToastController queue ADAPTER (sequential ids, default + explicit duration, the four tone shorthands, drop-oldest
+  cap, dismiss + Changed semantics, unknown-id no-op, isolated snapshot, shown/dismissed diagnostics); ToastAccess
+  Require/Optional (web useToast throw message + useOptionalToast null); ToastMutationReporter (default + custom
+  key/fallback, err.message detail, DescribeError coercion); the pure projection across the empty + per-tone +
+  with-message + per-action branches; the a11y accessible-name contract (title, and title + ". " + message); the
+  ToastViewModel state holder (empty start, reproject on show, dismiss forwarding, dispose unsubscribe); and the
+  PII-safe diagnostics lines.
+
+FORMAT_EXIT=0
+  dotnet format apps/windows/TeslaSync.sln --verify-no-changes  =>  clean (no changes) across the solution.
+  (New files normalised to LF + final newline + utf-8 no-BOM per .editorconfig [*.{cs,xaml}] end_of_line=lf.)
+
+PLACEHOLDER_EXIT=0
+  apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/Toast
+    =>  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  apps/tools/check-placeholders.ps1 -Path .../SharedSurfaces/ToastTests.cs -Language csharp
+    =>  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  No TODO / FIXME / XXX / Coming soon / Placeholder / Lorem ipsum / not implemented in shipped code.
+
+-------------------------------------------------------------------------------
+ACCEPTANCE
+-------------------------------------------------------------------------------
+[x] Surface renders on Windows with all states from the web source reproduced (empty overlay, four tones,
+    with/without message, navigation/callback/no-action, reduce-motion). Generic loading/stale/offline
+    fetch-states deliberately N/A for this transient client-only primitive (as for sibling OfflineBanner).
+[x] Hooks bind to the shared P1/S8 state-holder layer (IToastController / ToastAccess / ToastMutationReporter /
+    MotionPreference); no direct HTTP from the view.
+[x] Every i18n key from source has a matching key path (translation.toast.dismiss / translation.toast.common.error);
+    no hardcoded English in native code.
+[x] Accessibility labels present on every interactive element (dismiss button named + tooltip; action buttons
+    named; per-card assertive/polite live region with atomic title+message Narrator name).
+[x] Tests: adapter (queue) unit tests + per-state projection/view-model tests + a11y-name test + diagnostics
+    tests (60 cases passing).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code.
+[~] EXIT=0 for build / headless-test / format / placeholder; full-solution dotnet test is 1 SOLELY because the
+    WinAppDriver/Appium UI-automation runtime is unavailable on this non-interactive runner -- the prompt's
+    sanctioned "If unavailable on the runner -> STATUS=BLOCKED with API evidence" capability gap, identical to the
+    adjacent sibling shared surfaces. The Toast surface itself is fully implemented: it builds (0/0), its 60 tests
+    + the entire 22385 headless suite pass, it is format-clean and placeholder-free. E2E UIAutomation verification
+    is deferred to a WinAppDriver-provisioned runner.
+
+BUILD_EXIT=0  TEST_EXIT=1 (headless EXIT=0, 22385 passed)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED
