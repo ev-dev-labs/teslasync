@@ -1,0 +1,84 @@
+/*
+  RangePicker.strings
+  TeslaSync — P4 shared surface · 0157 · RangePicker (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface — the native peers of the web `t(key, default)`
+  keys in `components/forms/RangePicker.tsx` (and the preset labels it renders from `lib/datePresets.ts`).
+  Every web key/fallback pair below is byte-identical to the web source so the picker reads the same on both
+  platforms; the `{{count}}` token carries the i18next interpolation placeholder through verbatim (resolved
+  by RangePickerStrings.summaryDays).
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("RangePicker") so each parallel surface prompt owns its own strings. In test /
+  preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web `t()` keys (verbatim from components/forms/RangePicker.tsx) --- */
+
+/* Trigger label when the range matches no preset (web `date.range.pickRange`). */
+"date.range.pickRange" = "Custom range";
+
+/* Inclusive day-count summary; {{count}} is the day count (web `date.range.summaryDays`). */
+"date.range.summaryDays" = "{{count}} days";
+
+/* Trigger accessible name (web `date.range.trigger`). */
+"date.range.trigger" = "Date range";
+
+/* Popover accessible name (web `date.range.popoverLabel`). */
+"date.range.popoverLabel" = "Date range picker";
+
+/* Preset listbox accessible name (web `date.preset.label`). */
+"date.preset.label" = "Quick date range";
+
+/* Footer compare toggle (web `date.range.compare`). */
+"date.range.compare" = "Compare to previous period";
+
+/* Footer Cancel button (web `date.range.cancel`). */
+"date.range.cancel" = "Cancel";
+
+/* Footer Apply button (web `date.range.apply`). */
+"date.range.apply" = "Apply";
+
+/* --- Preset labels (verbatim from lib/datePresets.ts `fallback`) --- */
+
+"date.preset.today" = "Today";
+"date.preset.yesterday" = "Yesterday";
+"date.preset.last7" = "Last 7 days";
+"date.preset.last30" = "Last 30 days";
+"date.preset.last90" = "Last 90 days";
+"date.preset.mtd" = "Month to date";
+"date.preset.qtd" = "Quarter to date";
+"date.preset.ytd" = "Year to date";
+"date.preset.lastMonth" = "Last month";
+"date.preset.last1y" = "Last year";
+"date.preset.all" = "All time";
+
+/* --- Native chrome / a11y additions (P4 leaf states + calendar — no blank box) --- */
+
+/* Skeleton trigger accessible name while the page's range resolves. */
+"rangePicker.loadingA11y" = "Loading date range";
+
+/* Error tile title (web has no QueryError peer). */
+"rangePicker.errorTitle" = "Couldn't load date range";
+
+/* Error tile retry button. */
+"rangePicker.retry" = "Retry";
+
+/* Friendly empty popover body (presetsOnly with no resolvable presets). */
+"rangePicker.empty" = "No date ranges available";
+
+/* Freshness chip labels + their VoiceOver expansions (the connectivity axis). */
+"rangePicker.live" = "Live";
+"rangePicker.stale" = "Stale";
+"rangePicker.offline" = "Offline";
+"rangePicker.staleA11y" = "Stale — tap to refresh";
+"rangePicker.offlineA11y" = "Offline — showing the last range";
+
+/* Calendar month-navigation buttons. */
+"rangePicker.prevMonth" = "Previous month";
+"rangePicker.nextMonth" = "Next month";
+
+/* Calendar day-cell VoiceOver range-role suffixes. */
+"rangePicker.dayStart" = "Range start";
+"rangePicker.dayEnd" = "Range end";
+"rangePicker.dayInRange" = "In selected range";
