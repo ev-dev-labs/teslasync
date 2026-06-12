@@ -1,0 +1,127 @@
+=== P2 Shared surface 0197 HealthRow (Windows) ===
+date: 2026-06-12T01:18:49.2838871-07:00
+sdk: 10.0.300
+
+--- build: dotnet build apps/windows/TeslaSync.sln -c Release ---
+    0 Error(s)
+
+Time Elapsed 00:06:50.15
+BUILD_EXIT=0
+
+--- test: dotnet test apps/windows/TeslaSync.sln -c Release ---
+TEST_EXIT=1
+--- per-assembly test decomposition ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 323 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 24187, Skipped:     0, Total: 24187, Duration: 9 s - TeslaSync.App.Tests.dll (net10.0)
+--- UI-automation failure evidence (representative) ---
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+--- new HealthRow unit tests (sub-run, --no-build) ---
+Passed!  - Failed:     0, Passed:    34, Skipped:     0, Total:    34, Duration: 57 ms - TeslaSync.App.Tests.dll (net10.0)
+
+--- format: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- placeholders: gate literal path ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- placeholders: genuine per-file scan of the 5 shipped files ---
+HealthRow.cs: PLACEHOLDER_COUNT=0
+HealthRow.Model.cs: PLACEHOLDER_COUNT=0
+HealthRow.Source.cs: PLACEHOLDER_COUNT=0
+HealthRow.ViewModel.cs: PLACEHOLDER_COUNT=0
+HealthRowTests.cs: PLACEHOLDER_COUNT=0
+GENUINE_PLACEHOLDER_COUNT_TOTAL=0
+
+GATE_SUMMARY build=0 test=1 format=0 placeholder=0 genuine_ph=0
+
+================================================================================
+ANALYSIS / DECOMPOSITION
+================================================================================
+
+SURFACE DELIVERED (parity port of web/src/components/status/HealthRow.tsx)
+  Native WinUI 3 shared surface `HealthRow` in TeslaSync.App.SharedSurfaces - the single-line
+  at-a-glance health row: a status-tinted dot, an optional leading icon, a primary label, a
+  right-aligned status-tinted summary (e.g. "12 / 12 healthy") and a trailing chevron when the row is
+  actionable. It composes the atomic Components/Status/TsHealthRow primitive (the shared dot + icon +
+  label + summary + chevron grid, with built-in pointer/Enter/Space activation and system focus
+  visuals) and binds it to the UI-thread-free HealthRowViewModel, so the surface owns the binding, the
+  activation routing and the diagnostics while the row visuals stay in the component library (the
+  atomic is out of scope per the prompt). 44px minimum touch target (web min-h-[44px]).
+
+STATES (all reproduced from the web source; the web has NO data fetch, so there is no loading / error
+/ stale / offline chrome - the states are the presentational branches the web source actually has)
+  status tint : healthy / degraded / unhealthy / unknown / maintenance (Core.Status.HealthStatus, 5 values)
+  icon        : present (glyph supplied) / absent (web `icon && ...`)
+  interaction : InternalLink (web <Link to>) / ExternalLink (web <a target=_blank>) /
+                Command (web <button onClick>) / None (web <div>) - `to` wins over `onClick`
+  chevron     : shown when actionable (web `to || onClick`) / hidden otherwise
+
+FILES (4-file surface pattern + headless tests; subdirectory layout like LayoutBreadcrumbs/Toast)
+  apps/windows/TeslaSync.App/shared-surfaces/HealthRow/HealthRow.Model.cs     (WinUI-free)
+  apps/windows/TeslaSync.App/shared-surfaces/HealthRow/HealthRow.Source.cs    (WinUI-free)
+  apps/windows/TeslaSync.App/shared-surfaces/HealthRow/HealthRow.ViewModel.cs (WinUI-free)
+  apps/windows/TeslaSync.App/shared-surfaces/HealthRow/HealthRow.cs           (WinUI view; composes TsHealthRow)
+  apps/windows/TeslaSync.App.Tests/SharedSurfaces/HealthRowTests.cs           (34 headless tests)
+
+BINDINGS
+  P1/S8 state holders : HealthRowViewModel holds the HealthRowModel and reprojects on change (the web
+    re-render on prop change). Link activation routes through the IHealthRowNavigator seam (production
+    supplies a real navigator; NullHealthRowNavigator is the inert headless default); the command
+    branch invokes the supplied handler. The view performs no navigation itself.
+  P1/S9 tokens : the composed atomic tints the dot + summary from the canonical status palette
+    (StatusPresentation, Core.Status); no raw hex in the surface.
+  P1/S10 i18n  : the web HealthRow is anonymous - it renders NO literals of its own; label/summary are
+    caller-supplied, already-localized strings. There are therefore no i18n message keys to add to the
+    catalogue (documented in HealthRowRegistration); the " - " accessible-name join is punctuation.
+  P1/S11 diag  : HealthRowDiagnostics emits exactly `view.opened slug=HealthRow`, once, on Loaded.
+  Accessibility: the row is the focusable element with its Narrator name unified to the web link
+    aria-label ("{label} - {summary}"); the atomic's pointer/Enter/Space activation + system focus
+    visuals are reused; no animation, so reduce-motion-safe by construction.
+
+PRE-EXISTING BLOCKER REPAIRED (required for ANY build/test to pass)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed with a merge=union multi-root
+  corruption (TWO <Project> roots, MSB4025 "multiple root elements" at line 1357) -> the WHOLE solution
+  build failed before any change. Consolidated into ONE canonical <Project> root and the Compile
+  ItemGroup regenerated as the case-insensitive ordinal path-sorted, Include-deduplicated UNION of the
+  two corrupt roots (the documented recovery in the file's own INVARIANT). The two roots had diverged
+  (root-1 uniquely held AnimatedMarker/RoutePlayback/RouteTransition/VehiclePicker; root-2 uniquely held
+  MapTileLayer - all have tests), so the union was required to lose nothing; plus the 3 new HealthRow
+  WinUI-free logic links (the HealthRow.cs view is correctly excluded). Result: 1244 Compile items,
+  single root, valid XML. Same repair precedent named in the file's own header
+  (VehiclePicker/SortControl/RoutePlayback/AnimatedMarker/LayoutBreadcrumbs) and the ServiceStatus gate.
+
+GATE DECOMPOSITION
+  BUILD_EXIT=0      dotnet build apps/windows/TeslaSync.sln -c Release (0 errors; pre-existing CA warnings in Core only).
+  TEST_EXIT=1       dotnet test apps/windows/TeslaSync.sln -c Release, decomposed by assembly:
+                      TeslaSync.App.Tests.dll   : headless unit suite GREEN, incl. the 34 new HealthRow tests.
+                      TeslaSync.App.UITests.dll : WinAppDriver UI-automation suite RED - runner absent (see below).
+  FORMAT_EXIT=0     dotnet format apps/windows/TeslaSync.sln --verify-no-changes (clean; the new .cs files use lf per .editorconfig).
+  PLACEHOLDER_EXIT=0    gate literal path (HealthRow/ is a real directory, so it genuinely scans the 4 surface files);
+                     PLUS a genuine per-file scan of all 5 shipped files -> GENUINE_PLACEHOLDER_COUNT_TOTAL=0.
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders all web-source states (5 status tints; icon present/absent; the 4 interaction modes; chevron shown/hidden).
+  [x] Binds via the shared state holder (HealthRowViewModel) + the IHealthRowNavigator seam; no direct navigation/HTTP from the view.
+  [x] i18n: the web source defines no message keys (anonymous surface; label/summary are caller-localized) -> nothing to add to the P1/S10 catalogue (documented + tested).
+  [x] Accessibility: Narrator name unified to the web aria-label; reused pointer/keyboard activation + system focus visuals; 44px touch target; reduce-motion-safe.
+  [x] Tests: model/projection adapter tests + per-state projection tests (every status, icon gate, the 4 interaction modes) + view-model activation-routing tests + a11y accessible-name test (34 total, all green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (genuine scan = 0).
+  [~] EXIT=0 on this runner -> BLOCKED only by the absent WinAppDriver UI-automation harness (evidence below).
+
+BLOCKED_REASON (platform-capability evidence)
+  The ONLY red is TeslaSync.App.UITests: 147/147 fail with
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : "UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH."
+  These out-of-process e2e tests are, by the UITests project's own design, failed-not-skipped when the
+  runner is absent. This headless build agent has no WinAppDriver/Appium endpoint and no deployed
+  packaged app, so the UI-automation suite cannot execute here; it runs in CI with a runner. The WinUI 3
+  (Windows App SDK) + .NET 10 build & unit-test capability IS present and fully green. Identical
+  precedent: p2-windows-shared-surfaces-0104-ServiceStatus (EXIT=1 / STATUS=BLOCKED, same reason).
+
+EXIT=1
+STATUS=BLOCKED
