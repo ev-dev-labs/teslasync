@@ -1,0 +1,123 @@
+/*
+  Layout.strings
+  TeslaSync — P4 shared surface · 0169 · Layout (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface — the native peer of the strings used by
+  `components/layout/Layout.tsx`. The 20 verbatim web `t()` keys are reproduced below exactly as the web
+  source authors them; the remaining entries are the NATIVE chrome / accessibility additions for the P4
+  always-render leaf states (loading / empty / error), the freshness axis (live / stale / offline), and the
+  header/content regions — none of which the web shell exposes as discrete strings.
+
+  Navigation item labels + section titles are NOT here: the web renders them verbatim from `navSections`
+  (its `navI18nKeys` map is intentionally empty), so they are data carried by Layout.Nav.swift.
+
+  These fold into the app `Localizable.xcstrings` master catalog at integration time; kept in a per-surface
+  table ("Layout") so each parallel surface prompt owns its own strings. In test / preview bundles
+  `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web source keys (verbatim from Layout.tsx) --- */
+
+/* Accessible name of the quick theme switcher trigger + its popover (web `theme.openPicker`). */
+"theme.openPicker" = "Open theme picker";
+
+/* "Customize…" link in the theme popover, routing to appearance settings (web `theme.customize`). */
+"theme.customize" = "Customize…";
+
+/* Default title of an SSE alert toast when the alert has no title (web `alerts.toast.title`). */
+"alerts.toast.title" = "Alert";
+
+/* Action label on an alert toast that deep-links to the alert (web `alerts.toast.view`). */
+"alerts.toast.view" = "View";
+
+/* Accessible name of the primary navigation sidebar (web `a11y.primaryNav`). */
+"a11y.primaryNav" = "Primary";
+
+/* Close-sidebar control on the mobile drawer (web `nav.closeSidebar`). */
+"nav.closeSidebar" = "Close sidebar";
+
+/* Accessible name of the active-section "Current" card (web `nav.currentSection`). */
+"nav.currentSection" = "Current";
+
+/* Active-card pin toggle, pressed state — removes the current page from pinned (web `nav.unpinCurrent`). */
+"nav.unpinCurrent" = "Remove current page from pinned";
+
+/* Active-card pin toggle, idle state — pins the current page (web `nav.pinCurrent`). */
+"nav.pinCurrent" = "Pin current page";
+
+/* Active-card pin toggle text, pressed state (web `nav.pinnedAction`). */
+"nav.pinnedAction" = "Pinned";
+
+/* Active-card pin toggle text, idle state (web `nav.pinAction`). */
+"nav.pinAction" = "Pin";
+
+/* Header of the Pinned navigation group (web `nav.pinned`). */
+"nav.pinned" = "Pinned";
+
+/* Per-row unpin control in the Pinned group; {{page}} is the page label (web `nav.unpinPage`). */
+"nav.unpinPage" = "Unpin {{page}}";
+
+/* Header of the Recently Used navigation group (web `nav.recentlyUsed`). */
+"nav.recentlyUsed" = "Recently Used";
+
+/* Header of the Sections navigation group (web `nav.sections`). */
+"nav.sections" = "Sections";
+
+/* Expand-all-sections control in the Sections header (web `nav.expandAll`). */
+"nav.expandAll" = "Expand all sections";
+
+/* Collapse-all-sections control in the Sections header (web `nav.collapseAll`). */
+"nav.collapseAll" = "Collapse all sections";
+
+/* Accessible name of the site header / app bar (web `a11y.primaryHeader`). */
+"a11y.primaryHeader" = "Site header";
+
+/* Open-sidebar control on the mobile header (web `nav.openSidebar`). */
+"nav.openSidebar" = "Open sidebar";
+
+/* Breadcrumb-row hint advertising the command palette shortcut (web `nav.quickSearchHint`). */
+"nav.quickSearchHint" = "Ctrl+K to jump";
+
+/* --- Native chrome / a11y additions (no blank box — see the leaf states) --- */
+
+/* VoiceOver label for the initial loading skeleton (web has no shell loading state). */
+"layout.loadingA11y" = "Loading navigation";
+
+/* Title of the empty-navigation state (the web shell never fully empties). */
+"layout.emptyTitle" = "No navigation available";
+
+/* Message under the empty-navigation state. */
+"layout.emptyMessage" = "Sign in or add a vehicle to populate the menu.";
+
+/* Title of the error tile shown when a shell feed fails (web has no QueryError peer in the shell). */
+"layout.errorTitle" = "Couldn't load the menu";
+
+/* Retry action on the error tile. */
+"layout.retry" = "Retry";
+
+/* Accessibility hint on a collapsible section header. */
+"layout.openSection" = "Toggle section";
+
+/* Freshness chip label — the shell feeds are live. */
+"layout.live" = "Live";
+
+/* Freshness chip label — the shell feeds are older than the freshness window. */
+"layout.stale" = "Stale";
+
+/* Freshness chip label — no connectivity; the cached menu is shown. */
+"layout.offline" = "Offline";
+
+/* Expanded VoiceOver label for the stale freshness chip (it is a refresh button). */
+"layout.staleA11y" = "Stale — tap to refresh";
+
+/* Expanded VoiceOver label for the offline freshness chip. */
+"layout.offlineA11y" = "Offline — showing the cached menu";
+
+/* VoiceOver label for the main content region (web `<main role="main">`). */
+"layout.mainContent" = "Main content";
+
+/* Accessible name of the notification-bell trigger the shell places (web `NotificationBellPopover`). */
+"layout.notifications" = "Notifications";
+
+/* Stand-in copy for the host-content slot in standalone previews/tests. */
+"layout.contentSlot" = "Page content appears here.";
