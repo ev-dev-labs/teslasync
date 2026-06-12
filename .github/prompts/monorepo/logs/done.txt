@@ -524,3 +524,4 @@ p3-android/feature-views/A-0275-BatteryComparison.prompt.md
 p3-android/feature-views/A-0276-FleetSummary.prompt.md
 p3-android/feature-views/A-0272-SignalStatsPanel.prompt.md
 p3-android/feature-views/A-0280-InfoTile.prompt.md
+p3-android/feature-views/A-0279-EnergyChargingPanel.prompt.md
