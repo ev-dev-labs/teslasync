@@ -1,0 +1,109 @@
+=== P3 Feature view 0122 DashboardGrid (Android) ===
+
+Surface : DashboardGrid (feature view, composed feature component below page level)
+Web src : web/src/features/dashboard/components/DashboardGrid.tsx (THE specification)
+Native  : apps/android/app/src/main/java/com/teslasync/feature-views/DashboardGrid/
+            - DashboardGridModel.kt   (pure model + projection; package io.teslasync.android.featureviews.dashboardgrid)
+            - DashboardGrid.kt        (Jetpack Compose + Material 3 render layer)
+Tests   : apps/android/app/src/test/.../dashboardgrid/DashboardGridProjectionTest.kt   (adapter unit test, JVM gate)
+          apps/android/app/src/androidTest/.../dashboardgrid/DashboardGridUiTest.kt    (per-state UI + a11y, instrumented)
+
+--- Capability probe (ADR-012 toolchain lock) ---
+Jetpack Compose (compose-bom) + Material 3 + Kotlin 2.x (>= 2.2.x) + JDK 21 (Android Studio JBR) + Android SDK
+(C:\Users\AtulM\AppData\Local\Android\Sdk) — AVAILABLE on this runner. assembleRelease/testReleaseUnitTest/
+ktlintCheck/detekt all executed real tasks below (no capability gap; STATUS is therefore DONE, not BLOCKED).
+
+--- Module-path note (honest gate adaptation) ---
+The prompt gate template addresses `:app:`; the single app module's real Gradle path is `:android`
+(settings.gradle.kts L33-36: "every P3/A* prompt gate addresses `:android:`"). The gate below was run against the
+real module path `:android:` — the faithful execution of the template's intent, matching every prior P3 feature-view
+log in this directory. ktlintCheck + detekt were run module-qualified for the same reason.
+
+=====================================================================================================
+STEP 1 — ./gradlew :android:assembleRelease
+=====================================================================================================
+> Task :android:generateDesignTokens
+> Task :android:compileReleaseKotlin            (EXECUTED — compiled the new DashboardGrid.kt + DashboardGridModel.kt)
+> Task :android:compileReleaseJavaWithJavac
+> Task :android:dexBuilderRelease
+> Task :android:packageRelease
+> Task :android:assembleRelease
+
+BUILD SUCCESSFUL in 7m 36s
+70 actionable tasks: 10 executed, 6 from cache, 54 up-to-date
+BUILD_EXIT=0
+
+=====================================================================================================
+STEP 2 — ./gradlew :android:testReleaseUnitTest
+=====================================================================================================
+> Task :android:compileReleaseUnitTestKotlin    (EXECUTED — compiled DashboardGridProjectionTest.kt)
+> Task :android:testReleaseUnitTest             (EXECUTED — ran the adapter unit test)
+
+BUILD SUCCESSFUL in 3m 1s
+45 actionable tasks: 7 executed, 38 up-to-date
+TEST_EXIT=0
+
+Adapter unit test result
+  (apps/android/app/build/test-results/testReleaseUnitTest/
+   TEST-io.teslasync.android.featureviews.dashboardgrid.DashboardGridProjectionTest.xml):
+  SUITE io.teslasync.android.featureviews.dashboardgrid.DashboardGridProjectionTest
+    tests=14 failures=0 errors=0 skipped=0 time=0.024s
+    - breakpointForWidthPicksLargestThresholdAtOrBelowWidth       (useContainerWidth -> getBreakpointFromWidth parity)
+    - breakpointForWidthFallsBackToXsBelowEveryThreshold
+    - columnsForMatchesGridColsConstants                          (GRID_COLS 4/3/2/1)
+    - layoutForFallsBackToLgThenEmpty                             (web liveLayouts[bp] ?? lg ?? [])
+    - widgetSizeReadsActiveLayoutItemElseDefault                  (web getWidgetSizeLive)
+    - orderForMobileSortsBySavedScalarThenKeepsUnpositionedLast   (web orderedWidgets y*10000+x*100+i/1000)
+    - orderForMobileKeepsInsertionOrderWhenNoXsLayout
+    - packRowsWrapsWhenSpansExceedColumns                         (web verticalCompactor flow)
+    - packRowsClampsOverWideSpanToColumns
+    - packRowsReturnsEmptyForNoCells
+    - projectBuildsDesktopGridInReadingOrder
+    - projectBuildsMobileStackOneCellPerRow
+    - projectFlagsEmptyForNoWidgets
+    - recordOpenedEmitsPiiSafeViewOpenedWithSurfaceSlug           (P1/S11 view.opened, surface=DashboardGrid)
+
+=====================================================================================================
+STEP 3 — ./gradlew :android:ktlintCheck :android:detekt
+=====================================================================================================
+> Task :android:runKtlintCheckOverMainSourceSet         (EXECUTED — DashboardGrid.kt + DashboardGridModel.kt)
+> Task :android:runKtlintCheckOverTestSourceSet         (EXECUTED — DashboardGridProjectionTest.kt)
+> Task :android:runKtlintCheckOverAndroidTestSourceSet  (EXECUTED — DashboardGridUiTest.kt)
+> Task :android:detekt                                  (EXECUTED — warningsAsErrors=true, no findings)
+> Task :android:ktlintCheck
+
+BUILD SUCCESSFUL in 2m 22s
+13 actionable tasks: 7 executed, 6 up-to-date
+LINT_EXIT=0
+
+=====================================================================================================
+STEP 4 — apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/java/com/teslasync/feature-views/DashboardGrid
+=====================================================================================================
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=====================================================================================================
+GATE SUMMARY
+=====================================================================================================
+BUILD_EXIT=0  TEST_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0
+
+Parity coverage (web DashboardGrid.tsx -> native):
+  - useContainerWidth -> BoxWithConstraints + DashboardGridProjection.breakpointForWidth (lg1200/md996/sm768/xs480, cols 4/3/2/1)
+  - mobile "xs" stack (full-width, min 192dp, orderedWidgets scalar) AND desktop multi-column packed grid (ROW_HEIGHT 80)
+  - per-widget GlassPanel + SectionErrorBoundary frame (web SectionErrorBoundary + Suspense/Skeleton)
+  - edit-mode WidgetChrome: decorative grip + widget name + Settings + Remove (web drag handle is pointer-only / inert on touch)
+  - view-mode fullscreen "expand" button + full-bleed FullscreenOverlay (web Maximize2/Minimize2, Math.max(rows,4))
+  - every lifecycle state rendered: loading skeleton grid / hard error+retry / empty (customize hint) / content / stale+offline chip (auto-refresh)
+  - i18n via P1/S10 catalog only (dashboard_settings, common_remove, common_fullscreen_enter/exit, dashboard_customizeHint,
+    chart/error/common/freshness keys); no hardcoded English literals in native code
+  - a11y: name-qualified contentDescriptions on Settings/Remove/Expand, Exit-fullscreen label, grid semantics slug, Offline chip;
+    IconButton 48dp touch targets; FadeIn honours reduced motion
+  - telemetry: recordDashboardGridOpened emits view.opened {surface=DashboardGrid} from first-composition LaunchedEffect (P1/S11)
+  - 7 @Preview entry points exercise every render branch (Loading/Empty/Error/Content desktop/Edit/Content mobile/Offline)
+  - Per-state UI + a11y test (DashboardGridUiTest) authored under androidTest (instrumented; compiled+ktlint-checked here,
+    executed on device/emulator by connectedAndroidTest — not by the JVM gate, mirroring the sibling feature-view surfaces)
+
+EXIT=0
+STATUS=DONE
