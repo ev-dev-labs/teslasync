@@ -17,6 +17,7 @@ public enum AppRouteParser {
         "/devtools": .admin,
         "/admin/telemetry/coverage": .fleetTelemetryCoverage,
         "/admin/live-signals": .liveSignals,
+        "/admin/schema-drift": .schemaDrift,
         "/account": .settings
     ]
 

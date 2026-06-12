@@ -188431,6 +188431,248 @@
           }
         }
       }
+    },
+    "admin.schemaDrift.columnDelta" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Columns Δ"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.columnSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ current · %2$@ expected"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.columns" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Columns"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.emptyMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The schema fingerprint has not been computed yet. Restart the API to capture a seed fingerprint."
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.emptyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No fingerprint available"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.fingerprintCurrent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.fingerprintExpected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expected (seed)"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.fingerprintTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fingerprints"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.generatedAt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Captured %@"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.indexDelta" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indexes Δ"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.indexSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ current · %2$@ expected"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.indexes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indexes"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.notConfigured" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The schema-drift subsystem is not configured on this deployment. Enable schema fingerprinting in config to populate this page."
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.pageTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schema Drift"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.statusClean" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No drift"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.statusDrifted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drift detected"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.statusTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drift status"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current database schema fingerprint compared against the recorded seed. Drift indicates a migration ran without a seed refresh, or raw DDL bypassed the migration system."
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.tableDelta" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tables Δ"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.tableSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ current · %2$@ expected"
+          }
+        }
+      }
+    },
+    "admin.schemaDrift.tables" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tables"
+          }
+        }
+      }
+    },
+    "route.schemaDrift" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schema Drift"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

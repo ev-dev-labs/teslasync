@@ -27,7 +27,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, vehicles, charging, trips, energy, driving, analytics, maps
     case vehicleSystems, automations, notifications, telemetry, diagnostics
-    case admin, apiPlayground, fleetTelemetryCoverage, liveSignals, powerUser, system
+    case admin, apiPlayground, fleetTelemetryCoverage, liveSignals, schemaDrift, powerUser, system
     case settings, onboarding, explore, search, sharing, watch
 
     public var id: String {
@@ -42,6 +42,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .apiPlayground: "api-playground"
         case .fleetTelemetryCoverage: "fleet-telemetry-coverage"
         case .liveSignals: "live-signals"
+        case .schemaDrift: "schema-drift"
         default: rawValue
         }
     }
@@ -73,6 +74,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .apiPlayground: "curlybraces"
         case .fleetTelemetryCoverage: "dot.radiowaves.up.forward"
         case .liveSignals: "waveform.path.ecg"
+        case .schemaDrift: "tablecells.badge.ellipsis"
         case .powerUser: "terminal.fill"
         case .system: "server.rack"
         case .settings: "gearshape.fill"
@@ -91,7 +93,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .energy: .energy
         case .analytics, .telemetry: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
-        case .admin, .apiPlayground, .fleetTelemetryCoverage, .liveSignals, .powerUser, .system: .system
+        case .admin, .apiPlayground, .fleetTelemetryCoverage, .liveSignals, .schemaDrift, .powerUser, .system: .system
         case .settings, .onboarding: .account
         }
     }
