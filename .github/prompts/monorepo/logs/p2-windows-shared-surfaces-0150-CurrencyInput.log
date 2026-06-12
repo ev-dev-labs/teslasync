@@ -1,0 +1,137 @@
+=== P2 Shared surface 0150 CurrencyInput (Windows) ===
+Web source : web/src/components/forms/CurrencyInput.tsx  (THE specification)
+Native out : apps/windows/TeslaSync.App/shared-surfaces/{CurrencyInput.cs, CurrencyInput.Model.cs,
+             CurrencyInput.Source.cs, CurrencyInput.ViewModel.cs}  (the standard 4-file surface layout;
+             the WinUI-free Model/Source/ViewModel are headless-testable, the view CurrencyInput.cs is the
+             Microsoft.UI-bound shell exercised by the app build)
+Tests      : apps/windows/TeslaSync.App.Tests/SharedSurfaces/CurrencyInputTests.cs (headless, 49 cases:
+             41 [Fact] + 2 [Theory]/8 [InlineData])
+Capability : WinUI 3 (Windows App SDK 1.6+, WinUI 2.1.0) + .NET 10 (SDK 10.0.300) PRESENT — the Release
+             solution builds clean (0 warnings under TreatWarningsAsErrors) and the headless suite is green.
+
+--- PARITY MAP (web -> native) ---
+valueMicro (integer micro-units, 1 unit = 1_000_000) -> CurrencyInputProps.ValueMicro (long?); the canonical
+                                                         math is the shared TeslaSync.App.Core.Forms.CurrencyMicro
+                                                         (ToMicros/ToMajor/Format/Parse/Symbol), the native
+                                                         analogue of lib/currencyFormat.ts.
+currency / locale / precision (props)                 -> CurrencyInputProps.Currency / Culture / Precision (??2),
+                                                         normalised (null culture -> CurrentCulture, precision 0..20).
+display = formatCurrencyMicro(valueMicro,...)         -> CurrencyInputDisplay.FormattedValue (CurrencyMicro.Format;
+                                                         null -> empty string).
+symbol = currencySymbol(currency, locale)             -> CurrencyInputDisplay.Symbol (CurrencyMicro.Symbol).
+icon span (text-[var(--text-muted)], aria-hidden,     -> leading muted TextBlock overlay inside the field, AccessibilityView.Raw,
+  data-testid="currency-input-symbol"); input pl-10      AutomationId="currency-input-symbol", left-padding reserved for it.
+local text buffer + free typing (setText)             -> CurrencyInputViewModel.Text + SetText (buffer only; no parse).
+focusedRef guard + resync useEffect (!focused)        -> CurrencyInputViewModel.Focus/Blur + OnSourceChanged re-sync
+                                                         gated on !IsFocused (in-progress text never clobbered).
+commit on blur / Enter (parseCurrencyTextToMicro +    -> CurrencyInputViewModel.Blur / CommitFromEnter -> Commit():
+  onChange({valueMicro}) + setText(reformatted))         CurrencyMicro.Parse -> ValueCommitted(CurrencyInputCommit) +
+                                                         re-normalise buffer to the rounded display.
+onChange callback                                     -> CurrencyInputViewModel.ValueCommitted event (re-exposed by the view).
+ariaLabel (required prop)                             -> CurrencyInputProps.AriaLabel -> AutomationProperties.Name on the field
+                                                         (blank -> i18n default).
+label (passthrough InputProps)                        -> CurrencyInputProps.Label -> visible header above the field.
+disabled / error (passthrough InputProps)             -> CurrencyInputProps.Disabled/HasError -> TsInput.IsEnabled / HasError.
+@/components/ui Input                                 -> TeslaSync.App.Components.UI.TsInput (the native Input primitive).
+JSDoc @example t('settings.electricityCost',          -> CurrencyInputRegistration.DefaultAriaLabelKey =
+  'Electricity Cost (per kWh)')                          translation.settings.electricityCost (already in P1/S10 en/ar/he),
+                                                         fallback "Electricity Cost (per kWh)".
+component mount                                       -> CurrencyInputDiagnostics.RecordViewOpened() =>
+                                                         "view.opened slug=CurrencyInput" (once, P1/S11).
+
+--- STATES (web source is a pure presentational field — "Data sources: (none - pure presentational component)") ---
+populated value  -> formatted currency string + leading symbol adornment                       [reproduced + tested]
+empty value      -> blank editable area carrying ONLY the symbol affordance + the accessible    [reproduced + tested]
+                    name (never a nameless blank box; valueMicro == null)
+editing (focused) -> raw text buffer preserved verbatim; external re-sync suppressed             [reproduced + tested]
+disabled         -> field non-interactive (web disabled)                                        [reproduced + tested]
+error            -> error border + announced invalid (web error)                                [reproduced + tested]
+loading / error(fetch) / stale / offline : DO NOT EXIST in the web source — it reads no network data (the prompt's own
+  "Data sources" section says "(none - pure presentational component)"). Not stubbed, not invented; documented exactly
+  like the sibling dataless presentational surfaces (Spinner 0140, AnimatedNumber, VisuallyHidden).
+
+--- PRE-EXISTING BLOCKER REPAIRED (same recurring merge=union corruption as 0098/0104/0125/0126/0130/0138/0140) ---
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was merge=union multi-root corrupted at HEAD (03825a96e):
+  three <Project> opening tags (lines 1, 1321, 1322 — one with a stray BOM) but only two </Project> closes => invalid
+  XML (MSB4025: multiple root elements). Baseline `dotnet build/test` of the test project was RED before this change.
+  The two concatenated roots each held an incomplete Compile group: root1 had 1137 unique links (missing 7), root2 had
+  1131 (missing 13); their de-duplicated UNION = 1144 = exactly the set of Microsoft.UI-free .cs on disk under the five
+  surface dirs (verified: empty diff disk<->csproj-union).
+Repair: regenerated into ONE canonical <Project> root with a single, case-insensitive ordinal path-sorted,
+  Include-deduplicated Compile ItemGroup generated directly from the WinUI-free sources on disk = 1144 prior links + the
+  3 new CurrencyInput WinUI-free links (Model/Source/ViewModel; the view CurrencyInput.cs is Microsoft.UI-bound and is
+  excluded, exercised by the app build) = 1147 items. Post-repair verification: XML valid, exactly 1 Project root,
+  0 duplicate Compile items, set delta vs HEAD = +3 (only the CurrencyInput links), 0 removed; 3 PackageReference,
+  2 ProjectReference, 3 Content preserved. Files normalised to LF + final newline per .editorconfig.
+
+============================================================
+GATE (apps/windows/TeslaSync.sln, Release) — real results captured this session
+============================================================
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    -> Build succeeded. 0 Warning(s). 0 Error(s). Time Elapsed 00:06:25. The App project compiles the CurrencyInput
+       view clean under TreatWarningsAsErrors=true (pre-existing CA10xx/CA17xx/CA18xx warnings live only in
+       TeslaSync.App.Core, which does not treat warnings as errors; 0 warnings from this surface).
+    BUILD_EXIT=0
+
+[2] dotnet test apps/windows/TeslaSync.sln -c Release   (literal full-solution; informational)
+    TeslaSync.App.Tests.dll  : Passed! - Failed: 0, Passed: 22601, Skipped: 0, Total: 22601 (incl. 49 CurrencyInputTests)
+    TeslaSync.App.UITests.dll: Failed! - Failed: 147, Passed: 0, Skipped: 0, Total: 147, Duration 297 ms — every failure
+      is the SAME environmental cause:
+      UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is
+      listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+      (WinAppDriverSession.EnsureReady() line 75)
+    These [Trait("Category","UIAutomation")] out-of-process e2e tests require WinAppDriver + a deployed packaged MSIX +
+    an interactive desktop session; they run independently via apps/windows/run-ui-automation.ps1 and are NOT part of
+    the EXIT=0 per-surface gate — identical to the predecessor determinations (0104 ServiceStatus, 0118 EditConflictBanner,
+    0120 ErrorDisplay, 0130 OfflineBanner, 0140 Spinner). They are not CurrencyInput-specific.
+    FULL_SLN_TEST_EXIT=1
+
+[2b] dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"   (authoritative per-surface headless gate)
+    TeslaSync.App.UITests.dll: No test matches the given testcase filter `Category!=UIAutomation` (all excluded — env e2e)
+    TeslaSync.App.Tests.dll  : Passed! - Failed: 0, Passed: 22601, Skipped: 0, Total: 22601, Duration: 27 s
+    TEST_EXIT=0
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    -> no changes required (the 5 touched .cs files + the csproj normalised to LF + final newline per .editorconfig;
+       whole-solution verify clean).
+    FORMAT_EXIT=0
+
+[4] ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/CurrencyInput
+    PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 (gate command). Honest per-file rescan of every shipped file
+    (CurrencyInput.cs, .Model.cs, .Source.cs, .ViewModel.cs + CurrencyInputTests.cs) -> PLACEHOLDER_COUNT=0 each,
+    AGGREGATE=0 (no TODO/FIXME/XXX/Placeholder/Lorem/NotImplemented/stub across the shipped files).
+    PLACEHOLDER_EXIT=0
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+[x] Surface renders on Windows with all states from the web source reproduced (populated value, empty-with-symbol,
+    focused editing buffer, disabled, error). View compiles under TreatWarningsAsErrors; every branch is asserted by
+    the projection / view-model tests.
+[x] Hooks bind to the shared P1/S8 state-holder layer (ICurrencyInputSource -> CurrencyInputViewModel); no direct
+    HTTP/IO in the view (the web source is presentational, "Data sources: none").
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (translation.settings.electricityCost =
+    "Electricity Cost (per kWh)", present in en/ar/he Resources.resw). No English literals reach the UI without the facade.
+[x] Accessibility labels present on every interactive element (root AutomationId=currency-input; the editable TsInput
+    carries AutomationProperties.Name = ariaLabel or the i18n default; the symbol adornment + header are AccessibilityView.Raw).
+[x] Tests: adapter unit test (CurrencyInputDisplay.Project per-state: empty/value/disabled/error/precision/culture/blank-
+    aria-label) + per-state view-model behaviour (free typing, blur/Enter commit + re-format, accounting parens, locale
+    group separators, focus-gated re-sync, context change, dispose) + a11y (never-empty name) + diagnostics — 49 pass
+    within the green headless suite (22601 total).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[x] Telemetry: view.opened with slug "CurrencyInput" emitted once on load (P1/S11), asserted in tests; PII-safe
+    (only the slug, never the value/micros/symbol).
+
+============================================================
+DETERMINATION
+============================================================
+Surface artifact is COMPLETE and verified. The per-surface gate is green:
+  BUILD_EXIT=0   TEST_EXIT=0 (22601 headless pass, incl. 49 CurrencyInputTests)   FORMAT_EXIT=0   PLACEHOLDER_EXIT=0
+The literal full-solution `dotnet test` reports FULL_SLN_TEST_EXIT=1 solely because the Category=UIAutomation E2E suite
+requires an absent WinAppDriver/Appium runner (evidence above) — an environmental platform-capability gap, not a code
+defect, not specific to this surface, and excluded from the per-surface gate (run separately via run-ui-automation.ps1),
+consistent with the established predecessor convention (0104 ServiceStatus, 0118 EditConflictBanner, 0120 ErrorDisplay,
+0130 OfflineBanner, 0140 Spinner).
+
+EXIT=0
+STATUS=DONE
