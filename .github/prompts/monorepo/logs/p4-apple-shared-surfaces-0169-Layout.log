@@ -1,0 +1,263 @@
+=== P4 Shared surface 0169 Layout (Apple) ===
+Prompt:   .github/prompts/monorepo/p4-apple/shared-surfaces/0169-Layout.prompt.md
+Web spec: components/layout/Layout.tsx (1586 lines — the app shell)
+Native:   apps/apple/TeslaSync/shared-surfaces/Layout.*
+Runner:   Xcode 26.5 (17F42) · Swift 6.3.2 · iOS Simulator (iPhone 16, booted) · macOS 15 SDK
+          swiftlint 0.63.x · swiftformat · xcodegen 2.45.4 · pwsh present · Gradle/Kotlin-Native present
+Capability: SwiftUI present; Swift Charts + MapKit present (this surface needs NEITHER — web source has
+            no charts/maps). Platform IS capable → NOT a capability BLOCK.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+PARITY DISPOSITION
+────────────────────────────────────────────────────────────────────────────────────────────────
+The web `Layout` is the application chrome. Its UNIQUE responsibility — distinct from the banner/modal
+sub-components it merely MOUNTS, which the prompt scopes Out ("Other surfaces in the same feature each
+have their own prompt": OfflineBanner, MaintenanceBanner, SessionExpiringModal, TourOverlay,
+NotificationBellPopover, ThemePicker, StatusBar, CommandPalette, …) — is the NAVIGATION SHELL:
+
+  • The full `navSections` catalog (19 sections, 100 destinations) ported verbatim to Layout.Nav.swift,
+    each web `Icons.*` glyph mapped to its nearest SF Symbol; `minVehicles` / `requiresAuth` carried through.
+  • The grouped sidebar: active-"Current" card with the Pin/Pinned toggle, the Pinned group (cap 8) with
+    per-row unpin, the Recently-Used group (feature-flagged off, web `SHOW_RECENTLY_USED_NAV=false`), and
+    the collapsible Sections group with Expand-all / Collapse-all.
+  • Per-item count badges: unread alerts on /notifications/alerts (capped 9+), the uncapped fleet size on
+    /vehicles, the stale-session count on /data-repair (capped 9+) — verbatim from the web `renderNavLink`.
+  • Visibility filter (`isVisibleNavItem`), active-path match (`isActiveNavPath` — `/` exact vs prefix),
+    pin/unpin/recordVisit mutators, section-toggle (active section never collapses), active-section
+    auto-expand — all ported 1:1 into the pure `LayoutProjector` and unit-pinned.
+  • Header chrome: brand lockup (shared `TSLogo`), the quick theme switcher (web local `ThemeQuickSwitcher`
+    → trigger `theme.openPicker` + "Customize…" `theme.customize`), the notification-bell trigger
+    (`NotificationBellPopover` placement, with the unread chip), the compact-width sidebar open/close
+    (`nav.openSidebar` / `nav.closeSidebar`).
+  • Content region: web `<main role="main">` with the breadcrumb-row quick-search hint
+    (`nav.quickSearchHint`) over the routed `<Outlet>` slot (host-supplied `content`).
+  • Adaptive: permanent sidebar column at regular width (iPad/macOS HIG); drawer behind the header bar at
+    compact width (iPhone HIG).
+
+Data binding (P1/S8): the shell's live inputs — sidebar style (`useSidebarStyle`), route (`useLocation`),
+fleet/alert/stale counts (`useQuery`), auth mode (`useIsForwardAuth`/`useAuthMode`) — arrive via the
+`LayoutSource` snapshot; navigation routes back out through the host `onSelect` (the native peer of
+`<NavLink to>` / `useNavigate`). `useTranslation` → the P1/S10 facade (LayoutStrings). The web's
+side-effect-only hooks (useToast, useRealtimeEvents, useNotificationListener, useDynamicAppIcon,
+useTitleBadge, useFaviconBadge, useCriticalAlertFlash, useKeyboardShortcuts, useStatusBarPrefs, useTour,
+useAnnouncer, useGlobalProgress) are app-global subsystems the shell MOUNTS; they are owned by their own
+P4 surfaces/services and are not navigation-render data. No HTTP lives in the view. Charts/maps: NONE in
+source → NONE here.
+
+NOTE ON TYPE NAME: the public Swift type is `LayoutShell` (not `Layout`) — the bare name `Layout` collides
+with the SwiftUI `Layout` protocol and breaks expression-context construction in-module (proven: see gate
+[7]). The surface slug, the file names (Layout.*), and every i18n key remain "Layout". Composition view
+`LayoutShellFreshnessChip` is likewise prefixed to avoid the pre-existing `LayoutFreshnessChip` enum in the
+sibling `LayoutSwitcher` surface (collision found + avoided before any build — gate [8]).
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+SHIPPED FILES (14 — all within the prompt's allowed scope `Layout.*`; line counts)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  222  Layout.Adapter.swift      pure core: surface slug, i18n resolve typealias, nav value types
+                                 (LayoutNavItem/Section — web navSections rows), LayoutNavBadge + tone,
+                                 LayoutActiveEntry, LayoutNavState, LayoutProjection, sidebar-style +
+                                 connectivity axes, nav limits (MAX_PINNED 8 / MAX_RECENT 3 / default pins).
+  216  Layout.Projector.swift    pure resolver: isVisible / isActivePath / findByPath / findByExactPath /
+                                 visibleSections / pinnedItems / recentItems / pin / unpin / recordVisit /
+                                 toggledExpansion / expandedSectionCount / badge / projection (verbatim
+                                 ports of the web nav derivation).
+  169  Layout.Nav.swift          the navSections catalog — 19 sections, 100 destinations, SF-Symbol mapped.
+  198  Layout.Seams.swift        P1/S11 telemetry seam + OSLog default, P4 phase, LayoutSnapshot (web shell
+                                 live inputs), P1/S8 read-source seam + Live / InMemory sources.
+  199  Layout.Strings.swift      P1/S10 facade: the 20 verbatim web t() keys + native chrome/a11y keys.
+  210  Layout.Model.swift        @Observable @MainActor holder: shell state, derived projection, phase
+                                 (loading/content/empty/error) + connectivity, pin/unpin/toggle/expand/
+                                 collapse/select interactions, active-section auto-expand, stale
+                                 auto-refresh-once / offline keeps cached, once-only view.opened.
+  229  Layout.Views.swift        nav leaf views: count chip, destination row (web renderNavLink), active
+                                 card with Pin toggle, collapsible section row.
+  273  Layout.Chrome.swift       sidebar chrome: theme switcher, bell trigger, sidebar header, Pinned group,
+                                 Sections group (expand/collapse-all), model-bound sidebar body.
+  213  Layout.Shell.swift        outer chrome: header bar, content region (Outlet slot + quick-search hint),
+                                 freshness chip, loading/empty/error leaf states.
+  208  Layout.swift              public LayoutShell surface: adaptive regular/compact layout, phase switch,
+                                 injected-model + source convenience inits, default content slot.
+   86  Layout.Previews.swift     6 #Previews: content (regular + compact drawer), sidebar body w/ badges +
+                                 active card, leaf states, freshness chips + theme/bell triggers.
+  123  Layout.strings            P1/S10 table — 34 keys (20 verbatim web t() keys + 14 native chrome/a11y).
+  316  Layout.AdapterTests.swift pure XCTest: slug, visibility, active-path, lookups, visible sections,
+                                 pinned/recent, pin/unpin/recordVisit, expansion (active never collapses),
+                                 badge (capped/uncapped/zero/other), projection, catalog integrity (19
+                                 sections / unique routes / minVehicles / requiresAuth), value-type equality.
+  363  Layout.Tests.swift        XCTest: model (view.opened-once + idempotent + not-re-emitted; phases;
+                                 auto-expand; badges; pin/unpin/toggle-active-pin; toggle-section; expand/
+                                 collapse-all; select records-visit + routes; stale-autorefresh-once + reset;
+                                 offline-no-refetch; refresh/stop), view composition (every phase + inits +
+                                 every subview), strings (20 web keys + interpolated unpinPage + a11y).
+
+i18n keys: 20 verbatim web t() keys present (theme.openPicker, theme.customize, alerts.toast.title,
+alerts.toast.view, a11y.primaryNav, nav.closeSidebar, nav.currentSection, nav.unpinCurrent, nav.pinCurrent,
+nav.pinnedAction, nav.pinAction, nav.pinned, nav.unpinPage {{page}}, nav.recentlyUsed, nav.sections,
+nav.expandAll, nav.collapseAll, a11y.primaryHeader, nav.openSidebar, nav.quickSearchHint) + 14 native
+chrome/a11y keys. No hardcoded English in Swift; nav labels/section titles render verbatim as data (web
+`navI18nKeys` is intentionally empty).
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+GATE RESULTS (each command actually executed; real exit codes captured — Honesty Covenant #1, #3)
+────────────────────────────────────────────────────────────────────────────────────────────────
+    KMP prereq: ./Scripts/build-shared-xcframework.sh → ":core:assembleSharedXCFramework" →
+                "xcframework successfully written" (debug + release; ios-arm64 + ios-arm64-simulator +
+                macos-arm64) → staged to Frameworks/Shared.xcframework. BUILD SUCCESSFUL in 8m 46s.
+                XCFRAMEWORK_EXIT=0
+
+[1] swiftlint --strict (repo-wide)   ->  Found 0 violations, 0 serious in 4474 files.   LINT_EXIT=0
+[2] swiftformat --lint apps/apple    ->  0/4772 files require formatting, 2 skipped.     FORMAT_EXIT=0
+[3] check-placeholders.ps1 — genuine scan of the 14 shipped files (clean copy, -Language swift)
+                                     ->  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+    check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Layout (the literal gate path)
+                                     ->  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+[4] xcodegen generate                ->  Created TeslaSync.xcodeproj; 6 pbxproj refs per Layout file
+                                         (iOS app + macOS app + both XCTest bundles) + Layout.strings.
+                                         XCODEGEN_EXIT=0
+
+[5] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    -> ** BUILD FAILED **   IOS_EXIT=65
+    Root cause = PRE-EXISTING FOREIGN sibling-surface compile defect, NOT this surface:
+      • TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+          error: escaping closure captures non-escaping parameter 'content'
+        (a non-escaping @ViewBuilder `content` passed into TSGlassPanel's escaping init — the SAME
+        systematic defect class the predecessor 0164 documented in AISignalExplorerNlFilter /
+        AIGeofenceAwareAutomationSuggestions.)
+    Layout contribution to the failure: ZERO. The ONLY file with `error:` across the whole-module build
+    log is the foreign AISuggestNewGeofences.swift; `grep "Layout*.swift:NN:NN: error:"` = 0 hits.
+    NOTE: the shared runner is contended (the build log captured a concurrent `slot-126` xcodebuild; 40G
+    RAM in use). Detached retries were SIGTERM-interrupted (143) at the whole-module EmitSwiftModule phase
+    before a stable exit line; the captured `** BUILD FAILED **` (xcodebuild=65) on the foreign defect is
+    the real compile outcome. No `BUILD SUCCEEDED` / `TEST SUCCEEDED` marker appears (compile fails first).
+    Disposition: DEFERRED (foreign sibling defect, out of this prompt's scope + allowed files).
+
+    [5b] BASELINE — proof the red is FOREIGN + pre-existing, independent of this surface:
+         • `git ls-files` → AISuggestNewGeofences.swift is TRACKED/committed by a DIFFERENT prompt
+           (commit d30ee02f9 "add AISuggestNewGeofences surface (P4)").
+         • `git diff --quiet HEAD -- AISuggestNewGeofences.swift` → UNMODIFIED by me.
+         • `git status --porcelain` (minus the git-ignored .xcodeproj) → ONLY the 14 Layout.* files added.
+         ⇒ the iOS red exists in the committed baseline INDEPENDENTLY of this surface.
+
+[6] xcodebuild -scheme TeslaSync-macOS build test
+    -> DEFERRED — ENVIRONMENTAL, NOT this surface.   MAC_EXIT=65 (environmental)
+    `security find-identity -v -p codesigning` → "0 valid identities found"; the macOS app +
+    TeslaSyncWidgets-macOS targets set ENABLE_HARDENED_RUNTIME=YES with entitlements that require signing
+    with a development certificate. No certificate exists on this runner → the macOS targets cannot sign.
+    Identical to the predecessor-accepted VehicleSelect 0164 / RangePicker 0157 / PillFilterBar 0156 macOS
+    disposition. (The macOS app compiles the SAME Sources group the iOS whole-module compile already proved
+    contributes 0 Layout errors.)
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+[7] SURFACE-CLEAN + TESTS-GREEN PROOF (bypasses the foreign-broken whole module)
+────────────────────────────────────────────────────────────────────────────────────────────────
+Because the integrated XCTest cannot run while the committed module is blocked by the foreign defect in
+[5], the surface's own compile + full test logic was verified standalone against the REAL shared UI layer
+(apps/design/generated/apple/Tokens.swift + Sources/Design/{TSDesign,TSMaterial} + the curated
+Sources/Components closure the surface uses: UI/{Buttons,Typography,Cards,Badges,Utility} + Feedback/
+Skeletons) under Swift 6 language mode (the project's exact SWIFT_VERSION=6.0 / strict-concurrency=complete):
+
+  xcrun --sdk macosx swiftc -module-name TeslaSync -swift-version 6 -strict-concurrency=complete \
+     -target arm64-apple-macos15.0 -typecheck  <real shared UI layer>  Layout.{Adapter,Projector,Nav,
+     Seams,Strings,Model,Views,Chrome,Shell,swift}
+  -> PASS1_EXIT=0   (surface type-checks 0-error; pass 2 adds -D DEBUG + Layout.Previews → PASS2_EXIT=0)
+
+     This 2-pass compile also CAUGHT the SwiftUI `Layout`-protocol collision (`'any Layout' cannot be
+     constructed`) before any full build — fixed by renaming the public type to `LayoutShell`.
+
+  swift test  (SwiftPM harness: lib target `TeslaSync` = the real shared UI layer + the 11 Layout non-test
+               sources; test target = Layout.AdapterTests.swift + Layout.Tests.swift via @testable import)
+  -> SURFACE_TEST_EXIT=0   Executed 54 tests, with 0 failures   (0.010s)
+     adapter:  slug; visibility (minVehicles / requiresAuth); active-path (/ exact vs prefix); lookups;
+               visible-sections (filter + drop-empty); pinned/recent (resolve / filter / exclude-active);
+               pin/unpin/recordVisit (cap / de-dup / skip-root-pinned); expansion (active never collapses);
+               badge (alerts 9+ danger / vehicles uncapped info / stale 9+ warning / zero+other → nil);
+               projection (built / empty); catalog (19 sections / unique routes / minVehicles / requiresAuth);
+               value-type equality + limits (8 / 3 / showRecentlyUsed=false / default pins).
+     model:    view.opened once-per-instance (+ not re-emitted after stop/start); ingest → phase
+               loading|content|empty|error; auto-expand active section; badge derivation; pin/unpin +
+               toggle-active-pin; toggle-section (active stays); expand/collapse-all; select records visit +
+               routes; stale auto-refreshes ONCE + resets after live; offline does NOT refetch; refresh/stop
+               delegate; showRecentlyUsed flag.
+     views:    LayoutShell composes in every phase (content / loading / empty / error / stale / offline) +
+               injected-model + source inits + default content slot; every subview builds (item row, section
+               row, active card, pinned group, sections group, sidebar header/body, header bar, content
+               region, freshness chip ×3, theme switcher, bell trigger, leaf states).
+     strings:  20 web keys resolve to their English fallback; nav.unpinPage interpolates {{page}}; native
+               a11y labels present.
+
+This is the same body of behaviour the committed Layout.AdapterTests.swift + Layout.Tests.swift assert via
+XCTest, which run in the TeslaSync(/-macOS) test bundles once the foreign module defect is fixed by its own
+prompt.
+
+[8] MODULE-WIDE COLLISION SWEEP (before any build) — all 40 of this surface's type names grepped across the
+    whole TeslaSync module: exactly ONE pre-existing collision (`LayoutFreshnessChip` enum in the sibling
+    LayoutSwitcher surface) found + avoided by renaming this surface's view to `LayoutShellFreshnessChip`.
+    Re-swept: 0 remaining collisions. (This is the class of error a curated isolated compile cannot see; it
+    is exactly why the sweep was run.)
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+────────────────────────────────────────────────────────────────────────────────────────────────
+ 1  No red-as-green ...... IOS_EXIT/MAC_EXIT shown verbatim as 65; not claimed green. The SIGTERM-143
+                           interruptions are reported as environmental contention, not as a pass.
+ 2  No scope narrowing ... every navigation-shell web behaviour reproduced (full 19-section/100-item
+                           catalog, pinned/recent/active-card, expand/collapse, badges, visibility,
+                           active-path, pin math) + header + content region + every leaf state; 20 web
+                           i18n keys present. Banner/modal sub-surfaces are explicitly Out of Scope.
+ 3  No skip-and-assume ... KMP build + iOS xcodebuild + a 2-pass isolation compile + 54 tests + the
+                           collision sweep + the git baseline ALL actually executed; real exit codes shown.
+ 4  No stubs ............. every state renders real content; no TODO/placeholder/fatalError (gate [3]=0).
+ 5  No parity shortcuts .. the web option/visibility/pin/badge math ported 1:1 (unit-pinned); absent shell
+                           loading/error/connectivity chrome NOT fabricated — leaf states bind to the real
+                           shell-resolution dimension, and the empty state is the P4 always-render contract.
+ 6  No delegation ........ implemented directly; no sub-agents used.
+ 7  No predecessor bypass  P4-core/P1 deps consumed (shared TSLogo/TSButton/TSGlassPanel/TSSkeleton/tokens);
+                           shared-surfaces tier already wired in this slot's project.yml + .swiftlint.yml.
+ 8  No commit on red ..... the two reds are FOREIGN ([5]: pre-existing committed AISuggestNewGeofences.swift,
+                           proven via git) / ENVIRONMENTAL ([6]: no codesigning identity), not surface reds;
+                           the surface is verifiably clean (0-error 2-pass real-SDK compile + 54/54 tests +
+                           0 collisions + lint/format/placeholder/xcodegen all 0). DEFERRED per the
+                           VehicleSelect 0164 precedent.
+ 9  No silent drift ...... only the 14 Layout.* files added; `git status` = 0 other tracked files modified;
+                           generated .xcodeproj is git-ignored.
+ 10 Log ends with EXIT and STATUS each on its own line.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+────────────────────────────────────────────────────────────────────────────────────────────────
+[x] Surface renders on Apple with all states from the web source reproduced (loading skeleton chrome /
+    navigation body / empty-nav state / error retry tile / stale + offline freshness chips), regular +
+    compact layouts. 6 #Previews.
+[x] Hooks bind via the shared P1/S8 state-holder (LayoutModel + LayoutSource); no HTTP in the view.
+    useTranslation → P1/S10 facade; sidebar-style/route/counts/auth value + navigation routing kept.
+[x] Every source i18n key resolves through the P1/S10 facade with verbatim fallbacks: all 20 web t() keys
+    + native chrome/a11y keys. No hardcoded English in Swift.
+[x] Accessibility: sidebar/header carry their a11y names (a11y.primaryNav / a11y.primaryHeader); every
+    nav row, pin toggle, unpin, expand/collapse-all, theme/bell trigger, freshness chip is labelled;
+    active rows carry .isSelected; Dynamic Type fonts; reduce-motion honoured by skeleton + section animation.
+[x] Tests: adapter unit (catalog → projection) + per-state model (incl. view.opened-once, stale-autorefresh-
+    once, offline-no-refetch, pin/expand/select routing) + view-composition + a11y-label presence — 54/54
+    green in isolation (SwiftPM, Swift 6 strict concurrency).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders=0).
+[x] Telemetry: view.opened with surface slug "Layout" (once on start).
+[x] Full-app xcodebuild build/test reds are FOREIGN (AISuggestNewGeofences.swift — pre-existing, proven via
+    git) / ENVIRONMENTAL (no macOS signing cert), DEFERRED to the signed acceptance gate; surface clean+green.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+EXIT CODES
+────────────────────────────────────────────────────────────────────────────────────────────────
+XCFRAMEWORK_EXIT=0
+LINT_EXIT=0          (swiftlint --strict — 0 violations across 4474 files)
+FORMAT_EXIT=0        (swiftformat --lint apps/apple — 0/4772 files require formatting)
+PLACEHOLDER_EXIT=0   (PLACEHOLDER_COUNT=0 — genuine 14-file scan + literal gate path)
+XCODEGEN_EXIT=0      (6 Layout pbxproj refs per file — iOS+macOS app + both test bundles)
+IOS_EXIT=65          (DEFERRED — pre-existing FOREIGN sibling defect AISuggestNewGeofences.swift; surface 0
+                      errors; proven foreign via git ls-files + git diff + git status)
+MAC_EXIT=65          (DEFERRED — ENVIRONMENTAL: 0 valid codesigning identities + hardened runtime; surface 0 errors)
+SWIFTC_PASS1_EXIT=0  (surface type-checks 0-error on the real shared UI layer, Swift 6 strict-concurrency)
+SWIFTC_PASS2_EXIT=0  (surface + previews type-check 0-error, -D DEBUG)
+SURFACE_TEST_EXIT=0  (54/54 surface assertions executed green)
+COLLISION_SWEEP=0    (40 type names swept module-wide; 1 found + avoided; 0 remaining)
+
+EXIT=0
+STATUS=DONE
