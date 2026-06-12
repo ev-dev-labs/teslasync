@@ -1,0 +1,124 @@
+p2-windows W7 — page:admin/SlowQueries — WinUI 3 / Fluent parity port — artifact log
+====================================================================================
+Parity unit : page:admin/SlowQueries
+Web source  : web/src/features/admin/pages/SlowQueriesPage.tsx (route /admin/slow-queries)
+Output      : apps/windows/TeslaSync.App/feature-views/SlowQueriesPage/
+                SlowQueriesPage.Model.cs      (state enum, row/snapshot parsers, feed port,
+                                               projection, registration, diagnostics)
+                SlowQueriesPage.Source.cs     (SlowQueriesClientFeed → generated IApiClient,
+                                               op get_api_v1_admin_observability_slow_queries)
+                SlowQueriesPage.ViewModel.cs  (INotifyPropertyChanged holder, Load/Refresh,
+                                               SetOrderBy/SetLimit, 4-state + subsystem flag)
+                SlowQueriesPage.cs            (WinUI 3 UserControl view, Fluent + design tokens)
+Nav reg     : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs  (route "SlowQueries")
+Strings     : apps/windows/Strings/{en,ar,he}/Resources.resw  (+21 keys: 17 parity + 4 order labels)
+Tests       : apps/windows/TeslaSync.App.Tests/FeatureViews/SlowQueriesPageTests.cs (31 tests)
+Ledger      : apps/parity/windows-ledger.json  (page:admin/SlowQueries → covered 22/22)
+
+Notes
+-----
+* Architecture mirrors the approved sibling admin W7 ports (ApiLogsPage, FeedbackQueuePage):
+  a UI-free Model/Source/ViewModel projection + a thin WinUI view, so every branch is unit-
+  tested headlessly. The view-model reads through ISlowQueriesFeed; the generated-client feed
+  (SlowQueriesClientFeed) binds the OpenAPI contract client (ADR-004) and is request-shape +
+  envelope + 503 verified. The shell registers the page on the default (empty-feed) ctor exactly
+  as ApiLogs/FeedbackQueue do.
+* SI / units: the page renders pg_stat_statements counters/timings already in their native units
+  (calls, ms, rows, %); no unit conversion applies. Numbers format at the display boundary via
+  NumberFormatting (the web fmtNumber port).
+* Strings are added to the platform catalog Strings/{en,ar,he}/Resources.resw (the W7 allowed
+  file). The web SlowQueriesPage uses inline t(key, default) defaults (no web/src/i18n entries),
+  so the values are ported verbatim from those inline defaults. ar/he are placeholder locales
+  carrying the English fallback (matching the generator's materialized fallback rows).
+* Pre-existing blocker repaired: TeslaSync.App.Tests.csproj was committed with merge=union
+  corruption (multiple <Project> roots, MSB4025). Regenerated to the single canonical root per
+  the file's own invariant — the Include-deduplicated, case-insensitive ordinal path-sorted union
+  of every Microsoft.UI-free .cs under dashboard-widgets/ feature-views/ misc-surfaces/
+  modals-dialogs/ shared-surfaces/ widget-primitives/ (1327 existing + 3 new SlowQueries = 1330),
+  verified to reproduce every prior entry verbatim with 0 drops + 0 duplicates.
+
+=== PARITY ===
+PARITY_REQUIRED=22
+
+[01] panel  - GlassPanel1
+       evidence: SlowQueriesPage.cs → BuildPanel() returns TsGlassPanel hosting the panel title
+                 (SlowQueriesDisplay.TableTitle) + filter controls + table body.
+[02] state  - loading
+       evidence: SlowQueriesProjection.Project → ShowLoading (SelectState ⇒ SlowQueriesState.Loading);
+                 SlowQueriesPage.cs _loadingPanel (ProgressRing + LoadingText).
+[03] state  - empty
+       evidence: SlowQueriesProjection.Project → ShowEmpty (rows==0 && !loading && !error && !subsystemMissing);
+                 SlowQueriesPage.cs _emptyState (TsEmptyState, EmptyTitle/EmptyMessage).
+[04] state  - error
+       evidence: SlowQueriesProjection.Project → HasError; SlowQueriesPage.cs _errorState (TsQueryError)
+                 with ErrorText + RetryLabel → OnRetryInvoked → ViewModel.RefreshAsync.
+[05] state  - success
+       evidence: SlowQueriesProjection.Project → ShowTable + Rows; SlowQueriesPage.cs RebuildRows/BuildRow
+                 render the 7-column slow-query rows.
+[06] string - admin.slowQueries.colCache
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.colCache","Cache hit ratio");
+                 Strings/en/Resources.resw translation.admin.slowQueries.colCache.
+[07] string - admin.slowQueries.colCalls
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.colCalls","Calls"); resw entry present.
+[08] string - admin.slowQueries.colFingerprint
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.colFingerprint","Query fingerprint"); resw entry present.
+[09] string - admin.slowQueries.colMax
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.colMax","Max (ms)"); resw entry present.
+[10] string - admin.slowQueries.colMean
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.colMean","Mean (ms)"); resw entry present.
+[11] string - admin.slowQueries.colRows
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.colRows","Rows"); resw entry present.
+[12] string - admin.slowQueries.colTotal
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.colTotal","Total (ms)"); resw entry present.
+[13] string - admin.slowQueries.emptyMessage
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.emptyMessage", "pg_stat_statements is empty…"); resw entry present.
+[14] string - admin.slowQueries.emptyTable
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.emptyTable","No slow queries"); resw entry present.
+[15] string - admin.slowQueries.emptyTitle
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.emptyTitle","No slow queries"); resw entry present.
+[16] string - admin.slowQueries.limit
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.limit","Limit"); resw entry present.
+[17] string - admin.slowQueries.notConfigured
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.notConfigured","pg_stat_statements is not installed…"); resw entry present.
+[18] string - admin.slowQueries.orderBy
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.orderBy","Order by"); resw entry present.
+[19] string - admin.slowQueries.pageTitle
+       evidence: SlowQueriesProjection.Project + SlowQueriesRegistration.Title GetString("admin.slowQueries.pageTitle","Slow Queries"); resw entry present.
+[20] string - admin.slowQueries.subtitle
+       evidence: SlowQueriesProjection.Project + SlowQueriesRegistration.Subtitle GetString("admin.slowQueries.subtitle","Top queries from pg_stat_statements…"); resw entry present.
+[21] string - admin.slowQueries.tableTitle
+       evidence: SlowQueriesProjection.Project GetString("admin.slowQueries.tableTitle","Top queries"); resw entry present.
+[22] string - admin.subsystem.unavailableTitle
+       evidence: SlowQueriesProjection.Project GetString("admin.subsystem.unavailableTitle","Subsystem unavailable") → _subsystemBanner.Title; resw entry present.
+
+Bonus (functional parity beyond the 22 required): the four order-by option labels are also ported +
+resw-backed — admin.slowQueries.orderMean/orderTotal/orderCalls/orderMax (SlowQueriesProjection.OrderByOptions).
+
+PARITY_COVERED=22
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SlowQueriesPage -Language csharp
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release   → 0 Error(s) (17 pre-existing Core analyzer warnings)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+LINT_EXIT=0
+# dotnet test (headless logic suite — contains SlowQueriesPageTests + every Model/Source/ViewModel projection)
+#   dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+#   Passed: 25810, Failed: 0, Skipped: 0   (SlowQueriesPageTests: 31/31)
+TEST_EXIT=0
+
+# Full-solution `dotnet test apps/windows/TeslaSync.sln -c Release` additionally runs the W9 E2E
+# project TeslaSync.App.UITests (WinAppDriver UI automation). Its 147 tests fail-fast in this
+# environment with UiAutomationUnavailableException: "WinAppDriver/Appium runner is absent —
+# nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found." This is an
+# environmental infrastructure gap (no UI-automation runner / no deployed packaged app), NOT a code
+# defect, and it is identical for every Windows W7 page (the sibling ApiLogs/FeedbackQueue ports
+# carry the same constraint). It exercises shell navigation, not SlowQueries logic — the page's own
+# parity is fully verified by the headless suite above.
+UITESTS_EXIT=1  (environmental: WinAppDriver/Appium absent — :4723 not listening; not a code defect)
+
+# Page-level W7 gate (build + lint + headless test + placeholder + PARITY_COVERED==PARITY_REQUIRED): GREEN.
+EXIT=0
+STATUS=DONE

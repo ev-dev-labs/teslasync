@@ -783,6 +783,8 @@ public sealed partial class ShellWindow : Window
             "MQTTInspector", static () => new FeatureViews.Telemetry.MQTTInspectorPage());
         // Admin / Tesla feature flags page (P2/W7) — parity port of web TeslaFeatureFlagsPage at route /tesla-features.
         _viewModel.PageFactory.Register("TeslaFeatureFlags", static () => new FeatureViews.Admin.TeslaFeatureFlagsPage());
+        // Admin / Slow queries page (P2/W7) — parity port of web SlowQueriesPage at route /admin/slow-queries.
+        _viewModel.PageFactory.Register("SlowQueries", static () => new FeatureViews.Admin.SlowQueriesPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
