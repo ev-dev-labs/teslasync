@@ -1,0 +1,167 @@
+# p2-windows — W7 — page:driving/DriveDetail — evidence log
+
+Artifact : page:driving/DriveDetail
+Prompt   : p2-windows/W7/windows-page-driving-DriveDetailPage
+Web src  : web/src/features/driving/pages/DriveDetailPage.tsx  (route /drives/:id)
+Output   : apps/windows/TeslaSync.App/feature-views/DriveDetailPage/
+             DriveDetailPage.Model.cs      (parsers + snapshot + model + state + display + projection + strings + registration + diagnostics + json)
+             DriveDetailPage.Source.cs     (generated-client feed — 2 endpoints)
+             DriveDetailPage.ViewModel.cs  (INotifyPropertyChanged state holder — LoadAsync/RefreshAsync)
+             DriveDetailPage.cs            (WinUI 3 UserControl view — thin renderer)
+Nav reg  : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+             PageFactory.Register("DriveDetail", … ParseSessionId(Param("id")) … BackRequested→NavigateTo("drives"))
+Route    : apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs L156
+             Hidden("DriveDetail","drives/:id",RouteGroup.TripsDriving,"Drive")  (pre-existing)
+Strings  : apps/shared/i18n/catalog/{en,ar,he}.json — all 23 required keys (translation.driveDetail.*) PRE-EXISTING; 0 added
+Tests    : apps/windows/TeslaSync.App.Tests/FeatureViews/DriveDetailPageTests.cs  (26 tests)
+           apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj L498-500 (3 WinUI-free files added to the headless host, sorted)
+Ledger   : apps/parity/windows-ledger.json (page:driving/DriveDetail → done, 25/25)
+
+## Honesty Covenant (binding — verbatim)
+
+```
+1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+```
+
+Delegation: NONE (implemented directly; no sub-agents used).
+
+NOTE on idealized paths: the prompt header lists an idealized output path
+(apps/windows/TeslaSync/Features/Driving/*.xaml + the placeholder-scan path
+apps/windows/TeslaSync/Features/Driving). The real repo is a C#-markup WinUI 3 app — every sibling W7
+page (ChargingDetail, BatteryDegradation, VehicleCost, Timeline, EnergyFlow, …) lives under
+apps/windows/TeslaSync.App/feature-views/<Page>/ as <Page>.{Model,Source,ViewModel}.cs + <Page>.cs
+(no per-page .xaml). This unit follows that established convention exactly (verified against
+ChargingDetailPage). Pure logic lives in the WinUI-free .Model/.Source/.ViewModel (unit-tested
+headlessly via the .csproj <Compile Include> seam); the .cs is the thin view, exercised by the app
+build. The placeholder scan was additionally run against the REAL output dir (clean, below).
+
+NOTE on parity scope: the manifest record for page:driving/DriveDetail extracts NO dataSources /
+panels / charts / maps — only 2 states (loading, error) + 23 strings (requiredCount=25). That is
+because the web page is a pure COMPOSITION SHELL: it owns the query lifecycle + the loading skeleton /
+error surface / no-telemetry banner, and delegates every section to a child component imported from
+../components/drive-detail, each wrapped in a <SectionErrorBoundary fallbackTitle=…>. The 19
+driveDetail.section.*Failed strings ARE those 19 boundary fallback titles. The native port reproduces
+the shell faithfully: the parent page loads drive+vehicle, renders loading/empty/error/success +
+the no-telemetry AlertBanner, and lays out all 19 SectionErrorBoundary regions (each carrying its
+localized fallback title + a real data summary drawn from the resolved drive, never a blank region).
+The heavy child sections (HeroGauges, charts, maps, …) are their own separate parity units; the
+DriveTimeline native unit's own header documents this exact "parent page owns the lifecycle, mounts
+sections with a resolved drive" contract.
+
+## Architecture mapping (web → native)
+
+- useDrive(id)            → DriveDetailPageClientFeed (Registration.DriveOperation =
+                            get_api_v1_drives_driveID, GET /drives/{id}) — primary read; its failure
+                            drives the page error state. (ApiEndpoints.cs L289 returns "Drive".)
+- useVehicle(vehicleId)   → DriveDetailPageClientFeed (VehicleOperation = get_api_v1_vehicles_vehicleID,
+                            GET /vehicles/{id}) — best-effort; header vehicle name, degrades to the
+                            generic "Vehicle" label on transport failure.
+- useDriveDetailData      → DriveDetailProjection.Project — the no-telemetry envelope
+  (hasMeaningful)           (hasMeaningfulDriveStats = distance>0 || maxSpeed>0 || energy>0 ||
+                            telemetry/positions rows) + energyWh fallback (|avgPowerW|·durationS/3600),
+                            ported verbatim; gates hero/stat/more/energy sections + the AlertBanner.
+- isLoading / error       → DriveDetailPageViewModel.LoadAsync → DriveDetailState (Loading/Empty/Error/
+                            Success) → Display.Show{Loading,Empty,Error,Content}.
+- SI display boundary     → UnitConverters.{Distance,Speed,Energy,Power,Temperature}FromSi applied ONLY
+                            in DriveDetailProjection.BuildSections (m→km/mi, m/s→km·h/mph, Wh→Wh/kWh,
+                            W→kW, °C→°C/°F); nothing non-SI stored or computed.
+- t(...) / useTranslation → ILocalizer.GetString (web key names verbatim) via DriveDetailStrings.Resolve.
+
+## === PARITY ===
+
+PARITY_REQUIRED=25
+
+# data states (2) — file : symbol
+[x] state  loading : Model.cs DriveDetailProjection.Project (state=Loading when model.Loading && drive is null) → Display.ShowLoading ; View.cs Render→_loadingSkeleton (DriveDetailSkeleton parity: header+hero+8 stat cards+overview+2 charts) ; Test State_loading_when_drive_query_in_flight
+[x] state  error   : Model.cs DriveDetailProjection.Project (state=Error when model.ErrorDetail != null) → Display.ShowError + ErrorText/RetryLabel ; View.cs Render→_errorState (TsQueryError + Retry→RefreshAsync) ; Test State_error_when_primary_read_failed + View_model_surfaces_a_failed_read_as_the_error_state
+# (empty + success states also implemented — Display.ShowEmpty/ShowContent — exceeding the 2 required)
+
+# strings (23) — web key : file : symbol (resolved verbatim through ILocalizer)
+[x] string driveDetail.title                                  : Model.cs DriveDetailStrings.Resolve→Title ; View.cs Render _title.Value=Display.Title ; Registration.Title
+[x] string driveDetail.vehicle                                : Model.cs DriveDetailStrings.Resolve→Vehicle ; Projection vehicleName fallback + header/journey rows
+[x] string driveDetail.noTelemetryTitle                       : Model.cs DriveDetailStrings.Resolve→NoTelemetryTitle ; View.cs BuildNoTelemetryBanner Title
+[x] string driveDetail.noTelemetryBody                        : Model.cs DriveDetailStrings.Resolve→NoTelemetryBody ; View.cs BuildNoTelemetryBanner Message
+[x] string driveDetail.section.headerFailed                   : Model.cs DriveDetailStrings.Resolve→HeaderFailed ; Section("header") FallbackTitle ; View.cs BuildSection→SectionErrorBoundary.FallbackTitle
+[x] string driveDetail.section.heroGaugesFailed               : Model.cs Resolve→HeroGaugesFailed ; Section("hero-gauges") FallbackTitle
+[x] string driveDetail.section.timelineFailed                 : Model.cs Resolve→TimelineFailed ; Section("timeline") FallbackTitle
+[x] string driveDetail.section.statCardsFailed                : Model.cs Resolve→StatCardsFailed ; Section("stat-cards") FallbackTitle
+[x] string driveDetail.section.aiCoachingFailed               : Model.cs Resolve→AiCoachingFailed ; Section("ai-coaching") FallbackTitle
+[x] string driveDetail.section.moreDetailsFailed              : Model.cs Resolve→MoreDetailsFailed ; Section("more-details") FallbackTitle
+[x] string driveDetail.section.energySummaryFailed            : Model.cs Resolve→EnergySummaryFailed ; Section("energy-summary") FallbackTitle
+[x] string driveDetail.section.costSavingsFailed              : Model.cs Resolve→CostSavingsFailed ; Section("cost-savings") FallbackTitle
+[x] string driveDetail.section.routeMapFailed                 : Model.cs Resolve→RouteMapFailed ; Section("route-map") FallbackTitle
+[x] string driveDetail.section.journeyDetailsFailed           : Model.cs Resolve→JourneyDetailsFailed ; Section("journey-details") FallbackTitle
+[x] string driveDetail.section.overviewChartFailed            : Model.cs Resolve→OverviewChartFailed ; Section("overview-chart") FallbackTitle
+[x] string driveDetail.section.socChartFailed                 : Model.cs Resolve→SocChartFailed ; Section("soc-chart") FallbackTitle
+[x] string driveDetail.section.elevationChartFailed           : Model.cs Resolve→ElevationChartFailed ; Section("elevation-chart") FallbackTitle
+[x] string driveDetail.section.temperatureFailed              : Model.cs Resolve→TemperatureFailed ; Section("temperature") FallbackTitle
+[x] string driveDetail.section.speedHistogramFailed           : Model.cs Resolve→SpeedHistogramFailed ; Section("speed-histogram") FallbackTitle
+[x] string driveDetail.section.aiSpeedProfileInsightsFailed   : Model.cs Resolve→AiSpeedProfileInsightsFailed ; Section("ai-speed-profile-insights") FallbackTitle
+[x] string driveDetail.section.powerProfileFailed             : Model.cs Resolve→PowerProfileFailed ; Section("power-profile") FallbackTitle
+[x] string driveDetail.section.tirePressureFailed             : Model.cs Resolve→TirePressureFailed ; Section("tire-pressure") FallbackTitle
+[x] string driveDetail.section.whyEndedFailed                 : Model.cs Resolve→WhyEndedFailed ; Section("why-ended") FallbackTitle
+
+# String coverage proven mechanically: Tests Projection_resolves_every_required_string_key (success)
+# and Projection_resolves_all_keys_even_in_the_loading_state (loading) assert all 23 web keys are
+# requested through a RecordingLocalizer in BOTH states. Required_string_key_set_has_exactly_twenty_three_unique_keys.
+
+PARITY_COVERED=25
+
+## Section reproduction (all 19 web SectionErrorBoundary regions — never blank)
+
+header, hero-gauges*, timeline, stat-cards*, ai-coaching, more-details*, energy-summary*,
+cost-savings(energyWh>0), route-map, journey-details, overview-chart, soc-chart, elevation-chart,
+temperature, speed-histogram, ai-speed-profile-insights, power-profile, tire-pressure, why-ended
+  (* gated on hasMeaningfulDriveStats, exactly as the web page). Each region is a real
+  SharedSurfaces.SectionErrorBoundary(FallbackTitle=<localized>) wrapping a TsGlassPanel with either
+  a TsKVList of real drive values (formatted at the SI boundary) or a localized TsEmptyState caption
+  (driveDetail.noChartData / noRouteData / noTemperatureData / common.noData). Verified by Tests
+  Success_builds_all_nineteen_section_regions (id + order), Every_section_carries_its_localized_fallback_title,
+  No_telemetry_banner_replaces_numeric_sections_when_drive_has_no_meaningful_stats,
+  Cost_savings_section_is_hidden_without_energy / _is_visible_with_energy,
+  Energy_is_derived_from_average_power_and_duration_when_absent,
+  Sections_without_page_level_data_carry_a_localized_empty_message,
+  Route_map_falls_back_to_empty_copy_without_coordinates, Journey_details_renders_the_real_addresses_and_distance.
+
+## Gate (windows triad: build + lint + test + placeholder scan)
+
+# placeholder scan — prompt's idealized path (apps/windows/TeslaSync/Features/Driving) does not exist → clean;
+# additionally scanned the REAL output dir + the new test file:
+check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DriveDetailPage -Language csharp
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+dotnet build  apps/windows/TeslaSync.sln -c Release
+  0 Error(s)  (17 warnings — all PRE-EXISTING in TeslaSync.App.Core: CA1716/CA1720/CA1859/CA1000;
+               zero in TeslaSync.App or TeslaSync.App.Tests; my code is warning-clean)
+BUILD_EXIT=0
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (initial run flagged ENDOFLINE in the 5 new files only — CRLF from the editor; normalized to LF; re-verify clean)
+LINT_EXIT=0
+
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+  Passed!  - Failed: 0, Passed: 26458, Skipped: 0, Total: 26458
+  (includes the 26 new DriveDetailPageTests)
+TEST_EXIT=0
+
+## Summary
+
+Native C#-markup WinUI 3 parity port of the web DriveDetailPage composition shell, following the
+established sibling-page convention (Model/Source/ViewModel/.cs + headless .csproj compile-seam tests).
+The two web reads (useDrive + useVehicle) are bound through the generated OpenAPI client feed; the
+no-telemetry envelope + energy-derivation logic are ported verbatim and drive the AlertBanner + the
+gating of the numeric-summary sections; all 19 SectionErrorBoundary regions render with their
+localized fallback titles and a never-blank real-data summary; SI values are converted only at the
+display boundary; every visible string flows through ILocalizer with web key names preserved (all 23
+required keys already present in the shared i18n catalog); AutomationProperties names cover the page,
+the back/print affordances, the banner and every section panel. Build + lint + test + placeholder
+gates are green and parity coverage is 25/25 (loading + error states + all 23 i18n keys). The only red
+anywhere in the windows suite is the pre-existing TeslaSync.App.UITests shell suite (absent
+WinAppDriver/Appium runner) — an environmental condition this unit neither introduces nor touches.
+
+EXIT=0
+STATUS=DONE
