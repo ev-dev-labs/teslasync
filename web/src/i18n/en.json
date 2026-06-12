@@ -6370,6 +6370,17 @@
     "healthCrit": "Drivetrain Overheating",
     "motorState": "Motor State",
     "recommendations": "Health Recommendations",
+    "tips": {
+      "criticalStop": "Temperatures are critically high. Consider pulling over safely and letting the vehicle cool down.",
+      "serviceUrgent": "Schedule an urgent service appointment. Critical temperatures may indicate a coolant system issue.",
+      "reduceLoad": "Reduce driving intensity and avoid hard acceleration to allow components to cool.",
+      "checkCoolant": "Schedule a service appointment to inspect the coolant system and fluid levels.",
+      "avoidSupercharging": "Avoid Supercharging while temperatures are elevated. Use Level 2 charging instead.",
+      "regularService": "Keep up with regular service intervals for optimal drivetrain health and longevity.",
+      "gentleAccel": "Gentle acceleration helps maintain lower motor temperatures and extends component life.",
+      "precondition": "Precondition the battery in cold weather for better thermal performance and driving efficiency.",
+      "monitorTemps": "Monitor drivetrain temperatures after spirited driving sessions or long highway stretches."
+    },
     "liveMotor": "Live Motor Status",
     "shiftState": "Shift State",
     "power": "Power",
