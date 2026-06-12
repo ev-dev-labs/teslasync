@@ -1491,8 +1491,25 @@
     (repairing a merge=union multi-root corruption), plus the new DataTableColumnsMenu Model / Source /
     ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build item or
     project start tag inside this comment.
-  -->
+    UI-thread-free logic (Model / Source / ViewModel / Registration / diagnostics) for every dashboard-widget,
+    feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
+    TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's Microsoft.UI-free
+    sources are Compile-linked below (the Link mirrors each source's real location under Widgets, FeatureViews,
+    MiscSurfaces, ModalsDialogs or SharedSurfaces). The bare WinUI view files are excluded and exercised by the
+    app build; the test classes are picked up by the SDK default-compile glob; the Content links copy the
+    units-golden, Package.appxmanifest and widget-template fixtures the tests read from the output directory.
 
+    INVARIANT: keep this file as exactly ONE Project root with a single PropertyGroup, the package /
+    project-reference / content ItemGroups, and ONE Compile ItemGroup - the case-insensitive ordinal
+    path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/,
+    feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. The .gitattributes merge=union
+    strategy can re-concatenate this file into multiple roots plus duplicate Compile items (and can strand
+    comment prose as bare text under the root element), failing the build (MSB4025 / MSB4067); when that
+    happens, regenerate it directly from the WinUI-free sources on disk. Regenerated into this single canonical
+    root for P2 shared-surfaces/0214 FullscreenButton (repairing a merge=union multi-root corruption), plus the
+    new FullscreenButton Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never
+    write a literal build item or project start tag inside this comment.
+  -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -1528,6 +1545,7 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App; see the header comment for the single-root / sort / dedupe invariant. -->
   <ItemGroup>    <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App: a single, case-insensitive ordinal path-sorted, Include-deduplicated item group (the union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/). -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App; single-root / case-insensitive ordinal sort / Include-dedupe invariant (see header). -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -2432,9 +2450,9 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.Model.cs" Link="ModalsDialogs\WidgetSettingsModal.Model.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.Source.cs" Link="ModalsDialogs\WidgetSettingsModal.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.ViewModel.cs" Link="ModalsDialogs\WidgetSettingsModal.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ActionItem.Model.cs" Link="SharedSurfaces\ActionItem.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Accordion.Model.cs" Link="SharedSurfaces\Accordion.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Accordion.ViewModel.cs" Link="SharedSurfaces\Accordion.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ActionItem.Model.cs" Link="SharedSurfaces\ActionItem.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Model.cs" Link="SharedSurfaces\ActiveFilterChips.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Source.cs" Link="SharedSurfaces\ActiveFilterChips.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.ViewModel.cs" Link="SharedSurfaces\ActiveFilterChips.ViewModel.cs" />
@@ -2554,6 +2572,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Model.cs" Link="SharedSurfaces\ChartTooltip.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.Source.cs" Link="SharedSurfaces\ChartTooltip.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartTooltip.ViewModel.cs" Link="SharedSurfaces\ChartTooltip.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Checkbox\Checkbox.Model.cs" Link="SharedSurfaces\Checkbox\Checkbox.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Checkbox\Checkbox.ViewModel.cs" Link="SharedSurfaces\Checkbox\Checkbox.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Combobox.Model.cs" Link="SharedSurfaces\Combobox.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Combobox.Source.cs" Link="SharedSurfaces\Combobox.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Combobox.ViewModel.cs" Link="SharedSurfaces\Combobox.ViewModel.cs" />
@@ -2619,6 +2639,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Model.cs" Link="SharedSurfaces\FreshnessIndicator.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Source.cs" Link="SharedSurfaces\FreshnessIndicator.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.ViewModel.cs" Link="SharedSurfaces\FreshnessIndicator.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\FullscreenButton\FullscreenButton.Model.cs" Link="SharedSurfaces\FullscreenButton\FullscreenButton.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\FullscreenButton\FullscreenButton.Source.cs" Link="SharedSurfaces\FullscreenButton\FullscreenButton.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\FullscreenButton\FullscreenButton.ViewModel.cs" Link="SharedSurfaces\FullscreenButton\FullscreenButton.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Model.cs" Link="SharedSurfaces\HealthRow\HealthRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Source.cs" Link="SharedSurfaces\HealthRow\HealthRow.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.ViewModel.cs" Link="SharedSurfaces\HealthRow\HealthRow.ViewModel.cs" />
