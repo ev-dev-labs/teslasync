@@ -1,0 +1,48 @@
+/*
+  VersionSegment.strings
+  TeslaSync — P4 shared surface · 0181 · VersionSegment (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The keys in the first block mirror the web
+  source (components/layout/status-bar/VersionSegment.tsx) one-for-one — the tooltip + aria version
+  label, the uptime + unseen-changelog hints, the update-available label, the modal title + provenance
+  labels, the update banner, and the three action labels. The remaining keys are the native P4 leaf
+  chrome (loading / empty / error pills, the open hint, and the freshness axis) so the Swift sources hold
+  no English literals.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table ("VersionSegment") so each parallel surface prompt owns its own strings
+  without editing the shared catalog. In test / preview bundles `NSLocalizedString` returns the value
+  below, keeping the labels deterministic.
+*/
+
+/* --- Web source keys (VersionSegment.tsx) --- */
+"statusBar.version.tooltip" = "TeslaSync version";
+"statusBar.version.aria" = "TeslaSync version";
+"statusBar.version.uptime" = "up {{uptime}}";
+"changelog.unseenHint" = "{{count}} new release(s)";
+"changelog.unseenAria" = "unseen changelog";
+"statusBar.version.updateAvailable" = "Update available";
+"statusBar.version.modalTitle" = "About this build";
+"statusBar.version.appVersion" = "App version";
+"statusBar.version.commit" = "Commit";
+"statusBar.version.chart" = "Helm chart";
+"statusBar.version.go" = "Go runtime";
+"statusBar.version.platform" = "Platform";
+"statusBar.version.uptimeLabel" = "Server uptime";
+"statusBar.version.updateBanner" = "A newer release is available";
+"changelog.openModal" = "What's new";
+"statusBar.version.changelog" = "Release notes";
+"statusBar.version.close" = "Close";
+
+/* --- Loading / empty / error chrome (P4 leaf contract) --- */
+"statusBar.version.loadingA11y" = "Loading version";
+"statusBar.version.unavailable" = "Version unavailable";
+"statusBar.version.retryA11y" = "Version check failed — tap to retry";
+"statusBar.version.openHint" = "Opens build details";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"statusBar.version.live" = "Live";
+"statusBar.version.stale" = "Stale";
+"statusBar.version.offline" = "Offline";
+"statusBar.version.staleA11y" = "Version info is stale — tap to refresh";
+"statusBar.version.offlineA11y" = "Offline — showing the last known version";
