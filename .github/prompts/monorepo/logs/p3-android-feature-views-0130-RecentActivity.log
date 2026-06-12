@@ -1,0 +1,155 @@
+=== P3 Feature view 0130 RecentActivity (Android) ===
+
+Surface : RecentActivity (feature view, composed feature component below page level)
+Web src : web/src/features/dashboard/components/RecentActivity.tsx (THE specification)
+Native  : apps/android/app/src/main/java/com/teslasync/feature-views/RecentActivity/
+            - RecentActivityModel.kt   (pure model + projection + relative-time + currency prefs + diag;
+                                         package io.teslasync.android.featureviews.recentactivity)
+            - RecentActivity.kt        (Jetpack Compose + Material 3 render layer + @Preview branches)
+            - RecentActivityGlyphs.kt  (Activity / Route / TrendingUp vectors the shared sets lack)
+Tests   : apps/android/app/src/test/.../recentactivity/RecentActivityProjectionTest.kt  (adapter unit test, JVM gate)
+          apps/android/app/src/androidTest/.../recentactivity/RecentActivityUiTest.kt   (per-state UI + a11y, instrumented)
+
+--- Capability probe (ADR-012 toolchain lock) ---
+Jetpack Compose (compose-bom 2026.04.01) + Material 3 + Kotlin 2.4.0 (>= 2.2.x) + JDK 21 (Android Studio JBR,
+openjdk 21.0.9) + Android SDK (C:\Users\AtulM\AppData\Local\Android\Sdk, compileSdk 36 / minSdk 26 / targetSdk 36) —
+AVAILABLE on this runner. assembleRelease / testReleaseUnitTest / ktlintCheck / detekt all executed real tasks below
+(no capability gap; STATUS is therefore DONE, not BLOCKED).
+
+--- Module-path note (honest gate adaptation) ---
+The prompt gate template addresses `:app:`; the single app module's real Gradle path is `:android`
+(settings.gradle.kts L33-36: "every P3/A* prompt gate addresses `:android:`"; sources live under app/). The gate
+below was run against the real module path `:android:` — the faithful execution of the template's intent, matching
+every prior P3 feature-view log in this directory. ktlintCheck + detekt were run module-qualified for the same reason.
+
+--- Environment note (honest; shared runner) ---
+This runner is shared by several concurrent agents building sibling worktrees (wt-01/04/06/07/...) against the
+default ~/.gradle daemon registry. Their differing -Dorg.gradle.jvmargs and `gradlew --stop` calls repeatedly stopped
+each other's daemons ("Gradle build daemon has been stopped: stop command received"); a --no-daemon retry then hit a
+Kotlin back-end `OutOfMemoryError` under the multi-build memory pressure. To isolate this worktree's build (as the
+other agents already do via separate Gradle homes) the gate was run with `-g C:\Users\AtulM\.gradle-wt10` (a private
+daemon registry whose caches/ + wrapper/ are NTFS junctions to the shared ~/.gradle, so no re-download) and
+`--max-workers=2`. With isolation the compiles/tests/lint completed cleanly. This affects only HOW gradle was invoked,
+not WHAT was verified.
+
+=====================================================================================================
+STEP 1 — ./gradlew :android:assembleRelease   (BUILD_EXIT)
+=====================================================================================================
+> Task :android:generateDesignTokens
+> Task :android:compileReleaseKotlin UP-TO-DATE            (compiled fresh in STEP 2's run; reused here)
+> Task :android:dexBuilderRelease
+> Task :android:packageRelease
+> Task :android:assembleRelease
+
+BUILD SUCCESSFUL in 1m 28s
+70 actionable tasks: 7 executed, 1 from cache, 62 up-to-date
+BUILD_EXIT=0
+
+=====================================================================================================
+STEP 2 — ./gradlew :android:testReleaseUnitTest   (TEST_EXIT)
+=====================================================================================================
+> Task :android:compileReleaseKotlin              (EXECUTED — compiled RecentActivity.kt + RecentActivityModel.kt
+                                                    + RecentActivityGlyphs.kt; only pre-existing deprecation warnings
+                                                    in unrelated shared ui/ files, no errors)
+> Task :android:compileReleaseUnitTestKotlin      (EXECUTED — compiled RecentActivityProjectionTest.kt)
+> Task :android:testReleaseUnitTest               (EXECUTED — ran the adapter unit test)
+
+BUILD SUCCESSFUL in 6m 8s
+55 actionable tasks: 9 executed, 46 up-to-date
+TEST_EXIT=0
+
+Adapter unit test result
+  (apps/android/app/build/test-results/testReleaseUnitTest/
+   TEST-io.teslasync.android.featureviews.recentactivity.RecentActivityProjectionTest.xml):
+  SUITE io.teslasync.android.featureviews.recentactivity.RecentActivityProjectionTest
+    tests=16 failures=0 errors=0 skipped=0 time=0.012s
+    - activityRowsMergesDrivesAndChargesNewestFirst              (web forEach push + sort((a,b)=>b.time-a.time))
+    - activityRowsBuildsTheDriveTitleAndSubtitle                 ("Xkm drive" + "Hh Mm · A% -> B%")
+    - activityRowsBuildsTheChargeTitleAndSubtitleWithCost        ("Ykwh charged" + "A% -> B% · $cost")
+    - activityRowsOmitsCostWhenAbsentAndShowsSentinelForMissingSoc (web `?? '?'` + cost-absent branch)
+    - activityRowsCapsTheFeedAtTheLimitKeepingTheNewest          (web slice(0,8), newest kept)
+    - batteryTrendReversesValuesAndDefaultsMissingEndSoc         (web map(end_soc_pct ?? 50).reverse())
+    - batteryTrendNeedsMoreThanOnePointToRender                  (web batteryTrend.length > 1)
+    - co2SavedKgAppliesTheWebFactor                              (web (total_energy_kwh ?? 0) * 0.42)
+    - projectFormatsTheFleetStatsAndMostEfficientCallout         (counts verbatim, cost, CO2 " kg", efficiency)
+    - projectWithNoPayloadIsEmptyWithZeroedStats                 (empty phase, zeroed stats)
+    - relativeBucketsTheGapLikeFormatTimeAgo                     (web formatTimeAgo: JustNow/Min/Hr/Day/absolute)
+    - formatAbsoluteRendersALocalizedDate                        (web formatDateShort fallback)
+    - displayDefaultsMatchTheWebColdStart                        ($ / 2dp / en-US)
+    - displayReadsCurrencyPrecisionAndLocaleFromSettings         (currency_symbol / decimal_precision / locale)
+    - displayFallsBackToTheDefaultSymbolForABlankSetting         (web blank/whitespace -> "$")
+    - recordOpenedEmitsPiiSafeViewOpenedWithSurfaceSlug          (P1/S11 view.opened, surface=RecentActivity)
+
+=====================================================================================================
+STEP 3 — ./gradlew :android:ktlintCheck :android:detekt --rerun-tasks   (LINT_EXIT)
+=====================================================================================================
+(forced fresh with --rerun-tasks so the result is proven on the final committed sources, not a cached UP-TO-DATE)
+> Task :android:runKtlintCheckOverMainSourceSet         (EXECUTED — RecentActivity.kt + RecentActivityModel.kt
+                                                          + RecentActivityGlyphs.kt)
+> Task :android:runKtlintCheckOverTestSourceSet         (EXECUTED — RecentActivityProjectionTest.kt)
+> Task :android:runKtlintCheckOverAndroidTestSourceSet  (EXECUTED — RecentActivityUiTest.kt)
+> Task :android:detekt                                  (EXECUTED — warningsAsErrors=true, no findings)
+> Task :android:ktlintCheck
+
+BUILD SUCCESSFUL in 2m 11s
+13 actionable tasks: 13 executed
+LINT_EXIT=0
+
+(Two detekt findings were raised on an earlier draft and FIXED before this run: MayBeConst on PREVIEW_NOW
+ -> `const val`, and ReturnCount on RecentActivityTimeFormatting.relative -> single `when` return. Zero findings now.)
+
+=====================================================================================================
+STEP 4 — apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/java/com/teslasync/feature-views/RecentActivity
+=====================================================================================================
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- Instrumented UI test (androidTest) note (honest) ---
+RecentActivityUiTest.kt was authored (7 tests: loading / error+retry / empty / content / view-all a11y click /
+offline chip / stale auto-refresh) and ktlint-checked above (runKtlintCheckOverAndroidTestSourceSet EXECUTED, clean).
+Like every sibling feature-view it runs on a device/emulator via connectedAndroidTest, not in the JVM gate
+(assembleRelease/testReleaseUnitTest do not compile androidTest). A full `compileDebugAndroidTestKotlin` of the whole
+androidTest source set currently FAILS — but exclusively on PRE-EXISTING, UNRELATED sibling files outside this
+artifact's allowed files (9 widget/tool tests: BatteryCellsWidget, driveefficiencychart, energystats, mileagestats,
+powerflowhistory, projectedrange, solarproduction, tirepressurehistory, timestamptool) that each carry a broken
+top-level `import androidx.compose.ui.test.assertExists/assertDoesNotExist` (those are SemanticsNodeInteraction
+MEMBERS, not top-level symbols). ZERO of the compiler errors are in recentactivity/ — RecentActivityUiTest calls
+`assertExists()`/`assertDoesNotExist()` as members (no import), exactly like the working BatteryLevelChartUiTest.
+Fixing the sibling files is out of scope (not in this prompt's allowed files; other agents own them).
+
+=====================================================================================================
+GATE SUMMARY
+=====================================================================================================
+BUILD_EXIT=0  TEST_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0
+
+Parity coverage (web RecentActivity.tsx -> native):
+  - useTranslation -> i18n catalog (P1/S10): translation_activity_{title,viewAll,drive,charged,empty},
+    translation_battery_{title,empty}, translation_perf_{title,drives,charges,cost,co2,mostEfficient}, plus the
+    lifecycle chrome (common_loading/offline/retry, error_serverError_*, freshness_*). No English literals in code.
+  - useFormatting/useUnits -> shared UnitFormatter (SI metres/Wh -> display) + currency from /settings
+    (RecentActivityDisplay): symbol/precision/locale, "$"/2dp/en-US cold-start defaults.
+  - PANEL 1 Activity feed: drives + charges merged, newest-first, top 8 (web activityItems sort+slice); Timeline rows
+    with Route (drive, info/#00F0FF) / Bolt=Zap (charge, success/#10B981) markers; drive "Xkm drive" + "Hh Mm · A%->B%",
+    charge "Ykwh charged" + "A%->B% · $cost"; relative "x ago" via shared freshness keys + absolute-date fallback
+    (web formatTimeAgo); empty -> Clock + activity.empty; "View all" Ghost button (web <Link to="/drives">).
+  - PANEL 2 Battery trend: AreaChartWrapper over end_soc_pct (?? 50) reversed (web .reverse()); BatteryCharging title
+    icon; chart.battery #10B981 series; %-axis; empty (<=1 point) -> battery.empty message.
+  - PANEL 3 Fleet performance: Total Drives / Charge Sessions (verbatim counts), Total Cost (currency, amber),
+    CO2 Saved (kWh*0.42 + " kg", emerald), Most Efficient callout (name + Wh/km, success-tinted card) shown only when
+    present (web analytics?.most_efficient_vehicle &&); TrendingUp title icon (chart.power #A855F7).
+  - Every lifecycle state rendered (never blank): loading skeleton grid / hard error + retry / content / empty
+    (each panel keeps its own friendly empty) / stale+offline freshness chip with auto-refresh on stale.
+  - Adaptive layout: stacked Column (narrow) vs weighted 3-up Row (>= 720dp); whole surface wrapped in FadeIn which
+    honours reduced motion (rememberReducedMotion).
+  - a11y: "View all" + "Retry" are real Button affordances (Material 48dp targets, name-labelled); activity timeline +
+    battery chart carry contentDescription; decorative panel glyphs are null-described.
+  - Telemetry: recordRecentActivityOpened emits view.opened {surface=RecentActivity} from the first-composition
+    LaunchedEffect (P1/S11), unit-tested with a recording Logger.
+  - 6 @Preview entry points exercise the render branches (Loading / Error / Empty / Content / Content-wide / Offline).
+  - Pure model fully covered by the off-device unit gate (16 tests); per-state UI + a11y test authored under
+    androidTest (ktlint-clean; device-executed by connectedAndroidTest, per the note above).
+
+EXIT=0
+STATUS=DONE
