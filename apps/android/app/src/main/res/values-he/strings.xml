@@ -2853,6 +2853,7 @@
   <string name="translation_driveDetail_elevGain">Elev. Gain</string>
   <string name="translation_driveDetail_elevLoss">Elev. Loss</string>
   <string name="translation_driveDetail_elevProfile">Elevation Profile</string>
+  <string name="translation_driveDetail_elevProfileAria">Elevation and speed area+line chart over the drive timeline</string>
   <string name="translation_driveDetail_elevSummary">Elevation Summary</string>
   <string name="translation_driveDetail_elevation">Elevation</string>
   <string name="translation_driveDetail_end">End</string>
