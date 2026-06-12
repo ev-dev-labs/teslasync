@@ -1,0 +1,151 @@
+=== p2-windows W7 — page:battery/EnergyProducts (WinUI 3 / Fluent) ===
+Parity unit : page:battery/EnergyProducts
+Kind        : page
+Web route   : /energy-products
+Web source  : web/src/features/battery/pages/EnergyProductsPage.tsx
+Platform    : windows
+Prompt      : p2-windows/W7/windows-page-battery-EnergyProductsPage
+
+--- Path reconciliation (no silent drift) ---
+The generated prompt names the output `apps/windows/TeslaSync/Features/Battery/EnergyProductsPage.xaml`
++ `EnergyProductsPageViewModel.cs`. That project/folder does NOT exist in this repo. The real,
+gate-passing W7 predecessors (page:admin/ApiLogs, page:admin/VehicleCost, page:analytics/TrueCost,
+…) live in project `TeslaSync.App` under `feature-views/<Page>/` as code-only WinUI `UserControl`s
+(no XAML markup file) split into <Page>.cs (view) + .Model.cs + .Source.cs + .ViewModel.cs, with the
+pure-C# model/source/viewmodel linked into TeslaSync.App.Tests and the view registered in the
+NavigationView via ShellWindow.xaml.cs PageFactory.Register. Honesty Covenant #7 (no predecessor
+bypass): this unit follows that identical, accepted structure rather than the templated path.
+
+--- Files created ---
+apps/windows/TeslaSync.App/feature-views/EnergyProductsPage/EnergyProductsPage.Model.cs
+apps/windows/TeslaSync.App/feature-views/EnergyProductsPage/EnergyProductsPage.Source.cs
+apps/windows/TeslaSync.App/feature-views/EnergyProductsPage/EnergyProductsPage.ViewModel.cs
+apps/windows/TeslaSync.App/feature-views/EnergyProductsPage/EnergyProductsPage.cs            (view)
+apps/windows/TeslaSync.App/feature-views/EnergyProductsPage/EnergyProductsPage.CardView.cs   (per-site card view)
+apps/windows/TeslaSync.App.Tests/FeatureViews/EnergyProductsPageTests.cs                     (33 tests)
+
+--- Files modified ---
+apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs        (PageFactory.Register("EnergyProducts", …))
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj (link Model/Source/ViewModel into headless tests)
+apps/parity/windows-ledger.json                             (+ page:battery/EnergyProducts row)
+
+Route `EnergyProducts` (path `energy-products`, group BatteryEnergy) already exists in
+TeslaSync.App.Core/Navigation/RouteTable.cs; only the page-factory body was added.
+
+--- Data sources bound to the generated C# client (P1/S8 ObservableObject ViewModels) ---
+useTeslaEnergySites          GET  /tesla/energy-sites                          -> EnergyProductsSource.StreamAsync         (op get_api_v1_tesla_energy_sites)
+useRefreshTeslaEnergySites   POST /tesla/energy-sites/refresh                  -> EnergyProductsSource.RefreshAsync        (op post_api_v1_tesla_energy_sites_refresh)
+useTeslaEnergySiteInfo       GET  /tesla/energy-sites/{siteId}/site-info       -> EnergySiteInfoSource.StreamAsync         (op get_api_v1_tesla_energy_sites_siteID_site_info)
+useRefreshTeslaEnergySiteInfo POST /tesla/energy-sites/{siteId}/site-info/refresh -> EnergySiteInfoSource.RefreshAsync     (op post_api_v1_tesla_energy_sites_siteID_site_info_refresh)
+All four route through the shared CacheThenNetworkEngine; SI Wh/W are read directly and restated to
+compact display units only at the projection boundary (EnergyProductsProjection.FormatEnergy/FormatPower).
+
+=== PARITY ===
+PARITY_REQUIRED=51
+
+# panels (13) — every named StatCard + every anonymous GlassPanel region reproduced as a Fluent Card/Mica region
+[x] panel  - Powerwalls         | Model EnergyProductsPage.Model.cs:EnergySiteInfoDisplay.Powerwalls (ProjectSiteInfo, key energy.siteInfo.batteryCount) | view EnergyProductsPage.CardView.cs:_powerwalls (TsStatCard)
+[x] panel  - Rated-Power        | Model EnergySiteInfoDisplay.RatedPower (ProjectSiteInfo, FormatPower, key energy.siteInfo.ratedPower) | view CardView.cs:_ratedPower (TsStatCard)
+[x] panel  - Rated-Energy       | Model EnergySiteInfoDisplay.RatedEnergy (ProjectSiteInfo, FormatEnergy, key energy.siteInfo.ratedEnergy) | view CardView.cs:_ratedEnergy (TsStatCard)
+[x] panel  - GlassPanel4        | operation-mode + backup-reserve grid | Model EnergySiteInfoDisplay.OperationModeValue/BackupReservePercent | view CardView.cs:BuildSiteInfoContent (opModeCell + backupCell Borders, tokenized)
+[x] panel  - Charge             | Model EnergySiteCardDisplay.Charge (ProjectCard, key energy.products.charge) | view CardView.cs:_charge (TsStatCard)
+[x] panel  - Capacity           | Model EnergySiteCardDisplay.Capacity (ProjectCard, FormatEnergy, key energy.products.capacity) | view CardView.cs:_capacity (TsStatCard)
+[x] panel  - Type               | Model EnergySiteCardDisplay.Type (ProjectCard, ResourceLabel, key energy.products.type) | view CardView.cs:_type (TsStatCard)
+[x] panel  - Energy-Sites       | Model EnergyProductsDisplay.TotalSites (Project, key energy.products.totalSites) | view EnergyProductsPage.cs:_totalSitesTile (TsStatCard)
+[x] panel  - With-Solar         | Model EnergyProductsDisplay.WithSolar (Project, key energy.products.withSolar) | view EnergyProductsPage.cs:_withSolarTile (TsStatCard)
+[x] panel  - With-Battery       | Model EnergyProductsDisplay.WithBattery (Project, key energy.products.withBattery) | view EnergyProductsPage.cs:_withBatteryTile (TsStatCard)
+[x] panel  - Backup-Capable     | Model EnergyProductsDisplay.BackupCapable (Project, key energy.products.backupCapable) | view EnergyProductsPage.cs:_backupCapableTile (TsStatCard)
+[x] panel  - GlassPanel12       | per-site card container (Mica glass) | view EnergyProductsPage.CardView.cs:BuildLayout (TsGlassPanel) hosting header + stats + chips + site-info + footer
+[x] panel  - GlassPanel13       | Time-of-Use rate-plan panel | Model EnergyRatePlanDisplay (ProjectSiteInfo) | view CardView.cs:BuildRatePlanPanel/_ratePlanPanel (Border + Update TsButton)
+
+# chart (1) — W3 native chart wrapper (no web canvas)
+[x] chart  - RadialGauge        | backup-reserve gauge | view EnergyProductsPage.CardView.cs:_backupGauge (Components.Charts.TsRadialGauge, Role=Battery, Max=100) | Model EnergySiteInfoDisplay.BackupReservePercent
+
+# data states (4) — implemented for every data source (sites list AND per-site site-info)
+[x] state  - loading            | ViewModel EnergyProductsState.Loading | view EnergyProductsPage.cs:_loadingPanel (TsStatGridSkeleton+TsStatSkeleton) / CardView.cs:_siteInfoLoading (TsStatSkeleton) | test PageViewModel_loading_only_stays_loading
+[x] state  - empty              | EnergyProductsState.Empty | view EnergyProductsPage.cs:_emptyPanel/_emptyState (TsEmptyState) / CardView.cs:_siteInfoEmpty | tests PageViewModel_empty_renders_empty_state_with_no_cards, CardViewModel_empty_renders_site_info_empty_state
+[x] state  - error              | EnergyProductsState.Error | view EnergyProductsPage.cs:_errorBanner (TsAlertBanner Danger) / CardView.cs:_siteInfoError | tests PageViewModel_failure_renders_error, CardViewModel_failure_renders_site_info_error
+[x] state  - success            | EnergyProductsState.Loaded (+ Stale/Offline keep content) | view EnergyProductsPage.cs:_contentPanel | tests PageViewModel_loaded_builds_summary_and_cards, PageViewModel_stale_and_offline_keep_content, CardViewModel_loaded_exposes_site_info_content
+
+# strings (33) — every visible literal resolves via ILocalizer with the web key name; zero hardcoded literals.
+#   Evidence: EnergyProductsProjection.{Project|ProjectCard|ProjectSiteInfo} GetString(<key>, <enUS default>);
+#   coverage asserted by test Projection_resolves_every_required_string_key (RecordingLocalizer).
+[x] string - energy.products.backup          | ProjectCard (capability chip)
+[x] string - energy.products.backupCapable   | Project (summary stat)
+[x] string - energy.products.battery         | ProjectCard (capability chip)
+[x] string - energy.products.capacity        | ProjectCard (stat)
+[x] string - energy.products.charge          | ProjectCard (stat)
+[x] string - energy.products.empty           | Project (page empty state)
+[x] string - energy.products.grid            | ProjectCard (capability chip)
+[x] string - energy.products.lastFetched     | ProjectCard (footer)
+[x] string - energy.products.refresh         | Project (refresh action)
+[x] string - energy.products.solar           | ProjectCard (capability chip)
+[x] string - energy.products.stormActive     | ProjectCard (storm-mode chip)
+[x] string - energy.products.stormWatch      | ProjectCard (capability chip)
+[x] string - energy.products.subtitle        | Project (header)
+[x] string - energy.products.title           | Project (header) + EnergyProductsRegistration.Title
+[x] string - energy.products.totalSites      | Project (summary stat)
+[x] string - energy.products.type            | ProjectCard (stat)
+[x] string - energy.products.unnamed         | ProjectCard (site-name fallback)
+[x] string - energy.products.withBattery     | Project (summary stat)
+[x] string - energy.products.withSolar       | Project (summary stat)
+[x] string - energy.siteInfo.backupReserve   | ProjectSiteInfo (gauge label)
+[x] string - energy.siteInfo.batteryCount    | ProjectSiteInfo (Powerwalls stat)
+[x] string - energy.siteInfo.empty           | ProjectSiteInfo (site-info empty state)
+[x] string - energy.siteInfo.firmware        | ProjectSiteInfo (firmware line)
+[x] string - energy.siteInfo.lastFetched     | ProjectSiteInfo (footer)
+[x] string - energy.siteInfo.operationMode   | ProjectSiteInfo (mode label)
+[x] string - energy.siteInfo.ratedEnergy     | ProjectSiteInfo (Rated Energy stat)
+[x] string - energy.siteInfo.ratedPower      | ProjectSiteInfo (Rated Power stat)
+[x] string - energy.siteInfo.refresh         | ProjectSiteInfo (refresh action)
+[x] string - energy.siteInfo.title           | ProjectSiteInfo (section title)
+[x] string - energy.tou.editPlan             | ProjectSiteInfo (rate-plan edit aria/label)
+[x] string - energy.tou.noPlan               | ProjectSiteInfo (rate-plan fallback)
+[x] string - energy.tou.sectionTitle         | ProjectSiteInfo (rate-plan heading)
+[x] string - energy.tou.updateButton         | ProjectSiteInfo (rate-plan Update button)
+
+PARITY_COVERED=51
+
+Note on the i18n catalog: 31/33 keys already exist in Strings/en/Resources.resw (auto-generated,
+"do not edit by hand"). energy.products.empty and energy.siteInfo.empty are absent there; the
+ILocalizer (Localization.Get / PassthroughLocalizer) returns the verbatim en-US fallback for those,
+matching the web page's inline t(key, default). The resw was NOT hand-edited (no silent drift).
+
+a11y: AutomationProperties.SetName on the page, every TsStatCard, the radial gauge, capability chips,
+the refresh actions and the rate-plan button; Fluent components carry built-in keyboard/pointer +
+light/dark via design tokens (Tokens.xaml) — no hardcoded colors/typography.
+
+=== GATE ===
+# placeholder scan (ADR-011) — templated path is empty (clean), actual feature dir scanned too
+PLACEHOLDER_EXIT=0        (apps/windows/TeslaSync/Features/Battery — nonexistent templated path → clean)
+PLACEHOLDER_COUNT=0       (apps/windows/TeslaSync.App/feature-views/EnergyProductsPage — actual code)
+PLACEHOLDER_COUNT=0       (apps/windows/TeslaSync.App.Tests/FeatureViews/EnergyProductsPageTests.cs)
+
+# build  — dotnet build apps/windows/TeslaSync.sln -c Release
+BUILD_EXIT=0             (Build succeeded. 0 Warning(s) 0 Error(s); TeslaSync.App -> bin/x64/Release/net10.0-windows10.0.19041.0/TeslaSync.App.dll)
+
+# lint   — dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+LINT_EXIT=0             (no formatting changes required; new files passed dotnet format)
+
+# test   — dotnet test (TeslaSync.App.Tests, headless)
+TEST_EXIT=0             (Passed! - Failed: 0, Passed: 26029, Skipped: 0, Total: 26029 — incl. 33 EnergyProductsPageTests)
+
+# (UITests project TeslaSync.App.UITests is WinAppDriver/packaged-app gated and is not part of the
+#  headless unit gate; the W7 predecessors verify the same way.)
+
+=== Honesty Covenant ===
+1 no red-as-green   : all four gate steps run; raw counts/exit codes pasted above.
+2 no scope narrow   : all 13 panels + 1 chart + 4 states + 33 strings implemented (PARITY_COVERED==PARITY_REQUIRED==51).
+3 no skip-and-assume: every data state implemented for BOTH the sites list and the per-site site-info source.
+4 no stubs as final : full implementations; placeholder scan clean. Rate-plan "Update" delegates to the
+                      host via RatePlanUpdateRequested (the TOU editor is a separate component), mirroring
+                      the YearReview CloseRequested seam — not a stub.
+5 no parity shortcut: Fluent-native (TsGlassPanel/TsStatCard/TsRadialGauge/TsBadge/TsEmptyState/skeletons), no web pixel-cloning.
+6 no delegation     : implemented directly; no sub-agents.
+7 no predecessor bypass: followed the feature-views/<Page> code-only-UserControl structure of the 6 done W7 pages.
+8 no commit on red  : committed only after EXIT=0 below.
+9 no silent drift   : path + i18n-catalog reconciliations documented above; auto-generated resw untouched.
+10 EXIT/STATUS terminal lines present.
+
+EXIT=0
+STATUS=DONE

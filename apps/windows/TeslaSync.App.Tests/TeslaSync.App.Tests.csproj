@@ -517,6 +517,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\EnergyFlowPage\EnergyFlowPage.Model.cs" Link="FeatureViews\EnergyFlowPage\EnergyFlowPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnergyFlowPage\EnergyFlowPage.Source.cs" Link="FeatureViews\EnergyFlowPage\EnergyFlowPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnergyFlowPage\EnergyFlowPage.ViewModel.cs" Link="FeatureViews\EnergyFlowPage\EnergyFlowPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EnergyProductsPage\EnergyProductsPage.Model.cs" Link="FeatureViews\EnergyProductsPage\EnergyProductsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EnergyProductsPage\EnergyProductsPage.Source.cs" Link="FeatureViews\EnergyProductsPage\EnergyProductsPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EnergyProductsPage\EnergyProductsPage.ViewModel.cs" Link="FeatureViews\EnergyProductsPage\EnergyProductsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EntriesTable\EntriesTable.Model.cs" Link="FeatureViews\EntriesTable\EntriesTable.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentalImpact.Model.cs" Link="FeatureViews\EnvironmentalImpact.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentalImpact.Source.cs" Link="FeatureViews\EnvironmentalImpact.Source.cs" />
