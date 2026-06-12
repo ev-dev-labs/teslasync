@@ -322,3 +322,4 @@ p3-android/feature-views/A-0072-BatteryHealthSection.prompt.md
 p3-android/feature-views/A-0076-HighlightCard.prompt.md
 p3-android/feature-views/A-0074-ChargingSection.prompt.md
 p3-android/feature-views/A-0069-SummarySlide.prompt.md
+p3-android/feature-views/A-0075-DrivingSection.prompt.md
