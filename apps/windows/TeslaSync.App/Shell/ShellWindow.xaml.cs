@@ -76,6 +76,8 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("TrueCostOwnership", static () => new FeatureViews.Analytics.TrueCostPage());
         // Analytics / Weekly digest page (P2/W7) — parity port of web WeeklyDigestPage at route /weekly-digest.
         _viewModel.PageFactory.Register("WeeklyDigest", static () => new FeatureViews.Analytics.WeeklyDigestPage());
+        // Battery / Degradation page (P2/W7) — parity port of web BatteryDegradationPage at route /battery-degradation.
+        _viewModel.PageFactory.Register("BatteryDegradation", static () => new FeatureViews.Battery.BatteryDegradationPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
