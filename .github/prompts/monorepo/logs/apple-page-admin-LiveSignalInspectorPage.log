@@ -1,0 +1,207 @@
+=== P4-APPLE · P7 · page:admin/LiveSignalInspector (SwiftUI / HIG) ===
+started: 2026-06-12T12:35:00-0700
+host: macOS (Darwin) 26.5; Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint 0.63.x + swiftformat 0.61.1 + xcodegen + pwsh present
+web source: web/src/features/admin/pages/LiveSignalInspectorPage.tsx   (route /admin/live-signals)
+parity unit: page:admin/LiveSignalInspector  (manifest requiredCount=13)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group (the only
+`TeslaSync/*` groups compiled are widget-primitives / dashboard-widgets / feature-views /
+misc-surfaces / shared-surfaces). The repo's real, compiled canonical page home — proven by
+the three sibling DONE admin pages (ApiPlayground, DiskForecast, FleetTelemetryCoverage) — is
+`apps/apple/Sources/Features/Admin/` (`Sources` is a recursive project.yml source path with
+createIntermediateGroups). The page therefore ships at `apps/apple/Sources/Features/Admin/**`
+— the faithful equivalent of the prompt's `Features/Admin`. Strings ship in the platform
+catalog `apps/apple/Localization/Localizable.xcstrings` (an allowed file). This mapping is the
+only deviation from the literal prompt path and is recorded here per covenant #9.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/LiveSignalInspectorPage.swift              (246 LOC) SwiftUI view: header(title+subtitle+LiveIndicator), GlassPanel1 vehicle picker (loading/empty/error/success), GlassPanel2 no-vehicle EmptyState, GlassPanel3 snapshot (Activity icon + PanelTitle + embedded P3 LiveSignalsTable, re-keyed by .id(selection)); adaptive via the embedded table; #if DEBUG previews (loaded/empty/error)
+?? apps/apple/Sources/Features/Admin/LiveSignalInspectorPageModel.swift         (132 LOC) @MainActor @Observable model: InspectorVehicle(label = display_name||vin||`Vehicle ${id}`), LiveSignalInspectorVehicleSource seam (web useVehicles), LiveSignalInspectorLiveSignalsFactory seam (web useVehicleLiveSignals), VehiclesState(loading/empty/error/loaded), load/refresh/selectVehicle (vends per-vehicle LiveSignalsTableModel)
+?? apps/apple/Sources/Features/Admin/LiveSignalInspectorPageModel.Sample.swift  (82 LOC) page/preview default seeds: SampleLiveSignalInspectorVehicleSource (3 vehicles, 3rd exercises VIN fallback) + SampleLiveSignalInspectorLiveSignalsFactory (6-entry snapshot covering number/string/bool/compound/null + bare scalar)
+?? apps/apple/Sources/Features/Admin/LiveSignalInspectorRouteRegistration.swift (30 LOC) registers .liveSignals -> LiveSignalInspectorPage (mirrors FleetTelemetryCoverageRouteRegistration; model built on MainActor + captured)
+?? apps/apple/Tests/Unit/Features/Admin/LiveSignalInspectorPageModelTests.swift (171 LOC) XCTest: 4 vehicles states + selection builds/rebuilds/no-op/clears live model + label fallback chain + sample sources well-formed
+ M apps/apple/Sources/App/AppRoute.swift            + case .liveSignals (pathSegment "live-signals", group .system, systemImage "waveform.path.ecg")
+ M apps/apple/Sources/App/AppRouteParser.swift      + alias "/admin/live-signals" -> .liveSignals (mirrors "/admin/telemetry/coverage")
+ M apps/apple/Sources/TeslaSyncApp.swift            chains LiveSignalInspectorRouteRegistration.registry(base: FleetTelemetryCoverageRouteRegistration.registry(...)) into \.routeHosts
+ M apps/apple/Localization/Localizable.xcstrings    +15 keys (7 required parity + route.liveSignals + 5 native chrome [vehicles.loading/empty/emptyMessage/error, action.retry] + live.on/live.off for the header's shared TSLiveIndicator); JSON validated (8213 total)
+ M apps/parity/apple-ledger.json                    +2 rows: page:admin/LiveSignalInspector × {apple-macos, apple-ios}, status done, 13/13
+
+(generated apps/apple/TeslaSync.xcodeproj and the staged apps/apple/Frameworks/Shared.xcframework
+ are git-ignored — confirmed via `git check-ignore` — and are NOT part of the commit.)
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (project.yml pre-build script, run standalone) ---
+# apps/apple/Scripts/build-shared-xcframework.sh  ->  :core:assembleSharedXCFramework
+BUILD SUCCESSFUL in 8m 15s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "LiveSignalInspector" referenced 30x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 5 new files + 3 edited files) ---
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 5 new files + 3 edited files, repo .swiftlint.yml) ---
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+PLACEHOLDER_ALLOWED=1   [the lone allow marker is in a SIBLING file — FleetTelemetryCoveragePage.swift; none of mine]
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [no TODO/FIXME/Placeholder/Lorem/"not implemented"/fatalError in my shipped code]
+
+--- Executed model logic (real model + sample, Swift 6 strict-concurrency host harness) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx26.5> -target arm64-apple-macos15.0 \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   TeslaSync/feature-views/LiveSignalsTable{,.Models,.Adapter,.Model,.Localization,.Table}.swift \
+#   Sources/Features/Admin/LiveSignalInspectorPageModel{,.Sample}.swift main.swift -o lsiharness   (SWIFTC_EXIT=0)
+27 assertions, 0 failures -> "ALL ASSERTIONS PASSED"
+  initial=.loading + no selection + no live model + !hasSelection;
+  success -> .loaded(3 sample vehicles); selection builds per-vehicle LiveSignalsTableModel + hasSelection;
+  reselect SAME id == no-op (identical instance); reselect DIFFERENT id rebuilds (new instance);
+  clear -> selection nil + live model torn down; empty load -> .empty; failed load -> .error; refresh reloads;
+  InspectorVehicle.label: displayName | vin | `Vehicle ${id}` incl. empty-string fallbacks;
+  sample factory -> 6 entries, unique names
+HARNESS_EXIT=0
+
+--- View type-check against the REAL P2 tokens + P3 components (Swift 6 strict concurrency, BOTH idioms) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/{Cards,Typography,Buttons,Badges}.swift Sources/Components/Feedback/{States,Banners}.swift \
+#   Sources/Components/DataDisplay/StatusIndicators.swift \
+#   TeslaSync/feature-views/LiveSignalsTable{,.Models,.Adapter,.Model,.Localization,.Table}.swift \
+#   Sources/App/{AppRoute,RouteHostRegistry,AppRouteParser}.swift \
+#   Sources/Features/Admin/LiveSignalInspector{PageModel,PageModel.Sample,Page,RouteRegistration}.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0
+  [Compiles my page + model + sample + registration + the AppRoute/parser edits against the ACTUAL
+   TSGlassPanel/TSPageTitle/TSPanelTitle/TSEmptyState/TSSpinner/TSButton/TSLiveIndicator + the P3
+   LiveSignalsTable feature surface + Color.TS/Font.TS/TSSpacing/TSRadius/tsGlassPanel/AppRouteHostRegistry
+   sources on BOTH idioms (ADR-002/006). The embedded LiveSignalsTable.Table.swift exercises the
+   #if os(iOS) horizontalSizeClass compact-card vs. columnar-Grid branch on the iOS pass.]
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT=65  [** BUILD FAILED ** — BLOCKED by ONE PRE-EXISTING, OUT-OF-SCOPE error; ZERO errors in any of my files — see note]
+TEST_EXIT=(not reached)  [the test bundle hosts on the app target, blocked by the same out-of-scope error;
+                          model logic is instead proven GREEN by the executed harness (27/27) above]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not compile at this HEAD due to a defect in a sibling
+surface OUTSIDE this artifact's allowed files. grep of the build log: total `error:` lines = 1;
+unique erroring file =
+  TeslaSync/shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+      error: escaping closure captures non-escaping parameter 'content'
+This is the SAME systematic `glass(@ViewBuilder _ content: () -> some View)` bug class the
+predecessor DiskForecast / ApiPlayground / FleetTelemetryCoverage logs documented (57 sibling
+shared-surfaces files carry the helper). NONE of the diagnostics are in my files (grep of the
+build log for LiveSignalInspector*, AppRoute.swift, AppRouteParser.swift, TeslaSyncApp.swift ->
+zero diagnostics). My files' correctness is proven instead by the isolated Swift 6 strict-
+concurrency type-check (0/0 on macOS+iOS) and the executed model harness (27/27) — the same
+host-harness methodology the peer p4-apple DONE logs use when the app target is blocked by an
+out-of-scope sibling. No out-of-scope file was edited (git status above is clean).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=13
+================================================================================
+# evidence = file `symbol` (page paths under apps/apple/Sources/Features/Admin/)
+
+[x] panel  — GlassPanel1   LiveSignalInspectorPage.swift `controlsPanel` -> TSGlassPanel { controlsBody } switching the vehicles source loading(TSSpinner)/empty(TSEmptyState)/error(retry)/success(`vehiclePicker` native menu Picker, web <Select>)
+[x] panel  — GlassPanel2   LiveSignalInspectorPage.swift `noVehiclePanel` -> TSGlassPanel { TSEmptyState(noVehicle.title/message, "dot.radiowaves.left.and.right") } shown while selectedVehicleID==nil (web second GlassPanel)
+[x] panel  — GlassPanel3   LiveSignalInspectorPage.swift `snapshotPanel` -> TSGlassPanel { "waveform.path.ecg" + TSPanelTitle(panels.snapshot) + LiveSignalsTable(model:).id(selection) } (web third GlassPanel + LiveSignalsTable)
+[x] state  — loading       vehicles: LiveSignalInspectorPageModel.VehiclesState.loading -> `controlsBody` TSSpinner("admin.liveSignals.vehicles.loading"). live: LiveSignalsTableModel.Phase.loading -> embedded table "Loading…"
+[x] state  — empty         vehicles: VehiclesState.empty -> `emptyVehicles` TSEmptyState("vehicles.empty"). live: LiveSignalsTableModel.Phase.empty -> ContentUnavailableView("No live signals cached")
+[x] state  — success       vehicles: VehiclesState.loaded -> `vehiclePicker` (sentinel + ForEach(model.vehicles)). live: LiveSignalsTableContent (sortable/filterable snapshot table)
+[x] string — admin.liveSignals.controls.selectVehicle  LiveSignalInspectorPage.swift `vehiclePicker` -> Text("admin.liveSignals.controls.selectVehicle").tag(Int64?.none) (the <Select> sentinel)
+[x] string — admin.liveSignals.controls.vehicleAria    LiveSignalInspectorPage.swift `vehiclePicker` + `controlsPanel` -> .accessibilityLabel(Text("admin.liveSignals.controls.vehicleAria")) (web Select aria-label)
+[x] string — admin.liveSignals.noVehicle.message       LiveSignalInspectorPage.swift `noVehiclePanel` -> TSEmptyState(message: "admin.liveSignals.noVehicle.message")
+[x] string — admin.liveSignals.noVehicle.title         LiveSignalInspectorPage.swift `noVehiclePanel` -> TSEmptyState(title: "admin.liveSignals.noVehicle.title")
+[x] string — admin.liveSignals.pageTitle               LiveSignalInspectorPage.swift `header` -> TSPageTitle("admin.liveSignals.pageTitle") (+ route.liveSignals nav title)
+[x] string — admin.liveSignals.panels.snapshot         LiveSignalInspectorPage.swift `snapshotPanel` -> TSPanelTitle("admin.liveSignals.panels.snapshot")
+[x] string — admin.liveSignals.subtitle                LiveSignalInspectorPage.swift `header` -> Text("admin.liveSignals.subtitle")
+PARITY_COVERED=13
+
+All 13 panels/states/strings resolve from the bound @Observable LiveSignalInspectorPageModel (vehicles
+source) + the embedded P3 LiveSignalsTableModel (live source) and the Localizable.xcstrings catalog. Web
+key names preserved verbatim. Both declared data sources (useVehicles, useVehicleLiveSignals) implement
+loading/empty/success (+ error). The web LiveIndicator action is reproduced with the shared TSLiveIndicator
+in the header (gated on a selection), surfacing the live source's >2-min staleness via the embedded table's
+connectivity banner (ADR-013). SI converters: N/A on this surface — the live snapshot renders raw signal
+values verbatim exactly as the web LiveSignalsTable does (no unit-bearing display fields).
+
+NATIVE DEVIATIONS (recorded per covenant #9):
+ - Vehicle dropdown uses a native menu `Picker` (HIG) rather than `TSSelect`, because `TSSelect`'s options
+   are `LocalizedStringKey`-typed and the vehicle labels are dynamic runtime data (display_name/vin); the
+   Picker carries the web aria-label and the localized "select vehicle…" sentinel.
+ - +5 native chrome keys (vehicles.loading/empty/emptyMessage/error, action.retry) give the vehicles
+   source's loading/empty/error states real copy (the web page only maps `vehicles.data ?? []`); the
+   manifest requires those states be implemented for every data source.
+ - +live.on/live.off added for the shared TSLiveIndicator (web LiveIndicator) used in the header — they
+   were absent from the catalog and benefit every surface using the P3 indicator.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild=65) is a
+                       pre-existing OUT-OF-SCOPE single error, labelled as such, never recoloured.
+ 2 No scope narrowing: all 3 panels, all 3 declared states for BOTH data sources, and the 7 strings are
+                       implemented; the web LiveIndicator action + adaptive embedded table are reproduced.
+ 3 No skip-and-assume: the web page + its LiveSignalsTable child + useVehicles/useVehicleLiveSignals hooks
+                       were read end-to-end; PageContainer title/subtitle/action + the 3 GlassPanels +
+                       the select/no-vehicle/snapshot flow were reproduced.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete code.
+ 5 No parity shortcuts: each state renders distinctly; selection re-keys the live model exactly as the web
+                       re-keys useVehicleLiveSignals; strings = web keys verbatim.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface, project.yml, or other owners' files; reused the
+                       P3 LiveSignalsTable component as-is. git status is clean (only my deliverables).
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — xcframework(0), xcodegen(0), swiftformat(0),
+                       swiftlint --strict(0/8), placeholder(0), harness(27/27), view type-check macOS(0/0)
+                       + iOS(0/0). The only RED is the documented pre-existing out-of-scope sibling, DEFERRED
+                       to its owner / the P99 integration gate (forbidden to commit-fix per #6/#7).
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI LiveSignalInspectorPage shipped at parity with the web source: a pure
+@Observable state holder (ADR-004 — no networking in the view) that owns the vehicles source state
+(web useVehicles, loading/empty/error/success over an injectable seam) and vends a per-vehicle
+LiveSignalsTableModel (web useVehicleLiveSignals) the snapshot panel embeds and re-keys on selection;
+the three web GlassPanels (vehicle-picker controls, no-vehicle prompt, live snapshot) rendered with the
+P2 tokens + P3 shared components (TSGlassPanel/TSEmptyState/TSSpinner/TSButton/TSPageTitle/TSPanelTitle
+/TSLiveIndicator) and the existing P3 LiveSignalsTable feature surface — no hand-rolled glass; every
+visible string from Localizable.xcstrings with the web key names; adaptive across macOS/iPad/iPhone via
+the embedded table; deep-linkable via the new .liveSignals route (AppRouteParser resolves
+/admin/live-signals). Verified on BOTH idioms by isolated Swift 6 strict-concurrency type-checks (0/0)
+and an executed model harness (27/27), with the Shared.xcframework built GREEN. The full xcodebuild
+scheme is RED ONLY due to ONE pre-existing, out-of-scope sibling error
+(AIGeofenceAwareAutomationSuggestions.swift:141, escaping-closure bug class), with ZERO diagnostics in
+any of my files.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin apps/apple/Tests/Unit/Features/Admin \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-LiveSignalInspectorPage.log
+  git commit -m "feat(apps/apple): LiveSignalInspectorPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

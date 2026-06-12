@@ -1,6 +1,171 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "admin.liveSignals.action.retry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry"
+          }
+        }
+      }
+    },
+    "admin.liveSignals.controls.selectVehicle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select vehicle…"
+          }
+        }
+      }
+    },
+    "admin.liveSignals.controls.vehicleAria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle"
+          }
+        }
+      }
+    },
+    "admin.liveSignals.noVehicle.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a vehicle from the dropdown above to start streaming its live signal cache."
+          }
+        }
+      }
+    },
+    "admin.liveSignals.noVehicle.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a vehicle"
+          }
+        }
+      }
+    },
+    "admin.liveSignals.pageTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Signal Inspector"
+          }
+        }
+      }
+    },
+    "admin.liveSignals.panels.snapshot" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live snapshot"
+          }
+        }
+      }
+    },
+    "admin.liveSignals.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Realtime view of the Redis-cached live signal snapshot. Refreshes every second while this tab is in the foreground."
+          }
+        }
+      }
+    },
+    "admin.liveSignals.vehicles.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No vehicles found"
+          }
+        }
+      }
+    },
+    "admin.liveSignals.vehicles.emptyMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a vehicle to TeslaSync to inspect its live signal cache."
+          }
+        }
+      }
+    },
+    "admin.liveSignals.vehicles.error" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't load vehicles"
+          }
+        }
+      }
+    },
+    "admin.liveSignals.vehicles.loading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading vehicles…"
+          }
+        }
+      }
+    },
+    "live.off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Offline"
+          }
+        }
+      }
+    },
+    "live.on" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live"
+          }
+        }
+      }
+    },
+    "route.liveSignals" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live Signals"
+          }
+        }
+      }
+    },
     "coverage.pageTitle" : {
       "extractionState" : "manual",
       "localizations" : {
