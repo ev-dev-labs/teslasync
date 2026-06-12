@@ -626,3 +626,4 @@ p2-windows/shared-meaningful/W-0127-MaintenanceBanner.prompt.md
 p2-windows/shared-meaningful/W-0129-NewVersionBanner.prompt.md
 p2-windows/shared-meaningful/W-0130-OfflineBanner.prompt.md
 p2-windows/shared-meaningful/W-0133-QueryError.prompt.md
+p2-windows/shared-meaningful/W-0135-ReleaseNotes.prompt.md
