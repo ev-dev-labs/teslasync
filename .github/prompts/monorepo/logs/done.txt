@@ -472,3 +472,4 @@ p3-android/feature-views/A-0226-CommandTile.prompt.md
 p3-android/feature-views/A-0222-SessionList.prompt.md
 p3-android/feature-views/A-0227-FavoritesBar.prompt.md
 p3-android/feature-views/A-0225-CommandSearch.prompt.md
+p3-android/feature-views/A-0228-FSMHealthPanel.prompt.md
