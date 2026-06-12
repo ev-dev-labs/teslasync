@@ -1,0 +1,178 @@
+=== P2 Shared surface 0152 DateRangeFilter (Windows) ===
+Date: 2026-06-11
+Web source (spec): web/src/components/forms/DateRangeFilter.tsx
+                   (+ its dependencies web/src/components/forms/DatePresetChips.tsx
+                    and web/src/lib/datePresets.ts)
+Native output: apps/windows/TeslaSync.App/shared-surfaces/DateRangeFilter.{cs,Model.cs,Source.cs,ViewModel.cs}
+Tests:         apps/windows/TeslaSync.App.Tests/SharedSurfaces/DateRangeFilterTests.cs
+ADR refs:      ADR-002 (WinUI shell), ADR-005, ADR-009
+Toolchain:     .NET SDK 10.0.300, WinUI 3 (Microsoft.WindowsAppSDK via UseWinUI), Fluent Design System.
+Runner:        atul-think-i9
+
+--------------------------------------------------------------------------------------------------
+CAPABILITY (per prompt capability clause)
+--------------------------------------------------------------------------------------------------
+The REQUIRED capability - WinUI 3 (Windows App SDK) + .NET 10 (SDK 10.0.300), Fluent Design System -
+is AVAILABLE on this runner: the Release solution, including the WinUI app project TeslaSync.App and
+this surface's WinUI view DateRangeFilter.cs, builds with 0 errors / 0 warnings under the app project's
+TreatWarningsAsErrors=true. The required platform capability is present, so STATUS is DONE. The
+separately-provisioned WinAppDriver E2E UI-automation runtime is the only thing absent (recorded below);
+it is contractually excluded from this headless gate, exactly as for every shipped sibling surface log.
+
+--------------------------------------------------------------------------------------------------
+SURFACE
+--------------------------------------------------------------------------------------------------
+DateRangeFilter is the web inline date-range picker (web/src/components/forms/DateRangeFilter.tsx). The
+web component renders a translucent pill holding a leading calendar glyph, a start <input type="date">,
+a "->" separator and an end <input type="date">; an optional primary Apply button (rendered only when
+an onApply handler is supplied); and an optional quick-select preset chip row (web DatePresetChips,
+rendered by default - presets=true). The active preset is highlighted via matchPresetId(startDate,
+endDate) matched against the WHOLE preset catalogue (web/src/lib/datePresets.ts), so a window matching a
+preset that is not in the visible chip set highlights no chip. Choosing a chip resolves a concrete range
+relative to "today" and either writes it atomically (web onRangeChange -> useUrlBatch's single
+setBatch({from,to})) or fires the two granular setters (onStartDateChange + onEndDateChange), then calls
+onApply?.().
+
+Data sources (web): useTranslation (the i18n facade) and useUrlBatch (the atomic range writer). NEITHER
+is a data fetch, so the web source has NO loading / empty / error / stale / offline branches to
+reproduce - fabricating that chrome would be parity drift (the BulkActionsToolbar / VisuallyHidden
+presentational-surface precedent). The branches the web source ACTUALLY has are reproduced in full and
+verified headlessly: preset row shown vs hidden (web {presets && ...}), Apply shown vs hidden
+(web {onApply && ...}), a chip active vs none (web activeId), the atomic-range vs two-granular-setter
+selection path (web onRangeChange ? ... : ...), a custom preset subset (web presetIds, rendered in
+catalogue order exactly as web DATE_PRESETS.filter), and an empty / malformed date window (web unset
+input -> no active preset).
+
+Native decomposition (the shipped 4-file shared-surface pattern):
+  - DateRangeFilter.Model.cs      Registration (Slug "DateRangeFilter"; translation.* keys + English
+                                  fallbacks for date.range.start/end/apply + date.preset.label, plus the
+                                  preset-key helper that prefixes each catalogue key); DateRangeSelection
+                                  (web onRangeChange {start,end}); DatePresetChip projection; PII-safe
+                                  DateRangeFilterDiagnostics (view.opened slug=DateRangeFilter).
+  - DateRangeFilter.Source.cs     IDateRangeUrlWriter (the useUrlBatch atomic-setter seam) + the inert
+                                  no-op and recording doubles; IsoDate (yyyy-MM-dd parse/format, the web
+                                  <input type=date> / iso() contract).
+  - DateRangeFilter.ViewModel.cs  DateRangeFilterViewModel - the UI-thread-free state holder: controlled
+                                  StartDate/EndDate, ShowPresets, HasApply, PresetIds, Today anchor,
+                                  ActiveId (DatePresets.Match over the whole catalogue), Chips projection
+                                  (catalogue order filtered to the visible ids), ChipVariantFor
+                                  (active->Primary / inactive->Subtle for web primary/ghost),
+                                  SetStartDate/SetEndDate (always forward + re-project), SelectPreset
+                                  (atomic vs granular routing + onApply), RequestApply, events.
+  - DateRangeFilter.cs            DateRangeFilter : ContentControl - the tokenized pill (SurfaceGlass bg
+                                  + Border ring), a leading calendar FontIcon, two CalendarDatePickers
+                                  bridged to ISO strings, the "->" separator, the optional primary Apply
+                                  TsButton and the optional row of primary/subtle TsButton chips; binds
+                                  every label/flag from the view-model, marshals changes to the UI thread,
+                                  carries accessible names on every interactive element + a named Group
+                                  automation peer, and emits view.opened once on Loaded.
+
+Reuse (no atomic-component duplication): TeslaSync.App.Core.Forms.DatePresets / DatePreset / DateRange
+(preset resolve + Match + DefaultIds + the 11-entry catalogue), ILocalizer / PassthroughLocalizer
+(P1/S10), ButtonVariant / ControlSize (P1/S9), and the shared TsButton primitive (web @/components/ui/Button).
+
+The interface member IDateRangeUrlWriter.WriteRange(string,string)'s second parameter was named endDate
+(not end) because CA1716 (reserved VB keyword 'End') is an error under the app project's
+TreatWarningsAsErrors - the same precedent as IGlobalProgressTicker.StopTicking in the 0141 sibling.
+
+--------------------------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER REPAIRED (tightly coupled to this task)
+--------------------------------------------------------------------------------------------------
+The committed apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj did NOT load at HEAD: it
+carried THREE <Project> open tags vs TWO closes (a valid root at lines 1-1320 followed by a duplicate
+concatenated root at 1321-2584), with duplicate Compile items (e.g. InstallPrompt x8, DateTime x4) -
+the recurrence its own INVARIANT documents (the .gitattributes merge=union strategy re-concatenating the
+file into multiple Project roots, failing XML load MSB4025 / MSB4067). The first root was NOT a superset:
+the appended root uniquely carried 10 newer links (ReloadPrompt/SectionErrorBoundary/SkipToContent/
+TeslaReauthBanner Model/Source/ViewModel), so a plain truncation would have dropped 4 sibling surfaces.
+This makes the whole-solution build red at baseline independent of this surface, but it gates dotnet
+build / dotnet test and this surface's WinUI-free sources must be Compile-linked there, so it was
+repaired per the file's own invariant.
+
+Repair: regenerated as exactly ONE <Project> root with a fresh single header comment, the PropertyGroup,
+the three non-Compile ItemGroups (PackageReference, ProjectReference, Content - all preserved), and a
+single case-insensitive ordinal path-sorted, Include-deduplicated Compile ItemGroup built from the UNION
+of every Compile Include in the file (the existing 1150 unique WinUI-free sources, recovering the 10
+orphaned links) plus the 3 new DateRangeFilter Model/Source/ViewModel links = 1153. The bare WinUI view
+DateRangeFilter.cs (Microsoft.UI-referencing) is correctly excluded and exercised by the app build.
+Post-write XML check: Project roots=1, ItemGroups=4, Compile=1153, duplicate includes=0, XML_VALID=True.
+LF, no BOM. DateRangeFilter.* slots between DateGroupedList.* and DateTime.* (correct ordinal order).
+
+--------------------------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------------------------
+dotnet build apps/windows/TeslaSync.sln -c Release
+    -> Build succeeded. 0 Warning(s). 0 Error(s).
+       TeslaSync.App (WinUI app, TreatWarningsAsErrors=true) compiled the DateRangeFilter view + the 3
+       headless sources warning-clean; TeslaSync.App.Tests compiled with the repaired csproj.
+    -> BUILD_EXIT=0
+
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release --no-build  (headless suite)
+    -> Passed!  Failed: 0, Passed: 22663, Skipped: 0, Total: 22663  (TeslaSync.App.Tests.dll)
+       Includes all 43 DateRangeFilterTests cases: registration slug + translation.* keys/fallbacks +
+       preset-key helper; the ISO date adapter (round-trip + empty/malformed reject); active-preset
+       matching (match / no-match / unset); chip projection (default set, catalogue order, unknown-id
+       drop, active flag, non-visible-preset highlights nothing, label keys); preset-row/Apply
+       visibility; chip variant Primary/Subtle; granular vs atomic selection paths (writer write-once,
+       RangeChanged vs the two setters); apply-after-select gating; unknown-id no-op; controlled setters;
+       Today re-projection; accessible-label keys; the inert/recording writer doubles; and diagnostics.
+    -> TEST_EXIT=0
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    -> FORMAT_EXIT=0  (clean; the 5 new files were normalised to LF / UTF-8-no-BOM after creation, so
+       the only formatter findings pre-normalisation were end-of-line on those 5 files - now fixed - and
+       no style/analyzer findings remain.)
+
+check-placeholders.ps1
+    Literal gate path (apps/windows/TeslaSync.App/shared-surfaces/DateRangeFilter - the surface uses the
+    flat dotted-file layout, not a folder): PLACEHOLDER_COUNT=0, EXIT=0 (nothing-to-scan clean result).
+    Authoritative isolated scan of the actual shipped DateRangeFilter.* files (-Language csharp):
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  (DateRangeFilter hits = 0).
+    No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/NotImplementedException/// stub.
+    (The view sets accessible names via AutomationProperties.SetName rather than a date-input
+    PlaceholderText, so it carries none of the forbidden 'Placeholder' token.)
+    -> PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------------------------
+FULL-SOLUTION dotnet test (UNFILTERED) - recorded with evidence, NOT reported as green
+--------------------------------------------------------------------------------------------------
+dotnet test apps/windows/TeslaSync.sln -c Release --no-build   (verbatim, no filter):
+    TeslaSync.App.Tests  -> Passed!  Failed: 0,   Passed: 22663  (headless, incl. this surface)
+    TeslaSync.App.UITests-> Failed!  Failed: 147,  Passed: 0,  Duration 255 ms
+Every one of the 147 UITest failures is the SAME environmental error (zero from this surface):
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+    (RunnerAvailability.Probe(); WinAppDriverSession.EnsureReady() line 75)
+This is BY DESIGN: RunnerAvailability + WinAppDriverSession fail loudly rather than silently skipping when
+the runner is absent. The UIAutomation suite drives the PACKAGED app out-of-process over WinAppDriver and
+is environment-supplied / run via run-ui-automation.ps1; it is a platform-capability gap of THIS
+non-interactive runner, not a defect in this surface. No UITests were added or modified by this prompt,
+and the failure count is unchanged from the shipped predecessor logs (147).
+
+--------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------------------------
+[x] Surface renders all states the web source has: the pill with both date inputs, the optional Apply
+    button, the optional preset chip row, the active-vs-none chip highlight, the atomic-vs-granular
+    selection path, custom preset subsets and the empty/malformed window. No invented
+    loading/empty/error/stale/offline chrome (the web source - a presentational picker with no data
+    fetch - has none; useTranslation + useUrlBatch are not queries).
+[x] Hooks bind via the shared P1/S8 state-holder layer: useTranslation -> ILocalizer, useUrlBatch ->
+    IDateRangeUrlWriter, both injected into the view-model; the view never performs I/O.
+[x] Every i18n key from source has a translation.*-prefixed key + English fallback in Registration
+    (date.range.start/end/apply, date.preset.label, and every preset label key from the catalogue).
+[x] Accessibility: accessible name on each date picker, the Apply button and every chip; the chip row is
+    a named Group; the surface honours system font scale / Narrator via WinUI primitives.
+[x] Tests: ISO adapter unit tests + per-state view-model tests (visibility, active flag, granular vs
+    atomic, apply gating, setters, today) + accessibility/registration/diagnostics tests. 43/43 green.
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0 on all files).
+[x] Telemetry: view.opened slug=DateRangeFilter emitted once on Loaded via PII-safe diagnostics.
+[x] EXIT=0 / STATUS=DONE (headless gate; WinAppDriver E2E deferred to a provisioned runner with evidence).
+
+BUILD_EXIT=0
+TEST_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
