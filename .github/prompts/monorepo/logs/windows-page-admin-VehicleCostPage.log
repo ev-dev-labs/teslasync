@@ -1,0 +1,165 @@
+=== p2-windows · W7 · page:admin/VehicleCost (WinUI 3 / Fluent) ===
+Parity unit : page:admin/VehicleCost   kind=page   web route=/admin/vehicle-cost
+Web source  : web/src/features/admin/pages/VehicleCostPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ApiLogsPage / FeedbackQueuePage / SchemaDriftPage do. The generated prompt's idealized "VehicleCostPage.xaml +
+  VehicleCostPageViewModel.cs under TeslaSync/Features/Admin" is mapped onto these real conventions; the surface
+  registers itself with the W4 ShellPageFactory by route name ("VehicleCost", already in RouteTable.cs L210 →
+  /admin/vehicle-cost) via ShellWindow.xaml.cs.
+- Data binding (ADR-004): the manifest data source is useVehicleCost (GET /admin/observability/vehicle-cost
+  [limit, since]). The view-model derives the look-back `since` from the selected window (web
+  since = now − windowDays·24h) and reads through an injected IVehicleCostFeed; the default EmptyVehicleCostFeed
+  resolves the empty state, and the generated-client-backed VehicleCostClientFeed (VehicleCostPage.Source.cs) binds
+  to the generated OpenAPI contract client operation get_api_v1_admin_observability_vehicle_cost, passing the
+  snake_case `limit`=100 + `since` (RFC-3339/ISO-8601 UTC, matching Date.toISOString()) query params, asserted in
+  tests via the FakeApiClient. The route is confirmed in internal/api/router.go ("GET /admin/observability/vehicle-cost")
+  and registered in internal/handler/v1/admin_observability_handler.go (h.VehicleCost). No HTTP touches the view. A
+  non-success response surfaces as ApiException; the view-model maps StatusCode==503 to the distinct
+  subsystem-unavailable banner (web `subsystemMissing`) and every other failure to the generic InfoBar+Retry.
+- The response is wrapped by the platform httputil.Respond envelope as {data:{vehicles,totals}} (the web hook unwraps
+  via fetchEnvelope); VehicleCostSnapshot.FromJson unwraps the {data:…} envelope before reading the snake_case
+  vehicles[]/totals so the wire shape round-trips losslessly.
+- The web page renders its states INSIDE the PageContainer body (PageContainer is passed only `query=` for the
+  freshness chip, not loading/error/empty), so the native port reproduces them as visible Fluent regions per ADR-006:
+  loading -> TsStatGridSkeleton(4)+TsTableSkeleton shimmer; 503 subsystem-missing -> TsAlertBanner(Warning)
+  notConfigured; generic error -> TsQueryError (InfoBar-equivalent) + Retry; success/empty content -> the four
+  fleet-total TsStatCards + the per-vehicle breakdown TsGlassPanel (window TsSelect + either the shared TsDataTable
+  or, when no vehicle ingested, a TsEmptyState). The totals cards + window selector render in BOTH success and empty
+  (matching the web, which always renders FleetTotalsCards + the GlassPanel and only swaps the table body for the
+  EmptyState). Never a blank region.
+- The window selector (web setWindowDays / WINDOW_OPTIONS 1/7/30/90 d, default 30) maps to TsSelect; changing it
+  calls VehicleCostPageViewModel.SetWindowAsync(days), which re-projects the selected option + the "Window: Nd"
+  sublabel immediately and reloads with the new derived `since`.
+- SI units N/A (no unit-bearing physical fields on this admin surface — row counts, byte estimates, rows/min ingest
+  rate, DLQ failure counts only); counts format through the shared NumberFormatting port at 0 decimals (web
+  fmtNumber) / the rate at 1 decimal (web fmtNumber(v,1)), bytes through FormatBytes (web formatBytes binary
+  units + toFixed(1)) and the last-seen stamp through FormatRelative (web formatRelative tiers + absolute MMM d,
+  yyyy fallback via DateTimeFormatting), all at the display boundary.
+- All 24 manifest i18n keys were added verbatim (web key names) to Strings/en/Resources.resw as
+  translation.admin.vehicleCost.* (23) + the reused translation.admin.subsystem.unavailableTitle (already present),
+  alphabetically placed between admin.systemStatus.* and admin.xray.*; the four window-option labels
+  (window1d/7d/30d/90d) were added too so no literal is hardcoded (resolved but not counted in the 33). The surface
+  resolves every label through the ILocalizer facade. The ar/he catalogs lag en by design (translations land later);
+  the app falls back to the English default via ILocalizer until translated.
+- Microsoft.UI-free Model/Source/ViewModel links were added to TeslaSync.App.Tests.csproj (the bare WinUI view is
+  excluded — it uses Microsoft.UI). JsonReadHelpers (internal, ApiLogsPage.Model.cs, same namespace) is reused for
+  null-tolerant parsing.
+- Build-time defects found + fixed in this surface's own new code (no red shipped): (1) the view omitted
+  `using TeslaSync.App.Components.DataDisplay;` (TsStatCard) and `using TeslaSync.App.Core.Feedback;` (CalloutVariant),
+  a CS0246 that cascaded into a XAML-compiler WMC9999 internal crash with spurious "Unknown type" noise on unrelated
+  components — proven environmental-after-my-change via a pristine `git stash` build (0 errors) then reproduced
+  deterministically as the real CS0246; (2) the app project enforces CA1859 as an error, so three private helpers
+  (BuildWindowOptions / BuildColumns / BuildRows) were given concrete List<T> return types. Both fully repaired; the
+  app + solution now build 0 errors.
+
+=== PARITY ===
+PARITY_REQUIRED=33
+
+# Panels (5) — every web region reproduced as a Fluent Card/Mica region, bound to the state holder
+[x] panel  - GlassPanel1        -> per-vehicle breakdown panel: VehicleCostPage.cs#BuildContent (_breakdownPanel
+             TsGlassPanel) hosting _breakdownTitle PanelTitle + the window TsSelect + _tableHost (TsDataTable or
+             TsEmptyState); web VehicleCostPage.tsx GlassPanel; gated by VehicleCostDisplay.ShowContent
+             (VehicleCostProjection.Project showContent); test State_success_when_vehicles_present +
+             Breakdown_panel_has_title_and_six_columns
+[x] panel  - Total-rows         -> _totalRowsCard TsStatCard (VehicleCostPage.cs#Render); projection
+             TotalRowsLabel/TotalRowsValue(FormatCount)/TotalRowsSub(windowSub); web FleetTotalsCards "Total rows";
+             test Totals_cards_project_labels_values_and_sublabels + Totals_window_sublabel_follows_selected_window
+[x] panel  - Total-bytes-est    -> _totalBytesCard TsStatCard; projection
+             TotalBytesLabel/TotalBytesValue(FormatBytes)/TotalBytesSub(bytesSub); web FleetTotalsCards
+             "Total bytes (est.)"; test Totals_cards_project_labels_values_and_sublabels
+[x] panel  - Rate-rows-min-24h  -> _totalRateCard TsStatCard; projection
+             TotalRateLabel/TotalRateValue(FormatRate)/TotalRateSub(rateSub); web FleetTotalsCards
+             "Rate (rows/min, 24h)"; test Totals_cards_project_labels_values_and_sublabels + FormatRate_matches_web
+[x] panel  - DLQ-failures-24h   -> _totalFailuresCard TsStatCard; projection
+             TotalFailuresLabel/TotalFailuresValue(FormatCount)/TotalFailuresSub(failuresSub); web FleetTotalsCards
+             "DLQ failures (24h)"; test Totals_cards_project_labels_values_and_sublabels
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading            -> VehicleCostState.Loading + VehicleCostDisplay.ShowLoading; rendered
+             VehicleCostPage.cs#_loadingSkeleton (TsStatGridSkeleton(4) + TsTableSkeleton shimmer); test
+             State_loading_when_query_in_flight
+[x] state  - empty              -> VehicleCostState.Empty + ShowContent && ShowEmptyState; _tableHost renders
+             TsEmptyState (emptyTitle+emptyMessage) inside _breakdownPanel while the four totals cards + window
+             selector still render (web vehicles.length===0 EmptyState); test
+             State_empty_when_resolved_with_no_vehicles + ViewModel_empty_snapshot_is_the_empty_state
+[x] state  - error              -> VehicleCostState.Error: (a) 503 subsystem-missing -> ShowSubsystemUnavailable ->
+             _subsystemBanner (TsAlertBanner Warning, InfoBar-equivalent, notConfigured) [test
+             State_error_subsystem_unavailable_is_the_503_banner + ViewModel_http_503_is_the_subsystem_unavailable_branch];
+             (b) generic failure -> ShowError -> _errorState (TsQueryError + Retry via ActionInvoked -> RefreshAsync)
+             [test State_error_generic_failure_shows_retry + ViewModel_feed_failure_is_the_generic_error_state]
+[x] state  - success            -> VehicleCostState.Success + ShowTable; _tableHost renders _table (TsDataTable, the
+             six Vehicle/Rows/Bytes/Rate/DLQ/Last-seen columns over the rows) + totals cards; test
+             State_success_when_vehicles_present + ViewModel_loads_vehicles_into_the_success_state + Table_rows_format_every_cell
+
+# Strings (24) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - admin.subsystem.unavailableTitle  -> VehicleCostProjection.Project GetString("admin.subsystem.unavailableTitle","Subsystem unavailable") -> SubsystemTitle
+[x] string - admin.vehicleCost.bytesSub        -> GetString("admin.vehicleCost.bytesSub","96 bytes/row average") -> TotalBytesSub
+[x] string - admin.vehicleCost.colBytes        -> GetString("admin.vehicleCost.colBytes","Bytes (est.)") -> Columns[bytes].Header
+[x] string - admin.vehicleCost.colFailures     -> GetString("admin.vehicleCost.colFailures","DLQ (24h)") -> Columns[failures].Header
+[x] string - admin.vehicleCost.colLastSeen     -> GetString("admin.vehicleCost.colLastSeen","Last seen") -> Columns[last].Header
+[x] string - admin.vehicleCost.colRate         -> GetString("admin.vehicleCost.colRate","Rate (rows/min, 24h)") -> Columns[rate].Header
+[x] string - admin.vehicleCost.colRows         -> GetString("admin.vehicleCost.colRows","Rows") -> Columns[rows].Header
+[x] string - admin.vehicleCost.colVehicle      -> GetString("admin.vehicleCost.colVehicle","Vehicle") -> Columns[vehicle].Header
+[x] string - admin.vehicleCost.emptyMessage    -> GetString("admin.vehicleCost.emptyMessage","No vehicles have ingested signals during this window.") -> EmptyMessage
+[x] string - admin.vehicleCost.emptyTable      -> GetString("admin.vehicleCost.emptyTable","No vehicle cost data") -> EmptyTableMessage (TsDataTable.EmptyMessage)
+[x] string - admin.vehicleCost.emptyTitle      -> GetString("admin.vehicleCost.emptyTitle","No vehicle cost data") -> EmptyTitle
+[x] string - admin.vehicleCost.failuresSub     -> GetString("admin.vehicleCost.failuresSub","Codec or writer rejections") -> TotalFailuresSub
+[x] string - admin.vehicleCost.notConfigured   -> GetString("admin.vehicleCost.notConfigured","The ingest-x-ray subsystem is not configured …") -> SubsystemMessage
+[x] string - admin.vehicleCost.pageTitle       -> VehicleCostProjection.Project / VehicleCostRegistration.Title GetString("admin.vehicleCost.pageTitle","Vehicle Ingest Cost") -> Title
+[x] string - admin.vehicleCost.rateSub         -> GetString("admin.vehicleCost.rateSub","Across all vehicles") -> TotalRateSub
+[x] string - admin.vehicleCost.subtitle        -> GetString("admin.vehicleCost.subtitle","Per-vehicle telemetry cost over the selected window. …") -> Subtitle
+[x] string - admin.vehicleCost.tableTitle      -> GetString("admin.vehicleCost.tableTitle","Per-vehicle breakdown") -> TableTitle
+[x] string - admin.vehicleCost.totalBytes      -> GetString("admin.vehicleCost.totalBytes","Total bytes (est.)") -> TotalBytesLabel
+[x] string - admin.vehicleCost.totalFailures   -> GetString("admin.vehicleCost.totalFailures","DLQ failures (24h)") -> TotalFailuresLabel
+[x] string - admin.vehicleCost.totalRate       -> GetString("admin.vehicleCost.totalRate","Rate (rows/min, 24h)") -> TotalRateLabel
+[x] string - admin.vehicleCost.totalRows       -> GetString("admin.vehicleCost.totalRows","Total rows") -> TotalRowsLabel
+[x] string - admin.vehicleCost.unnamed         -> GetString("admin.vehicleCost.unnamed","Vehicle #{0}") -> per-row VehicleCostRowDisplay.Vehicle fallback (test Table_row_uses_unnamed_fallback_when_display_name_missing)
+[x] string - admin.vehicleCost.windowLabel     -> GetString("admin.vehicleCost.windowLabel","Window") -> WindowLabel
+[x] string - admin.vehicleCost.windowSub       -> GetString("admin.vehicleCost.windowSub","Window: {0}d") -> TotalRowsSub (test Totals_window_sublabel_follows_selected_window)
+
+PARITY_COVERED=33
+# Coverage asserted headlessly: VehicleCostPageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records every key above through a RecordingLocalizer; the four state tests + the
+# subsystem/error branch tests + the totals-card tests + the breakdown/columns/rows tests + the window-selector test
+# assert each region renders from the bound VehicleCostDisplay state holder;
+# ClientFeed_sends_the_observability_operation_with_limit_and_since +
+# ClientFeed_propagates_api_exception_for_the_subsystem_branch assert the generated-client GET request shaping
+# (web useVehicleCost) + the 503 path; the ViewModel_* tests assert the loading/empty/error(503+generic)/success
+# matrix + refresh + SetWindow reload with the derived since; the FormatCount/FormatRate/FormatBytes/FormatRelative
+# theories pin the number/byte/relative formatters to the web truth; the Snapshot_* tests assert the {data:…}
+# envelope unwrap + tolerant parsing.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/VehicleCostPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App project also built standalone: 0 Error(s); pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <VehicleCostPage Model/Source/ViewModel/view
+#   + VehicleCostPageTests + ShellWindow.xaml.cs> -> 0 issues (all LF/utf-8 after auto-format)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 25863, Failed: 0, Skipped: 0
+#   (incl. 52 VehicleCostPageTests)
+TEST_EXIT=0
+PARITY_COVERED=33
+PARITY_REQUIRED=33
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/VehicleCostPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/VehicleCostPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-VehicleCostPage.log
+# git commit -m "feat(apps/windows): VehicleCostPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE
