@@ -708,3 +708,4 @@ p2-windows/widget-primitives/W-0002-WidgetChartSummary.prompt.md
 p2-windows/widget-primitives/W-0003-WidgetComparisonCard.prompt.md
 p2-windows/widget-primitives/W-0004-WidgetDetailCard.prompt.md
 p2-windows/widget-primitives/W-0006-WidgetFlowDiagram.prompt.md
+p2-windows/widget-primitives/W-0007-WidgetGaugeHero.prompt.md
