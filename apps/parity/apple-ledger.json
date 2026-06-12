@@ -1,0 +1,24 @@
+{
+  "ledger": "P4 apple program — page parity rows (apple-macos + apple-ios)",
+  "generatedBy": ".github/prompts/monorepo/p4-apple/pages/p4-apple-P7-page-admin-ApiPlayground.prompt.md",
+  "rows": [
+    {
+      "unitId": "page:admin/ApiPlayground",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 10,
+      "requiredCount": 10,
+      "promptId": "p4-apple/P7/page:admin/ApiPlayground",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-ApiPlaygroundPage.log"
+    },
+    {
+      "unitId": "page:admin/ApiPlayground",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 10,
+      "requiredCount": 10,
+      "promptId": "p4-apple/P7/page:admin/ApiPlayground",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-ApiPlaygroundPage.log"
+    }
+  ]
+}
