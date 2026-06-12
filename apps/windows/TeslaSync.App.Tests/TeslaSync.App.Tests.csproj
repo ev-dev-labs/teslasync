@@ -1500,56 +1500,12 @@
     project-reference / content item groups, and ONE Compile item group - the case-insensitive ordinal
     path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/,
     feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file carries the .gitattributes
-    merge=union strategy, so a chain of integration merges can re-concatenate it into multiple roots plus
-    duplicate items, failing XML load (MSB4025 / MSB4067); when that happens, regenerate it directly from the
-    Microsoft.UI-free sources on disk. Regenerated into this single canonical root for P2 shared-surfaces/0196
-    ActionItem (repairing a merge=union multi-root corruption), adding the new ActionItem Model link. Do NOT
-    re-concatenate into multiple roots, and never write a literal build item or project start tag inside this
-    comment.
-    duplicate Compile items, failing XML load (MSB4025 / MSB4067); when that happens, regenerate it directly
-    from the Microsoft.UI-free sources on disk. Regenerated into this single canonical Project root for P2
-    shared-surfaces/0197 HealthRow (repairing a merge=union multi-root corruption), plus the new HealthRow
-    Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal
-    build item or project start tag inside this comment.
-    Microsoft.UI-free sources on disk. Regenerated into this single canonical root for P2 shared-surfaces/0203
-    Accordion (repairing a merge=union multi-root corruption), adding the new Accordion Model / ViewModel links.
-    Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
-    this comment.
-    Microsoft.UI-free sources on disk. Regenerated into this single canonical root for P2 shared-surfaces/0209
-    DataTableBulkBar (repairing a merge=union multi-root corruption), plus the new DataTableBulkBar Model /
-    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host,
-    so each surface's Microsoft.UI-free sources are Compile-linked below (the Link mirrors each source's
-    real location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces). The bare
-    WinUI view files are excluded and exercised by the app build; the test classes are picked up by the
-    SDK default-compile glob; the Content links copy the units-golden, Package.appxmanifest and
-    widget-template fixtures the tests read out of the output directory.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal
-    path-sorted, Include-deduplicated compile item group - the union of every Microsoft.UI-free .cs on
-    disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/.
-    This file carries the .gitattributes merge=union strategy, so a chain of integration merges can
-    re-concatenate it into multiple Project roots plus duplicate compile items, failing XML load
-    (MSB4025 / MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk.
-    Regenerated into this single canonical Project root for P2 shared-surfaces/0211 DataTableColumnsMenu
-    (repairing a merge=union multi-root corruption), plus the new DataTableColumnsMenu Model / Source /
-    ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build item or
-    project start tag inside this comment.
-    UI-thread-free logic (Model / Source / ViewModel / Registration / diagnostics) for every dashboard-widget,
-    feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
-    TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's Microsoft.UI-free
-    sources are Compile-linked below (the Link mirrors each source's real location under Widgets, FeatureViews,
-    MiscSurfaces, ModalsDialogs or SharedSurfaces). The bare WinUI view files are excluded and exercised by the
-    app build; the test classes are picked up by the SDK default-compile glob; the Content links copy the
-    units-golden, Package.appxmanifest and widget-template fixtures the tests read from the output directory.
-    project-reference / content ItemGroups, and ONE Compile ItemGroup — the case-insensitive ordinal path-sorted,
-    Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/,
-    misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file carries the .gitattributes merge=union
-    strategy, so a chain of integration merges can re-concatenate it into multiple Project roots plus duplicate
-    Compile items, failing XML load (MSB4025 / MSB4067); when that happens, regenerate it directly from the
-    Microsoft.UI-free sources on disk. Regenerated into this single canonical Project root for P2
-    shared-surfaces/0222 PinButton (repairing a merge=union multi-root corruption), plus the new PinButton
-    Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build
-    item or project start tag inside this comment.
+    merge=union strategy, so a chain of integration merges can re-concatenate it into multiple Project roots
+    plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); when that happens, regenerate it
+    directly from the Microsoft.UI-free sources on disk. Regenerated into this single canonical Project root for
+    P2 shared-surfaces/0225 Select (repairing a merge=union multi-root corruption), plus the new Select Model /
+    ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project
+    start tag inside this comment.
   -->
 
     INVARIANT: keep this file as exactly ONE Project root with a single PropertyGroup, the package /
@@ -2829,6 +2785,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\SearchInput.ViewModel.cs" Link="SharedSurfaces\SearchInput.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SectionErrorBoundary.Model.cs" Link="SharedSurfaces\SectionErrorBoundary.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SectionErrorBoundary.ViewModel.cs" Link="SharedSurfaces\SectionErrorBoundary.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Select\Select.Model.cs" Link="SharedSurfaces\Select\Select.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Select\Select.ViewModel.cs" Link="SharedSurfaces\Select\Select.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ServiceStatus.Model.cs" Link="SharedSurfaces\ServiceStatus.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ServiceStatus.Source.cs" Link="SharedSurfaces\ServiceStatus.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ServiceStatus.ViewModel.cs" Link="SharedSurfaces\ServiceStatus.ViewModel.cs" />
