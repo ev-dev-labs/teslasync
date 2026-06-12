@@ -1,0 +1,246 @@
+=== P4 Shared surface 0168 CopyLinkButton (Apple) ===
+
+Prompt: .github/prompts/monorepo/p4-apple/shared-surfaces/0168-CopyLinkButton.prompt.md
+Web source of truth: web/src/components/layout/CopyLinkButton.tsx
+  (+ web/src/components/ui/Button.tsx [ghost/sm Button], web/src/components/feedback/Toast.tsx
+   [useToast] — the trigger button + toast accessor the component composes)
+Native output: apps/apple/TeslaSync/shared-surfaces/CopyLinkButton.*
+Date: 2026-06-11  Host: Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / xcodegen / swiftlint /
+      swiftformat / pwsh 7.x / gradlew (Kotlin/Native).
+
+Honesty Covenant (binding — verbatim):
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+=== PREFLIGHT ===
+- Toolchain present: xcodebuild (Xcode 26.5), swift 6.3.2, swiftlint, swiftformat, xcodegen,
+  pwsh, gradlew. → capability satisfied (NOT a platform-capability BLOCKED case).
+  NOTE (destination): the prompt names 'iPhone 16'; this runner has the iPhone 17 family only,
+  so the iOS gate used the available 'platform=iOS Simulator,name=iPhone 17 Pro' (same iOS 18+
+  SDK). This does not affect the result (the iOS app target fails on pre-existing sibling source
+  errors regardless of the chosen simulator).
+- KMP Shared.xcframework: BUILT + staged via apps/shared gradlew :core:assembleSharedXCFramework
+  ("xcframework successfully written out") → apps/apple/Frameworks/Shared.xcframework. The
+  Gradle/Kotlin/Native toolchain works on this runner.
+- Depends-on (P4 core theme/nav/live/cache/state-holders, P1/S8 state holders, P1/S9 tokens,
+  P1/S10 i18n, P1/S11 diagnostics): present + consumed — Color.TS / Font.TS / TSSpacing / TSRadius
+  / TSMotion tokens (apps/design/generated/apple/Tokens.swift) + TSAnimation (Sources/Design/
+  TSDesign.swift) + TSButton (Sources/Components/UI/Buttons.swift); the @MainActor @Observable
+  state-holder seam pattern; NSLocalizedString i18n facade; os.Logger view.opened telemetry. The
+  surface typechecks against them with 0 errors on BOTH SDKs → predecessors effectively DONE.
+- Build wiring already present: project.yml + .swiftlint.yml already glob TeslaSync/shared-surfaces.
+  NO edits to those files were needed — this surface stays strictly within its allowed files
+  (the 8 surface files + this log).
+
+=== SURVEY ===
+Web source CopyLinkButton.tsx = a single ghost/sm Button that copies the current URL
+(window.location.href, path + query) to the clipboard so a filtered / deep-linked view can be
+shared, then shows a transient confirmation + a toast:
+  • icon swaps Link2 → Check while `copied`; label swaps "Copy link" → "Copied".
+  • on success: navigator.clipboard.writeText (with a textarea/execCommand fallback for non-secure
+    contexts), setCopied(true), toast.success("Link copied to clipboard"),
+    setTimeout(setCopied(false), 2000).
+  • on failure (catch): toast.error("Could not copy link").
+  • aria-label = "Copy link to this view".
+Data sources (P1/S8): useTranslation (P1/S10 facade), useToast (toast seam). Ambient:
+window.location.href. NO network and NO data-fetch state holder. Shared components: ui/Button.
+Charts/maps: none.
+Closest committed precedent studied: shared-surfaces/ChartExportMenu (0066) — the sibling
+props-driven action surface that also binds only useTranslation + a toast seam and copies to the
+clipboard; same architecture + same "reproduce the web's real branches (no fabricated data-feed
+states)" disposition, and the same P4-apple DEFERRED-xcodebuild gate disposition.
+
+=== REASONING ===
+- Architecture mirrors the props-driven leaf precedent (no Adapter/Projection because there is no
+  data feed — only the localisation facade, a toast seam, the ambient URL, and the clipboard):
+  • Model (Foundation/Observation/OSLog): CopyLinkButtonCopyOutcome (web try/catch);
+    CopyLinkButtonToastSeverity/Intent; CopyLinkButtonLogic (pure — toastIntent mapping, the
+    icon switch link/checkmark, the label switch, canCopy guard, url+clipboard→outcome);
+    CopyLinkButtonMeta (slug "CopyLinkButton"); CopyLinkButtonTelemetry seam (P1/S11 view.opened) +
+    OSLog default + Diagnostics seam; CopyLinkButtonToastPresenter (native useToast — @MainActor
+    AnyObject, optional for graceful degrade); CopyLinkButtonStrings (P1/S10 facade); @MainActor
+    @Observable CopyLinkButtonModel (owns the URL provider + clipboard + optional toast + the
+    transient `copied`; copyLink() = the verbatim web handleClick; markAppeared() emits view.opened
+    once; 2s auto-revert via an injectable autoResetDelay).
+  • Seams: CopyLinkURLProviding (native window.location.href — synchronous getter; Static + Resolving
+    sources) + CopyLinkClipboard (UIPasteboard/NSPasteboard SystemCopyLinkClipboard + InMemory double
+    for previews/tests).
+  • swift (the View): TSButton(.ghost,.small) bound through the model; designated + closure-wiring
+    inits; disabled when no shareable URL; VoiceOver label + value; view.opened onAppear.
+  • Views: the label content (SF Symbol + title) with a reduce-motion-gated symbol-replace transition.
+  • Previews: resting / copied / copy-demo(toast wired) / unavailable(no URL).
+  • strings: the exact 5 web keys; Tests + ModelTests.
+- "Every web branch renders" honoured for the control's REAL branches: this is a stateless,
+  networkless action surface, so the generic loading/empty/error/stale/offline template states do
+  not exist in the web source — faithful parity = reproducing the branches that DO exist (action /
+  copied / success toast / error toast / native-graceful unavailable), the same precedent as the
+  committed sibling ChartExportMenu 0066 (documented in the file headers).
+- Side effects off the view: the clipboard write + toast announcement + reset timer live on the
+  @MainActor model so no Task-sending / Sendable plumbing leaks into the SwiftUI layer (the project
+  builds under SWIFT_STRICT_CONCURRENCY=complete / Swift 6 language mode).
+- Rejected: porting the web textarea/execCommand fallback (the platform pasteboard is the native
+  equivalent); porting Tailwind/raw hex (used P1/S9 tokens); a literal global "window.location"
+  (modelled as an injectable provider seam read fresh at copy time); reusing the atomic
+  Sources/Components/UI TSCopyButton (that is a generic value-copy atomic, not this layout-chrome
+  share surface with its own i18n keys, toast, telemetry, and aria-label).
+
+=== CHANGES ===
+New (apps/apple/TeslaSync/shared-surfaces/, 8 files):
+  CopyLinkButton.Model.swift       outcome/severity/intent types; pure CopyLinkButtonLogic; meta
+                                   slug; telemetry seam + OSLog default + diagnostics; optional
+                                   toast seam; i18n facade; @MainActor @Observable model.
+  CopyLinkButton.Seams.swift       URL provider seam (Static + Resolving) + clipboard seam
+                                   (System UIPasteboard/NSPasteboard + InMemory double).
+  CopyLinkButton.swift             the surface View — TSButton(.ghost,.small), 3 inits, a11y
+                                   label+value, view.opened onAppear.
+  CopyLinkButton.Views.swift       the label content (icon + title), reduce-motion-gated transition.
+  CopyLinkButton.Previews.swift    #Preview per branch (resting / copied / copy-demo / unavailable).
+  CopyLinkButton.strings           i18n table "CopyLinkButton": the exact 5 web keys.
+  CopyLinkButton.Tests.swift       Logic + view-state + accessibility + i18n facade tests.
+  CopyLinkButton.ModelTests.swift  view.opened-once + slug + OSLog smoke; copy flow (write / success
+                                   toast / failure toast / empty-url / no-presenter / auto-revert).
+Modified: NONE outside the surface. project.yml + .swiftlint.yml already glob shared-surfaces, so
+  the gate compiles + lints this surface without any wiring edit. (A one-line @escaping probe of the
+  pre-existing sibling AIGeofenceAwareAutomationSuggestions.swift was applied ONLY to confirm the
+  next pre-existing error, then REVERTED — git status below shows it is NOT in the delivered tree.)
+
+=== PARITY ===  PARITY_UNIT = shared-surface:components/layout/CopyLinkButton
+Data + behaviour (web CopyLinkButton + useToast) — reproduced (asserted by tests):
+  [x] copy current URL → clipboard — ModelTests.testCopyLinkWritesCurrentURLToClipboard.
+  [x] success: copied=true + success toast "Link copied to clipboard" —
+      testCopyLinkSuccessSetsCopiedAndAnnouncesSuccess.
+  [x] failure (web catch): error toast "Could not copy link", copied stays false —
+      testCopyLinkFailureAnnouncesErrorAndDoesNotSetCopied.
+  [x] transient confirmation auto-reverts (web setTimeout 2000) — testCopiedRevertsAfterAutoResetDelay.
+  [x] icon switch Link2/Check + label switch "Copy link"/"Copied" — LogicTests.testIconSwitch /
+      .testLabelSwitch + ViewStateTests.
+  [x] graceful no-ToastProvider degrade (web useToast optional here): copy still runs, no announce —
+      testCopyLinkWithoutPresenterStillWritesClipboard.
+  [x] native-graceful unavailable URL (web always has location.href): inert button, clipboard skipped,
+      error toast — testCopyLinkEmptyURLAnnouncesErrorAndSkipsClipboard + LogicTests.testCanCopyGuard.
+i18n (P1/S10 table "CopyLinkButton") — every web key reproduced verbatim
+  (common.copyLink.{success,error,label,copied,action}); every Swift literal routes through the
+  facade fallback (no hardcoded English) — StringsTests + AccessibilityTests.
+Branches — every one the web source has renders (no hidden surface):
+  [x] action (Link2 + "Copy link")  [x] copied (Check + "Copied", 2s)  [x] success toast
+  [x] error toast  [x] unavailable (inert, no shareable URL — native improvement)
+Binding / a11y / telemetry:
+  [x] Bound via the @MainActor @Observable CopyLinkButtonModel (P1/S8 state-holder seam); no HTTP
+      and no side-effecting Task plumbing in the view; the optional toast presenter is useToast.
+  [x] VoiceOver: constant aria-label "Copy link to this view" + a state-reflecting accessibility
+      value ("Copy link"/"Copied"); the glyph is decorative; Dynamic Type via Font.TS; the icon/label
+      transition is gated by Reduce Motion (TSAnimation.fast(reduceMotion:)).
+  [x] Telemetry: view.opened emitted once with slug "CopyLinkButton" (P1/S11), asserted
+      (DiagnosticsTests.testModelMarkAppearedEmitsOnceAcrossRepeatedAppearances).
+PARITY_COVERED == PARITY_REQUIRED (copy + success/error toast + transient revert + icon/label switch
++ graceful degrade + native unavailable guard + i18n verbatim + every web branch).
+
+=== GATE ===
+Runnable host gates (exact prompt commands / their cross-platform equivalents) — all green:
+
+[FORMAT]      swiftformat --lint (the 7 surface .swift files; config apps/apple/.swiftformat)
+              -> 0/7 files require formatting.
+              FORMAT_EXIT=0
+
+[LINT]        swiftlint --strict (the 7 surface .swift files; config apps/apple/.swiftlint.yml)
+              -> Done linting! Found 0 violations, 0 serious in 7 files.
+              LINT_EXIT=0
+
+[PLACEHOLDER] pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/CopyLinkButton
+              -> PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0
+              PLACEHOLDER_EXIT=0
+
+[XCODEGEN]    cd apps/apple ; xcodegen generate -> Created project at TeslaSync.xcodeproj
+              XCODEGEN_EXIT=0
+
+[SURFACE TESTS] Real Model + View + Views + Previews + Tests + ModelTests executed via a standalone
+              SwiftPM harness (the surface's own sources + the REAL design tokens
+              apps/design/generated/apple/Tokens.swift + Sources/Design/TSDesign.swift +
+              Sources/Components/UI/Buttons.swift; module named TeslaSync so `@testable import
+              TeslaSync` resolves), Swift 6 language mode (.v6 = -strict-concurrency=complete),
+              platforms iOS 18 / macOS 15:
+              -> Test Suite 'All tests' passed. Executed 25 tests, with 0 failures (0 unexpected).
+                 Target Platform: arm64e-apple-macos14.0  (⇒ surface compiles + runs on macOS too).
+                 (Logic 5, ViewState 3, Accessibility 2, Strings 3, Diagnostics 5, Model 7.)
+              SWIFT_TEST_EXIT=0
+
+[ISOLATED TYPECHECK] The whole surface (View + Views + Previews incl. #Preview / @Previewable)
+              typechecks against the REAL design tokens + TSButton under Swift 6 +
+              -strict-concurrency=complete: 0 errors. Confirmed again inside the full iOS app-target
+              compile below — the whole-module Swift compile reached EmitSwiftModule with ZERO
+              CopyLinkButton diagnostics (grep "CopyLinkButton.*error:" over the full build log = 0).
+
+Full Xcode app build/test (DEFERRED — not a defect in this surface; the documented P4-apple
+predecessor disposition, identical to logs/p4-apple-shared-surfaces-0001-AnnouncerRegion.log,
+0007-AIAutoTripNameSuggestion.log, and 0066-ChartExportMenu.log):
+
+[XCODEBUILD iOS]   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build test
+              -> Shared.xcframework built+staged via the Gradle pre-action (Kotlin toolchain works),
+                 then ** BUILD FAILED **. Compile errors ALL in PRE-EXISTING sibling-slot surfaces
+                 owned by OTHER prompts, e.g.:
+                   shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22:
+                     error: escaping closure captures non-escaping parameter 'content'
+                   feature-views/RecentDrivesSection.Previews.swift:24:20:
+                     error: the compiler is unable to type-check this expression in reasonable time
+                 (the same RecentDrives* pre-existing family the committed precedents 0001/0007/0066
+                 recorded). CopyLinkButton contributes 0 of these errors — grep "error:" |
+                 grep "CopyLinkButton" = 0 (the only CopyLinkButton mentions are compile-list refs).
+              IOS_EXIT=65   (DEFERRED — pre-existing parallel-merge collisions in OTHER surfaces;
+                             this surface clean: 0 errors)
+
+[XCODEBUILD macOS] xcodebuild -scheme TeslaSync-macOS build test
+              -> ** BUILD FAILED **. Errors are all environmental code-signing (no Swift errors):
+                   TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require
+                     signing with a development certificate (DEVELOPMENT_TEAM:"" — none on runner).
+                   TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" ... require signing ...
+                 (fails at signing, before any compilation). CopyLinkButton contributes 0 errors;
+                 its macOS compilation + tests are independently proven green by the SwiftPM harness
+                 above (macOS 15 target). Owned by the P4-apple/P99 acceptance gate on a signed
+                 macos-latest runner (ADR-012 macOS CI).
+              MAC_EXIT=65   (DEFERRED — environmental code-signing / no dev certificate on runner;
+                             this surface clean: 0 errors)
+
+=== COVENANT SELF-CHECK ===
+  1  No red-as-green ...... runnable host gates green + surface clean (25/25 harness tests, 0 lint,
+                           0 format, 0 placeholder); xcodebuild shown DEFERRED with verbatim evidence
+                           (IOS_EXIT=65 pre-existing sibling errors, MAC_EXIT=65 signing); 0 surface errors.
+  2  No scope narrowing ... exact prompt gate commands run; full results recorded, not a subset;
+                           every web branch reproduced (props-driven control, no fabricated states).
+  3  No skip-and-assume ... both iOS + macOS xcodebuild actually executed end-to-end; real exit
+                           65/65 captured; the iOS Kotlin pre-action really built Shared.xcframework.
+  4  No stubs ............. no TODO/placeholder/fatalError; every branch renders real content; the
+                           toast seam + clipboard + URL provider are real; PLACEHOLDER_COUNT=0.
+  5  No parity shortcuts .. copy + success/error toast + transient revert + icon/label switch +
+                           graceful degrade + native unavailable guard + i18n (web keys verbatim).
+  6  No delegation ........ implemented directly; no sub-agents / parallel / background delegation.
+  7  No predecessor bypass  P4-core/P1 deps consumed + compile clean; followed the P4-apple DEFERRED
+                           precedent and the ChartExportMenu props-driven-leaf architecture.
+  8  No commit on red ..... runnable gates green + surface clean; xcodebuild DEFERRED per precedent
+                           (not a surface red) — committing per the 0001/0007/0066 precedent.
+  9  No silent drift ...... only the 8 surface files + this log; project.yml/.swiftlint.yml already
+                           glob shared-surfaces (no edit needed); the sibling @escaping probe was
+                           reverted; generated xcodeproj git-ignored.
+  10 Log ends with EXIT and STATUS each on its own line.
+
+=== COMMIT ===
+git add apps/apple/TeslaSync/shared-surfaces/CopyLinkButton.Model.swift \
+        apps/apple/TeslaSync/shared-surfaces/CopyLinkButton.Seams.swift \
+        apps/apple/TeslaSync/shared-surfaces/CopyLinkButton.swift \
+        apps/apple/TeslaSync/shared-surfaces/CopyLinkButton.Views.swift \
+        apps/apple/TeslaSync/shared-surfaces/CopyLinkButton.Previews.swift \
+        apps/apple/TeslaSync/shared-surfaces/CopyLinkButton.strings \
+        apps/apple/TeslaSync/shared-surfaces/CopyLinkButton.Tests.swift \
+        apps/apple/TeslaSync/shared-surfaces/CopyLinkButton.ModelTests.swift \
+        .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0168-CopyLinkButton.log
+git commit -m "feat(apps/apple/shared-surfaces): add CopyLinkButton surface (P4)"
+
+IOS_EXIT=65        (DEFERRED — pre-existing sibling-slot AIGeofence*/RecentDrives* errors; this surface 0 errors)
+MAC_EXIT=65        (DEFERRED — macOS code-signing / no dev certificate on runner; this surface 0 errors)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0  (25/25 executed green; real Model + View + test sources, Swift 6 strict concurrency)
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE
