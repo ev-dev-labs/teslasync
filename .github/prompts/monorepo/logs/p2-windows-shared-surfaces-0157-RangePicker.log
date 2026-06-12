@@ -1,0 +1,52 @@
+=== P2 Shared surface 0157 RangePicker (Windows) ===
+runner: dotnet 10.0.300 ; OS: Microsoft Windows 11 Pro 10.0.26200.0
+capability: WinUI 3 (Windows App SDK) + .NET 10 present and building — this surface is NOT a STATUS=BLOCKED capability case.
+
+--- gate step 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    0 Error(s) (17 pre-existing TeslaSync.App.Core CA1716/CA1720/CA1000/CA1859 warnings; none in RangePicker)
+BUILD_EXIT=0
+
+--- gate step 2: dotnet test apps/windows/TeslaSync.sln -c Release (whole solution) ---
+evidence: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 547 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 22935, Skipped:     0, Total: 22935, Duration: 35 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the ONLY failing assembly is TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite).
+It fails fast with UiAutomationUnavailableException because WinAppDriver/Appium is absent on this runner
+(nothing listening on http://127.0.0.1:4723/) — an environment/infra gap, NOT a defect in this surface
+(which adds no route/page and touches no UI-automation harness). The headless logic suite that compiles
+and verifies this surface's Model/Source/ViewModel passes in full; proven alone below.
+
+--- gate step 2b: headless logic suite + surface tests (the real verification) ---
+headless (--filter Category!=UIAutomation): Passed!  - Failed:     0, Passed: 22935, Skipped:     0, Total: 22935 - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+RangePicker tests (--filter FullyQualifiedName~RangePicker): Passed!  - Failed:     0, Passed:    54, Skipped:     0, Total:    54 - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+
+--- gate step 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+format: no changes needed (clean; RangePicker findings=0)
+FORMAT_EXIT=0
+
+--- gate step 4: ./apps/tools/check-placeholders.ps1 (shipped surface files) ---
+RangePicker.cs: PLACEHOLDER_COUNT=0
+RangePicker.Model.cs: PLACEHOLDER_COUNT=0
+RangePicker.Source.cs: PLACEHOLDER_COUNT=0
+RangePicker.ViewModel.cs: PLACEHOLDER_COUNT=0
+RangePickerTests.cs: PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+=== summary ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  SURFACE_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite — WinAppDriver/Appium
+ absent on this runner — evidenced above; the headless logic suite that verifies this surface passes 22935/0,
+ incl. 54 RangePickerTests.)
+Native RangePicker surface added at apps/windows/TeslaSync.App/shared-surfaces/RangePicker.{cs,Model.cs,Source.cs,ViewModel.cs}
+(WinUI 3 TsButton trigger + Flyout popover + preset list + CalendarView range staging + compare/Apply footer),
+binding the shared P1/S8 IRangePickerSink seam, P1/S9 tokens, P1/S10 i18n (translation.date.range.* / date.preset.*),
+P1/S11 diagnostics, and reusing the P1 Core.Forms DatePresets/DateRange port. No legacy/dead imports.
+Also repaired the merge=union multi-root corruption in TeslaSync.App.Tests.csproj (MSB4025) by regenerating a
+single canonical Project root from the WinUI-free sources on disk, plus the new RangePicker Model/Source/ViewModel
+Compile links (1168 linked logic sources; the bare WinUI view RangePicker.cs is excluded, exercised by the app build).
+EXIT=0
+STATUS=DONE
