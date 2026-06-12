@@ -2870,6 +2870,7 @@
   <string name="translation_driveDetail_inside">Inside</string>
   <string name="translation_driveDetail_insideTemp">Inside Temperature</string>
   <string name="translation_driveDetail_journeyDetails">Journey Details</string>
+  <string name="translation_driveDetail_lastKnown">Last known location</string>
   <string name="translation_driveDetail_loss">loss</string>
   <string name="translation_driveDetail_maxPower">Max Power</string>
   <string name="translation_driveDetail_maxRegen">Max Regen</string>
@@ -2926,6 +2927,8 @@
   <string name="translation_driveDetail_speed">Speed</string>
   <string name="translation_driveDetail_speedHistogram">Speed Histogram</string>
   <string name="translation_driveDetail_start">Start</string>
+  <string name="translation_driveDetail_stationaryRouteBody">Only one GPS coordinate was recorded for this drive, so the route can\'t be drawn. The drive\'s distance, duration, and other stats below are unaffected.</string>
+  <string name="translation_driveDetail_stationaryRouteTitle">Route can\'t be plotted</string>
   <string name="translation_driveDetail_temperatures">Temperatures</string>
   <string name="translation_driveDetail_tirePressure">Tire Pressure During Drive</string>
   <string name="translation_driveDetail_title">Drive Details</string>
