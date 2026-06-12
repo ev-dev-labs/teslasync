@@ -21,6 +21,9 @@
     the Microsoft.UI-free sources on disk. Regenerated into this single canonical Project root for P2
     windows/W7 admin/SchemaDriftPage (repairing a merge=union multi-root corruption), plus the new
     SchemaDriftPage Model/Source/ViewModel links. Do NOT re-concatenate into multiple roots, and never write
+    windows/W7 admin/TeslaFeatureFlagsPage (repairing a fresh merge=union two-root / mixed-EOL corruption),
+    deduplicating the 1327-source union back to one Compile group and adding the two new TeslaFeatureFlagsPage
+    Model/ViewModel links. Do NOT re-concatenate into multiple roots, and never write
     a literal build item or project start tag inside this comment.
   -->
 
@@ -1182,6 +1185,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\TeslaOrdersPage\TeslaOrdersPage.ViewModel.cs" Link="FeatureViews\TeslaOrdersPage\TeslaOrdersPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaRegionPage\TeslaRegionPage.Model.cs" Link="FeatureViews\TeslaRegionPage\TeslaRegionPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaRegionPage\TeslaRegionPage.ViewModel.cs" Link="FeatureViews\TeslaRegionPage\TeslaRegionPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaFeatureFlagsPage\TeslaFeatureFlagsPage.Model.cs" Link="FeatureViews\TeslaFeatureFlagsPage\TeslaFeatureFlagsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaFeatureFlagsPage\TeslaFeatureFlagsPage.ViewModel.cs" Link="FeatureViews\TeslaFeatureFlagsPage\TeslaFeatureFlagsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ThermalLoadPanel\ThermalLoadPanel.Model.cs" Link="FeatureViews\ThermalLoadPanel\ThermalLoadPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimeOfUseAnalysis\TimeOfUseAnalysis.Model.cs" Link="FeatureViews\TimeOfUseAnalysis\TimeOfUseAnalysis.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimeOfUseAnalysis\TimeOfUseAnalysis.Source.cs" Link="FeatureViews\TimeOfUseAnalysis\TimeOfUseAnalysis.Source.cs" />
@@ -1855,5 +1860,4 @@
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetStatusGrid.ViewModel.cs" Link="WidgetPrimitives\WidgetStatusGrid.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetTipCards.Model.cs" Link="WidgetPrimitives\WidgetTipCards.Model.cs" />
   </ItemGroup>
-
 </Project>

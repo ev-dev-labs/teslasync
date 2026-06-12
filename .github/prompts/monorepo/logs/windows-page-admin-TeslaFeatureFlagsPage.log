@@ -1,0 +1,97 @@
+=== p2-windows · W7 · page:admin/TeslaFeatureFlags (WinUI 3 / Fluent) ===
+Parity unit : page:admin/TeslaFeatureFlags   kind=page   web route=/tesla-features
+Web source  : web/src/features/admin/pages/TeslaFeatureFlagsPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) + Windows App SDK workload — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs
+  (the Fluent view), exactly as the sibling W7 ApiLogsPage / FeedbackQueuePage do. The generated prompt's idealized
+  "TeslaFeatureFlagsPage.xaml + TeslaFeatureFlagsPageViewModel.cs under TeslaSync/Features/Admin" is mapped onto
+  these real conventions; the surface registers itself with the W4 ShellPageFactory by route name
+  ("TeslaFeatureFlags", already in RouteTable.cs → /tesla-features, RouteGroup.AdminDevTools).
+- Web parity shape: TeslaFeatureFlagsPage.tsx is a thin <PageContainer title subtitle> wrapper around the shared
+  <FeatureToggles /> component (features/settings/components/FeatureToggles.tsx). The native port is the same
+  one-to-one composition: the W2 TsPageContainer (the native port of the web PageContainer) bound to the page
+  title/subtitle, hosting the existing W3 FeatureToggles control (feature-views/FeatureToggles.cs) as its body via
+  PageContent. The page is pure chrome — the hosted surface already owns the feature-config read
+  (useTeslaFeatureConfig), the refresh mutation (useRefreshTeslaFeatureConfig) and the loading/empty/error data
+  states — so it is NOT re-implemented (DRY). This matches the manifest record: page has no API data sources and no
+  named panels of its own; its parity scope is the two header strings.
+- Data binding (ADR-004): the page has no query of its own. The W4 shell factory constructs the page parameterless,
+  so it defaults to a new EmptyFeatureTogglesSource (the same host-injection precedent ApiLogsPage/FeedbackQueuePage
+  use via their Empty*Feed defaults): it yields a single Loaded snapshot with zero entries so the hosted
+  FeatureToggles lands on its friendly empty state rather than a perpetual spinner, and its refresh is a no-op
+  success. A host that owns the repository passes the repository-backed FeatureTogglesSource instead — no view
+  change. The page state holder (TeslaFeatureFlagsPageViewModel) exposes the localized Title/Subtitle the header
+  binds to and records the PII-safe view.opened diagnostic once on LoadAsync.
+- SI units N/A (no unit-bearing fields on this surface).
+- i18n: the two parity keys (translation.featureConfig.title / translation.featureConfig.subtitle) already exist
+  verbatim in Strings/{en,he,ar}/Resources.resw (the FeatureToggles component owns them); the page reuses the SAME
+  keys through FeatureTogglesRegistration.TitleKey/SubtitleKey so the page header and the hosted panel header can
+  never drift. No new catalog rows required; zero hardcoded literals.
+- a11y / dark mode: AutomationProperties.SetName on the page root; TsPageContainer's TsPageHeader emits the H1
+  heading level; the hosted FeatureToggles carries its own Narrator names + LiveRegion announcements. All color and
+  typography come from design tokens (TsPageContainer / FeatureToggles) — no hardcoded brushes.
+- Pre-existing blocker repaired: TeslaSync.App.Tests.csproj had been re-corrupted by its documented .gitattributes
+  merge=union strategy into TWO <Project> roots (lines 1-1379 + 1380-2778) with a stranded third </Project>, mixed
+  CRLF/LF endings, and 2633 Compile items / 1327 distinct — failing XML load (MSB4025/MSB4067) and blocking the
+  whole-solution build + test at baseline. Regenerated per the file's own INVARIANT into the single canonical
+  Project root: the case-insensitive ordinal path-sorted, Include-deduplicated UNION of all 1327 Microsoft.UI-free
+  sources (each verified present on disk; Missing=0) plus the two new TeslaFeatureFlagsPage Model/ViewModel links
+  (1329 total), all LF + final newline. The .cs view stays out of the headless project (it uses Microsoft.UI).
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+# Strings (2) — every visible literal resolves from Strings/*.resw via the ILocalizer facade with the web key names.
+#   The page header binds Title/Subtitle from the bound state holder (TeslaFeatureFlagsPageViewModel) and the
+#   TsPageContainer (web PageContainer) renders them; both keys are owned once by FeatureTogglesRegistration so the
+#   page header and the hosted FeatureToggles panel header resolve identical copy.
+[x] string - featureConfig.title    -> TeslaFeatureFlagsRegistration.Title (TeslaFeatureFlagsPage.Model.cs) ->
+             FeatureTogglesRegistration.Title localizer.GetString("translation.featureConfig.title", "Feature Flags");
+             bound via TeslaFeatureFlagsPageViewModel.Title (TeslaFeatureFlagsPage.ViewModel.cs) -> TsPageContainer.Title
+             (TeslaFeatureFlagsPage.cs). Tests: Registration_resolves_the_two_parity_string_keys_through_the_facade,
+             ViewModel_title_and_subtitle_resolve_through_the_facade, ViewModel_exposes_localized_title_and_subtitle.
+[x] string - featureConfig.subtitle -> TeslaFeatureFlagsRegistration.Subtitle (TeslaFeatureFlagsPage.Model.cs) ->
+             FeatureTogglesRegistration.Subtitle localizer.GetString("translation.featureConfig.subtitle",
+             "Tesla account feature configuration"); bound via TeslaFeatureFlagsPageViewModel.Subtitle ->
+             TsPageContainer.Subtitle (TeslaFeatureFlagsPage.cs). Tests as above.
+
+PARITY_COVERED=2
+# Coverage asserted headlessly in TeslaSync.App.Tests/FeatureViews/TeslaFeatureFlagsPageTests.cs (9 tests):
+#   Registration_resolves_the_two_parity_string_keys_through_the_facade + ViewModel_title_and_subtitle_resolve_
+#   through_the_facade record both required keys through a RecordingLocalizer; Registration_exposes_stable_slug_
+#   route_and_localized_parity_strings + ViewModel_exposes_localized_title_and_subtitle assert the rendered copy;
+#   ViewModel_load_records_view_opened_once_and_flips_is_loaded + Diagnostics_emits_view_opened_with_slug assert the
+#   PII-safe view.opened slug; EmptyFeatureTogglesSource_* + Default_source_drives_the_hosted_FeatureToggles_surface_
+#   to_its_empty_state assert the page's default source lands the hosted surface on its empty data state.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TeslaFeatureFlagsPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 changes (new sources + ShellWindow registration
+#   + regenerated test csproj, all LF + final newline)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25788, Failed: 0, Skipped: 0 (incl. 9 new
+#   TeslaFeatureFlagsPageTests). The WinUI TeslaSync.App.UITests project requires a packaged WinUI host / WinAppDriver
+#   not available in this runner, so the headless TeslaSync.App.Tests project is the test target (sibling W7 precedent).
+TEST_EXIT=0
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TeslaFeatureFlagsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/TeslaFeatureFlagsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-TeslaFeatureFlagsPage.log
+# git commit -m "feat(apps/windows): TeslaFeatureFlagsPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE

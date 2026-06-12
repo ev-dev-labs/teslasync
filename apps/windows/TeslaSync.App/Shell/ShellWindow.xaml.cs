@@ -781,6 +781,8 @@ public sealed partial class ShellWindow : Window
         // the per-vehicle streaming breakdown table.
         _viewModel.PageFactory.Register(
             "MQTTInspector", static () => new FeatureViews.Telemetry.MQTTInspectorPage());
+        // Admin / Tesla feature flags page (P2/W7) — parity port of web TeslaFeatureFlagsPage at route /tesla-features.
+        _viewModel.PageFactory.Register("TeslaFeatureFlags", static () => new FeatureViews.Admin.TeslaFeatureFlagsPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
