@@ -422,3 +422,4 @@ p3-android/feature-views/A-0176-SOCRouteChart.prompt.md
 p3-android/feature-views/A-0174-SpeedGearPanel.prompt.md
 p3-android/feature-views/A-0173-PedalUsage.prompt.md
 p3-android/feature-views/A-0177-TripLegList.prompt.md
+p3-android/feature-views/A-0175-SummaryStats.prompt.md
