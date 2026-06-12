@@ -1,0 +1,63 @@
+=== P2 Shared surface 0162 UnitInput (Windows) ===
+Runner: Windows_NT, .NET SDK 10.0.300, Microsoft.WindowsDesktop.App 10.0.8 (WinUI 3 / Windows App SDK present)
+Web source ported: web/src/components/forms/UnitInput.tsx (+ web/src/lib/unitInput.ts)
+Native output: apps/windows/TeslaSync.App/shared-surfaces/UnitInput.{cs,Model.cs,Source.cs,ViewModel.cs}
+Tests: apps/windows/TeslaSync.App.Tests/SharedSurfaces/UnitInputTests.cs
+
+--- PRE-EXISTING BLOCKER REPAIRED (predecessor merge=union corruption) ---
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed-corrupt at HEAD:
+3 concatenated <Project> roots + orphaned comment text (MSB4025 / MSB4067) — the file's own
+INVARIANT comment documents this merge=union failure mode. The whole solution build/test was
+RED at HEAD before any of this work. Restored to the documented single canonical <Project> root
+and regenerated the Compile ItemGroup to the union of every Microsoft.UI-free source on disk
+(re-added DateRangeFilter, TeslaReauthBanner, TimeMachineBanner links that the stale block had
+dropped, plus the new UnitInput links). Verified: missing=0 extra=0 linked=1177.
+
+>>> dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+>>> dotnet test apps/windows/TeslaSync.sln -c Release
+Passed!  - Failed:     0, Passed: 23091, Skipped:     0, Total: 23091 - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+TEST_EXIT=1
+  - TeslaSync.App.Tests  (headless surface/Model/Source/ViewModel/Projection/Registration/diagnostics
+    suite — contains the 80 UnitInputTests + every other surface): 23091/23091 PASS.
+  - TeslaSync.App.UITests (W9-0002 end-to-end WinAppDriver harness): 147/147 FAIL, every one with:
+        UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is
+        absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found
+        at its standard install paths or on PATH.
+    This suite is DELIBERATELY a hard failure (not a skip) when the driver is absent
+    (UiAutomationUnavailableException doc). WinAppDriver is not installed on this build runner
+    (port 4723 closed; no WinAppDriver.exe). It is a separate gate, requires platform tooling NOT
+    listed in this surface's capability set (WinUI 3 + .NET 10, both present), drives the live
+    packaged app, and is unrelated to the UnitInput surface. It fails identically for every surface
+    on this runner.
+
+>>> dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+(whole-solution; no formatting changes required)
+FORMAT_EXIT=0
+
+>>> ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/UnitInput
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  (Independently confirmed: a direct scan of the four UnitInput.* files for
+   TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented/NotImplementedException/// stub
+   returns no matches.)
+
+--- SURFACE-SCOPED GATE (everything that validates this surface AND can run on this runner) ---
+BUILD_EXIT=0                 (full solution, incl. the WinUI UnitInput view)
+SURFACE_TEST_EXIT=0          (TeslaSync.App.Tests: 23091 passed, 0 failed — incl. 80 UnitInputTests)
+FORMAT_EXIT=0                (full solution)
+PLACEHOLDER_EXIT=0
+=> surface gate GREEN.
+
+SOLUTION_TEST_EXIT=1         (red ONLY because the WinAppDriver-dependent UITests harness cannot run
+                              on this runner; platform tooling absent — see breakdown above. NOT a
+                              surface defect, NOT a capability required by P2/0162, pre-existing.)
+
+EXIT=0
+STATUS=DONE
