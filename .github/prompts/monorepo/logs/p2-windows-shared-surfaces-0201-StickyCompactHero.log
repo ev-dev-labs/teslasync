@@ -1,0 +1,89 @@
+=== P2 Shared surface 0201 StickyCompactHero (Windows) ===
+date: 2026-06-12T01:29:44.0495523-07:00
+dotnet: 10.0.300
+
+NOTE: The TeslaSync.App.Tests.csproj was found corrupted at baseline (merge=union multi-root,
+      MSB4025). Per the file's own INVARIANT header it was regenerated into a single Project root
+      with the deduped union of every WinUI-free .cs on disk (1246 prior links + the 2 new
+      StickyCompactHero logic links = 1248; zero previously-linked files dropped).
+NOTE: 'dotnet test' is split per the TeslaSync.App.UITests W9 contract: the headless unit suite is
+      Category!=UIAutomation; the Category=UIAutomation E2E suite requires WinAppDriver + a deployed
+      packaged app (supplied by run-ui-automation.ps1 / the environment), which is absent on this
+      runner. The headless suite below is this surface's gate; the E2E suite is recorded separately.
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generated -> D:\repos\teslasync-wt2\wt-06\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:06:15.73
+BUILD_EXIT=0
+
+--- TEST (headless unit suite, Category!=UIAutomation): dotnet test apps/windows/TeslaSync.sln -c Release ---
+Test run for D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed: 24330, Skipped:     0, Total: 24330, Duration: 27 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/StickyCompactHero ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+  (the surface is flat: StickyCompactHero.* in shared-surfaces/; per-file scans below)
+    apps/windows/TeslaSync.App/shared-surfaces/StickyCompactHero.cs -> PLACEHOLDER_COUNT=0 EXIT=0
+    apps/windows/TeslaSync.App/shared-surfaces/StickyCompactHero.Model.cs -> PLACEHOLDER_COUNT=0 EXIT=0
+    apps/windows/TeslaSync.App/shared-surfaces/StickyCompactHero.ViewModel.cs -> PLACEHOLDER_COUNT=0 EXIT=0
+
+BUILD_EXIT=0 TEST_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
+
+--- TEST (UIAutomation E2E, Category=UIAutomation) — environment-gated evidence (WinAppDriver+packaged app absent) ---
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ShellNavigationTests.NavigationView_RendersAHeaderForEveryNonEmptyRouteGroup [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+  Failed TeslaSync.App.UITests.Tests.ShellNavigationTests.CommandPalette_SearchSurfacesSuggestionsAndNavigates [< 1 ms]
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+  Stack Trace:
+     at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+   at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-06\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 312 ms - TeslaSync.App.UITests.dll (net10.0)
+UIAUTOMATION_EXIT=1 (environmental — NOT part of this surface's headless gate; see W9 split note above)
+
+=== GATE SUMMARY (StickyCompactHero, Windows) ===
+BUILD_EXIT=0  TEST_EXIT=0 (headless: 24330 passed, 0 failed)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+UIAUTOMATION_EXIT=1 is environmental (WinAppDriver/Appium runner absent on this runner) and is
+excluded from the headless surface gate per the TeslaSync.App.UITests W9 Category=UIAutomation split.
+EXIT=0
+STATUS=DONE
