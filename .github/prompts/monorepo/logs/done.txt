@@ -400,3 +400,4 @@ p3-android/feature-views/A-0150-TemperatureSection.prompt.md
 p3-android/feature-views/A-0153-DetailCards.prompt.md
 p3-android/feature-views/A-0152-WhyEndedPanel.prompt.md
 p3-android/feature-views/A-0156-HealthRecommendations.prompt.md
+p3-android/feature-views/A-0154-HealthGaugeGrid.prompt.md
