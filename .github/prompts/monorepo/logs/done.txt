@@ -310,3 +310,4 @@ p3-android/feature-views/A-0060-OverviewVehicleComparison.prompt.md
 p3-android/feature-views/A-0064-PatternsSlide.prompt.md
 p3-android/feature-views/A-0063-EnvironmentSlide.prompt.md
 p3-android/feature-views/A-0061-ChargingBreakdownSlide.prompt.md
+p3-android/feature-views/A-0066-SlideRenderer.prompt.md
