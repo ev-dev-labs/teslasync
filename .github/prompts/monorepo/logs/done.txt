@@ -739,3 +739,4 @@ p2-windows/pages/battery/EnergyFlowPage.prompt.md
 p2-windows/pages/battery/EnergyProductsPage.prompt.md
 p2-windows/pages/battery/EnergyPage.prompt.md
 p2-windows/pages/battery/ProjectedRangePage.prompt.md
+p2-windows/pages/battery/VampireDrainPage.prompt.md
