@@ -16,5 +16,14 @@
     "requiredCount": 43,
     "promptId": "p2-windows/W7/windows-page-admin-FeedbackQueuePage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-FeedbackQueuePage.log"
+  },
+  {
+    "unitId": "page:admin/SchemaDrift",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 32,
+    "requiredCount": 32,
+    "promptId": "p2-windows/W7/windows-page-admin-SchemaDriftPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-SchemaDriftPage.log"
   }
 ]

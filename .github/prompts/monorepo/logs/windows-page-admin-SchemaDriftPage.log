@@ -1,0 +1,140 @@
+=== p2-windows · W7 · page:admin/SchemaDrift (WinUI 3 / Fluent) ===
+Parity unit : page:admin/SchemaDrift   kind=page   web route=/admin/schema-drift
+Web source  : web/src/features/admin/pages/SchemaDriftPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ApiLogsPage / FeedbackQueuePage do. The generated prompt's idealized "SchemaDriftPage.xaml +
+  SchemaDriftPageViewModel.cs under TeslaSync/Features/Admin" is mapped onto these real conventions; the surface
+  registers itself with the W4 ShellPageFactory by route name ("SchemaDrift", already in RouteTable.cs →
+  /admin/schema-drift).
+- Data binding (ADR-004): the manifest data source is useSchemaDrift (GET /admin/observability/schema-drift). The
+  view-model reads through an injected ISchemaDriftFeed; the default EmptySchemaDriftFeed resolves the empty state
+  (matching the ApiLogsPage/FeedbackQueuePage host-injection precedent), and the generated-client-backed
+  SchemaDriftClientFeed (SchemaDriftPage.Source.cs) binds to the generated OpenAPI contract client operation
+  get_api_v1_admin_observability_schema_drift (no params), asserted in tests via the FakeApiClient. No HTTP touches
+  the view. A non-success response surfaces as ApiException; the view-model maps StatusCode==503 to the distinct
+  subsystem-unavailable banner (web `subsystemMissing`) and every other failure to the generic InfoBar+Retry.
+- The web page renders all four data states INSIDE the PageContainer body (PageContainer is passed only `query=` for
+  the freshness chip, not loading/error/empty), so the native port reproduces them as visible Fluent regions per
+  ADR-006: loading -> TsStatGridSkeleton(3) shimmer; error -> TsQueryError (InfoBar-equivalent) + Retry;
+  503 subsystem-missing -> TsAlertBanner(Warning) notConfigured; empty -> TsGlassPanel + TsEmptyState; success ->
+  the drift-summary + fingerprints glass panels. Never a blank region.
+- SI units N/A (no unit-bearing fields on this admin surface — SHA fingerprints + table/column/index counts only);
+  counts format through the shared NumberFormatting port (web fmtNumber) and the seed timestamp through
+  DateTimeFormatting (web formatDateTime) at the display boundary.
+- All 22 i18n keys were added verbatim (web key names) to Strings/en/Resources.resw as translation.admin.schemaDrift.*
+  (21) + translation.admin.subsystem.unavailableTitle (1), alphabetically placed; the surface resolves them through
+  the ILocalizer facade. The ar/he catalogs already lag en by design (translations land later); the app falls back
+  to the English default via ILocalizer until translated.
+- Pre-existing blocker repaired: TeslaSync.App.Tests.csproj had been re-corrupted by its documented .gitattributes
+  merge=union strategy into THREE <Project> roots (MSB4025: multiple root elements at line 1380), which failed XML
+  load and blocked the whole-solution build at baseline. Regenerated it into the single canonical Project root the
+  file's own INVARIANT mandates: the case-insensitive ordinal path-sorted, Include-deduplicated union of every
+  Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/,
+  shared-surfaces/ and widget-primitives/ (doc-comment mentions of Microsoft.UI are not treated as usage). The
+  regenerated union reproduced the prior 1327-link set exactly (0 added, 0 dropped) before adding the 3 new
+  SchemaDriftPage Model/Source/ViewModel links (1330 total); the bare WinUI view is excluded (it uses Microsoft.UI).
+
+=== PARITY ===
+PARITY_REQUIRED=32
+
+# Panels (6) — every web region reproduced as a Fluent Card/Mica region (each a visible branch)
+[x] panel  - GlassPanel1   -> empty-state panel: SchemaDriftPage.cs#BuildEmptyPanel (_emptyPanel TsGlassPanel hosting
+             _emptyState TsEmptyState); web SchemaDriftPage.tsx empty branch GlassPanel + EmptyState; gated by
+             SchemaDriftDisplay.ShowEmpty (SchemaDriftProjection.Project showEmpty); test State_empty_when_resolved_with_no_data
+[x] panel  - GlassPanel2   -> drift-summary panel: SchemaDriftPage.cs#BuildSummaryPanel (_summaryPanel TsGlassPanel)
+             hosting the status header (_statusTitle PanelTitle + _statusBadge TsBadge) and the three delta stat
+             cards; web DriftSummary GlassPanel; gated by ShowSummary; test State_success_when_data_present +
+             Summary_badge_drifted_uses_warning_tone
+[x] panel  - Tables        -> Tables delta StatCard (_tableDeltaCard TsStatCard) + the Tables fingerprint mini-stat
+             (SchemaDriftPage.cs#AddFingerprintStat); projection TableDeltaLabel/TableDeltaValue/TableDeltaSub +
+             FingerprintCardDisplay.TablesLabel/TablesValue; test Summary_delta_cards_label_format_and_sublabels +
+             Details_current_and_expected_cards_project_counts_and_titles
+[x] panel  - Columns       -> Columns delta StatCard (_columnDeltaCard) + the Columns fingerprint mini-stat;
+             projection ColumnDeltaLabel/ColumnDeltaValue/ColumnDeltaSub + FingerprintCardDisplay.ColumnsLabel/Value;
+             test Summary_delta_cards_label_format_and_sublabels
+[x] panel  - Indexes       -> Indexes delta StatCard (_indexDeltaCard) + the Indexes fingerprint mini-stat;
+             projection IndexDeltaLabel/IndexDeltaValue/IndexDeltaSub + FingerprintCardDisplay.IndexesLabel/Value;
+             test Summary_delta_cards_label_format_and_sublabels
+[x] panel  - GlassPanel6   -> fingerprints panel: SchemaDriftPage.cs#BuildDetailsPanel (_detailsPanel TsGlassPanel)
+             hosting _fingerprintTitle PanelTitle + the current/expected fingerprint cards
+             (SchemaDriftPage.cs#BuildFingerprintCard, _currentCardHost/_expectedCardHost); web DriftDetails
+             GlassPanel; gated by ShowDetails; test Details_current_and_expected_cards_project_counts_and_titles
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading       -> SchemaDriftState.Loading + SchemaDriftDisplay.ShowLoading; rendered
+             SchemaDriftPage.cs#_loadingSkeleton (TsStatGridSkeleton(3) shimmer); test State_loading_when_query_in_flight
+[x] state  - empty         -> SchemaDriftState.Empty + ShowEmpty; rendered _emptyPanel (TsGlassPanel + TsEmptyState,
+             title+message); test State_empty_when_resolved_with_no_data + ViewModel_empty_snapshot_is_the_empty_state
+[x] state  - error         -> SchemaDriftState.Error: (a) 503 subsystem-missing -> ShowSubsystemUnavailable ->
+             _subsystemBanner (TsAlertBanner Warning, InfoBar-equivalent) [test
+             State_error_subsystem_unavailable_is_the_503_banner + ViewModel_http_503_is_the_subsystem_unavailable_branch];
+             (b) generic failure -> ShowError -> _errorState (TsQueryError + Retry via ActionInvoked -> RefreshAsync)
+             [test State_error_generic_failure_shows_retry + ViewModel_feed_failure_is_the_generic_error_state]
+[x] state  - success       -> SchemaDriftState.Success + ShowSummary/ShowDetails; rendered _summaryPanel + _detailsPanel;
+             test State_success_when_data_present + ViewModel_loads_drift_into_the_success_state
+
+# Strings (22) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - admin.schemaDrift.columnDelta        -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.columnDelta", "Columns Δ")
+[x] string - admin.schemaDrift.columnSub          -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.columnSub", "{0} current · {1} expected") -> ColumnDeltaSub
+[x] string - admin.schemaDrift.columns            -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.columns", "Columns") -> FingerprintCardDisplay.ColumnsLabel
+[x] string - admin.schemaDrift.emptyMessage       -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.emptyMessage", "The schema fingerprint has not been computed yet. …")
+[x] string - admin.schemaDrift.emptyTitle         -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.emptyTitle", "No fingerprint available")
+[x] string - admin.schemaDrift.fingerprintCurrent -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.fingerprintCurrent", "Current") -> CurrentCard.Title
+[x] string - admin.schemaDrift.fingerprintExpected-> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.fingerprintExpected", "Expected (seed)") -> ExpectedCard.Title
+[x] string - admin.schemaDrift.fingerprintTitle   -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.fingerprintTitle", "Fingerprints")
+[x] string - admin.schemaDrift.generatedAt        -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.generatedAt", "Captured {0}") -> ExpectedCard.GeneratedAtText
+[x] string - admin.schemaDrift.indexDelta         -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.indexDelta", "Indexes Δ")
+[x] string - admin.schemaDrift.indexSub           -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.indexSub", "{0} current · {1} expected") -> IndexDeltaSub
+[x] string - admin.schemaDrift.indexes            -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.indexes", "Indexes") -> FingerprintCardDisplay.IndexesLabel
+[x] string - admin.schemaDrift.notConfigured      -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.notConfigured", "The schema-drift subsystem is not configured …") -> SubsystemMessage
+[x] string - admin.schemaDrift.pageTitle          -> SchemaDriftProjection.Project / SchemaDriftRegistration.Title localizer.GetString("admin.schemaDrift.pageTitle", "Schema Drift")
+[x] string - admin.schemaDrift.statusClean        -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.statusClean", "No drift")
+[x] string - admin.schemaDrift.statusDrifted      -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.statusDrifted", "Drift detected")
+[x] string - admin.schemaDrift.statusTitle        -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.statusTitle", "Drift status")
+[x] string - admin.schemaDrift.subtitle           -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.subtitle", "Current database schema fingerprint compared against the recorded seed. …")
+[x] string - admin.schemaDrift.tableDelta         -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.tableDelta", "Tables Δ")
+[x] string - admin.schemaDrift.tableSub           -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.tableSub", "{0} current · {1} expected") -> TableDeltaSub
+[x] string - admin.schemaDrift.tables             -> SchemaDriftProjection.Project localizer.GetString("admin.schemaDrift.tables", "Tables") -> FingerprintCardDisplay.TablesLabel
+[x] string - admin.subsystem.unavailableTitle     -> SchemaDriftProjection.Project localizer.GetString("admin.subsystem.unavailableTitle", "Subsystem unavailable") -> SubsystemTitle
+
+PARITY_COVERED=32
+# Coverage asserted headlessly: SchemaDriftPageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records every key above through a RecordingLocalizer; the four state tests + the
+# subsystem/error branch tests + the summary badge/delta tests + the fingerprint card tests assert each region
+# renders from the bound SchemaDriftDisplay state holder; ClientFeed_sends_the_observability_operation_with_no_params
+# + ClientFeed_propagates_api_exception_for_the_subsystem_branch assert the generated-client GET request shaping
+# (web useSchemaDrift) and the 503 path; the ViewModel_* tests assert the loading/empty/error(503+generic)/success
+# matrix + refresh reload.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SchemaDriftPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (SchemaDriftPage Model/Source/ViewModel/view
+#   + SchemaDriftPageTests + ShellWindow registration + regenerated test csproj + Resources.resw, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25811, Failed: 0, Skipped: 0 (incl. 32 SchemaDriftPageTests)
+TEST_EXIT=0
+PARITY_COVERED=32
+PARITY_REQUIRED=32
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SchemaDriftPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SchemaDriftPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-SchemaDriftPage.log
+# git commit -m "feat(apps/windows): SchemaDriftPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE

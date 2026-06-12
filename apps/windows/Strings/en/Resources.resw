@@ -1356,6 +1356,69 @@
   <data name="translation.admin.liveSignals.table.loading" xml:space="preserve">
     <value>Loading…</value>
   </data>
+  <data name="translation.admin.schemaDrift.columnDelta" xml:space="preserve">
+    <value>Columns Δ</value>
+  </data>
+  <data name="translation.admin.schemaDrift.columnSub" xml:space="preserve">
+    <value>{0} current · {1} expected</value>
+  </data>
+  <data name="translation.admin.schemaDrift.columns" xml:space="preserve">
+    <value>Columns</value>
+  </data>
+  <data name="translation.admin.schemaDrift.emptyMessage" xml:space="preserve">
+    <value>The schema fingerprint has not been computed yet. Restart the API to capture a seed fingerprint.</value>
+  </data>
+  <data name="translation.admin.schemaDrift.emptyTitle" xml:space="preserve">
+    <value>No fingerprint available</value>
+  </data>
+  <data name="translation.admin.schemaDrift.fingerprintCurrent" xml:space="preserve">
+    <value>Current</value>
+  </data>
+  <data name="translation.admin.schemaDrift.fingerprintExpected" xml:space="preserve">
+    <value>Expected (seed)</value>
+  </data>
+  <data name="translation.admin.schemaDrift.fingerprintTitle" xml:space="preserve">
+    <value>Fingerprints</value>
+  </data>
+  <data name="translation.admin.schemaDrift.generatedAt" xml:space="preserve">
+    <value>Captured {0}</value>
+  </data>
+  <data name="translation.admin.schemaDrift.indexDelta" xml:space="preserve">
+    <value>Indexes Δ</value>
+  </data>
+  <data name="translation.admin.schemaDrift.indexSub" xml:space="preserve">
+    <value>{0} current · {1} expected</value>
+  </data>
+  <data name="translation.admin.schemaDrift.indexes" xml:space="preserve">
+    <value>Indexes</value>
+  </data>
+  <data name="translation.admin.schemaDrift.notConfigured" xml:space="preserve">
+    <value>The schema-drift subsystem is not configured on this deployment. Enable schema fingerprinting in config to populate this page.</value>
+  </data>
+  <data name="translation.admin.schemaDrift.pageTitle" xml:space="preserve">
+    <value>Schema Drift</value>
+  </data>
+  <data name="translation.admin.schemaDrift.statusClean" xml:space="preserve">
+    <value>No drift</value>
+  </data>
+  <data name="translation.admin.schemaDrift.statusDrifted" xml:space="preserve">
+    <value>Drift detected</value>
+  </data>
+  <data name="translation.admin.schemaDrift.statusTitle" xml:space="preserve">
+    <value>Drift status</value>
+  </data>
+  <data name="translation.admin.schemaDrift.subtitle" xml:space="preserve">
+    <value>Current database schema fingerprint compared against the recorded seed. Drift indicates a migration ran without a seed refresh, or raw DDL bypassed the migration system.</value>
+  </data>
+  <data name="translation.admin.schemaDrift.tableDelta" xml:space="preserve">
+    <value>Tables Δ</value>
+  </data>
+  <data name="translation.admin.schemaDrift.tableSub" xml:space="preserve">
+    <value>{0} current · {1} expected</value>
+  </data>
+  <data name="translation.admin.schemaDrift.tables" xml:space="preserve">
+    <value>Tables</value>
+  </data>
   <data name="translation.admin.security.active" xml:space="preserve">
     <value>Active</value>
   </data>
@@ -1592,6 +1655,9 @@
   </data>
   <data name="translation.admin.security.windowDetail" xml:space="preserve">
     <value>Window Status Detail</value>
+  </data>
+  <data name="translation.admin.subsystem.unavailableTitle" xml:space="preserve">
+    <value>Subsystem unavailable</value>
   </data>
   <data name="translation.admin.systemStatus.clientPerformance.collecting" xml:space="preserve">
     <value>Collecting</value>
