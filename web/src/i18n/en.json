@@ -6256,6 +6256,7 @@
     "noRouteData": "No route data available for this drive",
     "socOverTime": "SOC % Over Time",
     "speedHistogram": "Speed Histogram",
+    "speedHistogramAria": "Speed-bucket distribution histogram",
     "ofDrive": "of drive",
     "temperatures": "Temperatures",
     "outsideTemp": "Outside Temperature",

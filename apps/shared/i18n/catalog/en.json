@@ -14344,6 +14344,11 @@
       "translated": true,
       "value": "Speed Histogram"
     },
+    "translation.driveDetail.speedHistogramAria": {
+      "tokens": [],
+      "translated": true,
+      "value": "Speed-bucket distribution histogram"
+    },
     "translation.driveDetail.start": {
       "tokens": [],
       "translated": true,
@@ -39868,7 +39873,7 @@
       "value": "You saved"
     }
   },
-  "entryCount": 7788,
+  "entryCount": 7789,
   "locale": "en",
   "name": "English",
   "namespaces": [

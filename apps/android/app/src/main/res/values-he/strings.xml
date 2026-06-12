@@ -2926,6 +2926,7 @@
   <string name="translation_driveDetail_socOverTime">SOC % Over Time</string>
   <string name="translation_driveDetail_speed">Speed</string>
   <string name="translation_driveDetail_speedHistogram">Speed Histogram</string>
+  <string name="translation_driveDetail_speedHistogramAria">Speed-bucket distribution histogram</string>
   <string name="translation_driveDetail_start">Start</string>
   <string name="translation_driveDetail_stationaryRouteBody">Only one GPS coordinate was recorded for this drive, so the route can\'t be drawn. The drive\'s distance, duration, and other stats below are unaffected.</string>
   <string name="translation_driveDetail_stationaryRouteTitle">Route can\'t be plotted</string>
