@@ -1,0 +1,20 @@
+/*
+  Slider.strings
+  TeslaSync — P4 shared surface · 0226 · Slider (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/ui/Slider.tsx) renders NO translatable copy of its own: the visible `label` and the
+  formatted readout (`formatValue(value)` / `String(value)`) are both supplied by the caller, and the
+  control's accessible name (`aria-label`) and spoken value (`aria-valuetext`) are derived from those
+  same caller-owned strings. There are therefore no source `t()` keys to reproduce.
+
+  The single key below is a native accessibility refinement: the web `<input type="range">` leans on
+  the browser / assistive technology to describe the adjust gesture, whereas the native surface voices
+  an explicit VoiceOver hint. It is resolved through the injected facade (with this English fallback)
+  so no user-facing English is hardcoded in Swift. The per-surface table name ("Slider") folds into
+  the app Localizable.xcstrings master catalog at integration time.
+*/
+
+/* VoiceOver hint for the slider track describing how to change the value (native refinement; the web
+   <input type=range> exposes no equivalent hint). */
+"slider.accessibility.hint" = "Swipe up or down to adjust the value.";
