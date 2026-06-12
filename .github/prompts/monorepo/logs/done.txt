@@ -433,3 +433,4 @@ p3-android/feature-views/A-0183-InboxBody.prompt.md
 p3-android/feature-views/A-0187-LegacyNotificationsRedirect.prompt.md
 p3-android/feature-views/A-0182-ComputedMetricEditor.prompt.md
 p3-android/feature-views/A-0180-AlertMessageEditor.prompt.md
+p3-android/feature-views/A-0189-NotificationFilterBar.prompt.md
