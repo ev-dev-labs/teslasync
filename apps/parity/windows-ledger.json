@@ -25,5 +25,14 @@
     "requiredCount": 32,
     "promptId": "p2-windows/W7/windows-page-admin-SchemaDriftPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-SchemaDriftPage.log"
+  },
+  {
+    "unitId": "page:admin/VehicleCost",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 33,
+    "requiredCount": 33,
+    "promptId": "p2-windows/W7/windows-page-admin-VehicleCostPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-VehicleCostPage.log"
   }
 ]

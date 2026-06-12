@@ -1677,6 +1677,87 @@
   <data name="translation.admin.systemStatus.clientPerformance.viewDashboard" xml:space="preserve">
     <value>View dashboard</value>
   </data>
+  <data name="translation.admin.vehicleCost.bytesSub" xml:space="preserve">
+    <value>96 bytes/row average</value>
+  </data>
+  <data name="translation.admin.vehicleCost.colBytes" xml:space="preserve">
+    <value>Bytes (est.)</value>
+  </data>
+  <data name="translation.admin.vehicleCost.colFailures" xml:space="preserve">
+    <value>DLQ (24h)</value>
+  </data>
+  <data name="translation.admin.vehicleCost.colLastSeen" xml:space="preserve">
+    <value>Last seen</value>
+  </data>
+  <data name="translation.admin.vehicleCost.colRate" xml:space="preserve">
+    <value>Rate (rows/min, 24h)</value>
+  </data>
+  <data name="translation.admin.vehicleCost.colRows" xml:space="preserve">
+    <value>Rows</value>
+  </data>
+  <data name="translation.admin.vehicleCost.colVehicle" xml:space="preserve">
+    <value>Vehicle</value>
+  </data>
+  <data name="translation.admin.vehicleCost.emptyMessage" xml:space="preserve">
+    <value>No vehicles have ingested signals during this window.</value>
+  </data>
+  <data name="translation.admin.vehicleCost.emptyTable" xml:space="preserve">
+    <value>No vehicle cost data</value>
+  </data>
+  <data name="translation.admin.vehicleCost.emptyTitle" xml:space="preserve">
+    <value>No vehicle cost data</value>
+  </data>
+  <data name="translation.admin.vehicleCost.failuresSub" xml:space="preserve">
+    <value>Codec or writer rejections</value>
+  </data>
+  <data name="translation.admin.vehicleCost.notConfigured" xml:space="preserve">
+    <value>The ingest-x-ray subsystem is not configured on this deployment. Vehicle cost reporting requires the signal_log hypertable to be populated.</value>
+  </data>
+  <data name="translation.admin.vehicleCost.pageTitle" xml:space="preserve">
+    <value>Vehicle Ingest Cost</value>
+  </data>
+  <data name="translation.admin.vehicleCost.rateSub" xml:space="preserve">
+    <value>Across all vehicles</value>
+  </data>
+  <data name="translation.admin.vehicleCost.subtitle" xml:space="preserve">
+    <value>Per-vehicle telemetry cost over the selected window. Use this to spot vehicles whose ingest volume is disproportionate to the fleet baseline.</value>
+  </data>
+  <data name="translation.admin.vehicleCost.tableTitle" xml:space="preserve">
+    <value>Per-vehicle breakdown</value>
+  </data>
+  <data name="translation.admin.vehicleCost.totalBytes" xml:space="preserve">
+    <value>Total bytes (est.)</value>
+  </data>
+  <data name="translation.admin.vehicleCost.totalFailures" xml:space="preserve">
+    <value>DLQ failures (24h)</value>
+  </data>
+  <data name="translation.admin.vehicleCost.totalRate" xml:space="preserve">
+    <value>Rate (rows/min, 24h)</value>
+  </data>
+  <data name="translation.admin.vehicleCost.totalRows" xml:space="preserve">
+    <value>Total rows</value>
+  </data>
+  <data name="translation.admin.vehicleCost.unnamed" xml:space="preserve">
+    <value>Vehicle #{0}</value>
+  </data>
+  <data name="translation.admin.vehicleCost.window1d" xml:space="preserve">
+    <value>Last 1 day</value>
+  </data>
+  <data name="translation.admin.vehicleCost.window30d" xml:space="preserve">
+    <value>Last 30 days</value>
+  </data>
+  <data name="translation.admin.vehicleCost.window7d" xml:space="preserve">
+    <value>Last 7 days</value>
+  </data>
+  <data name="translation.admin.vehicleCost.window90d" xml:space="preserve">
+    <value>Last 90 days</value>
+  </data>
+  <data name="translation.admin.vehicleCost.windowLabel" xml:space="preserve">
+    <value>Window</value>
+  </data>
+  <data name="translation.admin.vehicleCost.windowSub" xml:space="preserve">
+    <value>Window: {0}d</value>
+  </data>
   <data name="translation.admin.xray.chart.ariaLabel" xml:space="preserve">
     <value>Bar chart of ingest sample counts per time bucket.</value>
   </data>
