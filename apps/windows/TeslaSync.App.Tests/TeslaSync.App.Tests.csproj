@@ -845,6 +845,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Source.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.ViewModel.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsPage\TeslaChargingSessionsPage.Model.cs" Link="FeatureViews\TeslaChargingSessionsPage\TeslaChargingSessionsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsPage\TeslaChargingSessionsPage.Source.cs" Link="FeatureViews\TeslaChargingSessionsPage\TeslaChargingSessionsPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsPage\TeslaChargingSessionsPage.ViewModel.cs" Link="FeatureViews\TeslaChargingSessionsPage\TeslaChargingSessionsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ThermalLoadPanel\ThermalLoadPanel.Model.cs" Link="FeatureViews\ThermalLoadPanel\ThermalLoadPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimeOfUseAnalysis\TimeOfUseAnalysis.Model.cs" Link="FeatureViews\TimeOfUseAnalysis\TimeOfUseAnalysis.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimeOfUseAnalysis\TimeOfUseAnalysis.Source.cs" Link="FeatureViews\TimeOfUseAnalysis\TimeOfUseAnalysis.Source.cs" />

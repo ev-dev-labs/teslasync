@@ -99,6 +99,8 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Automations.AutomationListPage();
             page.NavigationRequested += (_, e) => NavigateTo(e.Route);
+            return page;
+        });
 
         // Automations hub page (P2/W7) — parity port of web AutomationsListPage at route /automations.
         _viewModel.PageFactory.Register("Automations", () =>
@@ -117,6 +119,9 @@ public sealed partial class ShellWindow : Window
         // (visible nav item /projected-range; /analytics/range is the hidden deep-link alias). Both resolve to the
         // "ProjectedRange" route name.
         _viewModel.PageFactory.Register("ProjectedRange", static () => new FeatureViews.Battery.ProjectedRangePage());
+        // Charging / Tesla fleet charging sessions page (P2/W7) — parity port of web TeslaChargingSessionsPage at
+        // route /tesla-charging-sessions.
+        _viewModel.PageFactory.Register("TeslaChargingSessions", static () => new FeatureViews.Charging.TeslaChargingSessionsPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
