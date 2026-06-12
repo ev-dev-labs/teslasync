@@ -3,7 +3,16 @@
 // No Compose, no Android, no HTTP: every type here is exercised off-device in the
 // :android:testReleaseUnitTest gate, keeping the composable a thin render layer.
 //
-// The web source is a PURELY PRESENTATIONAL loading scaffold: it binds no data hook, reads no i18n
+// DUAL-VARIANT SURFACE (prompt-path collision — documented, not silent drift): the web has two
+// distinct, identically-named `LoadingSkeleton.tsx` files — `charging-curve/` (prompt A-0088,
+// already shipped) and `cost-analysis/` (prompt A-0115). The native monorepo flattens both onto this
+// single `feature-views/LoadingSkeleton` surface, so this model hosts BOTH projections side by side
+// and the composable selects between them with [LoadingSkeletonVariant]. The charging-curve
+// projection ([LOADING_SKELETON_SPEC] / [LoadingSkeletonProjection.webParity]) and its render path
+// are the 0088 contract and are left byte-for-byte unchanged; the cost-analysis projection
+// ([COST_ANALYSIS_SKELETON_SPEC] / [LoadingSkeletonProjection.costAnalysisParity]) is added below.
+//
+// The charging-curve web source is a PURELY PRESENTATIONAL loading scaffold: it binds no data hook, reads no i18n
 // catalog, and has a single, unconditional render path (a `space-y-6` stack of shimmering bars laid
 // out like the charging-curve page it stands in for — a header, a filter row, a six-tile stat grid,
 // two chart panels, a two-up panel row, and a four-tile stat grid). Because the surface has zero
@@ -29,6 +38,19 @@ object LoadingSkeletonRegistration {
 
     /** Diagnostics surface slug emitted with the `view.opened` event (P1/S11). */
     const val SLUG: String = "LoadingSkeleton"
+}
+
+/**
+ * Which web `LoadingSkeleton.tsx` composition a render reproduces. Both web variants
+ * (`charging-curve/` from prompt A-0088 and `cost-analysis/` from prompt A-0115) collide on this one
+ * native surface, so the composable takes a [LoadingSkeletonVariant] to pick the projection to draw.
+ */
+enum class LoadingSkeletonVariant {
+    /** The `charging-curve/LoadingSkeleton.tsx` scaffold — the default, shipped by prompt A-0088. */
+    ChargingCurve,
+
+    /** The `cost-analysis/LoadingSkeleton.tsx` scaffold — added by prompt A-0115. */
+    CostAnalysis,
 }
 
 /**
@@ -60,13 +82,17 @@ data class GridColumns(
 )
 
 /**
- * One shimmering loading bar: [heightDp] tall and either [widthDp] dp wide or — when [widthDp] is
- * `null` — filling its parent's width (the web `w-full` block bars). Dimensions are the web Tailwind
- * `h-*` / `w-*` sizes converted 1:1 to dp (Tailwind `h-8` = 32 px ⇒ 32 dp).
+ * One shimmering loading bar: [heightDp] tall. Its width is, in priority order, a fixed [widthDp] dp
+ * (the web `w-*` / `width="220px"` bars), else a [widthFraction] of the parent in `0f..1f` (the web
+ * percentage widths `width="60%"`), else — when both are `null` — the full parent width (the web
+ * `w-full` block bars). [rounded] selects the pill shape for the web `rounded` bars. Pixel dimensions
+ * are the web values converted 1:1 to dp (Tailwind `h-8` = 32 px ⇒ 32 dp).
  */
 data class SkeletonBar(
     val heightDp: Int,
     val widthDp: Int? = null,
+    val widthFraction: Float? = null,
+    val rounded: Boolean = false,
 )
 
 /** A stat tile's two stacked bars — web `<Skeleton h-3 .../>` above `<Skeleton mt-2 h-7 .../>`. */
@@ -106,6 +132,53 @@ data class LoadingSkeletonSpec(
     val chartPanels: List<SkeletonChartPanelSpec>,
     val splitPanels: SkeletonSplitSpec,
     val bottomStats: SkeletonStatGridSpec,
+)
+
+// ── Cost-analysis variant (web `cost-analysis/LoadingSkeleton.tsx`, prompt A-0115) ───────────────
+
+/**
+ * Cost-analysis header — a left title/subtitle stack beside a trailing rounded action bar. Web
+ * `flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`: the stack and the action sit
+ * in a column on a compact window and split to opposite ends of a centered row once it is wide enough.
+ */
+data class CostHeaderSpec(
+    val titleStack: List<SkeletonBar>,
+    val action: SkeletonBar,
+)
+
+/** A cost-analysis stat card — three stacked bars in a `GlassPanel p-4` (label / value / caption). */
+data class CostCardSpec(
+    val label: SkeletonBar,
+    val value: SkeletonBar,
+    val caption: SkeletonBar,
+)
+
+/** A cost-analysis chart panel — a [title] bar over a full-width block of [blockHeightDp] dp (`p-4`). */
+data class CostChartSpec(
+    val title: SkeletonBar,
+    val blockHeightDp: Int,
+)
+
+/** The cost-analysis table — a [title] over [rowCount] full-width bars of [rowHeightDp] dp (`p-4`). */
+data class CostTableSpec(
+    val title: SkeletonBar,
+    val rowCount: Int,
+    val rowHeightDp: Int,
+)
+
+/**
+ * The full cost-analysis composition projected from `cost-analysis/LoadingSkeleton.tsx`. Regions are
+ * ordered to mirror the JSX top-to-bottom so the native column reads identically to the web
+ * `space-y-6 p-6` stack: header, a responsive card grid, a responsive chart grid, and the table.
+ */
+data class CostAnalysisSkeletonSpec(
+    val header: CostHeaderSpec,
+    val cardCount: Int,
+    val card: CostCardSpec,
+    val cardColumns: GridColumns,
+    val charts: List<CostChartSpec>,
+    val chartColumns: GridColumns,
+    val table: CostTableSpec,
 )
 
 /**
@@ -162,10 +235,54 @@ val LOADING_SKELETON_SPEC: LoadingSkeletonSpec =
             ),
     )
 
+/**
+ * Exact projection of `features/charging/components/cost-analysis/LoadingSkeleton.tsx`:
+ *  - header: `Skeleton 220×28` over `Skeleton 340×16` (mt-2) beside a `200×36 rounded` action bar
+ *  - cards: six `GlassPanel p-4` tiles (`h-14 w-60%`, `h-24 w-80%` mt-2, `h-12 w-40%` mt-1),
+ *    `grid-cols-2 lg:grid-cols-3 xl:grid-cols-6`
+ *  - charts: two `GlassPanel p-4` (`h-16 w-40%` title over `h-200` block), `grid-cols-1 lg:grid-cols-2`
+ *  - table: `GlassPanel p-4` with `h-16 w-30%` title over five `h-32` rows (space-y-2)
+ */
+val COST_ANALYSIS_SKELETON_SPEC: CostAnalysisSkeletonSpec =
+    CostAnalysisSkeletonSpec(
+        header =
+            CostHeaderSpec(
+                titleStack =
+                    listOf(
+                        SkeletonBar(heightDp = 28, widthDp = 220),
+                        SkeletonBar(heightDp = 16, widthDp = 340),
+                    ),
+                action = SkeletonBar(heightDp = 36, widthDp = 200, rounded = true),
+            ),
+        cardCount = 6,
+        card =
+            CostCardSpec(
+                label = SkeletonBar(heightDp = 14, widthFraction = 0.6f),
+                value = SkeletonBar(heightDp = 24, widthFraction = 0.8f),
+                caption = SkeletonBar(heightDp = 12, widthFraction = 0.4f),
+            ),
+        cardColumns = GridColumns(compact = 2, medium = 3, expanded = 6),
+        charts =
+            listOf(
+                CostChartSpec(title = SkeletonBar(heightDp = 16, widthFraction = 0.4f), blockHeightDp = 200),
+                CostChartSpec(title = SkeletonBar(heightDp = 16, widthFraction = 0.4f), blockHeightDp = 200),
+            ),
+        chartColumns = GridColumns(compact = 1, medium = 2, expanded = 2),
+        table =
+            CostTableSpec(
+                title = SkeletonBar(heightDp = 16, widthFraction = 0.3f),
+                rowCount = 5,
+                rowHeightDp = 32,
+            ),
+    )
+
 /** Pure derivations the composable switches on — unit-tested off-device. */
 object LoadingSkeletonProjection {
-    /** The web-parity composition rendered by the surface. */
+    /** The charging-curve composition (prompt A-0088) — the surface's default render. */
     val webParity: LoadingSkeletonSpec = LOADING_SKELETON_SPEC
+
+    /** The cost-analysis composition (prompt A-0115), drawn when the surface renders that variant. */
+    val costAnalysisParity: CostAnalysisSkeletonSpec = COST_ANALYSIS_SKELETON_SPEC
 
     /**
      * Folds an available width (dp) onto a [columns] region's column count, reproducing the web

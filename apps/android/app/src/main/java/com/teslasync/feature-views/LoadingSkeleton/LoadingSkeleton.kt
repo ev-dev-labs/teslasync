@@ -4,6 +4,14 @@
 // charging-curve page it stands in for (a header, a filter row, a six-tile stat grid, two chart
 // panels, a two-up panel row, and a four-tile stat grid). It binds NO data and reads NO i18n.
 //
+// DUAL-VARIANT SURFACE: the cost-analysis web sibling
+// (web/src/features/charging/components/cost-analysis/LoadingSkeleton.tsx, prompt A-0115) collides on
+// this same native path, so this file also renders that composition — a FadeIn-wrapped `space-y-6 p-6`
+// stack of a header-with-action, a six-card grid (three bars each), a two-up chart grid, and a table.
+// [LoadingSkeletonVariant] selects which scaffold to draw; [LoadingSkeletonVariant.ChargingCurve] is
+// the default, so the prompt A-0088 contract is preserved unchanged. See LoadingSkeletonModel for the
+// full collision rationale.
+//
 // Because the surface has zero data sources there is no loading / empty / error / stale / offline
 // lifecycle to branch on — the scaffold IS the loading affordance, with a single, unconditional
 // render path (see LoadingSkeletonModel for the drift rationale). What it owns is reproduced here in
@@ -31,8 +39,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -42,6 +52,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.teslasync.android.R
 import io.teslasync.android.components.feedback.Skeleton
+import io.teslasync.android.components.motion.FadeIn
 import io.teslasync.android.components.ui.GlassPanel
 import io.teslasync.android.components.ui.PanelPadding
 import io.teslasync.android.data.LocalDataContainer
@@ -51,27 +62,49 @@ import io.teslasync.shared.core.diagnostics.Logger
 
 /**
  * Stateful entry point for the LoadingSkeleton scaffold. Records the one-shot PII-safe `view.opened`
- * diagnostic (P1/S11), resolves the accessibility announcement from the i18n catalog (P1/S10), and
- * renders the presentational scaffold. The surface binds no data of its own.
+ * diagnostic (P1/S11) tagged with the active [variant], resolves the accessibility announcement from
+ * the i18n catalog (P1/S10), and renders the presentational scaffold for that variant. The surface
+ * binds no data of its own.
  *
- * @param modifier layout modifier applied to the scaffold's root column.
- * @param spec the bar composition to render; defaults to the web-parity projection.
+ * @param modifier layout modifier applied to the scaffold's root.
+ * @param variant which web composition to reproduce; defaults to [LoadingSkeletonVariant.ChargingCurve]
+ *   (the prompt A-0088 contract), with [LoadingSkeletonVariant.CostAnalysis] for the A-0115 sibling.
+ * @param chargingCurveSpec the charging-curve bar composition; defaults to its web-parity projection.
+ * @param costAnalysisSpec the cost-analysis bar composition; defaults to its web-parity projection.
  * @param logger the sanctioned redacting logger; defaults to the app's `LocalDataContainer`.
  */
 @Composable
 fun LoadingSkeleton(
     modifier: Modifier = Modifier,
-    spec: LoadingSkeletonSpec = LoadingSkeletonProjection.webParity,
+    variant: LoadingSkeletonVariant = LoadingSkeletonVariant.ChargingCurve,
+    chargingCurveSpec: LoadingSkeletonSpec = LoadingSkeletonProjection.webParity,
+    costAnalysisSpec: CostAnalysisSkeletonSpec = LoadingSkeletonProjection.costAnalysisParity,
     logger: Logger = LocalDataContainer.current.logger,
 ) {
-    LaunchedEffect(Unit) {
-        logger.info("view.opened", mapOf("surface" to LoadingSkeletonRegistration.SLUG))
+    LaunchedEffect(variant) {
+        logger.info(
+            "view.opened",
+            mapOf(
+                "surface" to LoadingSkeletonRegistration.SLUG,
+                "variant" to variant.name,
+            ),
+        )
     }
-    LoadingSkeletonContent(
-        loadingLabel = stringResource(R.string.translation_a11y_loading),
-        modifier = modifier,
-        spec = spec,
-    )
+    val loadingLabel = stringResource(R.string.translation_a11y_loading)
+    when (variant) {
+        LoadingSkeletonVariant.ChargingCurve ->
+            LoadingSkeletonContent(
+                loadingLabel = loadingLabel,
+                modifier = modifier,
+                spec = chargingCurveSpec,
+            )
+        LoadingSkeletonVariant.CostAnalysis ->
+            CostAnalysisLoadingSkeletonContent(
+                loadingLabel = loadingLabel,
+                modifier = modifier,
+                spec = costAnalysisSpec,
+            )
+    }
 }
 
 /**
@@ -235,10 +268,169 @@ private fun ShimmerBar(
     Skeleton(modifier = sized, height = bar.heightDp.dp)
 }
 
+/**
+ * Stateless renderer for the cost-analysis composition — the preview/visual entry point for that
+ * variant. Reproduces `cost-analysis/LoadingSkeleton.tsx` exactly: a [FadeIn]-wrapped, `p-6`-inset
+ * `space-y-6` column of a header-with-action, a six-card responsive grid, a two-up chart grid, and
+ * the table. The whole scaffold merges into one semantics node carrying [loadingLabel] so TalkBack
+ * announces "Loading" once instead of walking every decorative shimmer bar.
+ */
+@Composable
+fun CostAnalysisLoadingSkeletonContent(
+    loadingLabel: String,
+    modifier: Modifier = Modifier,
+    spec: CostAnalysisSkeletonSpec = LoadingSkeletonProjection.costAnalysisParity,
+) {
+    FadeIn(modifier = modifier) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(Spacing.xl2)
+                    .semantics(mergeDescendants = true) { contentDescription = loadingLabel },
+            verticalArrangement = Arrangement.spacedBy(Spacing.xl2),
+        ) {
+            CostSkeletonHeader(spec.header)
+            CostSkeletonCardGrid(spec)
+            CostSkeletonChartGrid(spec)
+            CostSkeletonTable(spec.table)
+        }
+    }
+}
+
+/**
+ * Cost-analysis header — a title/subtitle stack and a rounded action bar. Web
+ * `flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`: a `gap-4` column on a compact
+ * window, promoting to a centered space-between row once the inner width reaches the medium class.
+ */
+@Composable
+private fun CostSkeletonHeader(spec: CostHeaderSpec) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val wide = maxWidth.value >= MEDIUM_MIN_WIDTH_DP
+        if (wide) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                CostHeaderTitleStack(spec.titleStack, capped = false)
+                Spacer(modifier = Modifier.weight(1f))
+                CostBar(spec.action, cap = false)
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
+            ) {
+                CostHeaderTitleStack(spec.titleStack, capped = true)
+                CostBar(spec.action, cap = true)
+            }
+        }
+    }
+}
+
+/** The header's left column — the title bar above the subtitle bar (web `mt-2`, native `Spacing.sm`). */
+@Composable
+private fun CostHeaderTitleStack(
+    bars: List<SkeletonBar>,
+    capped: Boolean,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+        bars.forEach { CostBar(it, cap = capped) }
+    }
+}
+
+/**
+ * The card region — web `grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6` of `GlassPanel p-4`
+ * tiles, each a label bar, a value bar (`mt-2`), and a caption bar (`mt-1`).
+ */
+@Composable
+private fun CostSkeletonCardGrid(spec: CostAnalysisSkeletonSpec) {
+    SkeletonResponsiveGrid(
+        itemCount = spec.cardCount,
+        columns = spec.cardColumns,
+        horizontalGap = Spacing.lg,
+        verticalGap = Spacing.lg,
+    ) {
+        GlassPanel(modifier = Modifier.weight(1f), padding = PanelPadding.Lg) {
+            CostBar(spec.card.label, cap = false)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            CostBar(spec.card.value, cap = false)
+            Spacer(modifier = Modifier.height(Spacing.xs))
+            CostBar(spec.card.caption, cap = false)
+        }
+    }
+}
+
+/** The chart region — web `grid grid-cols-1 gap-4 lg:grid-cols-2` of `GlassPanel p-4` chart panels. */
+@Composable
+private fun CostSkeletonChartGrid(spec: CostAnalysisSkeletonSpec) {
+    SkeletonResponsiveGrid(
+        itemCount = spec.charts.size,
+        columns = spec.chartColumns,
+        horizontalGap = Spacing.lg,
+        verticalGap = Spacing.lg,
+    ) { index ->
+        val chart = spec.charts[index]
+        GlassPanel(modifier = Modifier.weight(1f), padding = PanelPadding.Lg) {
+            CostBar(chart.title, cap = false)
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            CostBar(SkeletonBar(heightDp = chart.blockHeightDp), cap = false)
+        }
+    }
+}
+
+/**
+ * The table region — web `GlassPanel p-4` with a title bar over a `mt-4` `space-y-2` stack of
+ * [CostTableSpec.rowCount] full-width row bars.
+ */
+@Composable
+private fun CostSkeletonTable(spec: CostTableSpec) {
+    GlassPanel(modifier = Modifier.fillMaxWidth(), padding = PanelPadding.Lg) {
+        CostBar(spec.title, cap = false)
+        Spacer(modifier = Modifier.height(Spacing.lg))
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            repeat(spec.rowCount) {
+                CostBar(SkeletonBar(heightDp = spec.rowHeightDp), cap = false)
+            }
+        }
+    }
+}
+
+/**
+ * Renders one cost-analysis [bar] via the shared [Skeleton] primitive. Width is a fixed dp when
+ * [SkeletonBar.widthDp] is set (the web fixed-px bars) — capped to the parent when [cap] is true so a
+ * compact window never overflows — else a [SkeletonBar.widthFraction] of the parent (the web
+ * percentage widths), else the full parent width (web `w-full`). [SkeletonBar.rounded] picks the pill.
+ */
+@Composable
+private fun CostBar(
+    bar: SkeletonBar,
+    cap: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val sized =
+        when {
+            bar.widthDp != null && cap -> modifier.widthIn(max = bar.widthDp.dp)
+            bar.widthDp != null -> modifier.width(bar.widthDp.dp)
+            else -> modifier
+        }
+    Skeleton(
+        modifier = sized,
+        widthFraction = bar.widthFraction ?: 1f,
+        height = bar.heightDp.dp,
+        rounded = bar.rounded,
+    )
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun LoadingSkeletonPreview() {
     TeslaSyncTheme {
         LoadingSkeletonContent(loadingLabel = stringResource(R.string.translation_a11y_loading))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun CostAnalysisLoadingSkeletonPreview() {
+    TeslaSyncTheme {
+        CostAnalysisLoadingSkeletonContent(loadingLabel = stringResource(R.string.translation_a11y_loading))
     }
 }
