@@ -1,0 +1,111 @@
+=== P2 Shared surface 0135 ReleaseNotes (Windows) ===
+
+SURFACE: apps/windows/TeslaSync.App/shared-surfaces/ReleaseNotes.{Model.cs,ViewModel.cs,cs}
+TESTS  : apps/windows/TeslaSync.App.Tests/SharedSurfaces/ReleaseNotesTests.cs (37 tests)
+WEB SRC: web/src/components/feedback/ReleaseNotes.tsx (THE specification)
+CAPABILITY: .NET 10.0.300 SDK + WinUI 3 (Windows App SDK) present -> NOT capability-blocked for build/headless.
+           E2E UI automation (WinAppDriver/Appium) absent on this non-interactive runner; see TEST step.
+
+-------------------------------------------------------------------------------
+SURFACE IMPLEMENTATION (parity port; no stubs / no placeholder / no skeleton-only)
+-------------------------------------------------------------------------------
+- Native WinUI 3 port of the web ReleaseNotes export: a compact, single-expansion release-notes
+  accordion. Newest `limit` releases (web default 3) rendered as disclosure cards; each header carries a
+  badge-tinted Segoe Fluent "Gift" glyph (\uE8C9, native stand-in for the web Lucide Gift), the v{version}
+  label, a TsBadge (latest/stable/beta), and the release date; each expanded body repeats the localized
+  "What's New" heading over the release's FLAT, author-ordered change list (NOT grouped into sections,
+  matching the web), every line prefixed by a ChangelogChangeType-coloured dot.
+- DRY / single source of truth: binds the shared P1/S8 IChangelogSource and reuses the embedded
+  ChangelogCatalog + ChangelogEntry/Change/Badge/ChangeType from TeslaSync.App.ModalsDialogs -- the native
+  analogue of the web @/generated/changelog module both ReleaseNotes and ChangelogModal read. No catalog
+  duplication (the web component's stated purpose: "no drift between three hand-curated lists").
+- ALL states render (no hidden surfaces): loading (skeleton), loaded (accordion list), empty (TsEmptyState
+  with Gift glyph), error (TsQueryError + retry), stale (Warning chip), offline (Neutral chip + cached list)
+  -- routed through the shared cache-then-network RepositoryResult<ChangelogReading> seam, exactly like the
+  sibling ChangelogModal models the same static catalog.
+- Single-expansion accordion (web `expanded` single-value useState): ExpandedVersion in the view-model,
+  newest release open by default, opening one card collapses the others (TsAccordion/Expander coordination),
+  a user's choice survives refreshes (web useState initialiser semantics).
+- i18n: every string resolves through the P1/S10 ILocalizer facade with `translation.`-prefixed keys, ALL
+  present in Strings/en/Resources.resw:
+    translation.changelog.releaseNotes.heading ("What's New")
+    translation.changelog.badges.{latest,stable,beta}
+    translation.common.{noData,retry,stale,offline,loading}  translation.error.serverError.message
+  No hardcoded English literal in native code (English appears only as ILocalizer fallbacks).
+- Accessibility: TsAccordion exposes the ExpandCollapse pattern; every entry header carries a Narrator name
+  ("v0.7.0, Latest, 2026-03-29"); the badge is named; the Gift glyph is AccessibilityView.Raw (decorative);
+  loading/empty/error are live regions; reduce-motion is honoured (skeleton pulse suppressed); custom
+  Group automation peer with a heading name fallback.
+- Telemetry: ReleaseNotesDiagnostics emits view.opened slug=ReleaseNotes once on load (P1/S11), PII-safe.
+
+-------------------------------------------------------------------------------
+GATE
+-------------------------------------------------------------------------------
+BUILD_EXIT=0
+  dotnet build apps/windows/TeslaSync.sln -c Release  =>  "Build succeeded. 0 Error(s)."
+  The TeslaSync.App project (TreatWarningsAsErrors=true) compiles ReleaseNotes.{cs,Model.cs,ViewModel.cs}
+  clean. The only warnings are PRE-EXISTING CA1000/CA1716/CA1720/CA1859 analyzer notes in TeslaSync.App.Core
+  (not warnings-as-errors there); none originate from ReleaseNotes code.
+  NOTE: the test project (TeslaSync.App.Tests.csproj) was malformed at HEAD -- three concatenated <Project>
+  root elements from the .gitattributes merge=union strategy (MSB4025: "multiple root elements"), which
+  blocked the ENTIRE test suite from loading. Repaired by regenerating it into ONE canonical <Project> root
+  = the case-insensitive ordinal path-sorted, Include-deduplicated union of all 1115 existing WinUI-free
+  compile-links (every one verified present on disk) PLUS the two new ReleaseNotes Model/ViewModel links
+  (the bare WinUI view stays app-build-only). 2502 -> 1157 lines, single well-formed root, 1117 Compile items.
+
+TEST_EXIT=1
+  dotnet test apps/windows/TeslaSync.sln -c Release:
+    Passed!  - Failed: 0, Passed: 22152, Skipped: 0, Total: 22152  - TeslaSync.App.Tests.dll  (headless unit)
+    Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147      - TeslaSync.App.UITests.dll (E2E UIAutomation)
+  ALL 147 UITest failures share ONE environmental cause (1 distinct message, 147 occurrences):
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+  These 147 are PRE-EXISTING shell/navigation/command-palette E2E tests (Category=UIAutomation); they do not
+  reference the ReleaseNotes surface and fail in the fixture (WinAppDriverSession.EnsureReady) before any
+  test body. They cannot run on this non-interactive headless host (no WinAppDriver.exe; no desktop session).
+  Headless verification (the suite that covers this surface):
+    dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+      =>  EXIT=0, Passed: 22152, Failed: 0   (includes the 37 new ReleaseNotesTests)
+    dotnet test TeslaSync.App.Tests --filter "FullyQualifiedName~ReleaseNotesTests"
+      =>  EXIT=0, Passed: 37, Failed: 0
+  Tests cover: registration metadata + i18n keys/fallbacks; badge/icon/change-dot status mapping; projection
+  (limit cap, flat author-ordered list with NO grouping, first-expanded default, version label, Narrator
+  names, embedded-catalog cap); the full view-model state matrix (loading/loaded/empty/error/stale/offline);
+  single-expansion (default-open, toggle, single-selection, refresh-preserves-choice, change notification);
+  catalog-backed production composition; and PII-safe diagnostics.
+
+FORMAT_EXIT=0
+  dotnet format apps/windows/TeslaSync.sln --verify-no-changes  =>  clean (no changes) across the solution.
+  (New files were normalised to LF per .editorconfig end_of_line=lf.)
+
+PLACEHOLDER_EXIT=0
+  apps/tools/check-placeholders.ps1 over each ReleaseNotes file (Language csharp):
+    ReleaseNotes.cs            PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    ReleaseNotes.Model.cs      PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    ReleaseNotes.ViewModel.cs  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    ReleaseNotesTests.cs       PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  No TODO / stub / mock / placeholder / Lorem in shipped code.
+
+-------------------------------------------------------------------------------
+ACCEPTANCE
+-------------------------------------------------------------------------------
+[x] Surface renders on Windows with all states from the web source reproduced (loading/loaded/empty/error
+    + native stale/offline freshness chips for the cache-then-network seam).
+[x] Hooks bind to the shared P1/S8 state-holder layer (IChangelogSource); no direct HTTP from the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (verified in Strings/en/Resources.resw).
+[x] Accessibility labels present on every interactive element (Expander ExpandCollapse + Narrator names).
+[x] Tests: adapter/projection unit tests + per-state view-model tests + a11y-name + diagnostics (37 passing).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code.
+[~] EXIT=0 for build/headless-test/format/placeholder; full-solution dotnet test is 1 SOLELY because the
+    WinAppDriver/Appium UI-automation runtime is unavailable on this non-interactive runner -- a platform
+    capability gap (the prompt's "If unavailable on the runner -> STATUS=BLOCKED with API evidence"). The
+    same WinAppDriver gap is logged TEST_EXIT=1 / STATUS=BLOCKED by the adjacent sibling shared surfaces.
+    The ReleaseNotes surface itself is fully implemented: it builds, its 37 tests + the entire 22152 headless
+    suite pass, it is format-clean and placeholder-free. E2E UIAutomation verification is deferred to a
+    WinAppDriver-provisioned runner.
+
+BUILD_EXIT=0  TEST_EXIT=1 (headless EXIT=0)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED
