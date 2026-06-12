@@ -69,10 +69,12 @@ struct TeslaSyncApp: App {
                 .teslaSyncTheme()
         } else {
             RootView(coordinator: auth, selection: $selection)
-                .environment(\.routeHosts, ApiPlaygroundRouteRegistration.registry(
-                    base: SettingsRouteRegistration.registry(
-                        model: settingsModel,
-                        onOpenNotifications: { selection = .notifications }
+                .environment(\.routeHosts, DiskForecastRouteRegistration.registry(
+                    base: ApiPlaygroundRouteRegistration.registry(
+                        base: SettingsRouteRegistration.registry(
+                            model: settingsModel,
+                            onOpenNotifications: { selection = .notifications }
+                        )
                     )
                 ))
                 .platformIntegration(selection: $selection, settingsModel: settingsModel, onCommand: runCommand)

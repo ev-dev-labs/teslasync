@@ -1,0 +1,210 @@
+=== P4-APPLE · P7 · page:admin/DiskForecast (SwiftUI / HIG) ===
+started: 2026-06-12T11:05:00-0700
+host: macOS (Darwin) 26.5; Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint 0.63.3 + swiftformat + xcodegen 2.45.4 + pwsh present
+web source: web/src/features/admin/pages/DiskForecastPage.tsx   (route /admin/disk-forecast)
+parity unit: page:admin/DiskForecast  (manifest PARITY_REQUIRED=32)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group. The repo's
+real, compiled canonical admin-page home is `apps/apple/Sources/Features/Admin/**` — where
+the sibling `ApiPlaygroundPage` (the only built P7 admin page) ships, and which `Sources`
+already lists as a project.yml source path (createIntermediateGroups). The page therefore
+ships at `apps/apple/Sources/Features/Admin/**`, the faithful equivalent of the prompt's
+`Features/Admin`. Strings ship in the platform catalog `apps/apple/Localization/
+Localizable.xcstrings` (an allowed file). This is the same reconciliation the
+ApiPlayground log recorded; it is the only deviation from the literal prompt path.
+
+ROUTE HOSTING: the web route is the admin sub-path `/admin/disk-forecast`, which
+`AppRouteParser` resolves to the top-level `.admin` route (the parser keys on the first
+path segment). There is no native admin landing page / sub-router yet, and `.admin` is
+otherwise unregistered (renders the pending state). `DiskForecastRouteRegistration`
+therefore hosts the page on `.admin` so it is reachable via the System-group sidebar entry
+and any `/admin/*` deep link; when an admin sub-router lands this becomes a
+`/admin/disk-forecast` NavigationDestination. Recorded here per covenant #9.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/DiskForecastPage.swift              (260 LOC) SwiftUI view: header(title+subtitle), subsystem-unavailable AlertBanner, 4 fleet StatCards (TSMetricCard grid, shown when rows>0), GlassPanel5 hypertables panel, all states (loading/empty/error/success + 503 unavailable), adaptive, a11y; #if DEBUG previews (loaded/empty/unavailable/error)
+?? apps/apple/Sources/Features/Admin/DiskForecastPage.Table.swift        (204 LOC) DiskForecastTable (adaptive: macOS/iPad columnar Grid, iPhone compact cards) — 6 web columns; DiskForecastSeverityBadge (SEVERITY_VARIANT tone + SEVERITY_LABEL verbatim tokens)
+?? apps/apple/Sources/Features/Admin/DiskForecastPageModel.swift         (284 LOC) @MainActor @Observable model: DiskForecastSeverity, DiskForecastHypertable/Report/FleetTotals (mirror KMP HypertableSize/DiskForecastResponse 1:1), DiskForecastDataSource seam + SampleDiskForecastDataSource default + DiskForecastSubsystemUnavailable(503), DiskForecastState(loading/empty/unavailable/error/loaded), load/refresh/fleetTotals; DiskForecastFormat (formatBytes/fmtNumber/daysToQuota/percent ported from web numberFormat.ts)
+?? apps/apple/Sources/Features/Admin/DiskForecastRouteRegistration.swift (27 LOC) registers .admin -> DiskForecastPage (mirrors ApiPlaygroundRouteRegistration; model built on MainActor + captured)
+?? apps/apple/Tests/Unit/Features/Admin/DiskForecastPageModelTests.swift (169 LOC) XCTest: 5 states + fleet roll-ups + severity fold + formatters (bytes/number/daysToQuota/percent) + sample seed well-formedness
+ M apps/apple/Sources/TeslaSyncApp.swift               chains DiskForecastRouteRegistration.registry(base: ApiPlaygroundRouteRegistration.registry(base: SettingsRouteRegistration.registry(...))) into \.routeHosts
+ M apps/apple/Localization/Localizable.xcstrings       +23 keys (22 admin.diskForecast.* + admin.subsystem.unavailableTitle); JSON validated (8160 total keys); web key names verbatim
+ M apps/parity/apple-ledger.json                        +2 rows (apple-macos, apple-ios) for page:admin/DiskForecast, covered 32/32
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (scheme pre-action, run standalone) ---
+# apps/apple/Scripts/build-shared-xcframework.sh
+BUILD SUCCESSFUL in 6m 46s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "DiskForecast" referenced 30x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 5 files + 1 edited file) ---
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 5 files + 1 edited file, repo .swiftlint.yml rules) ---
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   [no TODO/FIXME/Placeholder/Lorem/"not implemented"/fatalError in shipped code; tests dir also 0]
+
+--- Executed model logic (real DiskForecastPageModel.swift, Swift 6 strict-concurrency host harness) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx> -target arm64-apple-macos15.0 \
+#   Sources/Features/Admin/DiskForecastPageModel.swift Harness.swift -o dfharness   (SWIFTC_EXIT=0)
+34 assertions, 0 failures -> "ALL ASSERTIONS PASSED"
+  initial=.loading + !showsFleetStats; success->.loaded(2)+showsFleetStats+rows=2; empty->.empty+!showsFleetStats;
+  503->.unavailable+isSubsystemUnavailable; failure->.error; refresh re-runs; fleetTotals sum (3000/2100/900/35) + zero-when-not-loaded;
+  severity warn + bogus->unknown; bytes 0/512/1KB/1.5KB/1MB/1GB + nil/inf->dash; number 1,234.50 + 1,000; daysToQuota dash/45.00;
+  percent 50.0 + /0->dash; sample non-empty + ids unique
+HARNESS_EXIT=0
+
+--- View type-check against the REAL P2 tokens + P3 components (Swift 6 strict concurrency) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/{Cards,Typography,Badges,Buttons}.swift Sources/Components/DataDisplay/Metrics.swift \
+#   Sources/Components/Feedback/{States,Banners,Skeletons}.swift Sources/App/{AppRoute,RouteHostRegistry}.swift \
+#   Sources/Features/Admin/*.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0   [exercises the #if os(iOS) horizontalSizeClass compact branch in BOTH DiskForecastPage and DiskForecastTable]
+# This compiles my view + table + model + registration against the ACTUAL
+# TSGlassPanel/TSCard/TSMetricCard/TSAlertBanner/TSEmptyState/TSErrorDisplay/TSSkeleton/TSPageTitle/TSPanelTitle/TSTone
+# /Color.TS/Font.TS/TSSpacing/TSRadius/tsGlassPanel/AppRouteHostRegistry sources — authoritative proof the API usage
+# is correct on BOTH idioms (ADR-002/006). `-typecheck` performs full type/availability/concurrency checking.
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT=65  [BLOCKED by ONE PRE-EXISTING, OUT-OF-SCOPE error — see note below; ZERO errors in any of my files]
+TEST_EXIT=(not reached)  [the macOS test bundle hosts on the app target, which is blocked by the same out-of-scope error]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not compile at this HEAD due to a defect in a sibling
+surface OUTSIDE this artifact's allowed files. The build halted on exactly one diagnostic:
+  TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+      error: escaping closure captures non-escaping parameter 'content'
+This is the SAME systematic `glass(@ViewBuilder _ content: () -> some View)` bug class the
+predecessor ApiPlayground log documented across 71 generated shared-surfaces files (it named
+AISuggestNewGeofences.swift:129 + AIGeofenceAwareAutomationSuggestions.swift:141 as examples).
+Grep of the full build log: total `error:` lines = 1; unique message =
+"escaping closure captures non-escaping parameter 'content'"; unique erroring file =
+TeslaSync/shared-surfaces/AISuggestNewGeofences.swift. NONE are in my files (grep of the log
+for Features/Admin/DiskForecast* and TeslaSyncApp.swift -> zero diagnostics). My files'
+correctness is instead proven by the isolated Swift 6 type-check (0/0 on macOS+iOS) and the
+executed model harness (34/34) — the same host-harness methodology the peer p4-apple logs use
+when the shared bundle is blocked by out-of-scope siblings. No out-of-scope file was edited.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=32
+================================================================================
+[x] panel  — Total-disk            DiskForecastPage.swift `fleetStatsGrid` -> TSMetricCard(title:"admin.diskForecast.fleetTotal", value: DiskForecastFormat.bytes(totals.totalBytes), caption: tableCountCaption)
+[x] panel  — Uncompressed          DiskForecastPage.swift `fleetStatsGrid` -> TSMetricCard("admin.diskForecast.fleetUncompressed", bytes(uncompressedBytes), percentCaption(uncompressed,total))
+[x] panel  — Compressed            DiskForecastPage.swift `fleetStatsGrid` -> TSMetricCard("admin.diskForecast.fleetCompressed", bytes(compressedBytes), percentCaption(compressed,total))
+[x] panel  — Growth-per-day        DiskForecastPage.swift `fleetStatsGrid` -> TSMetricCard("admin.diskForecast.fleetGrowth", "\(bytes(growth))/d", caption "admin.diskForecast.growthSub")
+[x] panel  — GlassPanel5           DiskForecastPage.swift `hypertablesPanel` -> TSGlassPanel { TSPanelTitle("admin.diskForecast.tableTitle"); hypertablesContent } (table / empty / unavailable / skeleton)
+[x] state  — loading               DiskForecastState.loading (initial) -> `hypertablesContent`.loading -> `skeletonRows` ForEach TSSkeleton x6
+[x] state  — empty                 DiskForecastState.empty (loaded, 0 rows) -> TSEmptyState(title:"admin.diskForecast.emptyTitle", message:"admin.diskForecast.emptyMessage", systemImage:"internaldrive")
+[x] state  — error                 DiskForecastState.error(String) -> `errorPanel` TSGlassPanel { TSErrorDisplay(onRetry: model.refresh) }   (+503 variant DiskForecastState.unavailable -> `subsystemBanner` + emptyTableNote)
+[x] state  — success               DiskForecastState.loaded([DiskForecastHypertable]) -> `fleetStatsGrid` (4 cards) + DiskForecastTable (regular Grid / compact cards)
+[x] string — admin.diskForecast.chunkCount       DiskForecastPage.Table.swift `chunkCountText` (catalog "%lld chunks") rendered in `nameCell`
+[x] string — admin.diskForecast.colDays          DiskForecastPage.Table.swift `regularTable` header + compact `labeledRow("admin.diskForecast.colDays", ...)`
+[x] string — admin.diskForecast.colGrowth        DiskForecastPage.Table.swift `regularTable` header + compact `labeledRow`
+[x] string — admin.diskForecast.colSeverity      DiskForecastPage.Table.swift `regularTable` header("admin.diskForecast.colSeverity")
+[x] string — admin.diskForecast.colSplit         DiskForecastPage.Table.swift `regularTable` header + compact `splitRow`
+[x] string — admin.diskForecast.colTable         DiskForecastPage.Table.swift `regularTable` header("admin.diskForecast.colTable")
+[x] string — admin.diskForecast.colTotal         DiskForecastPage.Table.swift `regularTable` header + compact `labeledRow`
+[x] string — admin.diskForecast.compressedSuffix DiskForecastPage.Table.swift `compressedCaption` -> "{bytes} " + String(localized:"admin.diskForecast.compressedSuffix")
+[x] string — admin.diskForecast.emptyMessage     DiskForecastPage.swift `.empty` TSEmptyState message
+[x] string — admin.diskForecast.emptyTable       DiskForecastPage.swift `emptyTableNote` (503 unavailable branch)
+[x] string — admin.diskForecast.emptyTitle       DiskForecastPage.swift `.empty` TSEmptyState title
+[x] string — admin.diskForecast.fleetCompressed  DiskForecastPage.swift `fleetStatsGrid` TSMetricCard title
+[x] string — admin.diskForecast.fleetGrowth      DiskForecastPage.swift `fleetStatsGrid` TSMetricCard title
+[x] string — admin.diskForecast.fleetTotal       DiskForecastPage.swift `fleetStatsGrid` TSMetricCard title
+[x] string — admin.diskForecast.fleetUncompressed DiskForecastPage.swift `fleetStatsGrid` TSMetricCard title
+[x] string — admin.diskForecast.growthSub        DiskForecastPage.swift `fleetStatsGrid` TSMetricCard(caption:"admin.diskForecast.growthSub")
+[x] string — admin.diskForecast.notConfigured    DiskForecastPage.swift `subsystemBanner` TSAlertBanner message
+[x] string — admin.diskForecast.pageTitle        DiskForecastPage.swift `header` TSPageTitle("admin.diskForecast.pageTitle")
+[x] string — admin.diskForecast.percentSub       DiskForecastPage.swift `percentSubText` (catalog "%@%% of total") via `percentCaption`
+[x] string — admin.diskForecast.subtitle         DiskForecastPage.swift `header` Text("admin.diskForecast.subtitle")
+[x] string — admin.diskForecast.tableCount       DiskForecastPage.swift `tableCountText` (catalog "%lld hypertables") via `tableCountCaption`
+[x] string — admin.diskForecast.tableTitle       DiskForecastPage.swift `hypertablesPanel` TSPanelTitle("admin.diskForecast.tableTitle") + a11y label
+[x] string — admin.subsystem.unavailableTitle    DiskForecastPage.swift `subsystemBanner` TSAlertBanner title
+PARITY_COVERED=32
+
+All 32 panels/states/strings render from the bound @Observable DiskForecastPageModel and the
+Localizable.xcstrings catalog; web key names preserved verbatim. The value types
+(DiskForecastHypertable/Report) mirror the KMP OperatorConfidenceModels (HypertableSize/
+DiskForecastResponse) field-for-field, so the production `OperatorConfidenceStore.diskForecast()`
+binding drops into the `DiskForecastDataSource` seam (ADR-004 — no networking in the view), the
+same seam pattern the sibling ApiPlayground page uses. SI converters: N/A — disk byte counts are
+unit-agnostic control-plane values (per the KMP model doc), formatted at the display boundary by
+DiskForecastFormat. Live-SSE staleness: N/A — disk-forecast is a pull/refresh report, not a live
+stream (ADR-013 scope).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild=65)
+                       is ONE pre-existing OUT-OF-SCOPE error in shared-surfaces, labelled as such, never recoloured.
+ 2 No scope narrowing: all 5 panels, all 4 data states (+ the 503 unavailable variant), and adaptive
+                       macOS/iPad columnar + iPhone compact-card table layouts are implemented and verified.
+ 3 No skip-and-assume: the web page was read end-to-end; PageContainer title/subtitle/loading/error +
+                       subsystemMissing banner + the 4 StatCards (with sublabels) + the 6-column hypertables
+                       DataTable + EmptyState were all reproduced.
+ 4 No stubs as final : no TODO/stub/Placeholder/Lorem/fatalError (PLACEHOLDER_COUNT=0); complete code.
+ 5 No parity shortcuts: 4 states render distinctly; stat cards gated behind rows>0 (web guard); est-days
+                       null->em-dash; severity tone+label maps; strings = web keys verbatim.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT commit any edit to sibling surfaces, project.yml, or other owners' files.
+                       The generated TeslaSync.xcodeproj is git-ignored (git check-ignore confirmed) and not committed.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/6), swiftlint --strict(0/6),
+                       placeholder(0), model harness(34/34), view type-check macOS(0/0) + iOS(0/0). The only
+                       RED is out-of-scope and DEFERRED to its owner / the P99 integration gate.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+                       Output-path + .admin route-hosting reconciliations recorded above.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI DiskForecastPage shipped at parity with the web source: a pure
+@Observable state holder (ADR-004 — no networking in the view) exposing loading/empty/error/success
+plus the 503 subsystem-unavailable variant over an injectable DiskForecastDataSource seam whose value
+types mirror the KMP OperatorConfidence DiskForecastResponse/HypertableSize 1:1 (production binds
+OperatorConfidenceStore.diskForecast() through the seam). The page reproduces the web chrome
+(title/subtitle), the subsystem-unavailable AlertBanner, the four fleet StatCards (Total / Uncompressed
+/ Compressed / Growth, each with its web sublabel, shown only when rows>0), and the hypertables
+GlassPanel with an adaptive table — a columnar Grid on macOS/iPad and per-hypertable cards on iPhone —
+covering all six web columns plus the severity badge, using the P2 tokens + P3 shared components (no
+hand-rolled glass). Every visible string resolves from Localizable.xcstrings with the web key names
+(23 keys added); display formatting (formatBytes/fmtNumber/percent) is ported and unit-tested.
+Verified on BOTH idioms by isolated Swift 6 strict-concurrency type-checks (0/0) and an executed model
+harness (34/34). The full xcodebuild scheme is RED ONLY due to one pre-existing, out-of-scope
+shared-surfaces error (forbidden to commit-fix), with ZERO diagnostics in any of my files.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin apps/apple/Tests/Unit/Features/Admin \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-DiskForecastPage.log
+  git commit -m "feat(apps/apple): DiskForecastPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE
