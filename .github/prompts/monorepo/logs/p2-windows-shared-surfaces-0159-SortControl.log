@@ -1,0 +1,137 @@
+=== P2 Shared surface 0159 SortControl (Windows) ===
+
+SURFACE: apps/windows/TeslaSync.App/shared-surfaces/SortControl.{cs,Model.cs,Source.cs,ViewModel.cs}
+WEB SOURCE: web/src/components/forms/SortControl.tsx  (field dropdown + direction toggle, controlled)
+TESTS: apps/windows/TeslaSync.App.Tests/SharedSurfaces/SortControlTests.cs (41 headless test cases)
+
+------------------------------------------------------------------------------------------------
+PARITY NOTES (web -> native)
+------------------------------------------------------------------------------------------------
+- Composition: the web source renders [field <Select>] + [direction <button>] in an inline flex row
+  (gap-1). The native surface mirrors that with a horizontal StackPanel (Spacing=4) hosting the shared
+  Components/UI TsSelect (the native counterpart of web @/components/ui/Select) followed by an Icon-variant
+  TsButton direction toggle. NOT a hand-rolled control - it composes the shared primitives per Windows HIG.
+- Data sources (web hooks -> native seams): the ONLY web hook is useTranslation -> ILocalizer (P1/S10). The
+  web component is fully CONTROLLED - field / direction / options / directionAriaLabel are props the parent
+  owns and onFieldChange / onDirectionChange callbacks report changes. The native ISortControlSource (P1/S8
+  seam) plays the parent's role: it holds the state and raises Changed (re-projection) plus the specific
+  FieldChanged / DirectionChanged events (web callbacks). The view performs no I/O.
+- Shared components used (web @/components/ui/Select) -> native Components/UI TsSelect (ComboBox-based,
+  DisplayMemberPath="Label"); the direction toggle is the shared Components/UI TsButton (Icon variant). The
+  direction enum reuses the shared Core TeslaSync.App.Core.SortDirection (DRY; the same enum + ChevronUp/Down
+  glyphs TsDataTable already uses for column sort), normalized to a strict ascending/descending two-state.
+- States reproduced (every branch the web source actually renders):
+    * ascending  -> ChevronUp glyph (web ArrowUp) + "Ascending" label/tooltip (web direction === 'asc').
+    * descending -> ChevronDown glyph (web ArrowDown) + "Descending" label/tooltip.
+    * populated  -> the field dropdown bound to the options with the selected field resolved to its label.
+    * empty      -> when the option set is empty the field picker renders LABELED + DISABLED (never a blank
+                    box); the web would render an empty <select>, so disabling is a strict native improvement
+                    that invents no copy and no new i18n key.
+  The web SortControl is a CONTROLLED, presentational form control with no query-freshness or connectivity
+  concept, so it has NO loading / error / stale / offline chrome - and none is invented (honesty covenant:
+  no drift in either direction; same reasoning the predecessor Combobox/Delta surfaces logged).
+- Behaviour parity: picking a field -> source.SetField (web onFieldChange); clicking the toggle flips
+  ascending <-> descending and swaps the arrow glyph (web flip / onDirectionChange, L51). Programmatic
+  selection sync is re-entrancy guarded so the projection never feeds back into onFieldChange.
+- i18n (web t() keys -> P1/S10): the 4 sortControl.* keys did NOT exist in the catalog, so they were ADDED to
+  Strings/{en,ar,he}/Resources.resw (4/4 each, verified):
+    sortControl.ascending "Ascending" | sortControl.descending "Descending" |
+    sortControl.fieldLabel "Sort by"  | sortControl.direction "Sort direction".
+  ar/he are seeded with the English value, matching the established catalog precedent (the combobox/avatar
+  keys are English-seeded in ar/he pending localization). No English literals in native code; every visible
+  string flows through the localizer + SortControlRegistration fallbacks (verbatim from the web second args).
+- Accessibility: the field dropdown carries the localized "Sort by" Narrator name (web aria-label); the
+  direction toggle carries the localized "Sort direction: {Ascending|Descending}" name (web aria-label, with
+  the explicit directionAriaLabel override honored verbatim) + the direction label as its tooltip (web title);
+  the arrow glyph is the visible direction indicator. Inherits WinUI hover/pressed/focus visuals, Narrator
+  support and system font scaling from TsButton/TsSelect. No animation -> reduced-motion is a non-issue.
+- Diagnostics (P1/S11): emits `view.opened slug=SortControl` once on Loaded. PII-safe (slug only; never the
+  selected field, the direction, or any option label - asserted by a leak test).
+
+------------------------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER REPAIRED (not part of the surface, but required for the gate to run)
+------------------------------------------------------------------------------------------------
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed at HEAD corrupted into THREE
+stacked <Project> roots (one with a mid-file BOM) by the .gitattributes merge=union strategy - MSB4025
+"The project file could not be loaded. There are multiple root elements. Line 1426" - which fails XML load
+and takes the WHOLE solution build/test down before any compilation. This is the documented hazard the
+file's own INVARIANT comment warns about, and the documented remedy is to regenerate it from the WinUI-free
+sources on disk (every predecessor shared-surface prompt repaired it the same way: 0091/0109/0124/0125/
+0129/0133/0134/0137/0148...).
+
+Regenerated into ONE canonical root. Validated BEFORE regenerating: the corrupt file's 1168 DISTINCT Compile
+links == the disk scan of every Microsoft.UI-free .cs under dashboard-widgets/feature-views/misc-surfaces/
+modals-dialogs/shared-surfaces (0 symmetric difference; every Include exists on disk; no linked file contains
+Microsoft.UI). Regenerated = that 1168 union (case-insensitive ordinal path-sorted, Include-deduplicated)
+PLUS the 3 new WinUI-free SortControl sources (Model + Source + ViewModel) = 1171 Compile items. The bare
+WinUI view SortControl.cs is excluded and exercised by the app build. Verified: single-root XML loads; full
+solution builds; headless suite runs.
+
+------------------------------------------------------------------------------------------------
+GATE
+------------------------------------------------------------------------------------------------
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    BUILD_EXIT=0   (0 Error(s); the only warnings are 17 pre-existing CA1720/CA1716/CA1000/CA1859 hints in
+    TeslaSync.App.Core, which does not treat warnings as errors - none in the new code, which is
+    warnings-as-errors clean under TeslaSync.App's TreatWarningsAsErrors=true + Recommended analyzers).
+    WinUI 3 / Windows App SDK 2.1.3 + .NET 10.0.300 present and working.
+
+[2a] dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"   (authoritative
+     per-surface headless gate)
+    TeslaSync.App.UITests.dll: No test matches `Category!=UIAutomation` (all excluded - env e2e)
+    TeslaSync.App.Tests.dll:  Passed! - Failed: 0, Passed: 22975, Skipped: 0  (incl. 41 SortControl cases)
+    TEST_EXIT=0
+
+[2b] dotnet test apps/windows/TeslaSync.sln -c Release   (literal full-solution, for transparency)
+    TeslaSync.App.Tests.dll:   Passed! - Failed: 0,   Passed: 22975
+    TeslaSync.App.UITests.dll: Failed! - Failed: 147, Passed: 0
+    FULL_SLN_TEST_EXIT=1
+    CAUSE - platform capability absent on this runner (NOT this change):
+      TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+      WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+      WinAppDriver.exe was not found at its standard install paths or on PATH.
+      at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() ...WinAppDriverSession.cs:line 75
+    All 147 TeslaSync.App.UITests are [Trait("Category","UIAutomation")] out-of-process E2E tests that drive
+    the real packaged app via WinAppDriver; the harness is DESIGNED to fail-fast (never silently skip) when
+    the runner is absent. 0 non-UITests failures. This is an environmental gap independent of SortControl -
+    every shared surface sees the identical red. Matches the accepted headless-gate precedent
+    (p2-windows-shared-surfaces-0148-Combobox, -0139-SkipToContent, -0124-InlineCallout, -0110-UserCell).
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    FORMAT_EXIT=0   (no changes needed; the 4 new surface files + the test file are LF / UTF-8 (no BOM) /
+    final-newline / style-clean - an initial CRLF authoring slip was normalized to LF before this run).
+
+[4] check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/SortControl
+    GATE_PLACEHOLDER_EXIT=0  (the surface ships as flat SortControl.* files, so this literal path matches no
+    directory and the script scans nothing - recorded for completeness).
+    HONEST per-file scan of the 5 shipped files (SortControl.cs/.Model.cs/.Source.cs/.ViewModel.cs +
+    SortControlTests.cs): PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0  FILES_PLACEHOLDER_EXIT=0
+    (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/NotImplementedException/// stub).
+
+------------------------------------------------------------------------------------------------
+CAPABILITY EVIDENCE
+------------------------------------------------------------------------------------------------
+WinUI 3 (Windows App SDK 2.1.3) + .NET 10.0.300 + Fluent Design: PRESENT and working - the solution builds
+clean and the 22975-test headless suite (incl. the 41 new SortControl cases) passes. The ONLY red on this
+runner is the out-of-process WinAppDriver/Appium UI-automation harness (Category=UIAutomation), which is
+absent; that harness is not part of the WinUI 3 / .NET 10 capability this prompt requires.
+
+------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------------------------
+[x] Surface renders all states the web source has (ascending / descending direction across the populated and
+    empty option sets); the web primitive has no loading/error/stale/offline chrome and none is invented.
+[x] Hooks bind to the shared state-holder layer: ILocalizer (P1/S10) + ISortControlSource (P1/S8 field/
+    direction/options seam); no direct I/O in the view.
+[x] Every i18n key from source resolves in P1/S10: the 4 translation.sortControl.* keys added to en/ar/he (4/4).
+[x] Accessibility: localized "Sort by" name on the dropdown; localized "Sort direction: ..." name + tooltip on
+    the toggle (explicit directionAriaLabel honored); arrow glyph as the visible indicator; system font scaling.
+[x] Tests: projection per-state (asc/desc/none-normalized/empty/selection/accessible-name/override) + source
+    (set field/direction/toggle/options/null-fallback/normalize/no-op) + view-model (initial/reproject/notify/
+    dispose) + registration/i18n keys + diagnostics (emit + count + no-leak) + a11y labels - 41 cases, green.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (per-file scan = 0).
+[x] Authoritative headless gate green (BUILD_EXIT=0, TEST_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER=0); full-solution
+    red is solely the absent-WinAppDriver E2E harness (evidence above).
+
+EXIT=0
+STATUS=DONE
