@@ -666,3 +666,4 @@ p2-windows/shared-meaningful/W-0177-BackgroundWorkSegment.prompt.md
 p2-windows/shared-meaningful/W-0181-VersionSegment.prompt.md
 p2-windows/shared-meaningful/W-0183-VehiclePicker.prompt.md
 p2-windows/shared-meaningful/W-0185-MapTileLayer.prompt.md
+p2-windows/shared-meaningful/W-0187-RoutePlayback.prompt.md
