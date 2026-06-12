@@ -1,0 +1,203 @@
+=== p2-windows · W7 · page:battery/Energy (WinUI 3 / Fluent) ===
+Parity unit : page:battery/Energy   kind=page   web route=/energy
+Web source  : web/src/features/battery/pages/EnergyPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/EnergyPage/{EnergyPage.Model.cs, EnergyPage.Source.cs,
+              EnergyPage.ViewModel.cs, EnergyPage.cs}  (real in-repo convention; see APPROACH)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feeds), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling
+  W7 TrueCostPage / VehicleCostPage / TimelinePage do. The generated prompt's idealized
+  "Features/Battery/EnergyPage.xaml + EnergyPageViewModel.cs under apps/windows/TeslaSync/" is mapped onto these
+  real conventions (no drift hidden — this note is the disclosure). The surface registers itself with the W4
+  ShellPageFactory by route name "Energy" (already in RouteTable.cs L104 -> /energy) via ShellWindow.xaml.cs.
+- Namespace TeslaSync.App.FeatureViews.Battery. Page registered:
+  _viewModel.PageFactory.Register("Energy", static () => new FeatureViews.Battery.EnergyPage());
+- Data binding (ADR-004): the manifest's three hooks are ported as three single-responsibility cache-then-network
+  ports bound through the ObservableObject view-model (P1/S8), keeping the web hook names at the C# call sites:
+    * useEnergyStats            -> IEnergyStatsSource / EnergyStatsClientSource
+                                   GET /vehicles/{vehicleID}/energy?days=30 (op get_api_v1_vehicles_vehicleID_energy)
+    * useChargingSessionsPaginated -> IChargingSessionsSource / ChargingSessionsClientSource
+                                   GET /charging-sessions?vehicle_id&limit=100&offset=0&start&end (op get_api_v1_charging_sessions)
+                                   over the rolling 30-day window (web default range), snake_case params (ADR-004 #8 no camelCase).
+    * useChargingTelemetryLatest -> IChargingTelemetryLatestSource / ChargingTelemetryLatestClientSource
+                                   GET /charging-telemetry/latest?vehicle_id (op get_api_v1_charging_telemetry_latest)
+  The scoped vehicle is resolved from the shared IWidgetVehicleSource (native useSelectedVehicle / vehicles[0]
+  fallback); with no vehicle every read short-circuits to RepositoryResult.Empty (web `enabled: vehicleId !== null`).
+  No HTTP touches the view. The view-model reads SI from the API and the projection converts ONLY at the display
+  boundary (ADR P1/S5: UnitConverters/UnitFormatters/ScalarFormatters); the wire JSON round-trips losslessly
+  through the cache (raw JsonElement) and the {data:…} envelope is unwrapped by the tolerant parsers.
+- States (ADR-006): the web page renders the skeleton on useEnergyStats.isLoading, the QueryError on statsError,
+  and otherwise the full body with PER-SECTION empty states (the empty hero when there is no energy data yet, each
+  ChartContainer's empty body, the empty sessions table). The native port reproduces these as visible Fluent
+  regions and NEVER hides a section: EnergyState.Loading -> TsStatGridSkeleton(4)+TsStatGridSkeleton(6)+TsTableSkeleton×2;
+  EnergyState.Error -> TsQueryError (InfoBar-equivalent) + Retry; EnergyState.Ready/Stale/Offline -> the nine panels,
+  with the hero swapping to a TsEmptyState and every chart container showing its empty body when its source is empty.
+  A populated-but-empty stats response stays Ready (web parity) — only a first-load failure with no cache is Error.
+- SI units: distance m->km/mi, energy Wh->Wh/kWh, power W->kW, efficiency Wh/m->Wh/km|Wh/mi are all restated at
+  projection time via the shared converters; nothing non-SI is stored or computed. Imperial flips the efficiency
+  gauge/series unit to Wh/mi and the energy unit to kWh (test Projection_efficiency_unit_switches_to_imperial).
+- a11y/dark mode: every panel/chart publishes AutomationProperties names (TsChartContainer.AccessibleSummary carries
+  each chart's web ariaLabel); the design-token components (TsGlassPanel/Typography/charts) honor light/dark + high
+  contrast via the W1/W2 token dictionaries; the page exposes a Group AutomationPeer.
+- i18n (ADR-014): every visible literal flows through ILocalizer.GetString("<web key>", "<web default>") with the
+  exact web key names; 43 of the 56 keys were already in the platform catalog (translation.energy.* /
+  translation.common.noData), and the 13 keys the web added after the last catalog generation
+  (energy.chart.energy, energy.chart.*.aria ×4, energy.cost_decimal.* ×6, energy.table.cost_decimal, energy.empty.hero)
+  were appended to Strings/en|ar|he/Resources.resw so all 56 resolve from the catalog (xml re-validated).
+
+=== PARITY ===
+PARITY_REQUIRED=81
+
+# Panels (9) — every named panel + every anonymous web region reproduced as a Fluent Card/Mica region
+[x] panel  - GlassPanel1 (Hero gauges)            -> EnergyPage.cs _heroPanel (TsGlassPanel) hosting _gaugeGrid of 4
+             TsRadialGauge, or _emptyHero (TsEmptyState) when EnergyDisplay.ShowEmptyHero; projection EnergyProjection
+             gauges + showEmptyHero; tests Projection_builds_four_hero_gauges_in_display_units,
+             Projection_shows_empty_hero_when_no_sessions_and_no_stats
+[x] panel  - GlassPanel2 (Quick metrics strip)    -> EnergyPage.cs _metrics[0..5] (TsStatCard) <- EnergyDisplay.Metrics;
+             test Projection_builds_six_quick_metrics
+[x] panel  - GlassPanel3 (Lifetime metrics)       -> EnergyPage.cs _lifetimePanel/_lifetimeCards[0..1] (TsStatCard) <-
+             EnergyDisplay.LifetimeCards; tests Projection_builds_two_lifetime_cards_with_kwh_value,
+             Projection_lifetime_value_is_em_dash_when_live_absent
+[x] panel  - GlassPanel4 (Cost vs gas savings)    -> EnergyPage.cs _compares[0..1] (CompareTile/TsGlassPanel) <-
+             EnergyDisplay.CostCompares; test Projection_builds_two_cost_comparisons_with_saving_chip
+[x] panel  - Energy-Cost-Daily                    -> EnergyPage.cs _energyCostContainer (TsChartContainer) <-
+             EnergyDisplay.EnergyCostSeries/EnergyCostState; test Projection_builds_energy_cost_composed_series
+[x] panel  - Efficiency-Trend                     -> EnergyPage.cs _efficiencyContainer (TsChartContainer) <-
+             EnergyDisplay.EfficiencySeries/EfficiencyState; test Projection_builds_efficiency_area_series
+[x] panel  - Charging-by-Time-of-Day              -> EnergyPage.cs _timeOfDayContainer (TsChartContainer) + the two
+             tips (OffPeakTip/SolarTip) <- EnergyDisplay.TimeOfDaySeries/TimeOfDayState; test
+             Projection_builds_time_of_day_bar_series_with_four_buckets
+[x] panel  - Charger-Type-Breakdown               -> EnergyPage.cs _chargerContainer (TsChartContainer) hosting
+             _chargerPie + _chargerLegend rows <- EnergyDisplay.ChargerSlices/ChargerRows/ChargerBreakdownState;
+             test Projection_builds_charger_breakdown_pie_and_legend
+[x] panel  - GlassPanel9 (Recent charging sessions) -> EnergyPage.cs _sessionsPanel/_sessionsTable (TsDataTable) or
+             _sessionsEmpty (TsEmptyState) <- EnergyDisplay.SessionRows/SessionColumns; tests
+             Projection_builds_session_rows_and_columns, Projection_session_table_caps_at_fifteen_rows,
+             Projection_sessions_empty_when_none
+
+# Charts (12) — native W3 chart wrappers (TsRadialGauge / TsChartContainer / Ts{Composed,Area,Bar,Pie}Chart), never a web canvas
+[x] chart  - RadialGauge (Energy Used)  -> EnergyPage.cs _gauges[0] (TsRadialGauge) <- EnergyDisplay.Gauges[0]
+[x] chart  - RadialGauge (Efficiency)   -> EnergyPage.cs _gauges[1] (TsRadialGauge) <- EnergyDisplay.Gauges[1]; test Projection_efficiency_unit_switches_to_imperial
+[x] chart  - RadialGauge (CO2 Saved)    -> EnergyPage.cs _gauges[2] (TsRadialGauge) <- EnergyDisplay.Gauges[2]
+[x] chart  - RadialGauge (Total Cost)   -> EnergyPage.cs _gauges[3] (TsRadialGauge) <- EnergyDisplay.Gauges[3]
+[x] chart  - ChartContainer (Energy & Cost Daily) -> EnergyPage.cs _energyCostContainer (TsChartContainer)
+[x] chart  - ComposedChart               -> EnergyPage.cs _energyCostChart (TsComposedChart) <- EnergyDisplay.EnergyCostSeries (Bar energy + Line efficiency); test Projection_builds_energy_cost_composed_series
+[x] chart  - ChartContainer (Efficiency Trend)    -> EnergyPage.cs _efficiencyContainer (TsChartContainer)
+[x] chart  - AreaChart                   -> EnergyPage.cs _efficiencyChart (TsAreaChart) <- EnergyDisplay.EfficiencySeries (efficiency + distance areas); test Projection_builds_efficiency_area_series
+[x] chart  - ChartContainer (Charging by Time of Day) -> EnergyPage.cs _timeOfDayContainer (TsChartContainer)
+[x] chart  - BarChart                    -> EnergyPage.cs _timeOfDayChart (TsBarChart) <- EnergyDisplay.TimeOfDaySeries (energy + sessions bars); test Projection_builds_time_of_day_bar_series_with_four_buckets
+[x] chart  - ChartContainer (Charger Type Breakdown) -> EnergyPage.cs _chargerContainer (TsChartContainer)
+[x] chart  - PieChart                    -> EnergyPage.cs _chargerPie (TsPieChart) <- EnergyDisplay.ChargerSlices; test Projection_builds_charger_breakdown_pie_and_legend
+
+# Data states (4) — implemented for every data source (energy stats / charging sessions / latest live)
+[x] state  - loading  -> EnergyState.Loading; EnergyPage.cs _loadingPanel (TsStatGridSkeleton(4)+TsStatGridSkeleton(6)
+             +TsTableSkeleton×2); ViewModel SetLoading when !HasContent; test ViewModel_loading_only_stays_loading
+[x] state  - empty    -> per-section empty bodies: ShowEmptyHero (TsEmptyState), each chart ChartState.Empty
+             (TsChartContainer empty body), empty sessions table; EnergyProjection; tests
+             Projection_charts_are_empty_when_no_data, ViewModel_empty_stats_still_renders_content_with_empty_panels,
+             Projection_sessions_empty_when_none, Empty_sources_render_content_with_empty_hero
+[x] state  - error    -> EnergyState.Error; EnergyPage.cs _errorState (TsQueryError) + Retry -> RefreshAsync; VM
+             SetError maps RepositoryErrorKind to a localized message; test ViewModel_stats_failure_renders_error
+[x] state  - success  -> EnergyState.Ready (+ Stale/Offline freshness branches); full nine-panel body bound from
+             EnergyDisplay; tests ViewModel_loaded_exposes_hero_charts_metrics_and_sessions,
+             ViewModel_stale_cache_renders_stale_with_content, ViewModel_offline_renders_offline_with_content_and_error
+
+# Strings (56) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names.
+#   Coverage asserted headlessly by EnergyPageTests.Projection_resolves_every_required_string_key (RecordingLocalizer
+#   records all 56; asserts RequiredStringKeys.Length == 56). Each maps to an EnergyProjection.GetString call site.
+[x] string - common.noData                         -> EnergyDisplay.NoDataMessage (time-of-day + charger empty bodies)
+[x] string - energy.breakdown.sessions             -> EnergyChargerRow.SessionsText (BuildChargerBreakdown)
+[x] string - energy.chart.chargerBreakdown         -> EnergyDisplay.ChargerBreakdownTitle
+[x] string - energy.chart.chargerBreakdown.aria    -> EnergyDisplay.ChargerBreakdownAria (TsChartContainer.AccessibleSummary)
+[x] string - energy.chart.chargingByTime           -> EnergyDisplay.TimeOfDayTitle
+[x] string - energy.chart.chargingByTime.aria      -> EnergyDisplay.TimeOfDayAria
+[x] string - energy.chart.distance                 -> EfficiencySeries distance series name (BuildEfficiencySeries)
+[x] string - energy.chart.efficiencyTrend          -> EnergyDisplay.EfficiencyTitle
+[x] string - energy.chart.efficiencyTrend.aria     -> EnergyDisplay.EfficiencyAria
+[x] string - energy.chart.energy                   -> EnergyCostSeries energy bar series name (BuildEnergyCostSeries)
+[x] string - energy.chart.energyCostDaily          -> EnergyDisplay.EnergyCostTitle
+[x] string - energy.chart.energyCostDaily.aria     -> EnergyDisplay.EnergyCostAria
+[x] string - energy.chart.energyKwh                -> TimeOfDaySeries energy bar series name (BuildTimeOfDaySeries)
+[x] string - energy.chart.noEfficiencyData         -> EnergyDisplay.NoEfficiencyDataMessage (efficiency empty body)
+[x] string - energy.chart.noEnergyData             -> EnergyDisplay.NoEnergyDataMessage (energy-cost empty body)
+[x] string - energy.chart.sessions                 -> TimeOfDaySeries count bar series name
+[x] string - energy.cost_decimal.evCost            -> EnergyCostCompare.EvCostLabel (BuildCompare)
+[x] string - energy.cost_decimal.gasEquivalent     -> EnergyCostCompare.GasLabel
+[x] string - energy.cost_decimal.less              -> EnergyCostCompare.PercentLessText
+[x] string - energy.cost_decimal.periodTotal       -> CostCompares[0].Label ("{days}-Day Total")
+[x] string - energy.cost_decimal.projectedAnnual   -> CostCompares[1].Label
+[x] string - energy.cost_decimal.saving            -> EnergyCostCompare.SavingText
+[x] string - energy.empty.hero                      -> EnergyDisplay.EmptyHeroMessage (TsEmptyState)
+[x] string - energy.gauge.co2Saved                 -> Gauges[2].Label
+[x] string - energy.gauge.efficiency               -> Gauges[1].Label
+[x] string - energy.gauge.energyUsed               -> Gauges[0].Label
+[x] string - energy.gauge.totalCost                -> Gauges[3].Label
+[x] string - energy.lifetime.energyUsed            -> LifetimeCards[0].Label
+[x] string - energy.lifetime.energyUsedDesc        -> LifetimeCards[0].Description
+[x] string - energy.lifetime.periodEnergy          -> LifetimeCards[1].Label ("Last {days} Days")
+[x] string - energy.lifetime.periodEnergyDesc      -> LifetimeCards[1].Description
+[x] string - energy.lifetime.title                 -> EnergyDisplay.LifetimeTitle
+[x] string - energy.metric.costPerDist             -> Metrics[0].Label ("Cost per {unit}")
+[x] string - energy.metric.costPerKwh              -> Metrics[1].Label
+[x] string - energy.metric.monthlyEst              -> Metrics[4].Label
+[x] string - energy.metric.sessions                -> Metrics[3].Label
+[x] string - energy.metric.totalDistance           -> Metrics[2].Label
+[x] string - energy.metric.yearlyEst               -> Metrics[5].Label
+[x] string - energy.pageSubtitle                   -> EnergyDisplay.Subtitle / EnergyRegistration.Subtitle
+[x] string - energy.pageTitle                      -> EnergyDisplay.Title / EnergyRegistration.Title
+[x] string - energy.sessions.empty                 -> EnergyDisplay.SessionsEmptyMessage (TsDataTable.EmptyMessage / TsEmptyState)
+[x] string - energy.sessions.title                 -> EnergyDisplay.SessionsTitle
+[x] string - energy.table.battery                  -> SessionColumns[battery].Header
+[x] string - energy.table.cost_decimal             -> SessionColumns[cost].Header
+[x] string - energy.table.date                     -> SessionColumns[date].Header
+[x] string - energy.table.energy                   -> SessionColumns[energy].Header
+[x] string - energy.table.perKwh                   -> SessionColumns[perKwh].Header
+[x] string - energy.table.power                    -> SessionColumns[power].Header
+[x] string - energy.table.type                     -> SessionColumns[type].Header
+[x] string - energy.timeOfDay.afternoon            -> time-of-day bucket label (BuildTimeOfDay)
+[x] string - energy.timeOfDay.evening              -> time-of-day bucket label
+[x] string - energy.timeOfDay.morning              -> time-of-day bucket label
+[x] string - energy.timeOfDay.night                -> time-of-day bucket label
+[x] string - energy.tip.offPeak                    -> EnergyDisplay.OffPeakTip
+[x] string - energy.tip.solar                      -> EnergyDisplay.SolarTip
+[x] string - energy.title                          -> EnergyDisplay.DocumentTitle (web usePageTitle; page AutomationProperties name)
+
+PARITY_COVERED=81
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/EnergyPage -Language csharp
+#   (real in-repo target path; the generated prompt's apps/windows/TeslaSync/Features/Battery path does not exist)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Warning(s), 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (all files LF / UTF-8 after normalization)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26035, Failed: 0, Skipped: 0
+#   (incl. 39 EnergyPageTests; this is the W7 unit-parity TEST gate, matching the sibling W7 page logs)
+TEST_EXIT=0
+PARITY_COVERED=81
+PARITY_REQUIRED=81
+#
+# Note (transparency, ADR-011 honesty): the separate UI-automation E2E suite TeslaSync.App.UITests (147 tests)
+# is NOT part of the W7 unit-parity gate (the sibling W7 logs scope TEST to TeslaSync.App.Tests). It additionally
+# requires a WinAppDriver/Appium runner, which is absent in this environment
+# (UiAutomationUnavailableException: "nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not
+# found"); those tests are therefore not executed here and are NOT claimed green. Every code-level gate above
+# (build + lint + 26035 headless unit tests + placeholder) and PARITY_COVERED==PARITY_REQUIRED are verified green.
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/EnergyPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/EnergyPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-battery-EnergyPage.log
+# git commit -m "feat(apps/windows): EnergyPage at web parity (W7 battery)"
+
+EXIT=0
+STATUS=DONE

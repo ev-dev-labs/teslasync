@@ -59,6 +59,9 @@ public sealed partial class ShellWindow : Window
         // Onboarding / sign-in surface (P2/W4-0001) for the public onboarding route.
         _viewModel.PageFactory.Register("Onboarding", static () => new OnboardingView());
 
+        // Battery / Energy page (P2/W7) — parity port of web EnergyPage at route /energy.
+        _viewModel.PageFactory.Register("Energy", static () => new FeatureViews.Battery.EnergyPage());
+
         // Admin / API Logs page (P2/W7) — parity port of web ApiLogsPage at route /api-logs.
         _viewModel.PageFactory.Register("ApiLogs", static () => new FeatureViews.Admin.ApiLogsPage());
 

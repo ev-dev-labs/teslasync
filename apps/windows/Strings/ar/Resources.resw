@@ -24026,4 +24026,43 @@
   </data>
   <data name="translation.telemetry.vehicleState" xml:space="preserve">
     <value>Vehicle State</value>
-  </data></root>
+  </data>  <data name="translation.energy.chart.chargerBreakdown.aria" xml:space="preserve">
+    <value>Charger type share pie chart</value>
+  </data>
+  <data name="translation.energy.chart.chargingByTime.aria" xml:space="preserve">
+    <value>Charging energy and session count by time of day bar chart</value>
+  </data>
+  <data name="translation.energy.chart.efficiencyTrend.aria" xml:space="preserve">
+    <value>Daily efficiency and distance area chart</value>
+  </data>
+  <data name="translation.energy.chart.energy" xml:space="preserve">
+    <value>Energy</value>
+  </data>
+  <data name="translation.energy.chart.energyCostDaily.aria" xml:space="preserve">
+    <value>Daily energy and efficiency composed chart with bars and a line</value>
+  </data>
+  <data name="translation.energy.cost_decimal.evCost" xml:space="preserve">
+    <value>EV Cost</value>
+  </data>
+  <data name="translation.energy.cost_decimal.gasEquivalent" xml:space="preserve">
+    <value>Gas Equivalent</value>
+  </data>
+  <data name="translation.energy.cost_decimal.less" xml:space="preserve">
+    <value>less</value>
+  </data>
+  <data name="translation.energy.cost_decimal.periodTotal" xml:space="preserve">
+    <value>{{days}}-Day Total</value>
+  </data>
+  <data name="translation.energy.cost_decimal.projectedAnnual" xml:space="preserve">
+    <value>Projected Annual</value>
+  </data>
+  <data name="translation.energy.cost_decimal.saving" xml:space="preserve">
+    <value>Saving</value>
+  </data>
+  <data name="translation.energy.empty.hero" xml:space="preserve">
+    <value>No energy data yet — connect your vehicle and complete a drive or charging session to see efficiency, cost, and CO₂ savings.</value>
+  </data>
+  <data name="translation.energy.table.cost_decimal" xml:space="preserve">
+    <value>Cost</value>
+  </data>
+</root>
