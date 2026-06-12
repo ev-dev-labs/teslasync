@@ -18253,6 +18253,9 @@
   <data name="translation.sudo.typedConfirmationLabel" xml:space="preserve">
     <value>Type {0} to confirm</value>
   </data>
+  <data name="translation.system.page.subtitle" xml:space="preserve">
+    <value>Operator dashboard for the throttles and budgets that bound this TeslaSync deployment.</value>
+  </data>
   <data name="translation.system.page.title" xml:space="preserve">
     <value>System budgets</value>
   </data>

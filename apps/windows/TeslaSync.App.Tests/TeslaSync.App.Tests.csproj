@@ -25,6 +25,9 @@
     deduplicating the 1327-source union back to one Compile group and adding the two new TeslaFeatureFlagsPage
     Model/ViewModel links. Do NOT re-concatenate into multiple roots, and never write
     a literal build item or project start tag inside this comment.
+    windows/W7 admin/SystemPage (repairing a merge=union multi-root corruption), plus the new SystemPage
+    Model/ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build item
+    or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -1153,6 +1156,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Model.cs" Link="FeatureViews\SummaryStats\SummaryStats.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Source.cs" Link="FeatureViews\SummaryStats\SummaryStats.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.ViewModel.cs" Link="FeatureViews\SummaryStats\SummaryStats.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SystemPage\SystemPage.Model.cs" Link="FeatureViews\SystemPage\SystemPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SystemPage\SystemPage.ViewModel.cs" Link="FeatureViews\SystemPage\SystemPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Model.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Source.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Source.cs" />

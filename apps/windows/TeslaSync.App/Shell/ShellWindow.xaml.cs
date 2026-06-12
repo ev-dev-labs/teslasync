@@ -787,6 +787,10 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("TeslaFeatureFlags", static () => new FeatureViews.Admin.TeslaFeatureFlagsPage());
         // Admin / Slow queries page (P2/W7) — parity port of web SlowQueriesPage at route /admin/slow-queries.
         _viewModel.PageFactory.Register("SlowQueries", static () => new FeatureViews.Admin.SlowQueriesPage());
+        // Admin / System budgets page (P2/W7) — parity port of web SystemPage. The web page is unrouted
+        // (SYSTEM_PAGE_PATH '/admin/system' is never wired into a router), so RouteTable carries no entry;
+        // registering the factory keeps the surface reachable by deep link / programmatic navigation.
+        _viewModel.PageFactory.Register("System", static () => new FeatureViews.Admin.SystemPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

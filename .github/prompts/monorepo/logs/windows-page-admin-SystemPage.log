@@ -1,0 +1,104 @@
+=== p2-windows · W7 · page:admin/System (WinUI 3 / Fluent) ===
+Parity unit : page:admin/System   kind=page   web route=(unrouted)
+Web source  : web/src/features/admin/pages/SystemPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) + maui-windows workload — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free, unit-tested
+  headlessly), <Name>.ViewModel.cs (INotifyPropertyChanged state holder) and <Name>.cs (the Fluent view),
+  exactly as the sibling W7 ApiLogsPage / FeedbackQueuePage do. The generated prompt's idealized
+  "SystemPage.xaml + SystemPageViewModel.cs under TeslaSync/Features/Admin" is mapped onto these real
+  conventions (namespace TeslaSync.App.FeatureViews.Admin).
+- The web SystemPage is a thin shell: a PageContainer title/subtitle header above a <Stack className="gap-6">
+  holding two presentational panels — RateLimitStatusPanel then QueueStatusPanel — and it owns NO query
+  (manifest: "no API data sources - renders from navigation params / local state"). The native SystemPage
+  reproduces this exactly: SystemPage.cs composes the two ALREADY-IMPLEMENTED sibling panels
+  (feature-views/RateLimitStatusPanel.cs, feature-views/QueueStatusPanel/QueueStatusPanel.cs) inside a
+  ScrollViewer + StackPanel(Spacing=24) under a PageTitle + Subhead header bound to SystemPageViewModel.
+- The two web GlassPanel regions ARE the two embedded panels; each carries its own loading / empty / error
+  state holder (RateLimitStatusViewModel / QueueStatusViewModel), so the three data states render inside the
+  panels precisely as the web composes them. SystemPage adds no data state of its own (parity-correct).
+- Navigation (ADR): the web page exports SYSTEM_PAGE_PATH '/admin/system' but is NEVER referenced by any web
+  router (verified: only SystemPage.tsx mentions it), so the manifest web route is (unrouted) and the native
+  Core/Navigation/RouteTable.cs intentionally carries NO matching entry (it ports web <Route>s 1:1). The W4
+  ShellPageFactory is still given the page by route name ("System") in ShellWindow.xaml.cs so the surface is
+  reachable by deep link / programmatic navigation without inventing a route the web baseline lacks.
+- Default data sources: the shell constructs the page through its parameterless ctor, which (mirroring the
+  ApiLogsPage/FeedbackQueuePage EmptyFeed precedent) binds the two panels to EmptyRateLimitStatusSource /
+  EmptyQueueStatusSource. Each yields a single RepositoryResult<…>.Empty() emission so the panels resolve to
+  their empty state — never an indefinite spinner — until a host wires the repository-backed sources through
+  the panels' Create(IApiClient, …) factory. No HTTP touches the view.
+- i18n: both manifest keys resolve through the ILocalizer facade with the web key names. system.page.title was
+  already present in Strings/{en,ar,he}/Resources.resw (translation.system.page.title = "System budgets");
+  system.page.subtitle was MISSING and was added to all three catalogs
+  (translation.system.page.subtitle = "Operator dashboard for the throttles and budgets that bound this
+  TeslaSync deployment.", English in ar/he per the existing untranslated convention), inserted in
+  alphabetical order before the .title row.
+- Pre-existing blocker repaired: TeslaSync.App.Tests.csproj had been re-corrupted by its documented
+  .gitattributes merge=union strategy into TWO <Project> roots + TWO PropertyGroups + duplicated item groups
+  (2633 Compile items, only 1327 distinct), failing XML load (MSB4025: multiple root elements @1380) and
+  blocking the whole-solution build at baseline. Regenerated into the single canonical Project root the file's
+  own INVARIANT mandates: case-insensitive ordinal path-sorted, Include-deduplicated union of every
+  Microsoft.UI-free source (1327 distinct) plus the two new SystemPage Model/ViewModel links (1329 total), LF
+  + final newline. No linked source dropped; PackageReference/ProjectReference/Content sets preserved.
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+# Panels (2) — the two web GlassPanel regions, reproduced as the embedded W3 panels in web order
+[x] panel  - RateLimitStatusPanel -> SystemPage.cs#BuildLayout adds new RateLimitStatusPanel(rateLimitSource, localizer)
+             (web <Stack> child 1); owns its loading/empty/error/stale/offline state via RateLimitStatusViewModel.
+[x] panel  - QueueStatusPanel     -> SystemPage.cs#BuildLayout adds new QueueStatusPanel(queueSource, localizer)
+             (web <Stack> child 2); owns its loading/empty/error/stale/offline state via QueueStatusViewModel.
+
+# Data states — the page owns none (no data source); the embedded panels render all three, driven here to empty
+[x] state  - empty (default) -> EmptyRateLimitStatusSource / EmptyQueueStatusSource yield RepositoryResult<…>.Empty();
+             test Empty_sources_drive_the_panels_to_their_empty_state asserts RateLimitPanelState.Empty + QueuePanelState.Empty.
+
+# Strings (2) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - system.page.subtitle -> SystemPageRegistration.Subtitle (SystemPage.Model.cs) localizer.GetString(
+             "system.page.subtitle", "Operator dashboard for the throttles and budgets that bound this TeslaSync deployment.");
+             surfaced by SystemPageViewModel.Subtitle (SystemPage.ViewModel.cs) and rendered by SystemPage.cs#_subtitleText (Subhead);
+             catalog row translation.system.page.subtitle ADDED to Strings/{en,ar,he}/Resources.resw;
+             tests ViewModel_resolves_every_required_string_key + Registration_exposes_the_web_default_strings.
+[x] string - system.page.title    -> SystemPageRegistration.Title (SystemPage.Model.cs) localizer.GetString(
+             "system.page.title", "System budgets"); surfaced by SystemPageViewModel.Title and rendered by
+             SystemPage.cs#_titleText (PageTitle); catalog row translation.system.page.title present in
+             Strings/{en,ar,he}/Resources.resw; tests ViewModel_resolves_every_required_string_key +
+             Registration_exposes_the_web_default_strings.
+
+PARITY_COVERED=2
+# Coverage asserted headlessly: SystemPageTests.ViewModel_resolves_every_required_string_key records both
+# keys (system.page.title, system.page.subtitle) through a RecordingLocalizer driven by the bound
+# SystemPageViewModel; Registration_resolves_every_required_string_key records them through the registration;
+# Registration_exposes_the_web_default_strings + ViewModel_exposes_localized_title_and_subtitle pin the web
+# default copy; Refresh_reresolves_header_and_raises_property_changed asserts the language-change re-render;
+# Notify_opened_records_pii_safe_view_event asserts the diagnostics event; the two Empty*Source tests +
+# Empty_sources_drive_the_panels_to_their_empty_state assert the panels render their empty state. (11 tests.)
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SystemPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only; none in SystemPage or the test project)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (SystemPage Model/ViewModel/view + ShellWindow registration + resw + regenerated test csproj, all LF)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25790, Failed: 0, Skipped: 0 (incl. 11 SystemPageTests)
+TEST_EXIT=0
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SystemPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SystemPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-SystemPage.log
+# git commit -m "feat(apps/windows): SystemPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE
