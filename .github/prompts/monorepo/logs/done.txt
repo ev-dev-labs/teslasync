@@ -638,3 +638,4 @@ p2-windows/shared-meaningful/W-0142-TeslaReauthBanner.prompt.md
 p2-windows/shared-meaningful/W-0143-TimeMachineBanner.prompt.md
 p2-windows/shared-meaningful/W-0144-Toast.prompt.md
 p2-windows/shared-meaningful/W-0147-ActiveFilterChips.prompt.md
+p2-windows/shared-meaningful/W-0146-FormatterPrefsBridge.prompt.md
