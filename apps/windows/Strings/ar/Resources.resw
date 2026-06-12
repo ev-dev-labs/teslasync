@@ -9,6 +9,9 @@
   <data name="translation.AC" xml:space="preserve">
     <value>AC</value>
   </data>
+  <data name="translation.AC Power" xml:space="preserve">
+    <value>AC Power</value>
+  </data>
   <data name="translation.AEB" xml:space="preserve">
     <value>AEB</value>
   </data>
@@ -48,6 +51,9 @@
   <data name="translation.Avg" xml:space="preserve">
     <value>Avg</value>
   </data>
+  <data name="translation.Avg Energy/Day" xml:space="preserve">
+    <value>Avg Energy/Day</value>
+  </data>
   <data name="translation.BSC" xml:space="preserve">
     <value>BSC</value>
   </data>
@@ -59,6 +65,9 @@
   </data>
   <data name="translation.CFD" xml:space="preserve">
     <value>CFD</value>
+  </data>
+  <data name="translation.CO₂ Saved" xml:space="preserve">
+    <value>CO₂ Saved</value>
   </data>
   <data name="translation.Cancel" xml:space="preserve">
     <value>Cancel</value>
@@ -144,6 +153,21 @@
   <data name="translation.Critical" xml:space="preserve">
     <value>Critical</value>
   </data>
+  <data name="translation.DC Power" xml:space="preserve">
+    <value>DC Power</value>
+  </data>
+  <data name="translation.Daily Distance" xml:space="preserve">
+    <value>Daily Distance</value>
+  </data>
+  <data name="translation.Daily Efficiency" xml:space="preserve">
+    <value>Daily Efficiency</value>
+  </data>
+  <data name="translation.Daily Energy History" xml:space="preserve">
+    <value>Daily Energy History</value>
+  </data>
+  <data name="translation.Daily Energy Usage" xml:space="preserve">
+    <value>Daily Energy Usage</value>
+  </data>
   <data name="translation.Database" xml:space="preserve">
     <value>Database</value>
   </data>
@@ -216,6 +240,9 @@
   <data name="translation.Efficiency" xml:space="preserve">
     <value>Efficiency</value>
   </data>
+  <data name="translation.Efficiency Metrics" xml:space="preserve">
+    <value>Efficiency Metrics</value>
+  </data>
   <data name="translation.Empty" xml:space="preserve">
     <value>Empty</value>
   </data>
@@ -230,6 +257,15 @@
   </data>
   <data name="translation.Endpoint" xml:space="preserve">
     <value>Endpoint</value>
+  </data>
+  <data name="translation.Energy" xml:space="preserve">
+    <value>Energy</value>
+  </data>
+  <data name="translation.Energy Flow" xml:space="preserve">
+    <value>Energy Flow</value>
+  </data>
+  <data name="translation.Energy Flow Diagram" xml:space="preserve">
+    <value>Energy Flow Diagram</value>
   </data>
   <data name="translation.Entry" xml:space="preserve">
     <value>Entry</value>
@@ -438,6 +474,9 @@
   <data name="translation.My" xml:space="preserve">
     <value>My</value>
   </data>
+  <data name="translation.N/A" xml:space="preserve">
+    <value>N/A</value>
+  </data>
   <data name="translation.Name" xml:space="preserve">
     <value>Name</value>
   </data>
@@ -449,6 +488,30 @@
   </data>
   <data name="translation.No" xml:space="preserve">
     <value>No</value>
+  </data>
+  <data name="translation.No Data" xml:space="preserve">
+    <value>No Data</value>
+  </data>
+  <data name="translation.No daily distance data available." xml:space="preserve">
+    <value>No daily distance data available.</value>
+  </data>
+  <data name="translation.No daily energy data available." xml:space="preserve">
+    <value>No daily energy data available.</value>
+  </data>
+  <data name="translation.No efficiency data available." xml:space="preserve">
+    <value>No efficiency data available.</value>
+  </data>
+  <data name="translation.No energy flow data available for this vehicle and time range." xml:space="preserve">
+    <value>No energy flow data available for this vehicle and time range.</value>
+  </data>
+  <data name="translation.No energy history records available." xml:space="preserve">
+    <value>No energy history records available.</value>
+  </data>
+  <data name="translation.No energy records found." xml:space="preserve">
+    <value>No energy records found.</value>
+  </data>
+  <data name="translation.No live data" xml:space="preserve">
+    <value>No live data</value>
   </data>
   <data name="translation.Nominal" xml:space="preserve">
     <value>Nominal</value>
@@ -527,6 +590,9 @@
   </data>
   <data name="translation.Port" xml:space="preserve">
     <value>Port</value>
+  </data>
+  <data name="translation.Power distribution and energy analysis" xml:space="preserve">
+    <value>Power distribution and energy analysis</value>
   </data>
   <data name="translation.Preferences" xml:space="preserve">
     <value>Preferences</value>
@@ -695,6 +761,12 @@
   </data>
   <data name="translation.Total" xml:space="preserve">
     <value>Total</value>
+  </data>
+  <data name="translation.Total Charged" xml:space="preserve">
+    <value>Total Charged</value>
+  </data>
+  <data name="translation.Total Energy" xml:space="preserve">
+    <value>Total Energy</value>
   </data>
   <data name="translation.Track" xml:space="preserve">
     <value>Track</value>
@@ -3950,6 +4022,12 @@
   </data>
   <data name="translation.backup.import.errorSectionArray" xml:space="preserve">
     <value>sections.{0} must be an array</value>
+  </data>
+  <data name="translation.kg CO₂" xml:space="preserve">
+    <value>kg CO₂</value>
+  </data>
+  <data name="translation.per day" xml:space="preserve">
+    <value>per day</value>
   </data>
   <data name="translation.toast.settings.export.error" xml:space="preserve">
     <value>Failed to export settings</value>

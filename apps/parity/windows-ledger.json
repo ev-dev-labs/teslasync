@@ -43,5 +43,14 @@
     "requiredCount": 11,
     "promptId": "p2-windows/W7/windows-page-automations-AutomationActivityFeed",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-automations-AutomationActivityFeed.log"
+  },
+  {
+    "unitId": "page:battery/EnergyFlow",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 74,
+    "requiredCount": 74,
+    "promptId": "p2-windows/W7/windows-page-battery-EnergyFlowPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-EnergyFlowPage.log"
   }
 ]
