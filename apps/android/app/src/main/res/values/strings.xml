@@ -8056,4 +8056,18 @@
   <string name="translation_notifications_alertStudio_editor_presetModalIntro">Curated templates for common alert shapes. Click one to apply it; you can edit it afterwards.</string>
   <string name="translation_notifications_alertStudio_editor_presetAllTag">All</string>
   <string name="translation_notifications_alertStudio_editor_presetEmpty">No presets match this filter</string>
+  <string name="translation_system_slo_title">Uptime &amp; SLO</string>
+  <string name="translation_system_slo_targetSet">Target %1$s%%</string>
+  <string name="translation_system_slo_componentsHealthy">%1$s / %2$s components healthy</string>
+  <string name="translation_system_slo_caveat">Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot.</string>
+  <string name="translation_system_slo_loading">Loading uptime…</string>
+  <string name="translation_system_slo_error">Failed to load uptime data.</string>
+  <string name="translation_system_slo_empty">No uptime data for this window yet.</string>
+  <string name="translation_system_slo_window24h">Last 24 hours</string>
+  <string name="translation_system_slo_window7d">Last 7 days</string>
+  <string name="translation_system_slo_window30d">Last 30 days</string>
+  <string name="translation_system_slo_window90d">Last 90 days</string>
+  <string name="translation_system_slo_window1y">Last year</string>
+  <string name="translation_system_slo_a11y_targetInput">Target uptime percentage</string>
+  <string name="translation_system_slo_a11y_windowSelector">Uptime window selector</string>
 </resources>
