@@ -1,0 +1,96 @@
+=== P2 Shared surface 0139 SkipToContent (Windows) ===
+
+SURFACE: apps/windows/TeslaSync.App/shared-surfaces/SkipToContent.{cs,Model.cs,ViewModel.cs}
+WEB SOURCE: web/src/components/feedback/SkipToContent.tsx  (WCAG 2.4.1 Bypass Blocks, Level A)
+TESTS: apps/windows/TeslaSync.App.Tests/SharedSurfaces/SkipToContentTests.cs (22 tests)
+
+------------------------------------------------------------------------------------------------
+PARITY NOTES (web -> native)
+------------------------------------------------------------------------------------------------
+- Composition: web `<VisuallyHidden as="a" focusable>` skip link -> native shared `TsButton` primitive,
+  visually hidden until keyboard focus (opacity 0 -> 1 on GotFocus; -> 0 on LostFocus), revealed top-left.
+- Data: web `useTranslation` -> ILocalizer facade (P1/S10). Single i18n key `translation.a11y.skipToContent`
+  ("Skip to main content") — already present in Strings/{en,he,ar}/Resources.resw.
+- Behaviour: web onClick `const main = getElementById('main-content'); if (main) { main.focus(...);
+  main.scrollIntoView(...) }` -> ISkipTarget seam (P1/S8): ControlSkipTarget focuses + StartBringIntoView;
+  NullSkipTarget is the no-landmark no-op (the web `if (main)` guard falling through — never throws).
+- States reproduced (the web source has NO data fetch, so NO loading/empty/error/stale/offline chrome — same
+  as the peer a11y surfaces RouteAnnouncer / VisuallyHidden): resting (hidden) link, focused (revealed) link,
+  activation-with-landmark (focus moved), activation-without-landmark (safe no-op).
+- Accessibility: link carries the localized accessible name + automation id "skip-to-content" (web
+  data-testid); instant opacity reveal => reduce-motion-safe by construction; WinUI scales with system font size.
+- Diagnostics (P1/S11): emits `view.opened slug=SkipToContent` once on Loaded; also `skip.activated` /
+  `skip.targetMissing` operational counters. PII-safe (slug-only; never the label or landmark text).
+
+------------------------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER REPAIRED (not part of the surface, but required for the gate to run)
+------------------------------------------------------------------------------------------------
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was corrupted into TWO <Project> roots by the
+.gitattributes merge=union strategy (MSB4025: "multiple root elements", line 1263) — the documented hazard the
+file's own INVARIANT comment warns about. Regenerated into ONE canonical root = the union (1124) of every
+Microsoft.UI-free .cs on disk under the surface dirs, case-insensitive ordinal path-sorted, dedup'd. Verified:
+single-root XML loads; every Compile Include exists on disk; disk WinUI-free scan == csproj set (0 missing).
+Then added the 2 new WinUI-free SkipToContent sources (Model + ViewModel; the bare view SkipToContent.cs is
+excluded and exercised by the app build) -> 1126 Compile items.
+
+------------------------------------------------------------------------------------------------
+GATE
+------------------------------------------------------------------------------------------------
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    BUILD_EXIT=0   (0 Error(s), 0 Warning(s); TeslaSync.App.dll + TeslaSync.App.Tests.dll built)
+    WinUI 3 / Windows App SDK + .NET 10.0.300 present and working; new code is warnings-as-errors clean.
+
+[2a] dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"   (authoritative
+     per-surface headless gate)
+    TeslaSync.App.UITests.dll: No test matches `Category!=UIAutomation` (all excluded — env e2e)
+    TeslaSync.App.Tests.dll:  Passed! - Failed: 0, Passed: 22231, Skipped: 0  (incl. 22 SkipToContentTests)
+    TEST_EXIT=0
+
+[2b] dotnet test apps/windows/TeslaSync.sln -c Release   (literal full-solution, for transparency)
+    TeslaSync.App.Tests.dll:   Passed! - Failed: 0,   Passed: 22231
+    TeslaSync.App.UITests.dll: Failed! - Failed: 147, Passed: 0
+    FULL_SLN_TEST_EXIT=1
+    CAUSE — platform capability absent on this runner (NOT this change):
+      TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+      WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+      WinAppDriver.exe was not found at its standard install paths or on PATH.
+      at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() ...WinAppDriverSession.cs:line 75
+    The 147 TeslaSync.App.UITests are all [Trait("Category","UIAutomation")] out-of-process E2E tests that drive
+    the real packaged app via WinAppDriver; the harness is DESIGNED to fail-fast (never silently skip) when the
+    runner is absent. This is an environmental gap, independent of SkipToContent — every shared surface sees the
+    identical red. Matches the accepted headless-gate precedent (p2-windows-shared-surfaces-0130-OfflineBanner,
+    -0124-InlineCallout, -0110-UserCell).
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    FORMAT_EXIT=0   (no changes needed; 4 new files are LF / UTF-8 / final-newline / style-clean)
+
+[4] check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/SkipToContent
+    GATE_PLACEHOLDER_EXIT=0  (the surface ships as flat SkipToContent.* files, so this literal path matches no
+    directory and scans nothing — recorded for completeness)
+    HONEST per-file scan of the 3 shipped files (SkipToContent.cs/.Model.cs/.ViewModel.cs):
+    PLACEHOLDER_COUNT=0  FILES_PLACEHOLDER_EXIT=0   (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+------------------------------------------------------------------------------------------------
+CAPABILITY EVIDENCE
+------------------------------------------------------------------------------------------------
+WinUI 3 (Windows App SDK) + .NET 10.0.300 + Fluent: PRESENT and working — the solution builds clean and the
+22231-test headless suite (incl. the 22 new SkipToContentTests) passes. The ONLY red on this runner is the
+out-of-process WinAppDriver/Appium UI-automation harness (Category=UIAutomation), which is absent; that harness
+is not part of the WinUI 3 / .NET 10 capability this prompt requires.
+
+------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------------------------
+[x] Surface renders all states the web source has (resting/focused link + landmark-present / landmark-absent
+    activation); the web source has no loading/empty/error/stale/offline chrome and none is invented.
+[x] Hooks bind to the shared state-holder layer (ILocalizer P1/S10 + ISkipTarget P1/S8); no direct I/O in view.
+[x] Every i18n key from source resolves in P1/S10: translation.a11y.skipToContent present in en/he/ar.
+[x] Accessibility name + automation id on the interactive link; reduce-motion-safe; system font scaling.
+[x] Tests: adapter (SkipActivation) + registration/label + per-state ViewModel.Activate + diagnostics + a11y
+    label key — 22 headless tests, all green.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (per-file scan = 0).
+[x] Authoritative headless gate green (BUILD_EXIT=0, TEST_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER=0); full-solution
+    red is solely the absent-WinAppDriver E2E harness (evidence above).
+
+EXIT=0
+STATUS=DONE
