@@ -406,3 +406,4 @@ p3-android/feature-views/A-0155-HealthOverview.prompt.md
 p3-android/feature-views/A-0158-PowerOutputChart.prompt.md
 p3-android/feature-views/A-0160-TemperatureGauges.prompt.md
 p3-android/feature-views/A-0159-StatorTempChart.prompt.md
+p3-android/feature-views/A-0162-TemperatureTrendChart.prompt.md
