@@ -1435,8 +1435,8 @@
     the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it into multiple
     roots plus duplicate items, failing XML load (MSB4025 / MSB4067); when that happens, regenerate it directly
     from the Microsoft.UI-free sources on disk. Regenerated into this single canonical root for P2
-    shared-surfaces/0157 RangePicker (repairing a merge=union multi-root corruption), plus the new RangePicker
-    Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build
+    shared-surfaces/0167 Breadcrumbs (repairing a merge=union multi-root corruption), plus the new Breadcrumbs
+    Model / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build
     item or project start tag inside this comment.
 <Project Sdk="Microsoft.NET.Sdk">
 
@@ -2537,6 +2537,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\Avatar\Avatar.Source.cs" Link="SharedSurfaces\Avatar\Avatar.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Avatar\Avatar.ViewModel.cs" Link="SharedSurfaces\Avatar\Avatar.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BatteryDelta.Model.cs" Link="SharedSurfaces\BatteryDelta.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Breadcrumbs\Breadcrumbs.Model.cs" Link="SharedSurfaces\Breadcrumbs\Breadcrumbs.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Breadcrumbs\Breadcrumbs.ViewModel.cs" Link="SharedSurfaces\Breadcrumbs\Breadcrumbs.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BrowserCompatBanner.Model.cs" Link="SharedSurfaces\BrowserCompatBanner.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BrowserCompatBanner.Source.cs" Link="SharedSurfaces\BrowserCompatBanner.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BrowserCompatBanner.ViewModel.cs" Link="SharedSurfaces\BrowserCompatBanner.ViewModel.cs" />
@@ -2621,6 +2623,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Model.cs" Link="SharedSurfaces\KpiOverviewCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Source.cs" Link="SharedSurfaces\KpiOverviewCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.ViewModel.cs" Link="SharedSurfaces\KpiOverviewCard.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.Model.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.Source.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ListExportMenu\ListExportMenu.ViewModel.cs" Link="SharedSurfaces\ListExportMenu\ListExportMenu.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Model.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.Source.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\LiveIndicator\LiveIndicator.ViewModel.cs" Link="SharedSurfaces\LiveIndicator\LiveIndicator.ViewModel.cs" />
@@ -2658,11 +2663,6 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\RateLimitBanner.ViewModel.cs" Link="SharedSurfaces\RateLimitBanner.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.Model.cs" Link="SharedSurfaces\ReleaseNotes.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.ViewModel.cs" Link="SharedSurfaces\ReleaseNotes.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\RateLimitBanner.Model.cs" Link="SharedSurfaces\RateLimitBanner.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\RateLimitBanner.Source.cs" Link="SharedSurfaces\RateLimitBanner.Source.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\RateLimitBanner.ViewModel.cs" Link="SharedSurfaces\RateLimitBanner.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.Model.cs" Link="SharedSurfaces\ReleaseNotes.Model.cs" />
-    <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.ViewModel.cs" Link="SharedSurfaces\ReleaseNotes.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ReloadPrompt.Model.cs" Link="SharedSurfaces\ReloadPrompt.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ReloadPrompt.Source.cs" Link="SharedSurfaces\ReloadPrompt.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ReloadPrompt.ViewModel.cs" Link="SharedSurfaces\ReloadPrompt.ViewModel.cs" />
@@ -2685,6 +2685,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\SmallMultiplesChart.Model.cs" Link="SharedSurfaces\SmallMultiplesChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SmallMultiplesChart.Source.cs" Link="SharedSurfaces\SmallMultiplesChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SmallMultiplesChart.ViewModel.cs" Link="SharedSurfaces\SmallMultiplesChart.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SortControl.Model.cs" Link="SharedSurfaces\SortControl.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SortControl.Source.cs" Link="SharedSurfaces\SortControl.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SortControl.ViewModel.cs" Link="SharedSurfaces\SortControl.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SourceLayerBadge.Model.cs" Link="SharedSurfaces\SourceLayerBadge.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SourceLayerBadge.Source.cs" Link="SharedSurfaces\SourceLayerBadge.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SourceLayerBadge.ViewModel.cs" Link="SharedSurfaces\SourceLayerBadge.ViewModel.cs" />
@@ -2740,8 +2743,6 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\withAiFeature.Model.cs" Link="SharedSurfaces\withAiFeature.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\withAiFeature.Source.cs" Link="SharedSurfaces\withAiFeature.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\withAiFeature.ViewModel.cs" Link="SharedSurfaces\withAiFeature.ViewModel.cs" />
-  </ItemGroup>
-
   </ItemGroup>
 
 </Project>

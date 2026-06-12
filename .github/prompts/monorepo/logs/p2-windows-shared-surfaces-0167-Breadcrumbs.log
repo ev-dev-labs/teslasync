@@ -1,0 +1,142 @@
+=== P2 Shared surface 0167 Breadcrumbs (Windows) ===
+
+SURFACE: apps/windows/TeslaSync.App/shared-surfaces/Breadcrumbs/Breadcrumbs.{cs,Model.cs,ViewModel.cs}
+WEB SOURCE: web/src/components/layout/Breadcrumbs.tsx  (layout-chrome breadcrumb trail, presentational)
+TESTS: apps/windows/TeslaSync.App.Tests/SharedSurfaces/BreadcrumbsTests.cs (41 headless test cases)
+
+------------------------------------------------------------------------------------------------
+PARITY NOTES (web -> native)
+------------------------------------------------------------------------------------------------
+- Composition: the web source renders a <nav aria-label="Breadcrumb"> as an inline flex row (gap-1,
+  overflow-x-auto scrollbar-none) with a leading Home icon link followed by chevron-separated crumbs. The
+  native surface mirrors that with a ScrollViewer (horizontal, scrollbar hidden, vertical disabled) hosting a
+  horizontal StackPanel (Spacing=4): a leading Home HyperlinkButton (Segoe Fluent Home glyph \uE80F), then per
+  crumb a ChevronRight FontIcon (\uE76C) + the crumb element. It composes WinUI primitives + the shared
+  Components/DataDisplay DisplayTokens brushes per Windows HIG; the atomic crumb primitive (Components/Layout
+  TsBreadcrumbs) is the P2 component-library bundle and out of scope here.
+- Data sources (web hooks -> native seams): the ONLY web hook is useTranslation -> ILocalizer (P1/S10). The
+  web component is presentational - `items` / `homeHref` / `homeAriaLabel` are props the parent owns and it
+  delegates each link's navigation + hover/focus prefetch to <PrefetchLink>. The native IBreadcrumbNavigator
+  (P1/S8 seam) plays PrefetchLink's role (Navigate / Prefetch); items flow in through SetItems and are
+  projected by the UI-thread-free BreadcrumbsViewModel. The view performs no I/O, i18n, projection or routing
+  of its own - it binds the holder.
+- States reproduced (every branch the web source actually renders):
+    * collapsed  -> web `if (items.length <= 1) return null`; the native surface hides itself (Visibility=
+                    Collapsed) for a 0/1-crumb trail, matching the web empty-slot behaviour exactly (the
+                    LayoutBreadcrumbs contract: top-level pages render nothing). Reproduced, not invented.
+    * populated  -> Home link + chevron-separated crumbs.
+    * current    -> trailing crumb (isLast) renders as TextSecondary + font-medium text, never a link, even
+                    when it carries an href (web `isLast || !item.href`).
+    * link       -> a non-last crumb with an href renders as a muted HyperlinkButton (web PrefetchLink).
+    * text       -> a non-last crumb without an href renders as muted text (web span).
+    * middle     -> interior crumbs collapse on a narrow viewport and a per-crumb horizontal-ellipsis (\u2026,
+                    aria-hidden) is shown instead (web `hidden sm:inline` / `sm:hidden`, sm=640px), driven by
+                    SizeChanged + the pure BreadcrumbResponsive.IsNarrow decision.
+  The web Breadcrumbs is a presentational layout control fed by props with NO data fetch, so it has NO loading
+  / error / stale / offline chrome - and none is invented (honesty covenant: no drift in either direction; the
+  same reasoning the predecessor SkipToContent / RouteAnnouncer / SortControl surfaces logged).
+- i18n (web t() keys -> P1/S10): both keys ALREADY exist in the catalog (no resw change needed), verified in
+  en/ar/he (2/2 each): translation.a11y.breadcrumb "Breadcrumb" (nav landmark name) and
+  translation.a11y.breadcrumbHome "Dashboard" (Home link name). No English literals in native code; every
+  visible/accessible string flows through ILocalizer + BreadcrumbsRegistration fallbacks (verbatim from the
+  web t() second args), with the homeAriaLabel prop override honored.
+- Accessibility: the surface is an AutomationLandmarkType.Navigation landmark carrying the localized
+  "Breadcrumb" name (web <nav aria-label>); the Home link carries the localized "Dashboard" Narrator name (web
+  aria-label, explicit homeAriaLabel honored); each crumb link/text carries its label; the collapsed-ellipsis
+  is AccessibilityView.Raw (web aria-hidden="true"); labels truncate at 200px (web max-w-[200px]). Inherits
+  WinUI hover/pressed/focus visuals, Narrator support and system font scaling from HyperlinkButton. No
+  animation -> reduced-motion is a non-issue.
+- Diagnostics (P1/S11): emits `view.opened slug=Breadcrumbs` once on Loaded (idempotent). PII-safe (slug only;
+  never a crumb label or an href - an href can carry fleet ids like /charging/{id} - asserted by a leak test).
+
+------------------------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER REPAIRED (not part of the surface, but required for the gate to run)
+------------------------------------------------------------------------------------------------
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed at HEAD corrupted into TWO stacked
+<Project> roots by the .gitattributes merge=union strategy - MSB4025 "The project file could not be loaded.
+There are multiple root elements. Line 1387" - which fails XML load and takes the WHOLE solution build/test
+down before any compilation (verified: baseline `dotnet build apps/windows/TeslaSync.sln -c Release` = MSB4025,
+red). This is the documented hazard the file's own INVARIANT comment warns about, and the documented remedy is
+to regenerate it from the WinUI-free sources on disk (every predecessor shared-surface prompt repaired it the
+same way: 0134/0135/0144/0146/0147/0148/0150/0152/0154/0155/0157/0159...).
+
+Regenerated into ONE canonical root. Validated BEFORE regenerating: the corrupt file's 1186 DISTINCT Compile
+links == the disk scan of every Microsoft.UI-free .cs under dashboard-widgets/feature-views/misc-surfaces/
+modals-dialogs/shared-surfaces (0 symmetric difference; every Include exists on disk; no linked file contains
+Microsoft.UI). Regenerated = that union (case-insensitive ordinal path-sorted, Include-deduplicated) PLUS the 2
+new WinUI-free Breadcrumbs sources (Model + ViewModel) = 1188 Compile items. The bare WinUI view Breadcrumbs.cs
+is excluded and exercised by the app build; the BreadcrumbsTests.cs class is picked up by the SDK default
+glob. Verified: single-root XML loads ([xml] parse OK, 1 <Project>/1 </Project>, balanced ItemGroups); full
+solution builds; headless suite runs.
+
+------------------------------------------------------------------------------------------------
+GATE
+------------------------------------------------------------------------------------------------
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    BUILD_EXIT=0   (0 Error(s), 0 Warning(s) on the recompiled projects; the new code is warnings-as-errors
+    clean under TeslaSync.App's TreatWarningsAsErrors=true + Recommended analyzers - any pre-existing CA hints
+    live only in TeslaSync.App.Core, which does not treat warnings as errors and was not touched).
+    WinUI 3 / Windows App SDK 2.1.3 + .NET 10.0.300 present and working.
+
+[2a] dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"   (authoritative
+     per-surface headless gate)
+    TeslaSync.App.UITests.dll: No test matches `Category!=UIAutomation` (all excluded - env e2e)
+    TeslaSync.App.Tests.dll:  Passed! - Failed: 0, Passed: 23236, Skipped: 0  (incl. 41 Breadcrumbs cases)
+    TEST_EXIT=0
+
+[2b] dotnet test apps/windows/TeslaSync.sln -c Release   (literal full-solution, for transparency)
+    TeslaSync.App.Tests.dll:   Passed! - Failed: 0,   Passed: 23236
+    TeslaSync.App.UITests.dll: Failed! - Failed: 147, Passed: 0
+    FULL_SLN_TEST_EXIT=1
+    CAUSE - platform capability absent on this runner (NOT this change):
+      TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+      WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+      WinAppDriver.exe was not found at its standard install paths or on PATH.
+      at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() ...WinAppDriverSession.cs:line 75
+    All 147 TeslaSync.App.UITests are [Trait("Category","UIAutomation")] out-of-process E2E tests that drive
+    the real packaged app via WinAppDriver; the harness is DESIGNED to fail-fast (never silently skip) when
+    the runner is absent (WinAppDriverSession.cs L12-14). 0 non-UITests failures. This is an environmental gap
+    independent of Breadcrumbs - every shared surface sees the identical red. Matches the accepted
+    headless-gate precedent (p2-windows-shared-surfaces-0159-SortControl, -0148-Combobox, -0124-InlineCallout).
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    FORMAT_EXIT=0   (no changes needed; the 3 new surface files + the test file are LF / UTF-8 (no BOM) /
+    final-newline / style-clean - an initial CRLF authoring slip was normalized to LF before this run).
+
+[4] check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/Breadcrumbs
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+    (the surface ships as a Breadcrumbs/ subdirectory, so this literal path is a real directory and the script
+    scans all 3 shipped .cs files: no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/
+    NotImplementedException/// stub).
+
+------------------------------------------------------------------------------------------------
+CAPABILITY EVIDENCE
+------------------------------------------------------------------------------------------------
+WinUI 3 (Windows App SDK 2.1.3) + .NET 10.0.300 + Fluent Design: PRESENT and working - the solution builds
+clean and the 23236-test headless suite (incl. the 41 new Breadcrumbs cases) passes. The ONLY red on this
+runner is the out-of-process WinAppDriver/Appium UI-automation harness (Category=UIAutomation), which is
+absent; that harness is not part of the WinUI 3 / .NET 10 capability this prompt requires.
+
+------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------------------------
+[x] Surface renders all states the web source has (collapsed <=1 crumb / populated / current / link / text /
+    narrow-collapsed-middle with ellipsis); the web primitive has no loading/error/stale/offline chrome and
+    none is invented.
+[x] Hooks bind to the shared state-holder layer: ILocalizer (P1/S10) + IBreadcrumbNavigator (P1/S8 navigate/
+    prefetch seam, the PrefetchLink role); items flow via SetItems; no direct I/O in the view.
+[x] Every i18n key from source resolves in P1/S10: translation.a11y.breadcrumb + translation.a11y.breadcrumbHome
+    already present in en/ar/he (2/2 each); no catalog change required.
+[x] Accessibility: Navigation landmark with localized "Breadcrumb" name; localized "Dashboard" name on the Home
+    link (homeAriaLabel honored); each crumb labelled; collapsed-ellipsis hidden from AT (aria-hidden); 200px
+    label truncation; system font scaling.
+[x] Tests: projection per-state (collapsed/single/two/middle/text-no-href/last-never-link/preserve) + responsive
+    (narrow theory + unmeasured-wide) + null-navigator + view-model (labels/home overrides/state/notify/navigate
+    /prefetch/blank-no-op/MarkOpened-once/null-arg) + registration/i18n keys + a11y labels + diagnostics (emit +
+    count + no-leak) - 41 cases, green.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (directory scan = 0).
+[x] Authoritative headless gate green (BUILD_EXIT=0, TEST_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER=0); full-solution
+    red is solely the absent-WinAppDriver E2E harness (evidence above).
+
+EXIT=0
+STATUS=DONE
