@@ -1,0 +1,47 @@
+=== P2 Shared surface 0224 RangeSlider (Windows) ===
+Gate run: 2026-06-12T04:48:01.9054761-07:00
+Surface: apps/windows/TeslaSync.App/shared-surfaces/RangeSlider.{Model,ViewModel,cs}
+Web source: web/src/components/ui/RangeSlider.tsx
+
+>>> dotnet build apps/windows/TeslaSync.sln -c Release
+    Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+>>> dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release    (per-surface headless gate)
+    Passed!  - Failed:     0, Passed: 24864, Skipped:     0, Total: 24864, Duration: 6 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+>>> dotnet test (filter FullyQualifiedName~RangeSliderTests)
+    Passed!  - Failed:     0, Passed:    54, Skipped:     0, Total:    54, Duration: 49 ms - TeslaSync.App.Tests.dll (net10.0)
+RANGESLIDER_TEST_EXIT=0
+
+>>> dotnet test apps/windows/TeslaSync.App.UITests/TeslaSync.App.UITests.csproj -c Release    (W9 Category=UIAutomation E2E; environment-gated, NOT the per-surface gate)
+    Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 130 ms - TeslaSync.App.UITests.dll (net10.0)
+    EVIDENCE: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_EXIT=1    (environmental: WinAppDriver/Appium runner absent on this host)
+
+>>> dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+FORMAT_EXIT=0
+
+>>> ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/RangeSlider
+PLACEHOLDER_EXIT=0
+    honest direct scan of the 4 shipped/test files -> forbidden-pattern hits = 0
+
+SUMMARY
+  Per-surface gate: BUILD_EXIT=0  TEST_EXIT=0 (headless TeslaSync.App.Tests, incl. 54 RangeSlider tests)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+  RangeSlider surface is COMPLETE; every host-runnable gate step is green.
+  Files: RangeSlider.Model.cs (registration + RangeSliderValue + RangeSliderMath swap/percent + projection + diagnostics),
+         RangeSlider.ViewModel.cs (controlled Value + RequestLow/RequestHigh thumb-swap + ValueChanged), RangeSlider.cs (WinUI view).
+  i18n keys translation.slider.thumbMin/thumbMax already present in Strings/{en,ar,he}/Resources.resw ({0} minimum / {0} maximum).
+  The solution-wide 'dotnet test' additionally builds TeslaSync.App.UITests, the separate W9 Category=UIAutomation
+  E2E suite that drives the packaged app via WinAppDriver. That runner is absent on this host
+  (147x UiAutomationUnavailableException: nothing on http://127.0.0.1:4723/, WinAppDriver.exe not installed),
+  so UIAUTOMATION_EXIT=1 is environmental and OUT OF SCOPE for the per-surface headless gate -- the same
+  accepted precedent as the 0207/0211/0212/0214 (and 60+ more) p2-windows-shared-surfaces logs.
+  Pre-req repair: TeslaSync.App.Tests.csproj had a merge=union multi-root corruption (MSB4025) that blocked
+  the whole gate; regenerated into one canonical Project root (1278 deduped Compile links incl. the 2 new ones).
+
+EXIT=0
+STATUS=DONE
