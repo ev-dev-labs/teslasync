@@ -1,0 +1,69 @@
+=== P3 Feature view 0139 DriveStatCards (Android) ===
+date_utc=2026-06-12T08:16:52.9205307Z
+
+NOTE: settings.gradle.kts maps the single app module to Gradle path ':android' (it documents
+      'every P3/A* prompt gate addresses :android:'); the prompt's ':app:' is a template token.
+      The gate below runs the real module path ':android' - the only deviation from the prompt gate text.
+
+INFRA NOTE (no silent drift): the first :android:assembleRelease attempt hit a transient Kotlin
+      compile-daemon connection failure (shared runner contention; Gradle auto-fell-back to in-process
+      compilation and continued) and was then aborted at :android:mergeDexRelease by an EXTERNAL Gradle
+      daemon 'stop command received' (a concurrent session on the shared host). Neither is a code fault.
+      The gate was re-run with '-Dkotlin.compiler.execution.strategy=in-process --no-daemon' for stability;
+      all steps below are from those stable re-runs.
+
+openjdk version "21.0.9" 2025-10-21
+OpenJDK Runtime Environment (build 21.0.9+-14787801-b1163.94)
+OpenJDK 64-Bit Server VM (build 21.0.9+-14787801-b1163.94, mixed mode)
+
+.\gradlew.bat :android:assembleRelease -Dkotlin.compiler.execution.strategy=in-process --no-daemon
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2m 37s
+70 actionable tasks: 5 executed, 65 up-to-date
+BUILD_EXIT=0
+
+.\gradlew.bat :android:testReleaseUnitTest -Dkotlin.compiler.execution.strategy=in-process --no-daemon
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2m 28s
+45 actionable tasks: 7 executed, 38 up-to-date
+TEST_EXIT=0
+  DriveStatCardsModelTest: tests=19 failures=0 errors=0 skipped=0 (io.teslasync.android.featureviews.drivestatcards)
+  full release unit suite: classes=462 tests=5679 failures=0 errors=0 skipped=0
+
+.\gradlew.bat :android:ktlintCheck :android:detekt -Dkotlin.compiler.execution.strategy=in-process --no-daemon
+  (first run surfaced 3 detekt MayBeConst findings on the skeleton fraction vals; fixed by making
+   SKELETON_ICON/VALUE/LABEL_FRACTION 'const val'. Re-run below is clean.)
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 11m 42s
+13 actionable tasks: 5 executed, 8 up-to-date
+LINT_EXIT=0
+
+.\apps\tools\check-placeholders.ps1 -Path apps/android/.../feature-views/DriveStatCards
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- summary ---
+BUILD_EXIT=0   (:android:assembleRelease - release APK assembled; Kotlin compiled clean)
+TEST_EXIT=0    (:android:testReleaseUnitTest - DriveStatCardsModelTest 19 tests, 0 failures; suite 5679, 0 failures)
+LINT_EXIT=0    (:android:ktlintCheck :android:detekt - main + test + androidTest source sets)
+PLACEHOLDER_EXIT=0  (apps/tools/check-placeholders.ps1 over the surface dir; PLACEHOLDER_COUNT=0)
+
+CAPABILITY: Jetpack Compose + Material 3 + Kotlin toolchain present and exercised (assembleRelease produced
+            the release APK; JDK 21 / Android SDK 36 build succeeded). The prompt's 'Kotlin 2.2.x' floor is
+            satisfied by the repo-locked Kotlin (ADR-012 version lock, apps/android/gradle/libs.versions.toml).
+
+EXIT=0
+STATUS=DONE
