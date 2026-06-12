@@ -1,0 +1,114 @@
+=== p2-windows · W7 · page:automations/ActionBuilder (WinUI 3 / Fluent) ===
+Parity unit : page:automations/ActionBuilder   kind=page   web route=(unrouted)
+Web source  : web/src/features/automations/pages/ActionBuilder.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); feature surfaces live under
+  apps/windows/TeslaSync.App/feature-views/ as <Name>.Model.cs (pure, Microsoft.UI-free projection +
+  diagnostics + registration, unit-tested headlessly), <Name>.ViewModel.cs (INotifyPropertyChanged state
+  holder) and <Name>.cs (the Fluent view). The generated prompt's idealized "ActionBuilder.xaml +
+  ActionBuilderViewModel.cs under TeslaSync/Features/Automations" is mapped onto these real conventions.
+- This unit PRE-EXISTED on disk as a near-complete implementation (apps/windows/TeslaSync.App/feature-views/
+  ActionBuilder.cs + ActionBuilder.Model.cs + ActionBuilder.ViewModel.cs, namespace TeslaSync.App.FeatureViews)
+  with a comprehensive headless test (TeslaSync.App.Tests/FeatureViews/ActionBuilderTests.cs, already
+  Compile-linked in TeslaSync.App.Tests.csproj). It built and tested clean, but it was never ledgered and had
+  a parity DEFECT: 5 placeholder strings used non-web *Hint key names (commandParamsHint / notifyHint /
+  settingKeyHint / valueNumberHint / valueTextHint) — keys ABSENT from the .resw catalog — which dodged the
+  ADR-011 placeholder scanner (the literal "Placeholder" is a forbidden stub marker) at the cost of diverging
+  from the manifest/web key names. That divergence was invisible to the value-based unit tests.
+- FIX (surgical): renamed the 5 key constants' VALUES to the web/manifest *Placeholder keys
+  (commandParamsPlaceholder / notifyPlaceholder / settingKeyPlaceholder / valueNumberPlaceholder /
+  valueTextPlaceholder), each annotated `// parity:allow web i18n key name, not a stub marker` — the
+  documented opt-out (mirroring the repo's existing TsInput/TsSelect/TsTextarea PlaceholderText uses) so the
+  placeholder gate stays clean while the keys now match the web verbatim. The web English fallbacks were
+  already correct, so the existing value-based tests still pass unchanged.
+- i18n catalog: the manifest's commandParamsObjectError row was MISSING from Strings/{en,ar,he}/Resources.resw
+  and is now added; the surface's two extra native a11y/empty keys (automations.builder.empty,
+  automations.builder.region) were also added so EVERY visible literal is catalog-sourced. The other 24
+  required keys + the 5 corrected *Placeholder keys already existed in the catalog. Keys are resolved with the
+  web's natural names (no "translation." prefix) through the ILocalizer → Localization bridge, identical to the
+  completed admin/ApiLogs unit.
+- Web route is "(unrouted)" — ActionBuilder is a controlled sub-component consumed by the automation builder
+  page, not a navigable destination — so NO NavigationView registration is added (consistent with the sibling
+  unrouted feature-views AutomationActivityFeed / AutomationCard, which are likewise not shell-registered).
+- Added one regression test (Surface_resolves_every_manifest_string_key) that pins all 27 manifest keys by
+  name through a RecordingLocalizer — guarding against any future revert to the non-web *Hint keys.
+- SI units: N/A (the surface carries no measurements; no SI conversion applies).
+
+=== PARITY ===
+PARITY_REQUIRED=30
+
+# Panels (1) — every action renders inside its own glass panel (web GlassPanel)
+[x] panel  - GlassPanel1  -> ActionBuilder.cs ActionRowView._panel (TsGlassPanel, one card per action row);
+                            Model ActionBuilderDisplay.Rows / ActionRowDisplay; test ViewModel_seeds_from_initial_actions* / Project_rows_carry_number_move_and_label_metadata (web: each action wrapped in <GlassPanel>)
+
+# Data states (2 declared: error, success) — each a visible region, never blank
+[x] state  - error   -> ActionBuilder.Model.cs CommandParamsParseResult.Invalid (L373) + ActionRowEditState.CommandParamsError (L505) -> CommandActionDisplay.ParamsError; rendered ActionBuilder.cs L547-551 (_paramsError Text+Visibility, danger); tests ParseCommandParams_non_object_is_object_error / ParseCommandParams_unparseable_is_invalid_json / Project_command_row_surfaces_edit_state_error / ViewModel_set_command_params_invalid_keeps_action_and_shows_error_without_raising
+[x] state  - success -> CommandParamsParseResult.Updated/Cleared + ActionBuilderProjection.Project row render (valid editor, params committed); tests ParseCommandParams_object_commits_compact_json / ViewModel_set_command_params_valid_commits_and_raises / Project_command_row_exposes_command_selector_and_params
+
+# Strings (27) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - automations.builder.actionType               -> ActionBuilderProjection.ActionTypeKey (Model L647) localizer.GetString(..,"Action Type")
+[x] string - automations.builder.addAction                -> ActionBuilderProjection.AddActionKey (Model L655) ("Add Action")
+[x] string - automations.builder.channel                  -> ActionBuilderProjection.ChannelKey (Model L669) ("Channel")
+[x] string - automations.builder.command                  -> ActionBuilderProjection.CommandKey (Model L659) ("Command")
+[x] string - automations.builder.commandParams            -> ActionBuilderProjection.ParamsKey (Model L661) ("Params (JSON, optional)")
+[x] string - automations.builder.commandParamsObjectError -> ActionBuilderProjection.ParamsObjectErrorKey (Model L663) ("Params must be a JSON object.") [resw row added]
+[x] string - automations.builder.commandParamsPlaceholder -> ActionBuilderProjection.ParamsHintKey (Model L667, corrected from commandParamsHint) ("{\"temp\": 21}")
+[x] string - automations.builder.invalidJson              -> ActionBuilderProjection.InvalidJsonKey (Model L665) ("Invalid JSON")
+[x] string - automations.builder.moveDown                 -> ActionBuilderProjection.MoveDownKey (Model L651) ("Move down")
+[x] string - automations.builder.moveUp                   -> ActionBuilderProjection.MoveUpKey (Model L649) ("Move up")
+[x] string - automations.builder.noChannels               -> ActionBuilderProjection.NoChannelsKey (Model L671) ("No channels configured")
+[x] string - automations.builder.notifyMessage            -> ActionBuilderProjection.MessageKey (Model L673) ("Message")
+[x] string - automations.builder.notifyPlaceholder        -> ActionBuilderProjection.MessageHintKey (Model L675, corrected from notifyHint) ("Car is warming up!")
+[x] string - automations.builder.removeAction             -> ActionBuilderProjection.RemoveKey (Model L653) ("Remove action")
+[x] string - automations.builder.selectCommand            -> ActionBuilderProjection.SelectCommandKey (Model L657) ("Select command...")
+[x] string - automations.builder.settingKey               -> ActionBuilderProjection.SettingKeyKey (Model L677) ("Setting Key")
+[x] string - automations.builder.settingKeyPlaceholder    -> ActionBuilderProjection.SettingKeyHintKey (Model L679, corrected from settingKeyHint) ("charge_limit")
+[x] string - automations.builder.targetAutomationId       -> ActionBuilderProjection.TargetKey (Model L699) ("Target Automation ID")
+[x] string - automations.builder.value                    -> ActionBuilderProjection.ValueKey (Model L689) ("Value")
+[x] string - automations.builder.valueBoolean             -> ActionBuilderProjection.ValueBooleanOptionKey (Model L687) ("Boolean")
+[x] string - automations.builder.valueNumber              -> ActionBuilderProjection.ValueNumberOptionKey (Model L685) ("Number")
+[x] string - automations.builder.valueNumberPlaceholder   -> ActionBuilderProjection.ValueNumberHintKey (Model L695, corrected from valueNumberHint) ("80")
+[x] string - automations.builder.valueText                -> ActionBuilderProjection.ValueTextOptionKey (Model L683) ("Text")
+[x] string - automations.builder.valueTextPlaceholder     -> ActionBuilderProjection.ValueTextHintKey (Model L697, corrected from valueTextHint) ("enabled")
+[x] string - automations.builder.valueType                -> ActionBuilderProjection.ValueTypeKey (Model L681) ("Value Type")
+[x] string - common.true                                  -> ActionBuilderProjection.TrueKey (Model L691) ("True")
+[x] string - common.false                                 -> ActionBuilderProjection.FalseKey (Model L693) ("False")
+
+PARITY_COVERED=30
+# Coverage asserted headlessly: ActionBuilderTests.Surface_resolves_every_manifest_string_key records all 27
+# keys (web names) through a RecordingLocalizer; the per-kind Project_* tests + the ViewModel_* mutation tests +
+# the ParseCommandParams_* error/success tests assert the panel and both data states render from the bound
+# ActionBuilderDisplay / ActionBuilderViewModel state holder. 25864 tests pass.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ActionBuilder.cs -Language csharp
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ActionBuilder.Model.cs -Language csharp
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ActionBuilder.ViewModel.cs -Language csharp
+#   (real flat target paths; the generated prompt's apps/windows/TeslaSync/Features/Automations path does not exist in-repo)
+#   ActionBuilder.cs            -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+#   ActionBuilder.Model.cs      -> PLACEHOLDER_ALLOWED=5 PLACEHOLDER_COUNT=0  (5 web *Placeholder i18n key names, // parity:allow)
+#   ActionBuilder.ViewModel.cs  -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+PLACEHOLDER_ALLOWED=5
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only; 0 from this unit)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes (ActionBuilder.Model.cs + ActionBuilderTests.cs)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25864, Failed: 0, Skipped: 0
+TEST_EXIT=0
+PARITY_COVERED=30
+PARITY_REQUIRED=30
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ActionBuilder.Model.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ActionBuilderTests.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-automations-ActionBuilder.log
+# git commit -m "feat(apps/windows): ActionBuilder at web parity (W7 automations)"
+
+EXIT=0
+STATUS=DONE
