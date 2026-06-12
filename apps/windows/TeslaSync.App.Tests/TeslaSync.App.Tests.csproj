@@ -1,140 +1,27 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <!--
     TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    Microsoft.UI-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for
-    every dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
-    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host,
-    so each surface's Microsoft.UI-free sources are Compile-linked into the single source item group below
-    (the Link mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs
-    or SharedSurfaces). The bare WinUI view files are excluded and exercised by the app build; the test
-    classes are picked up by the SDK default-compile glob; the Content links copy the units-golden,
-    Package.appxmanifest and widget-template fixtures the tests read out of the output directory.
-
-    INVARIANT: keep this file as exactly ONE project root with a single, case-insensitive ordinal path-sorted,
-    Include-deduplicated compile item group - the union of every Microsoft.UI-free .cs on disk under
-    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/, shared-surfaces/ and
-    widget-primitives/. This file carries
-    the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it into
-    multiple Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); when that
-    happens, regenerate it directly from the Microsoft.UI-free sources on disk. Regenerated into this single
-    canonical Project root for P2 shared-surfaces/0189 SwipeRow (repairing a merge=union multi-root
-    corruption), plus the new SwipeRow Model / Source / ViewModel links. Do NOT re-concatenate into multiple
-    roots, and never write a literal build-item or project start tag inside this comment.
-  -->
-    Compile ItemGroup below (the Link mirrors each source's real location under dashboard-widgets,
-    feature-views, misc-surfaces, modals-dialogs or shared-surfaces). The bare WinUI view files are excluded
-    and exercised by the app build; the test classes are picked up by the SDK default-compile glob; the Content
-    links copy the units-golden, Package.appxmanifest and widget-template fixtures.
-    MiscSurfaces, ModalsDialogs or SharedSurfaces). The bare WinUI view files are excluded and exercised by the
-    app build; the test classes are picked up by the SDK default-compile glob; the Content links copy the
-    units-golden, Package.appxmanifest and widget-template fixtures the tests read out of the output directory.
     Microsoft.UI-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
     dashboard-widget, feature-view, misc-surface, modal/dialog, shared-surface and widget-primitive.
     TeslaSync.App targets a WinUI TFM and cannot be project-referenced from a plain net10.0 host, so each
-    surface's Microsoft.UI-free sources are Compile-linked below (the Link mirrors each source's real location
-    under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs, SharedSurfaces or WidgetPrimitives); the bare
-    WinUI view files are excluded and exercised by the app build, and the test classes are picked up by the
-    SDK default-compile glob. The Content links copy the units-golden, Package.appxmanifest and widget-template
-    fixtures the tests read from the output directory.
+    surface's Microsoft.UI-free sources are Compile-linked below (the Link mirrors each source's real
+    location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs, SharedSurfaces or WidgetPrimitives).
+    The bare WinUI view files are excluded and exercised by the app build; the test classes are picked up by
+    the SDK default-compile glob; the Content links copy the units-golden, Package.appxmanifest and
+    widget-template fixtures the tests read from the output directory.
 
     INVARIANT: keep this file as exactly ONE Project root with a single PropertyGroup, the package /
-    project-reference / content ItemGroups, and ONE Compile ItemGroup: the case-insensitive ordinal
-    path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/,
-    feature-views/, misc-surfaces/, modals-dialogs/, shared-surfaces/ and widget-primitives/ (a source is
-    Microsoft.UI-free when it has no `using` directive for Microsoft.UI / Windows.UI). This file carries the
-    .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it into multiple
-    Project roots plus duplicate Compile items (and can strand comment prose as bare text under the root
-    element), failing XML load (MSB4025 / MSB4067); when that happens, regenerate it directly from the
-    Microsoft.UI-free sources on disk. Regenerated into this single canonical Project root for P2
-    widget-primitives/0007 WidgetGaugeHero (repairing a merge=union multi-root + stranded-prose corruption),
-    plus the new WidgetGaugeHero Model / ViewModel links. Do NOT re-concatenate into multiple roots, and never
-    write a literal build item or project start tag inside this comment.
-
-    INVARIANT: keep this file as exactly ONE project root with a single PropertyGroup, the package /
     project-reference / content item groups, and ONE Compile item group (the case-insensitive ordinal
-    path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/,
-    feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/). The .gitattributes merge=union
-    strategy can re-concatenate this file into multiple roots plus duplicate items (failing XML load, MSB4025 /
-    MSB4067); when that happens, regenerate it directly from the Microsoft.UI-free sources on disk. Regenerated
-    into this single canonical root for P2 shared-surfaces/0223 PrintButton (repairing a merge=union multi-root
-    corruption), plus the new PrintButton Model / Source / ViewModel links. Do NOT re-concatenate into multiple
-    roots, and never write a literal build item or project start tag inside this comment.
-    shared-surfaces/0229 ThemeProvider (repairing a merge=union multi-root corruption), plus the new ThemeProvider
-    Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build
-    item or project start tag inside this comment.
-  -->
-    Microsoft.UI-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
-    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App)
-    targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's
-    Microsoft.UI-free sources are Compile-linked into the single source item group below (the Link mirrors each
-    source's real location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces). The bare
-    WinUI view files are excluded and exercised by the app build; the test classes are picked up by the SDK
-    default-compile glob; the Content links copy the units-golden, Package.appxmanifest and widget-template
-    fixtures the tests read out of the output directory.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single PropertyGroup, the package /
-    project-reference / content ItemGroups, and ONE Compile ItemGroup - the case-insensitive ordinal path-sorted,
-    Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/,
-    misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file carries the .gitattributes merge=union
-    strategy, so a chain of integration merges can re-concatenate it into multiple Project roots plus duplicate
-    Compile items, failing XML load (MSB4025 / MSB4067); when that happens, regenerate it directly from the
-    Microsoft.UI-free sources on disk. Regenerated into this single canonical Project root for P2
-    shared-surfaces/0235 VehicleTwin (repairing a merge=union multi-root corruption), plus the new VehicleTwin
-    Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build
-    item or project start tag inside this comment.
-    multiple Project roots plus duplicate Compile items (and can strand comment prose as bare text under the
-    root element), failing XML load (MSB4025 / MSB4067); when that happens, regenerate it directly from the
-    Microsoft.UI-free sources on disk. Regenerated into this single canonical Project root for P2
-    widget-primitives/0002 WidgetChartSummary (repairing a merge=union multi-root corruption), plus the new
-    WidgetChartSummary Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never
-    write a literal build item or project start tag inside this comment.
-    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    Microsoft.UI-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
-    dashboard-widget, feature-view, misc-surface, modal/dialog, shared-surface and widget-primitive. The WinUI app
-    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each
-    surface's Microsoft.UI-free sources are Compile-linked into the single Compile ItemGroup below (the Link
-    mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs, SharedSurfaces
-    or WidgetPrimitives). The bare WinUI view files are excluded and exercised by the app build; the test classes
-    are picked up by the SDK default-compile glob; the Content links copy the units-golden, Package.appxmanifest
-    and widget-template fixtures the tests read out of the output directory.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single PropertyGroup, the package /
-    project-reference / content ItemGroups, and ONE Compile ItemGroup — the case-insensitive ordinal path-sorted,
-    Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/,
-    misc-surfaces/, modals-dialogs/, shared-surfaces/ and widget-primitives/ (a source is Microsoft.UI-free when it
-    has no using directive for Microsoft.UI / Windows.UI / Microsoft.Xaml / CommunityToolkit). This file carries
-    the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it into multiple
-    Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); when that happens, regenerate
-    it directly from the Microsoft.UI-free sources on disk. Regenerated into this single canonical Project root for
-    P2 widget-primitives/0003 WidgetComparisonCard (repairing a merge=union multi-root corruption and introducing
-    the widget-primitives tier), plus the new WidgetComparisonCard Model / Source / ViewModel links. Do NOT
-    re-concatenate into multiple roots, and never write a literal build item or project start tag inside this
-    every dashboard-widget, feature-view, misc-surface, modal/dialog, shared-surface and widget-primitive.
-    TeslaSync.App targets a WinUI TFM and cannot be project-referenced from a plain net10.0 host, so each
-    surface's Microsoft.UI-free sources are Compile-linked in the single source item group below (the Link
-    mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs,
-    SharedSurfaces or WidgetPrimitives). The bare WinUI view files are excluded and exercised by the app
-    build; the test classes are picked up by the SDK default-compile glob; the Content links copy the
-    units-golden, Package.appxmanifest and widget-template fixtures the tests read from the output directory.
-
-    INVARIANT: keep this file as exactly ONE project root with a single PropertyGroup, the package /
-    project-reference / content item groups, and ONE Compile item group - the case-insensitive ordinal
     path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/,
-    feature-views/, misc-surfaces/, modals-dialogs/, shared-surfaces/ and widget-primitives/ (a source is
-    Microsoft.UI-free when it has no using directive for Microsoft.UI / Windows.UI / Microsoft.Xaml /
-    CommunityToolkit). This file carries the .gitattributes merge=union strategy, so a chain of integration
-    merges can re-concatenate it into multiple project roots plus duplicate Compile items, failing XML load
-    (MSB4025 / MSB4067); when that happens, regenerate it directly from the Microsoft.UI-free sources on disk.
-    Regenerated into this single canonical project root for P2 widget-primitives/0009 WidgetRankedList
-    (repairing a merge=union multi-root corruption), plus the new WidgetRankedList Model link. Do NOT
-    re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this
-    comment.
-    canonical Project root for P2 widget-primitives/0012 WidgetTipCards (repairing a merge=union multi-root
-    plus orphaned-comment-fragment corruption), plus the new WidgetTipCards.Model.cs link. Do NOT
-    re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
-    this comment.
-    Microsoft.UI-free sources on disk. Do NOT re-concatenate into multiple roots, and never write a literal
-    build-item or project start tag inside this comment.
+    feature-views/, misc-surfaces/, modals-dialogs/, shared-surfaces/ and widget-primitives/). This file
+    carries the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it
+    into multiple Project roots plus duplicate Compile items (and can strand comment prose as bare text under
+    the root element), failing XML load (MSB4025 / MSB4067); when that happens, regenerate it directly from
+    the Microsoft.UI-free sources on disk. Regenerated into this single canonical Project root for P2
+    windows/W7 admin/FeedbackQueuePage (repairing a merge=union multi-root corruption), plus the new
+    FeedbackQueuePage Model/Source/ViewModel links. Do NOT re-concatenate into multiple roots, and never write
+    a literal build item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -169,8 +56,7 @@
     </Content>
   </ItemGroup>
 
-  <!-- Microsoft.UI-free logic sources Compile-linked from TeslaSync.App: a single, case-insensitive ordinal
-       path-sorted, Include-deduplicated item group. See the header invariant before editing. -->
+  <!-- Microsoft.UI-free logic sources Compile-linked from TeslaSync.App: a single, case-insensitive ordinal path-sorted, Include-deduplicated item group. See the header invariant before editing. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -626,6 +512,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\FeatureToggles.Model.cs" Link="FeatureViews\FeatureToggles.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FeatureToggles.Source.cs" Link="FeatureViews\FeatureToggles.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FeatureToggles.ViewModel.cs" Link="FeatureViews\FeatureToggles.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FeedbackQueuePage\FeedbackQueuePage.Model.cs" Link="FeatureViews\FeedbackQueuePage\FeedbackQueuePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FeedbackQueuePage\FeedbackQueuePage.Source.cs" Link="FeatureViews\FeedbackQueuePage\FeedbackQueuePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FeedbackQueuePage\FeedbackQueuePage.ViewModel.cs" Link="FeatureViews\FeedbackQueuePage\FeedbackQueuePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FlagsTable\FlagsTable.Model.cs" Link="FeatureViews\FlagsTable\FlagsTable.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetStatsBar\FleetStatsBar.Model.cs" Link="FeatureViews\FleetStatsBar\FleetStatsBar.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetStatsBar\FleetStatsBar.Source.cs" Link="FeatureViews\FleetStatsBar\FleetStatsBar.Source.cs" />
@@ -736,8 +625,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\LiveStateIndicators\LiveStateIndicators.Source.cs" Link="FeatureViews\LiveStateIndicators\LiveStateIndicators.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveStateIndicators\LiveStateIndicators.ViewModel.cs" Link="FeatureViews\LiveStateIndicators\LiveStateIndicators.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveStatusPill\LiveStatusPill.Model.cs" Link="FeatureViews\LiveStatusPill\LiveStatusPill.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" Link="FeatureViews\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetry\LiveTelemetry.Model.cs" Link="FeatureViews\LiveTelemetry\LiveTelemetry.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" Link="FeatureViews\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.Model.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.Source.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.ViewModel.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.ViewModel.cs" />
@@ -901,13 +790,13 @@
     <Compile Include="..\TeslaSync.App\feature-views\SuggestedPrompts.Model.cs" Link="FeatureViews\SuggestedPrompts.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SuggestedPrompts.ViewModel.cs" Link="FeatureViews\SuggestedPrompts.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummarySlide\SummarySlide.Model.cs" Link="FeatureViews\SummarySlide\SummarySlide.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Model.cs" Link="FeatureViews\SummaryStats\SummaryStats.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Source.cs" Link="FeatureViews\SummaryStats\SummaryStats.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.ViewModel.cs" Link="FeatureViews\SummaryStats\SummaryStats.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Model.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Source.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsRow.Model.cs" Link="FeatureViews\SummaryStatsRow.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Model.cs" Link="FeatureViews\SummaryStats\SummaryStats.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Source.cs" Link="FeatureViews\SummaryStats\SummaryStats.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.ViewModel.cs" Link="FeatureViews\SummaryStats\SummaryStats.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Model.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Source.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Source.cs" />
@@ -1482,12 +1371,6 @@
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetChartSummary.Model.cs" Link="WidgetPrimitives\WidgetChartSummary.Model.cs" />
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetChartSummary.Source.cs" Link="WidgetPrimitives\WidgetChartSummary.Source.cs" />
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetChartSummary.ViewModel.cs" Link="WidgetPrimitives\WidgetChartSummary.ViewModel.cs" />
-    <Compile Include="..\TeslaSync.App\widget-primitives\WidgetShell.Model.cs" Link="WidgetPrimitives\WidgetShell.Model.cs" />
-    <Compile Include="..\TeslaSync.App\widget-primitives\WidgetShell.Source.cs" Link="WidgetPrimitives\WidgetShell.Source.cs" />
-    <Compile Include="..\TeslaSync.App\widget-primitives\WidgetShell.ViewModel.cs" Link="WidgetPrimitives\WidgetShell.ViewModel.cs" />
-  </ItemGroup>
-
-</Project>
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetComparisonCard\WidgetComparisonCard.Model.cs" Link="WidgetPrimitives\WidgetComparisonCard\WidgetComparisonCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetComparisonCard\WidgetComparisonCard.Source.cs" Link="WidgetPrimitives\WidgetComparisonCard\WidgetComparisonCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetComparisonCard\WidgetComparisonCard.ViewModel.cs" Link="WidgetPrimitives\WidgetComparisonCard\WidgetComparisonCard.ViewModel.cs" />
@@ -2885,13 +2768,10 @@
 </Project>
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetGaugeHero.Model.cs" Link="WidgetPrimitives\WidgetGaugeHero.Model.cs" />
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetGaugeHero.ViewModel.cs" Link="WidgetPrimitives\WidgetGaugeHero.ViewModel.cs" />
-  </ItemGroup>
-
-</Project>
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetRankedList.Model.cs" Link="WidgetPrimitives\WidgetRankedList.Model.cs" />
-  </ItemGroup>
-
-</Project>
+    <Compile Include="..\TeslaSync.App\widget-primitives\WidgetShell.Model.cs" Link="WidgetPrimitives\WidgetShell.Model.cs" />
+    <Compile Include="..\TeslaSync.App\widget-primitives\WidgetShell.Source.cs" Link="WidgetPrimitives\WidgetShell.Source.cs" />
+    <Compile Include="..\TeslaSync.App\widget-primitives\WidgetShell.ViewModel.cs" Link="WidgetPrimitives\WidgetShell.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetTipCards.Model.cs" Link="WidgetPrimitives\WidgetTipCards.Model.cs" />
   </ItemGroup>
 
