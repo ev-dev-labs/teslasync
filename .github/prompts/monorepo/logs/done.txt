@@ -484,3 +484,4 @@ p3-android/feature-views/A-0234-SnapshotInspector.prompt.md
 p3-android/feature-views/A-0235-StateTimeline.prompt.md
 p3-android/feature-views/A-0238-AnomalyInlineRow.prompt.md
 p3-android/feature-views/A-0243-FrontendErrorsCard.prompt.md
+p3-android/feature-views/A-0245-helpers.prompt.md
