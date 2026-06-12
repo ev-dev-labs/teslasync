@@ -431,3 +431,4 @@ p3-android/feature-views/A-0185-LegacyAlertsRedirect.prompt.md
 p3-android/feature-views/A-0186-LegacyAlertStudioRedirect.prompt.md
 p3-android/feature-views/A-0183-InboxBody.prompt.md
 p3-android/feature-views/A-0187-LegacyNotificationsRedirect.prompt.md
+p3-android/feature-views/A-0182-ComputedMetricEditor.prompt.md
