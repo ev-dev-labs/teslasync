@@ -1,6 +1,95 @@
 {
   "direction": "rtl",
   "entries": {
+    "translation.system.slo.a11y.targetInput": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Target uptime percentage"
+    },
+    "translation.system.slo.a11y.windowSelector": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Uptime window selector"
+    },
+    "translation.system.slo.caveat": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot."
+    },
+    "translation.system.slo.componentsHealthy": {
+      "fallbackFrom": "en",
+      "tokens": [
+        "healthy",
+        "total"
+      ],
+      "translated": false,
+      "value": "{{healthy}} / {{total}} components healthy"
+    },
+    "translation.system.slo.empty": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "No uptime data for this window yet."
+    },
+    "translation.system.slo.error": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Failed to load uptime data."
+    },
+    "translation.system.slo.loading": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Loading uptime…"
+    },
+    "translation.system.slo.targetSet": {
+      "fallbackFrom": "en",
+      "tokens": [
+        "pct"
+      ],
+      "translated": false,
+      "value": "Target {{pct}}%"
+    },
+    "translation.system.slo.title": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Uptime & SLO"
+    },
+    "translation.system.slo.window1y": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Last year"
+    },
+    "translation.system.slo.window24h": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Last 24 hours"
+    },
+    "translation.system.slo.window30d": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Last 30 days"
+    },
+    "translation.system.slo.window7d": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Last 7 days"
+    },
+    "translation.system.slo.window90d": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Last 90 days"
+    },
     "translation.ai.settings.provider.azureApiVersion": {
       "fallbackFrom": "en",
       "tokens": [],

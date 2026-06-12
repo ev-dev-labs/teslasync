@@ -1,6 +1,81 @@
 {
   "direction": "ltr",
   "entries": {
+    "translation.system.slo.a11y.targetInput": {
+      "tokens": [],
+      "translated": true,
+      "value": "Target uptime percentage"
+    },
+    "translation.system.slo.a11y.windowSelector": {
+      "tokens": [],
+      "translated": true,
+      "value": "Uptime window selector"
+    },
+    "translation.system.slo.caveat": {
+      "tokens": [],
+      "translated": true,
+      "value": "Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot."
+    },
+    "translation.system.slo.componentsHealthy": {
+      "tokens": [
+        "healthy",
+        "total"
+      ],
+      "translated": true,
+      "value": "{{healthy}} / {{total}} components healthy"
+    },
+    "translation.system.slo.empty": {
+      "tokens": [],
+      "translated": true,
+      "value": "No uptime data for this window yet."
+    },
+    "translation.system.slo.error": {
+      "tokens": [],
+      "translated": true,
+      "value": "Failed to load uptime data."
+    },
+    "translation.system.slo.loading": {
+      "tokens": [],
+      "translated": true,
+      "value": "Loading uptime…"
+    },
+    "translation.system.slo.targetSet": {
+      "tokens": [
+        "pct"
+      ],
+      "translated": true,
+      "value": "Target {{pct}}%"
+    },
+    "translation.system.slo.title": {
+      "tokens": [],
+      "translated": true,
+      "value": "Uptime & SLO"
+    },
+    "translation.system.slo.window1y": {
+      "tokens": [],
+      "translated": true,
+      "value": "Last year"
+    },
+    "translation.system.slo.window24h": {
+      "tokens": [],
+      "translated": true,
+      "value": "Last 24 hours"
+    },
+    "translation.system.slo.window30d": {
+      "tokens": [],
+      "translated": true,
+      "value": "Last 30 days"
+    },
+    "translation.system.slo.window7d": {
+      "tokens": [],
+      "translated": true,
+      "value": "Last 7 days"
+    },
+    "translation.system.slo.window90d": {
+      "tokens": [],
+      "translated": true,
+      "value": "Last 90 days"
+    },
     "translation.ai.settings.provider.azureApiVersion": {
       "tokens": [],
       "translated": true,

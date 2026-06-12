@@ -9974,6 +9974,24 @@
   "system": {
     "page": {
       "title": "System budgets"
+    },
+    "slo": {
+      "title": "Uptime & SLO",
+      "targetSet": "Target {{pct}}%",
+      "componentsHealthy": "{{healthy}} / {{total}} components healthy",
+      "caveat": "Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot.",
+      "loading": "Loading uptime…",
+      "error": "Failed to load uptime data.",
+      "empty": "No uptime data for this window yet.",
+      "window24h": "Last 24 hours",
+      "window7d": "Last 7 days",
+      "window30d": "Last 30 days",
+      "window90d": "Last 90 days",
+      "window1y": "Last year",
+      "a11y": {
+        "targetInput": "Target uptime percentage",
+        "windowSelector": "Uptime window selector"
+      }
     }
   },
   "automationList": {
