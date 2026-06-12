@@ -1,0 +1,86 @@
+=== P3 Feature view 0145 MoreDetailsPanel (Android) ===
+date_utc=2026-06-12T09:20:53.2591123Z
+
+NOTE (no silent drift): settings.gradle.kts maps the single app module to Gradle path ':android' (it documents
+      'every P3/A* prompt gate addresses :android:'); the prompt's ':app:' is a template token that does not
+      resolve in this repo (':app' not found in root project 'teslasync-android'). The gate below runs the real
+      module path ':android' - the only deviation from the prompt gate text. Each step also adds
+      '-Dkotlin.compiler.execution.strategy=in-process --no-daemon' for stability on the shared runner, matching
+      the sibling P3 feature-view gate runs.
+
+FIXES (no red-as-green): the first ':android:ktlintCheck :android:detekt' run surfaced two findings, both in the
+      new surface and both fixed before the green re-run recorded below:
+        1. detekt UnusedPrivateProperty - an unused 'index' loop variable in the skeleton grid; replaced the
+           'for (index in chunk)' loop with 'repeat(chunk.size) { ... }'.
+        2. ktlint standard:argument-list-wrapping (12) - the 14-key remember(...) in rememberMoreDetailsStrings
+           was wrapped onto two lines; rewrote it one argument per line.
+
+openjdk version "21.0.9" 2025-10-21
+OpenJDK Runtime Environment (build 21.0.9+-14787801-b1163.94)
+OpenJDK 64-Bit Server VM (build 21.0.9+-14787801-b1163.94, mixed mode)
+
+.\gradlew.bat :android:assembleRelease -Dkotlin.compiler.execution.strategy=in-process --no-daemon --console=plain
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+BUILD SUCCESSFUL in 2m 2s
+70 actionable tasks: 8 executed, 62 up-to-date
+BUILD_EXIT=0
+
+.\gradlew.bat :android:testReleaseUnitTest -Dkotlin.compiler.execution.strategy=in-process --no-daemon --console=plain
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+BUILD SUCCESSFUL in 1m 42s
+45 actionable tasks: 5 executed, 40 up-to-date
+TEST_EXIT=0
+  MoreDetailsPanelModelTest: tests=29 failures=0 errors=0 skipped=0 (io.teslasync.android.featureviews.moredetailspanel)
+  full release unit suite: classes=470 tests=5820 failures=0 errors=0 skipped=0
+
+.\gradlew.bat :android:ktlintCheck :android:detekt -Dkotlin.compiler.execution.strategy=in-process --no-daemon --console=plain
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverMainSourceSet
+> Task :android:detekt
+> Task :android:ktlintMainSourceSetCheck
+> Task :android:ktlintCheck
+
+BUILD SUCCESSFUL in 2m 13s
+13 actionable tasks: 3 executed, 10 up-to-date
+LINT_EXIT=0
+
+.\apps\tools\check-placeholders.ps1 -Path apps/android/app/src/main/java/com/teslasync/feature-views/MoreDetailsPanel
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- summary ---
+BUILD_EXIT=0   (:android:assembleRelease - release APK assembled; Kotlin compiled clean)
+TEST_EXIT=0    (:android:testReleaseUnitTest - MoreDetailsPanelModelTest 29 tests, 0 failures; suite 5820, 0 failures)
+LINT_EXIT=0    (:android:ktlintCheck :android:detekt - main + test source sets clean)
+PLACEHOLDER_EXIT=0  (apps/tools/check-placeholders.ps1 over the surface dir; PLACEHOLDER_COUNT=0)
+
+PARITY: 1:1 port of web/src/features/driving/components/drive-detail/MoreDetailsPanel.tsx.
+  - Data: useTranslation -> P1/S10 i18n catalog (13 driveDetail.* keys); useUnits + global fmtNumber
+    precision/locale -> P1/S8 SettingsStore via UnitPreferences.fromSettings (distance/speed/temperature units +
+    precision + locale). No HTTP in the view; the host threads a UiState<MoreDetailsSnapshot>.
+  - Shared components: @/components/ui GlassPanel + @/components/motion FadeIn mapped to the native GlassPanel +
+    FadeIn; PanelTitle/Icon/Caption-equivalent + feedback EmptyState/ErrorDisplay/Skeleton + DataFreshness.
+  - SI-canonical: odometer/range/distance (m), min speed (m/s) and temperatures (degC) carried as SI and
+    converted at the Compose boundary via convert{Distance,Speed,Temp}FromSI; energy (Wh/kWh threshold), power
+    (kW), elevation (m) and the battery delta (%) carried in the web stats display unit. Consumption derives
+    energyWh/(distanceM/1000) and applies the web toEfficiencyDisplay (* 1.609344 for miles).
+  - States: every state renders - loading skeleton grids, hard error + retry (QueryError equivalent), friendly
+    empty state, content, and stale/offline cached "last known" with a freshness chip + auto-refresh. @Preview
+    entry points exercise Content / Offline / Loading / Empty / Error.
+  - i18n: all 13 driveDetail.* labels + common.noData resolve through stringResource; no English literal in code.
+  - a11y: each cell is one TalkBack node ("label, value"); elevation announces directional arrows; reduce-motion
+    honored via the shared FadeIn; font-scale-safe Material 3 typography roles.
+  - Tests: adapter (settings -> prefs), SI->display projection incl. imperial/fahrenheit/precision boundaries,
+    conditional temperature cells, '-'/'?' guards, kWh-vs-Wh threshold, per-state classifier (loading/content/
+    empty/offline), label + announcement (a11y-key) coverage, and the PII-safe view.opened diagnostic.
+
+CAPABILITY: Jetpack Compose + Material 3 + Kotlin toolchain present and exercised (assembleRelease produced the
+            release APK; JDK 21 / Gradle 8.14.5 / Android SDK build succeeded). The prompt's 'Kotlin 2.2.x' floor
+            is satisfied by the repo-locked Kotlin 2.4.0 (apps/android/gradle/libs.versions.toml).
+
+EXIT=0
+STATUS=DONE
