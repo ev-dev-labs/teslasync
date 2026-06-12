@@ -1,0 +1,131 @@
+=== p2-windows · W7 · page:automations/ConflictWarnings (WinUI 3 / Fluent) ===
+Parity unit : page:automations/ConflictWarnings   kind=page   web route=(unrouted)
+Web source  : web/src/features/automations/pages/ConflictWarnings.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+              net10.0-windows10.0.19041.0 app builds; headless logic suite runs on plain net10.0.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly) and <Name>.cs (the Fluent view), exactly as the sibling W7 SchemaDriftPage and the
+  W-0084 ConflictWarnings feature-view do. The generated prompt's idealized "ConflictWarnings.xaml +
+  ConflictWarningsViewModel.cs under TeslaSync/Features/Automations" is mapped onto these real conventions.
+- PREDECESSOR (no bypass): the ConflictWarnings surface already exists from feature-view prompt W-0084
+  (.github/prompts/monorepo/logs/p2-windows-feature-views-0084-ConflictWarnings.log, committed 4658032ff) with
+  the loading / empty / ready branches. The PAGE manifest record (apps/parity/parity-manifest.json
+  id=page:automations/ConflictWarnings) declares states=[empty,error] + string=automations.builder.conflict,
+  requiredCount=3. The page-parity delta over W-0084 is therefore the ERROR data state. This run EXTENDS the
+  existing presentational surface (DRY; honours the predecessor) rather than duplicating it — one surface, raised
+  to the page-parity bar.
+- Data binding (ADR-004): the manifest declares NO API data sources — the web component binds only
+  useTranslation and renders host-resolved props (the hosting AutomationBuilderPage derives `conflicts` from its
+  save/validate mutation). So there is no generated-client Source/ViewModel to add; the bound C# state holder is
+  ConflictWarningsModel (the web `conflicts` prop + the parent-driven Loading / HasError lifecycle flags), and all
+  branch selection, severity parsing, variant/glyph mapping and copy resolution happen in the WinUI-free
+  ConflictWarningsProjection (headless-tested). The view performs no HTTP.
+- The 3 data states are visible Fluent regions per ADR-006 (never a blank region), branch precedence
+  loading → error → empty → ready (ConflictWarningsProjection.SelectState):
+    loading -> ConflictWarnings.cs#BuildLoading: a polite LiveRegion StackPanel of TsSkeleton banner rows.
+    error   -> ConflictWarnings.cs#BuildError: a TsQueryError (InfoBar-equivalent, assertive live region, danger
+               glyph) carrying ErrorTitle/ErrorMessage + a Retry affordance (ActionText=RetryLabel). The view
+               performs no fetch, so Retry raises the public ConflictWarnings.RetryRequested event for the host
+               (AutomationBuilderPage) to re-run the conflict check. The error branch overrides empty/ready (a
+               failed check has no trustworthy conflict list) but never overrides loading.
+    empty   -> ConflictWarnings.cs#BuildEmpty: a TsEmptyState (the native always-render replacement for the web's
+               bare `return null`).
+    ready   -> ConflictWarnings.cs#BuildReady: the web composition — a `space-y-2` StackPanel of one
+               non-dismissible TsAlertBanner per conflict (severity-mapped variant + glyph, the shared
+               "Potential Conflict" heading and the `"name": reason` body).
+- i18n: the ONLY i18n key in the web source is automations.builder.conflict ("Potential Conflict"). It and the
+  shared empty/loading copy were already wired by W-0084 (translation.automations.builder.conflict +
+  translation.common.noData/loading). The new error surface reuses the web QueryError generic-failure copy that
+  already exists in the catalog — translation.error.network.title ("Can't reach server"),
+  translation.error.network.message ("Check your internet connection and try again.") and
+  translation.error.retry ("Retry"). NO new strings were added (all present in Strings/en/Resources.resw; the
+  he/ar catalogs lag en by design and fall back to the English default via ILocalizer). Every label resolves
+  through the ILocalizer facade with the web key names.
+- a11y: each state sets a Narrator name on the surface (ConflictWarningsDisplay.AutomationName: loading→loading
+  label, error→error title, empty→empty message, ready→"Potential Conflict"); the error surface is an assertive
+  live region with the danger glyph; the loading surface is a polite live region; each banner carries a
+  "Title. Message" Narrator name. Light/dark honoured via design tokens (TsColor*Brush) on the shared components.
+- SI units N/A (no unit-bearing fields on this surface — only automation names / reasons / a severity token).
+- Navigation: web route is (unrouted) — ConflictWarnings is a host-embedded presentational component, not a
+  routed screen, so there is no NavigationView entry / deep link to register (consistent with W-0084 and the web
+  source). Out-of-scope items rejected: no other pages, no backend changes, no new features, no web pixel-cloning.
+- Files changed (4): ConflictWarnings.Model.cs (+ Error state, HasError/Failed, error copy consts, error-branch
+  projection), ConflictWarnings.cs (+ RetryRequested event, BuildError, Error switch case),
+  ConflictWarningsTests.cs (+7 headless tests), apps/parity/windows-ledger.json (page row covered). 0 files
+  touched under TeslaSync.App.UITests/.
+
+=== PARITY ===
+PARITY_REQUIRED=3
+
+# Data states (2) — each a visible Fluent region bound to the ConflictWarningsModel state holder (never blank)
+[x] state  - empty data state -> ConflictWarningsState.Empty selected by ConflictWarningsProjection.SelectState
+             (resolved, conflictCount==0; also the null-conflicts fallback) in
+             feature-views/ConflictWarnings/ConflictWarnings.Model.cs; rendered ConflictWarnings.cs#BuildEmpty
+             (TsEmptyState, Message=ConflictWarningsDisplay.EmptyMessage = translation.common.noData "No data
+             available"); model factory ConflictWarningsModel.Empty; tests Empty_when_resolved_with_no_conflicts,
+             Null_conflicts_list_collapses_to_empty, Empty_message_uses_the_shared_common_no_data_string,
+             Empty_automation_name_is_the_empty_message.
+[x] state  - error data state -> ConflictWarningsState.Error selected by SelectState (model.HasError; precedence
+             over empty/ready, below loading) in ConflictWarnings.Model.cs; model flag ConflictWarningsModel.HasError
+             + factory ConflictWarningsModel.Failed; rendered ConflictWarnings.cs#BuildError (TsQueryError
+             InfoBar-equivalent + Retry, Title=ErrorTitle, Message=ErrorMessage, ActionText=RetryLabel,
+             ActionInvoked -> ConflictWarnings.OnRetryInvoked -> RetryRequested event); copy from
+             ConflictWarningsProjection.ErrorTitleKey/ErrorMessageKey/RetryKey (translation.error.network.title /
+             .message + translation.error.retry); tests Error_when_resolved_with_failure,
+             Error_takes_precedence_over_present_conflicts, Loading_takes_precedence_over_error,
+             Error_title_uses_the_shared_network_error_string, Error_message_uses_the_shared_network_error_string,
+             Error_retry_label_uses_the_shared_retry_string, Error_automation_name_is_the_error_title.
+
+# Strings (1) — resolves from Strings/*.resw via ILocalizer with the web key name
+[x] string - automations.builder.conflict -> ConflictWarningsProjection.ConflictTitleKey
+             ("translation.automations.builder.conflict", fallback "Potential Conflict") resolved via
+             ILocalizer.GetString in ConflictWarningsProjection.Project; applied as every banner's heading
+             (ConflictBannerDisplay.Title) and surface-Narrator name in the ready branch, rendered as
+             TsAlertBanner.Title in ConflictWarnings.cs#BuildReady; present in Strings/en/Resources.resw
+             (name="translation.automations.builder.conflict"); tests Banner_title_uses_the_shared_conflict_string,
+             Ready_automation_name_is_the_shared_conflict_heading,
+             I18n_keys_use_the_resw_translation_catalog_form.
+
+PARITY_COVERED=3
+# Coverage asserted headlessly by ConflictWarningsTests (44 tests: the 37 from W-0084 + 7 new for the error
+# branch — error/empty/loading precedence, the network-error + retry copy, and the error-state Narrator name).
+# The bare WinUI view (ConflictWarnings.cs, Microsoft.UI) is exercised by the app build.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ConflictWarnings -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Automations path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Error(s), 17 Warning(s)
+#   (the 17 are pre-existing TeslaSync.App.Core CA warnings only; ConflictWarnings added 0). All 5 projects built
+#   incl. the WinUI app TeslaSync.App (net10.0-windows10.0.19041.0).
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 changes (ConflictWarnings Model/view + tests
+#   + windows-ledger.json, all LF/utf-8 per root .editorconfig).
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25941, Failed: 0, Skipped: 0
+#   (incl. 44 ConflictWarnings tests; filtered FullyQualifiedName~ConflictWarnings -> Passed: 44, Failed: 0).
+TEST_EXIT=0
+# NOTE — whole-solution `dotnet test apps/windows/TeslaSync.sln` additionally bundles the UIAutomation E2E suite
+#   (TeslaSync.App.UITests), which fail-fasts on every surface when WinAppDriver/Appium is absent (nothing
+#   listening on http://127.0.0.1:4723/). That is an environment gate, not a surface defect: this run touched 0
+#   files under TeslaSync.App.UITests/, apps/windows/run-ui-automation.ps1 "never reports an absent runner as
+#   green", and the surface is fully covered by the headless suite above + the app build — identical handling to
+#   the committed sibling W7 SchemaDriftPage and W-0084 ConflictWarnings logs.
+PARITY_COVERED=3
+PARITY_REQUIRED=3
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ConflictWarnings \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ConflictWarningsTests.cs \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-automations-ConflictWarnings.log
+# git commit -m "feat(apps/windows): ConflictWarnings at web parity (W7 automations)"
+
+EXIT=0
+STATUS=DONE

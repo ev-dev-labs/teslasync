@@ -9,17 +9,19 @@ namespace TeslaSync.App.FeatureViews.Automations;
 /// <summary>
 /// The native WinUI 3 <c>ConflictWarnings</c> feature surface — a parity port of
 /// <c>web/src/features/automations/pages/ConflictWarnings.tsx</c>. It is a pure presentational list: assign a
-/// <see cref="Model"/> (the web <c>conflicts</c> prop) and it renders exactly one of three branches —
+/// <see cref="Model"/> (the web <c>conflicts</c> prop) and it renders exactly one of four branches —
 /// <see cref="ConflictWarningsState.Loading"/> (tokenized skeleton chrome while a parent resolves the conflict
-/// check), <see cref="ConflictWarningsState.Empty"/> (a friendly <see cref="TsEmptyState"/> in place of the
-/// web's bare <c>return null</c>, so the region never collapses to an invisible box) or
-/// <see cref="ConflictWarningsState.Ready"/> (the web composition: a vertically stacked list — the web
-/// <c>space-y-2</c> — of one <see cref="TsAlertBanner"/> per conflict, each carrying the severity-mapped variant
-/// and glyph, the shared "Potential Conflict" heading and the <c>"name": reason</c> body). The view never
-/// performs HTTP; all branch selection, severity parsing, variant / glyph mapping and copy resolution happen in
-/// the WinUI-free <see cref="ConflictWarningsProjection"/> (so there is no fetch-driven error / stale / offline
-/// branch to reproduce here — the hosting <c>AutomationBuilderPage</c> owns the conflict-check lifecycle and
-/// re-renders this control with already-resolved props). Each banner is a shared callout that mirrors the web
+/// check), <see cref="ConflictWarningsState.Error"/> (a <see cref="TsQueryError"/> InfoBar-equivalent + Retry
+/// surface the parent shows when its conflict-check mutation fails — the Retry affordance raises
+/// <see cref="RetryRequested"/> so the host can re-run the check), <see cref="ConflictWarningsState.Empty"/>
+/// (a friendly <see cref="TsEmptyState"/> in place of the web's bare <c>return null</c>, so the region never
+/// collapses to an invisible box) or <see cref="ConflictWarningsState.Ready"/> (the web composition: a
+/// vertically stacked list — the web <c>space-y-2</c> — of one <see cref="TsAlertBanner"/> per conflict, each
+/// carrying the severity-mapped variant and glyph, the shared "Potential Conflict" heading and the
+/// <c>"name": reason</c> body). The view never performs HTTP; all branch selection, severity parsing, variant /
+/// glyph mapping and copy resolution happen in the WinUI-free <see cref="ConflictWarningsProjection"/> — the
+/// hosting <c>AutomationBuilderPage</c> owns the conflict-check lifecycle (loading / failure) and re-renders this
+/// control with the resolved <see cref="Model"/>. Each banner is a shared callout that mirrors the web
 /// <c>AlertBanner</c> (non-dismissible, since the web usage passes no <c>onClose</c>); every string resolves
 /// through the i18n facade; and the surface carries a Narrator name in each state.
 /// </summary>
@@ -62,6 +64,13 @@ public sealed partial class ConflictWarnings : ContentControl
     /// <summary>The canonical diagnostics slug this surface registers under (<c>ConflictWarnings</c>).</summary>
     public static string Slug => ConflictWarningsRegistration.Slug;
 
+    /// <summary>
+    /// Raised when the user invokes Retry on the <see cref="ConflictWarningsState.Error"/> surface. The hosting
+    /// <c>AutomationBuilderPage</c> (which owns the conflict-check lifecycle) handles it by re-running the check;
+    /// the presentational surface itself performs no fetch.
+    /// </summary>
+    public event EventHandler? RetryRequested;
+
     /// <summary>The render model (the conflicts); reassigning re-projects and re-renders the surface.</summary>
     public ConflictWarningsModel Model
     {
@@ -93,6 +102,7 @@ public sealed partial class ConflictWarnings : ContentControl
         Content = display.State switch
         {
             ConflictWarningsState.Loading => BuildLoading(display),
+            ConflictWarningsState.Error => BuildError(display),
             ConflictWarningsState.Empty => BuildEmpty(display),
             _ => BuildReady(display),
         };
@@ -118,6 +128,24 @@ public sealed partial class ConflictWarnings : ContentControl
 
         return stack;
     }
+
+    // ── Error (the parent's conflict-check failed — an InfoBar-equivalent surface with a Retry affordance) ──
+    private TsQueryError BuildError(ConflictWarningsDisplay display)
+    {
+        var error = new TsQueryError
+        {
+            Title = display.ErrorTitle,
+            Message = display.ErrorMessage,
+            ActionText = display.RetryLabel,
+        };
+
+        // The view performs no fetch; Retry bubbles to the host (AutomationBuilderPage), which re-runs the check.
+        error.ActionInvoked += OnRetryInvoked;
+        AutomationProperties.SetName(error, display.ErrorTitle);
+        return error;
+    }
+
+    private void OnRetryInvoked(object? sender, EventArgs e) => RetryRequested?.Invoke(this, EventArgs.Empty);
 
     // ── Empty (resolved, no conflicts — a friendly surface, never the web's bare `return null`) ────────────
     private static TsEmptyState BuildEmpty(ConflictWarningsDisplay display) =>
