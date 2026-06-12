@@ -1,0 +1,175 @@
+=== P2 Shared surface 0151 DatePresetChips (Windows) ===
+Date: 2026-06-11
+Web source (spec): web/src/components/forms/DatePresetChips.tsx
+                   (+ its data dependency web/src/lib/datePresets.ts)
+Native output: apps/windows/TeslaSync.App/shared-surfaces/DatePresetChips.{cs,Model.cs,Source.cs,ViewModel.cs}
+Tests:         apps/windows/TeslaSync.App.Tests/SharedSurfaces/DatePresetChipsTests.cs
+ADR refs:      ADR-002 (WinUI shell), ADR-005, ADR-009
+Toolchain:     .NET SDK 10.0.300, WinUI 3 (Microsoft.WindowsAppSDK via UseWinUI), Fluent Design System.
+
+--------------------------------------------------------------------------------------------------
+CAPABILITY (per prompt capability clause)
+--------------------------------------------------------------------------------------------------
+The REQUIRED capability — WinUI 3 (Windows App SDK) + .NET 10 (SDK 10.0.300), Fluent Design System —
+is AVAILABLE on this runner: the Release solution, including the WinUI app project TeslaSync.App and
+this surface's WinUI view DatePresetChips.cs, builds with 0 errors. The required platform capability is
+present, so STATUS is DONE. The separately-provisioned WinAppDriver E2E UI-automation runtime is the
+only thing absent (recorded below); it is contractually excluded from this headless gate, exactly as for
+every shipped sibling surface log.
+
+--------------------------------------------------------------------------------------------------
+SURFACE
+--------------------------------------------------------------------------------------------------
+DatePresetChips is the web quick-select chip row for date ranges (web/src/components/forms/DatePresetChips.tsx).
+The web component renders a role="group" container (aria-label = t('date.preset.label', 'Quick date range'))
+holding one shared <Button> chip per preset id — filtered from the static DATE_PRESETS table and defaulting to
+DEFAULT_PRESET_IDS (['today','7d','30d','mtd','ytd','all']). The active preset (p.id === activeId) renders as a
+primary chip with aria-pressed; the rest render as ghost chips. Clicking a chip resolves the preset's inclusive
+range from the local calendar day and calls onSelect({ id, start, end }) with ISO YYYY-MM-DD strings.
+
+It is presentational: the web source consumes only useTranslation and the static preset table — NO data hooks,
+charts, maps, and NO loading/error/stale/offline branches. The honest native union is therefore the two states
+the catalogue can yield — the populated chip row (Populated) and, when the supplied ids resolve to no presets
+(the web's empty group), a friendly empty surface (Empty, never a blank box). Fabricating loading/error/stale/
+offline chrome the web source lacks would be parity drift, so — per the SuggestedPrompts / Delta presentational-
+surface precedent — none was invented. Evidence is in the doc-comments.
+
+Reuse / DRY: the surface binds the existing canonical native port of the web preset table,
+TeslaSync.App.Core.Forms.DatePresets / DatePreset / DateRange (id filtering, range maths), instead of
+re-porting it. The web Button maps to the shared TsButton (Variant Primary for the active chip = web
+'primary'; Variant Subtle for the rest = web 'ghost'); the empty surface maps to the shared TsEmptyState; the
+wrapping row reuses the house ChipWrapPanel flow-panel pattern (base WinUI ships no wrap panel).
+
+Native decomposition (flat file layout, matching the Delta / QueryError sibling surfaces):
+  - DatePresetChips.Model.cs     DatePresetChipSize, DatePresetChipsState (Populated/Empty), DatePresetSelection
+                                 (web DatePresetSelection), DatePresetChipItem, DatePresetChipsDisplay,
+                                 Registration (Slug "DatePresetChips"; i18n keys translation.date.preset.label /
+                                 translation.common.noData / translation.<preset> ; ISO formatter),
+                                 Projection (id filter + localize + active flag + click-time range Resolve),
+                                 PII-safe DatePresetChipsDiagnostics (view.opened + preset.selected with the
+                                 fixed non-PII id token).
+  - DatePresetChips.Source.cs    IDatePresetChipsSource + DatePresetChipsSource (P1/S8 seam: PresetIds, ActiveId,
+                                 Size, AriaLabel; injectable Today clock = the web new Date() local day; null ids
+                                 fall back to DEFAULT_PRESET_IDS, empty ids preserved so Empty is reachable).
+  - DatePresetChips.ViewModel.cs DatePresetChipsViewModel — observes the source, projects the Display, raises
+                                 INotifyPropertyChanged; Select(id) resolves the range and raises Selected (web
+                                 onSelect); Reload() re-resolves labels on language change; idempotent Dispose.
+  - DatePresetChips.cs           DatePresetChips : ContentControl — wrapping ChipWrapPanel of TsButton chips /
+                                 TsEmptyState; raises PresetSelected; transparent? no — a Group automation peer
+                                 carrying the localized aria-label (web role="group"); each chip is a
+                                 PresetChipButton exposing the UIA Toggle pattern so Narrator announces the active
+                                 chip's pressed state (web aria-pressed); emits view.opened once on Loaded;
+                                 marshals view-model changes to the UI thread.
+
+i18n: every label resolves through the P1/S10 ILocalizer facade. Each key the web source uses has a matching
+catalog entry (verified in apps/shared/i18n/catalog/en.json and apps/windows/Strings/en/Resources.resw):
+translation.date.preset.label ("Quick date range"), translation.date.preset.{today,last7,last30,last90,
+yesterday,mtd,qtd,ytd,lastMonth,last1y,all}, and translation.common.noData (the friendly empty message). No
+hardcoded English in native code.
+
+--------------------------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER REPAIRED (tightly coupled to this task)
+--------------------------------------------------------------------------------------------------
+The committed apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj did NOT load at HEAD: it had TWO
+<Project> roots (lines 1-1317 and 1318-2575, the second prefixed with a stray BOM), and the first root's header
+was a stack of merged regeneration comments — one <!-- opener but five --> closers — leaving non-whitespace
+#text children of <Project>. This is the recurrence the file's own INVARIANT documents (the .gitattributes
+merge=union strategy re-concatenating it into multiple roots), and it fails MSBuild load with MSB4025 / MSB4067,
+making the whole-solution build red at baseline independent of this surface. Because this surface's WinUI-free
+sources must be Compile-linked there, it was repaired per the file's own invariant.
+
+The two roots had DIVERGED — neither was a superset (root1 uniquely carried QueryError / RateLimitBanner /
+ReleaseNotes / RequiresAuth / Spinner / SuspenseProgressBoundary; root2 uniquely carried ReloadPrompt /
+SectionErrorBoundary / SkipToContent) — so a truncate-to-one-root repair would have silently dropped sibling
+surfaces' links and broken their tests. Repair: regenerated as exactly ONE <Project> root with a single clean
+header comment, the PropertyGroup, the three non-Compile ItemGroups (PackageReference, ProjectReference, Content
+— all 8 items preserved), and a single case-insensitive ordinal path-sorted, Include-deduplicated Compile
+ItemGroup = the union of both roots' links plus this surface's 3 new headless links.
+
+The result was VERIFIED to exactly equal the union of every Microsoft.UI-free .cs on disk under
+dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/:
+  1147 pre-existing WinUI-free sources + 3 new DatePresetChips headless sources = 1150.
+  DISK_HEADLESS=1150 == INCLUDE_SET=1150 (DIFF=0; zero stale links, zero misclassifications).
+The bare WinUI view DatePresetChips.cs (Microsoft.UI-referencing) is correctly excluded.
+Post-write XML check: STRAY_TEXT_CHILDREN=0, <Project> roots=1, PropertyGroups=1, ItemGroups=4, Compile=1150,
+comment markers balanced (<!--=2, -->=2). LF, no BOM.
+
+--------------------------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------------------------
+dotnet build apps/windows/TeslaSync.sln -c Release
+    -> Build succeeded. 0 Error(s).
+       TeslaSync.App (WinUI app, TreatWarningsAsErrors=true) compiled the DatePresetChips view + 3 headless
+       sources warning-clean (0 errors proves it); TeslaSync.App.Tests compiled with the repaired csproj.
+       The only build warnings (17) are pre-existing analyzer findings in TeslaSync.App.Core (CA1720 / CA1716 /
+       CA1000 / CA1859 in LiveEvent.cs, DateTimeFormatting.cs, RepositoryResult.cs, SseEventDecoder.cs,
+       GeneratedApiClient.cs, VehicleOption.cs) — not from this surface, and Core does not treat warnings as
+       errors.
+    -> BUILD_EXIT=0
+
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release  (the headless suite)
+    -> Passed!  Failed: 0, Passed: 22617, Skipped: 0, Total: 22617  (TeslaSync.App.Tests.dll)
+       Includes all 34 DatePresetChipsTests cases: projection (default 6 presets in order, active-only flag,
+       explicit subset, unknown-id drop, size), empty branch (empty id set / all-unknown -> Empty + friendly
+       message), group accessible name (default + ariaLabel override), exact-i18n-key-order assertion, click-time
+       range resolution + ISO formatting (today / last7 / all-time baseline / catalogue-match for every default
+       id / unknown -> null / zero-pad), source defaults + change notifications + injected clock, view-model
+       Populated/Empty + Select event + re-projection + Reload + Dispose, accessibility-label coverage,
+       registration metadata, and PII-safe diagnostics (view.opened + preset.selected).
+    -> TEST_EXIT=0
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    -> FORMAT_EXIT=0  (clean; only the benign "warnings were encountered while loading the workspace" note. The 5
+       new files were normalised to LF after creation — the only formatter findings were ENDOFLINE on those
+       files, now fixed; no style/analyzer findings.)
+
+check-placeholders.ps1  (apps/tools/check-placeholders.ps1, canonical apps/tools/placeholder-patterns.json)
+    Literal gate path (apps/windows/TeslaSync.App/shared-surfaces/DatePresetChips — not a folder, the surface
+    uses the flat file layout): PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0, EXIT=0 (nothing-to-scan clean result).
+    Genuine authoritative isolated scan of the actual 5 files (copied to a temp surface dir, -Language csharp):
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0.  No TODO / FIXME / XXX / Coming soon / Placeholder / Lorem ipsum /
+    not implemented / NotImplementedException / // stub.
+    -> PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------------------------
+FULL-SOLUTION dotnet test (UNFILTERED) — recorded with evidence, NOT reported as green
+--------------------------------------------------------------------------------------------------
+dotnet test apps/windows/TeslaSync.sln -c Release   (verbatim, no filter):
+    TeslaSync.App.Tests  -> Passed!  Failed: 0,   Passed: 22617  (headless, incl. this surface's 34)
+    TeslaSync.App.UITests-> Failed!  Failed: 147,  Passed: 0,  Skipped: 0,  Duration 300 ms
+Every one of the 147 UITest failures is the SAME environmental error (zero from this surface):
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+    (at WinAppDriverSession.EnsureReady() : WinAppDriverSession.cs:75)
+This is BY DESIGN: RunnerAvailability + WinAppDriverSession fail loudly rather than silently skipping when the
+runner is absent. The UIAutomation suite drives the PACKAGED app out-of-process over WinAppDriver and is
+environment-supplied / run via run-ui-automation.ps1; it is a platform-capability gap of THIS non-interactive
+runner, not a defect in this surface. No UITests were added or modified by this prompt, and the failure count is
+unchanged from the shipped predecessor logs (147). The headless gate above is the authoritative result for this
+shared-surface prompt (the W9-0002 gate runs the Category=UIAutomation suite separately on a provisioned runner).
+
+--------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------------------------
+[x] Surface renders all states the web source has: populated chip row and the friendly empty surface (no presets
+    resolved). No invented loading/error/stale/offline branches (the presentational web source has none).
+[x] Hooks bind via the shared P1/S8 state-holder layer (IDatePresetChipsSource through the view-model); the view
+    never reads data directly; no direct HTTP (the surface is presentational by nature).
+[x] Every i18n key from the web source has a matching key in the P1/S10 catalog (date.preset.label, the per-preset
+    date.preset.* keys, and common.noData for the empty message) — verified in en.json + Resources.resw.
+[x] Accessibility: the row is a UIA Group carrying the localized aria-label; every chip carries a Narrator name
+    (its label) plus the Toggle pattern reporting the active/pressed state (web aria-pressed).
+[x] Tests: adapter unit test (projection + range Resolve) + per-state tests (Populated / Empty, active highlight)
+    + accessibility-label test + registration/diagnostics tests. 34/34 green.
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0 on all files).
+[x] Telemetry: view.opened slug=DatePresetChips emitted once on Loaded (plus PII-safe preset.selected) via the
+    P1/S11 diagnostics contract.
+[x] EXIT=0 / STATUS=DONE (headless gate; WinAppDriver E2E deferred to a provisioned runner with evidence above).
+
+BUILD_EXIT=0
+TEST_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
