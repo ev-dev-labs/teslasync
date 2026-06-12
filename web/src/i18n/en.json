@@ -1066,6 +1066,7 @@
       "avgDuration": "Avg Duration",
       "totalCost": "Total Cost",
       "timeToCharge": "Time-to-Charge Analysis",
+      "timeToChargeDesc": "How long DC sessions take to reach key SOC thresholds",
       "avg10to80": "10% → 80%",
       "avg20to80": "20% → 80%",
       "fastest": "Fastest Session",
