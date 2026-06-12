@@ -328,3 +328,4 @@ p3-android/feature-views/A-0079-WeekSelector.prompt.md
 p3-android/feature-views/A-0078-WeekOverWeekSummary.prompt.md
 p3-android/feature-views/A-0084-ConflictWarnings.prompt.md
 p3-android/feature-views/A-0080-ActionBuilder.prompt.md
+p3-android/feature-views/A-0082-AutomationCard.prompt.md
