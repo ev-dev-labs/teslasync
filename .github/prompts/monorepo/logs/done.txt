@@ -452,3 +452,4 @@ p3-android/feature-views/A-0203-AIUsageCard.prompt.md
 p3-android/feature-views/A-0205-FeatureToggles.prompt.md
 p3-android/feature-views/A-0206-GasPriceSettings.prompt.md
 p3-android/feature-views/A-0204-AppearanceSettings.prompt.md
+p3-android/feature-views/A-0211-RegionSettings.prompt.md
