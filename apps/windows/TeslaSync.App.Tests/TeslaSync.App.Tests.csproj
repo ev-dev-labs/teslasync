@@ -1420,14 +1420,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    TeslaSync.App.Tests is the headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Registration / diagnostics) for every dashboard-widget,
-    feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Registration / diagnostics) for every dashboard widget,
+    feature view, misc surface, modal/dialog and shared surface. The WinUI app (TeslaSync.App) targets a WinUI
     TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's Microsoft.UI-free
-    sources are Compile-linked here (the Link mirrors each source's real location under Widgets, FeatureViews,
-    MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are excluded and exercised by the
-    app build, and the test classes are picked up by the SDK default-compile glob. The Content links copy the
-    units-golden, Package.appxmanifest and widget-template fixtures the tests read out of the output directory.
+    sources are Compile-linked into the single, case-insensitive ordinal path-sorted, Include-deduplicated
+    Compile ItemGroup below (the Link mirrors each source's real location under dashboard-widgets,
+    feature-views, misc-surfaces, modals-dialogs or shared-surfaces). The bare WinUI view files are excluded and
+    exercised by the app build; the test classes are picked up by the SDK default-compile glob; the Content
+    links copy the units-golden, Package.appxmanifest and widget-template fixtures.
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
     Include-deduplicated Compile item group - the union of every Microsoft.UI-free .cs on disk under
@@ -1504,6 +1505,11 @@
     shared-surfaces/0129 NewVersionBanner (repairing a merge=union multi-root corruption, plus the new
     NewVersionBanner Model / Source / ViewModel links). Do NOT re-concatenate into multiple roots, and never
     write a literal build-item or project start tag inside this comment.
+    Include-deduplicated Compile ItemGroup. The .gitattributes merge=union strategy can re-concatenate this file
+    into multiple roots plus duplicate Compile items (failing XML load, MSB4025 / MSB4067); when that happens,
+    regenerate it directly from the WinUI-free sources on disk. Regenerated into this single canonical root for
+    P2 shared-surfaces/0168 CopyLinkButton, repairing a merge=union multi-root corruption, plus the new
+    CopyLinkButton Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots.
   -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -2108,8 +2114,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\LiveStateIndicators\LiveStateIndicators.Source.cs" Link="FeatureViews\LiveStateIndicators\LiveStateIndicators.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveStateIndicators\LiveStateIndicators.ViewModel.cs" Link="FeatureViews\LiveStateIndicators\LiveStateIndicators.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveStatusPill\LiveStatusPill.Model.cs" Link="FeatureViews\LiveStatusPill\LiveStatusPill.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" Link="FeatureViews\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetry\LiveTelemetry.Model.cs" Link="FeatureViews\LiveTelemetry\LiveTelemetry.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" Link="FeatureViews\LiveTelemetryPanels\LiveTelemetryPanels.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.Model.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.Source.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveVehicleState\LiveVehicleState.ViewModel.cs" Link="FeatureViews\LiveVehicleState\LiveVehicleState.ViewModel.cs" />
@@ -2273,13 +2279,13 @@
     <Compile Include="..\TeslaSync.App\feature-views\SuggestedPrompts.Model.cs" Link="FeatureViews\SuggestedPrompts.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SuggestedPrompts.ViewModel.cs" Link="FeatureViews\SuggestedPrompts.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummarySlide\SummarySlide.Model.cs" Link="FeatureViews\SummarySlide\SummarySlide.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Model.cs" Link="FeatureViews\SummaryStats\SummaryStats.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Source.cs" Link="FeatureViews\SummaryStats\SummaryStats.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.ViewModel.cs" Link="FeatureViews\SummaryStats\SummaryStats.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Model.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.Source.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" Link="FeatureViews\SummaryStatsGrid\SummaryStatsGrid.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SummaryStatsRow.Model.cs" Link="FeatureViews\SummaryStatsRow.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Model.cs" Link="FeatureViews\SummaryStats\SummaryStats.Model.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.Source.cs" Link="FeatureViews\SummaryStats\SummaryStats.Source.cs" />
-    <Compile Include="..\TeslaSync.App\feature-views\SummaryStats\SummaryStats.ViewModel.cs" Link="FeatureViews\SummaryStats\SummaryStats.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" Link="FeatureViews\TelemetryErrorsPanel\TelemetryErrorsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Model.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryGrid\TelemetryGrid.Source.cs" Link="FeatureViews\TelemetryGrid\TelemetryGrid.Source.cs" />
@@ -2566,6 +2572,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.Model.cs" Link="SharedSurfaces\CookieConsentBanner.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.Source.cs" Link="SharedSurfaces\CookieConsentBanner.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CookieConsentBanner.ViewModel.cs" Link="SharedSurfaces\CookieConsentBanner.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\CopyLinkButton.Model.cs" Link="SharedSurfaces\CopyLinkButton.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\CopyLinkButton.Source.cs" Link="SharedSurfaces\CopyLinkButton.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\CopyLinkButton.ViewModel.cs" Link="SharedSurfaces\CopyLinkButton.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CurrencyInput.Model.cs" Link="SharedSurfaces\CurrencyInput.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CurrencyInput.Source.cs" Link="SharedSurfaces\CurrencyInput.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\CurrencyInput.ViewModel.cs" Link="SharedSurfaces\CurrencyInput.ViewModel.cs" />
