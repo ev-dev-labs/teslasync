@@ -641,3 +641,4 @@ p2-windows/shared-meaningful/W-0147-ActiveFilterChips.prompt.md
 p2-windows/shared-meaningful/W-0146-FormatterPrefsBridge.prompt.md
 p2-windows/shared-meaningful/W-0150-CurrencyInput.prompt.md
 p2-windows/shared-meaningful/W-0148-Combobox.prompt.md
+p2-windows/shared-meaningful/W-0151-DatePresetChips.prompt.md
