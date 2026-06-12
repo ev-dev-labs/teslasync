@@ -3089,7 +3089,9 @@
   <string name="translation_drives_total">Total</string>
   <string name="translation_drives_totalDriveTime">Total Drive Time</string>
   <string name="translation_drives_totalDrives">Total Drives</string>
+  <string name="translation_drivetrain_alert_criticalMsg">One or more drivetrain components are operating at critically high temperatures. Immediate attention is recommended.</string>
   <string name="translation_drivetrain_alert_criticalTitle">Critical Temperature Warning</string>
+  <string name="translation_drivetrain_alert_warningMsg">Drivetrain temperatures are above normal operating range. Monitor closely and consider reducing load.</string>
   <string name="translation_drivetrain_alert_warningTitle">Elevated Temperatures Detected</string>
   <string name="translation_drivetrain_allVehicles">All Vehicles</string>
   <string name="translation_drivetrain_avgPower">Avg Power</string>
@@ -3116,6 +3118,9 @@
   <string name="translation_drivetrain_healthScoreDesc">Overall drivetrain condition rating</string>
   <string name="translation_drivetrain_healthScoreLabel">Health Score</string>
   <string name="translation_drivetrain_healthWarn">Drivetrain Running Warm</string>
+  <string name="translation_drivetrain_health_critical">CRITICAL</string>
+  <string name="translation_drivetrain_health_good">GOOD</string>
+  <string name="translation_drivetrain_health_warning">WARNING</string>
   <string name="translation_drivetrain_inverterTemp">Inverter Temp</string>
   <string name="translation_drivetrain_isolationResistance">HV Isolation</string>
   <string name="translation_drivetrain_liveMotor">Live Motor Status</string>
