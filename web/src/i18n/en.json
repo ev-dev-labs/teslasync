@@ -1026,6 +1026,8 @@
       "cost": "Cost",
       "location": "Location",
       "speedTrend": "Charging Speed Trend",
+      "speedTrendDesc": "Monthly average DC vs AC charge rate",
+      "speedTrendAria": "Monthly average DC and AC charging speed line chart",
       "avgKw": "Avg kW",
       "dcAvg": "DC Avg",
       "acAvg": "AC Avg",

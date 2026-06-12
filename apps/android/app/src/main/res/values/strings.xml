@@ -1735,6 +1735,8 @@
   <string name="translation_charging_curve_socPercent">SOC (%)</string>
   <string name="translation_charging_curve_socRange">SOC Range</string>
   <string name="translation_charging_curve_speedTrend">Charging Speed Trend</string>
+  <string name="translation_charging_curve_speedTrendAria">Monthly average DC and AC charging speed line chart</string>
+  <string name="translation_charging_curve_speedTrendDesc">Monthly average DC vs AC charge rate</string>
   <string name="translation_charging_curve_subtitle">Power vs state-of-charge across sessions</string>
   <string name="translation_charging_curve_timeToCharge">Time-to-Charge Analysis</string>
   <string name="translation_charging_curve_title">Charging Curve</string>
