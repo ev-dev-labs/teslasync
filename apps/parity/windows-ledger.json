@@ -25,5 +25,14 @@
     "requiredCount": 32,
     "promptId": "p2-windows/W7/windows-page-admin-SchemaDriftPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-SchemaDriftPage.log"
+  },
+  {
+    "unitId": "page:analytics/Timeline",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 35,
+    "requiredCount": 35,
+    "promptId": "p2-windows/W7/windows-page-analytics-TimelinePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-analytics-TimelinePage.log"
   }
 ]

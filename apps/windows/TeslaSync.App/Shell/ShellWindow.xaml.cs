@@ -67,6 +67,9 @@ public sealed partial class ShellWindow : Window
 
         // Admin / Schema drift page (P2/W7) — parity port of web SchemaDriftPage at route /admin/schema-drift.
         _viewModel.PageFactory.Register("SchemaDrift", static () => new FeatureViews.Admin.SchemaDriftPage());
+
+        // Analytics / Timeline page (P2/W7) — parity port of web TimelinePage at route /timeline.
+        _viewModel.PageFactory.Register("Timeline", static () => new FeatureViews.Analytics.TimelinePage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

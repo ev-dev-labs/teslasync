@@ -1,0 +1,146 @@
+=== p2-windows · W7 · page:analytics/Timeline (WinUI 3 / Fluent) ===
+Parity unit : page:analytics/Timeline   kind=page   web route=/timeline
+Web source  : web/src/features/analytics/pages/TimelinePage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ApiLogsPage / FeedbackQueuePage / SchemaDriftPage do. The generated prompt's idealized "TimelinePage.xaml +
+  TimelinePageViewModel.cs under TeslaSync/Features/Analytics" is mapped onto these real conventions; the surface
+  registers with the W4 ShellPageFactory by route name ("Timeline", already in RouteTable.cs → /timeline) in
+  Shell/ShellWindow.xaml.cs.
+- Data binding (ADR-004): the manifest data source is useVehicles (GET /vehicles); the page additionally derives its
+  panels from the two vehicle-states queries (GET /vehicle-states/timeline, GET /vehicle-states/summary) the web page
+  runs. The view-model reads all three through an injected ITimelineFeed; the default EmptyTimelineFeed resolves the
+  empty state (matching the ApiLogsPage/SchemaDriftPage host-injection precedent), and the generated-client-backed
+  TimelineClientFeed (TimelinePage.Source.cs) binds to the generated OpenAPI contract operations get_api_v1_vehicles
+  (no params) + get_api_v1_vehicle_states_timeline / get_api_v1_vehicle_states_summary (snake_case vehicle_id + days
+  query params, never camelCase, never a double /api/v1 prefix), asserted in tests via the FakeApiClient. No HTTP
+  touches the view; non-success surfaces as ApiException -> the failure banner.
+- The web page renders the failure banner (anyError) above always-present panels, a full-page loading scaffold while
+  the first query is in flight with no rows, and per-region empty states; the native port reproduces them as visible
+  Fluent regions per ADR-006: loading -> TsPageLoadSkeleton; error -> TsAlertBanner(Danger) (web anyError) above the
+  content; distribution/daily empties -> TsChartSkeleton (while loading) / TsEmptyState; transitions empty ->
+  TsEmptyState. Never a blank region.
+- SI units: this surface carries no unit-bearing fields (FSM state transitions + time-in-state seconds + transition
+  counts only). Durations format through the shared NumberFormatting port (web fmtInt, half-away-from-zero, verified
+  by FormatDurationFromSeconds_matches_web) and timestamps through DateTimeFormatting (web formatDateTime) at the
+  display boundary — no non-SI value is ever stored or computed.
+- i18n: 21 of the 23 manifest keys already existed in Strings/{en,ar,he}/Resources.resw; the 2 missing required keys
+  (timeline.noStateData, timeline.trigger — the web resolves these via inline t() fallbacks, they are absent from
+  en.json) were added verbatim (web key names) to all three catalogs, plus the action-row keys timeline.range /
+  timeline.range.last7Days/last30Days/last90Days / timeline.refresh. The surface resolves every literal through the
+  ILocalizer facade; ar/he carry the English default until translated, matching the existing catalog convention.
+- Tests link the three Microsoft.UI-free files (Model/Source/ViewModel) into TeslaSync.App.Tests.csproj via the
+  established <Compile Include … Link="FeatureViews\TimelinePage\…"> convention (the headless test assembly cannot
+  reference the WinUI exe); the bare WinUI view (TimelinePage.cs) is excluded (it uses Microsoft.UI).
+
+=== PARITY ===
+PARITY_REQUIRED=35
+
+# Panels (7) — every web region reproduced as a Fluent Card/Mica region (each a visible branch)
+[x] panel  - Total-Transitions -> TimelinePage.cs#_totalTransitionsCard (TsMetricCard); web MetricCard
+             "Total Transitions"; projection TimelineProjection.Project Metrics[0] (sum of by_state transition_count);
+             test Metrics_project_labels_values_and_accents
+[x] panel  - Driving-Time      -> TimelinePage.cs#_drivingCard (TsMetricCard, accent TsColorSuccessBrush); web MetricCard
+             color="green"; projection Metrics[1] = FormatHoursFromSeconds(driving); test Metrics_project_labels_values_and_accents
+[x] panel  - Charging-Time     -> TimelinePage.cs#_chargingCard (TsMetricCard, accent TsColorInfoBrush); web MetricCard
+             color="cyan"; projection Metrics[2] = FormatHoursFromSeconds(charging); test Metrics_project_labels_values_and_accents
+[x] panel  - Idle-Sleep-Time   -> TimelinePage.cs#_idleSleepCard (TsMetricCard); web MetricCard "Idle / Sleep Time";
+             projection Metrics[3] = FormatHoursFromSeconds(idle+sleeping buckets); test Metrics_project_labels_values_and_accents
+[x] panel  - GlassPanel5       -> state-distribution panel: TimelinePage.cs#BuildDistributionPanel (_distributionPanel
+             TsGlassPanel) hosting _distributionTitle (PanelTitle, timeline.stateTimeline), the proportional segment bar
+             (_distributionBar, RebuildDistribution) and the 8-state legend (_legendRow); web "State Distribution"
+             GlassPanel; projection DistributionSegments/Legend/DistributionMode; tests
+             Distribution_segments_sum_and_skip_sub_threshold_slices + Distribution_legend_lists_all_eight_states +
+             Distribution_empty_shows_skeleton_while_summary_loads
+[x] panel  - GlassPanel6       -> daily-breakdown panel: TimelinePage.cs#BuildDailyPanel (_dailyPanel TsGlassPanel)
+             hosting _dailyTitle (PanelTitle, timeline.dailyBreakdown) + the bar chart; web "Daily Breakdown" GlassPanel;
+             projection DailyBars/DailyMode; test Daily_breakdown_bins_by_utc_day_and_buckets_by_destination_state
+[x] panel  - GlassPanel7       -> state-transitions panel: TimelinePage.cs#BuildTransitionsPanel (_transitionsPanel
+             TsGlassPanel) hosting _transitionsTitle (PanelTitle, timeline.stateTransitions), the column header
+             (_tableHeader) and the data rows (_tableRows, RebuildRows/BuildRow) with from/to TsBadge chips; web
+             "State Transitions" DataTable; projection Rows/ShowTransitions; test
+             Table_rows_carry_badges_durations_and_trigger_fallback + Table_trigger_falls_back_to_em_dash_when_absent
+
+# Charts (1) — native W3 chart wrapper, never a web canvas
+[x] chart  - BarChart          -> TimelinePage.cs#_dailyChart (TsBarChart, the W3 native cartesian wrapper) fed by
+             BuildSeries: four ChartSeries{Kind=ChartSeriesKind.Bar} (Driving/Charging/Idle/Sleeping) over the per-day
+             buckets; web recharts <BarChart> stacked bars; series names localized (timeline.driving/charging/idle/
+             sleeping); projection DailyBars + *SeriesName; test Daily_breakdown_bins_by_utc_day_and_buckets_by_destination_state
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading -> TimelineState.Loading + TimelineDisplay.ShowLoading; rendered TimelinePage.cs#_loadingSkeleton
+             (TsPageLoadSkeleton); web isLoading && transitions.length===0; test State_loading_when_first_query_in_flight
+[x] state  - empty   -> TimelineState.Empty (no vehicle / no rows) with per-region empties: DistributionMode/DailyMode
+             == TimelinePanelMode.Empty (TsEmptyState) + ShowTransitions==false (TsEmptyState noTransitions); tests
+             State_empty_when_resolved_with_no_vehicle_or_data + ViewModel_empty_feed_is_the_empty_state
+[x] state  - error   -> TimelineState.Error + ShowError -> _errorBanner (TsAlertBanner Danger, web anyError "Failed to
+             load data: …") rendered above the panels; tests State_error_shows_banner_above_content +
+             ViewModel_vehicles_failure_is_the_error_state + ViewModel_timeline_failure_is_the_error_state
+[x] state  - success -> TimelineState.Success + ShowContent with the bar/chart/table content modes; tests
+             State_success_when_data_present + ViewModel_loads_into_the_success_state_and_selects_the_first_vehicle
+
+# Strings (23) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - error.loadFailed          -> TimelineProjection.Project localizer.GetString("error.loadFailed", "Failed to load data") -> ErrorBannerText
+[x] string - timeline.charging         -> TimelineProjection.Project localizer.GetString("timeline.charging", "Charging") -> ChargingSeriesName (chart legend)
+[x] string - timeline.chargingTime     -> TimelineProjection.Project localizer.GetString("timeline.chargingTime", "Charging Time") -> Metrics[2].Label
+[x] string - timeline.dailyBreakdown   -> TimelineProjection.Project localizer.GetString("timeline.dailyBreakdown", "Daily Breakdown") -> DailyTitle
+[x] string - timeline.driving          -> TimelineProjection.Project localizer.GetString("timeline.driving", "Driving") -> DrivingSeriesName (chart legend)
+[x] string - timeline.drivingTime      -> TimelineProjection.Project localizer.GetString("timeline.drivingTime", "Driving Time") -> Metrics[1].Label
+[x] string - timeline.duration         -> TimelineProjection.Project localizer.GetString("timeline.duration", "Duration") -> DurationHeader
+[x] string - timeline.fromState        -> TimelineProjection.Project localizer.GetString("timeline.fromState", "From State") -> FromStateHeader
+[x] string - timeline.idle             -> TimelineProjection.Project localizer.GetString("timeline.idle", "Idle") -> IdleSeriesName (chart legend)
+[x] string - timeline.idleSleepTime    -> TimelineProjection.Project localizer.GetString("timeline.idleSleepTime", "Idle / Sleep Time") -> Metrics[3].Label
+[x] string - timeline.noDailyData      -> TimelineProjection.Project localizer.GetString("timeline.noDailyData", "No daily transition activity yet") -> DailyEmptyText
+[x] string - timeline.noStateData      -> TimelineProjection.Project localizer.GetString("timeline.noStateData", "No state distribution available yet") -> DistributionEmptyText  [ADDED to en/ar/he resw]
+[x] string - timeline.noTransitions    -> TimelineProjection.Project localizer.GetString("timeline.noTransitions", "No state transitions recorded") -> NoTransitionsText
+[x] string - timeline.selectVehicle    -> TimelineProjection.Project localizer.GetString("timeline.selectVehicle", "Select Vehicle") -> SelectVehicleHint (picker placeholder)
+[x] string - timeline.sleeping         -> TimelineProjection.Project localizer.GetString("timeline.sleeping", "Sleeping") -> SleepingSeriesName (chart legend)
+[x] string - timeline.stateTimeline    -> TimelineProjection.Project localizer.GetString("timeline.stateTimeline", "State Distribution") -> DistributionTitle
+[x] string - timeline.stateTransitions -> TimelineProjection.Project localizer.GetString("timeline.stateTransitions", "State Transitions") -> TransitionsTitle
+[x] string - timeline.subtitle         -> TimelineProjection.Project / TimelineRegistration.Subtitle localizer.GetString("timeline.subtitle", "Vehicle state history and transitions") -> Subtitle
+[x] string - timeline.time             -> TimelineProjection.Project localizer.GetString("timeline.time", "Time") -> TimeHeader
+[x] string - timeline.title            -> TimelineProjection.Project / TimelineRegistration.Title localizer.GetString("timeline.title", "Timeline") -> Title
+[x] string - timeline.toState          -> TimelineProjection.Project localizer.GetString("timeline.toState", "To State") -> ToStateHeader
+[x] string - timeline.totalTransitions -> TimelineProjection.Project localizer.GetString("timeline.totalTransitions", "Total Transitions") -> Metrics[0].Label
+[x] string - timeline.trigger          -> TimelineProjection.Project localizer.GetString("timeline.trigger", "Trigger") -> TriggerHeader  [ADDED to en/ar/he resw]
+
+PARITY_COVERED=35
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/TimelinePageTests.cs, 39 tests):
+# Projection_resolves_every_required_string_key (+ _even_in_the_loading_state) records all 23 keys through a
+# RecordingLocalizer; the four state tests + the metric/distribution/legend/daily/table tests assert each panel + the
+# chart render from the bound TimelineDisplay state holder; ClientFeed_vehicles_/timeline_/summary_* assert the
+# generated-client GET request shaping (web useVehicles + the two vehicle-states queries, snake_case vehicle_id/days);
+# the ViewModel_* tests assert the loading/empty/error(vehicles+timeline)/success matrix + vehicle-select + day-window
+# refetch + refresh reload.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TimelinePage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Analytics path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (TimelinePage Model/Source/ViewModel/view +
+#   TimelinePageTests + ShellWindow registration + test csproj links + Resources.resw, all LF / utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25850, Failed: 0, Skipped: 0 (incl. 39 TimelinePageTests)
+TEST_EXIT=0
+PARITY_COVERED=35
+PARITY_REQUIRED=35
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TimelinePage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/TimelinePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-analytics-TimelinePage.log
+# git commit -m "feat(apps/windows): TimelinePage at web parity (W7 analytics)"
+
+EXIT=0
+STATUS=DONE
