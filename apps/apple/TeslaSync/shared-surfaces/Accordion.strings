@@ -1,0 +1,35 @@
+/*
+  Accordion.strings
+  TeslaSync — P4 shared surface · 0203 · Accordion (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web `components/ui/Accordion.tsx` is an
+  anonymous presentational primitive — its `title` is a caller-supplied, already-localized prop and it
+  calls no `t()` — so there are NO web keys to mirror here. The only entries below are the native a11y
+  additions: the VoiceOver expand / collapse hint, the expanded / collapsed value (the spoken peer of the
+  web `aria-expanded`), and the empty-body leaf (the "never a blank box" peer of an expanded section that
+  reveals no children).
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("Accordion") so each parallel surface prompt owns its own strings. In test /
+  preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Native a11y additions (no web `t()` key exists; the source is anonymous) --- */
+
+/* VoiceOver hint announced when the section is collapsed — the action a tap performs. */
+"accordion.expandHint" = "Expand section";
+
+/* VoiceOver hint announced when the section is expanded — the action a tap performs. */
+"accordion.collapseHint" = "Collapse section";
+
+/* VoiceOver value announced when the section is expanded (spoken peer of web aria-expanded=true). */
+"accordion.expanded" = "Expanded";
+
+/* VoiceOver value announced when the section is collapsed (spoken peer of web aria-expanded=false). */
+"accordion.collapsed" = "Collapsed";
+
+/* Title of the empty-body leaf, shown when an expanded section has nothing to reveal. */
+"accordion.empty" = "No details to show";
+
+/* Supporting line of the empty-body leaf. */
+"accordion.emptyMessage" = "Details appear here when they become available.";
