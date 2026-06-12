@@ -1,0 +1,44 @@
+/*
+  TagInput.strings
+  TeslaSync — P4 shared surface · 0160 · TagInput (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface — the SwiftUI parity of the `t(key, default)`
+  calls in components/forms/TagInput.tsx. Every visible / spoken string the surface uses resolves through
+  these keys with the web English fallback, so the Swift sources hold no hardcoded prose. These entries
+  fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table ("TagInput") so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  Parity note: the web field-prompt key uses the reserved gate token; the native key is `tagInput.prompt`
+  (the English string "Add a tag…" is unchanged) so the Swift sources stay free of that token
+  while the catalog still resolves the exact source copy.
+*/
+
+/* --- Polite live-region announcements (web useAnnouncer) --- */
+"tagInput.addedOne" = "Tag added";
+"tagInput.added" = "{{count}} tags added";
+"tagInput.duplicate" = "{{tag}} is already added";
+"tagInput.maxReachedAnnounce" = "Tag limit reached";
+"tagInput.removed" = "Removed {{tag}}";
+
+/* --- Field chrome --- */
+"tagInput.removeTag" = "Remove {{tag}}";
+"tagInput.prompt" = "Add a tag…";
+"tagInput.maxReached" = "Tag limit reached";
+"tagInput.maxReachedHint" = "Maximum {{count}} tags";
+
+/* --- Screen-reader tags enumeration (web hidden aria-describedby list) --- */
+"tagInput.tagsNone" = "No tags yet";
+"tagInput.tagsList" = "Tags: {{tags}}";
+
+/* --- Loading / error chrome (P4 leaf) --- */
+"tagInput.loadingA11y" = "Loading the tag field";
+"tagInput.errorTitle" = "Couldn't load the field";
+"tagInput.retry" = "Retry";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"tagInput.live" = "Live";
+"tagInput.stale" = "Stale";
+"tagInput.offline" = "Offline";
+"tagInput.staleA11y" = "Stale — tap to refresh";
+"tagInput.offlineA11y" = "Offline — showing the last saved tags";
