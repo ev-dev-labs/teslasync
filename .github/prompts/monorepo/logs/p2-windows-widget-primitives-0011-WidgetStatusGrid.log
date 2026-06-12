@@ -1,0 +1,104 @@
+=== P2 Widget primitive 0011 WidgetStatusGrid (Windows) ===
+date=2026-06-12T08:12:12-07:00  base=16cc1476a  runner=Windows_NT / .NET SDK 10.0.300 / WindowsAppSDK.WinUI 2.1.0
+
+Web parity source : web/src/features/dashboard/widgets/shared/WidgetStatusGrid.tsx
+Native surface    : apps/windows/TeslaSync.App/widget-primitives/WidgetStatusGrid.Model.cs
+                    apps/windows/TeslaSync.App/widget-primitives/WidgetStatusGrid.Source.cs   (IWidgetStatusGridSource, P1/S8)
+                    apps/windows/TeslaSync.App/widget-primitives/WidgetStatusGrid.ViewModel.cs
+                    apps/windows/TeslaSync.App/widget-primitives/WidgetStatusGrid.cs          (WinUI 3 view)
+Surface tests     : apps/windows/TeslaSync.App.Tests/WidgetPrimitives/WidgetStatusGridTests.cs (67 cases)
+
+Capability (ADR-002/005/009): WinUI 3 (Windows App SDK 2.1.0, >= 1.6) + .NET 10 PRESENT — TeslaSync.App and
+TeslaSync.App.Core build, and 25,439 headless tests pass. The WinAppDriver/Appium E2E runner is ABSENT on
+this runner, so the repo's 147 Category=UIAutomation end-to-end tests cannot execute (same gap logged by
+the adjacent sibling surfaces).
+
+------------------------------------------------------------------------------------------------------------
+GATE
+------------------------------------------------------------------------------------------------------------
+BUILD_EXIT=0   dotnet build apps/windows/TeslaSync.sln -c Release
+               Build succeeded. 0 Error(s). 17 Warning(s) — all pre-existing CA1716/CA1720/CA1859/CA1000 in
+               TeslaSync.App.Core only (that project does not set TreatWarningsAsErrors). TeslaSync.App
+               itself builds clean under TreatWarningsAsErrors=true, including the new widget-primitives
+               surface (CS0108 CornerRadius-hides-Control.CornerRadius and two CA1859 concrete-return-type
+               findings in the view were fixed during development).
+
+TEST_EXIT=1    dotnet test apps/windows/TeslaSync.sln -c Release --no-build
+               Passed!  - Failed:   0, Passed: 25439, Skipped: 0 - TeslaSync.App.Tests.dll  (headless logic, incl. WidgetStatusGrid)
+               Failed!  - Failed: 147, Passed:     0, Skipped: 0 - TeslaSync.App.UITests.dll (E2E UI automation)
+
+               Root cause of the 147 failures (pre-existing, environment — NOT this surface):
+                 TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+                 WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+                 WinAppDriver.exe was not found at its standard install paths or on PATH.
+                   at WinAppDriverSession.EnsureReady() WinAppDriverSession.cs:line 75
+               These are the repo's shell/navigation/auth/a11y/component E2E suite (Category=UIAutomation),
+               identical to every adjacent Windows surface. No WidgetStatusGrid test is among them.
+
+               Green proofs on the same runner:
+                 dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+                   => EXIT=0 — Passed 25439 / Failed 0.
+                 dotnet test TeslaSync.App.Tests --filter "FullyQualifiedName~WidgetStatusGridTests"
+                   => EXIT=0 — Passed 67 / Failed 0.
+
+FORMAT_EXIT=0  dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+               Clean across the whole solution. The four widget-primitives sources and the test file are LF
+               / .editorconfig-clean (converted from CRLF to satisfy [*.{cs,xaml}] end_of_line=lf).
+
+PLACEHOLDER_EXIT=0  apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/widget-primitives/WidgetStatusGrid
+               PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0.
+               A genuine recursive scan of the real directory apps/windows/TeslaSync.App/widget-primitives
+               also reports COUNT=0 — no TODO/FIXME/stub/Placeholder/NotImplementedException in shipped code.
+
+------------------------------------------------------------------------------------------------------------
+PARITY NOTES (web WidgetStatusGrid.tsx -> native)
+------------------------------------------------------------------------------------------------------------
+- States: the web source is a PURE presentational primitive (no data hooks). It has exactly two render
+  branches, both reproduced: empty (cells.length===0 -> EmptyState, mapped to TsEmptyState) and the
+  populated responsive grid of ok/warning/error/inactive/unknown chips with a corner status dot. The generic
+  loading/error/stale/offline fetch states do not exist in the source and are intentionally NOT fabricated
+  (per honesty covenant #2/#3) — they belong to the data-bound widgets that consume this primitive.
+- statusStyles (web L21-L42) -> WidgetStatusPalette: ok/warning/error are tinted semantic accents
+  (Success/Warning/Danger brushes at /10 background + /20 border); inactive/unknown share the neutral
+  muted-surface treatment (SurfaceGlass bg, Border border, TextMuted dot).
+- Container-query column collapse (web L44-L50, cols 2|3|4 + compact, @xs=320 / @sm=384) is reproduced by
+  WidgetStatusGridLayout.ResolveColumns and applied on the view's measured width (WinUI has no container
+  queries). Verified by unit tests at every breakpoint.
+- compact hides per-cell values (web L92) and forces two columns (web L63).
+- i18n (P1/S10): the web default emptyMessage ('No status data available') is a hard-coded prop default with
+  NO dedicated catalog key. The primitive resolves its fallback through the shared generic catalog key
+  translation.common.noData ("No data available", present in Strings/{en,he,ar}/Resources.resw); consuming
+  widgets pass their own specific localized message. No English literal is rendered without the facade.
+- a11y: every chip exposes a Narrator name (label, plus value when shown); the status dot and inner texts are
+  marked decorative (AccessibilityView.Raw) so the chip is a single clean Narrator stop — matching the web
+  (colour-only dot, no aria text alternative). Verified by the a11y-name tests.
+- Diagnostics (P1/S11): view.opened slug=WidgetStatusGrid is emitted once on Loaded via
+  WidgetStatusGridDiagnostics. Verified by unit test.
+
+------------------------------------------------------------------------------------------------------------
+REPOSITORY REPAIR (required for the solution to load at all)
+------------------------------------------------------------------------------------------------------------
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was found in a .gitattributes merge=union
+multi-root corruption state: 3 <Project> roots and 2592 Compile items (1305 distinct, each duplicated),
+which fails XML load (MSB4025 / MSB4067) and blocks the ENTIRE solution build + test. Per the file's own
+documented remedy, it was regenerated into a single canonical Project root — the case-insensitive ordinal
+path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk (1305) plus the three new
+WidgetStatusGrid Model/Source/ViewModel Compile links (1308 total). The WidgetStatusGrid.cs view stays
+excluded (it references Microsoft.UI and is exercised by the app build). All 1305 prior links and the
+package/project-reference/content item groups are preserved verbatim.
+
+------------------------------------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------------------------------------
+BUILD_EXIT=0   TEST_EXIT=1   FORMAT_EXIT=0   PLACEHOLDER_EXIT=0
+
+The surface is complete and fully green in the headless suite (67/67 surface tests, 25,439/0 overall), the
+solution build, the format gate and the placeholder gate. The only red is the full-solution dotnet test
+step, which fails solely on the 147 Category=UIAutomation E2E tests because the WinAppDriver/Appium runner
+is unavailable on this runner. Per the artifact's capability clause ("requires WinUI 3 + .NET 10 ... If
+unavailable on the runner -> STATUS=BLOCKED with API evidence"), the unavailable capability is the
+WinAppDriver/Appium E2E runtime; E2E UIAutomation verification is deferred to a WinAppDriver-provisioned
+runner.
+
+EXIT=1
+STATUS=BLOCKED
