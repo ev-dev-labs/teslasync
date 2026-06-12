@@ -475,3 +475,4 @@ p3-android/feature-views/A-0225-CommandSearch.prompt.md
 p3-android/feature-views/A-0228-FSMHealthPanel.prompt.md
 p3-android/feature-views/A-0224-CollapsibleCommandGroup.prompt.md
 p3-android/feature-views/A-0229-FSMStateDiagram.prompt.md
+p3-android/feature-views/A-0230-FSMSubFSMPanel.prompt.md
