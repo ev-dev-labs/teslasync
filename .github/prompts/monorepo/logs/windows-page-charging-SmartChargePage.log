@@ -1,0 +1,184 @@
+=== p2-windows · W7 · page:charging/SmartCharge (WinUI 3 / Fluent) ===
+Parity unit : page:charging/SmartCharge   kind=page   web route=/charging/schedule (+ /smart-charge)
+Web source  : web/src/features/charging/pages/SmartChargePage.tsx (+ components/RateTimeline.tsx)
+Output      : apps/windows/TeslaSync.App/feature-views/SmartChargePage/{SmartChargePage.Model.cs,
+              SmartChargePage.Source.cs, SmartChargePage.ViewModel.cs, SmartChargePage.cs}  (real in-repo convention; see APPROACH)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feeds), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling
+  W7 EnergyPage / BatteryDegradationPage / ApiLogsPage do. The generated prompt's idealized
+  "apps/windows/TeslaSync/Features/Charging/SmartChargePage.xaml + SmartChargePageViewModel.cs" is mapped onto
+  these real conventions (no drift hidden — this note is the disclosure). The view-model is a manual
+  INotifyPropertyChanged + IDisposable holder (not CommunityToolkit ObservableObject) because the headless test
+  project (TeslaSync.App.Tests, plain net10.0) Compile-links the Model/Source/ViewModel and references only
+  Generated + Core — matching the EnergyPage sibling exactly.
+- The surface registers itself with the W4 ShellPageFactory by route name "SmartCharge"
+  (RouteTable.cs L259/L260 map both /smart-charge and the hidden /charging/schedule to name "SmartCharge")
+  via ShellWindow.xaml.cs:
+    _viewModel.PageFactory.Register("SmartCharge", static () => new FeatureViews.Charging.SmartChargePage());
+  Namespace TeslaSync.App.FeatureViews.Charging.
+- PRE-EXISTING BUILD BREAKAGE REPAIRED (honesty, disclosure): at HEAD 184d28f1e the bare
+  `dotnet build apps/windows/TeslaSync.sln -c Release` FAILED with 84 errors. Root cause: two unclosed
+  PageFactory.Register lambdas in Shell/ShellWindow.xaml.cs ("YearReview" and "AutomationList") were missing
+  their `return page; });` closers (a merge corruption), leaving the constructor braces unbalanced → CS1026/
+  CS1002/CS1513 at the ctor close → the WinUI XAML compiler then cascaded into 80+ "unknown type" WMC0001/
+  WMC0110 errors and a WMC9999 internal crash. The two lambdas were repaired (the file IS the allowed
+  "NavigationView registration" target, and a green build is a gate precondition). No other behavior touched.
+- Data binding (ADR-004): the manifest's four web hooks are ported as four single-responsibility ports bound
+  through the view-model (P1/S8), keeping the web hook names at the C# call sites:
+    * useRatePlans       -> IRatePlansSource / RatePlansClientSource
+                           GET  /charge-planner/rate-plans   (op get_api_v1_charge_planner_rate_plans)
+    * useChargePlans     -> IChargePlansSource / ChargePlansClientSource
+                           GET  /charge-planner/history?vehicle_id (op get_api_v1_charge_planner_history),
+                           snake_case query (ADR-004 #8, no camelCase), scoped to the primary vehicle via the
+                           shared IWidgetVehicleSource (native useSelectedVehicle; no vehicle => RepositoryResult.Empty,
+                           web `enabled: !!vehicleId`).
+    * useOptimizeCharge  -> IOptimizeChargeClient / OptimizeChargeClient
+                           POST /charge-planner/optimize     (op post_api_v1_charge_planner_optimize)
+    * useApplySchedule   -> IApplyScheduleClient / ApplyScheduleClient
+                           POST /charge-planner/apply        (op post_api_v1_charge_planner_apply)
+  The generated endpoint table types these four bodies as JsonElement, so feature-local DTOs are deserialized
+  via IApiClient.SendAsync<T> (the contract client); the POST bodies are built as snake_case dictionaries
+  (vehicle_id, target_soc, depart_by, rate_plan_id, max_amps, battery_capacity_kwh / plan_id) so the wire shape
+  matches the Go handler regardless of the JsonSerializerDefaults.Web naming policy. No HTTP touches the view.
+- States (ADR-006): the plan-history read is the page spine. SmartChargeState.Loading -> History TsTableSkeleton;
+  Error -> History TsQueryError + Retry -> RefreshAsync; Empty -> History TsEmptyState (chargePlanner.noHistory);
+  Ready -> History TsDataTable. The settings form, rate timeline, the three cost tiles and the schedule panel are
+  ALWAYS rendered and NEVER collapse: before an optimization the cost tiles show em dashes, the schedule details
+  show em dashes (Apply disabled), and the rate timeline shows its empty body (chargePlanner.noRateData). The
+  optimize/apply mutations surface their own pending (TsButton.IsLoading) and error (ErrorText) states.
+- SI / units: this planner endpoint's contract is dimensioned (cents/kWh, kWh, hours, %) exactly as the web page;
+  costs are formatted at the display boundary via ScalarFormatters.FormatCurrency, percentages via
+  FormatPercentage, plain numbers via FormatNumber, times/dates via DateTimeFormatting — never recomputed.
+- Live data: none of the four charge-planner sources is an SSE stream, so no live subscription is created; the
+  >2-minute staleness contract (ADR-013) is surfaced for the cached plan-history read via the header
+  TsDataFreshness chip (UpdatedAt / IsFetching / IsError + the 2-minute CacheFreshness window).
+- a11y/dark mode (ADR-015): every panel, the rate-timeline bars, the cost tiles, the history table, the schedule
+  detail cells and the alternative rows publish AutomationProperties names; the design-token components
+  (TsGlassPanel/Typography/TsStatCard/TsDataTable/TsButton/TsSelect/TsSlider) honor light/dark + high contrast via
+  the W1/W2 token dictionaries; the page exposes its document title as its AutomationProperties name.
+- i18n (ADR-014): every visible literal flows through ILocalizer.GetString("chargePlanner.<key>", "<web default>")
+  with the exact web key names; 32 of the 33 required keys were already in the platform catalog as
+  translation.chargePlanner.* ; the one missing key (chargePlanner.cost_decimal — the web history "Cost" column key,
+  distinct from the existing chargePlanner.cost) was appended to Strings/en|ar|he/Resources.resw (xml re-validated).
+
+=== PARITY ===
+PARITY_REQUIRED=44
+
+# Panels (7) — every named panel reproduced as a Fluent Card/Mica region
+[x] panel  - GlassPanel1 (Charge Settings)      -> SmartChargePage.cs BuildSettingsPanel/_settingsPanel (TsGlassPanel)
+             hosting the rate-plan TsSelect, target-SOC TsSlider, departure DatePicker+TimePicker, max-amps NumberBox,
+             battery-capacity NumberBox, the Optimize TsButton and the optimize ErrorText; labels <- SmartChargeDisplay
+             .Settings/RatePlan/TargetSoc/DepartBy/MaxAmps/BatteryCapacity/Optimize; tests
+             Resolves_every_required_string_key, ViewModel_form_values_clamp_to_web_ranges, ViewModel_default_depart_is_tomorrow_morning
+[x] panel  - GlassPanel2 (24-Hour Rate Timeline) -> SmartChargePage.cs BuildTimelinePanel/_timelinePanel + BuildTimelineBars
+             (24 tier-colored bars + window highlight) or _timelineEmpty (TsEmptyState), legend + _windowInfo <-
+             SmartChargeDisplay.RateBars/NoRateDataMessage/WindowInfoText; SmartChargeProjection.BuildRateBars; tests
+             Projection_rate_timeline_builds_twenty_four_bars_and_window_info, Projection_rate_timeline_has_no_bars_before_a_result
+[x] panel  - Charge-Now                          -> SmartChargePage.cs _chargeNowCard (TsStatCard) <- SmartChargeDisplay
+             .CostStats[0]; tests Projection_cost_tiles_format_currency_after_a_result, Projection_cost_tiles_show_em_dash_before_a_result
+[x] panel  - Optimized-Cost                      -> SmartChargePage.cs _optimizedCard (TsStatCard) <- CostStats[1]
+             (tier + cents/kWh sublabel); test Projection_cost_tiles_format_currency_after_a_result
+[x] panel  - Savings                             -> SmartChargePage.cs _savingsCard (TsStatCard) <- CostStats[2]
+             (savings % + kWh + duration sublabel); test Projection_cost_tiles_format_currency_after_a_result
+[x] panel  - GlassPanel6 (Recommended Schedule)  -> SmartChargePage.cs BuildSchedulePanel/_schedulePanel: the four detail
+             cells (BuildScheduleDetails <- ScheduleDetails), the Apply TsButton / _appliedChip, the apply ErrorText and the
+             alternative-window rows (BuildAlternatives <- AlternativeWindows); tests
+             Projection_schedule_details_and_alternatives_after_a_result, Projection_schedule_details_are_em_dash_before_a_result,
+             ViewModel_apply_success_sets_applied_chip, ViewModel_apply_failure_surfaces_error
+[x] panel  - GlassPanel7 (Plan History)          -> SmartChargePage.cs BuildHistoryPanel/_historyPanel hosting one of
+             _historyLoading (TsTableSkeleton) / _historyError (TsQueryError) / _historyTable (TsDataTable) / _historyEmpty
+             (TsEmptyState) <- SmartChargeDisplay.History{Columns,Rows,EmptyMessage}; tests
+             Projection_history_columns_match_web_table, Projection_history_rows_format_cells_and_carry_status_color,
+             Projection_history_saved_is_em_dash_when_not_positive
+
+# Data states (4) — implemented for every data source (rate plans / plan history / optimize / apply)
+[x] state  - loading  -> SmartChargeState.Loading -> _historyLoading (TsTableSkeleton); optimize/apply TsButton.IsLoading;
+             ViewModel SetLoading when !HasContent; test ViewModel_loading_only_stays_loading
+[x] state  - empty    -> SmartChargeState.Empty -> _historyEmpty (TsEmptyState chargePlanner.noHistory); pre-optimize the
+             cost tiles + schedule details show em dashes and the timeline shows chargePlanner.noRateData; tests
+             ViewModel_empty_plans_render_empty_state, Projection_cost_tiles_show_em_dash_before_a_result,
+             Projection_schedule_details_are_em_dash_before_a_result, Projection_rate_timeline_has_no_bars_before_a_result
+[x] state  - error    -> SmartChargeState.Error -> _historyError (TsQueryError, InfoBar-equivalent) + Retry; the optimize and
+             apply mutations surface localized ErrorText; tests ViewModel_failed_history_renders_error,
+             ViewModel_optimize_failure_surfaces_error, ViewModel_apply_failure_surfaces_error
+[x] state  - success  -> SmartChargeState.Ready -> History TsDataTable; a successful optimize populates the timeline + cost
+             tiles + schedule, a successful apply shows the _appliedChip; tests ViewModel_loaded_plans_render_ready_with_rows,
+             ViewModel_optimize_success_populates_result_panels, ViewModel_apply_success_sets_applied_chip
+
+# Strings (33) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names.
+#   Coverage asserted headlessly by SmartChargePageTests.Resolves_every_required_string_key (RecordingLocalizer records
+#   all 33; asserts RequiredStringKeys.Length == 33). Each maps to a SmartChargeProjection.GetString call site (the two
+#   mutation-error keys resolve on the view-model's optimize/apply failure paths).
+[x] string - chargePlanner.alternatives    -> SmartChargeDisplay.AlternativesTitle
+[x] string - chargePlanner.applied          -> SmartChargeDisplay.AppliedText (_appliedChip)
+[x] string - chargePlanner.applyError       -> ViewModel.ApplyErrorMessage (ApplyAsync catch)
+[x] string - chargePlanner.applySchedule    -> SmartChargeDisplay.ApplyText (_applyButton)
+[x] string - chargePlanner.batteryCapacity  -> SmartChargeDisplay.BatteryCapacityLabel
+[x] string - chargePlanner.chargeNowCost    -> CostStats[0].Label
+[x] string - chargePlanner.cost_decimal     -> HistoryColumns[cost].Header
+[x] string - chargePlanner.currentRate      -> CostStats[0].Sublabel
+[x] string - chargePlanner.currentSoc       -> ScheduleDetails[0].Label
+[x] string - chargePlanner.date             -> HistoryColumns[date].Header
+[x] string - chargePlanner.departBy         -> SmartChargeDisplay.DepartByLabel
+[x] string - chargePlanner.endTime          -> ScheduleDetails[3].Label
+[x] string - chargePlanner.history          -> SmartChargeDisplay.HistoryTitle
+[x] string - chargePlanner.maxAmps          -> SmartChargeDisplay.MaxAmpsLabel
+[x] string - chargePlanner.noHistory        -> SmartChargeDisplay.HistoryEmptyMessage (_historyEmpty / TsDataTable.EmptyMessage)
+[x] string - chargePlanner.optimize         -> SmartChargeDisplay.OptimizeText (_optimizeButton)
+[x] string - chargePlanner.optimizeError    -> ViewModel.OptimizeErrorMessage (OptimizeAsync catch)
+[x] string - chargePlanner.optimizedCost    -> CostStats[1].Label
+[x] string - chargePlanner.plan             -> HistoryColumns[plan].Header
+[x] string - chargePlanner.ratePlan         -> SmartChargeDisplay.RatePlanLabel
+[x] string - chargePlanner.rateTimeline     -> SmartChargeDisplay.RateTimelineTitle
+[x] string - chargePlanner.savedAmount      -> HistoryColumns[saved].Header
+[x] string - chargePlanner.savings          -> CostStats[2].Label
+[x] string - chargePlanner.schedule         -> SmartChargeDisplay.ScheduleTitle
+[x] string - chargePlanner.settings         -> SmartChargeDisplay.SettingsTitle
+[x] string - chargePlanner.startTime        -> ScheduleDetails[2].Label
+[x] string - chargePlanner.status           -> HistoryColumns[status].Header
+[x] string - chargePlanner.subtitle         -> SmartChargeDisplay.Subtitle / SmartChargeRegistration.Subtitle
+[x] string - chargePlanner.targetSoc        -> SmartChargeDisplay.TargetSocLabel
+[x] string - chargePlanner.targetSocLabel   -> ScheduleDetails[1].Label
+[x] string - chargePlanner.title            -> SmartChargeDisplay.Title/DocumentTitle / SmartChargeRegistration.Title
+[x] string - chargePlanner.window           -> HistoryColumns[window].Header
+[x] string - chargePlanner.windowInfo       -> SmartChargeDisplay.WindowInfoText
+
+PARITY_COVERED=44
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SmartChargePage -Language csharp
+#   (real in-repo target path; the generated prompt's apps/windows/TeslaSync/Features/Charging path does not exist)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (all new files LF / UTF-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26336, Failed: 0, Skipped: 0
+#   (incl. 51 SmartChargePageTests; this is the W7 unit-parity TEST gate, matching the sibling W7 page logs)
+TEST_EXIT=0
+PARITY_COVERED=44
+PARITY_REQUIRED=44
+#
+# Note (transparency, ADR-011 honesty): the separate UI-automation E2E suite TeslaSync.App.UITests is NOT part of the
+# W7 unit-parity gate (the sibling W7 logs scope TEST to TeslaSync.App.Tests); it additionally requires a
+# WinAppDriver/Appium runner that is absent in this environment, so it is not executed here and is NOT claimed green.
+# Every code-level gate above (build + lint + 26336 headless unit tests + placeholder) and PARITY_COVERED==PARITY_REQUIRED
+# are verified green.
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SmartChargePage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SmartChargePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-charging-SmartChargePage.log
+# git commit -m "feat(apps/windows): SmartChargePage at web parity (W7 charging)"
+
+EXIT=0
+STATUS=DONE
