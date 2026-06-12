@@ -1,0 +1,112 @@
+=== P2 Shared surface 0140 Spinner (Windows) ===
+Web source : web/src/components/feedback/Spinner.tsx  (THE specification)
+Native out : apps/windows/TeslaSync.App/shared-surfaces/{Spinner.cs, Spinner.Model.cs, Spinner.ViewModel.cs}
+             (flat Spinner.* layout per the prompt's "Allowed files"; reuses the shared motion seam like the
+             sibling AnimatedNumber surface, so there is no separate Spinner.Source.cs)
+Tests      : apps/windows/TeslaSync.App.Tests/SharedSurfaces/SpinnerTests.cs (headless, 44 facts/theory-cases)
+Capability : WinUI 3 (Windows App SDK) + .NET 10 (SDK 10.0.300) PRESENT — the solution builds and the headless suite is green.
+
+--- PARITY MAP (web -> native) ---
+useMotionPreference (reduce)            -> IMotionPreferenceSource (P1/S8 seam, reused from AIThinkingIndicator):
+                                           SystemMotionPreferenceSource over Components.Motion.MotionPreference (prod, read-once),
+                                           StaticMotionPreferenceSource / FakeMotionSource (tests)
+sizeMap sm/md/lg (px + stroke)          -> SpinnerRegistration.Resolve(SpinnerSize) -> SpinnerMetrics(24/22, 48/14, 80/10)
+svg path d="M112 30L62 108h34L78 170l58-82h-34z" (viewBox 200)
+                                        -> SpinnerRegistration.BoltVertices (6 absolute points) -> closed filled PathGeometry;
+                                           BoltPathLength = measured closed perimeter (~384.5) drives the stroke-dash draw
+@keyframes boltDraw (2s ease-in-out)    -> SpinnerRegistration.DrawKeyframes -> looping Storyboard: StrokeDashOffset (draw),
+                                           white Fill opacity (fill-in), bolt-canvas Opacity (fade) per frame
+.spinner-bolt-glow (cyan #22d3ee + emerald #10b981 drop-shadow)
+                                        -> two thicker colour-tinted stroke copies behind the white bolt (native halo stand-in;
+                                           the platform animation idiom here is XAML Storyboards, not Composition blur)
+fillOpacity / strokeDasharray / strokeDashoffset (reduce ? ...)
+                                        -> SpinnerProjection.FillOpacity / StrokeDashed / InitialDashProgress
+label (optional caption)                -> SpinnerProjection.HasLabel / Label (TextBlock, text-sm, TextSecondary token)
+aria-label={label ?? 'Loading'}         -> SpinnerProjection.AccessibleName (caller label, else i18n default)
+'Loading' default literal               -> translation.global.loading (web i18n: global.loading = "Loading") via ILocalizer
+role="status"                           -> LiveRegion.Configure (polite) + AutomationProperties.Name + FrameworkElementAutomationPeer (Image)
+component mount                         -> SpinnerDiagnostics.RecordViewOpened() => "view.opened slug=Spinner" (once, P1/S11)
+
+--- STATES (web source is a pure presentational loading mark — no query, no async data) ---
+full motion  -> bolt draws itself (dash sweep), fills, holds, fades, redraws; 2s loop   [reproduced + tested]
+reduced motion -> static solid filled bolt, no draw cycle (web prefers-reduced-motion)  [reproduced + tested]
+with caption -> caption shown beneath bolt + it is the accessible name                  [reproduced + tested]
+no caption   -> caption hidden; accessible name falls back to i18n "Loading"            [reproduced + tested]
+sizes sm/md/lg -> 24/48/80 px boxes, 22/14/10 strokes                                    [reproduced + tested]
+loading / empty / error / stale / offline : DO NOT EXIST in the web source (the spinner IS the loading state; it reads no
+network data) — not stubbed, not invented; documented like the sibling AnimatedNumber/VisuallyHidden dataless surfaces.
+
+--- PRE-EXISTING BLOCKER REPAIRED (same remedy as siblings 0098/0104/0106/0108/0117/0125/0129/0130) ---
+apps/windows/TeslaSync.App.Tests.csproj was merge=union multi-root corrupted at HEAD:
+  MSB4025: The project file could not be loaded. There are multiple root elements. Line 1263.
+  (two full Project roots concatenated, 2417 lines, garbled duplicate header comments) => baseline
+  `dotnet build/test` of the test project was RED before this change.
+Repair: regenerated into ONE canonical root with a single, case-insensitive ordinal path-sorted,
+  Include-deduplicated Compile item group = the de-duplicated UNION of every Compile link across both
+  corrupted roots (1124 unique) + 2 new Spinner WinUI-free links (Spinner.Model.cs, Spinner.ViewModel.cs;
+  the view Spinner.cs is Microsoft.UI-bound and is exercised by the app build, not linked into the net10.0 host).
+  Post-repair: XML valid (1 root), 1126 Compile items, 0 duplicates; 3 PackageReference, 2 ProjectReference, 3 Content.
+
+============================================================
+GATE (apps/windows/TeslaSync.sln, Release) — real results captured this session
+============================================================
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    -> Build succeeded. 0 Error(s). (Pre-existing CA10xx/CA17xx/CA18xx warnings live in TeslaSync.App.Core only;
+       the App project compiles the Spinner view clean under TreatWarningsAsErrors=true — 0 warnings from this surface.)
+    BUILD_EXIT=0
+
+[2] dotnet test apps/windows/TeslaSync.sln -c Release   (literal full-solution; informational)
+    TeslaSync.App.Tests.dll  : Passed! - Failed: 0, Passed: 22253, Skipped: 0, Total: 22253 (incl. 44 SpinnerTests)
+    TeslaSync.App.UITests.dll: Failed! - Failed: 147 — every failure is the SAME environmental cause:
+      UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent:
+      nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard
+      install paths or on PATH.  (RunnerAvailability.Probe(); WinAppDriverSession.EnsureReady() line 75)
+    These [Trait("Category","UIAutomation")] out-of-process e2e tests require WinAppDriver + a deployed packaged
+    MSIX + an interactive desktop session; they run independently via apps/windows/run-ui-automation.ps1 and are
+    NOT part of the EXIT=0 per-surface gate — identical to the predecessor determinations (0104 ServiceStatus,
+    0118 EditConflictBanner, 0120 ErrorDisplay, 0130 OfflineBanner). They are not Spinner-specific.
+    FULL_SLN_TEST_EXIT=1
+
+[2b] dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"   (authoritative per-surface headless gate)
+    TeslaSync.App.UITests.dll: No test matches the given testcase filter `Category!=UIAutomation` (all excluded — env e2e)
+    TeslaSync.App.Tests.dll  : Passed! - Failed: 0, Passed: 22253, Skipped: 0, Total: 22253
+    TEST_EXIT=0
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    -> no changes required (the 5 touched files normalized to LF per .editorconfig; whole-solution verify clean).
+    FORMAT_EXIT=0
+
+[4] ./apps/tools/check-placeholders.ps1 over the shipped Spinner files
+    (flat Spinner.* layout — scanned each shipped file: Spinner.cs, Spinner.Model.cs, Spinner.ViewModel.cs + SpinnerTests.cs)
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0   (no TODO/FIXME/Placeholder/Lorem/NotImplemented across the shipped files)
+    PLACEHOLDER_EXIT=0
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+[x] Surface renders on Windows with all states from the web source reproduced (full-motion self-drawing bolt,
+    reduced-motion static fill, with/without caption, sm/md/lg). View compiles under TreatWarningsAsErrors;
+    every branch is asserted by the projection / view-model tests.
+[x] Hooks bind to the shared P1/S8 state-holder layer (IMotionPreferenceSource via SpinnerViewModel); no direct HTTP/IO in the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (translation.global.loading — web global.loading = "Loading").
+[x] Accessibility labels present (root AutomationId=spinner; AutomationProperties.Name = label or i18n "Loading";
+    polite status live region; decorative bolt + caption = Raw so the name is authoritative).
+[x] Tests: adapter (projection per-state) + geometry (vertices/perimeter) + keyframe timeline + view-model
+    (size/label push, runtime motion toggle, dispose) + a11y (never-empty name) + diagnostics — 44 pass within the green headless suite.
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[x] Telemetry: view.opened with slug "Spinner" emitted once on load (P1/S11), asserted in tests.
+
+============================================================
+DETERMINATION
+============================================================
+Surface artifact is COMPLETE and verified. The per-surface gate is green:
+  BUILD_EXIT=0   TEST_EXIT=0 (22253 headless pass, incl. 44 SpinnerTests)   FORMAT_EXIT=0   PLACEHOLDER_EXIT=0
+The literal full-solution `dotnet test` reports FULL_SLN_TEST_EXIT=1 solely because the Category=UIAutomation E2E suite
+requires an absent WinAppDriver/Appium runner (evidence above) — an environmental platform-capability gap, not a code
+defect, not specific to this surface, and excluded from the per-surface gate (run separately via run-ui-automation.ps1),
+consistent with the established predecessor convention (0104 ServiceStatus, 0118 EditConflictBanner, 0120 ErrorDisplay,
+0130 OfflineBanner).
+
+EXIT=0
+STATUS=DONE
