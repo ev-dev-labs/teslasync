@@ -502,3 +502,4 @@ p3-android/feature-views/A-0250-OperationsSection.prompt.md
 p3-android/feature-views/A-0255-SubscribeCard.prompt.md
 p3-android/feature-views/A-0258-TeslaAuthCard.prompt.md
 p3-android/feature-views/A-0260-ToggleCommandTile.prompt.md
+p3-android/feature-views/A-0257-TeslaApiUsageCard.prompt.md
