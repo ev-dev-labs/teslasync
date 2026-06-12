@@ -1,0 +1,154 @@
+=== p2-windows · W7 · page:charging/Powershare (WinUI 3 / Fluent) ===
+Parity unit : page:charging/Powershare   kind=page   web route=/powershare
+Web source  : web/src/features/charging/pages/PowersharePage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/PowersharePage/{PowersharePage.Model.cs, .Source.cs, .ViewModel.cs, .cs}
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent UserControl view), exactly as the
+  sibling W7 EnergyFlowPage / BatteryDegradationPage do. The generated prompt's idealized "PowersharePage.xaml +
+  PowersharePageViewModel.cs under TeslaSync/Features/Charging" is mapped onto these real conventions. The surface
+  registers itself with the W4 ShellPageFactory by route name ("Powershare", already in
+  TeslaSync.App.Core/Navigation/RouteTable.cs L261 → /powershare, group Charging) via ShellWindow.xaml.cs.
+- Data binding (ADR-004): the manifest data source is useSignalObservations (GET /signals/observations). The web
+  page reads FIVE cold Powershare signals from signal_observations (PowershareStatus, PowershareType,
+  PowershareStopReason, PowershareHoursLeft, PowershareInstantaneousPowerKW), one useSignalObservations hook each.
+  PowershareClientFeed (PowersharePage.Source.cs) fans these out to five independent reads of the generated
+  operation id get_api_v1_signals_observations (resolved against the generated endpoint table, ApiEndpoints.cs
+  L407 — asserted by ClientFeed_operation_resolves_against_the_generated_endpoint_table), each scoped by
+  vehicle_id + field + limit=1, exactly as the sibling AutopilotSectionSource references the same endpoint. Each
+  read is best-effort and independent (web parity: a failed/empty hook just leaves that value absent), folded into
+  a PowershareReading via the tolerant PowershareObservation reducers (the native port of latestText/latestNumeric
+  + adaptObservations' value-kind discriminator, tolerating snake_case + camelCase keys). The default
+  PowersharePage() ctor uses EmptyPowershareFeed (the no-data empty state), mirroring EnergyFlowPage; the client
+  feed is exercised by tests (ClientFeed_sends_five_observation_reads_with_vehicle_field_and_limit). No HTTP
+  touches the view.
+- The web page renders its states INSIDE the PageContainer body and ALWAYS shows both GlassPanels, so the native
+  port reproduces them as visible Fluent regions per ADR-006: the page header (PageTitle + Subhead) is always
+  shown; loading -> TsStatGridSkeleton(3) + TsSkeleton shimmer; error -> TsQueryError (InfoBar-equivalent) +
+  Retry; and the two-panel content layout is shown in BOTH the empty AND success states. GlassPanel1 always
+  carries its "Powershare Status" header + status badge and swaps its body between the three stat cards (success)
+  and a TsEmptyState ("No Powershare data received yet…"); GlassPanel5 always carries its "Stop Reason" header and
+  swaps its body between the stop-reason chip + help text and a TsEmptyState ("No stop reason recorded…"). Never a
+  blank region.
+- Badge variants (web statusVariant / stopReasonVariant) are ported verbatim into PowershareProjection,
+  preserving the web's exact substring-precedence — including the documented quirk that "inactive" matches the
+  includes('active') success branch first (test Status_variant_reproduces_web_inactive_quirk). Web BadgeVariant ->
+  StatusKind: success→Success, danger→Danger, neutral→Neutral, warning→Warning.
+- Units (ADR-002): the two numeric readouts are NOT unit-system dependent and the web applies no conversion —
+  PowershareInstantaneousPowerKW is rendered with a literal "kW" suffix and PowershareHoursLeft with "h". The
+  native port formats them at the display boundary through the shared ScalarFormatters.FormatNumber (web
+  fmtNumber: power @2dp "12.34 kW", hours @1dp "2.5 h"), never storing/computing a non-SI value. There is no
+  miles/mph/psi/°F path on this page.
+- i18n (ADR-014): all 14 manifest keys flow through ILocalizer.GetString("<web key>", "<English default>") in
+  PowershareProjection, resolved UNCONDITIONALLY at the top of Project so every key is recorded in every data
+  state (tests Projection_resolves_every_required_string_key + _even_in_the_loading_state + _even_when_data_is_
+  absent). 9 of the 14 keys already existed in Strings/{en,ar,he}/Resources.resw; the 5 missing keys
+  (powershare.hoursLeftSub, .noData, .noStopReason, .stopReasonHelp, .subtitle) were added verbatim (web key
+  names, "translation.<key>") to all three catalogs in alphabetical position within the existing powershare
+  block, preserving LF/UTF-8-no-BOM (validated: 14/14 present, valid XML, no CR, no BOM in each catalog). NOTE:
+  the resw is generator-owned and sources from web en.json; these 5 hand-added keys would not be re-emitted by
+  gen-i18n until the same keys land in web en.json — documented here, not silent. The resw is not part of the
+  dotnet build, so this does not affect the build gate.
+- a11y (ADR-015): AutomationProperties.SetName on the page, both panels, the status/stop badges, the three stat
+  cards, and the error/empty surfaces; the view exposes a Group AutomationPeer that falls back to the page title.
+  Light/dark + tokens honored — every colour/typography comes from the W1/W2 design tokens via the shared
+  components (TsGlassPanel/TsBadge/TsStatCard/TsEmptyState/PageTitle/Subhead/PanelTitle), and the section icons are
+  tinted from the themed StatusResources accent brushes (warning/danger).
+- Predecessor repair (no red shipped, no silent drift): the W4 shell file
+  apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs was committed in a merge-corrupted state on this
+  integration branch — the YearReview (L90) and AutomationList (L96) PageFactory.Register lambdas were each
+  missing their closing `return page; });` (a .gitattributes merge=union concatenation hazard), which broke the
+  whole TeslaSync.App C# compile (CS1026/CS1002/CS1513 at L140) and cascaded into ~84 spurious XamlCompiler
+  WMC0001/WMC0110 "Unknown type" errors + a WMC9999 internal error. Both lambdas were repaired to mirror the
+  adjacent (correct) Automations lambda, then the Powershare registration was appended. This is the single file
+  the W7 surface must edit to register itself, so the fix is in-scope; it is documented here rather than left
+  silent.
+
+=== PARITY ===
+PARITY_REQUIRED=21
+
+# Panels (5) — every web region reproduced as a Fluent Card/Mica region, bound to the PowershareDisplay state holder
+[x] panel  - GlassPanel1     -> Status panel: PowersharePage.cs#BuildStatusSection (_statusPanel TsGlassPanel,
+             Padding 24) hosting the header row (Zap FontIcon + _statusTitle PanelTitle + _statusBadge TsBadge) +
+             _statusBody (the 3-card grid or _statusEmpty); Display.StatusSectionTitle ("Powershare Status") +
+             StatusBadgeText/StatusBadgeStatus; web "Powershare Status" GlassPanel; tests
+             Status_badge_shows_the_status_when_present + Status_badge_falls_back_to_no_data_when_status_absent
+[x] panel  - Type            -> _typeCard TsStatCard; Display.TypeCard (PowershareStat: shareType ?? '—',
+             sub "Powershare destination", Home glyph); web StatCard "Type"; test Type_card_shows_share_type_or_em_dash
+[x] panel  - Output-Power    -> _powerCard TsStatCard; Display.PowerCard (ScalarFormatters.FormatNumber powerKw
+             @2dp + " kW", sub "Instantaneous power draw"); web StatCard "Output Power" value+unit; test
+             Output_power_card_formats_kilowatts_with_two_decimals
+[x] panel  - Hours-Remaining -> _hoursCard TsStatCard; Display.HoursCard (FormatNumber hoursLeft @1dp + " h", sub
+             "Estimated runtime at current output"); web StatCard "Hours Remaining" value+unit; test
+             Hours_card_formats_hours_with_one_decimal
+[x] panel  - GlassPanel5     -> Stop-reason panel: PowersharePage.cs#BuildStopSection (_stopPanel TsGlassPanel,
+             Padding 24) hosting the header (AlertCircle FontIcon + _stopTitle PanelTitle) + _stopBody (the
+             _stopBadge + _stopHelp row, or _stopEmpty); Display.StopReasonSectionTitle ("Stop Reason") +
+             StopReason*; web "Stop Reason" GlassPanel; tests Stop_reason_chip_shown_when_present +
+             Stop_reason_empty_when_absent
+
+# Data states (2) — each a visible region (never blank); loading + error also implemented per ADR-006 robustness
+[x] state  - empty           -> PowershareState.Empty + Display.ShowContent (both GlassPanels rendered; _statusBody
+             = _statusEmpty "No Powershare data received yet…", _stopBody = _stopEmpty "No stop reason recorded…");
+             incl. the no-vehicle case (web disabled queries); tests State_empty_when_resolved_with_no_data +
+             ViewModel_no_vehicle_is_the_empty_state_without_fetching + ViewModel_empty_feed_is_the_empty_state
+[x] state  - success         -> PowershareState.Success + Display.HasData; GlassPanel1 renders the three stat cards
+             and GlassPanel5 renders the stop-reason chip + help; tests State_success_when_any_value_present +
+             ViewModel_loads_reading_into_the_success_state + Has_data_is_true_when_only_one_value_present
+             (loading -> State_loading_when_first_load_in_flight; error -> State_error_when_load_failed +
+             ViewModel_feed_failure_is_the_error_state — implemented but not parity-counted)
+
+# Strings (14) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - common.noData                -> GetString("common.noData","—") -> Display.StatusBadgeText fallback
+[x] string - powershare.hoursLeft         -> GetString("powershare.hoursLeft",…) -> Display.HoursCard.Label
+[x] string - powershare.hoursLeftSub      -> GetString("powershare.hoursLeftSub",…) -> Display.HoursCard.Sublabel
+[x] string - powershare.noData            -> GetString("powershare.noData",…) -> Display.NoDataMessage (_statusEmpty)
+[x] string - powershare.noStopReason      -> GetString("powershare.noStopReason",…) -> Display.NoStopReasonMessage
+[x] string - powershare.outputPower       -> GetString("powershare.outputPower",…) -> Display.PowerCard.Label
+[x] string - powershare.outputPowerSub    -> GetString("powershare.outputPowerSub",…) -> Display.PowerCard.Sublabel
+[x] string - powershare.statusSection     -> GetString("powershare.statusSection",…) -> Display.StatusSectionTitle
+[x] string - powershare.stopReasonHelp    -> GetString("powershare.stopReasonHelp",…) -> Display.StopReasonHelp
+[x] string - powershare.stopReasonSection -> GetString("powershare.stopReasonSection",…) -> Display.StopReasonSectionTitle
+[x] string - powershare.subtitle          -> GetString("powershare.subtitle",…) -> Display.Subtitle
+[x] string - powershare.title             -> GetString("powershare.title",…) -> Display.Title + PowershareRegistration.Title
+[x] string - powershare.type              -> GetString("powershare.type",…) -> Display.TypeCard.Label
+[x] string - powershare.typeSub           -> GetString("powershare.typeSub",…) -> Display.TypeCard.Sublabel
+# String coverage asserted headlessly: PowersharePageTests.Projection_resolves_every_required_string_key (+
+# _even_in_the_loading_state + _even_when_data_is_absent) record every one of the 14 web keys through a
+# RecordingLocalizer in success, loading AND empty states; Required_string_key_set_has_exactly_fourteen_unique_keys.
+
+PARITY_COVERED=21
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/PowersharePage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Charging path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s). The 17 remaining warning
+#   lines are all pre-existing TeslaSync.App.Core CA1716/CA1720/CA1000/CA1859 — none in feature-views/PowersharePage
+#   or the App project (TreatWarningsAsErrors=true), which compiled my surface with 0 Warning(s).
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <PowersharePage Model/Source/ViewModel/view
+#   + PowersharePageTests + ShellWindow.xaml.cs> -> 0 issues (all four new files normalized CRLF->LF, UTF-8-no-BOM)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 26338, Failed: 0, Skipped: 0
+#   (incl. 53 PowersharePageTests cases)
+TEST_EXIT=0
+PARITY_COVERED=21
+PARITY_REQUIRED=21
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/PowersharePage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/PowersharePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-charging-PowersharePage.log
+# git commit -m "feat(apps/windows): PowersharePage at web parity (W7 charging)"
+
+EXIT=0
+STATUS=DONE
