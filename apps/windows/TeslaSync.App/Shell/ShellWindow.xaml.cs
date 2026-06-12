@@ -84,12 +84,16 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Review.YearReviewPage(ParseYearParam(_viewModel.Current.Param("year")));
             page.CloseRequested += (_, _) => GoBack();
+            return page;
+        });
 
         // Automations / list page (P2/W7) — parity port of web AutomationListPage at route /automations/list.
         _viewModel.PageFactory.Register("AutomationList", () =>
         {
             var page = new FeatureViews.Automations.AutomationListPage();
             page.NavigationRequested += (_, e) => NavigateTo(e.Route);
+            return page;
+        });
 
         // Automations hub page (P2/W7) — parity port of web AutomationsListPage at route /automations.
         _viewModel.PageFactory.Register("Automations", () =>
@@ -104,6 +108,8 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("AutomationBuilder", static () => new FeatureViews.Automations.AutomationBuilderPage());
         // Battery / Degradation page (P2/W7) — parity port of web BatteryDegradationPage at route /battery-degradation.
         _viewModel.PageFactory.Register("BatteryDegradation", static () => new FeatureViews.Battery.BatteryDegradationPage());
+        // Charging / Charging Curve page (P2/W7) — parity port of web ChargingCurvePage at route /charging-curve.
+        _viewModel.PageFactory.Register("ChargingCurve", static () => new FeatureViews.Charging.ChargingCurvePage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

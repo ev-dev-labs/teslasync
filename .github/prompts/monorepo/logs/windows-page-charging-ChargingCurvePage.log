@@ -1,0 +1,140 @@
+P2 · WINDOWS · W7 — page:charging/ChargingCurve (WinUI 3 / Fluent)
+==================================================================
+
+Goal: native WinUI 3 / Windows App SDK / .NET 10 / Fluent parity port of the web
+page ChargingCurvePage (web/src/features/charging/pages/ChargingCurvePage.tsx,
+route /charging-curve, nav name ChargingCurve) at full panel / state / string
+parity. Delegation FORBIDDEN — implemented in this session. No placeholders
+(ADR-011). SI read directly from the API; display-boundary scaling only.
+
+Repo-convention note: the p2-windows feature surfaces are authored as C#-markup
+UserControl views with a four-file split (.Model.cs / .Source.cs / .ViewModel.cs
+/ .cs), NOT a hand-written .xaml + ViewModel pair. This port follows the actual
+sibling-page pattern (BatteryDegradationPage, TrueCostPage, ApiLogsPage) verbatim:
+output dir apps/windows/TeslaSync.App/feature-views/ChargingCurvePage/, namespace
+TeslaSync.App.FeatureViews.Charging, nav registered in Shell/ShellWindow.xaml.cs.
+
+Honesty Covenant (binding): no red-as-green; no scope narrowing; no skip-and-assume;
+no stubs as final; no parity shortcuts; no delegation; no predecessor bypass; no
+commit on red; no silent drift; log ends with EXIT/STATUS.
+
+Artifacts produced
+------------------
+  apps/windows/TeslaSync.App/feature-views/ChargingCurvePage/
+    ChargingCurvePage.Model.cs      (ChargingCurveSession + tolerant JSON parser,
+                                     ChargingCurveSnapshot, ChargingCurveState,
+                                     ChargingCurveSessionOption, ChargingCurveModel,
+                                     ChargingCurveDisplay, ChargingCurveProjection —
+                                     ported sessionLabel / generateChargingCurve /
+                                     getChargerLabel / isDcSession — Registration,
+                                     Diagnostics)
+    ChargingCurvePage.Source.cs     (IChargingCurveFeed, EmptyChargingCurveFeed,
+                                     ChargingCurveClientFeed [GET /charging-sessions,
+                                     generated op get_api_v1_charging_sessions, scoped
+                                     by snake_case vehicle_id], ChargingCurveChildServices,
+                                     empty child sources for the self-fetching sections)
+    ChargingCurvePage.ViewModel.cs  (INotifyPropertyChanged state holder; LoadAsync /
+                                     RefreshAsync / SelectSession; loading/empty/
+                                     success/error; freshness flags)
+    ChargingCurvePage.cs            (thin WinUI 3 UserControl renderer: header +
+                                     freshness, loading skeleton, empty GlassPanel,
+                                     session selector, selected-session curve+detail
+                                     vs select-a-session hint GlassPanel, and the
+                                     composed child sections — SummaryStatsGrid,
+                                     SessionComparisonChart, ChargerTypeChart,
+                                     SpeedTrendChart, TimeToChargeSection)
+  apps/windows/Strings/{en,ar,he}/Resources.resw
+    + translation.charging.curve.emptyHint
+    + translation.charging.curve.selectSessionHint  (the two keys the catalog lacked;
+                                     the other four already present)
+  apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+    + PageFactory.Register("ChargingCurve", () => new …Charging.ChargingCurvePage())
+    + repaired a pre-existing build-blocker in the same registration block: the
+      YearReview and AutomationList page-factory lambdas were missing their
+      `return page; });` closings (the file did not compile at HEAD); restored to
+      match the sibling Automations registration so the shell — and the build — is green.
+  apps/windows/TeslaSync.App.Tests/FeatureViews/ChargingCurvePageTests.cs  (23 tests)
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj  (link the three headless
+    page files for the headless test compile, matching the sibling-page pattern)
+  apps/parity/windows-ledger.json  (page:charging/ChargingCurve → done, 11/11)
+
+=== PARITY ===
+PARITY_REQUIRED=11
+
+  [x] panel  — GlassPanel1 (page-level empty surface)
+        ChargingCurvePage.cs:46  field `_emptyPanel` (TsGlassPanel); BuildEmptyPanel();
+        Render() ChargingCurvePage.cs:344 `_emptyPanel.Visibility = Show(display.ShowEmpty)`
+        — Mica/glass region carrying charging.curve.empty + charging.curve.emptyHint.
+  [x] panel  — GlassPanel2 (select-a-session hint surface)
+        ChargingCurvePage.cs:58  field `_hintPanel` (TsGlassPanel); BuildHintPanel();
+        RenderContent() ChargingCurvePage.cs:367 `_hintPanel.Visibility =
+        Show(!display.HasSelectedSession)` — shown until a session is selected, then
+        swapped for the curve + detail grid (cs:366).
+  [x] state  — loading
+        ChargingCurveState.Loading (Model.cs:162); ChargingCurveDisplay.ShowLoading
+        (Model.cs:205, set Model.cs:277); view skeleton `_loadingSkeleton`
+        (ChargingCurvePage.cs:43, toggled cs:335). Fluent shimmer (TsSkeleton), redacted.
+  [x] state  — empty
+        ChargingCurveState.Empty (Model.cs:165); ShowEmpty (Model.cs:206, set Model.cs:278);
+        EmptyState GlassPanel `_emptyPanel` (cs:344). Never a blank region.
+  [x] state  — success
+        ChargingCurveState.Success (Model.cs:168); ShowContent (set Model.cs:280); content
+        host `_contentPanel` (cs:50, toggled cs:347). InfoBar+Retry error superset
+        (TsQueryError `_errorState`) covers the failed-query path.
+  [x] string — charging.curve.empty
+        ChargingCurveProjection.Project Model.cs:259 → Display.EmptyMessage; rendered
+        ChargingCurvePage.cs `_emptyMessage.Value`. resw key translation.charging.curve.empty.
+  [x] string — charging.curve.emptyHint
+        Project Model.cs:260-262 → Display.EmptyHint; rendered `_emptyHint.Value`.
+        resw key translation.charging.curve.emptyHint (added to en/ar/he this slice).
+  [x] string — charging.curve.selectSession
+        Project Model.cs:263 → Display.SelectSessionPrompt; bound as the selector Hint
+        (ChargingCurvePage.cs UpdateSelector `_selector.Hint`). resw key
+        translation.charging.curve.selectSession.
+  [x] string — charging.curve.selectSessionHint
+        Project Model.cs:264-266 → Display.SelectSessionHint; rendered `_hintText.Value`
+        on GlassPanel2. resw key translation.charging.curve.selectSessionHint (added).
+  [x] string — charging.curve.subtitle
+        Project Model.cs:258 → Display.Subtitle; rendered header `_subtitle.Value`.
+        resw key translation.charging.curve.subtitle.
+  [x] string — charging.curve.title
+        Project Model.cs:257 + Registration.Title Model.cs:565 → Display.Title; rendered
+        header `_title.Value` (PageTitle). resw key translation.charging.curve.title.
+
+PARITY_COVERED=11
+
+i18n: every visible literal resolves through the ILocalizer facade with the web key
+names; ChargingCurvePageTests asserts all six required keys are requested via a
+RecordingLocalizer in both the success and empty states.
+units: SI read directly from the API (peak_power_w / total_energy_added_wh stay watts /
+watt-hours on the model); display scaling (÷1000 → kW / kWh) happens only in the
+projection at the render boundary, mirroring the web.
+
+=== GATE ===
+# placeholder / stub scan (ADR-011) — actual output dir (the manifest's hypothetical
+# apps/windows/TeslaSync/Features/Charging does not exist in this repo).
+./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ChargingCurvePage -Language csharp
+  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+dotnet build apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App -> …\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+  TeslaSync.App.Tests -> …\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  Build succeeded. 0 Warning(s) 0 Error(s)   (TreatWarningsAsErrors=true; analyzers on)
+BUILD_EXIT=0
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (whole solution; LF + style + analyzers clean, including the new files and the
+  ShellWindow repair)
+LINT_EXIT=0
+
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+  Passed!  Failed: 0, Passed: 26185, Skipped: 0, Total: 26185
+  ChargingCurvePageTests: 23 passed (parse, projection state matrix, the six i18n
+  keys, ported sessionLabel/generateChargingCurve/getChargerLabel, the session-
+  selection state-holder, and the client feed's get_api_v1_charging_sessions request
+  shaping with vehicle_id).
+TEST_EXIT=0
+
+EXIT=0
+STATUS=DONE
