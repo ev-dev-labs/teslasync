@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AISettings cost-cap bar strings (P3/0202; app-owned, like settings_strings.xml — not part of the
+  auto-generated translation_* i18n catalog). The web AICostCapSpendBar (in AISettings.tsx) uses these
+  ai.settings.costCap.* keys with inline defaults, so the i18n generator (which only emits keys present in
+  the locale source) never produced translation_ai_settings_costCap_* entries. They live here so the native
+  surface still resolves every source string through the R.string facade (P1/S10) — no hardcoded literals.
+  The remaining AISettings strings (title/subtitle/modeLegend/mode_*/bannerOff/saving/save) DO exist in the
+  generated catalog and are referenced as translation_ai_settings_* directly.
+-->
+<resources>
+    <string name="ai_settings_cost_cap_today_title">Today’s Helix spend</string>
+    <string name="ai_settings_cost_cap_loading">Loading…</string>
+    <string name="ai_settings_cost_cap_amount">$%1$s / $%2$s</string>
+    <string name="ai_settings_cost_cap_bar_label">Helix cost cap usage</string>
+    <string name="ai_settings_cost_cap_critical_hint">Cap reached — new Helix calls will be rejected until the cap resets at UTC midnight or you raise it.</string>
+    <string name="ai_settings_cost_cap_warn_hint">You are nearing today’s cap. Calls will pause once you reach it.</string>
+</resources>
