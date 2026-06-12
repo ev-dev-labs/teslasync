@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using TeslaSync.App.Core.Notifications;
 
-namespace TeslaSync.App.SharedSurfaces;
+namespace TeslaSync.App.SharedSurfaces.BreadcrumbsSurface;
 
 /// <summary>
 /// Canonical metadata for the <c>Breadcrumbs</c> shared surface — the native mirror of
