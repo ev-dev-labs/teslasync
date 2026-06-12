@@ -410,3 +410,4 @@ p3-android/feature-views/A-0162-TemperatureTrendChart.prompt.md
 p3-android/feature-views/A-0161-TemperatureMetricCards.prompt.md
 p3-android/feature-views/A-0164-TorqueHistoryChart.prompt.md
 p3-android/feature-views/A-0165-AutopilotSection.prompt.md
+p3-android/feature-views/A-0163-ThermalLoadPanel.prompt.md
