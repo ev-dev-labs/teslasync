@@ -34,5 +34,14 @@
     "requiredCount": 33,
     "promptId": "p2-windows/W7/windows-page-admin-VehicleCostPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-VehicleCostPage.log"
+  },
+  {
+    "unitId": "page:automations/ConditionBuilder",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 21,
+    "requiredCount": 21,
+    "promptId": "p2-windows/W7/windows-page-automations-ConditionBuilder",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-automations-ConditionBuilder.log"
   }
 ]
