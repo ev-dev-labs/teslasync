@@ -69,14 +69,16 @@ struct TeslaSyncApp: App {
                 .teslaSyncTheme()
         } else {
             RootView(coordinator: auth, selection: $selection)
-                .environment(\.routeHosts, LiveSignalInspectorRouteRegistration.registry(
-                    base: SchemaDriftRouteRegistration.registry(
-                        base: FleetTelemetryCoverageRouteRegistration.registry(
-                            base: DiskForecastRouteRegistration.registry(
-                                base: ApiPlaygroundRouteRegistration.registry(
-                                    base: SettingsRouteRegistration.registry(
-                                        model: settingsModel,
-                                        onOpenNotifications: { selection = .notifications }
+                .environment(\.routeHosts, TeslaOrdersRouteRegistration.registry(
+                    base: LiveSignalInspectorRouteRegistration.registry(
+                        base: SchemaDriftRouteRegistration.registry(
+                            base: FleetTelemetryCoverageRouteRegistration.registry(
+                                base: DiskForecastRouteRegistration.registry(
+                                    base: ApiPlaygroundRouteRegistration.registry(
+                                        base: SettingsRouteRegistration.registry(
+                                            model: settingsModel,
+                                            onOpenNotifications: { selection = .notifications }
+                                        )
                                     )
                                 )
                             )

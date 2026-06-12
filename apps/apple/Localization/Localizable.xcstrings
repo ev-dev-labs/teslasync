@@ -185235,6 +185235,29 @@
         }
       }
     },
+    "route.teslaOrders": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Active Orders"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active Orders"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Active Orders"
+          }
+        }
+      }
+    },
     "route.onboarding": {
       "extractionState": "manual",
       "localizations": {

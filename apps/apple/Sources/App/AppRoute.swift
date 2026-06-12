@@ -28,7 +28,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, vehicles, charging, trips, energy, driving, analytics, maps
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiPlayground, fleetTelemetryCoverage, liveSignals, schemaDrift, powerUser, system
-    case settings, onboarding, explore, search, sharing, watch
+    case settings, onboarding, teslaOrders, explore, search, sharing, watch
 
     public var id: String {
         rawValue
@@ -43,6 +43,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .fleetTelemetryCoverage: "fleet-telemetry-coverage"
         case .liveSignals: "live-signals"
         case .schemaDrift: "schema-drift"
+        case .teslaOrders: "tesla-orders"
         default: rawValue
         }
     }
@@ -75,6 +76,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .fleetTelemetryCoverage: "dot.radiowaves.up.forward"
         case .liveSignals: "waveform.path.ecg"
         case .schemaDrift: "tablecells.badge.ellipsis"
+        case .teslaOrders: "cart.fill"
         case .powerUser: "terminal.fill"
         case .system: "server.rack"
         case .settings: "gearshape.fill"
@@ -94,7 +96,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .analytics, .telemetry: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiPlayground, .fleetTelemetryCoverage, .liveSignals, .schemaDrift, .powerUser, .system: .system
-        case .settings, .onboarding: .account
+        case .settings, .onboarding, .teslaOrders: .account
         }
     }
 
