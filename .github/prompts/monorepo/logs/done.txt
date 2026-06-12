@@ -511,3 +511,4 @@ p3-android/feature-views/A-0261-VehicleCommandCenter.prompt.md
 p3-android/feature-views/A-0262-ScheduledExportsPanel.prompt.md
 p3-android/feature-views/A-0263-LiveSignalTail.prompt.md
 p3-android/feature-views/A-0267-SignalCompareControls.prompt.md
+p3-android/feature-views/A-0265-SignalCategoryTree.prompt.md
