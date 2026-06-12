@@ -1,0 +1,144 @@
+=== p2-windows · W7 · page:battery/ProjectedRange (WinUI 3 / Fluent) ===
+Parity unit : page:battery/ProjectedRange   kind=page   web route=/analytics/range
+Web source  : web/src/features/battery/pages/ProjectedRangePage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+Output      : apps/windows/TeslaSync.App/feature-views/ProjectedRangePage/{ProjectedRangePage.Model.cs,
+              ProjectedRangePage.Source.cs, ProjectedRangePage.ViewModel.cs, ProjectedRangePage.cs}
+              (the generated prompt's idealized "TeslaSync/Features/Battery/ProjectedRangePage.xaml +
+              ProjectedRangePageViewModel.cs" is mapped onto the repo's real code-first WinUI conventions).
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the cache-then-network data port, also Microsoft.UI-free),
+  <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view).
+  Namespace TeslaSync.App.FeatureViews.Battery. The surface registers itself with the W4 ShellPageFactory by
+  route name ("ProjectedRange"), which RouteTable.cs already maps to the /projected-range nav item AND the
+  hidden /analytics/range deep-link alias.
+- Data source (web useQuery(['range-projection', vehicleId]) · GET /analytics/range-projection?vehicle_id=…):
+  ported as the Microsoft.UI-free IRangeProjectionSource. The repository-backed RangeProjectionSource resolves
+  the scoped/primary vehicle via the shared IWidgetVehicleSource (native useSelectedVehicle), then runs one
+  cache-then-network read of the generated operation get_api_v1_analytics_range_projection (added as
+  Operations.Analytics.RangeProjection, validated by OperationsResolveTests) through the shared
+  CacheThenNetworkEngine (cacheKey analytics:range-projection:{id}), and parses each emission into the full
+  RangeProjection (10 scalars + factors[] + projection_curve[] + scenarios[] + efficiency_matrix[]) via
+  RangeProjectionResultMapper. The parameterless ProjectedRangePage() defaults to EmptyRangeProjectionSource
+  (renders the empty state) — the established W7 default-feed pattern — while ProjectedRangePage(source,
+  localizer) drives the full loading/empty/error/success matrix for DI hosts and the headless tests. No HTTP
+  touches the view.
+- Interactive "what if": the two web slider useState(80)/useState(20) + the useMemo(interpolateRange) become
+  ProjectedRangePageViewModel.WhatIfSpeedKmh/WhatIfTempC (km/h, °C) which re-project the current snapshot in
+  place; RangeProjectionProjection.InterpolateRange is the 1:1 port of the web interpolateRange (matrix-bucket
+  lookup → heuristic Wh/km fallback → range = capacity·SoC/eff). The view binds two TsSliders to those.
+- Units: the endpoint delivers km / km/h / Wh / °C / Wh-per-km. SI display restatement happens only at
+  projection time via the shared C# behavior port — UnitFormatters.FormatDistance(km·1000) /
+  FormatSpeed(km/h ÷ 3.6) / FormatTemperature(°C) / FormatEnergy(Wh) + ScalarFormatters.FormatPercentage /
+  FormatNumber (P1/S5). Nothing non-SI is stored or computed; only the (intrinsically metric) what-if slider
+  domains and the .resw "at {0} km/h, {1}°C" template stay km/h/°C, matching the web sliders' hardcoded labels.
+- Catalog: all 27 of the page's i18n keys already existed verbatim in Strings/{en,ar,he}/Resources.resw
+  (translation.range.*). No catalog rows were added; every visible literal resolves through ILocalizer with
+  the web key names (incidental sub-keys range.bucket.* / range.drives / range.factor.* fall back to the web's
+  own capitalize-raw / literal behavior when absent, exactly as the web source does).
+- AIRangePrediction (the web page's opt-in Helix panel, strings range.aiPredict.*) is a SEPARATE parity unit
+  with its own string group — it is not among this unit's 14 panels or 27 strings and is out of scope here.
+- Pre-existing blocker fixed: apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs had a malformed page-factory
+  block (the "YearReview" registration lambda was never closed; the "AutomationList" registration had been
+  nested inside it), left red by the prior AutomationListPage runner. That C# syntax error broke MarkupCompile
+  Pass1 and cascaded into a WMC9999 XAML-compiler crash on every XAML file. It is the section this prompt must
+  edit to register the page, so it was repaired (YearReview lambda closed + un-nested) alongside adding the
+  ProjectedRange registration. With it fixed (and one CS0649/3×CA1822 in this prompt's own new files), the full
+  solution XAML+C# build is green again.
+
+=== PARITY ===
+PARITY_REQUIRED=47
+
+# Panels (14) — the 5 hero MetricCards + the 9 GlassPanel regions (source order) from the web page
+[x] panel  - Your-Estimate    -> RangeProjectionProjection.Project `your` (RangeHeroStat, range.yourEstimate, UnitFormatters.FormatDistance(your_estimate_km·1000)); rendered ProjectedRangePage.cs#HeroTile _yourTile (TsGlassPanel Glow=Green)
+[x] panel  - Tesla-Estimate   -> RangeProjectionProjection.Project `tesla` (range.teslaEstimate, FormatDistance(tesla_estimate_km·1000)); rendered ProjectedRangePage.cs#_teslaTile (TsGlassPanel Glow=Cyan)
+[x] panel  - Battery          -> RangeProjectionProjection.Project `battery` (range.battery, ScalarFormatters.FormatPercentage(current_battery_pct??battery_level)); rendered ProjectedRangePage.cs#_batteryTile (TsGlassPanel Glow=Purple)
+[x] panel  - Usable-Capacity  -> RangeProjectionProjection.Project `capacity` (range.usableCapacity, UnitFormatters.FormatEnergy(usable_capacity_wh)); rendered ProjectedRangePage.cs#_capacityTile (TsGlassPanel, amber accent)
+[x] panel  - Health-Factor    -> RangeProjectionProjection.Project `health` (range.healthFactor, FormatPercentage(health_factor·100,1)); rendered ProjectedRangePage.cs#_healthTile (TsGlassPanel Glow=Green)
+[x] panel  - GlassPanel6      -> efficiency gauge panel: ProjectedRangePage.cs#_gaugePanel (TsGlassPanel) hosting _gauge (TsRadialGauge) + _accuracyNote (Display.EfficiencyValue/EfficiencyColorIndex/AccuracyNote)
+[x] panel  - GlassPanel7      -> projection-curve panel: ProjectedRangePage.cs#_curveContainer (TsChartContainer = tokenized TsGlassPanel) Body=_curveChart, bound to Display.CurveTitle/CurveSeries/CurveAnnotations
+[x] panel  - GlassPanel8      -> scenarios panel (outer): ProjectedRangePage.cs#_scenariosPanel (TsGlassPanel) — _scenariosTitle + _scenariosHost grid + _scenariosEmpty (Display.ScenariosTitle/Scenarios/NoScenariosMessage)
+[x] panel  - GlassPanel9      -> scenario card (repeated): ProjectedRangePage.cs#BuildScenarioCard (Border) from RangeScenarioCard; RangeProjectionProjection scenario loop (glyph/range/speed/temp/eff/samples/extras/is_current)
+[x] panel  - GlassPanel10     -> efficiency heatmap: ProjectedRangePage.cs#_matrixPanel (TsGlassPanel) + _matrixHost (4 temp × 3 speed Grid via RebuildMatrix) + _matrixEmpty (Display.MatrixRows/MatrixSpeedHeaders/NoMatrixMessage)
+[x] panel  - GlassPanel11     -> what-if calculator: ProjectedRangePage.cs#_whatIfPanel (TsGlassPanel) — two TsSliders (_speedSlider/_tempSlider) + result (Display.WhatIfRangeValue/WhatIfEfficiencyValue/WhatIfConditions); VM WhatIfSpeedKmh/WhatIfTempC reproject via RangeProjectionProjection.InterpolateRange
+[x] panel  - GlassPanel12     -> factors panel (outer): ProjectedRangePage.cs#_factorsPanel (TsGlassPanel) — _factorsTitle + _factorsHost grid (Display.FactorsTitle/Factors)
+[x] panel  - GlassPanel13     -> factor card (repeated): ProjectedRangePage.cs#BuildFactorCard (Border) from RangeFactorCard (name + impact TsBadge Success/Danger + description)
+[x] panel  - GlassPanel14     -> tips panel: ProjectedRangePage.cs#_tipsPanel (TsGlassPanel) — _tipsTitle + _tipsHost (4 RangeTipItem rows, glyph + text)
+
+# Charts (2) — native W3 chart wrappers, never a web canvas
+[x] chart  - RadialGauge      -> ProjectedRangePage.cs#_gauge (TsRadialGauge) Value=Display.EfficiencyValue, Max=100, Unit=%, ColorIndex=Display.EfficiencyColorIndex (web CHART_COLORS thresholds factor>=0.9→1 / >=0.7→3 / else 5); test Projection_efficiency_gauge_color_thresholds
+[x] chart  - AreaChart        -> ProjectedRangePage.cs#_curveChart (TsAreaChart) Series=Display.CurveSeries (two ChartSeries{Kind=Area} rated_range/projected_range over battery_pct) + Annotations=Display.CurveAnnotations (ChartAnnotation VerticalLine at battery_level, label range.current); test Projection_curve_has_rated_and_projected_series_plus_current_reference
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading -> RangeProjectionState.Loading + ProjectedRangePageViewModel.SetLoading; rendered ProjectedRangePage.cs#_loadingPanel (ProgressRing + caption)
+[x] state  - empty   -> RangeProjectionState.Empty + ViewModel.SetEmpty (LoadStatus.Empty); rendered _emptyPanel/_emptyState (TsEmptyState, range.noData) + per-section empties (_scenariosEmpty/_matrixEmpty noScenarios/noMatrix); tests ViewModel_empty_source_yields_empty / Projection_scenarios_empty_message_when_none
+[x] state  - error   -> RangeProjectionState.Error + ViewModel.SetError; rendered _errorBanner (TsAlertBanner Danger, InfoBar-equivalent) with ErrorMessage; test ViewModel_failure_yields_error
+[x] state  - success -> RangeProjectionState.Loaded/Stale/Offline + ViewModel.ApplySnapshot; rendered _contentPanel (hero + gauge + curve + scenarios + matrix + what-if + factors + tips), freshness chip reflects stale/offline; tests ViewModel_loads_to_loaded / _stale_keeps_content / _offline_keeps_content_with_message
+
+# Strings (27) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - range.battery          -> RangeProjectionProjection.Project Battery.Label localizer.GetString("range.battery", "Battery")
+[x] string - range.current          -> RangeProjectionProjection.Project currentLabel localizer.GetString("range.current", "Current") (scenario "Current" badge + curve reference line)
+[x] string - range.efficiency       -> RangeProjectionProjection.Project EfficiencyLabel localizer.GetString("range.efficiency", "Efficiency") (RadialGauge label)
+[x] string - range.efficiencyMatrix -> RangeProjectionProjection.Project MatrixTitle localizer.GetString("range.efficiencyMatrix", "Personal Efficiency Matrix (Wh/km)")
+[x] string - range.factors          -> RangeProjectionProjection.Project FactorsTitle localizer.GetString("range.factors", "Range Factors")
+[x] string - range.healthFactor     -> RangeProjectionProjection.Project HealthFactor.Label localizer.GetString("range.healthFactor", "Health Factor")
+[x] string - range.noMatrix         -> RangeProjectionProjection.Project NoMatrixMessage localizer.GetString("range.noMatrix", "Efficiency data requires drives in different conditions.")
+[x] string - range.noScenarios      -> RangeProjectionProjection.Project NoScenariosMessage localizer.GetString("range.noScenarios", "Drive more to see personalized scenario projections.")
+[x] string - range.noWhatIf         -> RangeProjectionProjection.Project NoWhatIfMessage localizer.GetString("range.noWhatIf", "Adjust sliders to calculate projected range.")
+[x] string - range.projected        -> RangeProjectionProjection.Project projectedName localizer.GetString("range.projected", "Projected Range") (projected_range area series name)
+[x] string - range.projectionCurve  -> RangeProjectionProjection.Project CurveTitle localizer.GetString("range.projectionCurve", "Range Projection Curve")
+[x] string - range.rated            -> RangeProjectionProjection.Project ratedName localizer.GetString("range.rated", "Rated Range") (rated_range area series name)
+[x] string - range.scenarios        -> RangeProjectionProjection.Project ScenariosTitle localizer.GetString("range.scenarios", "Range Scenarios")
+[x] string - range.speed            -> RangeProjectionProjection.Project SpeedLabel localizer.GetString("range.speed", "Speed") (what-if speed slider label)
+[x] string - range.subtitle         -> RangeProjectionProjection.Project / ProjectedRangePageRegistration.Subtitle localizer.GetString("range.subtitle", "Personalized range estimates based on your driving patterns, weather, and conditions")
+[x] string - range.temperature      -> RangeProjectionProjection.Project TemperatureLabel localizer.GetString("range.temperature", "Temperature") (what-if temp slider label)
+[x] string - range.teslaEstimate    -> RangeProjectionProjection.Project TeslaEstimate.Label localizer.GetString("range.teslaEstimate", "Tesla Estimate")
+[x] string - range.tip.elevation    -> RangeProjectionProjection.Project Tips[3].Text localizer.GetString("range.tip.elevation", "Plan routes to minimize elevation changes.")
+[x] string - range.tip.precondition -> RangeProjectionProjection.Project Tips[1].Text localizer.GetString("range.tip.precondition", "Pre-condition the cabin while still plugged in.")
+[x] string - range.tip.seatHeaters  -> RangeProjectionProjection.Project Tips[2].Text localizer.GetString("range.tip.seatHeaters", "Use seat heaters instead of cabin heat in cold weather.")
+[x] string - range.tip.speed        -> RangeProjectionProjection.Project Tips[0].Text localizer.GetString("range.tip.speed", "Keep speed under 110 km/h for optimal efficiency.")
+[x] string - range.tips             -> RangeProjectionProjection.Project TipsTitle localizer.GetString("range.tips", "Tips to Maximize Range")
+[x] string - range.title            -> RangeProjectionProjection.Project / ProjectedRangePageRegistration.Title localizer.GetString("range.title", "Projected Range")
+[x] string - range.usableCapacity   -> RangeProjectionProjection.Project UsableCapacity.Label localizer.GetString("range.usableCapacity", "Usable Capacity")
+[x] string - range.whatIf           -> RangeProjectionProjection.Project WhatIfTitle localizer.GetString("range.whatIf", "What If Calculator")
+[x] string - range.whatIfConditions -> RangeProjectionProjection.Project WhatIfConditions string.Format(localizer.GetString("range.whatIfConditions", "at {0} km/h, {1}°C"), speed, temp)
+[x] string - range.yourEstimate     -> RangeProjectionProjection.Project YourEstimate.Label localizer.GetString("range.yourEstimate", "Your Estimate")
+
+PARITY_COVERED=47
+# Coverage asserted headlessly: ProjectedRangePageTests.Projection_surfaces_all_required_strings records every
+# key above (27/27) through PassthroughLocalizer; the four state tests (ViewModel_loads_to_loaded /
+# _empty_source_yields_empty / _failure_yields_error / _offline_keeps_content_with_message / _stale_keeps_content)
+# + the hero / gauge-threshold / curve+reference / scenario / matrix-severity / what-if-interpolation projection
+# tests assert each panel + chart + state renders from the bound RangeProjectionDisplay state holder. 25 cases, 0 failed.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ProjectedRangePage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Battery path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (pre-existing ShellWindow.xaml.cs Pass1 syntax break repaired; this prompt's CS0649 + 3×CA1822 fixed)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes (ProjectedRangePage sources + ProjectedRangePageTests
+#   + ShellWindow registration + Operations.cs) -> no changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26059, Failed: 0, Skipped: 0
+#   (incl. 25 new ProjectedRangePageTests cases)
+TEST_EXIT=0
+PARITY_COVERED=47
+PARITY_REQUIRED=47
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ProjectedRangePage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs apps/windows/TeslaSync.App.Core/Data/Net/Operations.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ProjectedRangePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-battery-ProjectedRangePage.log
+# git commit -m "feat(apps/windows): ProjectedRangePage at web parity (W7 battery)"
+
+EXIT=0
+STATUS=DONE

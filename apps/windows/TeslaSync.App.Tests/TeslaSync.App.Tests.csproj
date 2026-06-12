@@ -864,6 +864,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TrueCostPage\TrueCostPage.Model.cs" Link="FeatureViews\TrueCostPage\TrueCostPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TrueCostPage\TrueCostPage.Source.cs" Link="FeatureViews\TrueCostPage\TrueCostPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TrueCostPage\TrueCostPage.ViewModel.cs" Link="FeatureViews\TrueCostPage\TrueCostPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ProjectedRangePage\ProjectedRangePage.Model.cs" Link="FeatureViews\ProjectedRangePage\ProjectedRangePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ProjectedRangePage\ProjectedRangePage.Source.cs" Link="FeatureViews\ProjectedRangePage\ProjectedRangePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ProjectedRangePage\ProjectedRangePage.ViewModel.cs" Link="FeatureViews\ProjectedRangePage\ProjectedRangePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.Model.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.Source.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.ViewModel.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.ViewModel.cs" />
