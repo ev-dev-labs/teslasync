@@ -732,3 +732,4 @@ p2-windows/pages/automations/ActionBuilder.prompt.md
 p2-windows/pages/automations/TriggerConfigurator.prompt.md
 p2-windows/pages/automations/PresetGallery.prompt.md
 p2-windows/pages/automations/AutomationListPage.prompt.md
+p2-windows/pages/automations/AutomationsListPage.prompt.md
