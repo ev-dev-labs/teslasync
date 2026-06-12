@@ -382,6 +382,8 @@ private class FakeAdminRepository : AdminRepository {
 
     override fun connectionPool(): Flow<Resource<JsonElement>> = loading()
 
+    override fun compressionStats(): Flow<Resource<JsonElement>> = loading()
+
     override fun exportJobs(): Flow<Resource<JsonElement>> = loading()
 
     override fun vehicleStateMachine(vehicleId: String): Flow<Resource<JsonElement>> = loading()

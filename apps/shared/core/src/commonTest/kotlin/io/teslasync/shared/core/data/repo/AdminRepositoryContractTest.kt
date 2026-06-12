@@ -136,6 +136,12 @@ class AdminRepositoryContractTest {
         }
 
     @Test
+    fun compressionStatsHitsSystemCompressionStats() =
+        runTestBlocking {
+            assertEquals("/api/v1/system/compression-stats", captureRead { it.compressionStats() }.encodedPath)
+        }
+
+    @Test
     fun vehicleStateMachineHitsPerVehicleState() =
         runTestBlocking {
             assertEquals("/api/v1/vehicles/7/state", captureRead { it.vehicleStateMachine("7") }.encodedPath)
