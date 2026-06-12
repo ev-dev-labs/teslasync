@@ -18801,8 +18801,26 @@
   <data name="translation.timeline.noDailyData" xml:space="preserve">
     <value>No daily data available yet</value>
   </data>
+  <data name="translation.timeline.noStateData" xml:space="preserve">
+    <value>No state distribution available yet</value>
+  </data>
   <data name="translation.timeline.noTransitions" xml:space="preserve">
     <value>No state transitions recorded</value>
+  </data>
+  <data name="translation.timeline.range" xml:space="preserve">
+    <value>Range</value>
+  </data>
+  <data name="translation.timeline.range.last7Days" xml:space="preserve">
+    <value>Last 7 days</value>
+  </data>
+  <data name="translation.timeline.range.last30Days" xml:space="preserve">
+    <value>Last 30 days</value>
+  </data>
+  <data name="translation.timeline.range.last90Days" xml:space="preserve">
+    <value>Last 90 days</value>
+  </data>
+  <data name="translation.timeline.refresh" xml:space="preserve">
+    <value>Refresh</value>
   </data>
   <data name="translation.timeline.selectVehicle" xml:space="preserve">
     <value>Select Vehicle</value>
@@ -18830,6 +18848,9 @@
   </data>
   <data name="translation.timeline.totalTransitions" xml:space="preserve">
     <value>Total Transitions</value>
+  </data>
+  <data name="translation.timeline.trigger" xml:space="preserve">
+    <value>Trigger</value>
   </data>
   <data name="translation.tirePressure.aiTrendReasoning.badge" xml:space="preserve">
     <value>Helix</value>

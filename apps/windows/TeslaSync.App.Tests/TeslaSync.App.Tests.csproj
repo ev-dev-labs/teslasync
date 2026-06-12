@@ -828,6 +828,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TimeOfUseAnalysis\TimeOfUseAnalysis.Model.cs" Link="FeatureViews\TimeOfUseAnalysis\TimeOfUseAnalysis.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimeOfUseAnalysis\TimeOfUseAnalysis.Source.cs" Link="FeatureViews\TimeOfUseAnalysis\TimeOfUseAnalysis.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimeOfUseAnalysis\TimeOfUseAnalysis.ViewModel.cs" Link="FeatureViews\TimeOfUseAnalysis\TimeOfUseAnalysis.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TimelinePage\TimelinePage.Model.cs" Link="FeatureViews\TimelinePage\TimelinePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TimelinePage\TimelinePage.Source.cs" Link="FeatureViews\TimelinePage\TimelinePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TimelinePage\TimelinePage.ViewModel.cs" Link="FeatureViews\TimelinePage\TimelinePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.Model.cs" Link="FeatureViews\TimestampTool\TimestampTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimestampTool\TimestampTool.ViewModel.cs" Link="FeatureViews\TimestampTool\TimestampTool.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimeToChargeSection.Model.cs" Link="FeatureViews\TimeToChargeSection.Model.cs" />
