@@ -1,0 +1,120 @@
+=== p2-windows · W7 · page:automations/AutomationCard (WinUI 3 / Fluent) ===
+Parity unit : page:automations/AutomationCard   kind=page   web route=(unrouted)
+Web source  : web/src/features/automations/pages/AutomationCard.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly) and <Name>.cs (the Fluent view), exactly as the sibling W7 feature surfaces do. The
+  generated prompt's idealized "AutomationCard.xaml + AutomationCardViewModel.cs under TeslaSync/Features/
+  Automations" is mapped onto these real conventions: AutomationCard.Model.cs + AutomationCard.cs.
+- The web AutomationCard is a PURELY PRESENTATIONAL card (it takes an `automation` prop + the `isFiring` /
+  `vehicleName` flags and raises onToggle/onReEnable/onDelete/onTestRun callbacks); it NEVER fetches. The
+  manifest therefore declares NO API data sources and a single `success` data state — there is no fetch-driven
+  loading/empty/error branch to reproduce (ADR-006). The native surface mirrors this exactly: it is a
+  ContentControl bound to an AutomationCardModel, all branch selection/label resolution/formatting happen in the
+  WinUI-free AutomationCardProjection, and the host page (the automations list) wires the action events — the
+  native analogue of the web callbacks. Web route is `(unrouted)` (the card is embedded by the automations list,
+  not a navigable route), so no NavigationView entry is registered; the surface exposes a stable diagnostics slug
+  (AutomationCardRegistration.Slug = "AutomationCard").
+- Panel (ADR-005): the web <GlassPanel> maps to a tokenized TsGlassPanel (Mica/Acrylic glass) built in
+  AutomationCard.cs#Render; firing automations gain the cyan accent glow (Glow=Cyan) and auto-disabled
+  automations the danger accent border — the native analogue of the web ring/border. Every region inside (header
+  row with the truncating name + status TsBadge + pulsing firing chip + pin/toggle/kebab cluster, the description
+  line, the scoped-vehicle/all-vehicles chip row, the last-run/never-run + runs + fails + next-fire stats row, the
+  auto-disabled reason banner and the warning/info conflict rows) is reproduced with Fluent controls + design
+  tokens. No hardcoded colors/typography.
+- i18n (ADR-014): every visible literal resolves through the ILocalizer facade with the web key names. All 19
+  manifest keys are present in Strings/en/Resources.resw (verified: translation.automations.* + translation.
+  common.cancel — MISSING_COUNT=0); the projection feeds the exact translation.* catalog keys and the web English
+  default as the fallback, proven by the ReswLocalizer test. The ar/he catalogs lag en by design (translations
+  land later); ILocalizer falls back to the English default until translated.
+- a11y (ADR-015): decorative FontIcon glyphs are AccessibilityView.Raw (hidden from Narrator); every interactive
+  element (pin, toggle, kebab, each menu item, delete dialog) carries an accessible name; the card composes a
+  single meaningful Narrator name (name + status + vehicle + stats + reason + conflicts) via BuildAutomationName.
+  Segoe Fluent glyphs stand in for the web Lucide icons.
+- SI units (ADR): N/A — the card renders no unit-bearing physical quantity. Counts format through invariant
+  ToString; the bespoke web `timeAgo` tiers (just now / Nm / Nh / Nd ago, Math.floor semantics) and the
+  `formatDateTime` next-fire stamp are ported 1:1 through AutomationCardProjection / DateTimeFormatting at the
+  display boundary.
+- The implementation (AutomationCard.Model.cs 609 L + AutomationCard.cs 660 L) and its headless suite
+  (AutomationCardTests.cs, 52 methods / 60 cases) were already committed by the feature-views surface phase
+  (59fbf0a31). This W7 page gate verifies full manifest coverage (21/21), runs the windows triad + placeholder
+  gate green, and records the parity ledger row + this evidence log. No red shipped; no stubs/placeholders.
+
+=== PARITY ===
+PARITY_REQUIRED=21
+
+# Panels (1) — the web region reproduced as a Fluent Card/Mica region
+[x] panel  - GlassPanel1   -> AutomationCard.cs#Render: `new TsGlassPanel { Padding=16, Content=stack }` (L149),
+             firing -> panel.Glow=GlassGlow.Cyan (L160), auto-disabled -> danger BorderBrush (L165); web
+             AutomationCard.tsx <GlassPanel>; the view (AutomationCard.cs) is exercised by the app build and every
+             child region is driven by the AutomationCardDisplay branches asserted in AutomationCardTests
+
+# Data states (1) — the web card never fetches, so the manifest declares only `success` (visible, never blank)
+[x] state  - success       -> no API data source; AutomationCardProjection.Project (AutomationCard.Model.cs L297)
+             yields the render-ready AutomationCardDisplay and AutomationCard.cs#Render composes the header /
+             vehicle / stats / auto-disabled banner / conflicts regions; tests assert every success branch
+             (status precedence, toggle state, firing chip, description, vehicle scope, last-run/never-run, runs,
+             fails, next-fire, auto-disabled banner, conflicts, pin) — e.g. Active_automation_uses_the_success_badge
+
+# Strings (19) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - automations.allVehicles  -> AutomationCardProjection.AllVehiclesKey (Model.cs L180) -> VehicleLabel (L307-309); web t('automations.allVehicles','All vehicles'); test Missing_vehicle_shows_all_vehicles + Labels_resolve_from_the_resw_catalog_keys
+[x] string - automations.conflictWith -> ConflictWithKey (L198) -> conflictPrefix (L335) -> AutomationConflictDisplay.Text via ConflictText (L470); web t('automations.conflictWith','Conflict with'); test Conflict_text_composes_prefix_name_and_reason
+[x] string - automations.delete       -> DeleteKey (L177) -> DeleteLabel (L371) -> kebab Delete item; web t('automations.delete','Delete'); test Labels_resolve_to_the_web_english_fallbacks
+[x] string - automations.deleteConfirm-> DeleteConfirmKey (L207) -> DeleteConfirmLabel (L389) -> TsConfirmDialog PrimaryButtonText; web t('automations.deleteConfirm','Delete'); test Delete_dialog_carries_the_web_copy
+[x] string - automations.deleteMessage-> DeleteMessageKey (L204) -> deleteMessage string.Format {0}=name (L348-351); web t('automations.deleteMessage',{name}); test Delete_dialog_carries_the_web_copy
+[x] string - automations.deleteTitle  -> DeleteTitleKey (L201) -> DeleteTitle (L387) -> TsConfirmDialog.Title; web t('automations.deleteTitle','Delete Automation'); test Delete_dialog_carries_the_web_copy + Labels_resolve_from_the_resw_catalog_keys
+[x] string - automations.duplicate    -> DuplicateKey (L171) -> DuplicateLabel (L369) -> kebab Duplicate item; web t('automations.duplicate','Duplicate'); test Labels_resolve_to_the_web_english_fallbacks
+[x] string - automations.export       -> ExportKey (L174) -> ExportLabel (L370) -> kebab Export item; web t('automations.export','Export'); test Labels_resolve_to_the_web_english_fallbacks
+[x] string - automations.fails        -> FailsKey (L192) -> FailsText (L322-324) -> fails chip; web t('automations.fails','Fails'); test Failures_chip_shows_when_failures_exist
+[x] string - automations.firing       -> FiringKey (L156) -> FiringLabel (L362) -> pulsing firing chip; web t('automations.firing','Firing'); test Firing_automation_marks_the_firing_branch
+[x] string - automations.lastRun      -> LastRunKey (L183) -> LastRunText (L312-314) -> last-run chip; web t('automations.lastRun','Last'); test Last_triggered_shows_the_relative_last_run
+[x] string - automations.menu         -> MenuKey (L162) -> MenuLabel (L365) -> kebab AutomationProperties name; web t('automations.menu','Actions menu'); test Labels_resolve_to_the_web_english_fallbacks
+[x] string - automations.neverRun     -> NeverRunKey (L186) -> NeverRunLabel (L316) -> never-run chip; web t('automations.neverRun','Never run'); test Never_triggered_shows_never_run
+[x] string - automations.nextFire     -> NextFireKey (L195) -> NextFireText (L327-331) -> next-fire chip; web t('automations.nextFire','Next'); test Next_fire_chip_shows_when_scheduled
+[x] string - automations.reEnable     -> ReEnableKey (L168) -> ReEnableLabel (L368) -> kebab Re-enable item (auto-disabled only); web t('automations.reEnable','Re-enable'); test Labels_resolve_to_the_web_english_fallbacks
+[x] string - automations.runs         -> RunsKey (L189) -> RunsText (L318-319) -> runs chip; web t('automations.runs','Runs'); test Runs_text_carries_the_execution_count
+[x] string - automations.testRun      -> TestRunKey (L165) -> TestRunLabel (L367) -> kebab Test Run item; web t('automations.testRun','Test Run'); test Labels_resolve_to_the_web_english_fallbacks
+[x] string - automations.toggleLabel  -> ToggleLabelKey (L159) -> ToggleLabel (L364) -> enable TsToggle AutomationProperties name; web t('automations.toggleLabel','Toggle automation'); test Labels_resolve_to_the_web_english_fallbacks
+[x] string - common.cancel            -> CancelKey (L210) -> CancelLabel (L390) -> TsConfirmDialog CloseButtonText; web t('common.cancel','Cancel'); test Delete_dialog_carries_the_web_copy + Labels_resolve_from_the_resw_catalog_keys
+
+PARITY_COVERED=21
+# Coverage asserted headlessly: the 19 string keys are fed verbatim by AutomationCardProjection (constants L156-210)
+# and proven to resolve from the en resw catalog by Labels_resolve_from_the_resw_catalog_keys (ReswLocalizer) +
+# the web English fallbacks by Labels_resolve_to_the_web_english_fallbacks; the success-state regions are asserted
+# branch-by-branch (status precedence, toggle, firing, description, vehicle scope, last-run/never-run, runs, fails,
+# next-fire, auto-disabled banner, warning/info conflicts, pin) and the bespoke timeAgo tiers + delete-name
+# interpolation + composed Narrator name + glyph map + PII-safe diagnostics. The TsGlassPanel view (AutomationCard.cs)
+# compiles + links in the app build. All 19 keys present in Strings/en/Resources.resw (MISSING_COUNT=0).
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AutomationCard -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Automations path does not exist in-repo)
+#   AutomationCard.Model.cs + AutomationCard.cs -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+#   AutomationCardTests.cs                      -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (17 pre-existing TeslaSync.App.Core CA warnings only; none in AutomationCard; TeslaSync.App built standalone)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 formatting issues
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 25863, Failed: 0, Skipped: 0
+#   (incl. 60 AutomationCardTests cases / 52 methods; --filter AutomationCardTests -> Passed: 60, Failed: 0)
+#   (WinAppDriver UITests are W9 scope and are not part of this headless gate, per the sibling W7 page logs)
+TEST_EXIT=0
+PARITY_COVERED=21
+PARITY_REQUIRED=21
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/AutomationCard \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-automations-AutomationCard.log
+# git commit -m "feat(apps/windows): AutomationCard at web parity (W7 automations)"
+# (AutomationCard.Model.cs/.cs + AutomationCardTests.cs already committed at 59fbf0a31; this gate adds the
+#  parity ledger row + this evidence log.)
+
+EXIT=0
+STATUS=DONE
