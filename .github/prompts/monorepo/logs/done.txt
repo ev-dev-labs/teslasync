@@ -455,3 +455,4 @@ p3-android/feature-views/A-0204-AppearanceSettings.prompt.md
 p3-android/feature-views/A-0211-RegionSettings.prompt.md
 p3-android/feature-views/A-0208-NotificationSettings.prompt.md
 p3-android/feature-views/A-0209-PrivacySection.prompt.md
+p3-android/feature-views/A-0207-GeneralSettings.prompt.md
