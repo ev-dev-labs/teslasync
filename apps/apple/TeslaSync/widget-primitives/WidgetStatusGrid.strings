@@ -1,0 +1,39 @@
+/*
+  WidgetStatusGrid.strings
+  TeslaSync — P4 widget primitive · 0011 · WidgetStatusGrid (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web
+  `features/dashboard/widgets/shared/WidgetStatusGrid.tsx` renders exactly one copy string of its own — the
+  empty default `emptyMessage = 'No status data available'` (a default param, not a `t()` call); its cell
+  `label` / `value` are caller-supplied, already-localized props rendered verbatim. The first entry below
+  mirrors that single literal; the rest are native a11y additions: the spoken status words (so the
+  color-coded dot is not the only status signal), the cell's combined label/value/status reading, and the
+  empty-leaf supporting hint (the "never a blank box" peer of the web `EmptyState`'s single line).
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("WidgetStatusGrid") so each parallel surface prompt owns its own strings. In
+  test / preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web copy (verbatim port of the web literal) --- */
+
+/* Empty-leaf headline — the web `emptyMessage = 'No status data available'`. */
+"widgetStatusGrid.empty" = "No status data available";
+
+/* --- Native a11y / HIG additions (no web `t()` key exists) --- */
+
+/* Supporting line of the empty leaf, so the surface never renders a bare box. */
+"widgetStatusGrid.emptyHint" = "Status indicators appear here once the system reports component states.";
+
+/* Spoken status words — restate the color-coded dot for VoiceOver / colorblind users. */
+"widgetStatusGrid.status.ok" = "OK";
+"widgetStatusGrid.status.warning" = "Warning";
+"widgetStatusGrid.status.error" = "Error";
+"widgetStatusGrid.status.inactive" = "Inactive";
+"widgetStatusGrid.status.unknown" = "Unknown";
+
+/* A cell's combined VoiceOver reading with a value — "{label}, {value}, {status}". Positional. */
+"widgetStatusGrid.cellLabel" = "%1$@, %2$@, %3$@";
+
+/* A cell's combined VoiceOver reading without a value — "{label}, {status}". Positional. */
+"widgetStatusGrid.cellLabelNoValue" = "%1$@, %2$@";
