@@ -1,0 +1,84 @@
+=== P2 Shared surface 0160 TagInput (Windows) ===
+
+Artifact:  apps/windows/TeslaSync.App/shared-surfaces/TagInput.{cs,Model.cs,Source.cs,ViewModel.cs}
+Web source: web/src/components/forms/TagInput.tsx (read end-to-end, 570 lines)
+Tests:     apps/windows/TeslaSync.App.Tests/SharedSurfaces/TagInputTests.cs (surface adapter + view-model + a11y + diagnostics)
+           apps/windows/TeslaSync.App.Tests/TagInputModelTests.cs (pre-existing Core.Forms.TagInputModel tests — untouched)
+Toolchain: .NET SDK 10.0.300 ; WinUI 3 / Windows App SDK (Microsoft.WindowsAppSDK.WinUI 2.1.0) ; target net10.0-windows10.0.19041.0
+
+Design note (parity, not scope narrowing):
+  The web TagInput is a CONTROLLED, self-contained presentational primitive (value + onChange; data sources
+  useTranslation / useAnnouncer / useId / useImperativeHandle). It performs no data fetch, so — exactly like the
+  shipped Combobox / CurrencyInput controlled primitives — it has NO loading / async-error / stale / offline chrome.
+  Every branch the web source actually renders is reproduced: empty ("No tags yet") vs populated ("Tags: …") chip
+  strip, commit on Enter / separator / paste, case-insensitive de-duplication, blocking validator error, at-capacity
+  disable + "Maximum N tags" helper, chip removal + Backspace, lower-casing, and the add / "{n} tags added" /
+  duplicate / limit-reached / removed announcements. The atomic TsTagInput (Components/Forms/Inputs.cs, backed by
+  Core.Forms.TagInputModel) is the separate component-library deliverable and is out of scope per this prompt.
+
+Pre-existing blocker repaired (documented remediation):
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj had been concatenated by the .gitattributes
+  merge=union strategy into THREE <Project> roots (lines 1 / 1426 / 1427, one carrying a stray BOM) plus duplicate
+  Compile ItemGroups — invalid XML (MSB4025 / MSB4067), so `dotnet test` on the solution could not even load the
+  project (baseline RED for every surface). Per the file's own header invariant it was regenerated into ONE canonical
+  Project root with a single, case-insensitive ordinal path-sorted, Include-deduplicated Compile ItemGroup = the union
+  of every Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and
+  shared-surfaces/, plus the new TagInput Model/Source/ViewModel links. Reconciliation verified: 1168 prior distinct
+  entries == 1168 disk UI-free files (0 stale, 0 missing); written 1171 entries (1168 + 3 TagInput), 0 duplicates,
+  single root, parses as XML. This matches prior repairs (InstallPrompt/0125, SectionErrorBoundary/0138, …).
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  TeslaSync.App.Tests -> ...\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> ...\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+  (App project enforces TreatWarningsAsErrors=true + AnalysisMode=Recommended — clean.)
+
+--- TEST: dotnet test apps/windows/TeslaSync.sln -c Release ---
+Passed!  - Failed:     0, Passed: 22995, Skipped:     0, Total: 22995 - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+TEST_EXIT=1
+
+  TeslaSync.App.Tests (the headless surface/adapter/view-model verification for THIS surface) PASSES 22995/22995.
+  Scoped run of just the TagInput tests:
+    dotnet test ...TeslaSync.App.Tests.csproj --filter "FullyQualifiedName~TagInput"
+    Passed!  - Failed: 0, Passed: 68, Skipped: 0, Total: 68 - TeslaSync.App.Tests.dll (net10.0)
+
+  ALL 147 failures are in TeslaSync.App.UITests (a separate, app-wide end-to-end UI-automation project, NOT this
+  surface's tests) and are identical:
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+    runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its
+    standard install paths or on PATH.
+       at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() : line 75
+  The UITests fixture is DESIGNED to hard-fail (never skip) when the runner is absent
+  ("the suite is never silently skipped", WinAppDriverSession.cs L12-L14). ZERO of the 147 failures relate to
+  TagInput or any file authored by this prompt.
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+  (Initial run flagged ENDOFLINE on the 5 new files — editor wrote CRLF; repo requires LF. Converted to LF.)
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/TagInput ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  (Shipped TagInput files independently verified free of TODO / FIXME / XXX / NotImplementedException / // stub /
+  Lorem ipsum / "Coming soon" / "not implemented". The single `// parity:allow` marks the WinUI TextBox.PlaceholderText
+  hint API, mirroring the atomic TsTagInput convention.)
+
+=== Gate summary ===
+  BUILD_EXIT=0        PASS
+  TEST_EXIT=1         headless TeslaSync.App.Tests PASS 22995/22995 (incl. 68 TagInput); 147 UITests FAIL —
+                      WinAppDriver/Appium UI-automation runner absent on this host (port 4723 / WinAppDriver.exe).
+  FORMAT_EXIT=0       PASS
+  PLACEHOLDER_EXIT=0  PASS
+
+The surface is production-complete and passes every gate step that can run on this host. The lone failing step is the
+solution-wide UITests project, which requires the WinAppDriver/Appium UI-automation runner that is not installed on
+this runner; per the artifact's capability clause this is reported as a platform-capability block with the evidence
+above (it is environmental, by-design hard-fail, and affects the whole monorepo equally — not this surface).
+
+EXIT=1
+STATUS=BLOCKED
