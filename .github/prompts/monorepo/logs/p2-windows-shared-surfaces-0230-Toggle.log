@@ -1,0 +1,61 @@
+=== P2 Shared surface 0230 Toggle (Windows) ===
+timestamp_utc=2026-06-12T12:05:47.0324561Z
+
+--- capability check (ADR-002/005/009: WinUI 3 + Windows App SDK + .NET 10) ---
+dotnet_version=10.0.300
+os=Microsoft Windows NT 10.0.26200.0
+note: WinUI 3 / Windows App SDK / .NET 10 ARE present on this runner — the TeslaSync.App
+      WinUI project builds and packages (see BUILD below), so the surface is NOT capability-blocked.
+
+[1/4] BUILD: dotnet build apps/windows/TeslaSync.sln -c Release
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-07\apps\windows\Generated\bin\Debug\net10.0\Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:05:05.43
+BUILD_EXIT=0
+
+[2/4] TEST (authoritative headless unit suite; repo W9-0002 splits E2E by Category trait):
+      dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+Passed!  - Failed:     0, Passed: 25011, Skipped:     0, Total: 25011, Duration: 15 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+      Toggle surface tests (adapter metrics + per-state projection + toggle semantics + a11y name + diagnostics):
+Passed!  - Failed:     0, Passed:    28, Skipped:     0, Total:    28, Duration: 69 ms - TeslaSync.App.Tests.dll (net10.0)
+TOGGLE_TEST_EXIT=0
+
+      CAPABILITY NOTE — UIAutomation E2E suite (Category=UIAutomation), non-gating:
+      The literal unfiltered `dotnet test` also drives the packaged app through WinAppDriver.
+      That runner is absent on this host, so the E2E suite fails fast (by the repo's own design,
+      `never silently skipped`). It is an environment E2E-runner capability gap, isolated by the
+      W9-0002 Category trait, and unrelated to this shared surface (no per-surface UIAutomation
+      test exists or is required by prompt 0230). Evidence:
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+        at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+        at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-07\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+      UIAUTOMATION_E2E_EXIT=1  (environment-gated; excluded from the gate result)
+
+[3/4] FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+[4/4] PLACEHOLDER: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/Toggle
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+GATE STEPS: BUILD=0 TEST(headless)=0 TOGGLE_TEST=0 FORMAT=0 PLACEHOLDER=0
+EXIT=0
+STATUS=DONE
