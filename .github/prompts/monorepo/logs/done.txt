@@ -397,3 +397,4 @@ p3-android/feature-views/A-0147-RouteMapSection.prompt.md
 p3-android/feature-views/A-0149-SpeedHistogramChart.prompt.md
 p3-android/feature-views/A-0151-TirePressureSection.prompt.md
 p3-android/feature-views/A-0150-TemperatureSection.prompt.md
+p3-android/feature-views/A-0153-DetailCards.prompt.md
