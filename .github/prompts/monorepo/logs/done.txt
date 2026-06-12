@@ -662,3 +662,4 @@ p2-windows/shared-meaningful/W-0171-PageContainer.prompt.md
 p2-windows/shared-meaningful/W-0173-ScrollRestoration.prompt.md
 p2-windows/shared-meaningful/W-0174-LinearSidebar.prompt.md
 p2-windows/shared-meaningful/W-0178-ConnectionSegment.prompt.md
+p2-windows/shared-meaningful/W-0177-BackgroundWorkSegment.prompt.md
