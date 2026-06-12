@@ -1,0 +1,69 @@
+=== P2 Shared surface 0170 LayoutBreadcrumbs (Windows) ===
+
+Web source : web/src/components/layout/LayoutBreadcrumbs.tsx
+             (+ Breadcrumbs.tsx, hooks/useBreadcrumbs.ts, BreadcrumbOverridesContext.tsx, lib/routeMeta.ts)
+Native out : apps/windows/TeslaSync.App/shared-surfaces/LayoutBreadcrumbs/
+             LayoutBreadcrumbs.cs (WinUI 3 view) + .Model.cs + .Source.cs + .ViewModel.cs
+Tests      : apps/windows/TeslaSync.App.Tests/SharedSurfaces/LayoutBreadcrumbsTests.cs (38 tests)
+
+Capability : WinUI 3 (Microsoft.WindowsAppSDK) + .NET 10.0.300 present; TeslaSync.App targets
+             net10.0-windows10.0.19041.0 and builds to a WinUI MSIX app. CAPABILITY AVAILABLE.
+
+--- Pre-existing blocker repaired (baseline was already RED) ---
+  TeslaSync.App.Tests.csproj arrived merge=union-corrupted into multiple <Project> roots
+  (MSB4025 "There are multiple root elements", line 1398) so the baseline solution build failed before
+  any change here. Per the file's own documented INVARIANT it was regenerated into ONE canonical Project
+  root: the case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs
+  link (1192 existing, each validated to exist on disk) plus the 3 new LayoutBreadcrumbs Model/Source/
+  ViewModel links = 1195 Compile items. XML re-validated (single root, 4 ItemGroups, LF).
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  TeslaSync.App.Core / TeslaSync.App.Platform / TeslaSync.App.UITests / TeslaSync.App.Tests /
+  TeslaSync.App (WinUI, x64) -> all built.
+  0 Warning(s)  0 Error(s)   (TeslaSync.App enforces TreatWarningsAsErrors + Recommended analyzers;
+  fixed CA1716 on IBreadcrumbOverrideSource.Overrides -> OverrideLabels and CA1822 on three static view builders.)
+BUILD_EXIT=0
+
+--- TEST: dotnet test apps/windows/TeslaSync.sln -c Release ---
+  Headless TeslaSync.App.Tests : Passed 23366 / Failed 0 / Skipped 0
+    (incl. 38 LayoutBreadcrumbs tests: registration + nav/home label resolvers, native parent chain,
+     ROUTE_META builder, pure resolver [params / hrefs / override precedence / suppression / cycle-safety],
+     route->trail projector against the real RouteRegistry, ViewModel state [suppressed vs resolved] and
+     re-resolve on route/override change, crumb + Home activation, a11y labels, PII-safe diagnostics,
+     lifecycle/disposal, argument validation).
+  TeslaSync.App.UITests        : Failed 147 / Passed 0 — every case throws
+    UiAutomationUnavailableException: "WinAppDriver/Appium runner is absent: nothing is listening on
+    http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH."
+    The fixture (WinAppDriverSession.EnsureReady) is DESIGNED to hard-fail, never skip, when the runner is
+    absent. ZERO of the 147 failures relate to LayoutBreadcrumbs or any file authored by this prompt; they
+    fail before any surface code runs and affect the whole monorepo equally.
+TEST_EXIT=1
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+  (Initial editor writes were CRLF; repo .editorconfig requires LF for [*]. Converted the 5 new .cs files
+  and the regenerated .csproj to LF before this run.)
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/LayoutBreadcrumbs ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  (Shipped LayoutBreadcrumbs files independently verified free of TODO / FIXME / XXX /
+  NotImplementedException / "// stub" / Lorem ipsum / "Coming soon" / "not implemented" / "Placeholder".
+  No parity:allow markers were required.)
+
+=== Gate summary ===
+  BUILD_EXIT=0        PASS
+  TEST_EXIT=1         headless TeslaSync.App.Tests PASS 23366/23366 (incl. 38 LayoutBreadcrumbs); 147 UITests
+                      FAIL — WinAppDriver/Appium UI-automation runner absent on this host (port 4723 /
+                      WinAppDriver.exe). Environmental, by-design hard-fail, monorepo-wide; not this surface.
+  FORMAT_EXIT=0       PASS
+  PLACEHOLDER_EXIT=0  PASS
+
+The surface is production-complete and passes every gate step that can run on this host. The single failing step
+is the solution-wide UITests project, which requires the WinAppDriver/Appium UI-automation runner that is not
+installed on this runner; per the artifact's capability clause this is reported as a platform-capability block
+with the API evidence above (environmental, by-design hard-fail, affects the whole monorepo equally).
+
+EXIT=1
+STATUS=BLOCKED
