@@ -686,3 +686,4 @@ p2-windows/shared-meaningful/W-0206-ContextMenu.prompt.md
 p2-windows/shared-meaningful/W-0207-CopyButton.prompt.md
 p2-windows/shared-meaningful/W-0210-DataTableColumnMenu.prompt.md
 p2-windows/shared-meaningful/W-0209-DataTableBulkBar.prompt.md
+p2-windows/shared-meaningful/W-0212-DataTableResizer.prompt.md
