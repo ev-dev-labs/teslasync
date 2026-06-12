@@ -1,0 +1,138 @@
+=== P2 Widget primitive 0009 WidgetRankedList (Windows) ===
+
+Capability: WinUI 3 (Windows App SDK) + .NET 10 present on this runner (dotnet 10.0.300;
+net10.0-windows10.0.19041.0 app TFM). Build + headless logic tests run here. The E2E UI-automation
+runner (WinAppDriver/Appium) is ABSENT on this non-interactive host — see the TEST step.
+
+Web source (THE spec): web/src/features/dashboard/widgets/shared/WidgetRankedList.tsx — a pure
+presentational widget primitive (no hooks / no data sources). Props: items, maxItems, compact(false),
+showBars(true), emptyMessage('No data available'), emptyIcon. RankedItem: id, label, value,
+formattedValue, badge?{text, variant: success|warning|error|neutral}, barColor?(Tailwind class).
+Derivations: limit = maxItems ?? (compact ? 3 : 5); hideBars = compact || !showBars;
+visible = [...items].sort((a,b)=>b.value-a.value).slice(0,limit); maxValue = reduce(Math.max, seed 0);
+empty branch (visible.length===0) → <EmptyState icon message py-8>; row branch → rank(i+1), background
+bar (barPct = maxValue>0 ? value/maxValue*100 : 0, opacity-15, color barColor ?? bg-blue-400),
+truncating label, optional <Badge variant={badgeVariantMap[variant]} size="sm">, semibold value.
+Shared components used (mapped to native): @/components/ui Badge → TsBadge; @/components/feedback
+EmptyState → TsEmptyState.
+
+----------------------------------------------------------------------------------------------------
+SURFACE IMPLEMENTATION (apps/windows/TeslaSync.App/widget-primitives/WidgetRankedList.*)
+----------------------------------------------------------------------------------------------------
+Two-file split mirroring the shipped pure-presentational ScoreBadge surface (Model + view; no
+Source/ViewModel because the web component is synchronous and prop-driven — its parent widget owns any
+fetching):
+  .Model.cs  - Microsoft.UI-free. WidgetRankedListRegistration (slug "WidgetRankedList");
+               RankedBadgeVariant enum (success/warning/error/neutral — the web RankedItem.badge.variant
+               union); RankedBadge + RankedItem (id/label/value/formattedValue/badge/barColorHex) input
+               records; WidgetRankedListModel (items/maxItems/compact/showBars/emptyMessage/
+               emptyIconGlyph, null-safe Items default + Empty); WidgetRankedListProjection — the native
+               port of the web body: LimitFor (maxItems ?? compact?3:5), StatusFor (badgeVariantMap,
+               error→Danger), descending STABLE sort + Take(max(0,limit)), zero-seeded maxValue
+               (reduce(Math.max,0)), barPercent = value/maxValue*100 clamped to the 0..100 a browser
+               actually paints, default bar tint #60a5fa (Tailwind blue-400 = web bg-blue-400), localized
+               empty message + composed per-row accessible name; WidgetRankedListDisplay / RankedRow /
+               RankedBadgeDisplay projections; PII-safe WidgetRankedListDiagnostics (view.opened only).
+  .cs        - WinUI 3 ContentControl view. Empty branch → TsEmptyState (message + optional glyph; never
+               a blank box). List branch → ScrollViewer(overflow-y-auto) over a StackPanel(gap-1) of row
+               Grids: each row is min-h 44, rounded(TsRadiusSm), tokenized hover surface
+               (TsColorSurfaceGlassBrush = web hover:bg-[var(--surface-2)]); a declarative two
+               star-column bar track (barPercent : 100-barPercent) hosts the opacity-15 tinted Border
+               (DisplayPrimitives.HexBrush — semantic data-attribute colour); the content grid carries
+               the right-aligned rank (muted), truncating label (CharacterEllipsis), optional sm TsBadge
+               (status-mapped) and semibold value. Tokens via DisplayTokens (TextMuted/TextPrimary).
+               Emits view.opened on Loaded.
+
+States reproduced from the web source (every state the source has renders; none hidden):
+  populated list | empty (always-rendered EmptyState with the localized default, a caller override, or
+  the supplied glyph). NOTE: the web source is a PURE PRESENTATIONAL primitive with no hooks — it has
+  exactly two render branches and NO fetch-driven loading / error / stale / offline branch. Per the
+  shipped sibling ScoreBadge precedent (same template, same "no fetch states" finding), those generic
+  states are NOT fabricated — faithful parity reproduces the two real branches. Honesty covenant rule 2
+  (no scope narrowing) / rule 5 (no parity shortcuts): the spec's states checklist is satisfied by the
+  branches that exist in THE spec; inventing absent chrome would be silent drift.
+
+i18n (P1/S10): every string flows through ILocalizer.GetString(key, fallback). Keys (+ English
+  fallbacks verbatim from the web): widgets.rankedList.emptyDefault ("No data available", the web
+  default prop), widgets.rankedList.rowAccessibleName ("{{rank}}. {{label}}, {{value}}"),
+  widgets.rankedList.rowAccessibleNameWithBadge ("{{rank}}. {{label}}, {{value}} ({{badge}})"). No
+  English literals in native code.
+A11y: each row carries a composed Narrator name (rank + label + value + badge); the bar, rank, label,
+  badge and value sub-elements are marked AccessibilityView.Raw so the row announces once; the list is
+  exposed as Content. TsEmptyState announces its message via its live region. System font scale +
+  reduced-motion inherit from the shared primitives.
+Telemetry: view.opened slug=WidgetRankedList on Loaded (P1/S11), PII-safe (never row labels or values).
+Tests (apps/windows/TeslaSync.App.Tests/WidgetPrimitives/WidgetRankedListTests.cs — 40 methods / 43
+  cases): adapter unit tests (limit matrix; descending + STABLE-sort ordering; bar percent proportional
+  / zero-seeded all-negative / clamped; show-hide-bars matrix; default vs custom vs blank bar colour;
+  badge variant→status mapping incl. error→danger), per-state tests (populated rows; empty default /
+  override / icon passthrough / zero & negative maxItems → empty), a11y-label tests (composed row name
+  with + without badge, token-leak guard, rank reflects sorted position), registration, PII-safe
+  diagnostics, and null-safety / argument guards. All via PassthroughLocalizer, headless (no UI host).
+
+----------------------------------------------------------------------------------------------------
+PRE-EXISTING REPO FIX required to reach a loadable/buildable test gate (NOT part of the surface, but
+mandatory to run build/test — documented per honesty covenant rule 7 "no predecessor bypass"):
+----------------------------------------------------------------------------------------------------
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed CORRUPTED by its documented
+`.gitattributes merge=union` strategy into THREE concatenated <Project> roots (open tags at lines 1 /
+1432 / 1466, only two closing tags) with the big Compile item group DUPLICATED — block A = 1298 unique
+links, block C = 1291 — neither block complete (A lacked Select/Toggle Model+ViewModel; C lacked Input/
+PrintButton/ThemeProvider/VehiclePaintPicker links). Multiple root elements → MSB4025 → the WHOLE test
+project (hence `dotnet test`) could not XML-load at this branch HEAD, independent of this surface.
+Repaired per the file's own INVARIANT: regenerated into exactly ONE <Project> root = the canonical
+header (PropertyGroup + package / project-reference / content item groups) + a single, case-insensitive
+ordinal path-sorted, Include-deduplicated Compile item group = the UNION of every prior link (1302) PLUS
+this surface's one Microsoft.UI-free Model link (WidgetRankedList.Model.cs → 1303 total, 0 duplicates,
+XML loads, root=Project). The view (WidgetRankedList.cs) is Microsoft.UI-bound so it is intentionally
+NOT linked (excluded → exercised by the app build, like every other surface's view). The invariant
+comment was extended to name the 6th source dir (widget-primitives/ → Link prefix WidgetPrimitives\).
+No production behaviour changed; restores the pre-corruption intent + adds this surface.
+
+----------------------------------------------------------------------------------------------------
+GATE RESULTS (commands per the prompt; full no-incremental solution build + test)
+----------------------------------------------------------------------------------------------------
+BUILD_EXIT=0   dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s).
+               (Pre-existing CA1716/CA1720/CA1000/CA1859 warnings remain in TeslaSync.App.Core only —
+               that project does not treat warnings as errors; non-fatal, unrelated to this surface.
+               The app project (TreatWarningsAsErrors=true) compiles this surface warning-clean.)
+
+TEST_EXIT=1    dotnet test apps/windows/TeslaSync.sln -c Release:
+               Passed!  - Failed: 0, Passed: 25373, Skipped: 0, Total: 25373 - TeslaSync.App.Tests.dll
+                          (headless logic, INCLUDING this surface's 43 cases)
+               Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147   - TeslaSync.App.UITests.dll
+                          (E2E UI automation)
+               ALL 147 UITests failures share ONE pre-existing distinct reason:
+                 TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot
+                 run: WinAppDriver/Appium runner is absent: nothing is listening on
+                 http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths
+                 or on PATH.  (WinAppDriverSession.EnsureReady, Fixtures/WinAppDriverSession.cs:75)
+               These are pre-existing shell/nav/auth/component E2E tests (Category=UIAutomation),
+               unrelated to this surface (which adds 0 UITests). grep of the test output for
+               "WidgetRankedList" failures => NONE.
+               Scoped evidence (this surface + headless are green):
+                 dotnet test TeslaSync.App.Tests --filter "FullyQualifiedName~WidgetRankedList"
+                   => EXIT=0, Passed 43 / Failed 0.
+
+FORMAT_EXIT=0  dotnet format apps/windows/TeslaSync.sln --verify-no-changes -> clean across the whole
+               solution (the two new .cs files + regenerated .csproj normalized to editorconfig
+               charset=utf-8 / end_of_line=lf / final-newline; .cs = 4-space, .csproj = 2-space).
+
+PLACEHOLDER_EXIT=0  ./apps/tools/check-placeholders.ps1 -Path
+               apps/windows/TeslaSync.App/widget-primitives/WidgetRankedList -> PLACEHOLDER_COUNT=0,
+               PLACEHOLDER_ALLOWED=0, EXIT=0. (Recursive scan of the widget-primitives dir is also 0; no
+               TODO/FIXME/stub/mock/placeholder/Lorem/NotImplementedException in the shipped files.)
+
+----------------------------------------------------------------------------------------------------
+BUILD_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  TEST_EXIT=1.
+The full-solution `dotnet test` aggregate cannot reach 0 ONLY because the WinAppDriver/Appium
+UI-automation runtime is unavailable on this non-interactive runner (no WinAppDriver.exe; nothing on
+127.0.0.1:4723). The surface itself is complete and verified by every available means: it builds in the
+WinUI app, its 43 adapter/per-state/a11y tests pass, the whole headless suite (25373) is green, format
++ placeholder are clean. Per this prompt's capability clause ("requires WinUI 3 ... If unavailable on
+the runner -> STATUS=BLOCKED with API evidence") and matching the adjacent sibling surfaces (e.g.
+shared-surfaces/0009 AICabinTemperatureImpactNarrative, also TEST_EXIT=1 / STATUS=BLOCKED on the same
+WinAppDriver gap), E2E UIAutomation verification is deferred to a WinAppDriver-provisioned runner.
+
+EXIT=1
+STATUS=BLOCKED

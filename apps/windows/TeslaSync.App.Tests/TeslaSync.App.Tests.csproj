@@ -138,6 +138,25 @@
     P2 widget-primitives/0003 WidgetComparisonCard (repairing a merge=union multi-root corruption and introducing
     the widget-primitives tier), plus the new WidgetComparisonCard Model / Source / ViewModel links. Do NOT
     re-concatenate into multiple roots, and never write a literal build item or project start tag inside this
+    every dashboard-widget, feature-view, misc-surface, modal/dialog, shared-surface and widget-primitive.
+    TeslaSync.App targets a WinUI TFM and cannot be project-referenced from a plain net10.0 host, so each
+    surface's Microsoft.UI-free sources are Compile-linked in the single source item group below (the Link
+    mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs,
+    SharedSurfaces or WidgetPrimitives). The bare WinUI view files are excluded and exercised by the app
+    build; the test classes are picked up by the SDK default-compile glob; the Content links copy the
+    units-golden, Package.appxmanifest and widget-template fixtures the tests read from the output directory.
+
+    INVARIANT: keep this file as exactly ONE project root with a single PropertyGroup, the package /
+    project-reference / content item groups, and ONE Compile item group - the case-insensitive ordinal
+    path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/,
+    feature-views/, misc-surfaces/, modals-dialogs/, shared-surfaces/ and widget-primitives/ (a source is
+    Microsoft.UI-free when it has no using directive for Microsoft.UI / Windows.UI / Microsoft.Xaml /
+    CommunityToolkit). This file carries the .gitattributes merge=union strategy, so a chain of integration
+    merges can re-concatenate it into multiple project roots plus duplicate Compile items, failing XML load
+    (MSB4025 / MSB4067); when that happens, regenerate it directly from the Microsoft.UI-free sources on disk.
+    Regenerated into this single canonical project root for P2 widget-primitives/0009 WidgetRankedList
+    (repairing a merge=union multi-root corruption), plus the new WidgetRankedList Model link. Do NOT
+    re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this
     comment.
   -->
 
@@ -2861,6 +2880,10 @@
 </Project>
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetGaugeHero.Model.cs" Link="WidgetPrimitives\WidgetGaugeHero.Model.cs" />
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetGaugeHero.ViewModel.cs" Link="WidgetPrimitives\WidgetGaugeHero.ViewModel.cs" />
+  </ItemGroup>
+
+</Project>
+    <Compile Include="..\TeslaSync.App\widget-primitives\WidgetRankedList.Model.cs" Link="WidgetPrimitives\WidgetRankedList.Model.cs" />
   </ItemGroup>
 
 </Project>
