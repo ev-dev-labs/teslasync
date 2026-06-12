@@ -1,0 +1,11 @@
+[
+  {
+    "unitId": "page:admin/ApiLogs",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 43,
+    "requiredCount": 43,
+    "promptId": "p2-windows/W7/windows-page-admin-ApiLogsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-ApiLogsPage.log"
+  }
+]
