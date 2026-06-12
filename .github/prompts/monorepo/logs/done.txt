@@ -702,3 +702,4 @@ p2-windows/shared-meaningful/W-0230-Toggle.prompt.md
 p2-windows/shared-meaningful/W-0225-Select.prompt.md
 p2-windows/shared-meaningful/W-0229-ThemeProvider.prompt.md
 p2-windows/shared-meaningful/W-0234-VehiclePaintPicker.prompt.md
+p2-windows/shared-meaningful/W-0235-VehicleTwin.prompt.md
