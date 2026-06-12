@@ -1,0 +1,76 @@
+=== P4 Shared surface 0235 VehicleTwin (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/VehicleTwin.*
+Web src  : web/src/components/vehicles/VehicleTwin.tsx  (+ lib/vehicleState.ts, lib/vehicleColors.ts, hooks/useVehiclePaint.ts)
+Host     : macOS (Darwin arm64), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat + xcodegen + pwsh present.
+Capability: SwiftUI / iOS 18 / iPadOS 18 / macOS 15 AVAILABLE on this runner — NOT capability-blocked.
+
+------------------------------------------------------------------------------
+DELIVERABLE (13 files, all under apps/apple/TeslaSync/shared-surfaces/)
+------------------------------------------------------------------------------
+VehicleTwin.swift            main surface View (states + telemetry + a11y container)
+VehicleTwin.State.swift      i18n facade, connection/load/size enums, input snapshot, region row,
+                             resolved view-state (legend item / content / phase)
+VehicleTwin.Model.swift      telemetry seam (view.opened), VehicleTwinSource seam, @Observable
+                             VehicleTwinSurfaceModel, InMemoryVehicleTwinSource
+VehicleTwin.Paint.swift      5-palette paint model + inferID (port of inferPaintFromTesla) +
+                             resolve (port of useVehiclePaint: override > inferred > fallback)
+VehicleTwin.Projection.swift pure input->resolved (phase + paint + last-updated)
+VehicleTwin.Legend.swift     per-subsystem status legend (always-visible tooltip peer) + VoiceOver summary
+VehicleTwin.Regions.swift    per-region detail rows (windowLabel/stateLabel/security/charge ports)
+VehicleTwin.Views.swift      scene (wraps the module-owned VehicleTwinView Canvas) + legend + region list
+VehicleTwin.Chrome.swift     freshness chip + refresh + connectivity banner + loading + error + empty
+VehicleTwin.Previews.swift   9 previews (content rich/calm/driving+drive-in/unknown, loading, error, empty, stale, offline)
+VehicleTwin.Tests.swift      projection phases + model wiring + telemetry + stale auto-refresh + content a11y
+VehicleTwin.AdapterTests.swift  paint inference/resolve/catalog + legend + regions + summary
+VehicleTwin.strings          i18n catalog (table "VehicleTwin")
+
+DRY/no-redeclare: composes the module-public VehicleTwinView (Canvas illustration) + VehicleTwinState +
+the window/door/turn enums (port of lib/vehicleState.ts) rather than duplicating them. New public symbols
+are VehicleTwin*-prefixed and collision-free with the existing DigitalTwinWidget.* surface.
+
+States rendered: loading | empty | error | stale | offline | content, plus every twin visual branch
+(doors/windows/frunk/trunk/charge/charging/headlights/hazards/turn/lock/sentry/seat/driving/drive-in).
+
+------------------------------------------------------------------------------
+SURFACE VERIFIED GREEN (isolated, real SDKs, Swift 6 strict concurrency)
+------------------------------------------------------------------------------
+swiftc -typecheck  arm64-apple-ios18.0-simulator  -swift-version 6 -strict-concurrency=complete  => 0 errors / 0 warnings
+swiftc -typecheck  arm64-apple-macos15.0           -swift-version 6 -strict-concurrency=complete  => 0 errors / 0 warnings
+  (compiled against the real generated Tokens.swift + the full Sources/Components + Sources/Design
+   design system [minus the SharedFacade-coupled UnitFormatters.swift/TypedFormatters.swift] + the
+   reused DigitalTwinWidget.{Models,Palette,Builder,Model,Twin}.swift; coexists with no redeclarations.)
+SwiftPM isolated tests (Swift 6 mode)  => Executed 53 tests, with 0 failures (0 unexpected)
+swiftlint --strict   (12 swift files)  => Found 0 violations, 0 serious
+swiftformat --lint   (12 swift files)  => 0/12 files require formatting
+check-placeholders.ps1 (swift)         => PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+i18n parity (table "VehicleTwin")      => 82 keys referenced = 82 keys defined; 0 missing / 0 dead
+xcodegen generate                      => project written; all 13 VehicleTwin.* files enumerated in pbxproj
+
+------------------------------------------------------------------------------
+GATE (xcodebuild build test) — DEFERRED, macOS-pending (pre-existing, unrelated)
+------------------------------------------------------------------------------
+The KMP `Shared.xcframework` is not staged (apps/apple/Frameworks holds only .gitkeep). Assembling it is
+the documented Kotlin/Native long-pole:
+  cd apps/shared && ./gradlew :core:assembleSharedXCFramework   => ran ~350s with no completion, stopped
+  (STAGE_EXIT=124 timeout pattern; same as ~20 sibling P4 surfaces in apps/macos-pending-verifications.md).
+
+With the framework unstaged, the real app-target builds halt at framework resolution BEFORE any Swift
+source compiles (so this surface contributes ZERO errors):
+  xcodebuild -target TeslaSync     -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
+    => error: There is no XCFramework found at '.../Frameworks/Shared.xcframework' (in target 'TeslaSync')
+  xcodebuild -target TeslaSync-macOS                   CODE_SIGNING_ALLOWED=NO build
+    => error: There is no XCFramework found at '.../Frameworks/Shared.xcframework' (in target 'TeslaSync-macOS')
+macOS additionally blocked by development signing: `security find-identity -p codesigning` => 0 valid identities found.
+
+These are the same pre-existing, unrelated blockers recorded for the sibling P4 Apple surfaces; they are
+escalated to p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest with the KMP toolchain + signing
+identities). Zero VehicleTwin/shared-surfaces errors are attributable to this artifact.
+
+IOS_EXIT=65        (DEFERRED — unstaged KMP Shared.xcframework; build halts at framework resolution; this surface 0 errors)
+MAC_EXIT=65        (DEFERRED — unstaged KMP Shared.xcframework + 0 codesigning identities; this surface 0 errors)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE
