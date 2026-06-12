@@ -1,0 +1,73 @@
+=== P2 Shared surface 0166 BreadcrumbOverridesContext (Windows) ===
+runner: Windows 11 26200; .NET SDK 10.0.300; Microsoft.WindowsDesktop.App 10.0.8; Windows SDK 10.0.26100
+
+--- PRE-EXISTING BREAKAGE REPAIRED (so the gate was reachable; no silent drift) ---
+TeslaSync.App.Tests.csproj was committed at HEAD as INVALID XML: a .gitattributes merge=union
+concatenation had produced TWO <Project> roots (lines 1-1386 and 1387-2668) with ~2x duplicated
+Compile items, so the test project could not load (MSB4025 / MSB4067) and the whole solution build/test
+was red before any of this surface's work. Per the file's own INVARIANT header it was regenerated into a
+single canonical Project root from the WinUI-free sources on disk: a sorted, de-duplicated Compile
+ItemGroup of all 1183 Microsoft.UI-free .cs under dashboard-widgets/feature-views/misc-surfaces/
+modals-dialogs/shared-surfaces, plus the 3 new BreadcrumbOverridesContext Model/Source/ViewModel links
+(= 1186). The bare WinUI view BreadcrumbOverridesContext.cs is excluded and exercised by the app build.
+This is the same repair prior shared-surface prompts performed (0094/0126/0129/0141/0143/0151...).
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-03\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:02:37.76
+BUILD_EXIT=0
+
+--- TEST (headless gate, W9-0002): dotnet test ... -c Release --filter Category!=UIAutomation ---
+(The UITests assembly tags every test [Trait("Category","UIAutomation")] so the headless unit suite
+ (Category!=UIAutomation) and the WinAppDriver E2E suite (Category=UIAutomation) run independently.)
+Test run for D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed: 23176, Skipped:     0, Total: 23176, Duration: 32 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- TEST (full suite, informational transparency only) : dotnet test ... -c Release ---
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-03\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+TEST_FULL_EXIT=1  (non-zero ONLY because the 147 Category=UIAutomation whole-app E2E tests
+ require a physical WinAppDriver/Appium runner on http://127.0.0.1:4723/ that is absent on this host;
+ all 147 fail with UiAutomationUnavailableException by the harness's explicit no-silent-skip design,
+ and zero of them touch this surface, which is a non-visual context with no UIAutomation tests.)
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- PLACEHOLDERS: check-placeholders.ps1 over each shipped BreadcrumbOverridesContext file ---
+BreadcrumbOverridesContext.cs: PLACEHOLDER_COUNT=0
+BreadcrumbOverridesContext.Model.cs: PLACEHOLDER_COUNT=0
+BreadcrumbOverridesContext.Source.cs: PLACEHOLDER_COUNT=0
+BreadcrumbOverridesContext.ViewModel.cs: PLACEHOLDER_COUNT=0
+BreadcrumbOverridesContextTests.cs: PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- SUMMARY ---
+BUILD_EXIT=0  TEST_EXIT=0 (headless)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
