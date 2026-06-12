@@ -77,6 +77,7 @@
     AnimatedMarker Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never
     write a literal build item or project start tag inside this comment.
   -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App: a single, case-insensitive ordinal path-sorted, Include-deduplicated ItemGroup (the union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/; the Link mirrors each source's real location). The bare WinUI view files are excluded and exercised by the app build; the test classes are picked up by the SDK default-compile glob; the Content links copy the units-golden, Package.appxmanifest and widget-template fixtures. INVARIANT: keep this file as exactly ONE Project root with this single Compile ItemGroup. The .gitattributes merge=union strategy can re-concatenate it into multiple Project roots plus duplicate Compile items (failing XML load, MSB4025 / MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk. Regenerated into this single canonical Project root for P2 shared-surfaces/0170 LayoutBreadcrumbs, plus the new LayoutBreadcrumbs Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -1264,6 +1265,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\RoutePlayback.Model.cs" Link="SharedSurfaces\RoutePlayback.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RoutePlayback.Source.cs" Link="SharedSurfaces\RoutePlayback.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RoutePlayback.ViewModel.cs" Link="SharedSurfaces\RoutePlayback.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\RouteTransition\RouteTransition.Model.cs" Link="SharedSurfaces\RouteTransition\RouteTransition.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\RouteTransition\RouteTransition.ViewModel.cs" Link="SharedSurfaces\RouteTransition\RouteTransition.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SavedViewMenu\SavedViewMenu.Model.cs" Link="SharedSurfaces\SavedViewMenu\SavedViewMenu.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SavedViewMenu\SavedViewMenu.Source.cs" Link="SharedSurfaces\SavedViewMenu\SavedViewMenu.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SavedViewMenu\SavedViewMenu.ViewModel.cs" Link="SharedSurfaces\SavedViewMenu\SavedViewMenu.ViewModel.cs" />
