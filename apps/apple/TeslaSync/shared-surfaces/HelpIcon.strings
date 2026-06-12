@@ -1,0 +1,29 @@
+/*
+  HelpIcon.strings
+  TeslaSync — P4 shared surface · 0215 · HelpIcon (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Unlike most sibling presentational primitives
+  (which are anonymous), the web `components/ui/HelpIcon.tsx` resolves two REAL `t()` keys for its trigger
+  label — `a11y.helpFor` (the per-field label) and `help.tooltip.iconLabel` (the generic fallback) — so
+  those are mirrored verbatim below. The help TEXT itself is resolved through a caller-supplied key (with
+  the caller's `content` as the `defaultValue`), so it is owned by the adopting call-site, not by this
+  table. The one remaining entry is the native a11y addition: the VoiceOver open hint on the trigger.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("HelpIcon") so each parallel surface prompt owns its own strings. In test /
+  preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Real web `t()` keys (mirrored from the source) --- */
+
+/* Per-field trigger label — web t('a11y.helpFor', { field }). The %@ token (or a {{field}} token in a
+   ported web catalog string) is replaced with the `for` field name, e.g. "Help for Battery health". */
+"a11y.helpFor" = "Help for %@";
+
+/* Generic trigger label when no `for` field id is supplied — web t('help.tooltip.iconLabel'). */
+"help.tooltip.iconLabel" = "More info";
+
+/* --- Native a11y addition (no web `t()` key exists) --- */
+
+/* VoiceOver hint announced on the trigger — the action a tap performs. */
+"helpIcon.openHint" = "Shows help";

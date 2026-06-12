@@ -1,0 +1,200 @@
+=== P4 Shared surface 0215 HelpIcon (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/HelpIcon.*
+Web src  : web/src/components/ui/HelpIcon.tsx
+Host     : macOS / Darwin · Xcode 26.5 · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1
+           xcodegen 2.45.4 · pwsh 7.x · OpenJDK 17.0.19 (KMP) · iPhone 16 sim (iOS 26.5) booted
+Capability: NOT BLOCKED — SwiftUI present; Swift Charts / MapKit are NOT needed (the web source uses
+           neither — it is a tiny structural help-trigger primitive). KMP Shared.xcframework built green
+           (Gradle BUILD SUCCESSFUL in 9m31s, staged ios-arm64 + ios-arm64-simulator + macos-arm64).
+Delegation: NONE (FORBIDDEN this tier) — implemented directly.
+
+------------------------------------------------------------------------------
+WHAT SHIPPED  (8 HelpIcon.* files; shared-surface bundle convention)
+------------------------------------------------------------------------------
+HelpIcon.swift          (75)  Public SwiftUI surface. Prop initializer (i18nKey / content / for / side /
+                              ariaLabel + injectable resolve + telemetry) and a model-injection seam
+                              (host/preview/test). Renders the trigger ONLY when text resolves — the
+                              faithful parity of the web `if (!text) return null` (no blank box). Binds
+                              HelpIconModel; once-only view.opened; pushes prop changes via .onChange.
+HelpIcon.Adapter.swift  (226) Foundation-only core: HelpIconSurface.slug="HelpIcon"; HelpIconResolve i18n
+                              seam; HelpIconKey/Fallback (the two REAL web t() keys a11y.helpFor +
+                              help.tooltip.iconLabel); HelpIconSide (web side; left/right -> leading/
+                              trailing); HelpIconInput; HelpIconProjection (hasContent, text,
+                              accessibilityLabel, describedByID, side); HelpIconProjector — the 1:1 port of
+                              `i18nKey ? t(i18nKey,{defaultValue:content}) : content`, `ariaLabel ?? (for ?
+                              helpFor : iconLabel)`, `for ? \(for)-help : undefined`, and {{field}}/%@ interp.
+HelpIcon.Model.swift    (151) P1/S10 HelpIconStrings facade (the two web keys + the openHint native a11y
+                              addition), P1/S11 HelpIconTelemetry seam + OSLog default, P1/S8 @Observable
+                              HelpIconModel (input + isPresented; present/dismiss; projection via injected
+                              resolver; update never disturbs open state on identical props; view.opened once).
+HelpIcon.Views.swift    (114) Token-driven (P1/S9): side->Edge arrowEdge map; HelpIconHoverTip (native
+                              `.help()` — macOS hover / iOS pointer, the web Tooltip hover affordance);
+                              HelpIconTrigger (questionmark.circle sized inline next to a Label, ml-1, muted
+                              glyph brightening on hover = web hover:text-secondary; tap reveals the popover;
+                              VoiceOver label + hint=help text = web aria-describedby; glyph hidden);
+                              HelpIconPopover (the revealed help copy, width-capped, TSFadeIn entrance that
+                              honors Reduce Motion, \(for)-help a11y identifier when for is set).
+HelpIcon.Previews.swift (106) DEBUG previews for every REAL branch: plain content, i18nKey-with-fallback,
+                              per-field (for), every side (top/bottom/leading/trailing), seeded-open bubble
+                              (injected model), and the absent branch (renders nothing — web return null).
+HelpIcon.strings        (29)  P1/S10 catalog: a11y.helpFor + help.tooltip.iconLabel (the REAL web t() keys,
+                              mirrored verbatim) + helpIcon.openHint (native a11y addition). The help TEXT
+                              key is caller-owned (resolved with content as the defaultValue), not in this table.
+HelpIcon.AdapterTests.swift (235) Pure-core XCTest: surface slug; text resolution (keyless/missing-key-falls-
+                              back/key-wins/empty-key/none); hasContent (return-null branch); label rule
+                              (override-even-empty / field / generic / empty-field); described-by id;
+                              {{field}}/%@/no-token interpolation; side fromWeb left/right fold; projection
+                              composition + absent branch; Input/Projection value-type equality.
+HelpIcon.Tests.swift    (159) State-holder/view/facade XCTest: view.opened once+idempotent+stop/start;
+                              present/dismiss flips isPresented; projection reflects input; hasContent gate;
+                              update re-derive + identical-prop keeps open state; view composition every
+                              branch + injected model + subviews; side->arrowEdge; strings facade fallbacks.
+5 ship .swift files = 672 LOC; max single file 235 (AdapterTests), max ship file 226 (Adapter); SwiftLint
+file_length budget 400, --strict. No file gated all content behind a single data flag; every branch renders.
+
+------------------------------------------------------------------------------
+PARITY SCOPE  (Honesty #2 No-scope-narrowing)
+------------------------------------------------------------------------------
+The web <HelpIcon> is a tiny PRESENTATIONAL PRIMITIVE. Its only data source is the SYNCHRONOUS
+useTranslation; it takes plain props (i18nKey, content, for, side, ariaLabel) and renders a `(?)` trigger
+that reveals a <Tooltip>. There is NO fetch, NO React-Query cache, NO Promise -> therefore NO loading /
+error / stale / offline branch (there is nothing to fetch, fail, age, or disconnect from). Reproducing
+those generic states would FABRICATE behaviour the source does not have, so this surface reproduces only
+the source's REAL branches — exactly the disposition the sibling presentational primitives Accordion (0203),
+MetricCard (0095), InlineCallout (0124), ActiveFilterChips (0147), and StaggerItem (0194) used. The REAL
+branches, all reproduced + tested:
+  • absent               : no i18nKey + no content (or a string that resolves empty) -> renders NOTHING
+                           (web `if (!text) return null`), a deliberate zero-footprint absence so adopting
+                           call-sites need not gate the icon themselves — NOT a blank box.
+  • resting              : the muted `(?)` trigger; help bubble hidden.
+  • presented            : tap (keyboard Return/Space) or macOS pointer hover reveals the help copy; Escape
+                           / outside-tap dismiss (web Escape-to-blur).
+  • label resolution     : ariaLabel override wins (web nullish ??, even empty); else for -> "Help for
+                           {field}" (a11y.helpFor); else generic "More info" (help.tooltip.iconLabel).
+  • placement            : per-side bubble (web side; left/right fold to leading/trailing for RTL).
+  • reduced motion       : the bubble entrance fades via TSFadeIn; instant under Reduce Motion.
+Data source  : useTranslation only (synchronous i18n; no fetch).
+Shared comps : none (the web source maps none -> none required).
+Charts/maps  : none (the web source uses none) -> Swift Charts / MapKit not required.
+i18n keys    : a11y.helpFor + help.tooltip.iconLabel (REAL web t() keys, mirrored) resolved through the
+               P1/S10 facade; the help text key is caller-owned with content as the defaultValue.
+Telemetry    : view.opened emitted once with slug "HelpIcon" (P1/S11) when the trigger renders.
+a11y         : trigger is one button with explicit label (web aria-label) + open hint + the help text as its
+               VoiceOver hint (the native peer of aria-describedby); glyph hidden from VoiceOver; the bubble
+               carries the \(for)-help identifier; Dynamic Type via tokens; reduce-motion honored.
+
+------------------------------------------------------------------------------
+GATE RESULTS  (verbatim)
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    -> ** BUILD FAILED **  IOS_EXIT=65
+    The ONLY errors are FOREIGN (NOT this surface) — the systematic pre-existing Swift-6.3 escaping-closure
+    defect in sibling AI* surfaces' `glass(@ViewBuilder _ content:)` -> TSGlassPanel{}:
+      shared-surfaces/AIGeofenceAwareAutomationSuggestions.swift:141:22: error: escaping closure captures
+                                                                         non-escaping parameter 'content'
+      shared-surfaces/AISignalExplorerNlFilter.swift:142:22:             error: escaping closure captures
+                                                                         non-escaping parameter 'content'
+    HelpIcon error count in this build: 0. Tests did not run ("Testing cancelled because the build failed").
+    git status confirms ONLY 8 new HelpIcon.* files are added — the flagged AI* files are untracked/unmodified
+    by this work, so the red cannot be attributable to HelpIcon.
+
+    BASELINE PROOF (Honesty #1/#8) — same gate, HelpIcon.* EXCLUDED from compilation, fresh DerivedData:
+      xcodebuild ... EXCLUDED_SOURCE_FILE_NAMES='HelpIcon.*' build  ->  ** BUILD FAILED **
+      BASELINE_IOS_EXIT=65, foreign error:
+        shared-surfaces/AIAutoNameUnnamedLocations.swift:123:22: error: escaping closure captures
+                                                                 non-escaping parameter 'content'
+      0 HelpIcon errors. The tree is RED WITHOUT this surface -> the red is PRE-EXISTING and FOREIGN. (Same
+      disposition the accepted siblings Accordion 0203 / MetricCard 0095 / InlineCallout 0124 /
+      ActiveFilterChips 0147 / StaggerItem 0194 recorded; the parallel compiler surfaces whichever AI* glass()
+      batch fails first — here AIAutoNameUnnamedLocations, one of the exact files the 0203 baseline cited.)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    -> ** BUILD FAILED **  MAC_EXIT=65
+    ENVIRONMENTAL, pre-compile (NOT this surface): the macOS app/widget targets carry hardened-runtime
+    entitlements that require a development signing certificate, and the runner has none
+    (project.yml DEVELOPMENT_TEAM=""):
+      TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+        development certificate. Enable development signing in the Signing & Capabilities editor.
+      TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+    The Shared.xcframework pre-action staged green; HelpIcon error count: 0. HelpIcon's macOS-15 compilation
+    is proven green independently via the macOS typecheck + `swift test` below.
+
+[3] swiftlint --strict (FULL TREE, gate step)
+    -> Done linting! Found 0 violations, 0 serious in 4677 files.        LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple (FULL TREE, gate step)
+    -> 0/4975 files require formatting, 2 files skipped.                 FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 (REAL gate tool)
+    scoped to the HelpIcon.* swift files: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    gate-literal -Path .../HelpIcon     : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    -> no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/"not implemented"/unimpl stub; 0 opt-outs.  PLACEHOLDER_EXIT=0
+
+[6] xcodegen generate -> 48 HelpIcon refs across the iOS app + macOS app + both XCTest bundles.  XCODEGEN_EXIT=0
+
+------------------------------------------------------------------------------
+SURFACE-ATTRIBUTABLE VERIFICATION  (all GREEN — actually executed, Honesty #3)
+------------------------------------------------------------------------------
+[xcframework] apps/apple/Scripts/build-shared-xcframework.sh -> Gradle BUILD SUCCESSFUL in 9m31s; staged
+              Shared.xcframework (ios-arm64 + ios-arm64-simulator + macos-arm64).        XCFRAMEWORK_EXIT=0
+[typecheck-iOS]   swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+                  -target arm64-apple-ios18.0-simulator (SDK 26.5), real surface (swift/Adapter/Model/Views/
+                  Previews) + design tokens + TSFadeIn -> 0 errors / 0 warnings.         IOS_TYPECHECK_EXIT=0
+[typecheck-macOS] swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+                  -target arm64-apple-macos15.0 (SDK 26.5), real surface + design tokens + TSFadeIn ->
+                  0 errors / 0 warnings.                                                 MAC_TYPECHECK_EXIT=0
+[swift test]  The UNMODIFIED @testable XCTest files (HelpIcon.Tests + HelpIcon.AdapterTests) run as a real
+              module named TeslaSync (the shipped surface + design tokens + TSFadeIn), macOS, Swift 6 strict
+              concurrency:  Executed 38 tests, with 0 failures (0 unexpected).            SWIFT_TEST_EXIT=0
+              Covered: surface slug; text resolution (keyless / missing-key-fallback / key-wins / empty-key /
+              none); hasContent return-null gate; label rule (override-even-empty / field / generic / empty-
+              field); described-by id; {{field}}/%@ interpolation; side fromWeb fold; projection composition +
+              absent branch; value-type equality; model view.opened-once/idempotent/stop-start; present/dismiss
+              flips isPresented; update re-derive + identical-prop keeps open state; view composition every
+              branch + injected model + subviews; side->arrowEdge; strings facade fallbacks.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+ 1  No red-as-green ..... IOS_EXIT=65 + MAC_EXIT=65 shown verbatim with file:line; NEVER claimed green.
+ 2  No scope narrowing .. full surface (adapter/model/views/previews/strings + 2 test files) + every REAL
+                          branch; generic loading/error/stale/offline are documented N/A (the synchronous
+                          i18n primitive has none), not skipped; the web return-null branch is reproduced.
+ 3  No skip-and-assume .. iOS gate, macOS gate, iOS baseline build (fresh DD), iOS+macOS typechecks, swift
+                          test (38), swiftlint, swiftformat, placeholder (scoped + gate-literal), xcodegen —
+                          ALL actually executed.
+ 4  No stubs as final ... PLACEHOLDER_COUNT=0; every branch implemented + previewed + tested.
+ 5  No parity shortcuts . `i18nKey ? t(i18nKey,{defaultValue:content}) : content`, `!text -> return null`,
+                          `ariaLabel ?? (for ? helpFor : iconLabel)`, `for ? \(for)-help : undefined`, the
+                          side placement (left/right -> leading/trailing), and the hover/tap reveal reproduced.
+ 6  No delegation ....... implemented directly.
+ 7  No predecessor bypass the identical pre-existing FOREIGN build red was dispositioned exactly as the
+                          accepted siblings Accordion/MetricCard/InlineCallout/ActiveFilterChips/StaggerItem.
+ 8  No commit on red .... the iOS red is FOREIGN (proven pre-existing via the HelpIcon-excluded fresh-DD
+                          baseline + git status) / the macOS red is ENVIRONMENTAL (no dev-signing cert); this
+                          surface contributes ZERO errors and EVERY surface-attributable gate is green.
+ 9  No silent drift ..... N/A states + the native `.help()` hover affordance (the macOS/iOS peer of the web
+                          Tooltip hover) + the TSFadeIn bubble entrance (reduce-motion honored) + the hover
+                          tint (textSecondary, the native peer of web hover:text-[var(--text-secondary)]) are
+                          documented above.
+10  Log ends with EXIT/STATUS.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+XCFRAMEWORK_EXIT=0
+IOS_EXIT=65          (FOREIGN pre-existing sibling compile defects; surface 0 errors — proven via
+                      baseline + isolation typecheck + swift test)
+MAC_EXIT=65          (ENVIRONMENTAL: no macOS development-signing certificate on runner; pre-compile;
+                      surface 0 errors — proven via macOS typecheck + swift test)
+BASELINE_IOS_EXIT=65 (HelpIcon.* EXCLUDED — tree still red on the foreign AI* glass() defect; pre-existing)
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+SWIFT_TEST_EXIT=0    (38/38)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+XCODEGEN_EXIT=0
+
+EXIT=0
+STATUS=DONE
