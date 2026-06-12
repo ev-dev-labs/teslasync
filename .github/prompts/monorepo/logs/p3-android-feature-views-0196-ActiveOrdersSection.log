@@ -1,0 +1,69 @@
+=== P3 Feature view 0196 ActiveOrdersSection (Android) ===
+
+Surface: com/teslasync/feature-views/ActiveOrdersSection
+  - ActiveOrdersSection.kt        (Compose render layer: stateful store-bound entry + stateless content)
+  - ActiveOrdersSectionModel.kt   (pure projection + lucide glyphs + view.opened diagnostic)
+Tests:
+  - app/src/test/java/io/teslasync/android/featureviews/activeorderssection/ActiveOrdersSectionProjectionTest.kt   (JVM unit)
+  - app/src/androidTest/java/io/teslasync/android/featureviews/activeorderssection/ActiveOrdersSectionUiTest.kt    (Compose UI + a11y)
+
+Web source (THE spec): web/src/features/settings/components/ActiveOrdersSection.tsx
+Data binding: shared P1/S8 io.teslasync.shared.core.presentation.user.UserStore
+  (teslaUserOrders() read + refreshTeslaOrders() mutation) — no HTTP in the view (ADR-002).
+i18n (P1/S10): all 12 source keys already exist as generated resources
+  (translation_orders_{title,subtitle,lastSynced,refresh,orderId,vin,deliveryDate,upgradable,noOrders,noData},
+   translation_toast_{ordersRefreshed,ordersFailed}) — no catalog change required.
+Telemetry (P1/S11): recordActiveOrdersSectionOpened(logger) -> logger.info("view.opened", {surface=ActiveOrdersSection}).
+States rendered: loading skeleton / hard-error+retry / empty(noOrders|noData) / content grid / stale+offline freshness chip + auto-refresh.
+
+NOTE on module + task paths: the prompt's literal gate uses ':app:'. The real Gradle module is ':android'
+(rootProject teslasync-android; settings.gradle.kts: include(":android"); projectDir = app/). Every P3/A* gate
+addresses ':android:'. The placeholder template path is honored verbatim as the on-disk surface directory.
+
+### STEP: ./gradlew :android:assembleRelease ###
+BUILD SUCCESSFUL in 4m 10s   (:android:assembleRelease)
+BUILD_EXIT=0
+
+### STEP: ./gradlew :android:testReleaseUnitTest ###
+:android:testReleaseUnitTest — executed.
+TEST-io.teslasync.android.featureviews.activeorderssection.ActiveOrdersSectionProjectionTest.xml:
+  tests=18 failures=0 errors=0 skipped=0
+TEST_EXIT=0
+
+### STEP: ./gradlew ktlintCheck detekt ###
+:android:ktlintMainSourceSetCheck       PASS
+:android:ktlintTestSourceSetCheck       PASS
+:android:ktlintAndroidTestSourceSetCheck PASS   (the new ActiveOrdersSectionUiTest.kt is ktlint-clean)
+:android:detekt                          PASS   (warningsAsErrors=true)
+LINT_EXIT=0
+
+### STEP: check-placeholders (surface dir) ###
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- androidTest compile note (honesty covenant) -----------------------------------------------------
+The :android: gate intentionally does NOT compile the androidTest source set (no emulator; instrumented
+tests run in connectedAndroidTest only). For diligence, :android:compileDebugAndroidTestKotlin --continue
+was run separately. It FAILS, but EXCLUSIVELY on PRE-EXISTING, unrelated files that incorrectly write
+`import androidx.compose.ui.test.assertExists`/`assertDoesNotExist` as top-level functions (they are
+SemanticsNodeInteraction members, so the import is unresolved):
+  - dashboard/widgets/BatteryCellsWidgetUiTest.kt
+  - dashboard/widgets/driveefficiencychart/DriveEfficiencyChartWidgetUiTest.kt
+  - dashboard/widgets/energystats/EnergyStatsWidgetUiTest.kt
+  - dashboard/widgets/mileagestats/MileageStatsWidgetUiTest.kt
+  - dashboard/widgets/powerflowhistory/PowerFlowHistoryWidgetUiTest.kt
+  - dashboard/widgets/projectedrange/ProjectedRangeWidgetUiTest.kt
+  - dashboard/widgets/solarproduction/SolarProductionWidgetUiTest.kt
+  - dashboard/widgets/tirepressurehistory/TirePressureHistoryWidgetUiTest.kt
+  - featureviews/timestamptool/TimestampToolUiTest.kt
+These are other surfaces (out of scope; their own prompts) and are NOT modifiable under this prompt's
+allowed files. The new ActiveOrdersSectionUiTest.kt is NOT among the compiler-reported errors — it uses
+the correct member-call style (`.assertExists()`, `.assertDoesNotExist()`), exactly like the canonical
+AutomationCardUiTest (also not in the error list). The compiler did a full pass and reported every
+unresolved reference; none originate from this surface's files.
+-----------------------------------------------------------------------------------------------------
+
+BUILD_EXIT=0 TEST_EXIT=0 LINT_EXIT=0 PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
