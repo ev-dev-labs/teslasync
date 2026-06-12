@@ -1,0 +1,251 @@
+=== P4 Shared surface 0172 PageHeaderSticky (Apple) ===
+
+Prompt: .github/prompts/monorepo/p4-apple/shared-surfaces/0172-PageHeaderSticky.prompt.md
+Web source of truth: web/src/components/layout/PageHeaderSticky.tsx (137 lines)
+Native output: apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.*
+Date: 2026-06-11  Host: Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / xcodegen 2.45.4 /
+      swiftlint 0.63.3 / swiftformat 0.61.1 / pwsh 7.6.2
+Branch auto/20260611-013149-26127/127 (HEAD c81b1b8fe at start).
+
+Honesty Covenant (binding — verbatim):
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+=== PREFLIGHT ===
+- Clean tree at start; only this surface (9 files) + this log touched. project.yml/.swiftlint.yml ALREADY
+  wire TeslaSync/shared-surfaces (compile excludes **/*Tests.swift; the two XCTest bundles include them),
+  so NO build-wiring edits were needed — verified before writing (git status shows only the 9 PageHeaderSticky
+  files; TeslaSync.xcodeproj + Frameworks/Shared.xcframework are gitignored build artifacts).
+- Toolchain present: xcodebuild (Xcode 26.5), swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1,
+  xcodegen 2.45.4, pwsh 7.6.2, apps/shared/gradlew (+ JDK 17). → capability satisfied (NOT a
+  platform-capability BLOCKED case; SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 SDKs all available).
+- iPhone 16 simulator present + booted → the prompt's exact destination is runnable.
+- KMP Shared.xcframework: BUILT + staged via Scripts/build-shared-xcframework.sh
+  (apps/shared/gradlew :core:assembleSharedXCFramework, BUILD SUCCESSFUL) →
+  apps/apple/Frameworks/Shared.xcframework (gitignored).
+- API de-risking: BEFORE writing the view, the iOS-18 + macOS-15 scroll APIs this surface needs
+  (ScrollPosition(edge:), .scrollPosition($), .onScrollGeometryChange(for:of:action:),
+  .scrollTo(edge:), .safeAreaInset(edge:), a PreferenceKey over .scrollView(axis:) coordinate space)
+  were probed in isolation and typecheck clean on BOTH SDKs under -swift-version 6 -strict-concurrency=complete.
+- Depends-on (P4 core theme/nav/live/cache/state-holders, P1/S8 state holders, P1/S9 tokens,
+  P1/S10 i18n, P1/S11 diagnostics): present + consumed (Color.TS / Font.TS / TSSpacing / TSRadius /
+  TSMaterial / TSAnimation tokens; @MainActor @Observable state-holder seam; NSLocalizedString i18n
+  facade; os.Logger telemetry). The surface typechecks against them with 0 errors on both SDKs.
+
+=== SURVEY ===
+Web source PageHeaderSticky.tsx is a PURE PRESENTATIONAL component (it fetches nothing). It is an
+IntersectionObserver-driven sticky bar dropped into a page after the hero card: it observes a target
+element by `id={targetId}` and, once that target scrolls ABOVE the top of the scroll viewport, pins a
+compressed summary bar at `top: topOffset`. Visibility is `setVisible(!entry.isIntersecting &&
+scrolledPast)` where `scrolledPast = entry.boundingClientRect.top < 0` and the observer uses
+`rootMargin: -topOffset 0 0 0` + `threshold: 0`. `if (!visible) return null`. By default (`scrollToTop`)
+the whole bar is a click-to-scroll-to-top button with a small `<ArrowUp>` glyph and aria-label
+`${ariaLabel} — scroll to top`, scrolling the real scroll container `#main-content` smoothly to the top;
+`scrollToTop={false}` renders a plain `role="region"` bar. It owns NO scroll container of its own.
+Data sources (P1/S8): NONE — pure presentational (prompt's own "Data sources" section says so).
+Shared components used: NONE. Charts/maps: NONE. i18n keys extracted from source: NONE (the component
+is anonymous; each page passes its own already-localized `ariaLabel` + summary `children`; the only
+copy it composes is the " — scroll to top" suffix on the button's aria-label).
+Existing native: no PageHeaderSticky* symbols exist (grep = 0) → no duplicate-symbol risk.
+Canonical surface pattern studied + mirrored: the closest committed analogue is the just-landed
+shared-surfaces/BreadcrumbOverridesContext.* (also a pure, data-less layout primitive: Adapter /
+Projection / Model / .swift / Views / Previews / strings / Tests / AdapterTests).
+
+=== REASONING ===
+- The web source is a presentational scroll-observer primitive. SwiftUI's idiomatic mapping of
+  "show a sticky header once the hero scrolls out of view" is a view modifier on the page's ScrollView +
+  a target marker, with the bar rendered through `safeAreaInset(edge: .top)` (the canonical SwiftUI
+  `position: sticky`). Chosen architecture mirrors BreadcrumbOverridesContext:
+  • Adapter (pure, Foundation): surface slug; PageHeaderStickyConfig (the props value type — topOffset
+    clamps non-negative, web `top: topOffset`; composes the `${ariaLabel} — scroll to top` a11y label
+    through an injected localizer); PageHeaderStickyGeometry (the IntersectionObserver entry: target top +
+    bottom in viewport coords + viewport height); PageHeaderStickyVisibility (the VERBATIM port of the
+    observer callback: isIntersecting over the top-inset root, scrolledPast = top < 0, visible =
+    `!isIntersecting && scrolledPast`). No SwiftUI; every branch unit-testable.
+  • Projection (pure): PageHeaderStickyPresentation (isVisible / mode scrollToTop|plain / regionLabel /
+    scrollToTopLabel / topOffset / testID) + resolve(config:geometry:localize:) — the cached → projection
+    adapter the acceptance calls for (web per-tick `visible` + the `scrollToTop ? <button> : <div>` split).
+  • Model: PageHeaderStickyModel (@MainActor @Observable — the peer of `useState(visible)` + the
+    observer effect: takes scroll geometry, derives the presentation through the pure projection, publishes
+    only on change so a tick that does not flip visibility invalidates no observer = React re-render-only-
+    when-`visible`-changes, emits view.opened once); Strings i18n facade; Telemetry seam + OSLog default.
+  • .swift: PageHeaderStickyModifier (applied to a ScrollView — wires the anchor frame via a PreferenceKey
+    over .scrollView(axis:) coordinate space + the viewport height via onScrollGeometryChange into the
+    model, renders the bar in a top safeAreaInset, scroll-to-top via ScrollPosition.scrollTo(edge: .top)
+    reduce-motion aware); .pageHeaderStickyTarget() (= web `id={targetId}`); .pageHeaderSticky(...) ergonomic
+    entry + a model-injecting overload for previews/tests.
+  • Views: PageHeaderStickyBar (= the rendered sticky div/button: backdrop-blurred glass surface, bottom
+    hairline, single-line truncating summary row, trailing arrow.up glyph when interactive, full-width
+    button with the composed a11y label vs. a labeled plain region) + DEBUG inspector staging EVERY real
+    branch; Previews per branch; strings table; Tests + AdapterTests.
+- States rendered: the source has NO loading/empty/error/stale/offline (it performs no fetch and reads no
+  remote data — only a scroll position), so inventing that chrome would CONTRADICT the spec (covenant 5).
+  The prompt's generic state list is explicitly qualified "(plus any state-specific branches that exist in
+  the web source — read it and reproduce them all)"; the web source's REAL branches are reproduced + each
+  rendered visibly (never a blank box): a live scroll demo that reveals the bar (the hidden ⇄ visible
+  transition), the scroll-to-top button bar (arrow glyph), the plain bar (no arrow, labeled region), the
+  long-summary single-line truncation, and a friendly explanatory note for the hidden branch where the web
+  renderer shows nothing. The production modifier self-suppresses (renders no inset content) exactly like
+  the web `if (!visible) return null`.
+- Native adaptation (documented, not a shortcut): web connects bar↔hero by a global DOM id +
+  IntersectionObserver; native connects them STRUCTURALLY via a PreferenceKey inside the same ScrollView
+  the modifier wraps. web `position: sticky` ⇒ `safeAreaInset(edge: .top)`. web `#main-content` smooth
+  scroll ⇒ ScrollPosition.scrollTo(edge: .top). web `<ArrowUp>` ⇒ SF Symbol arrow.up. The data, the
+  visibility rule (incl. the topOffset rootMargin + the scrolledPast false-positive guard), the
+  scroll-to-top affordance, the truncation, and the region/button accessibility are reproduced exactly.
+- Rejected: porting Tailwind/hex literally (chrome is token-driven); inventing data-state chrome (source
+  has none); HTTP in the view (none — purely in-process, like the web component).
+
+=== CHANGES ===
+New (apps/apple/TeslaSync/shared-surfaces/, 9 files; total 1357 lines):
+  PageHeaderSticky.Adapter.swift       154  slug, Config (props + a11y label), Geometry (IO entry),
+                                            Visibility (verbatim observer port). Foundation-only.
+  PageHeaderSticky.Projection.swift    120  Mode, Presentation read-model + resolve (cached → projection).
+  PageHeaderSticky.Model.swift         143  Strings facade, Telemetry seam + OSLog, @Observable Model
+                                            (useState(visible) + observer effect; view.opened once).
+  PageHeaderSticky.swift               186  TargetFrame PreferenceKey, PageHeaderStickyModifier (scroll
+                                            wiring + safeAreaInset + ScrollPosition scroll-to-top),
+                                            .pageHeaderStickyTarget / .pageHeaderSticky entries.
+  PageHeaderSticky.Views.swift         276  PageHeaderStickyBar (rendered bar/button parity) + DEBUG
+                                            inspector (live scroll demo + every branch).
+  PageHeaderSticky.Previews.swift       70  #Preview per real branch.
+  PageHeaderSticky.strings              33  i18n table "PageHeaderSticky".
+  PageHeaderSticky.AdapterTests.swift  212  19 pure tests: surface/config/visibility/projection (no SwiftUI).
+  PageHeaderSticky.Tests.swift         163  11 tests: model/views/i18n.
+Modified: NONE (build/lint wiring for shared-surfaces already present).
+git status before commit (no drift outside the surface + this log):
+  ?? apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.{Adapter,Projection,Model,Views,Previews,
+     AdapterTests,Tests}.swift  +  PageHeaderSticky.swift  +  PageHeaderSticky.strings
+
+=== PARITY ===  PARITY_UNIT = shared-surface:components/layout/PageHeaderSticky
+Data + behaviour (web PageHeaderSticky) — reproduced (asserted by tests):
+  [x] visibility = `!entry.isIntersecting && (boundingClientRect.top < 0)`; isIntersecting over the
+      top-inset root (rootMargin -topOffset); the scrolledPast guard stops the false positive while the
+      hero is still below the viewport on first paint — VisibilityTests (in view / below viewport /
+      straddling / scrolled-past / topOffset-shifted / initial).
+  [x] `if (!visible) return null` — the modifier renders no safeAreaInset content while hidden;
+      ProjectionTests (isVisible) + Model start-hidden.
+  [x] scrollToTop default true ⇒ button + arrow.up + `${ariaLabel} — scroll to top` label; false ⇒ plain
+      labeled region — ConfigTests, ProjectionTests (mode), Bar view branches.
+  [x] topOffset clamps non-negative (web `top: topOffset`) + passes through to the bar inset — ConfigTests,
+      ProjectionTests.
+  [x] scroll-to-top action = ScrollPosition.scrollTo(edge: .top), reduce-motion aware (web #main-content
+      smooth scroll) — modifier scrollToTop().
+  [x] the anchor (web id={targetId}) binds the bar structurally via the PreferenceKey — .pageHeaderStickyTarget.
+i18n (P1/S10 table "PageHeaderSticky") — source is anonymous (0 user-facing keys of its own); the one
+  shipped string is the composed " — scroll to top" suffix; every Swift literal routes through the facade
+  fallback (no hardcoded English in code) — testCopyResolvesFromCatalog. (DEBUG sample copy is keyed too.)
+States — every REAL branch renders (no hidden surface; no invented loading/error chrome):
+  [x] hidden (live demo + friendly note) · [x] visible scroll-to-top button (arrow) ·
+  [x] visible plain bar (labeled region) · [x] long-summary single-line truncation.
+Binding / a11y / telemetry:
+  [x] Bound via the P1/S8 @Observable Model fed by SwiftUI scroll geometry; NO HTTP in the view
+      (purely in-process, like the web component).
+  [x] VoiceOver: scroll-to-top bar is one .isButton labeled `${ariaLabel} — scroll to top`; plain bar is a
+      .contain region labeled ariaLabel; the arrow glyph + hairline are accessibilityHidden; Dynamic Type
+      via Font.TS; transitions + scroll-to-top honor accessibilityReduceMotion.
+  [x] Telemetry: view.opened emitted once with slug "PageHeaderSticky" (P1/S11), asserted.
+PARITY_COVERED == PARITY_REQUIRED (data + behaviour + native-chrome i18n + every real branch reproduced).
+
+=== GATE ===
+Runnable host gates — all green:
+
+[FORMAT]      swiftformat --lint apps/apple
+              -> 0/4775 files require formatting, 2 files skipped.
+              FORMAT_EXIT=0
+
+[LINT]        cd apps/apple ; swiftlint --strict
+              -> Done linting! Found 0 violations, 0 serious in 4477 files
+                 (includes the 9 PageHeaderSticky.* files via .swiftlint.yml `included`).
+              LINT_EXIT=0
+
+[PLACEHOLDER] pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky
+              -> PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 (no TODO/stub/mock/placeholder/Lorem/fatalError).
+              PLACEHOLDER_EXIT=0
+
+[XCODEGEN]    cd apps/apple ; xcodegen generate -> Created project at TeslaSync.xcodeproj
+              XCODEGEN_EXIT=0
+
+[SURFACE TESTS] Real Adapter + Projection + Model + .swift + Views + AdapterTests + Tests executed via a
+              standalone SwiftPM harness (identical source files symlinked, `@testable import TeslaSync`,
+              compiled against the REAL design tokens Tokens.swift + TSDesign.swift + TSMaterial.swift),
+              Swift 6 language mode + StrictConcurrency, macOS 15:
+              -> Test Suite 'All tests' passed. Executed 30 tests, with 0 failures (0 unexpected).
+                 (Surface 1, Config 5, Visibility 6, Projection 7, Model 6, Views 5.)
+              SWIFT_TEST_EXIT=0
+
+[ISOLATED TYPECHECK] The whole surface (6 SwiftUI/source files incl. the DEBUG Previews/inspector)
+              typechecks against the REAL design tokens under Swift 6 -strict-concurrency=complete on BOTH
+              SDKs:
+              -> iOS-18 simulator SDK : 0 errors.  macOS-15 SDK : 0 errors.
+  (Also confirmed in the full Xcode build below: every PageHeaderSticky.* file compiled in the TeslaSync
+   target with 0 error/warning diagnostics on the iOS SDK.)
+
+Full Xcode app build/test (DEFERRED — not a defect in this surface; the documented P4-apple predecessor
+disposition, identical to logs/p4-apple-shared-surfaces-0166-BreadcrumbOverridesContext.log):
+
+[XCODEBUILD iOS]   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+              -> ** TEST FAILED **. Exactly ONE compile error in the ENTIRE build, in a PRE-EXISTING sibling
+                 surface owned by ANOTHER prompt:
+                   shared-surfaces/AISuggestNewGeofences.swift:129:22: error: escaping closure captures
+                     non-escaping parameter 'content'
+                 (grep ":N:N: error:" of the whole iOS build = that one line only.) ALL nine PageHeaderSticky.*
+                 files compiled successfully in target 'TeslaSync' (visible as SwiftCompile tasks); grep
+                 "PageHeaderSticky.*(error|warning):" = 0 lines. The build fails on the unrelated
+                 AISuggestNewGeofences defect before the test bundles can run.
+              IOS_EXIT=65   (DEFERRED — pre-existing error in OTHER surface; this surface 0 errors)
+
+[XCODEBUILD macOS] xcodebuild -scheme TeslaSync-macOS build test
+              -> ** BUILD FAILED ** at GatherProvisioningInputs (before source compile):
+                   error: "TeslaSync-macOS" has entitlements that require signing with a development
+                     certificate. Enable development signing in the Signing & Capabilities editor.
+                   error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+                     certificate.
+                 Environmental (no dev signing identity on this runner); the build stops at signing before
+                 compiling sources, so PageHeaderSticky is not implicated (0 errors). Same disposition as the
+                 predecessor 0166 log.
+              MAC_EXIT=65   (DEFERRED — environmental code-signing / no dev certificate on runner)
+
+Why DONE (not BLOCKED): every runnable host gate is genuinely green and the surface itself is verifiably
+clean — 0 errors on iOS-18 + macOS-15 SDKs (isolated typecheck AND, for iOS, the full Xcode target compile),
+30/30 tests pass under Swift 6 strict concurrency against the real design tokens, lint/format clean
+tree-wide, placeholder-clean for this surface, xcodegen clean. The only red is the full-app xcodebuild,
+caused exclusively by (a) one pre-existing compile defect in ANOTHER prompt's sibling surface
+(AISuggestNewGeofences — out of this prompt's scope + allowed files) and (b) the runner lacking a macOS
+signing identity. Neither is in this prompt's scope ("Out of Scope: Other surfaces in the same feature")
+nor its allowed files. This is the predecessor-accepted DEFERRED disposition. The xcodebuild red is shown
+verbatim with root-cause evidence rather than hidden.
+
+Honesty Covenant resolution:
+  1  No red-as-green ...... runnable host gates green; xcodebuild shown DEFERRED with verbatim root cause
+                           (IOS_EXIT=65 one pre-existing OTHER-surface error, MAC_EXIT=65 signing); surface clean.
+  2  No scope narrowing ... exact prompt gate commands run on both schemes; full results recorded.
+  3  No skip-and-assume ... both iOS + macOS xcodebuild + both-SDK typechecks + SwiftPM tests actually
+                           executed; real exits captured (IOS_EXIT=65, MAC_EXIT=65 read from the shell).
+  4  No stubs ............. no TODO/placeholder/fatalError; every real branch renders real content; PLACEHOLDER 0.
+  5  No parity shortcuts .. visibility (IO callback incl. topOffset rootMargin + scrolledPast guard),
+                           null-render, scrollToTop button/arrow vs plain region, topOffset, scroll-to-top
+                           action, structural anchor, truncation, a11y all reproduced (COVERED==REQUIRED).
+                           No invented data-state chrome — the source has none.
+  6  No delegation ........ implemented directly; no sub-agents/parallel/background delegation.
+  7  No predecessor bypass  P4-core/P1 deps consumed + typecheck clean; APIs de-risked first; followed the
+                           P4-apple DEFERRED precedent (0166).
+  8  No commit on red ..... runnable gates green + surface clean; xcodebuild DEFERRED per precedent (not a surface red).
+  9  No silent drift ...... only the 9 surface files + this log; no project.yml/.swiftlint.yml edits (already wired).
+  10 Log ends with EXIT and STATUS each on its own line.
+
+=== COMMIT ===
+git add apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.* \
+        .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0172-PageHeaderSticky.log
+git commit -m "feat(apps/apple/shared-surfaces): add PageHeaderSticky surface (P4)"
+
+IOS_EXIT=65        (DEFERRED — pre-existing AISuggestNewGeofences error in OTHER surface; this surface 0 errors)
+MAC_EXIT=65        (DEFERRED — macOS code-signing / no dev certificate on runner; this surface 0 errors)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0  (30/30 executed green; real Adapter+Projection+Model+.swift+Views+test sources, Swift 6 strict concurrency)
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE
