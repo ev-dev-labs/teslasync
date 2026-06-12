@@ -960,6 +960,7 @@
   <string name="translation_analytics_weeklyDigest_estRangeAdded">Est. Range Added</string>
   <string name="translation_analytics_weeklyDigest_funFact">Fun Fact</string>
   <string name="translation_analytics_weeklyDigest_nextWeek">Next</string>
+  <string name="translation_analytics_weeklyDigest_noAlerts">No alerts this week — everything looks great!</string>
   <string name="translation_analytics_weeklyDigest_noDailyDistance">No driving distance data is available for this week.</string>
   <string name="translation_analytics_weeklyDigest_noData">No Data</string>
   <string name="translation_analytics_weeklyDigest_noTopDrive">No top drive is available for this week yet.</string>
