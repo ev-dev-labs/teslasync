@@ -1441,6 +1441,10 @@
     shared-surfaces/0197 HealthRow (repairing a merge=union multi-root corruption), plus the new HealthRow
     Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal
     build item or project start tag inside this comment.
+    Microsoft.UI-free sources on disk. Regenerated into this single canonical root for P2 shared-surfaces/0203
+    Accordion (repairing a merge=union multi-root corruption), adding the new Accordion Model / ViewModel links.
+    Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
+    this comment.
   -->
 
   <PropertyGroup>
@@ -2381,6 +2385,8 @@
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.Source.cs" Link="ModalsDialogs\WidgetSettingsModal.Source.cs" />
     <Compile Include="..\TeslaSync.App\modals-dialogs\WidgetSettingsModal.ViewModel.cs" Link="ModalsDialogs\WidgetSettingsModal.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActionItem.Model.cs" Link="SharedSurfaces\ActionItem.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Accordion.Model.cs" Link="SharedSurfaces\Accordion.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\Accordion.ViewModel.cs" Link="SharedSurfaces\Accordion.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Model.cs" Link="SharedSurfaces\ActiveFilterChips.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Source.cs" Link="SharedSurfaces\ActiveFilterChips.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.ViewModel.cs" Link="SharedSurfaces\ActiveFilterChips.ViewModel.cs" />
@@ -2483,6 +2489,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\BulkActionsToolbar.Model.cs" Link="SharedSurfaces\BulkActionsToolbar.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BulkActionsToolbar.Source.cs" Link="SharedSurfaces\BulkActionsToolbar.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BulkActionsToolbar.ViewModel.cs" Link="SharedSurfaces\BulkActionsToolbar.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\CarAnimation.Model.cs" Link="SharedSurfaces\CarAnimation.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\CarAnimation.ViewModel.cs" Link="SharedSurfaces\CarAnimation.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.Model.cs" Link="SharedSurfaces\ChartContainer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.Source.cs" Link="SharedSurfaces\ChartContainer.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ChartContainer.ViewModel.cs" Link="SharedSurfaces\ChartContainer.ViewModel.cs" />
@@ -2672,6 +2680,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\SuspenseProgressBoundary.Model.cs" Link="SharedSurfaces\SuspenseProgressBoundary.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SuspenseProgressBoundary.Source.cs" Link="SharedSurfaces\SuspenseProgressBoundary.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\SuspenseProgressBoundary.ViewModel.cs" Link="SharedSurfaces\SuspenseProgressBoundary.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SwipeRow.Model.cs" Link="SharedSurfaces\SwipeRow.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SwipeRow.Source.cs" Link="SharedSurfaces\SwipeRow.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SwipeRow.ViewModel.cs" Link="SharedSurfaces\SwipeRow.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TagInput.Model.cs" Link="SharedSurfaces\TagInput.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TagInput.Source.cs" Link="SharedSurfaces\TagInput.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\TagInput.ViewModel.cs" Link="SharedSurfaces\TagInput.ViewModel.cs" />
