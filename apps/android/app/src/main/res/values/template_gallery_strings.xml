@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App-owned strings (not part of the auto-generated i18n translation_* catalog).
+
+  The web TemplateGallery (web/src/features/dashboard/components/TemplateGallery.tsx) renders every
+  template title/description/chrome string via t('templates.…', '<English fallback>') — e.g.
+  t('templates.title', 'Dashboard Templates'), t('templates.default.desc', '…'). Those `templates.*`
+  keys do NOT exist in the web react-i18next catalog (web/src/i18n/{en,ar,he}.json), so the web app
+  renders the i18next *fallback* string in every locale. The neutral P1/S10 catalog (apps/shared/i18n,
+  generated into the translation_* resources) therefore has no matching key to bind, and that catalog
+  is auto-generated — it must never be hand-edited.
+
+  To keep the native surface free of hardcoded English while reproducing the web verbatim, those strings
+  live here as app-owned resources, mirroring the established preset_gallery_strings / nav_strings /
+  auth_strings pattern. They are English-only in values/ on purpose: Android falls back to values/ for
+  ar/he, which reproduces the web's missing-key fallback (English shown in every locale) exactly. The
+  "Back" button reuses the real catalog key translation_common_back (it exists), and the widget count
+  reuses the web "{{count}} widgets" plural-agnostic phrasing as a %1$s format string.
+
+  template_gallery_empty has no web counterpart: the web data is a static non-empty constant, so the web
+  never renders an empty gallery. It backs the native lifecycle "empty" state (a host feed could resolve
+  to zero templates) so the surface is never a blank box.
+-->
+<resources>
+    <string name="template_gallery_title">Dashboard Templates</string>
+    <string name="template_gallery_detail">Template Preview</string>
+    <string name="template_gallery_blank">Blank Dashboard</string>
+    <string name="template_gallery_blank_desc">Start from scratch and add widgets manually</string>
+    <string name="template_gallery_apply">Use This Template</string>
+    <string name="template_gallery_empty">No dashboard templates available</string>
+    <string name="template_gallery_widget_count">%1$s widgets</string>
+
+    <string name="template_gallery_name_default">Default</string>
+    <string name="template_gallery_name_commuter">Daily Commuter</string>
+    <string name="template_gallery_name_fleet_manager">Fleet Manager</string>
+    <string name="template_gallery_name_data_nerd">Data Nerd</string>
+    <string name="template_gallery_name_charging_focus">Charging Hub</string>
+    <string name="template_gallery_name_security_monitor">Security Monitor</string>
+    <string name="template_gallery_name_road_trip">Road Trip</string>
+    <string name="template_gallery_name_performance">Performance</string>
+    <string name="template_gallery_name_kiosk_wall">Wall Display</string>
+    <string name="template_gallery_name_minimal">Minimal</string>
+
+    <string name="template_gallery_desc_default">Balanced overview of vehicle status, battery, climate, and recent drives</string>
+    <string name="template_gallery_desc_commuter">Essentials for your daily drive — range, charging, climate, and security</string>
+    <string name="template_gallery_desc_fleet_manager">Fleet-wide metrics, drive history, and charging analytics</string>
+    <string name="template_gallery_desc_data_nerd">Live signals, energy flow, and deep telemetry data</string>
+    <string name="template_gallery_desc_charging_focus">Focus on charging status, costs, and energy flow</string>
+    <string name="template_gallery_desc_security_monitor">Keep an eye on doors, windows, sentry events, and location</string>
+    <string name="template_gallery_desc_road_trip">Everything you need for a long drive — range, weather, tires, and maps</string>
+    <string name="template_gallery_desc_performance">Track driving performance, efficiency, and vehicle health</string>
+    <string name="template_gallery_desc_kiosk_wall">Clean layout designed for always-on screens and kiosk mode</string>
+    <string name="template_gallery_desc_minimal">Just the essentials — battery, charging, climate, and navigation</string>
+</resources>
