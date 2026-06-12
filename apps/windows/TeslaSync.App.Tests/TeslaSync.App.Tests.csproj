@@ -463,6 +463,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ConditionBuilder\ConditionBuilder.Source.cs" Link="FeatureViews\ConditionBuilder\ConditionBuilder.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ConditionBuilder\ConditionBuilder.ViewModel.cs" Link="FeatureViews\ConditionBuilder\ConditionBuilder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ConflictWarnings\ConflictWarnings.Model.cs" Link="FeatureViews\ConflictWarnings\ConflictWarnings.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostAnalysisPage\CostAnalysisPage.Model.cs" Link="FeatureViews\CostAnalysisPage\CostAnalysisPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostAnalysisPage\CostAnalysisPage.Source.cs" Link="FeatureViews\CostAnalysisPage\CostAnalysisPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CostAnalysisPage\CostAnalysisPage.ViewModel.cs" Link="FeatureViews\CostAnalysisPage\CostAnalysisPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.Model.cs" Link="FeatureViews\CostForecastSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.Source.cs" Link="FeatureViews\CostForecastSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CostForecastSection.ViewModel.cs" Link="FeatureViews\CostForecastSection.ViewModel.cs" />

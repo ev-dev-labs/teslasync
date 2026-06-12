@@ -61,5 +61,14 @@
     "requiredCount": 51,
     "promptId": "p2-windows/W7/windows-page-battery-EnergyProductsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-EnergyProductsPage.log"
+  },
+  {
+    "unitId": "page:charging/CostAnalysis",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 7,
+    "requiredCount": 7,
+    "promptId": "p2-windows/W7/windows-page-charging-CostAnalysisPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-charging-CostAnalysisPage.log"
   }
 ]

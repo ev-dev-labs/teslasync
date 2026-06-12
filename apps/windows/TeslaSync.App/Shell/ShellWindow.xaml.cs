@@ -80,6 +80,8 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("TrueCostOwnership", static () => new FeatureViews.Analytics.TrueCostPage());
         // Analytics / Weekly digest page (P2/W7) — parity port of web WeeklyDigestPage at route /weekly-digest.
         _viewModel.PageFactory.Register("WeeklyDigest", static () => new FeatureViews.Analytics.WeeklyDigestPage());
+        // Charging / Cost analysis page (P2/W7) — parity port of web CostAnalysisPage at route /charging/costs.
+        _viewModel.PageFactory.Register("CostAnalysis", static () => new FeatureViews.Charging.CostAnalysisPage());
 
         // Analytics / Year-in-Review story player (P2/W7) — parity port of web YearReviewPage at route
         // /year-review/:year. The route year is read from the live match and close/Esc maps to back-navigation
@@ -88,12 +90,16 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Review.YearReviewPage(ParseYearParam(_viewModel.Current.Param("year")));
             page.CloseRequested += (_, _) => GoBack();
+            return page;
+        });
 
         // Automations / list page (P2/W7) — parity port of web AutomationListPage at route /automations/list.
         _viewModel.PageFactory.Register("AutomationList", () =>
         {
             var page = new FeatureViews.Automations.AutomationListPage();
             page.NavigationRequested += (_, e) => NavigateTo(e.Route);
+            return page;
+        });
 
         // Automations hub page (P2/W7) — parity port of web AutomationsListPage at route /automations.
         _viewModel.PageFactory.Register("Automations", () =>

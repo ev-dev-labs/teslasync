@@ -1,0 +1,122 @@
+=== p2-windows · W7 · page:charging/CostAnalysis (WinUI 3 / Fluent) ===
+Parity unit : page:charging/CostAnalysis   kind=page   web route=/charging/costs
+Web source  : web/src/features/charging/pages/CostAnalysisPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the cache-then-network data port, also Microsoft.UI-free),
+  <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view).
+  The generated prompt's idealized "CostAnalysisPage.xaml + CostAnalysisPageViewModel.cs under
+  TeslaSync/Features/Charging" is mapped onto these real conventions; the surface registers itself with the W4
+  ShellPageFactory by route name ("CostAnalysis"), which RouteTable.cs already maps to /cost-analysis and the
+  /charging/costs hidden deep link.
+- Data source 1 (web useChargingSessionsPaginated · GET /charging/sessions?vehicle_id=…): ported as the
+  Microsoft.UI-free ICostAnalysisSessionsSource. The repository-backed CostAnalysisSessionsSource resolves the
+  scoped/primary vehicle via the shared IWidgetVehicleSource (native useSelectedVehicle) and runs one
+  cache-then-network read of the generated operation Operations.Charging.Sessions through the shared
+  CacheThenNetworkEngine (cacheKey charging:{id}:cost-analysis), parsing each emission into a tolerant
+  CostAnalysisSession list via CostAnalysisResultMapper. The session count gates the page's loading/empty/
+  success states exactly as the web page's `if (isLoading) … if (!sessions || length === 0) … else …`.
+- Data source 2 (web useCostForecast · GET /analytics/cost-forecast [vehicle_id, months]): in the native
+  architecture the forecast fetch lives inside the self-fetching CostForecastSection / ForecastDetails child
+  surfaces (each with its own repository-backed Source), so the page realises useCostForecast by composing
+  those children rather than re-fetching at the page level. No HTTP touches the page view.
+- The page is the single aggregation owner the web page is: CostAnalysisAggregator (a Microsoft.UI-free port
+  of the chart-feeding slice of web useCostAnalysisData) folds the session list into the four presentational
+  chart models — the monthly cost buckets, the per-session cost-per-kWh trend and the charger-type breakdown —
+  that the MonthlyCostChart / CostPerKwhChart / ChargerTypeBreakdown / MonthlyCostTable children render. SI
+  energy is converted to display kWh only at aggregation time (watt-hours ÷ 1000, the web
+  convertEnergyFromSI(wh,'kWh') boundary); cost is the account currency. The default gas price ($3.50/gal) and
+  efficiency (30 mpg) from constants.ts seed the monthly gas-equivalent line so the first paint matches the web.
+- Section composition (web order/grouping, every <GlassPanel>/region reproduced): the success layout composes
+  the existing Fluent child surfaces — CostSummaryCards; [MonthlyCostChart | CostPerKwhChart]; ChargerTypeBreakdown;
+  SavingsCalculator; MonthlyCostTable; TimeOfUseAnalysis; CostForecastSection + ForecastDetails (useCostForecast);
+  [LifetimeSummary | EnvironmentalImpact]. The seven self-fetching surfaces are built via their Create(deps)
+  factories from a CostAnalysisSurfaceDependencies bundle; the four presentational charts are fed the
+  page-computed models. The parameterless CostAnalysisPage() defaults to EmptyCostAnalysisSessionsSource (renders
+  the empty state) — the established W7 default-feed pattern — while CostAnalysisPage(source, localizer, deps)
+  drives the full loading/empty/error/success matrix for DI hosts and the headless tests.
+- AICostForecastNarration (web import @/components/ai/AICostForecastNarration) has no W3 component port in-repo
+  (the only AI narration surfaces are AITCONarration / AIYearReviewNarration); it is a separate cross-cutting AI
+  parity unit and is therefore out of this page's composition scope. This does not narrow the page's declared
+  parity (the 7 manifest items + the two data sources are all delivered).
+- Catalog: 3 of the 4 page-level i18n keys already existed verbatim in Strings/{en,ar,he}/Resources.resw
+  (translation.costAnalysis.{title,subtitle,empty.title}). ONE key was missing and was added, in sorted
+  position, to all three locale catalogs (en/ar/he): translation.costAnalysis.empty.message (English text
+  seeded; resolves verbatim via ILocalizer / the web key name).
+- Pre-existing build-blocker fixed (required to verify this page): the W4 shell registration constructor
+  ShellWindow.xaml.cs carried two malformed lambdas in the committed baseline — the "YearReview" and
+  "AutomationList" PageFactory.Register lambdas were missing their `return page; });` closure (confirmed
+  pre-existing via `git diff`: this prompt's only registration line is +2). The whole App C# assembly therefore
+  failed to compile (CS1026 at the constructor's closing brace), which in turn crashed the XAML markup compiler
+  (WMC9999) with a cascade of "unknown type" errors. The two obviously-intended closures were completed
+  (matching the adjacent, well-formed "Automations" lambda) — a behaviour-neutral fix returning the
+  already-constructed page — so the file/assembly compiles and the gate can run.
+
+=== PARITY ===
+PARITY_REQUIRED=7
+
+# Data states (3) — loading / empty / success, each a visible region (never blank)
+[x] state  - loading -> CostAnalysisState.Loading + CostAnalysisPageViewModel.SetLoading; rendered
+             CostAnalysisPage.cs#_loadingPanel (BuildLoadingSkeleton: header + 6 metric cards + 2 charts + table,
+             the native LoadingSkeleton.tsx mirror); test ViewModel_loading_only_stays_loading
+[x] state  - empty   -> CostAnalysisState.Empty + ViewModel.SetEmpty (web `!sessions || length === 0` AND the
+             LoadStatus.Empty / no-vehicle disabled-query branch both collapse here); rendered
+             CostAnalysisPage.cs#_emptyPanel hosting _emptyState (TsEmptyState, Title=Display.EmptyTitle,
+             Message=Display.EmptyMessage); tests ViewModel_empty_session_list_renders_empty +
+             ViewModel_empty_status_renders_empty + Empty_source_yields_empty_result
+[x] state  - success -> CostAnalysisState.Loaded/Stale/Offline + ViewModel.ApplySnapshot; rendered
+             CostAnalysisPage.cs#_contentPanel (EnsureContentBuilt composes the seven Create(deps) child
+             surfaces + the four presentational charts fed from ViewModel.Charts = CostAnalysisAggregator.Build);
+             freshness chip reflects stale/offline; tests ViewModel_loaded_with_sessions_renders_success /
+             _stale_cache_renders_stale_with_content / _offline_renders_offline_with_content_and_error /
+             _folds_loading_cached_loaded_to_loaded / _raises_property_changed_for_state_and_charts
+
+# Strings (4) — every page-level literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - costAnalysis.title         -> CostAnalysisRegistration.Title / CostAnalysisProjection.Project
+             localizer.GetString("costAnalysis.title", "Cost Analysis")            [catalog row existed en/ar/he]
+[x] string - costAnalysis.subtitle      -> CostAnalysisRegistration.Subtitle localizer.GetString(
+             "costAnalysis.subtitle", "Electricity cost trends, gas savings, and charging economics")
+             [catalog row existed en/ar/he]
+[x] string - costAnalysis.empty.title   -> CostAnalysisRegistration.EmptyTitle localizer.GetString(
+             "costAnalysis.empty.title", "No Charging Data")                       [catalog row existed en/ar/he]
+[x] string - costAnalysis.empty.message -> CostAnalysisRegistration.EmptyMessage localizer.GetString(
+             "costAnalysis.empty.message", "Start charging your vehicle to see cost analysis and savings
+             trends.")                                                             [catalog row ADDED en/ar/he]
+
+PARITY_COVERED=7
+# Coverage asserted headlessly by CostAnalysisPageTests (31 cases): Projection_resolves_every_required_string_key
+# records all four keys through a RecordingLocalizer and Projection_uses_web_fallbacks pins their values; the
+# loading/empty/success state tests assert each state renders from the bound CostAnalysisPageViewModel; the
+# aggregator tests (monthly buckets, cost-per-kWh trend, charger-type breakdown, charger categorization, gas
+# equivalent, empty) pin the four presentational chart models the success layout feeds its chart children.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/CostAnalysisPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Charging path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Warning(s) 0 Error(s)
+#   (after completing the pre-existing YearReview/AutomationList shell-registration lambda closures)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no files require formatting
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26277, Failed: 0, Skipped: 0
+#   (incl. 31 new CostAnalysisPageTests cases)
+TEST_EXIT=0
+PARITY_COVERED=7
+PARITY_REQUIRED=7
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/CostAnalysisPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/CostAnalysisPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-charging-CostAnalysisPage.log
+# git commit -m "feat(apps/windows): CostAnalysisPage at web parity (W7 charging)"
+
+EXIT=0
+STATUS=DONE

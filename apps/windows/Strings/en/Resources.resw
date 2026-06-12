@@ -7077,6 +7077,9 @@
   <data name="translation.costAnalysis.charts.rateLabel" xml:space="preserve">
     <value>$/kWh</value>
   </data>
+  <data name="translation.costAnalysis.empty.message" xml:space="preserve">
+    <value>Start charging your vehicle to see cost analysis and savings trends.</value>
+  </data>
   <data name="translation.costAnalysis.empty.title" xml:space="preserve">
     <value>No Charging Data</value>
   </data>
