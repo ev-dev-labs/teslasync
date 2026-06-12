@@ -3375,6 +3375,9 @@
   <data name="translation.automations.allVehicles" xml:space="preserve">
     <value>All vehicles</value>
   </data>
+  <data name="translation.automations.autoDisabledWarning" xml:space="preserve">
+    <value>{0} automation(s) have been auto-disabled due to repeated failures.</value>
+  </data>
   <data name="translation.automations.avgDuration" xml:space="preserve">
     <value>avg</value>
   </data>
@@ -3711,6 +3714,9 @@
   <data name="translation.automations.empty" xml:space="preserve">
     <value>No automations yet. Create a typed automation to get started!</value>
   </data>
+  <data name="translation.automations.empty.cta" xml:space="preserve">
+    <value>Create automation</value>
+  </data>
   <data name="translation.automations.export" xml:space="preserve">
     <value>Export</value>
   </data>
@@ -3720,11 +3726,20 @@
   <data name="translation.automations.filterStatus" xml:space="preserve">
     <value>Filter by status</value>
   </data>
+  <data name="translation.automations.filters.all" xml:space="preserve">
+    <value>All</value>
+  </data>
   <data name="translation.automations.firing" xml:space="preserve">
     <value>Firing</value>
   </data>
   <data name="translation.automations.import" xml:space="preserve">
     <value>Import</value>
+  </data>
+  <data name="translation.automations.importFailedWithReason" xml:space="preserve">
+    <value>Typed automation import failed: {0}</value>
+  </data>
+  <data name="translation.automations.importTypedEnvelopeRequired" xml:space="preserve">
+    <value>Import a typed TeslaSync CTI automation export file. Legacy automation exports are rejected rather than translated.</value>
   </data>
   <data name="translation.automations.importUnknownError" xml:space="preserve">
     <value>Unknown error</value>
@@ -3749,6 +3764,9 @@
   </data>
   <data name="translation.automations.noMatch" xml:space="preserve">
     <value>No automations match your filters</value>
+  </data>
+  <data name="translation.automations.noMatch.cta" xml:space="preserve">
+    <value>Reset filters</value>
   </data>
   <data name="translation.automations.presets.actionCount" xml:space="preserve">
     <value>{0} actions</value>

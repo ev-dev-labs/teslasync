@@ -90,6 +90,12 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Automations.AutomationListPage();
             page.NavigationRequested += (_, e) => NavigateTo(e.Route);
+
+        // Automations hub page (P2/W7) — parity port of web AutomationsListPage at route /automations.
+        _viewModel.PageFactory.Register("Automations", () =>
+        {
+            var page = new FeatureViews.Automations.AutomationsListPage();
+            page.NavigationRequested += (_, e) => NavigateTo(e.Path);
             return page;
         });
         ReauthBannerHost.Content = _authBanner;
