@@ -305,3 +305,4 @@ p3-android/feature-views/A-0056-DrivingTab.prompt.md
 p3-android/feature-views/A-0054-ChargingTab.prompt.md
 p3-android/feature-views/A-0057-DrivingTemperatureStats.prompt.md
 p3-android/feature-views/A-0059-OverviewTab.prompt.md
+p3-android/feature-views/A-0058-HeroGauges.prompt.md
