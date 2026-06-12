@@ -1008,6 +1008,8 @@
     },
     "curve": {
       "chargerType": "Charge Rate by Charger Type",
+      "chargerTypeAria": "Composed bar/line chart of average power and energy per charger type",
+      "chargerTypeDesc": "Average kW and kWh per charger category",
       "avgPower": "Avg Power",
       "avgEnergy": "Avg Energy",
       "sessions": "sessions",

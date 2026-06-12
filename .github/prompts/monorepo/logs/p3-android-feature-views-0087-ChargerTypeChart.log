@@ -1,0 +1,107 @@
+=== P3 Feature view 0087 ChargerTypeChart (Android) ===
+
+Artifact: apps/android/app/src/main/java/com/teslasync/feature-views/ChargerTypeChart/{ChargerTypeChart.kt, ChargerTypeChartModel.kt}
+Tests:    apps/android/app/src/test/java/io/teslasync/android/featureviews/chargertypechart/ChargerTypeChartProjectionTest.kt
+          apps/android/app/src/androidTest/java/io/teslasync/android/featureviews/chargertypechart/ChargerTypeChartUiTest.kt
+Web spec: web/src/features/charging/components/charging-curve/ChargerTypeChart.tsx
+
+----------------------------------------------------------------------
+CAPABILITY (Jetpack Compose + Material 3, Kotlin 2.2.x) — AVAILABLE
+----------------------------------------------------------------------
+- JDK 21.0.9 (Android Studio jbr); ANDROID_HOME set; Gradle 8.14.5.
+- Baseline `:android:assembleRelease` (pre-change) = BUILD SUCCESSFUL (2m34s).
+- Compose/Material3/Vico/KMP-shared-core all resolve and compile. NOT blocked.
+
+----------------------------------------------------------------------
+GATE NOTES (transparency — Honesty Covenant #9 no silent drift)
+----------------------------------------------------------------------
+1. Module path: the prompt's gate text addresses `:app:`, but the Gradle module
+   in this repo is `:android:` (settings.gradle.kts: include(":android"),
+   projectDir=app; comment: "every P3/A* prompt gate addresses `:android:`").
+   `:app:` does not resolve ("project 'app' not found"); the canonical
+   `:android:` tasks were run instead — same build, correct module.
+2. Execution mode: this is a SHARED runner; an external process repeatedly issued
+   the Gradle daemon "stop command" mid-build ("Daemon is stopping immediately
+   stop command received"), aborting daemon-backed runs at the final tasks.
+   Re-run with `--no-daemon` (single-use JVM) completed cleanly. This changes only
+   HOW the JVM is hosted, not WHAT is compiled/tested/linted.
+3. Pre-existing repo conditions (NOT introduced by this artifact, NOT in this gate):
+   - i18n catalog drift: `gen-i18n.ts --check` reports 11 generated files already
+     drifted from web/src/i18n (en.json has 7796 grouped entries vs committed
+     strings.xml 7779) BEFORE this change. A full regen is P1/S10 + cross-platform
+     scope (also rewrites Apple/Windows). This artifact therefore added only its two
+     required keys to the source (en.json) AND the three Android catalogs
+     (values, values-ar, values-he) in sorted position — scoped, forward-stable.
+   - `compileDebugAndroidTestKotlin` fails on OTHER surfaces' UI tests
+     (BatteryCellsWidgetUiTest, DriveEfficiencyChartWidgetUiTest, ... 9 files) which
+     carry an invalid `import androidx.compose.ui.test.assertExists` /
+     `assertDoesNotExist`. The per-surface gate runs `testReleaseUnitTest`
+     (JVM unit tests), which does NOT compile androidTest, so this is outside the
+     gate. This artifact's ChargerTypeChartUiTest uses `.assertExists()` as a
+     member call (no bad import), matching the working XRay/Sentry sibling pattern;
+     it is NOT among the failing files and ktlint passed over the androidTest set.
+
+----------------------------------------------------------------------
+GATE EXECUTION (clean run, --no-daemon, final code)
+----------------------------------------------------------------------
+$ ./gradlew :android:assembleRelease :android:testReleaseUnitTest ktlintCheck detekt --no-daemon --console=plain
+
+> Task :android:assembleRelease
+> Task :android:testReleaseUnitTest
+> Task :android:runKtlintCheckOverMainSourceSet
+> Task :android:runKtlintCheckOverTestSourceSet UP-TO-DATE
+> Task :android:runKtlintCheckOverAndroidTestSourceSet UP-TO-DATE
+> Task :android:detekt
+BUILD SUCCESSFUL in 9m
+86 actionable tasks: 19 executed, 67 up-to-date
+
+BUILD_EXIT=0     (:android:assembleRelease)
+TEST_EXIT=0      (:android:testReleaseUnitTest)
+LINT_EXIT=0      (ktlintCheck + detekt; main/test/androidTest source sets)
+
+Unit test (off-device, runs in the gate):
+  io.teslasync.android.featureviews.chargertypechart.ChargerTypeChartProjectionTest
+  tests=13 failures=0 errors=0 skipped=0
+    - classifyTreatsAnyTeslaChargerAsSupercharger
+    - classifyTreatsOtherNonEmptyTypeAsDcFast
+    - classifyUsesPeakPowerHeuristicWhenTypeIsAbsent
+    - durationMinutesRoundsToWholeMinutes
+    - durationMinutesAcceptsOffsetAndZonelessTimestamps
+    - durationMinutesReturnsZeroForOpenInvalidOrNonPositiveRanges
+    - avgComputesMeanAndZeroForEmpty
+    - aggregateGroupsByCategoryPreservingOrderWithAverages
+    - aggregateTreatsMissingPeakPowerAsZeroKw
+    - aggregateReturnsEmptyForNoSessions
+    - projectBuildsLabelsSeriesTableAndBreakdownInOrder
+    - projectReturnsEmptyResultForNoSessions
+    - recordOpenedEmitsPiiSafeViewOpenedWithSurfaceSlug
+
+UI / a11y test (on-device androidTest; exercises every state + label):
+  io.teslasync.android.featureviews.chargertypechart.ChargerTypeChartUiTest
+    loading / error+retry / empty / content (aria + data table + legend + breakdown)
+    / offline (cached + Offline chip) / stale (auto-refresh). Compiles via the
+    working sibling pattern; not run here (no emulator; outside testReleaseUnitTest).
+
+----------------------------------------------------------------------
+PLACEHOLDER / STUB GATE (ADR-011)
+----------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/java/com/teslasync/feature-views/ChargerTypeChart
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------
+PARITY SUMMARY (web -> native)
+----------------------------------------------------------------------
+- ChartContainer (title/subtitle/aria fallback table/loading+empty/export chrome) -> components.charts.ChartContainer.
+- ComposedChart 2 bar series (avgKw, avgKwh) -> BarChartWrapper(power token, energy token) + ChartLegend.
+- chargerTypeStats useMemo (group-by getChargerLabel; count/avgKw/avgKwh/avgDuration) -> ChargerTypeChartProjection.aggregate (LinkedHashMap order-preserving).
+- getChargerLabel / durationMinutes / avg -> classify / durationMinutes / avg (unit-tested).
+- Per-charger breakdown footer (dot + label + "{count} sessions · {avgDuration} min avg") -> ChargerTypeBreakdown; dot color = web CHARGER_COLORS[label] ?? CHART_COLORS[3] (Supercharger->chart.temperature #EF4444; others->paletteColor(3) #F0E442).
+- States: loading / error+retry / empty / content / stale / offline — all rendered, none hidden.
+- i18n: all charging.curve.* + charging.chargerTypes.* keys resolve via P1/S10; new chargerTypeDesc + chargerTypeAria added to source + Android catalogs.
+- Diagnostics: view.opened {surface: ChargerTypeChart} (P1/S11).
+- SI on the wire (peakPowerW / totalEnergyAddedWh); kW/kWh is a display-boundary /1000 only.
+
+EXIT=0
+STATUS=DONE

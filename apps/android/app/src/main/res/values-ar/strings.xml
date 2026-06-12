@@ -1694,6 +1694,8 @@
   <string name="translation_charging_curve_avgKw">Avg kW</string>
   <string name="translation_charging_curve_avgPower">Avg Power</string>
   <string name="translation_charging_curve_chargerType">Charge Rate by Charger Type</string>
+  <string name="translation_charging_curve_chargerTypeAria">Composed bar/line chart of average power and energy per charger type</string>
+  <string name="translation_charging_curve_chargerTypeDesc">Average kW and kWh per charger category</string>
   <string name="translation_charging_curve_col_acAvgKw">AC Avg kW</string>
   <string name="translation_charging_curve_col_avg10to80">10→80% avg min</string>
   <string name="translation_charging_curve_col_avg20to80">20→80% avg min</string>
