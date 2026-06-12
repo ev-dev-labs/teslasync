@@ -506,3 +506,4 @@ p3-android/feature-views/A-0257-TeslaApiUsageCard.prompt.md
 p3-android/feature-views/A-0259-UpdateAvailableCallout.prompt.md
 p3-android/feature-views/A-0253-SLOTrackingCard.prompt.md
 p3-android/feature-views/A-0256-TelemetryPipelineCard.prompt.md
+p3-android/feature-views/A-0264-SignalCatalogPanel.prompt.md
