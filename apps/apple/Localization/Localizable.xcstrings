@@ -1,6 +1,182 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "playground.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API Playground"
+          }
+        }
+      }
+    },
+    "playground.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explore and test TeslaSync API endpoints"
+          }
+        }
+      }
+    },
+    "playground.selectEndpoint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select an endpoint from the sidebar to start testing"
+          }
+        }
+      }
+    },
+    "playground.endpointCount": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld endpoints available"
+          }
+        }
+      }
+    },
+    "playground.endpointsTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoints"
+          }
+        }
+      }
+    },
+    "playground.noEndpoints": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No endpoints available"
+          }
+        }
+      }
+    },
+    "playground.loading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading endpoints…"
+          }
+        }
+      }
+    },
+    "playground.errorTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't load the API catalog"
+          }
+        }
+      }
+    },
+    "playground.errorMessage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The API catalog could not be loaded. Check your connection and try again."
+          }
+        }
+      }
+    },
+    "playground.detail.method": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Method"
+          }
+        }
+      }
+    },
+    "playground.detail.path": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Path"
+          }
+        }
+      }
+    },
+    "playground.detail.tag": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category"
+          }
+        }
+      }
+    },
+    "playground.a11y.sidebar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API endpoints list"
+          }
+        }
+      }
+    },
+    "playground.a11y.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint details"
+          }
+        }
+      }
+    },
+    "route.apiPlayground": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API Playground"
+          }
+        }
+      }
+    },
+    "spotlight.route.apiPlayground.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explore and test TeslaSync API endpoints"
+          }
+        }
+      }
+    },
     "widget.drivetrainHealth.accessibility.refresh": {
       "extractionState": "manual",
       "localizations": {
