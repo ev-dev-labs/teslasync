@@ -497,3 +497,4 @@ p3-android/feature-views/A-0249-LiveStatusPill.prompt.md
 p3-android/feature-views/A-0242-DataPipelineSection.prompt.md
 p3-android/feature-views/A-0248-InfrastructureSection.prompt.md
 p3-android/feature-views/A-0251-ScheduledMaintenanceCard.prompt.md
+p3-android/feature-views/A-0252-ServiceHealthSection.prompt.md
