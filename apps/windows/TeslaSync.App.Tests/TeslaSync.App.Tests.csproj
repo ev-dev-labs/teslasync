@@ -6,19 +6,10 @@
     dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
     (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so
     each surface's Microsoft.UI-free sources are Compile-linked into the single, case-insensitive ordinal
-    path-sorted, Include-deduplicated ItemGroup below (the Link mirrors each source's real location under
+    path-sorted, Include-deduplicated item group below (the Link mirrors each source's real location under
     Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are
     excluded and exercised by the app build, and the test classes are picked up by the SDK default-compile
     glob. The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures.
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
-    logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for each dashboard-widget,
-    feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI TFM
-    and cannot be project-referenced from a plain net10.0 test host, so each surface's Microsoft.UI-free sources are
-    Compile-linked into the single ItemGroup below (the Link mirrors each source's real location under Widgets,
-    FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are excluded and
-    exercised by the app build. The matching test classes live under this project and are picked up by the SDK
-    default-compile glob. The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures
-    the tests read out of the test output directory.
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
     Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk under
@@ -89,6 +80,14 @@
     LiveStaleDataBanner (repairing a merge=union multi-root corruption) from the WinUI-free sources on disk, plus the
     new LiveStaleDataBanner Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never
     write a literal build-item or project start tag inside this comment.
+    Include-deduplicated item group - the union of every Microsoft.UI-free .cs on disk under
+    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file
+    carries the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it
+    into multiple Project roots plus duplicate items, failing XML load (MSB4025 / MSB4067); regenerate it
+    directly from the WinUI-free sources on disk. Regenerated into this single canonical Project root for P2
+    shared-surfaces/0133 QueryError (repairing a merge=union multi-root corruption), plus the new QueryError
+    Model / Source / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal
+    build-item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -1172,6 +1171,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\EmptyStateThreshold\EmptyStateThreshold.Model.cs" Link="SharedSurfaces\EmptyStateThreshold\EmptyStateThreshold.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\EmptyStateThreshold\EmptyStateThreshold.Source.cs" Link="SharedSurfaces\EmptyStateThreshold\EmptyStateThreshold.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\EmptyStateThreshold\EmptyStateThreshold.ViewModel.cs" Link="SharedSurfaces\EmptyStateThreshold\EmptyStateThreshold.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ErrorDisplay.Model.cs" Link="SharedSurfaces\ErrorDisplay.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ErrorDisplay.Source.cs" Link="SharedSurfaces\ErrorDisplay.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ErrorDisplay.ViewModel.cs" Link="SharedSurfaces\ErrorDisplay.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Model.cs" Link="SharedSurfaces\FreshnessIndicator.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.Source.cs" Link="SharedSurfaces\FreshnessIndicator.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FreshnessIndicator.ViewModel.cs" Link="SharedSurfaces\FreshnessIndicator.ViewModel.cs" />
@@ -1211,6 +1213,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\Pressure.Model.cs" Link="SharedSurfaces\Pressure.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Pressure.Source.cs" Link="SharedSurfaces\Pressure.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Pressure.ViewModel.cs" Link="SharedSurfaces\Pressure.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\QueryError.Model.cs" Link="SharedSurfaces\QueryError.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\QueryError.Source.cs" Link="SharedSurfaces\QueryError.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\QueryError.ViewModel.cs" Link="SharedSurfaces\QueryError.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Range.Model.cs" Link="SharedSurfaces\Range.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Range.ViewModel.cs" Link="SharedSurfaces\Range.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" />
