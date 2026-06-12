@@ -84,6 +84,12 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Review.YearReviewPage(ParseYearParam(_viewModel.Current.Param("year")));
             page.CloseRequested += (_, _) => GoBack();
+
+        // Automations / list page (P2/W7) — parity port of web AutomationListPage at route /automations/list.
+        _viewModel.PageFactory.Register("AutomationList", () =>
+        {
+            var page = new FeatureViews.Automations.AutomationListPage();
+            page.NavigationRequested += (_, e) => NavigateTo(e.Route);
             return page;
         });
         ReauthBannerHost.Content = _authBanner;

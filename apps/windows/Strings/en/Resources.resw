@@ -3324,6 +3324,12 @@
   <data name="translation.automationList.bulk.delete" xml:space="preserve">
     <value>Delete</value>
   </data>
+  <data name="translation.automationList.bulk.deleteConfirm.body" xml:space="preserve">
+    <value>Selected automations will stop running and be removed permanently. This cannot be undone.</value>
+  </data>
+  <data name="translation.automationList.bulk.deleteConfirm.title" xml:space="preserve">
+    <value>Delete automations?</value>
+  </data>
   <data name="translation.automationList.bulk.disable" xml:space="preserve">
     <value>Disable</value>
   </data>
@@ -3342,6 +3348,9 @@
   <data name="translation.automationList.col.status" xml:space="preserve">
     <value>Status</value>
   </data>
+  <data name="translation.automationList.empty.body" xml:space="preserve">
+    <value>Create your first automation in the builder.</value>
+  </data>
   <data name="translation.automationList.empty.cta" xml:space="preserve">
     <value>Open builder</value>
   </data>
@@ -3356,6 +3365,9 @@
   </data>
   <data name="translation.automationList.selectAutomation" xml:space="preserve">
     <value>Select automation {0}</value>
+  </data>
+  <data name="translation.automationList.subtitle" xml:space="preserve">
+    <value>Bulk-manage automations. Click an automation to edit it in the builder.</value>
   </data>
   <data name="translation.automationList.title" xml:space="preserve">
     <value>Automations (list)</value>
