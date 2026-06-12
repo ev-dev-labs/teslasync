@@ -1,0 +1,256 @@
+=== P4 Shared surface 0150 CurrencyInput (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — shared parallel runner, slot-105.
+  Xcode              : 26.5 (Build 17F42) — /Applications/Xcode.app/Contents/Developer.
+  Toolchain          : swift 6.3.2 · swiftlint (--strict) · swiftformat (--lint) · xcodegen 2.45.4 · pwsh 7.
+  Destinations       : iOS 18 simulator (iPhone 16, booted) + macOS 15 SDK present.
+  KMP core           : Shared.xcframework STAGED on this worktree — apps/shared/gradlew
+                       :core:assembleSharedXCFramework => "BUILD SUCCESSFUL in 9m 1s", release artifact copied to
+                       apps/apple/Frameworks/Shared.xcframework (Info.plist + ios-arm64 + ios-arm64-simulator +
+                       macos-arm64). This is STRONGER than the predecessor surfaces, which could not stage it.
+  Capability         : SwiftUI present; this surface uses NO Swift Charts / MapKit (web "Charts/maps used: none").
+                       CurrencyInput is a presentational, controlled form field — the native parity needs only
+                       SwiftUI + Foundation + Observation + os. => NOT capability-BLOCKED. The surface is
+                       INDEPENDENTLY VERIFIED on this runner (typecheck iOS 18 + macOS 15, a real Swift 6 XCTest
+                       run of 57 cases, lint/format/placeholder, xcodegen membership). The full-app xcodebuild is
+                       DEFERRED on PRE-EXISTING, code-unrelated failures in OTHER parallel agents' sibling surfaces
+                       + macOS signing (see DEFERRED), per the repo's sanctioned "code-complete + DEFERRED Xcode
+                       gate" disposition used by every P4 surface (FormatterPrefsBridge 0146 et al.).
+
+WEB SOURCE (the specification) — components/forms/CurrencyInput.tsx (+ lib/currencyFormat.ts)
+  CurrencyInput.tsx — a controlled, currency-aware number field built on <Input>:
+    • Stores its value in integer MICRO-units (1 major unit = 1_000_000) so currencies with 0/2/3/4 fractional
+      digits round-trip without floating-point loss (valueToMicro / microToValue).
+    • Renders the value via Intl.NumberFormat style:'currency' (symbol/position/decimal per locale: "$1.50" vs
+      "1,50 €" vs "£1.50") with useGrouping:false for the editable field; nil/non-finite -> "".
+    • Shows the localized currency symbol as a leading aria-hidden icon adornment (currencySymbol).
+    • Parses typed text on blur / Enter: strips the localized symbol on either side, the literal ISO code
+      ("USD 1.50"), locale group separators ("1,234.56" / "1.234,56" / "1 234,56"), accounting parentheses for
+      negatives ("($1.50)" -> -1.5); commits the canonical micro then renormalises the display.
+    • Focus guard: re-syncs the local text buffer from the parent's valueMicro ONLY when the field is NOT focused,
+      so an external change never clobbers in-progress typing. inputMode=decimal, autoComplete=off, aria-label.
+  lib/currencyFormat.ts — valueToMicro/microToValue (MICRO_SCALE 1e6, Math.round), formatCurrencyValue/Micro
+    (Intl currency, clampPrecision [0,20] default 2, code-prefixed fallback on RangeError), currencySymbol
+    (formatToParts), currencyCodeFromSymbol (symbol->ISO table), parseCurrencyText/ToMicro, parseLocaleNumber
+    (locale group/decimal separators; space-like group separators stripped).
+  i18n keys extracted from source — the documented canonical ariaLabel "Electricity Cost (per kWh)".
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/CurrencyInput.*, 9 .swift + 1 .strings = 10 files, 1792 lines)
+  CurrencyInput.Adapter.swift   293  Resolve typealias, Meta (slug "CurrencyInput", defaults), Micro
+                                     (valueToMicro/microToValue), Formatter (clampPrecision, resolveLocale, format/
+                                     formatMicro, symbol, code(fromSymbol) table, parse/parseToMicro,
+                                     parseLocaleNumber; .halfUp rounding for Intl parity; code-prefixed fallback),
+                                     Accessibility (composed field label). Pure Foundation.
+  CurrencyInput.Model.swift     291  Telemetry seam + OSLog default (view.opened), Connection (live/stale/offline),
+                                     Input snapshot, Resolved (phase loading/ready/error + display/symbol/empty/
+                                     required/disabled), pure Projection, @Observable Model (start/stop/refresh,
+                                     once-only telemetry, editing buffer + focus guard, commit write-back, stale
+                                     rising-edge auto-refresh), Strings facade (P1/S10).
+  CurrencyInput.Seams.swift     127  Source protocol (P1/S8) + Live (update + commit write-back via onCommit, the
+                                     web onChange) + InMemory (records commits / push; lifecycle counts).
+  CurrencyInput.Views.swift     182  Field chrome, the editable field (symbol adornment + decimal TextField + focus
+                                     begin/commit + Enter submit + aria-label + disabled), the labelled ready body
+                                     with the "not set" hint, the freshness chip.
+  CurrencyInput.States.swift     70  Loading skeleton field + error tile with retry (web QueryError peer).
+  CurrencyInput.swift            97  public surface View `CurrencyInputField` (phase switch + freshness chip +
+                                     onAppear/onDisappear lifecycle) + web-signature convenience init;
+                                     surfaceSlug = "CurrencyInput".
+  CurrencyInput.Previews.swift  121  #if DEBUG previews: ready USD / ready empty (required) / EUR de-DE / GBP en-GB /
+                                     loading / error / stale / offline.
+  CurrencyInput.Tests.swift     345  Pure: Micro round-trip, symbol (+fallback), format ($1.50 / 1,50 € / £1.50 /
+                                     precision-4 $0.1235 / nil / code-prefixed), parse ($1.50 / 1,50 EUR / integer /
+                                     blank / symbol-strip / ISO-code-strip / 0.12345 full-precision / parens /
+                                     leading sign), parseLocaleNumber (en/de/fr), codeFromSymbol, accessibility,
+                                     projection (error/loading/ready-empty/ready-populated/required+disabled),
+                                     Live + InMemory sources. (40 cases)
+  CurrencyInput.ModelTests.swift 234 Model: start-idempotence + once-only telemetry, loading/ready/error phases,
+                                     commit-on-blur (parse+renormalise), blank->nil, symbol-strip+full-precision,
+                                     Enter submit (commit, keep editing), focus guard (no clobber while editing /
+                                     re-sync while idle / resume after commit), stale rising-edge auto-refresh +
+                                     re-arm, offline-no-refresh, manual refresh, stop/restart, slug. (17 cases)
+  CurrencyInput.strings          32  P1/S10 catalog table "CurrencyInput": the source label "Electricity Cost (per
+                                     kWh)" + the native P4 leaf chrome (prompt, not-set hint, loading/error/retry,
+                                     freshness, a11y) — Swift sources hold no English literals.
+  No wiring edits required: TeslaSync/shared-surfaces is ALREADY registered in project.yml (iOS + macOS app and test
+  targets) and .swiftlint.yml `included:` by prior surfaces — changes are confined to the allowed glob + this log.
+
+NAMING NOTE (logged; no silent drift)
+  The sibling Currency display surface (0083) already declares a module-public `CurrencyInput` value type (its input
+  snapshot) plus a `Currency*` core. Two same-named module-public types cannot coexist, and Currency.* is OUT of my
+  allowed glob. So the view is named `CurrencyInputField` and every symbol is namespaced `CurrencyInputField*`; the
+  diagnostics slug + the web parity intent stay "CurrencyInput" (CurrencyInputFieldMeta.surfaceSlug).
+
+PARITY MAPPING (web -> Apple platform tokens; no Tailwind ported, no raw hex)
+  <Input value/onChange (controlled)   -> P1/S8 CurrencyInputFieldSource (Live/InMemory) -> ...Model; the view does
+                                          no HTTP. commit(_:) carries the parsed micro back (the web onChange).
+  valueToMicro / microToValue          -> CurrencyInputFieldMicro (1e6 scale, rounded; nil/non-finite -> nil).
+  formatCurrencyMicro (Intl currency)  -> CurrencyInputFieldFormatter.format (NumberFormatter .currency, useGrouping
+                                          false, .halfUp to match Intl halfExpand; code-prefixed fallback).
+  currencySymbol                       -> Formatter.symbol (NumberFormatter.currencySymbol; literal-code fallback).
+  currencyCodeFromSymbol               -> Formatter.code(fromSymbol:) table (default USD).
+  parseCurrencyText / parseLocaleNumber-> Formatter.parse / parseLocaleNumber (symbol+ISO strip, parens, leading
+                                          sign, locale group/decimal seps incl. space-like U+00A0/U+202F).
+  local text + focusedRef guard        -> Model.editingText + beginEditing/commitEditing/submit; apply() re-syncs the
+                                          buffer to the canonical display ONLY when not editing (verbatim web guard).
+  symbol icon adornment (aria-hidden)  -> leading muted symbol glyph, accessibilityHidden; field carries aria-label.
+  render (no loading/empty/error)      -> the editable field is the `ready` phase; the P4 leaf states (loading /
+                                          error / stale / offline) are added as native chrome so it is never a blank
+                                          box. The blank value renders as an empty, usable field + a "not set" hint.
+  i18n                                 -> every string via CurrencyInputFieldStrings (P1/S10); English fallbacks.
+  telemetry                            -> view.opened surface="CurrencyInput" once on appear (P1/S11).
+  Reduce Motion                        -> TSFadeIn + TSSkeleton honour accessibilityReduceMotion.
+
+  Parity decisions (logged, no silent drift):
+    • NumberFormatter defaults to banker's (half-even) rounding; Intl.NumberFormat rounds half away from zero
+      (halfExpand). Pinned `.halfUp` so 123_450 micro @ precision 4 -> "$0.1235" (not "$0.1234"), matching the web
+      test. Asserted by testRespectsPrecisionForDisplayRounding.
+    • The web `parseLocaleNumber` strips space + U+00A0 group separators; today's ICU uses U+202F (narrow no-break
+      space) for fr-FR, so the native strips all three space-like separators — the web's intent, generalised.
+    • An unresolvable ISO code: NumberFormatter renders the code itself ("ZZZ 1.50", non-breaking space), which is
+      the web's code-prefixed fallback shape; a defensive plain-decimal fallback covers the empty/`¤`-symbol case.
+    • The web shows the symbol BOTH as the aria-hidden icon AND inside the formatted value; reproduced faithfully
+      (leading muted glyph + the canonical formatted text).
+
+STATES (every web behaviour + P4 leaf state reproduced — never a hidden/blank surface)
+  loading   : skeleton label + field-shaped block (the bound value's fetch in flight).
+  ready      (empty)     : the editable field with the symbol adornment, blank value, + a "not set" hint.
+  ready      (populated) : the editable field showing the canonical formatted value ("$1.50" / "1,50 €" / "£1.50").
+  error     : retry tile (web QueryError peer — the parent settings fetch failed).
+  stale     : freshness chip + one-shot auto-refresh on the rising edge.
+  offline   : freshness chip over the cached value (no auto-refresh while offline).
+  Each state has a #if DEBUG preview + a unit test.
+
+GATES — HOST-RUNNABLE STEPS (executed on this machine; real output)
+  [GREEN] swiftc -typecheck — iOS 18 simulator SDK (the 7 production files + DEBUG previews vs the REAL apps/apple
+          component closure: generated Tokens + Design/TSDesign+TSMaterial + UI/Buttons+Cards+Typography+Badges+
+          Utility + Feedback/States+Banners+Skeletons + Motion), -swift-version 6 -strict-concurrency=complete
+          -target arm64-apple-ios18.0-simulator -D DEBUG:
+            IOS_TYPECHECK_EXIT=0
+  [GREEN] swiftc -typecheck — macOS 15 SDK (same closure + DEBUG previews, -target arm64-apple-macos15.0):
+            MAC_TYPECHECK_EXIT=0
+  [GREEN] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness (the
+          real production Adapter/Model/Seams/Views/States/surface/Previews + the real design tokens + the real TS
+          primitives, module name "TeslaSync"), Swift 6 language mode + strict concurrency complete:
+            Test Suite 'All tests' passed.  Executed 57 tests, with 0 failures (0 unexpected)
+              CurrencyInputFieldMicroTests              3/3
+              CurrencyInputFieldSymbolTests             2/2
+              CurrencyInputFieldFormatTests             6/6
+              CurrencyInputFieldParseTests              9/9
+              CurrencyInputFieldLocaleNumberTests       4/4
+              CurrencyInputFieldCodeFromSymbolTests     2/2
+              CurrencyInputFieldAccessibilityTests      2/2
+              CurrencyInputFieldProjectionTests         6/6
+              LiveCurrencyInputFieldSourceTests         4/4
+              InMemoryCurrencyInputFieldSourceTests     2/2
+              CurrencyInputFieldModelTests             17/17
+            SWIFT_TEST_EXIT=0
+  [GREEN] swiftlint --strict (explicit paths; config apps/apple/.swiftlint.yml):
+            Done linting! Found 0 violations, 0 serious in 9 files.        LINT_EXIT=0
+  [GREEN] swiftformat --lint (config apps/apple/.swiftformat):
+            0/9 files require formatting.                                  FORMAT_EXIT=0
+  [GREEN] check-placeholders.ps1 (ADR-011 stub gate; pwsh) — self-test PASS (SELFTEST_EXIT=0); the prompt's prefix
+          -Path matches no directory and trivially returns clean, so the 10 shipped files were ALSO scanned directly
+          + a direct case-insensitive grep for every banned pattern (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem
+          ipsum/not implemented/fatalError("unimpl|not):
+            PLACEHOLDER (CurrencyInput.*): NONE FOUND   PLACEHOLDER_EXIT=0
+  [GREEN] xcodegen generate — project generates cleanly; the 10 files are members:
+            all of CurrencyInput.{swift,Adapter,Model,Seams,Views,States,Previews,strings} on the app targets,
+            CurrencyInput.{Tests,ModelTests}.swift on the XCTest targets (referenced in the generated pbxproj).
+            XCODEGEN_EXIT=0
+
+GATES — XCODE FULL-APP BUILD/TEST (DEFERRED to the integration/P99 acceptance runner; NOT faked, NOT green)
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on THIS host, full Xcode 26.5, with Shared.xcframework STAGED):
+      iOS  : ** BUILD FAILED ** / ** TEST FAILED ** (Testing cancelled because the build failed)   IOS_EXIT=65
+             The TeslaSync app module compiled my 7 CurrencyInput sources (no diagnostics) and FAILED only on
+             PRE-EXISTING errors in OTHER parallel agents' sibling surfaces (NOT in my allowed glob):
+               TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24 — "compiler is unable to type-check this
+                 expression in reasonable time"
+               TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129    — "escaping closure captures non-escaping
+                 parameter 'content'"
+               TeslaSync/shared-surfaces/AISignalExplorerNlFilter.swift:142 — "escaping closure captures non-escaping
+                 parameter 'content'"
+             CurrencyInput-specific compile errors in that output: 0.
+      macOS: ** BUILD FAILED **   (CODE_SIGNING_ALLOWED=NO; slot-local derivedData)
+             swift-frontend FATAL ERROR (compiler crash, llvm::report_fatal_error) in a batch including the sibling
+             Sources/Platform/Settings/AppSettingsStore.swift, under heavy concurrent-slot runner contention; my 7
+             CurrencyInput sources were being compiled (SwiftCompile present). CurrencyInput-specific errors: 0.
+             Separately, the macOS app + widget targets carry CODE_SIGN_ENTITLEMENTS requiring a development
+             certificate ("has entitlements that require signing with a development certificate") — absent on the
+             runner.
+    Why deferred (code-unrelated; not a defect in this surface; identical disposition to the predecessor shared
+    surfaces, Honesty rule 7):
+      The whole TeslaSync module only fully compiles once EVERY parallel surface is correct; the failing files above
+      belong to OTHER prompts' surfaces and are explicitly OUTSIDE my allowed glob (CurrencyInput.* only), so fixing
+      them would violate scope (Honesty rules 2/9). The macОС development-signing requirement + the contended-runner
+      compiler crash are pre-existing infra conditions owned by the P4/P99 Apple acceptance gate on a signed
+      macos-latest CI runner per apps/macos-pending-verifications.md. None were introduced or touched by this commit.
+    The MEANINGFUL validation IS performed above: the surface compiles against BOTH the iOS 18 simulator and the
+    macOS 15 SDKs and its full 57-test XCTest suite EXECUTES green under the app's own Swift 6 strict-concurrency
+    rules, against the real design tokens + real shared components. Under Xcode these same tests run in the
+    TeslaSync(/-macOS) test targets (membership verified). The KMP Shared.xcframework was staged successfully.
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders all states from the web source reproduced (loading / ready-empty / ready-populated / error /
+      stale / offline) — each with a #if DEBUG preview + a unit test; the ready-empty field + "not set" hint are the
+      never-a-blank-box treatment of the web blank value.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (CurrencyInputFieldSource -> ...Model); no view HTTP.
+      The controlled value flows host->surface via update(_:) and surface->host via commit(_:) (web onChange).
+  [x] Every i18n key from source has a matching catalog key — the source label "Electricity Cost (per kWh)" plus the
+      native P4 leaf chrome, all via the P1/S10 facade (CurrencyInputFieldStrings).
+  [x] Accessibility labels on every interactive element (the field carries the aria-label; the symbol adornment is
+      accessibility-hidden; the retry button + freshness chip carry explicit labels).
+  [x] Tests: adapter/format/parse + projection + sources + model/telemetry/commit/focus-guard/stale/a11y — 57
+      methods, EXECUTED green via SwiftPM (Swift 6 strict concurrency).
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (check-placeholders self-test PASS + direct grep of
+      the 10 files clean).
+  [x] view.opened telemetry emitted with surface slug "CurrencyInput" (P1/S11), asserted once + idempotent.
+  [~] EXIT=0 / STATUS=DONE for all host-runnable + surface-scoped gates; the full-app iOS/macOS xcodebuild build/test
+      is DEFERRED with real captured evidence (sibling-surface pre-existing compile errors + macOS signing + a
+      contended-runner compiler crash — none in CurrencyInput), owned by the P4/P99 acceptance gate.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild is reported DEFERRED (RED) with real exit 65 + the
+                           sibling errors + the macOS crash/signing, never as passing; 0 CurrencyInput errors.
+  2  No scope narrowing  : every web behaviour (micro storage, locale currency format, symbol adornment, the full
+                           parse contract incl. parens/sign/ISO-code/locale-separators, the focus guard, commit-on-
+                           blur/Enter) + the full P4 states contract shipped.
+  3  No skip-and-assume  : web source read end-to-end (CurrencyInput.tsx + CurrencyInput.test.tsx + currencyFormat.ts)
+                           and every formatter/parse case calibrated against real NumberFormatter output before
+                           asserting; every host gate executed on THIS runner with pasted results.
+  4  No stubs as final   : complete production field + state-holder + seams + 57 real XCTest; placeholder scan clean.
+  5  No parity shortcuts : the micro storage, Intl-equivalent rounding (.halfUp), the symbol/code tables, the locale
+                           parse (incl. U+202F), and the focus guard are faithful ports; the rounding + space-sep +
+                           unresolvable-code + double-symbol decisions are logged above, not hidden.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened all present and
+                           consumed; the isolated-harness + macos-pending DEFERRED convention followed. Did NOT edit
+                           project.yml / .swiftlint.yml / macos-pending-verifications.md / any sibling surface.
+  8  No commit on red    : the COMMITTED artifact (CurrencyInput.* + this log) is GREEN on every surface-scoped host
+                           gate AND a real Swift 6 SwiftPM 57-test run + iOS/macOS typecheck; the deferred full-app
+                           gate fails only on PRE-EXISTING sibling/infra issues neither introduced nor touched here.
+  9  No silent drift     : changes confined to shared-surfaces/CurrencyInput.* (10 files) + this log — no project.yml
+                           / .swiftlint.yml / shared-wiring edits; the namespacing-around-the-Currency-collision is
+                           logged above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic CurrencyInput (shipped as `CurrencyInputField` to avoid the pre-existing
+  module-public `CurrencyInput` collision from the Currency display surface) at full parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner: it compiles for iOS 18 + macOS 15 and its 57 tests pass under the app's own
+  Swift 6 strict-concurrency rules, against the real design tokens + shared components, with swiftformat / swiftlint
+  (--strict) / placeholder all green for the surface and the xcodegen target membership validated; the KMP
+  Shared.xcframework was staged successfully. The micro-unit storage, locale-aware currency formatting + parsing
+  (symbol/ISO-code/parens/locale-separators), the symbol adornment, and the focus-protected commit-on-blur/Enter are
+  faithful ports; the P4 leaf states (loading / error / stale / offline) wrap the editable field so it is never a
+  blank box. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it
+  is blocked by PRE-EXISTING compile errors in OTHER parallel agents' sibling surfaces (RecentDrivesSection.Previews,
+  AISuggestNewGeofences, AISignalExplorerNlFilter) + macOS development signing + a contended-runner swift-frontend
+  crash — all outside my allowed glob and owned by the P4/P99 acceptance gate per apps/macos-pending-verifications.md.
+  This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface.
+
+EXIT=0
+STATUS=DONE
