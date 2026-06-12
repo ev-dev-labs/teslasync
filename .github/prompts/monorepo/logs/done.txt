@@ -528,3 +528,4 @@ p3-android/feature-views/A-0279-EnergyChargingPanel.prompt.md
 p3-android/feature-views/A-0277-RecentActivity.prompt.md
 p3-android/feature-views/A-0282-MediaNavigationPanel.prompt.md
 p3-android/feature-views/A-0284-SecurityPanel.prompt.md
+p3-android/feature-views/A-0281-LiveTelemetryPanels.prompt.md
