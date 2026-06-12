@@ -5236,6 +5236,8 @@
   <string name="translation_replay_elevation_noData">No elevation data available</string>
   <string name="translation_replay_elevation_title">Elevation Profile</string>
   <string name="translation_replay_map_noPositions">No position data available for this drive</string>
+  <string name="translation_replay_map_stationaryRouteBody">Only one GPS coordinate was recorded for this drive, so the route can\'t be drawn. The trip statistics, speed, and elevation timeline above the scrubber are unaffected.</string>
+  <string name="translation_replay_map_stationaryRouteTitle">Route can\'t be plotted</string>
   <string name="translation_replay_markers_atPercent">at %1$s%%</string>
   <string name="translation_replay_markers_chargeStart">Charge start</string>
   <string name="translation_replay_markers_chargeStop">Charge stop</string>
