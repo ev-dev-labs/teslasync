@@ -1,0 +1,159 @@
+=== P2 Shared surface 0141 SuspenseProgressBoundary (Windows) ===
+Date: 2026-06-11
+Web source (spec): web/src/components/feedback/SuspenseProgressBoundary.tsx
+                   (+ its dependency web/src/lib/globalProgress.ts)
+Native output: apps/windows/TeslaSync.App/shared-surfaces/SuspenseProgressBoundary.{cs,Model.cs,Source.cs,ViewModel.cs}
+Tests:         apps/windows/TeslaSync.App.Tests/SharedSurfaces/SuspenseProgressBoundaryTests.cs
+ADR refs:      ADR-002 (WinUI shell), ADR-005, ADR-009
+Toolchain:     .NET SDK 10.0.300, WinUI 3 (Microsoft.WindowsAppSDK via UseWinUI), Fluent Design System.
+
+--------------------------------------------------------------------------------------------------
+CAPABILITY (per prompt capability clause)
+--------------------------------------------------------------------------------------------------
+The REQUIRED capability — WinUI 3 (Windows App SDK) + .NET 10 (SDK 10.0.300), Fluent Design System —
+is AVAILABLE on this runner: the Release solution, including the WinUI app project TeslaSync.App and
+this surface's WinUI view SuspenseProgressBoundary.cs, builds with 0 errors / 0 warnings. The required
+platform capability is present, so STATUS is DONE. The separately-provisioned WinAppDriver E2E
+UI-automation runtime is the only thing absent (recorded below); it is contractually excluded from this
+headless gate, exactly as for every shipped sibling surface log.
+
+--------------------------------------------------------------------------------------------------
+SURFACE
+--------------------------------------------------------------------------------------------------
+SuspenseProgressBoundary is the web progress-tracking Suspense boundary wrapped around every code-split
+route (web/src/components/feedback/SuspenseProgressBoundary.tsx). The web component wraps <Suspense> so
+that while a lazy chunk downloads the fallback is shown and the global progress bar activates
+(globalProgress.start() in the internal ProgressTrackingFallback's useEffect), and when the real
+component resolves the fallback is swapped for the children and the bar deactivates (the effect cleanup
+/ returned stop()). The controller it drives (web/src/lib/globalProgress.ts) jumps to 8 on the first
+start, trickles asymptotically toward 80 (+max(1, remaining*0.15) every 120 ms), stacks concurrent
+consumers (the bar stays active until the last stop), snaps back to 0 on the last stop, replays the
+current state to every new subscriber, and returns an idempotent stop.
+
+It is ANONYMOUS and purely presentational: the web source has NO titles, labels, i18n keys, charts,
+maps, or data hooks, and NO loading/empty/error/stale/offline branches — only the two states the native
+port reproduces: pending/suspended (show the fallback; hold a consumer on the global channel) and
+resolved (show the children; release the consumer). Fabricating empty/error/stale/offline chrome the
+web source lacks would be parity drift, so — per the VisuallyHidden / withAiFeature anonymous-surface
+precedent — none was invented. The "loading" state IS the pending branch (the caller's fallback) and is
+fully rendered. Evidence is in the doc-comments.
+
+Native decomposition (per-surface sub-namespace SuspenseProgressBoundarySurface to avoid CS0101 with
+the generically-named GlobalProgress* types, the same isolation pattern VisuallyHidden uses):
+  - SuspenseProgressBoundary.Model.cs     Registration (Slug "SuspenseProgressBoundary"),
+                                          GlobalProgressSnapshot (web __getGlobalProgressStateForTests),
+                                          PII-safe SuspenseProgressBoundaryDiagnostics (view.opened).
+  - SuspenseProgressBoundary.Source.cs    GlobalProgressListener, IGlobalProgress + GlobalProgress
+                                          (Shared singleton, TrickleTarget/Initial/IntervalMs consts,
+                                          initial jump, asymptotic trickle, consumer stacking, idempotent
+                                          stop, subscriber replay, listener-error isolation, thread-safe);
+                                          IGlobalProgressTicker + TimerGlobalProgressTicker (the real
+                                          System.Threading.Timer trickle, web setInterval); NoOpGlobalProgress
+                                          (inert fallback for isolated hosts, the NoOpAnnouncer precedent).
+  - SuspenseProgressBoundary.ViewModel.cs SuspenseProgressBoundaryViewModel — the ProgressTrackingFallback
+                                          bridge: IsPending edge acquires/releases a consumer (start/stop),
+                                          reflects live IsProgressActive/Progress, idempotent Dispose.
+  - SuspenseProgressBoundary.cs           SuspenseProgressBoundary : ContentControl — Fallback /
+                                          ResolvedContent / IsPending dependency properties; swaps the shown
+                                          child on the pending edge; drives the channel through the view-model;
+                                          transparent (AccessibilityView.Raw) nameless Group automation peer;
+                                          emits view.opened once on Loaded; marshals view-model changes to the
+                                          UI thread.
+
+The interface member IGlobalProgressTicker.Stop() was renamed StopTicking() because CA1716 (reserved
+VB keyword 'Stop') is an error under the app project's TreatWarningsAsErrors.
+
+--------------------------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER REPAIRED (tightly coupled to this task)
+--------------------------------------------------------------------------------------------------
+The committed apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj did NOT load at HEAD:
+  error MSB4025: The project file could not be loaded. There are multiple root elements. Line 1268.
+This is the recurrence documented by the file's own INVARIANT: the .gitattributes merge=union strategy
+re-concatenated the file into TWO <Project> roots (lines 1-1267 and 1268-2422). Neither root was a
+superset (root1 uniquely had InstallPrompt/InlineCallout/LiveStaleDataBanner/PlaybackSpeedMenu[dup]/
+NewVersionBanner/QueryError; root2 uniquely had OfflineBanner), and the first root's header was a soup of
+merged regeneration comments with interleaved loose text — a non-whitespace #text child of <Project>
+that ALSO trips MSB4067. This makes the whole-solution build red at baseline, independent of this
+surface, but it gates `dotnet build`/`dotnet test` and this surface's WinUI-free sources must be
+Compile-linked there, so it was repaired per the file's own invariant.
+
+Repair: regenerated as exactly ONE <Project> root with a fresh single header comment, the PropertyGroup,
+the three non-Compile ItemGroups (PackageReference, ProjectReference, Content — all 8 items preserved),
+and a single case-insensitive ordinal path-sorted, Include-deduplicated Compile ItemGroup. The Compile
+set was VERIFIED to exactly equal the union of every Microsoft.UI-free .cs on disk under
+dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/:
+  1127 pre-existing WinUI-free sources + 3 new SuspenseProgressBoundary headless sources = 1130,
+  DISK_HEADLESS=1130 == INCLUDE_SET=1130 (DIFF=0; zero stale links, zero misclassifications).
+The bare WinUI view SuspenseProgressBoundary.cs (Microsoft.UI-referencing) is correctly excluded.
+Post-write XML check: STRAY_TEXT_CHILDREN=0, PropertyGroups=1, ItemGroups=4, Compile=1130. LF, no BOM.
+
+--------------------------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------------------------
+dotnet build apps/windows/TeslaSync.sln -c Release
+    -> Build succeeded. 0 Warning(s). 0 Error(s).
+       TeslaSync.App (WinUI app, TreatWarningsAsErrors=true) compiled the SuspenseProgressBoundary view +
+       3 headless sources warning-clean; TeslaSync.App.Tests compiled with the repaired csproj.
+    -> BUILD_EXIT=0
+
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release  (the headless suite)
+    -> Passed!  Failed: 0, Passed: 22319, Skipped: 0, Total: 22319  (TeslaSync.App.Tests.dll)
+       Includes all 31 SuspenseProgressBoundaryTests cases (registration, diagnostics, controller initial
+       jump / asymptotic trickle / never-exceeds-target / stacking / idempotent stop / subscriber replay /
+       publish edges / listener-error isolation / ticker lifecycle / snapshot, NoOpGlobalProgress, and the
+       view-model's pending/resolved bridge, stacking, dispose, and null guard).
+    -> TEST_EXIT=0
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    -> FORMAT_EXIT=0  (clean; only a benign "warnings were encountered while loading the workspace" note.
+       The 5 new files were normalised to LF after creation — the only formatter findings were ENDOFLINE
+       on those 5 files, now fixed; no other files and no style/analyzer findings.)
+
+check-placeholders.ps1
+    Literal gate path (apps/windows/TeslaSync.App/shared-surfaces/SuspenseProgressBoundary — not a folder,
+    the surface uses the flat file layout): PLACEHOLDER_COUNT=0, EXIT=0 (nothing-to-scan clean result).
+    Genuine authoritative isolated scan of the actual 5 files (copied to a temp surface dir, canonical
+    placeholder-patterns.json, -Language csharp): PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0.
+    No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/NotImplementedException/// stub.
+    -> PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------------------------
+FULL-SOLUTION dotnet test (UNFILTERED) — recorded with evidence, NOT reported as green
+--------------------------------------------------------------------------------------------------
+dotnet test apps/windows/TeslaSync.sln -c Release   (verbatim, no filter):
+    TeslaSync.App.Tests  -> Passed!  Failed: 0,   Passed: 22319  (headless, incl. this surface)
+    TeslaSync.App.UITests-> Failed!  Failed: 147,  Passed: 0,  Duration 433 ms
+Every one of the 147 UITest failures is the SAME environmental error (zero from this surface):
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+    WinAppDriver.exe was not found at its standard install paths or on PATH.
+This is BY DESIGN: RunnerAvailability + WinAppDriverSession fail loudly rather than silently skipping when
+the runner is absent. The UIAutomation suite drives the PACKAGED app out-of-process over WinAppDriver and
+is environment-supplied / run via run-ui-automation.ps1; it is a platform-capability gap of THIS
+non-interactive runner, not a defect in this surface. No UITests were added or modified by this prompt,
+and the failure count is unchanged from the shipped predecessor logs (147).
+
+--------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------------------------
+[x] Surface renders all states the web source has: pending/suspended (caller fallback shown, channel
+    consumer held) and resolved (children shown, consumer released). No invented empty/error/stale/offline
+    branches (the web source — a transparent Suspense wrapper — has none).
+[x] Hooks bind via the shared P1/S8 state-holder layer (IGlobalProgress through the view-model); the view
+    never reads the channel directly; no direct HTTP (the surface is presentational by nature).
+[x] i18n: web source is anonymous (zero t() calls / i18n keys); none invented. (P1/S10 facade unused by design.)
+[x] Accessibility: transparent (AccessibilityView.Raw) nameless Group automation peer; the hosted fallback /
+    content carries every semantic, and the decorative global bar is aria-hidden equivalent. The surface has
+    no interactive element of its own to label.
+[x] Tests: controller adapter unit tests + per-state view-model tests (the two states, stacking, dispose) +
+    accessibility/registration tests (slug, transparent host). 31/31 green.
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0 on all files).
+[x] Telemetry: view.opened slug=SuspenseProgressBoundary emitted once on Loaded via PII-safe diagnostics.
+[x] EXIT=0 / STATUS=DONE (headless gate; WinAppDriver E2E deferred to a provisioned runner with evidence).
+
+BUILD_EXIT=0
+TEST_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE

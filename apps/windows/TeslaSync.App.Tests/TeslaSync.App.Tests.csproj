@@ -1,27 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
-    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app
-    (TeslaSync.App) targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so
-    each surface's Microsoft.UI-free sources are Compile-linked into the single, case-insensitive ordinal
-    path-sorted, Include-deduplicated item group below (the Link mirrors each source's real location under
-    Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are
-    excluded and exercised by the app build, and the test classes are picked up by the SDK default-compile
-    glob. The Content links copy the units-golden, Package.appxmanifest and widget-template fixtures.
-
-    INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
-    Include-deduplicated Compile ItemGroup - the union of every Microsoft.UI-free .cs on disk under
-    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's
-    UI-thread-free logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every
-    dashboard-widget, feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App)
+    TeslaSync.App.Tests is the headless (plain net10.0, no WinUI host) verification of the WinUI app's
+    UI-thread-free logic (Model / Source / ViewModel / Registration / diagnostics) for every dashboard
+    widget, feature view, misc surface, modal/dialog and shared surface. The WinUI app (TeslaSync.App)
     targets a WinUI TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's
-    Microsoft.UI-free sources are Compile-linked into the single ItemGroup below (the Link mirrors each source's
-    real location under Widgets, FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view
-    files are excluded and exercised by the app build. The matching test classes live under this project and are
-    picked up by the SDK default-compile glob. The Content links copy the units-golden, Package.appxmanifest and
-    widget-template fixtures the tests read out of the test output directory.
+    Microsoft.UI-free sources are Compile-linked into the single, case-insensitive ordinal path-sorted,
+    Include-deduplicated ItemGroup below (the Link mirrors each source's real location under Widgets,
+    FeatureViews, MiscSurfaces, ModalsDialogs or SharedSurfaces); the bare WinUI view files are excluded
+    and exercised by the app build, and the test classes are picked up by the SDK default-compile glob.
 
     INVARIANT: keep this file as exactly ONE Project root with a single, case-insensitive ordinal path-sorted,
     Include-deduplicated Compile ItemGroup — the union of every Microsoft.UI-free .cs on disk under
@@ -132,6 +119,12 @@
     Regenerated into this single canonical root for P2 shared-surfaces/0140 Spinner (repairing a merge=union
     multi-root corruption) from the WinUI-free sources on disk, plus the new Spinner Model / ViewModel links. Do
     NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag in this comment.
+    INVARIANT: keep this file as exactly ONE Project root with a single Compile ItemGroup. This file
+    carries the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate
+    it into multiple Project roots (and interleave loose comment text), failing MSBuild load with MSB4025
+    or MSB4067. If that happens, regenerate it into this single canonical root from the WinUI-free sources
+    on disk. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project
+    start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -177,6 +170,7 @@
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build, and the test classes are picked up by the SDK default-compile glob. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App: a single, case-insensitive ordinal path-sorted, Include-deduplicated ItemGroup (the union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/; the Link mirrors each source's real location). The bare WinUI view files are excluded and exercised by the app build; the test classes are picked up by the SDK default-compile glob; the Content links copy the units-golden, Package.appxmanifest and widget-template fixtures. INVARIANT: keep this file as exactly ONE Project root with this single Compile ItemGroup. The .gitattributes merge=union strategy can re-concatenate it into multiple Project roots plus duplicate Compile items (failing XML load, MSB4025 / MSB4067); when that happens, regenerate it directly from the WinUI-free sources on disk. Regenerated into this single canonical Project root for P2 shared-surfaces/0135 ReleaseNotes, plus the new ReleaseNotes Model / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment. -->
   <!-- WinUI-free logic sources Compile-linked from TeslaSync.App (case-insensitive ordinal path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are exercised by the app build, and the test classes are picked up by the SDK default-compile glob. Regenerated for P2 shared-surfaces/0134 RateLimitBanner. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App, case-insensitive ordinal path-sorted and Include-deduplicated (the union of every Microsoft.UI-free .cs on disk under dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/); the bare WinUI view files are excluded and exercised by the app build. Regenerated for P2 shared-surfaces/0141 SuspenseProgressBoundary into this single canonical Project root, repairing a merge=union multi-root corruption, from the WinUI-free sources on disk. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -1289,6 +1283,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\Speed.ViewModel.cs" Link="SharedSurfaces\Speed.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Spinner.Model.cs" Link="SharedSurfaces\Spinner.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Spinner.ViewModel.cs" Link="SharedSurfaces\Spinner.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SuspenseProgressBoundary.Model.cs" Link="SharedSurfaces\SuspenseProgressBoundary.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SuspenseProgressBoundary.Source.cs" Link="SharedSurfaces\SuspenseProgressBoundary.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SuspenseProgressBoundary.ViewModel.cs" Link="SharedSurfaces\SuspenseProgressBoundary.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Temperature\Temperature.Model.cs" Link="SharedSurfaces\Temperature\Temperature.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Temperature\Temperature.Source.cs" Link="SharedSurfaces\Temperature\Temperature.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Temperature\Temperature.ViewModel.cs" Link="SharedSurfaces\Temperature\Temperature.ViewModel.cs" />
