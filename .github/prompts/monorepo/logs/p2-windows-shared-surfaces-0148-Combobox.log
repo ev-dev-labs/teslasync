@@ -1,0 +1,138 @@
+=== P2 Shared surface 0148 Combobox (Windows) ===
+
+SURFACE: apps/windows/TeslaSync.App/shared-surfaces/Combobox.{cs,Model.cs,Source.cs,ViewModel.cs}
+WEB SOURCE: web/src/components/forms/Combobox.tsx  (WAI-ARIA 1.2 editable combobox / autocomplete)
+TESTS: apps/windows/TeslaSync.App.Tests/SharedSurfaces/ComboboxTests.cs (53 headless tests)
+
+------------------------------------------------------------------------------------------------
+PARITY NOTES (web -> native)
+------------------------------------------------------------------------------------------------
+- Composition: the web source builds its OWN editable input + <ul role="listbox"> (it does NOT wrap a
+  native <select>), so the native surface mirrors that with a tokenized input Border hosting a borderless
+  TextBox + a trailing cluster (an in-flight ProgressRing, a clear (x) TsButton, a chevron-toggle TsButton)
+  and the option listbox in a Popup anchored under the input. NOT the platform ComboBox; NOT the existing
+  Components/Forms TsCombobox primitive (that wraps AutoSuggestBox) - this is the higher-level shared surface.
+- Data sources (web hooks -> native seams, P1/S8): useTranslation -> ILocalizer (P1/S10);
+  useAnnouncer -> IAnnouncerBus (the shared AnnouncerBus, web announce()); useId -> WinUI automation peer.
+  The web `options` union (static array | async loader (query, AbortSignal)) -> IComboboxOptionsSource with
+  StaticComboboxOptionsSource (filters via the shared, unit-tested Core ComboboxFilter == web defaultFilter)
+  and AsyncComboboxOptionsSource (ComboboxOptionLoader + CancellationToken == the web AbortSignal). The option
+  type reuses the shared Core record TeslaSync.App.Core.Forms.ComboOption (DRY; not re-declared).
+- Shared components used (web @/components/a11y) -> native Components/A11y TsVisuallyHidden (hidden label) +
+  the shared announcer bus; trailing affordances are shared Components/UI TsButton (Icon variant).
+- States reproduced (every branch the web source actually renders):
+    * loading  -> in-flight ProgressRing + a "Loading" listbox row (web loadingProp || asyncLoading; L640).
+    * empty    -> "No results" row (web visibleOptions.length === 0 && !loading; L630). The async loader's
+                  error path collapses here exactly as the web .catch resolves to [] (L255-260) - mapped in
+                  AsyncComboboxOptionsSource; a cancelled (superseded) keystroke is dropped, not shown.
+    * results  -> option rows with a keyboard active descendant (wrap-around Up/Down, Home/End; web L398-466).
+    * overflow -> "{{count}} more - refine search" row when filtered > maxVisibleOptions (web L675-686).
+  The web Combobox is a CONTROLLED presentational primitive with no query-freshness or connectivity concept,
+  so it has NO stale/offline chrome - and none is invented (honesty covenant: no drift in either direction).
+- Behaviour parity: type-ahead opens + filters/debounces; Enter commits the active option (or, in
+  allowFreeText, the trimmed text -> onFreeTextCommit + onChange(null)); Esc closes and reverts the text to
+  the selected label; Tab commits the highlighted option then continues tab order; the clear button resets
+  selection+text and reopens; async fetch is debounced (default 200ms) and cancels the previous request on
+  each keystroke (web AbortController). Disabled options are never committed (consistent with the shared
+  Core combobox model + its existing ComboboxModelTests).
+- i18n (web t() keys -> P1/S10, all 8 already in Strings/{en,he,ar}/Resources.resw, verified 8/8 each):
+    combobox.noResults "No results" | resultsCountOne "1 result" | resultsCount "{{count}} results" |
+    loading "Loading" | clearAria "Clear selection" | closeListAria "Hide options" |
+    openListAria "Show options" | moreHidden "{{count}} more - refine search" (em dash preserved).
+  Catalog values use the native {0} token; web fallbacks use i18next {{count}} - both are interpolated
+  (ComboboxRegistration.Interpolate), matching the shipped BulkActionsToolbar pattern. No English literals
+  in native code; every visible string flows through the localizer.
+- Accessibility: the input carries the ComboBox control type + an IExpandCollapseProvider automation peer
+  (web aria-expanded), the accessible name (web label / aria-label, optionally TsVisuallyHidden), and every
+  interactive control (input, clear, chevron, each option row) has an accessible name. Result-count changes
+  are announced politely through the shared announcer (web announce()); WinUI scales with the system font.
+- Diagnostics (P1/S11): emits `view.opened slug=Combobox` once on Loaded. PII-safe (slug only; never the
+  query text, option labels, or committed value).
+
+------------------------------------------------------------------------------------------------
+PRE-EXISTING BLOCKER REPAIRED (not part of the surface, but required for the gate to run)
+------------------------------------------------------------------------------------------------
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was committed at HEAD corrupted into THREE
+stacked <Project> roots (one with a mid-file BOM) by the .gitattributes merge=union strategy - MSB4025
+"The project file could not be loaded. There are multiple root elements. Line 1304" - which fails XML load
+and takes the WHOLE solution build/test down before any compilation. This is the documented hazard the
+file's own INVARIANT comment warns about, and the documented remedy is to regenerate it from the WinUI-free
+sources on disk (every predecessor shared-surface prompt repaired it the same way: 0091/0109/0124/0125/
+0126/0129/0133/0134/0137/0139...).
+
+Regenerated into ONE canonical root. Validated BEFORE regenerating: the corrupt file's 1139 DISTINCT Compile
+links == the disk scan of every Microsoft.UI-free .cs under dashboard-widgets/feature-views/misc-surfaces/
+modals-dialogs/shared-surfaces (0 symmetric difference; every Include exists on disk; no linked file contains
+Microsoft.UI). Regenerated = that 1139 union (case-insensitive ordinal path-sorted, Include-deduplicated)
+PLUS the 3 new WinUI-free Combobox sources (Model + Source + ViewModel) = 1142 Compile items. The bare WinUI
+view Combobox.cs is excluded and exercised by the app build. Verified: single-root XML loads; full solution
+builds; headless suite runs.
+
+------------------------------------------------------------------------------------------------
+GATE
+------------------------------------------------------------------------------------------------
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    BUILD_EXIT=0   (0 Error(s); the only warnings are 17 pre-existing CA1859 perf hints in TeslaSync.App.Core,
+    which does not treat warnings as errors - none in the new code, which is warnings-as-errors clean under
+    TeslaSync.App's TreatWarningsAsErrors=true + Recommended analyzers).
+    WinUI 3 / Windows App SDK 2.1.3 + .NET 10.0.300 present and working.
+
+[2a] dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"   (authoritative
+     per-surface headless gate)
+    TeslaSync.App.UITests.dll: No test matches `Category!=UIAutomation` (all excluded - env e2e)
+    TeslaSync.App.Tests.dll:  Passed! - Failed: 0, Passed: 22523, Skipped: 0  (incl. 53 ComboboxTests)
+    TEST_EXIT=0
+
+[2b] dotnet test apps/windows/TeslaSync.sln -c Release   (literal full-solution, for transparency)
+    TeslaSync.App.Tests.dll:   Passed! - Failed: 0,   Passed: 22523
+    TeslaSync.App.UITests.dll: Failed! - Failed: 147, Passed: 0
+    FULL_SLN_TEST_EXIT=1
+    CAUSE - platform capability absent on this runner (NOT this change):
+      TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+      WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+      WinAppDriver.exe was not found at its standard install paths or on PATH.
+      at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() ...WinAppDriverSession.cs:line 75
+    All 147 TeslaSync.App.UITests are [Trait("Category","UIAutomation")] out-of-process E2E tests that drive
+    the real packaged app via WinAppDriver; the harness is DESIGNED to fail-fast (never silently skip) when
+    the runner is absent. 0 non-UITests failures. This is an environmental gap independent of Combobox -
+    every shared surface sees the identical red. Matches the accepted headless-gate precedent
+    (p2-windows-shared-surfaces-0139-SkipToContent, -0130-OfflineBanner, -0124-InlineCallout, -0110-UserCell).
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    FORMAT_EXIT=0   (no changes needed; the 4 new surface files + the test file are LF / UTF-8 (no BOM) /
+    final-newline / style-clean).
+
+[4] check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/Combobox
+    GATE_PLACEHOLDER_EXIT=0  (the surface ships as flat Combobox.* files, so this literal path matches no
+    directory and the script scans nothing - recorded for completeness).
+    HONEST per-file scan of the 4 shipped files (Combobox.cs/.Model.cs/.Source.cs/.ViewModel.cs):
+    PLACEHOLDER_COUNT=0 each  FILES_PLACEHOLDER_EXIT=0  (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/
+    not implemented/NotImplementedException/// stub in shipped code).
+
+------------------------------------------------------------------------------------------------
+CAPABILITY EVIDENCE
+------------------------------------------------------------------------------------------------
+WinUI 3 (Windows App SDK 2.1.3) + .NET 10.0.300 + Fluent Design: PRESENT and working - the solution builds
+clean and the 22523-test headless suite (incl. the 53 new ComboboxTests) passes. The ONLY red on this runner
+is the out-of-process WinAppDriver/Appium UI-automation harness (Category=UIAutomation), which is absent;
+that harness is not part of the WinUI 3 / .NET 10 capability this prompt requires.
+
+------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------------------------
+[x] Surface renders all states the web source has (loading / empty(=async-error) / results / overflow, with
+    the keyboard active descendant); the web primitive has no stale/offline chrome and none is invented.
+[x] Hooks bind to the shared state-holder layer: ILocalizer (P1/S10) + IAnnouncerBus (P1/S8) +
+    IComboboxOptionsSource (static/async option seam); no direct I/O in the view.
+[x] Every i18n key from source resolves in P1/S10: all 8 translation.combobox.* keys present in en/he/ar (8/8).
+[x] Accessibility name + ComboBox control type + IExpandCollapseProvider on the input; accessible names on
+    the clear/chevron buttons and every option row; polite result-count announcement; system font scaling.
+[x] Tests: adapter (Static/Async option sources incl. error->empty + cancellation) + registration/i18n keys
+    + interpolation + per-state ViewModel (open/close/filter/empty/overflow/wrap/commit/free-text/clear/
+    close-revert/loading) + announcements + a11y labels + diagnostics - 53 headless tests, all green.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (per-file scan = 0).
+[x] Authoritative headless gate green (BUILD_EXIT=0, TEST_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER=0); full-solution
+    red is solely the absent-WinAppDriver E2E harness (evidence above).
+
+EXIT=0
+STATUS=DONE
