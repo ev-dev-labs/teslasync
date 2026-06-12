@@ -668,3 +668,4 @@ p2-windows/shared-meaningful/W-0183-VehiclePicker.prompt.md
 p2-windows/shared-meaningful/W-0185-MapTileLayer.prompt.md
 p2-windows/shared-meaningful/W-0187-RoutePlayback.prompt.md
 p2-windows/shared-meaningful/W-0184-AnimatedMarker.prompt.md
+p2-windows/shared-meaningful/W-0192-RouteTransition.prompt.md
