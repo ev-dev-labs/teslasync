@@ -91,6 +91,24 @@
       "requiredCount": 32,
       "promptId": "p4-apple/P7/page:admin/SchemaDrift",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-SchemaDriftPage.log"
+    },
+    {
+      "unitId": "page:admin/TeslaOrders",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:admin/TeslaOrders",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-TeslaOrdersPage.log"
+    },
+    {
+      "unitId": "page:admin/TeslaOrders",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:admin/TeslaOrders",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-TeslaOrdersPage.log"
     }
   ]
 }
