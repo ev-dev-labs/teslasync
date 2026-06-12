@@ -1,0 +1,52 @@
+/*
+  VehiclePaintPicker.strings
+  TeslaSync — P4 shared surface · 0234 · VehiclePaintPicker (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The first block mirrors the EXACT keys the web
+  `components/vehicles/VehiclePaintPicker.tsx` resolves through `t(key, default)`. The second block
+  localizes the paint display names (static data in `lib/vehicleColors.ts`, surfaced here through the
+  facade so the native code holds no English literal — the same precedent as the ThemePicker accent
+  labels). The third block is the native a11y additions (the spoken selected value + the per-swatch hint
+  + the "never a blank box" empty leaf), which the anonymous web swatches convey purely visually.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table ("VehiclePaintPicker") so each parallel surface prompt owns its own
+  strings. In test / preview bundles `NSLocalizedString` returns the value below, keeping the labels
+  deterministic.
+*/
+
+/* --- Web `t()` keys (verbatim from components/vehicles/VehiclePaintPicker.tsx) --- */
+
+/* Radiogroup label (web t('paint.pickerLabel', 'Vehicle paint color')). */
+"paint.pickerLabel" = "Vehicle paint color";
+
+/* Section caption (web t('paint.label', 'Paint')). */
+"paint.label" = "Paint";
+
+/* Auto-detected tooltip / hint word (web t('paint.detected', 'Auto-detected')). */
+"paint.detected" = "Auto-detected";
+
+/* Reset affordance copy (web t('paint.reset', 'Reset to auto-detected')). */
+"paint.reset" = "Reset to auto-detected";
+
+/* --- Paint display names (lib/vehicleColors.ts data, localized here) --- */
+
+"paint.pearlWhite" = "Pearl White Multi-Coat";
+"paint.midnightSilver" = "Midnight Silver Metallic";
+"paint.deepBlue" = "Deep Blue Metallic";
+"paint.solidBlack" = "Solid Black";
+"paint.redMulticoat" = "Red Multi-Coat";
+
+/* --- Native a11y additions (no web t() key; the swatches convey state visually) --- */
+
+/* VoiceOver value spoken for the active swatch. */
+"paint.a11y.selected" = "Selected";
+
+/* VoiceOver hint on a paint swatch. */
+"paint.a11y.swatchHint" = "Selects the paint color";
+
+/* Title of the empty leaf shown when no palettes are configured. */
+"paint.empty" = "No paint options available";
+
+/* Supporting line of the empty leaf. */
+"paint.emptyMessage" = "Paint colors appear here once configured.";
