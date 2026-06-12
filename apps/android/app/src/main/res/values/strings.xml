@@ -760,6 +760,7 @@
   <string name="translation_ai_settings_subtitle">Optional. Helix is off by default; nothing is enabled until you opt in here.</string>
   <string name="translation_ai_settings_title">Helix</string>
   <string name="translation_ai_settings_usage_cost">Estimated cost</string>
+  <string name="translation_ai_settings_usage_liveSuffix">Helix calls today.</string>
   <string name="translation_ai_settings_usage_placeholder">Usage populates as features run. Live numbers arrive in a follow-up update.</string>
   <string name="translation_ai_settings_usage_title">Usage today</string>
   <string name="translation_ai_settings_usage_tokensIn">Tokens in</string>
