@@ -1321,6 +1321,25 @@
     re-concatenate it into multiple roots plus duplicate items, failing XML load (MSB4025 / MSB4067);
     if that happens, regenerate it directly from the WinUI-free sources on disk. Do NOT re-concatenate
     into multiple roots, and never write a literal build-item or project start tag inside this comment.
+    TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
+    logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every dashboard-widget,
+    feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI TFM
+    and cannot be project-referenced from a plain net10.0 test host, so each surface's Microsoft.UI-free sources are
+    compile-linked into the single, case-insensitive ordinal path-sorted, Include-deduplicated linked-source item
+    group below (the Link mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces,
+    ModalsDialogs or SharedSurfaces); the bare WinUI view files are excluded and exercised by the app build, and the
+    test classes are picked up by the SDK default-compile glob. The Content links copy the units-golden,
+    Package.appxmanifest and widget-template fixtures the tests read out of the test output directory.
+
+    INVARIANT: keep this file as exactly ONE project root with a single, case-insensitive ordinal path-sorted,
+    Include-deduplicated linked-source item group — the union of every Microsoft.UI-free .cs on disk under
+    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file carries the
+    .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it into multiple roots
+    plus duplicate items and stray comment text, failing XML load (MSB4025 / MSB4067); when that happens, regenerate
+    it directly from the WinUI-free sources on disk. Regenerated into this single canonical project root for P2
+    shared-surfaces/0138 SectionErrorBoundary (repairing a merge=union multi-root + stray-text corruption), plus the
+    new SectionErrorBoundary Model / ViewModel links. Do NOT re-concatenate into multiple roots, and never write a
+    literal build item or project start tag inside this comment.
   -->
 
   <PropertyGroup>
@@ -1355,6 +1374,7 @@
     </Content>
   </ItemGroup>
 
+  <!-- WinUI-free logic sources compile-linked from TeslaSync.App; see the header comment for the single-root / sort / dedupe invariant. -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
@@ -2407,6 +2427,10 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.Model.cs" Link="SharedSurfaces\InstallPrompt.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.Source.cs" Link="SharedSurfaces\InstallPrompt.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.ViewModel.cs" Link="SharedSurfaces\InstallPrompt.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.Model.cs" Link="SharedSurfaces\InstallPrompt.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.Source.cs" Link="SharedSurfaces\InstallPrompt.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.ViewModel.cs" Link="SharedSurfaces\InstallPrompt.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\InlineCallout.Model.cs" Link="SharedSurfaces\InlineCallout.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Model.cs" Link="SharedSurfaces\KpiOverviewCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Source.cs" Link="SharedSurfaces\KpiOverviewCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.ViewModel.cs" Link="SharedSurfaces\KpiOverviewCard.ViewModel.cs" />
@@ -2428,6 +2452,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.Model.cs" Link="SharedSurfaces\PlaybackSpeedMenu.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.Source.cs" Link="SharedSurfaces\PlaybackSpeedMenu.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.ViewModel.cs" Link="SharedSurfaces\PlaybackSpeedMenu.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\NewVersionBanner.Model.cs" Link="SharedSurfaces\NewVersionBanner.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\NewVersionBanner.Source.cs" Link="SharedSurfaces\NewVersionBanner.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\NewVersionBanner.ViewModel.cs" Link="SharedSurfaces\NewVersionBanner.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PollingEngine\PollingEngine.Model.cs" Link="SharedSurfaces\PollingEngine\PollingEngine.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PollingEngine\PollingEngine.Source.cs" Link="SharedSurfaces\PollingEngine\PollingEngine.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PollingEngine\PollingEngine.ViewModel.cs" Link="SharedSurfaces\PollingEngine\PollingEngine.ViewModel.cs" />
@@ -2482,6 +2509,11 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\withAiFeature.Model.cs" Link="SharedSurfaces\withAiFeature.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\withAiFeature.Source.cs" Link="SharedSurfaces\withAiFeature.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\withAiFeature.ViewModel.cs" Link="SharedSurfaces\withAiFeature.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ErrorDisplay.Model.cs" Link="SharedSurfaces\ErrorDisplay.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ErrorDisplay.Source.cs" Link="SharedSurfaces\ErrorDisplay.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ErrorDisplay.ViewModel.cs" Link="SharedSurfaces\ErrorDisplay.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SectionErrorBoundary.Model.cs" Link="SharedSurfaces\SectionErrorBoundary.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\SectionErrorBoundary.ViewModel.cs" Link="SharedSurfaces\SectionErrorBoundary.ViewModel.cs" />
   </ItemGroup>
 
 </Project>
