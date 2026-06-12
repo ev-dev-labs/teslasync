@@ -13,7 +13,8 @@
 
     INVARIANT: keep this file as exactly ONE project root with a single, case-insensitive ordinal path-sorted,
     Include-deduplicated compile item group - the union of every Microsoft.UI-free .cs on disk under
-    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/. This file carries
+    dashboard-widgets/, feature-views/, misc-surfaces/, modals-dialogs/, shared-surfaces/ and
+    widget-primitives/. This file carries
     the .gitattributes merge=union strategy, so a chain of integration merges can re-concatenate it into
     multiple Project roots plus duplicate Compile items, failing XML load (MSB4025 / MSB4067); when that
     happens, regenerate it directly from the Microsoft.UI-free sources on disk. Regenerated into this single
@@ -158,6 +159,10 @@
     (repairing a merge=union multi-root corruption), plus the new WidgetRankedList Model link. Do NOT
     re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this
     comment.
+    canonical Project root for P2 widget-primitives/0012 WidgetTipCards (repairing a merge=union multi-root
+    plus orphaned-comment-fragment corruption), plus the new WidgetTipCards.Model.cs link. Do NOT
+    re-concatenate into multiple roots, and never write a literal build-item or project start tag inside
+    this comment.
   -->
 
   <PropertyGroup>
@@ -2884,6 +2889,10 @@
 
 </Project>
     <Compile Include="..\TeslaSync.App\widget-primitives\WidgetRankedList.Model.cs" Link="WidgetPrimitives\WidgetRankedList.Model.cs" />
+  </ItemGroup>
+
+</Project>
+    <Compile Include="..\TeslaSync.App\widget-primitives\WidgetTipCards.Model.cs" Link="WidgetPrimitives\WidgetTipCards.Model.cs" />
   </ItemGroup>
 
 </Project>

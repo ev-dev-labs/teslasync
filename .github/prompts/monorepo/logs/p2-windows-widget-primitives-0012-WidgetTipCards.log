@@ -1,0 +1,54 @@
+=== P2 Widget primitive 0012 WidgetTipCards (Windows) ===
+date: 2026-06-12 (runner: Windows_NT, .NET SDK 10.0.300, maui-windows workload present)
+
+Surface:    apps/windows/TeslaSync.App/widget-primitives/WidgetTipCards.cs (+ .Model.cs)
+Web source: web/src/features/dashboard/widgets/shared/WidgetTipCards.tsx (pure presentational primitive)
+Tests:      apps/windows/TeslaSync.App.Tests/WidgetPrimitives/WidgetTipCardsTests.cs (25 facts/theories)
+
+NOTE: TeslaSync.App.Tests.csproj carries the .gitattributes merge=union strategy and had accreted into a
+multi-root + orphaned-comment-fragment state (failed XML load: MSB4025, then MSB4067). It was regenerated
+to a single canonical <Project> root (1306 ordinal-sorted, Include-deduped Compile links = the union of
+both prior roots + the new WidgetTipCards.Model.cs link), exactly as the file's own INVARIANT comment
+prescribes. No other surface's links were dropped (Select/Toggle headless links preserved).
+
+>>> dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    0 Warning(s)   (the 17 informational CA notes are pre-existing TeslaSync.App.Core warnings; none in the new files)
+    0 Error(s)
+Time Elapsed ~00:01:05 (incremental) / ~00:03:47 (cold)
+BUILD_EXIT=0
+
+>>> dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation
+Passed!  - Failed: 0, Passed: 25402, Skipped: 0, Total: 25402 - TeslaSync.App.Tests.dll (net10.0)
+(includes the 25 new WidgetTipCards adapter / per-state / a11y-name / diagnostics tests)
+TEST_EXIT=0
+
+>>> dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+(clean; the only stderr line is the benign "Warnings were encountered while loading the workspace" notice)
+FORMAT_EXIT=0
+
+>>> ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/widget-primitives/WidgetTipCards
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+>>> dotnet test apps/windows/TeslaSync.App.UITests/TeslaSync.App.UITests.csproj -c Release --filter Category=UIAutomation   (W9-0002 E2E; NOT the per-surface gate)
+Failed!  - Failed: 147, Passed: 0, Skipped: 0, Total: 147 - TeslaSync.App.UITests.dll (net10.0)
+EVIDENCE: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+  WinAppDriver.exe was not found at its standard install paths or on PATH.
+WinAppDriver.exe on PATH: False
+UIAUTOMATION_EXIT=1 (environment-gated: WinAppDriver/Appium runner absent on this host; the suite fails
+  fast by the repo's own design and is NEVER silently skipped -- see TeslaSync.App.UITests/README.md
+  L18-19 + run-ui-automation.ps1 W9-0002. It is a separate gate, EXCLUDED from the per-surface EXIT.)
+
+---- per-surface gate decomposition ----
+BUILD_EXIT=0  TEST_EXIT(headless, Category!=UIAutomation)=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+WinUI 3 / Windows App SDK 1.6+ / .NET 10 capability IS present: the full Release solution builds and the
+headless suite runs (25402 passed). The W9-0002 Category=UIAutomation E2E suite (UIAUTOMATION_EXIT=1)
+requires a live WinAppDriver endpoint + a deployed MSIX, absent on this runner; by repo design it fails
+fast (147x UiAutomationUnavailableException) rather than skipping, and is a separate gate excluded from
+the per-surface EXIT -- same convention as shared-surfaces/0229 ThemeProvider, 0225 Select, 0224 RangeSlider.
+
+EXIT=0
+STATUS=DONE
