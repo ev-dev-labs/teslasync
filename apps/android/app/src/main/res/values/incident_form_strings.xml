@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Surface-owned strings for the IncidentForm feature view
+  (com/teslasync/feature-views/IncidentForm), the native port of
+  web/src/features/system/components/status/IncidentForm.tsx.
+
+  The web component predates the i18n migration: it hard-codes its English copy
+  (title, field labels, severity/status option labels, buttons, toasts, validation)
+  rather than going through react-i18next, so the auto-generated translation_*
+  catalog (web/src/i18n -> apps/shared/i18n -> values/strings.xml) carries no key
+  for it. These keys provide that copy so the native surface resolves every string
+  through stringResource (no English literals in Kotlin), using the same
+  hand-authored *_strings.xml mechanism as nav_strings.xml / settings_strings.xml.
+  Values are verbatim from the web source.
+-->
+<resources>
+    <string name="translation_incidentForm_title">Log an incident</string>
+    <string name="translation_incidentForm_close">Close</string>
+    <string name="translation_incidentForm_titleLabel">Title</string>
+    <string name="translation_incidentForm_titleHint">e.g. Wall connector restart at 14:00</string>
+    <string name="translation_incidentForm_severityLabel">Severity</string>
+    <string name="translation_incidentForm_severityMinor">Minor</string>
+    <string name="translation_incidentForm_severityMajor">Major</string>
+    <string name="translation_incidentForm_severityCritical">Critical</string>
+    <string name="translation_incidentForm_statusLabel">Status</string>
+    <string name="translation_incidentForm_statusInvestigating">Investigating</string>
+    <string name="translation_incidentForm_statusIdentified">Identified</string>
+    <string name="translation_incidentForm_statusMonitoring">Monitoring</string>
+    <string name="translation_incidentForm_statusResolved">Resolved</string>
+    <string name="translation_incidentForm_componentsLabel">Affected components</string>
+    <string name="translation_incidentForm_componentsHint">Comma-separated, optional — e.g. tesla, telemetry</string>
+    <string name="translation_incidentForm_messageLabel">Initial timeline message</string>
+    <string name="translation_incidentForm_messageHint">Optional — What\'s the situation?</string>
+    <string name="translation_incidentForm_cancel">Cancel</string>
+    <string name="translation_incidentForm_submit">Log incident</string>
+    <string name="translation_incidentForm_submitting">Logging…</string>
+    <string name="translation_incidentForm_toastLogged">Incident logged.</string>
+    <string name="translation_incidentForm_toastSubmitFailed">Failed to log incident</string>
+    <string name="translation_incidentForm_validationTitleTooShort">Title must be at least 3 characters.</string>
+</resources>
