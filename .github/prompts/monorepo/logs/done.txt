@@ -727,3 +727,4 @@ p2-windows/pages/automations/AutomationCard.prompt.md
 p2-windows/pages/analytics/WeeklyDigestPage.prompt.md
 p2-windows/pages/automations/ConditionBuilder.prompt.md
 p2-windows/pages/analytics/YearReviewPage.prompt.md
+p2-windows/pages/automations/ConflictWarnings.prompt.md
