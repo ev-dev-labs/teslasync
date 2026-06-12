@@ -130,6 +130,15 @@ public sealed partial class ShellWindow : Window
         });
         // Charging / Charging Curve page (P2/W7) — parity port of web ChargingCurvePage at route /charging-curve.
         _viewModel.PageFactory.Register("ChargingCurve", static () => new FeatureViews.Charging.ChargingCurvePage());
+
+        // Dashboard / Quick Stats page (P2/W7) — parity port of web QuickStatsPage at route /quick-stats. The
+        // footer "Open Dashboard" link navigates to the dashboard root (web Link to="/").
+        _viewModel.PageFactory.Register("QuickStats", () =>
+        {
+            var page = new FeatureViews.Dashboard.QuickStatsPage();
+            page.OpenDashboardRequested += (_, _) => NavigateTo(string.Empty);
+            return page;
+        });
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

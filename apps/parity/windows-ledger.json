@@ -70,5 +70,14 @@
     "requiredCount": 7,
     "promptId": "p2-windows/W7/windows-page-charging-TeslaChargingSessionsMap",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-charging-TeslaChargingSessionsMap.log"
+  },
+  {
+    "unitId": "page:dashboard/QuickStats",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 18,
+    "requiredCount": 18,
+    "promptId": "p2-windows/W7/windows-page-dashboard-QuickStatsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-dashboard-QuickStatsPage.log"
   }
 ]

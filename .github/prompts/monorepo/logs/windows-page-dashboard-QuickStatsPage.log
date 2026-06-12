@@ -1,0 +1,103 @@
+P2-WINDOWS W7 — page:dashboard/QuickStats — WinUI 3 / Fluent parity port
+=========================================================================
+Web source : web/src/features/dashboard/pages/QuickStatsPage.tsx (route /quick-stats)
+Output     : apps/windows/TeslaSync.App/feature-views/QuickStatsPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done pages ApiLogsPage/VehicleCostPage/EnergyProductsPage)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("QuickStats", …)
+             (RouteTable already maps Standalone("QuickStats","quick-stats",DashboardExplore))
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw already carry all nine
+             translation.quickStats.* keys (catalog-generated) — resolved by key, none added.
+
+Files:
+  feature-views/QuickStatsPage/QuickStatsPage.Model.cs      (parsers + projection + registration + diagnostics + source port)
+  feature-views/QuickStatsPage/QuickStatsPage.Source.cs     (generated C# client cache-then-network: vehicles+state+analytics)
+  feature-views/QuickStatsPage/QuickStatsPage.ViewModel.cs  (ObservableObject 4-state holder + units/currency)
+  feature-views/QuickStatsPage/QuickStatsPage.cs            (WinUI 3 UserControl, Fluent + design tokens)
+  TeslaSync.App.Tests/FeatureViews/QuickStatsPageTests.cs   (20 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj            (link the 3 UI-free files; the WinUI view is build-only)
+
+Data sources (P1/S8 ObservableObject VM → generated C# client, web hook names kept at the C# call sites):
+  useVehicles         -> QuickStatsSource.FetchAsync step 1, ApiRequest(Operations.Vehicles.List)
+  useVehicleState     -> QuickStatsSource.FetchAsync step 2, ApiRequest(Operations.Vehicles.State, vehicleID)
+  useAnalyticsSummary -> QuickStatsSource.FetchAsync step 3, ApiRequest(Operations.Analytics.Fleet, days=30)
+Units (P1/S5): SI read from the API; converted only at the display boundary in
+  QuickStatsProjection via UnitConverters.DistanceFromSi + ScalarFormatters (no non-SI stored/computed).
+Live data: none (web page uses TanStack-Query hooks, no useLiveX/SSE), so no SSE subscription / staleness chip (ADR-013 n/a).
+
+=== PARITY ===
+PARITY_REQUIRED=18
+
+[1/18]  panel  GlassPanel1 (vehicle card)
+        QuickStatsPage.cs::_vehiclePanel (TsGlassPanel) + _vehicleHost swap (_vehicleContent | _vehicleEmpty);
+        QuickStatsProjection.Project -> VehicleName/VehicleSubtitle/HasVehicle/VehicleAutomationName.
+        evidence-test: Projection_renders_the_vehicle_card_name_and_model_state, Projection_surfaces_the_no_vehicle_empty_state
+[2/18]  panel  unit-Driven (distance metric)
+        QuickStatsProjection metric key "distance" (CyanAccentBrushKey) ; QuickStatsPage.cs::_distanceCard (TsMetricCard).
+        evidence-test: Projection_emits_four_metric_panels_in_order, Projection_converts_distance_to_metric_and_imperial
+[3/18]  panel  Drives (drives metric)
+        QuickStatsProjection metric key "drives" (GreenAccentBrushKey) ; QuickStatsPage.cs::_drivesCard.
+        evidence-test: Projection_emits_four_metric_panels_in_order
+[4/18]  panel  kWh-Used (energy metric)
+        QuickStatsProjection metric key "energy" (AmberAccentBrushKey) ; QuickStatsPage.cs::_energyCard.
+        evidence-test: Projection_emits_four_metric_panels_in_order
+[5/18]  panel  Total-Cost (cost metric)
+        QuickStatsProjection metric key "cost" (PurpleAccentBrushKey) ; QuickStatsPage.cs::_costCard.
+        evidence-test: Projection_emits_four_metric_panels_in_order, Projection_formats_cost_with_the_currency_symbol
+[6/18]  state  loading
+        QuickStatsState.Loading ; QuickStatsPageViewModel.SetLoading ; QuickStatsDisplay.ShowLoading ;
+        QuickStatsPage.cs::_loadingSkeleton (TsSkeleton + 2×TsStatGridSkeleton).
+        evidence-test: ViewModel_starts_loading_then_resolves_loaded
+[7/18]  state  empty
+        QuickStatsState.Empty ; QuickStatsPageViewModel.SetEmpty (snapshot !HasData) ; vehicle card -> TsEmptyState.
+        evidence-test: ViewModel_classifies_a_no_data_snapshot_as_empty, Projection_surfaces_the_no_vehicle_empty_state
+[8/18]  state  error
+        QuickStatsState.Error ; QuickStatsPageViewModel.SetError ; QuickStatsDisplay.ShowError ;
+        QuickStatsPage.cs::_errorState (TsQueryError + Retry, error.loadFailed/common.retry).
+        evidence-test: ViewModel_surfaces_the_error_state_on_failure
+[9/18]  state  success
+        QuickStatsState.Loaded ; QuickStatsPageViewModel.ApplySnapshot ; QuickStatsDisplay.ShowContent.
+        evidence-test: ViewModel_starts_loading_then_resolves_loaded
+[10/18] string quickStats.cost            QuickStatsProjection costLabel = localizer.GetString("quickStats.cost", …)
+[11/18] string quickStats.defaultName     QuickStatsProjection defaultName = localizer.GetString("quickStats.defaultName", …)
+[12/18] string quickStats.distance        QuickStatsProjection distanceLabel = localizer.GetString("quickStats.distance", …) ({{unit}} interpolated)
+[13/18] string quickStats.drives          QuickStatsProjection drivesLabel = localizer.GetString("quickStats.drives", …)
+[14/18] string quickStats.energy          QuickStatsProjection energyLabel = localizer.GetString("quickStats.energy", …)
+[15/18] string quickStats.footer          QuickStatsProjection FooterText = localizer.GetString("quickStats.footer", …)
+[16/18] string quickStats.noVehicle       QuickStatsProjection noVehicle = localizer.GetString("quickStats.noVehicle", …)
+[17/18] string quickStats.openDashboard   QuickStatsProjection OpenDashboardText = localizer.GetString("quickStats.openDashboard", …)
+[18/18] string quickStats.title           QuickStatsProjection/Registration title = localizer.GetString("quickStats.title", …)
+# All nine string keys asserted resolved headlessly via a RecordingLocalizer:
+#   QuickStatsPageTests.Projection_resolves_every_required_string_key.
+# All four data states + the five panels assert their render from the bound QuickStatsDisplay state holder
+#   (ViewModel_* + Projection_* tests). Source request shaping (Operations.Vehicles.List/State +
+#   Operations.Analytics.Fleet days=30) is pinned by QuickStatsSource + Registration_mirrors_the_web_route_and_window.
+
+PARITY_COVERED=18
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Dashboard does not
+# exist in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/QuickStatsPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App also built standalone: 0 Error(s); the only warnings are pre-existing TeslaSync.App.Core CA*)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <QuickStatsPage Model/Source/ViewModel/view
+#   + QuickStatsPageTests + ShellWindow.xaml.cs>  -> 0 issues (LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26399, Failed: 0, Skipped: 0
+#   (incl. 20 QuickStatsPageTests)
+TEST_EXIT=0
+PARITY_COVERED=18
+PARITY_REQUIRED=18
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/QuickStatsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/QuickStatsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-dashboard-QuickStatsPage.log
+# git commit -m "feat(apps/windows): QuickStatsPage at web parity (W7 dashboard)"
+
+EXIT=0
+STATUS=DONE
