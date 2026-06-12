@@ -704,3 +704,4 @@ p2-windows/shared-meaningful/W-0229-ThemeProvider.prompt.md
 p2-windows/shared-meaningful/W-0234-VehiclePaintPicker.prompt.md
 p2-windows/shared-meaningful/W-0235-VehicleTwin.prompt.md
 p2-windows/widget-primitives/W-0005-WidgetEventFeed.prompt.md
+p2-windows/widget-primitives/W-0002-WidgetChartSummary.prompt.md
