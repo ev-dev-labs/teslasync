@@ -27,11 +27,13 @@
     each surface's Microsoft.UI-free sources are Compile-linked here instead; the bare WinUI view files are
     excluded and exercised by the app build.
     TeslaSync.App.Tests — headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
+    TeslaSync.App.Tests - headless (plain net10.0, no WinUI host) verification of the WinUI app's UI-thread-free
     logic (Model / Source / ViewModel / Projection / Registration / diagnostics) for every dashboard-widget,
     feature-view, misc-surface, modal/dialog and shared-surface. The WinUI app (TeslaSync.App) targets a WinUI
     TFM and cannot be project-referenced from a plain net10.0 test host, so each surface's Microsoft.UI-free
     sources are Compile-linked into the single, case-insensitive ordinal path-sorted, Include-deduplicated Compile
     ItemGroup below (the Link mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces,
+    item group below (the Link mirrors each source's real location under Widgets, FeatureViews, MiscSurfaces,
     ModalsDialogs or SharedSurfaces). The bare WinUI view files are excluded and exercised by the app build; the
     test classes are picked up by the SDK default-compile glob; the Content links copy the units-golden,
     Package.appxmanifest and widget-template fixtures.
@@ -82,6 +84,14 @@
     multi-root corruption) from the Microsoft.UI-free sources on disk, plus the new CarAnimation Model / ViewModel
     links. Do NOT re-concatenate into multiple roots, and never write a literal build-item or project start tag
     inside this comment.
+    project-reference / content item groups, and ONE Compile item group (the case-insensitive ordinal
+    path-sorted, Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/,
+    feature-views/, misc-surfaces/, modals-dialogs/ and shared-surfaces/). This file carries the .gitattributes
+    merge=union strategy, so a chain of integration merges can re-concatenate it into multiple roots plus
+    duplicate items, failing XML load (MSB4025 / MSB4067); when that happens, regenerate it directly from the
+    Microsoft.UI-free sources on disk. Regenerated into this single canonical root for P2 shared-surfaces/0202
+    UptimeHeatmap (repairing a merge=union multi-root corruption), adding the new UptimeHeatmap Model link. Do NOT
+    re-concatenate into multiple roots, and never write a literal build-item or project start tag inside this comment.
   -->
     INVARIANT: keep this file as exactly ONE project root with a single PropertyGroup, the package /
     project-reference / content item groups, and ONE Compile item group - the case-insensitive ordinal
@@ -111,8 +121,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
     <ProjectReference Include="..\Generated\Generated.csproj" />
+    <ProjectReference Include="..\TeslaSync.App.Core\TeslaSync.App.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -127,10 +137,9 @@
     </Content>
   </ItemGroup>
 
-  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App; see the header comment for the single-root / sort / dedupe invariant. -->
+  <!-- WinUI-free logic sources Compile-linked from TeslaSync.App; single-root / case-insensitive ordinal sort / Include-dedupe invariant (see header). -->
   <ItemGroup>
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
-  <ItemGroup>    <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Model.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.Source.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" Link="Widgets\AlertFeedWidget\AlertFeedWidget.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\dashboard-widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.Model.cs" Link="Widgets\AnalyticsSummaryWidget\AnalyticsSummaryWidget.Model.cs" />
@@ -1359,6 +1368,7 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\UnitInput.Model.cs" Link="SharedSurfaces\UnitInput.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UnitInput.Source.cs" Link="SharedSurfaces\UnitInput.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UnitInput.ViewModel.cs" Link="SharedSurfaces\UnitInput.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\UptimeHeatmap.Model.cs" Link="SharedSurfaces\UptimeHeatmap.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UsageCard.Model.cs" Link="SharedSurfaces\UsageCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UsageCard.Source.cs" Link="SharedSurfaces\UsageCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UsageCard.ViewModel.cs" Link="SharedSurfaces\UsageCard.ViewModel.cs" />

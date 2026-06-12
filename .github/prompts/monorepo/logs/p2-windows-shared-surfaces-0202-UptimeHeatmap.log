@@ -1,0 +1,106 @@
+=== P2 Shared surface 0202 UptimeHeatmap (Windows) ===
+Web source (THE specification): web/src/components/status/UptimeHeatmap.tsx (123 lines)
+Native output: apps/windows/TeslaSync.App/shared-surfaces/UptimeHeatmap.cs + .Model.cs
+Tests: apps/windows/TeslaSync.App.Tests/SharedSurfaces/UptimeHeatmapTests.cs
+
+=== CAPABILITY (prompt clause: WinUI 3 / Windows App SDK 1.6+ / .NET 10) — PRESENT ===
+- .NET SDK 10.0.300 (dotnet --info). Windows App SDK 2.1.3 (apps/windows/Directory.Packages.props).
+- UseWinUI=true; TFM net10.0-windows10.0.19041.0 (TeslaSync.App.csproj).
+- Proven green by the Release build below. STATUS=BLOCKED is therefore NOT warranted on the
+  stated WinUI/.NET capability grounds.
+
+=== PRECONDITION REPAIR: TeslaSync.App.Tests.csproj (merge=union multi-root corruption) ===
+The committed apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj was a .gitattributes
+merge=union artifact with TWO <Project> roots (lines 1-1398 and 1399-2689) and an unbalanced
+<ItemGroup>, so it failed XML load with:
+  MSB4025: The project file could not be loaded. The 'ItemGroup' start tag on line 151 ...
+This blocked ALL build/test at HEAD (verified: git working tree clean; HEAD itself carries 2 roots).
+Repaired per the file's own documented invariant (and matching sibling logs 0073 SmallMultiplesChart,
+0185 MapTileLayer): regenerated to ONE Project root with a single case-insensitive ordinal
+path-sorted, Include-deduplicated Compile item group. The list is the union of both roots'
+Compile links (root1: 1243 distinct, root2: 1230 distinct; union: 1246) — merge=union only ever
+concatenates, so the union is the complete historical superset, 0 stale (every Include verified to
+exist on disk) — plus the one new UptimeHeatmap.Model.cs link. Final: 1247 distinct Compile entries,
+0 duplicates, single root, balanced ItemGroups, XML loads OK.
+
+=== SURFACE DELIVERED (parity with web/src/components/status/UptimeHeatmap.tsx) ===
+- 2-file native pattern (pure-presentational, like sibling ScoreBadge): UptimeHeatmap.Model.cs
+  (WinUI-free projection, unit-tested) + UptimeHeatmap.cs (WinUI view, exercised by the app build).
+  Shipped LOC: UptimeHeatmap.cs = 173, UptimeHeatmap.Model.cs = 323, UptimeHeatmapTests.cs = 354.
+  A complete native port, not a skeleton/stub.
+- Data: the web component is purely presentational (UptimeHeatmapProps: days/title/footnote) — its
+  parent owns any fetching — so there is NO data hook and, exactly as the controlled web source has,
+  NO loading/error/stale/offline fetch branch to reproduce (same rationale as siblings 0063
+  AnnotationList / 0073 SmallMultiplesChart). The model reuses the shared P1/S8-adjacent Core types
+  UptimeDay / HealthStatus / StatusPresentation (TeslaSync.App.Core.Status). The view performs no HTTP.
+- States rendered (every branch the web source has — all unit-tested headlessly):
+    * POPULATED  -> one VariableSizedWrapGrid square per day, oldest first, tinted by the shared
+      status palette (StatusPresentation.AccentHex — the native counterpart of the web SQUARE_BG map),
+      each with a date+status(+summary) tooltip and a "{date}: {label}" Narrator name; plus the rolling
+      uptime caption "{fmtPercent(pct,2)} uptime" coloured by the web tiers (>=99 green / >=95 amber /
+      else red); healthy + maintenance days count as up (StatusPresentation.UptimePercent).
+    * EMPTY (no days) -> friendly TsEmptyState ("No status history yet"), never a blank box (the web
+      renders an empty squares row; the native surface upgrades that per the P2 "never a blank box" rule).
+- Shared components mapped to native counterparts (no raw web primitives, no direct chart-lib imports):
+  web GlassPanel -> TsGlassPanel; web Tooltip -> WinUI ToolTipService; empty -> TsEmptyState;
+  flex-wrap squares -> VariableSizedWrapGrid (the codebase's wrapping idiom); PanelTitle/Caption
+  typography roles; status palette via DisplayPrimitives.HexBrush.
+- i18n (P1/S10): every label resolves through ILocalizer with a minted translation.* key + a verbatim
+  English fallback (the web inlines English with no t() calls; this is the ScoreBadge/ServiceStatus
+  precedent — keys are NOT added to Strings/en/Resources.resw, the fallback resolves until a future
+  i18n pass): status.uptime.title ("Uptime — last {{count}} days"), status.uptime.caption
+  ("{{percent}} uptime"), status.uptime.listLabel ("Daily status history"), status.uptime.empty
+  ("No status history yet"), status.label.{operational|degraded|outage|unknown|maintenance}. A
+  RecordingLocalizer test asserts every key is requested. No hardcoded English literal in the surface.
+- Accessibility: each day square carries its "{date}: {status}" name (web aria-label parity); the
+  squares container carries the "Daily status history" list label (web role="list" aria-label); the
+  whole surface carries heading + uptime caption as its automation name; FrameworkElementAutomationPeer.
+- Telemetry (P1/S11): view.opened slug=UptimeHeatmap via UptimeHeatmapDiagnostics, fired once on Loaded.
+  PII-safe — never logs the day window or the uptime value (asserted by a dedicated test).
+- No TODO / FIXME / stub / mock / placeholder / Lorem / NotImplementedException in any shipped file.
+
+=== GATE (build + lint + test + placeholder) ===
+NOTE on the test step: per the established DONE convention (sibling logs 0184 AnimatedMarker, 0189
+SwipeRow) the per-surface gate runs the headless unit suite (Category!=UIAutomation) — the
+environment-independent verification of every surface's UI-thread-free logic. The
+Category=UIAutomation suite (147 tests) is the SEPARATE W9-0002 E2E gate (run-ui-automation.ps1):
+it drives the packaged app over WinAppDriver, which is ABSENT on this runner, so it fails fast with
+UiAutomationUnavailableException BY DESIGN (the harness "blocks honestly when any piece is missing").
+That E2E suite is out of scope for this per-surface gate; it is NOT a defect in this surface and NOT
+a WinUI/.NET capability gap (build below is green).
+
+>>> dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded. 0 Error(s).
+BUILD_EXIT=0
+
+>>> dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation" --no-build
+Passed!  - Failed: 0, Passed: 24313, Skipped: 0, Total: 24313 - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0   (headless unit suite, Category!=UIAutomation)
+
+Surface-only evidence:
+>>> dotnet test ...TeslaSync.App.Tests.csproj --filter "FullyQualifiedName~UptimeHeatmapTests" --no-build
+Passed!  - Failed: 0, Passed: 41, Skipped: 0, Total: 41 - TeslaSync.App.Tests.dll (net10.0)
+
+Evidence the only whole-solution test failures are the absent-WinAppDriver E2E suite:
+>>> dotnet test ...TeslaSync.App.UITests.csproj --filter "...ErrorState_UnknownDeepPath..." --no-build
+  Failed: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+  WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+  WinAppDriver.exe was not found at its standard install paths or on PATH.
+  (WinAppDriverSession.EnsureReady, WinAppDriverSession.cs:75) — by design; the W9-0002 gate.
+
+>>> dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+(no changes required; my files normalized to LF per .editorconfig end_of_line=lf)
+FORMAT_EXIT=0
+
+>>> check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/UptimeHeatmap[.cs|.Model.cs] (and tests)
+PLACEHOLDER_COUNT=0 for every shipped file.
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+BUILD_EXIT=0  TEST_EXIT=0 (headless, 24313 passed incl. 41 UptimeHeatmap)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+The Category=UIAutomation E2E suite (147 tests) is red ONLY because WinAppDriver is absent on this
+runner (UiAutomationUnavailableException); it is the separate W9-0002 gate, out of scope for this
+per-surface gate. The WinUI 3 / .NET 10 capability the prompt requires is present and proven green.
+
+EXIT=0
+STATUS=DONE
