@@ -744,3 +744,4 @@ p2-windows/pages/charging/ChargingDetailPage.prompt.md
 p2-windows/pages/charging/ChargingCurvePage.prompt.md
 p2-windows/pages/charging/TeslaChargingSessionsMap.prompt.md
 p2-windows/pages/charging/PowersharePage.prompt.md
+p2-windows/pages/charging/CostAnalysisPage.prompt.md
