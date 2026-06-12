@@ -3188,6 +3188,15 @@
   <string name="translation_drivetrain_tempHistorySub">Outside temperature recorded during recent drives</string>
   <string name="translation_drivetrain_temperatures">Temperature Details</string>
   <string name="translation_drivetrain_thermalMetrics">Thermal Load Indicators</string>
+  <string name="translation_drivetrain_tips_avoidSupercharging">Avoid Supercharging while temperatures are elevated. Use Level 2 charging instead.</string>
+  <string name="translation_drivetrain_tips_checkCoolant">Schedule a service appointment to inspect the coolant system and fluid levels.</string>
+  <string name="translation_drivetrain_tips_criticalStop">Temperatures are critically high. Consider pulling over safely and letting the vehicle cool down.</string>
+  <string name="translation_drivetrain_tips_gentleAccel">Gentle acceleration helps maintain lower motor temperatures and extends component life.</string>
+  <string name="translation_drivetrain_tips_monitorTemps">Monitor drivetrain temperatures after spirited driving sessions or long highway stretches.</string>
+  <string name="translation_drivetrain_tips_precondition">Precondition the battery in cold weather for better thermal performance and driving efficiency.</string>
+  <string name="translation_drivetrain_tips_reduceLoad">Reduce driving intensity and avoid hard acceleration to allow components to cool.</string>
+  <string name="translation_drivetrain_tips_regularService">Keep up with regular service intervals for optimal drivetrain health and longevity.</string>
+  <string name="translation_drivetrain_tips_serviceUrgent">Schedule an urgent service appointment. Critical temperatures may indicate a coolant system issue.</string>
   <string name="translation_drivetrain_title">Drivetrain Health</string>
   <string name="translation_drivetrain_topSpeed">Top Speed</string>
   <string name="translation_drivetrain_torque">Torque</string>
