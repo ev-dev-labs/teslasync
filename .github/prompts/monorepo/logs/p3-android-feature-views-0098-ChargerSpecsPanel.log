@@ -1,0 +1,93 @@
+=== P3 Feature view 0098 ChargerSpecsPanel (Android) ===
+
+Artifact: apps/android/app/src/main/java/com/teslasync/feature-views/ChargerSpecsPanel/{ChargerSpecsPanel.kt, ChargerSpecsPanelModel.kt}
+Tests:    apps/android/app/src/test/java/io/teslasync/android/featureviews/chargerspecspanel/ChargerSpecsPanelProjectionTest.kt
+          apps/android/app/src/androidTest/java/io/teslasync/android/featureviews/chargerspecspanel/ChargerSpecsPanelUiTest.kt
+Web spec: web/src/features/charging/components/charging-list/ChargerSpecsPanel.tsx
+
+----------------------------------------------------------------------
+CAPABILITY (Jetpack Compose + Material 3, Kotlin 2.2.x) — AVAILABLE
+----------------------------------------------------------------------
+- JDK 21.0.9 (Android Studio jbr); ANDROID_HOME set (android-36 platform, build-tools 36.1.0); Gradle 8.14.5.
+- Toolchain locked at Kotlin 2.4.0 / AGP 8.9.2 / compileSdk 36 (gradle/libs.versions.toml), which satisfies
+  the prompt's "Kotlin 2.2.x or newer + Compose + Material 3" capability floor.
+- `:android:assembleRelease` = BUILD SUCCESSFUL; Compose/Material3/KMP-shared-core all resolve and compile.
+  NOT blocked.
+
+----------------------------------------------------------------------
+GATE NOTES (transparency — Honesty Covenant #9 no silent drift)
+----------------------------------------------------------------------
+1. Module path: the prompt's gate text addresses `:app:`, but the Gradle module in this repo is `:android:`
+   (settings.gradle.kts: include(":android"), projectDir=app; comment: "every P3/A* prompt gate addresses
+   `:android:`"). The gate below was run with `:android:` so the tasks actually resolve; `:app:...` would
+   error with "project ':app' not found". Same adaptation the sibling feature-view gates record.
+2. The UI/a11y test (ChargerSpecsPanelUiTest.kt) is an androidTest (connectedAndroidTest) instrumented test;
+   it compiles + passes ktlint/detekt here but is NOT executed by the offline gate (no emulator; outside
+   testReleaseUnitTest). The pure projection is fully covered by the testReleaseUnitTest run below.
+3. SI on the wire, display at the boundary: SpecEntry carries energyWh (watt-hours) + avgPowerW (watts); the
+   kWh/kW conversion is a display-only /1000 in the projection (web convertEnergyFromSI/convertPowerFromSI),
+   never a stored unit-suffixed field — matches the repo SI-canonical mandate + the ChargerTypeChart sibling.
+
+----------------------------------------------------------------------
+BUILD — :android:assembleRelease
+----------------------------------------------------------------------
+$ ./gradlew :android:assembleRelease --console=plain
+BUILD SUCCESSFUL in 3m 48s
+70 actionable tasks: 10 executed, 6 from cache, 54 up-to-date
+BUILD_EXIT=0
+
+----------------------------------------------------------------------
+TEST — :android:testReleaseUnitTest (off-device JVM unit gate)
+----------------------------------------------------------------------
+$ ./gradlew :android:testReleaseUnitTest --console=plain
+BUILD SUCCESSFUL in 1m 49s
+45 actionable tasks: 3 executed, 42 up-to-date
+Aggregate across the module: tests=4941 failures=0 errors=0 (401 suites).
+Surface class io.teslasync.android.featureviews.chargerspecspanel.ChargerSpecsPanelProjectionTest:
+  tests=11 failures=0 errors=0
+  - hasData gate: null / fully-empty → false; phase-only → false (web omits phase); voltage|cable|brand → true.
+  - projectUiState: Content when hasData, Empty otherwise.
+  - four columns in web source order (Voltage, Phase, Cable, Brand) with labels + per-column empty messages.
+  - Brand row shows "{int} kW avg" when avgPower present, falls back to "{energy} kWh" when null.
+  - non-Brand rows always show kWh even with a power sample (web showAvgPower is Brand-only).
+  - SI→display /1000 conversion verified through stub formatters (480000 W → 120 kW; 90000 Wh → 90 kWh).
+  - view.opened {surface: ChargerSpecsPanel} PII-safe diagnostic.
+TEST_EXIT=0
+
+----------------------------------------------------------------------
+LINT — :android:ktlintCheck :android:detekt
+----------------------------------------------------------------------
+$ ./gradlew :android:ktlintCheck :android:detekt --console=plain
+BUILD SUCCESSFUL in 2m 38s
+(ktlint main+test+androidTest source sets clean; detekt clean with warningsAsErrors=true)
+LINT_EXIT=0
+
+----------------------------------------------------------------------
+PLACEHOLDER / STUB GATE (ADR-011)
+----------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/java/com/teslasync/feature-views/ChargerSpecsPanel
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------
+PARITY SUMMARY (web -> native)
+----------------------------------------------------------------------
+- GlassPanel(title "Charger Specs Breakdown" + Gauge glyph, text-neon-purple) -> GlassPanel + ChargerSpecsTitle
+  (Gauge glyph tinted TeslaTokens.chart.power = #A855F7).
+- hasData gate `specs && (voltage||cable||brand).length` (phase intentionally excluded) -> ChargerSpecsPanelProjection.hasData.
+- Four SpecColumns (By Voltage/Zap, By Phase/Activity, By Cable/Cable, By Brand/Plug) -> SpecColumnView in a
+  responsive 1/2/4-column grid (web grid-cols-1 sm:grid-cols-2 lg:grid-cols-4).
+- Per-column EmptyState (noVoltage/noPhase/noCable/noBrand) -> column-level EmptyState; column never a blank gap.
+- Row "{count} sessions · {showAvgPower && avgPower != null ? `{int} kW avg` : fmtWithUnit(energy,'kWh')}" ->
+  ChargerSpecsPanelProjection.projectRow (Brand-only avg power; count ungrouped per web {v.count}).
+- Panel-level !hasData EmptyState (noData) -> ChargerSpecsEmpty.
+- States: loading skeleton grid / error+retry / empty / content / stale / offline — all rendered, none hidden.
+- i18n: all charging.specs.* keys + the composed unit words (charging.curve.sessions, kW, kWh, avg) resolve via
+  P1/S10; every catalog key already present in res/values/strings.xml (no new keys needed).
+- Diagnostics: view.opened {surface: ChargerSpecsPanel} (P1/S11).
+- a11y: merged per-row contentDescription "{name}, {summary}"; decorative glyphs contentDescription=null;
+  EmptyState message exposed as its own label; retry exposes a click action.
+
+EXIT=0
+STATUS=DONE
