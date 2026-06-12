@@ -1,0 +1,199 @@
+================================================================================
+p4-apple · P7 · page:admin/FleetTelemetryCoverage — SwiftUI / HIG parity
+================================================================================
+artifact : apps/apple/Sources/Features/Admin/FleetTelemetryCoveragePage.swift (+ model, sample, sections, route reg, tests)
+host     : macOS (Darwin) 26.5.1; Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.6.2 present
+parity   : page:admin/FleetTelemetryCoverage  (manifest PARITY_REQUIRED=51 = 11 panels + 3 states + 37 strings)
+web src  : web/src/features/admin/pages/FleetTelemetryCoveragePage.tsx  (route /admin/telemetry/coverage)
+data src : useFleetTelemetryCoverage -> GET /tesla/fleet-telemetry/coverage  (package-derived routing snapshot; NOT live telemetry -> no SSE/staleness on this surface, per the web source's own note)
+
+FILES (allowed scope: Features/Admin/**, navigation registration, the string catalog, this log)
+  NEW  apps/apple/Sources/Features/Admin/FleetTelemetryCoveragePageModel.swift
+  NEW  apps/apple/Sources/Features/Admin/FleetTelemetryCoveragePageModel.Sample.swift
+  NEW  apps/apple/Sources/Features/Admin/FleetTelemetryCoveragePage.swift
+  NEW  apps/apple/Sources/Features/Admin/FleetTelemetryCoveragePage.Sections.swift
+  NEW  apps/apple/Sources/Features/Admin/FleetTelemetryCoverageRouteRegistration.swift
+  NEW  apps/apple/Tests/Unit/Features/Admin/FleetTelemetryCoveragePageModelTests.swift
+  EDIT apps/apple/Sources/App/AppRoute.swift            (add .fleetTelemetryCoverage: System group, segment "fleet-telemetry-coverage", SF symbol)
+  EDIT apps/apple/Sources/App/AppRouteParser.swift      (deep-link alias "/admin/telemetry/coverage" -> .fleetTelemetryCoverage)
+  EDIT apps/apple/Sources/TeslaSyncApp.swift            (compose FleetTelemetryCoverageRouteRegistration into the route-host chain)
+  EDIT apps/apple/Localization/Localizable.xcstrings    (+37 coverage.* strings, +1 route.fleetTelemetryCoverage nav title)
+  EDIT apps/parity/apple-ledger.json                    (+2 rows: apple-macos / apple-ios -> done 51/51)
+
+Navigation note: the sibling DiskForecast page already hosts on .admin; the first-segment
+parser would route /admin/* there. To keep the page reachable + deep-linkable WITHOUT
+displacing the predecessor (covenant #7), a dedicated .fleetTelemetryCoverage route was added
+(System sidebar group) plus an explicit /admin/telemetry/coverage alias. MenuCommandCatalog
+derives navigate commands from AppRoute.allCases, so the new case is covered automatically
+(testNavigateCommandsCoverEveryRoute stays green); the new pathSegment is unique
+(testEveryRouteHasUniquePathSegment stays green).
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (apps/apple/Scripts/build-shared-xcframework.sh) ---
+BUILD SUCCESSFUL in 7m 29s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "FleetTelemetryCoverage" referenced 36x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 6 new/test files + 3 edited files, repo .swiftformat) ---
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 6 new/test files + 3 edited files, repo .swiftlint.yml) ---
+Found 0 violations, 0 serious.
+LINT_EXIT=0
+  [the only repo-wide --strict violations are PRE-EXISTING + OUT-OF-SCOPE:
+   TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52-54 identifier_name a/b/c — untouched by this artifact]
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  [the single ALLOWED is the filter field line in FleetTelemetryCoveragePage.swift:209 — the
+   manifest i18n key name is literally "coverage.filter.placeholder"; the case-insensitive
+   scanner matches the substring "placeholder" in that KEY. It is annotated
+   `// parity:allow i18n key name, not a stub` with a required reason. It is NOT a stub:
+   it binds a real TSTextField filter. No TODO/FIXME/Coming soon/Lorem/"not implemented"/fatalError anywhere.]
+
+--- Executed model logic (real model + sample, Swift 6 strict-concurrency host harness) ---
+# xcrun swiftc -swift-version 6 -strict-concurrency=complete -sdk <macosx> -target arm64-apple-macos15.0 \
+#   Sources/Features/Admin/FleetTelemetryCoveragePageModel.swift \
+#   Sources/Features/Admin/FleetTelemetryCoveragePageModel.Sample.swift Harness.swift -o fcharness   (SWIFTC_EXIT=0)
+39 assertions, 0 failures -> "ALL ASSERTIONS PASSED"
+  initial=.loading + !isRefreshing + response==nil + stats==.zero;
+  success->.loaded(2 categories) + stats(cats=2/routed=5/subscribed=3/unsub=2/orphans=1);
+  destination totals sort desc then key asc (c,a,b); per-category dest tiebreak (drives,signal_log);
+  orphans passthrough + hasOrphans; filter by category-name (keeps category, 0 field matches);
+  filter by field-name / destination / column; whitespace filter -> all; no-match -> 0 categories;
+  empty load -> .empty + stats .zero; failed load -> .error; refresh clears isRefreshing + reloads;
+  sample seed (5 categories / 16 routed / 12 subscribed / 4 unsub / signal_log total 11 / 2 orphans);
+  fmtInt 0 / 42 / 1,234 / 1,000,000 + emptyValue dash
+HARNESS_EXIT=0
+
+--- View type-check against the REAL P2 tokens + P3 components (Swift 6 strict concurrency, BOTH idioms) ---
+# xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/{TSDesign,TSMaterial}.swift Sources/Theme.swift \
+#   Sources/Components/UI/{Cards,Typography,Badges,Buttons,Fields}.swift Sources/Components/DataDisplay/Metrics.swift \
+#   Sources/Components/Feedback/{States,Banners,Skeletons}.swift Sources/App/{AppRoute,RouteHostRegistry,AppRouteParser}.swift \
+#   Sources/Features/Admin/{FleetTelemetryCoveragePageModel,..Sample,FleetTelemetryCoveragePage,..Sections,..RouteRegistration}.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0
+  [exercises the #if os(iOS) horizontalSizeClass compact branch in BOTH FleetTelemetryCoveragePage
+   (stat-card 2-col grid) and FleetTelemetryFieldTable (per-field cards vs. columnar Grid), ADR-002/006.
+   Compiles my view + sections + model + sample + registration against the ACTUAL
+   TSGlassPanel/TSCard/TSStatCard/TSBadge/TSTextField/TSEmptyState/TSSpinner/TSButton/TSPanelTitle/TSCaption
+   /TSPageTitle/TSTone/Color.TS/Font.TS/TSSpacing/TSRadius/tsGlassPanel/AppRouteHostRegistry sources.]
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug -destination platform=macOS,arch=arm64 CODE_SIGNING_ALLOWED=NO build) ---
+BUILD_EXIT=65  [BLOCKED by ONE PRE-EXISTING, OUT-OF-SCOPE error — see note below; ZERO errors in any of my files]
+TEST_EXIT=(not reached)  [the test bundle hosts on the app target, which is blocked by the same out-of-scope error;
+                          model logic is instead proven GREEN by the executed harness (39/39) above]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target does not compile at this HEAD due to a defect in a sibling
+surface OUTSIDE this artifact's allowed files. grep of the build log: total `error:` lines = 1;
+unique erroring file =
+  TeslaSync/shared-surfaces/AISuggestNewGeofences.swift:129:22:
+      error: escaping closure captures non-escaping parameter 'content'
+This is the SAME systematic `glass(@ViewBuilder _ content: () -> some View)` bug class the
+predecessor DiskForecast + ApiPlayground logs documented across the generated shared-surfaces files.
+NONE of the diagnostics are in my files (grep of the build log for Features/Admin/FleetTelemetry*,
+TeslaSyncApp.swift, AppRoute*.swift -> zero diagnostics). My files' correctness is proven instead by
+the isolated Swift 6 type-check (0/0 on macOS+iOS) and the executed model harness (39/39) — the same
+host-harness methodology the peer p4-apple logs use when the shared bundle is blocked by out-of-scope
+siblings. No out-of-scope file was edited.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=51
+================================================================================
+# evidence = file `symbol` (paths under apps/apple/Sources/Features/Admin/)
+
+[x] panel  — GlassPanel1            FleetTelemetryCoveragePage.Sections.swift `FleetTelemetryCategorySection` -> TSGlassPanel { sectionHeader + FleetTelemetryFieldTable } (per-category routing table; web `CategorySection` GlassPanel)
+[x] panel  — Categories             FleetTelemetryCoveragePage.swift `statGrid` -> TSStatCard(title:"coverage.stat.categories", value: fmt(model.stats.totalCategories))
+[x] panel  — Routed-fields          FleetTelemetryCoveragePage.swift `statGrid` -> TSStatCard(title:"coverage.stat.routedFields", value: fmt(model.stats.totalRoutedFields))
+[x] panel  — Subscribed             FleetTelemetryCoveragePage.swift `statGrid` -> TSStatCard(title:"coverage.stat.subscribed", value: fmt(model.stats.subscribedFields))
+[x] panel  — Routed-not-subscribed  FleetTelemetryCoveragePage.swift `statGrid` -> TSStatCard(title:"coverage.stat.routedNotSubscribed", value: fmt(model.stats.unsubscribedRoutedFields))
+[x] panel  — Orphan-fields          FleetTelemetryCoveragePage.swift `statGrid` -> TSStatCard(title:"coverage.stat.orphans", value: fmt(model.stats.orphanFields))
+[x] panel  — GlassPanel7 (legend)         FleetTelemetryCoveragePage.swift `legendPanel` -> TSGlassPanel { TSPanelTitle/TSCaption + 3 legendItem rows } (web "Reading this page")
+[x] panel  — GlassPanel8 (destinations)   FleetTelemetryCoveragePage.swift `destinationsPanel` -> TSGlassPanel { CoverageFlowLayout of CoverageCountChip / empty note } (web "Destination breakdown")
+[x] panel  — GlassPanel9 (orphans)        FleetTelemetryCoveragePage.swift `orphansPanel` -> TSGlassPanel (warning-stroked) { triangle + title/help + monospaced orphan list } (web amber "Orphan fields detected"; gated on model.hasOrphans)
+[x] panel  — GlassPanel10 (filter)        FleetTelemetryCoveragePage.swift `filterPanel` -> TSGlassPanel { TSTextField bound to model.filter } (web filter Input)
+[x] panel  — GlassPanel11 (error)         FleetTelemetryCoveragePage.swift `errorPanel(_:)` -> TSGlassPanel (danger-stroked) { triangle + "coverage.error" + Retry } (web rose error GlassPanel)
+
+[x] state  — loading   FleetTelemetryCoveragePage.swift `loadingRow` (TSSpinner label "coverage.loading"); model FleetTelemetryCoverageState.loading; .task -> model.load() sets .loading
+[x] state  — empty     FleetTelemetryCoveragePage.swift `emptyState` (TSEmptyState "coverage.empty") + `filterEmptyState` (TSEmptyState "coverage.filterEmpty"); model .empty (zero categories) / filteredCategories.isEmpty
+[x] state  — success   FleetTelemetryCoveragePage.swift `categoriesList` -> ForEach(model.filteredCategories) FleetTelemetryCategorySection; model .loaded(response)
+            (+ error state also implemented: errorPanel + model .error + Retry -> model.refresh(), per HIG "error view + Retry")
+
+[x] string — coverage.category.empty            Sections.swift:25  FleetTelemetryFieldTable(emptyMessage: "coverage.category.empty")
+[x] string — coverage.category.noMatch          Sections.swift:20  Text("coverage.category.noMatch")
+[x] string — coverage.category.totalFields      Sections.swift:57  String(localized: "coverage.category.totalFields") ("%lld routed fields")
+[x] string — coverage.col.column                Sections.swift:103 header("coverage.col.column")
+[x] string — coverage.col.destination           Sections.swift:102 header("coverage.col.destination")
+[x] string — coverage.col.dualWrite             Sections.swift:104 header("coverage.col.dualWrite")
+[x] string — coverage.col.field                 Sections.swift:101 header("coverage.col.field")
+[x] string — coverage.col.subscribed            Sections.swift:105 header("coverage.col.subscribed")
+[x] string — coverage.destinations.empty        Page.swift:155 Text("coverage.destinations.empty")
+[x] string — coverage.destinations.help         Page.swift:142 TSCaption("coverage.destinations.help")
+[x] string — coverage.destinations.title        Page.swift:141 TSPanelTitle("coverage.destinations.title")
+[x] string — coverage.dualWrite.yes             Sections.swift:187 TSBadge("coverage.dualWrite.yes", tone: .warning)
+[x] string — coverage.empty                     Page.swift:271 TSEmptyState(title: "coverage.empty")
+[x] string — coverage.error                     Page.swift:251 Text("coverage.error")
+[x] string — coverage.filter.placeholder        Page.swift:209 TSTextField("coverage.filter.placeholder", ...)
+[x] string — coverage.filterEmpty               Page.swift:276 TSEmptyState(title: "coverage.filterEmpty")
+[x] string — coverage.legend.columnHelp         Page.swift:114 legendItem(help: "coverage.legend.columnHelp")
+[x] string — coverage.legend.columnLabel        Page.swift:114 legendItem(label: "coverage.legend.columnLabel")
+[x] string — coverage.legend.dualWriteHelp      Page.swift:115 legendItem(help: "coverage.legend.dualWriteHelp")
+[x] string — coverage.legend.dualWriteLabel     Page.swift:115 legendItem(label: "coverage.legend.dualWriteLabel")
+[x] string — coverage.legend.intro              Page.swift:112 TSCaption("coverage.legend.intro")
+[x] string — coverage.legend.subscribedHelp     Page.swift:116 legendItem(help: "coverage.legend.subscribedHelp")
+[x] string — coverage.legend.subscribedLabel    Page.swift:116 legendItem(label: "coverage.legend.subscribedLabel")
+[x] string — coverage.legend.title              Page.swift:111 TSPanelTitle("coverage.legend.title")
+[x] string — coverage.loading                   Page.swift:238 TSSpinner(label: "coverage.loading")
+[x] string — coverage.orphans.help              Page.swift:179 TSCaption("coverage.orphans.help")
+[x] string — coverage.orphans.title             Page.swift:178 TSPanelTitle("coverage.orphans.title")
+[x] string — coverage.pageTitle                 Page.swift:64  TSPageTitle("coverage.pageTitle")
+[x] string — coverage.refresh                   Page.swift:80  Label("coverage.refresh", systemImage: "arrow.clockwise")
+[x] string — coverage.stat.categories           Page.swift:89  TSStatCard(title: "coverage.stat.categories")
+[x] string — coverage.stat.orphans              Page.swift:96  TSStatCard(title: "coverage.stat.orphans")
+[x] string — coverage.stat.routedFields         Page.swift:90  TSStatCard(title: "coverage.stat.routedFields")
+[x] string — coverage.stat.routedNotSubscribed  Page.swift:93  TSStatCard(title: "coverage.stat.routedNotSubscribed")
+[x] string — coverage.stat.subscribed           Page.swift:91  TSStatCard(title: "coverage.stat.subscribed")
+[x] string — coverage.subscribed.no             Sections.swift:198 TSBadge("coverage.subscribed.no", tone: .neutral)
+[x] string — coverage.subscribed.yes            Sections.swift:197 TSBadge("coverage.subscribed.yes", tone: .success)
+[x] string — coverage.subtitle                  Page.swift:65  Text("coverage.subtitle")
+
+PARITY_COVERED=51
+PARITY_REQUIRED=51
+(all 37 keys also confirmed present in apps/apple/Localization/Localizable.xcstrings with en source values ported verbatim from the web `t(key, default)` calls; "{{count}}" -> "%lld")
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild=65)
+                       is a PRE-EXISTING out-of-scope sibling defect (AISuggestNewGeofences.swift:129),
+                       reported as RED, not masked. In-scope gates are all GREEN.
+ 2 No scope narrowing : all 11 panels + 3 states + 37 strings implemented (PARITY_COVERED=51).
+ 3 No skip-and-assume : model logic executed (39/39); views type-checked on macOS+iOS (0/0).
+ 4 No stubs as final  : complete implementation; PLACEHOLDER_COUNT=0 (1 documented i18n-key opt-out).
+ 5 No parity shortcuts: SwiftUI-native (TSGlassPanel/TSStatCard/TSTextField/TSBadge/Swift `Layout` flow,
+                        adaptive Grid/cards) — no web cloning, no WKWebView.
+ 6 No delegation      : implemented directly; no sub-agents.
+ 7 No predecessor bypass: DiskForecast (.admin) + ApiPlayground (.apiPlayground) untouched & still hosted;
+                        a NEW .fleetTelemetryCoverage route + /admin/telemetry/coverage alias were added.
+ 8 No commit on red   : committing on all-GREEN IN-SCOPE gates — swiftformat(0/9), swiftlint --strict(0/9),
+                        placeholder(0), harness(39/39), typecheck macOS+iOS(0/0), xcodegen(0). The full
+                        xcodebuild is RED ONLY due to the documented pre-existing out-of-scope sibling.
+ 9 No silent drift    : Localizable.xcstrings keys = web key names verbatim; apple-ledger updated 51/51.
+10 (terminates below with EXIT + STATUS)
+
+EXIT=0
+STATUS=DONE
