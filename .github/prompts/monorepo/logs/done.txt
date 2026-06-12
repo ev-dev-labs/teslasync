@@ -677,3 +677,4 @@ p2-windows/shared-meaningful/W-0196-ActionItem.prompt.md
 p2-windows/shared-meaningful/W-0197-HealthRow.prompt.md
 p2-windows/shared-meaningful/W-0198-ResourcesPanel.prompt.md
 p2-windows/shared-meaningful/W-0199-StatusHero.prompt.md
+p2-windows/shared-meaningful/W-0202-UptimeHeatmap.prompt.md
