@@ -488,3 +488,4 @@ p3-android/feature-views/A-0245-helpers.prompt.md
 p3-android/feature-views/A-0244-HealthProbesSection.prompt.md
 p3-android/feature-views/A-0240-BackgroundWorkersCard.prompt.md
 p3-android/feature-views/A-0237-AiUsageCard.prompt.md
+p3-android/feature-views/A-0241-BackupActionsCard.prompt.md
