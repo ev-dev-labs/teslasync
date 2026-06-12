@@ -42,7 +42,7 @@ public class AdminStore(
     private val triggers = mutableMapOf<String, MutableStateFlow<Int>>()
     private val feeds = mutableMapOf<String, StateFlow<Resource<JsonElement>>>()
 
-    // ---- Reads (15) ---------------------------------------------------------------
+    // ---- Reads (16) ---------------------------------------------------------------
 
     /** Shared, refreshable `GET /api-keys` feed. */
     public fun apiKeys(): StateFlow<Resource<JsonElement>> = feed(KEY_API_KEYS) { repo.apiKeys() }
@@ -83,6 +83,9 @@ public class AdminStore(
 
     /** Shared, refreshable `GET /dev-tools/runtime-info` feed. */
     public fun connectionPool(): StateFlow<Resource<JsonElement>> = feed(KEY_CONNECTION_POOL) { repo.connectionPool() }
+
+    /** Shared, refreshable `GET /system/compression-stats` feed (web devtools `getCompressionStats`). */
+    public fun compressionStats(): StateFlow<Resource<JsonElement>> = feed(KEY_COMPRESSION_STATS) { repo.compressionStats() }
 
     /** Shared, refreshable `GET /export/jobs` feed. */
     public fun exportJobs(): StateFlow<Resource<JsonElement>> = feed(KEY_EXPORT_JOBS) { repo.exportJobs() }
@@ -176,6 +179,7 @@ public class AdminStore(
         const val KEY_DB_STATS = "db-stats"
         const val KEY_MIGRATIONS = "migrations"
         const val KEY_CONNECTION_POOL = "connection-pool"
+        const val KEY_COMPRESSION_STATS = "compression-stats"
         const val KEY_EXPORT_JOBS = "export-jobs"
         const val KEY_VEHICLE_STATE = "vehicle-state"
         const val KEY_STATE_TIMELINE = "state-timeline"

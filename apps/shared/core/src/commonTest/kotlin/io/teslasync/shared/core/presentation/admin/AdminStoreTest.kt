@@ -68,6 +68,8 @@ class AdminStoreTest {
 
         override fun connectionPool(): Flow<Resource<JsonElement>> = feed("connection-pool")
 
+        override fun compressionStats(): Flow<Resource<JsonElement>> = feed("compression-stats")
+
         override fun exportJobs(): Flow<Resource<JsonElement>> = feed("export-jobs")
 
         override fun vehicleStateMachine(vehicleId: String): Flow<Resource<JsonElement>> = feed("vehicle-state:$vehicleId")

@@ -91,6 +91,9 @@ public class HttpAdminRepository(
     override fun connectionPool(): Flow<Resource<JsonElement>> =
         observe(KEY_CONNECTION_POOL) { api.request<JsonElement>(path = "/dev-tools/runtime-info") }
 
+    override fun compressionStats(): Flow<Resource<JsonElement>> =
+        observe(KEY_COMPRESSION_STATS) { api.request<JsonElement>(path = "/system/compression-stats") }
+
     override fun exportJobs(): Flow<Resource<JsonElement>> =
         observe(KEY_EXPORT_JOBS) { safeArray(api.request<JsonElement>(path = "/export/jobs")) }
 
@@ -201,6 +204,7 @@ public class HttpAdminRepository(
         const val KEY_DB_STATS = "db-stats"
         const val KEY_MIGRATIONS = "migrations"
         const val KEY_CONNECTION_POOL = "connection-pool"
+        const val KEY_COMPRESSION_STATS = "compression-stats"
         const val KEY_EXPORT_JOBS = "export-jobs"
         const val KEY_VEHICLE_STATE = "vehicle-state"
         const val KEY_STATE_TIMELINE = "state-timeline"

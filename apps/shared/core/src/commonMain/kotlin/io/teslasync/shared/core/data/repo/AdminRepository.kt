@@ -24,7 +24,7 @@ import kotlinx.serialization.json.JsonElement
  * the web applies via `select: safeArray` to every list read.
  */
 public interface AdminRepository {
-    // ---- Reads (15) ---------------------------------------------------------------
+    // ---- Reads (16) ---------------------------------------------------------------
 
     /** `GET /api-keys` — issued API keys (array-guarded). */
     public fun apiKeys(): Flow<Resource<JsonElement>>
@@ -64,6 +64,9 @@ public interface AdminRepository {
 
     /** `GET /dev-tools/runtime-info` — connection-pool / runtime diagnostics. */
     public fun connectionPool(): Flow<Resource<JsonElement>>
+
+    /** `GET /system/compression-stats` — position-compression savings statistics. */
+    public fun compressionStats(): Flow<Resource<JsonElement>>
 
     /** `GET /export/jobs` — data-export jobs (array-guarded). */
     public fun exportJobs(): Flow<Resource<JsonElement>>
