@@ -376,3 +376,4 @@ p3-android/feature-views/A-0124-KioskOverlay.prompt.md
 p3-android/feature-views/A-0131-RecentlyViewedWidget.prompt.md
 p3-android/feature-views/A-0126-LayoutSwitcher.prompt.md
 p3-android/feature-views/A-0127-LiveTelemetry.prompt.md
+p3-android/feature-views/A-0137-DriveDetailHeader.prompt.md
