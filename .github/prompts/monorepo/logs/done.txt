@@ -749,3 +749,4 @@ p2-windows/pages/charging/SmartChargePage.prompt.md
 p2-windows/pages/dashboard/DashboardPage.prompt.md
 p2-windows/pages/charging/TeslaChargingSessionsPage.prompt.md
 p2-windows/pages/dashboard/QuickStatsPage.prompt.md
+p2-windows/pages/diagnostics/AnomalyDashboardPage.prompt.md
