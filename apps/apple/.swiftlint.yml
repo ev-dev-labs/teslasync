@@ -5,6 +5,7 @@ included:
   - TeslaSync/feature-views
   - TeslaSync/misc-surfaces
   - TeslaSync/shared-surfaces
+  - TeslaSync/widget-primitives
   - Tests
   - TeslaSyncWidgets
   - TeslaSyncWatch
