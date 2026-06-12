@@ -440,3 +440,4 @@ p3-android/feature-views/A-0191-NotificationRow.prompt.md
 p3-android/feature-views/A-0196-ActiveOrdersSection.prompt.md
 p3-android/feature-views/A-0195-Stepper.prompt.md
 p3-android/feature-views/A-0194-OnboardingGate.prompt.md
+p3-android/feature-views/A-0190-NotificationGroupRow.prompt.md
