@@ -110,7 +110,7 @@ public static class BreadcrumbParentChain
 }
 
 /// <summary>
-/// A single resolved breadcrumb entry — the native analogue of the web <c>BreadcrumbItem</c>
+/// A single resolved breadcrumb entry — the native analogue of the web <c>LayoutBreadcrumbItem</c>
 /// (<c>web/src/components/layout/Breadcrumbs.tsx</c> L7-10). <see cref="Href"/> is <see langword="null"/> for the
 /// trailing, current-page crumb (the web <c>href?: string</c> being undefined), which renders as non-interactive
 /// medium-weight text; non-null for ancestor crumbs, which render as links. Pure value so the resolved trail is
@@ -119,7 +119,7 @@ public static class BreadcrumbParentChain
 /// <param name="Label">The already-localized, parameter-substituted display label.</param>
 /// <param name="Href">The activation path for an ancestor crumb, or <see langword="null"/> for the current crumb.</param>
 /// <param name="IsCurrent">True for the trailing crumb (the current page; never a link).</param>
-public readonly record struct BreadcrumbItem(string Label, string? Href, bool IsCurrent)
+public readonly record struct LayoutBreadcrumbItem(string Label, string? Href, bool IsCurrent)
 {
     /// <summary>True when this crumb is an interactive link (an ancestor with a non-empty <see cref="Href"/>).</summary>
     public bool IsLink => !IsCurrent && !string.IsNullOrEmpty(Href);
@@ -161,7 +161,7 @@ public static class BreadcrumbResolver
     /// <param name="overrides">Per-route label overrides keyed by pattern (web <c>useBreadcrumbOverrides</c>).</param>
     /// <param name="routeMeta">Pattern → metadata lookup (web <c>ROUTE_META</c>).</param>
     /// <param name="localizer">The i18n facade labels resolve through (web <c>useTranslation</c>).</param>
-    public static IReadOnlyList<BreadcrumbItem> Resolve(
+    public static IReadOnlyList<LayoutBreadcrumbItem> Resolve(
         string? matchedPattern,
         IReadOnlyDictionary<string, string> parameters,
         IReadOnlyDictionary<string, string> overrides,
@@ -178,7 +178,7 @@ public static class BreadcrumbResolver
             return [];
         }
 
-        var trail = new List<BreadcrumbItem>();
+        var trail = new List<LayoutBreadcrumbItem>();
         var visited = new HashSet<string>(StringComparer.Ordinal);
         string? current = matchedPattern;
 
@@ -207,7 +207,7 @@ public static class BreadcrumbResolver
             string? href = isCurrent ? null : BuildHref(current, parameters);
 
             // unshift — keep root-to-current order (web L73 items.unshift).
-            trail.Insert(0, new BreadcrumbItem(label, href, isCurrent));
+            trail.Insert(0, new LayoutBreadcrumbItem(label, href, isCurrent));
 
             current = meta.ParentPattern;
         }
@@ -309,9 +309,9 @@ public interface IBreadcrumbOverrideSource
 /// The navigation port a breadcrumb link activates (P1/S8 state-holder seam) — the native analogue of the web
 /// <c>PrefetchLink</c> <c>to</c> navigation. The view never drives the router itself: it asks this seam to navigate
 /// to a crumb's href (or the Home href), so activation is asserted headlessly. The production adapter routes through
-/// the shell navigation service; <see cref="NullBreadcrumbNavigator"/> stands in when no navigator is supplied.
+/// the shell navigation service; <see cref="NullLayoutBreadcrumbNavigator"/> stands in when no navigator is supplied.
 /// </summary>
-public interface IBreadcrumbNavigator
+public interface ILayoutBreadcrumbNavigator
 {
     /// <summary>Navigate to <paramref name="href"/> (web breadcrumb link / Home link click).</summary>
     /// <param name="href">The destination path (an ancestor crumb's href, or the Home href).</param>
@@ -321,14 +321,14 @@ public interface IBreadcrumbNavigator
 /// <summary>
 /// The inert navigation seam used when no navigator is supplied — the native analogue of mounting the breadcrumb
 /// without a live router: activation is a safe no-op that never throws. Used by the design-time / headless entry
-/// points; the composition root supplies a real <see cref="IBreadcrumbNavigator"/>.
+/// points; the composition root supplies a real <see cref="ILayoutBreadcrumbNavigator"/>.
 /// </summary>
-public sealed class NullBreadcrumbNavigator : IBreadcrumbNavigator
+public sealed class NullLayoutBreadcrumbNavigator : ILayoutBreadcrumbNavigator
 {
     /// <summary>The shared inert instance.</summary>
-    public static NullBreadcrumbNavigator Instance { get; } = new();
+    public static NullLayoutBreadcrumbNavigator Instance { get; } = new();
 
-    private NullBreadcrumbNavigator()
+    private NullLayoutBreadcrumbNavigator()
     {
     }
 
