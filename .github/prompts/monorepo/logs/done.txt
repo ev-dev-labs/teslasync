@@ -334,3 +334,4 @@ p3-android/feature-views/A-0087-ChargerTypeChart.prompt.md
 p3-android/feature-views/A-0088-LoadingSkeleton.prompt.md
 p3-android/feature-views/A-0089-SessionComparisonChart.prompt.md
 p3-android/feature-views/A-0085-PresetGallery.prompt.md
+p3-android/feature-views/A-0090-SessionCurveChart.prompt.md
