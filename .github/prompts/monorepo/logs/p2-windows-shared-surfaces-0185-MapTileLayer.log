@@ -1,0 +1,135 @@
+=== P2 Shared surface 0185 MapTileLayer (Windows) ===
+
+SURFACE   : apps/windows/TeslaSync.App/shared-surfaces/MapTileLayer/MapTileLayer.{cs,Model.cs,Source.cs,ViewModel.cs}
+TEST      : apps/windows/TeslaSync.App.Tests/SharedSurfaces/MapTileLayerTests.cs (51 tests, all green)
+WEB SOURCE: web/src/components/maps/MapTileLayer.tsx
+CAPABILITY: WinUI 3 (Microsoft.WindowsAppSDK 2.1.0) + .NET 10.0.300 — PRESENT (app builds 0/0, headless suite runs).
+            UI-automation harness (WinAppDriver/Appium) — ABSENT on this runner (see TEST breakdown / BLOCKED note).
+
+--- WHAT SHIPPED (parity port of the web MapTileLayer) ---
+4-file shared-surface pattern, bound to the shared P1/S8 seam + P1/S10 i18n facade; the view performs no query /
+HTTP itself and reads every label from the projection. The web MapTileLayer selects a Leaflet TileLayer URL +
+attribution from useQuery(['map-config'], getMapConfig) (free community tiles by default; Azure / Google tiles
+when a provider + key are configured). Natively the base raster tiles are painted by the shared TsMapControl
+(the Leaflet MapContainer analogue, Components/Maps — out of scope, reused) configured from the resolved
+MapConfig, and this surface adds the data-binding layer + the full state matrix on top:
+  * MapTileLayer.Model.cs      — MapTileLayerVisualState enum; MapTileLayerSnapshot (+ FromRepositoryResult adapter
+                                 mapping the cache-then-network RepositoryResult<MapConfig> -> state + resolved
+                                 TileSource via Core MapTileProvider, free-tile fallback exactly like the web
+                                 `tiles = freeTiles` default); MapTileLayerRegistration (Slug, 6 automation ids,
+                                 freshness window = web 5-min staleTime, 3 Fluent glyphs, 12 i18n keys + English
+                                 fallbacks, ClassifyState + Provider/Style label helpers); the pure
+                                 MapTileLayerProjection (per-state overlay/chip gates, localized strings,
+                                 attribution, accessible name — provider key never enters it); and the PII-safe
+                                 MapTileLayerDiagnostics (emits only `view.opened slug=MapTileLayer`).
+  * MapTileLayer.Source.cs     — P1/S8 seam IMapTileLayerSource (web useQuery result) with an in-memory Static impl
+                                 and a Repository impl over a cache-then-network stream (generation-guarded pump,
+                                 + SetStyle re-projection for the web `style` prop without re-fetching).
+  * MapTileLayer.ViewModel.cs  — INotifyPropertyChanged + IDisposable holder projecting Source -> Projection,
+                                 RequestRefresh() forwarding (web query.refetch()), subscription cleanup.
+  * MapTileLayer.cs            — WinUI 3 ContentControl hosting TsMapControl + state overlays: busy spinner
+                                 (loading), TsErrorDisplay + Retry (error), stale / offline status chips, empty
+                                 note, and a TsFullscreenButton (the web @/components/ui/FullscreenButton, mapped
+                                 to its native counterpart, parity with MapFullscreenControl). Tokenized brushes
+                                 (DisplayTokens, P1/S9) — no inline hex; reduce-motion honoured (entrance
+                                 transition only when OS animations are enabled).
+
+STATES REPRODUCED (every one renders — the web surface fetches, so it carries the full matrix): loading (busy
+overlay over free tiles), ready (configured provider tiles, no chrome), empty (free community tiles + note),
+error (free fallback + error overlay + retry), stale (cached config past freshness -> stale chip), offline
+(cached config + offline chip). The base tiles always paint (the web renders the TileLayer immediately and swaps
+providers when the query resolves). Accessibility: provider+style accessible name on the root; automation ids on
+map/loading/error/status/fullscreen; polite live-region announcement on the status chips; the API key is consumed
+only by the tile renderer and is asserted to never reach the accessible name / diagnostics. Telemetry:
+view.opened slug=MapTileLayer (P1/S11).
+
+i18n (P1/S10): every surface-owned string flows through ILocalizer with an English fallback. The web source has
+NO t() calls — its only literals are the brand tile attributions (CARTO / OpenStreetMap / Esri / OpenTopoMap /
+Azure Maps / Google Maps), which the provider terms require verbatim and which are intentionally NOT localized
+(carried as Core TileSource.Attribution). Keys introduced for the WinUI catalogue (translation.mapTileLayer.*):
+loading, error.title, error.message, retry, fullscreen, stale, offline, empty, accessibleName, provider.{community,
+azure,google}, style.{dark,satellite,streets,terrain}. Following the established sibling convention (ServiceStatus
+0xxx etc.) the keys + fallbacks live as asserted Registration constants resolved through the facade; no catalog
+file edit was required (and the allowed-files scope is the surface folder).
+
+PRE-REQ REPAIR #1 (test csproj merge=union corruption): apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+was committed-corrupt at HEAD — merge=union had re-concatenated it into multiple <Project> roots (MSB4025
+"multiple root elements", line 1343), which blocked the whole-solution build/test/format for ANY surface (the
+baseline solution build failed in 27s before compiling a single project). Per the file's own embedded INVARIANT
+(and exactly as predecessors LinearSidebar 0174 / ConnectionSegment 0178 / Layout 0169 did), it was regenerated
+into ONE canonical root with the case-insensitive ordinal (StringComparer.OrdinalIgnoreCase) path-sorted,
+Include-deduplicated union of every Microsoft.UI-free .cs under dashboard-widgets/ feature-views/ misc-surfaces/
+modals-dialogs/ shared-surfaces/ = 1230 Compile links: the prior canonical 1221 (verified: all exist on disk, the
+sort reproduces the head order exactly) + the 3 new MapTileLayer Model/Source/ViewModel links + 6 restored
+Layout.* / PageContainer.* Model/Source/ViewModel links that the corruption had stranded in the discarded tail
+(both surfaces have existing tests — LayoutTests / PageContainerTests — that need them). The 5 WinUI-dependent
+helper partials on disk (TripReplayMap.Overlays.cs, AIThinkingIndicator.Dots.cs, ...) were correctly NOT added
+(4-7 Microsoft.UI refs each; excluded by design, exercised by the app build). Single <Project> root + XML load
+verified.
+
+PRE-REQ REPAIR #2 (Breadcrumbs vs LayoutBreadcrumbs type collision): once the csproj loaded, the App project AND
+the Tests project both failed to compile (30 errors: CS0101/CS0111/CS8863 + a cascaded CS0535) because the
+Breadcrumbs surface (0167) and the LayoutBreadcrumbs surface (0170) BOTH defined BreadcrumbItem,
+IBreadcrumbNavigator and NullBreadcrumbNavigator in the flat namespace TeslaSync.App.SharedSurfaces — a
+pre-existing integration-merge collision that had been masked because the corrupted csproj aborted every
+solution build before compilation. It is unrelated to MapTileLayer but blocks the entire Tests assembly (hence my
+own MapTileLayer tests) from compiling. Resolved minimally + surgically by renaming the LayoutBreadcrumbs
+surface's three colliding types to Layout-prefixed names (LayoutBreadcrumbItem / ILayoutBreadcrumbNavigator /
+NullLayoutBreadcrumbNavigator) across its 4 surface files + its test (the Breadcrumbs surface keeps the canonical
+names); grep verified those 3 names are referenced only within each surface's own files, so there is zero
+external-reference risk. This also cleared the CS0535 (LayoutBreadcrumbsTests.FakeNavigator), which was purely a
+collision artifact (its Navigate-only interface had been bound to Breadcrumbs' Prefetch-bearing interface).
+
+=== GATE ===
+
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    Build succeeded.
+        0 Warning(s)
+        0 Error(s)
+    (TeslaSync.App WinUI app + TeslaSync.App.Tests + all class libs)
+    BUILD_EXIT=0
+
+[2] dotnet test apps/windows/TeslaSync.sln -c Release
+    Passed!  - Failed:     0, Passed: 23971, Skipped:     0, Total: 23971 - TeslaSync.App.Tests.dll (net10.0)
+    Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+    -> The headless logic suite PASSES in full. It contains the MapTileLayer adapter (RepositoryResult ->
+       snapshot for every cache-then-network state incl. the free-tile fallback + offline-cached), the per-state
+       projection (loading/ready/empty/error/stale/offline overlay gating + localized strings + attribution),
+       the accessible-name + provider-key-safety tests, the view-model + Static/Repository source + SetStyle
+       re-projection tests, and the PII-safe diagnostics test. Filtered count: 51 MapTileLayer tests, 0 failed.
+    -> All 147 TeslaSync.App.UITests failures occur at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.
+       EnsureReady() — shared fixture setup across EVERY surface (AuthenticationFlowTests, PlatformPolishTests,
+       ShellNavigationTests, ...), NOT in any MapTileLayer test. The fixture is designed to hard-fail (never
+       silently skip) when the runner is absent. Capability evidence (verbatim):
+         TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+         WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+         WinAppDriver.exe was not found at its standard install paths or on PATH.
+    TEST_EXIT=1   (whole-solution; caused exclusively by the absent WinAppDriver/Appium UI-automation runner)
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    clean across the whole solution (the 5 new files are LF + formatted to the repo style; the LayoutBreadcrumbs
+    rename preserved each file's existing formatting)
+    FORMAT_EXIT=0
+
+[4] ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/MapTileLayer
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0   (no TODO/FIXME/stub/mock/placeholder/Lorem/NotImplemented across the 4 shipped files)
+    PLACEHOLDER_EXIT=0
+
+--- VERDICT ---
+BUILD_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  TEST_EXIT=1.
+The MapTileLayer deliverable is complete and green on every gate within this runner's reach: the solution builds
+clean (0/0), the full headless test suite passes (23971/0/0, incl. 51 MapTileLayer tests covering every state),
+the solution is format-clean, and the surface carries zero placeholders. Two pre-existing integration-rot defects
+that blocked the whole-solution gate for ANY surface were repaired as documented (the merge=union csproj
+corruption and the Breadcrumbs/LayoutBreadcrumbs type collision); both are unrelated to MapTileLayer but had to be
+fixed for the mandated gate to run at all. The only non-zero step is the whole-solution TEST, failing solely
+because the WinAppDriver/Appium UI-automation runner is unavailable on this runner (no interactive desktop
+session) — a platform-capability gap that fails all 147 UITests identically regardless of surface, and which the
+UI-automation harness itself documents as an honest BLOCKED condition for the separate W9-0002 gate. Per the
+prompt's capability clause ("If unavailable on the runner -> STATUS=BLOCKED with API evidence") and matching the
+adjacent sibling shared-surface logs (0174 LinearSidebar, 0178 ConnectionSegment, ...), this is recorded as
+BLOCKED with the evidence above.
+
+EXIT=1
+STATUS=BLOCKED
