@@ -629,3 +629,4 @@ p2-windows/shared-meaningful/W-0133-QueryError.prompt.md
 p2-windows/shared-meaningful/W-0135-ReleaseNotes.prompt.md
 p2-windows/shared-meaningful/W-0139-SkipToContent.prompt.md
 p2-windows/shared-meaningful/W-0134-RateLimitBanner.prompt.md
+p2-windows/shared-meaningful/W-0137-RequiresAuth.prompt.md
