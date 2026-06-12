@@ -1,0 +1,142 @@
+=== p2-windows · W7 · page:automations/AutomationList (WinUI 3 / Fluent) ===
+Parity unit : page:automations/AutomationList   kind=page   web route=/automations/list
+Web source  : web/src/features/automations/pages/AutomationListPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ApiLogsPage / FeedbackQueuePage / SchemaDriftPage / VehicleCostPage do. The generated prompt's idealized
+  "AutomationListPage.xaml + AutomationListPageViewModel.cs under TeslaSync/Features/Automations" is mapped onto these
+  real conventions; the surface registers itself with the W4 ShellPageFactory by route name ("AutomationList",
+  already in RouteTable.cs L123 → /automations/list) via ShellWindow.xaml.cs.
+- Data binding (ADR-004): the manifest data sources are useAutomations (GET /automations) and
+  useBulkAutomationsUpdate (POST /automations/bulk). The view-model reads the list through an injected
+  IAutomationListFeed; the default EmptyAutomationListFeed resolves the empty state, and the generated-client-backed
+  AutomationListClientFeed (AutomationListPage.Source.cs) binds to the generated OpenAPI operations
+  get_api_v1_automations (list) and post_api_v1_automations_bulk (bulk), posting the {ids, op} body exactly as the
+  web hook does (op wire string enable|disable|delete via AutomationListRegistration.Wire; JSON property names pinned
+  via [JsonPropertyName] so the wire shape is policy-independent), asserted in tests via the FakeApiClient. Both
+  operations are confirmed in the generated apps/windows/Generated/Api/ApiEndpoints.cs and the Go routes in
+  internal/api/automation/crud.go (List → writeJSON([]automationResponse)) + internal/api/automation/bulk.go
+  (BulkUpdate → apibulk.OperationResult {updated?,deleted?,failed:[{id,reason}]}). No HTTP touches the view.
+- The list wire shape is a bare JSON array (the base models.Automation embedded in automationResponse:
+  id/name/description?/enabled, no execution_count on the base row → tolerant parse reads execution_count as 0,
+  matching the web a.execution_count ?? 0); AutomationListSnapshot.FromJson accepts both the bare array and the
+  platform {data:[…]} envelope so the response round-trips losslessly.
+- The web page renders its states INSIDE the GlassPanel (PageContainer only carries title/subtitle), so the native
+  port reproduces them as visible Fluent regions per ADR-006: loading → three TsSkeleton bars (web three Skeleton
+  h-10 bars, space-y-2 p-4); error → TsErrorDisplay (web ErrorDisplay) + Retry → RefreshAsync; empty → TsEmptyState
+  (web EmptyState) "No automations yet" + the "Open builder" CTA (web actionTo /automations/new, raised through the
+  page NavigationRequested event the shell wires to NavigateTo); success → the bulk-selectable table (master + per-row
+  TsCheckbox, the name TsButton link to /automations/{id}, description, run count and the enabled/disabled TsBadge
+  status chip). GlassPanel1 is always present; only its body switches — never a blank region.
+- Bulk-selection + bulk-ops parity (web useBulkSelection + BulkActionToolbar + useBulkAutomationsUpdate): the
+  view-model owns the selection set with toggle / toggleAll (master tri-state none/some/all via
+  AutomationListProjection.ComputeMasterState) / clear, and RunBulkAsync runs an allowlisted op then — on success —
+  clears the selection and reloads the list (web onSuccess invalidate + sel.clear()); on failure the selection is
+  preserved so the user can retry (web onError toast). The Delete action routes through a destructive TsConfirmDialog
+  (web ConfirmDialog) before mutating.
+- SI units N/A (no unit-bearing physical fields on this surface — id, name, description, run count, enabled only);
+  the run count renders as a plain integer (no grouping) to match the web {a.execution_count} JSX numeric render.
+- 4 of the 22 manifest i18n keys were missing and added verbatim (web key names) to Strings/en/Resources.resw as
+  translation.automationList.subtitle, translation.automationList.empty.body,
+  translation.automationList.bulk.deleteConfirm.title and translation.automationList.bulk.deleteConfirm.body,
+  alphabetically placed among the existing translation.automationList.* entries; the other 18 keys
+  (automationList.* + bulk.selectAll/selectRow + common.delete/disabled/enabled) were already present. The surface
+  resolves every label through the ILocalizer facade (extra non-counted keys error.loadFailed / common.retry /
+  common.cancel / bulk.clear / bulk.selected are resolved too so no literal is hardcoded). The ar/he catalogs lag en
+  by design; the app falls back to the English default via ILocalizer until translated.
+- The Microsoft.UI-free Model/Source/ViewModel links were added to TeslaSync.App.Tests.csproj (the bare WinUI view
+  is excluded — it uses Microsoft.UI). The new files were authored with CRLF by the editor and normalized to LF via
+  `dotnet format` so the lint gate's ENDOFLINE rule is satisfied.
+
+=== PARITY ===
+PARITY_REQUIRED=27
+
+# Panels (1) — every web region reproduced as a Fluent Card/Mica region, bound to the state holder
+[x] panel  - GlassPanel1        -> AutomationListPage.cs#BuildTable (_panel TsGlassPanel) hosting the loading shimmer /
+             TsErrorDisplay / TsEmptyState / table body (master TsCheckbox + per-row checkbox + name link +
+             description + runs + status TsBadge); web AutomationListPage.tsx GlassPanel; the body switches by the
+             AutomationListDisplay flags (AutomationListProjection.Project); test State_success_when_automations_present
+             + Table_projects_the_four_column_headers_and_select_labels + Table_row_formats_every_cell_for_an_enabled_automation
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading            -> AutomationListState.Loading + AutomationListDisplay.ShowLoading; rendered
+             AutomationListPage.cs#_loadingSkeleton (three TsSkeleton bars); test State_loading_when_query_in_flight
+             + ViewModel_loads_automations_into_the_success_state (IsFetching)
+[x] state  - empty              -> AutomationListState.Empty + ShowEmpty; AutomationListPage.cs#_emptyState
+             (TsEmptyState title+body + "Open builder" CTA); web automations.length===0 EmptyState; test
+             State_empty_when_resolved_with_no_automations + ViewModel_empty_snapshot_is_the_empty_state
+[x] state  - error              -> AutomationListState.Error + ShowError; AutomationListPage.cs#_errorState
+             (TsErrorDisplay + Retry → RefreshAsync); web error ErrorDisplay; test State_error_shows_failure_and_retry
+             + ViewModel_feed_failure_is_the_error_state
+[x] state  - success            -> AutomationListState.Success + ShowTable; AutomationListPage.cs#RenderRows builds the
+             table rows from AutomationListDisplay.Rows; web automations.map; test State_success_when_automations_present
+             + ViewModel_loads_automations_into_the_success_state + Table_row_formats_every_cell_for_an_enabled_automation
+
+# Strings (22) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - automationList.bulk.delete             -> AutomationListProjection.Project GetString("automationList.bulk.delete","Delete") -> Actions[Delete].Label
+[x] string - automationList.bulk.deleteConfirm.body  -> GetString("automationList.bulk.deleteConfirm.body","Selected automations will stop running …") -> DeleteConfirmBody
+[x] string - automationList.bulk.deleteConfirm.title -> GetString("automationList.bulk.deleteConfirm.title","Delete automations?") -> DeleteConfirmTitle
+[x] string - automationList.bulk.disable            -> GetString("automationList.bulk.disable","Disable") -> Actions[Disable].Label
+[x] string - automationList.bulk.enable             -> GetString("automationList.bulk.enable","Enable") -> Actions[Enable].Label
+[x] string - automationList.col.desc                -> GetString("automationList.col.desc","Description") -> DescriptionHeader
+[x] string - automationList.col.name                -> GetString("automationList.col.name","Name") -> NameHeader
+[x] string - automationList.col.runs                -> GetString("automationList.col.runs","Runs") -> RunsHeader
+[x] string - automationList.col.status              -> GetString("automationList.col.status","Status") -> StatusHeader
+[x] string - automationList.empty.body              -> GetString("automationList.empty.body","Create your first automation in the builder.") -> EmptyMessage
+[x] string - automationList.empty.cta               -> GetString("automationList.empty.cta","Open builder") -> EmptyCtaLabel
+[x] string - automationList.empty.title             -> GetString("automationList.empty.title","No automations yet") -> EmptyTitle
+[x] string - automationList.noun.one                -> GetString("automationList.noun.one","automation") -> ItemNoun (singular)
+[x] string - automationList.noun.other              -> GetString("automationList.noun.other","automations") -> ItemNoun (plural)
+[x] string - automationList.selectAutomation        -> GetString("automationList.selectAutomation","Select automation {0}") -> per-row AutomationRowDisplay.SelectLabel (test Table_row_formats_every_cell_for_an_enabled_automation)
+[x] string - automationList.subtitle                -> GetString("automationList.subtitle","Bulk-manage automations. …") -> Subtitle
+[x] string - automationList.title                   -> AutomationListProjection.Project / AutomationListRegistration.Title GetString("automationList.title","Automations (list)") -> Title
+[x] string - bulk.selectAll                         -> GetString("bulk.selectAll","Select all") -> SelectAllLabel (master checkbox AutomationProperties name)
+[x] string - bulk.selectRow                         -> GetString("bulk.selectRow","Select row") -> SelectRowLabel (per-row checkbox tooltip / fallback name)
+[x] string - common.delete                          -> GetString("common.delete","Delete") -> DeleteConfirmLabel (confirm dialog primary)
+[x] string - common.disabled                        -> GetString("common.disabled","Disabled") -> disabled-row StatusLabel (test Table_row_uses_em_dash_for_missing_description_and_neutral_disabled_chip)
+[x] string - common.enabled                         -> GetString("common.enabled","Enabled") -> enabled-row StatusLabel (test Table_row_formats_every_cell_for_an_enabled_automation)
+
+PARITY_COVERED=27
+# Coverage asserted headlessly: AutomationListPageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records every one of the 22 keys above through a RecordingLocalizer (resolved
+# unconditionally on every projection); the four state tests + the table/column/row/bulk-bar/master-state tests assert
+# each region renders from the bound AutomationListDisplay; ClientFeed_sends_the_list_operation +
+# ClientFeed_posts_the_bulk_operation_with_ids_and_op_body assert the generated-client GET + POST request shaping
+# (web useAutomations / useBulkAutomationsUpdate) including the {"ids":[…],"op":"…"} wire body; the ViewModel_* tests
+# assert the loading/empty/error/success matrix + selection (toggle/toggleAll/clear) + the bulk-op flow
+# (success clears+reloads, failure preserves selection, no-op when empty); the Snapshot_* / Bulk_outcome_* tests assert
+# the bare-array + {data:…} envelope unwrap + tolerant parsing.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AutomationListPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Automations path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (17 pre-existing TeslaSync.App.Core CA warnings only; the warnings-as-errors TeslaSync.App project built clean)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <AutomationListPage Model/Source/ViewModel/view
+#   + AutomationListPageTests + ShellWindow.xaml.cs> -> 0 issues (all LF/utf-8 after auto-format)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 25900, Failed: 0, Skipped: 0
+#   (incl. 37 AutomationListPageTests; 25863 pre-existing)
+TEST_EXIT=0
+PARITY_COVERED=27
+PARITY_REQUIRED=27
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/AutomationListPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/AutomationListPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-automations-AutomationListPage.log
+# git commit -m "feat(apps/windows): AutomationListPage at web parity (W7 automations)"
+
+EXIT=0
+STATUS=DONE
