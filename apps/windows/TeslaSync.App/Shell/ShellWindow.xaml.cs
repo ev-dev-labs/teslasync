@@ -132,6 +132,8 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("ChargingCurve", static () => new FeatureViews.Charging.ChargingCurvePage());
         // Charging / Powershare page (P2/W7) — parity port of web PowersharePage at route /powershare.
         _viewModel.PageFactory.Register("Powershare", static () => new FeatureViews.Charging.PowersharePage());
+        // Driving / DriveScore page (P2/W7) — parity port of web DriveScorePage at route /drive-score.
+        _viewModel.PageFactory.Register("DriveScore", static () => new FeatureViews.Driving.DriveScorePage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

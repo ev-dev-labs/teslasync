@@ -70,5 +70,14 @@
     "requiredCount": 7,
     "promptId": "p2-windows/W7/windows-page-charging-TeslaChargingSessionsMap",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-charging-TeslaChargingSessionsMap.log"
+  },
+  {
+    "unitId": "page:driving/DriveScore",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 160,
+    "requiredCount": 160,
+    "promptId": "p2-windows/W7/windows-page-driving-DriveScorePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-DriveScorePage.log"
   }
 ]
