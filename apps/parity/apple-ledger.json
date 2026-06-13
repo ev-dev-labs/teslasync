@@ -145,6 +145,24 @@
       "requiredCount": 61,
       "promptId": "p4-apple/P7/page:analytics/Statistics",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-StatisticsPage.log"
+    },
+    {
+      "unitId": "page:automations/AutomationActivityFeed",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 11,
+      "requiredCount": 11,
+      "promptId": "p4-apple/P7/page:automations/AutomationActivityFeed",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationActivityFeed.log"
+    },
+    {
+      "unitId": "page:automations/AutomationActivityFeed",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 11,
+      "requiredCount": 11,
+      "promptId": "p4-apple/P7/page:automations/AutomationActivityFeed",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationActivityFeed.log"
     }
   ]
 }
