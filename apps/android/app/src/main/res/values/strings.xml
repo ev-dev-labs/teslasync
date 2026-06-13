@@ -4188,6 +4188,15 @@
   <string name="translation_lightbox_zoomOut">Zoom out</string>
   <string name="translation_lightbox_zoomPercent">%1$s%%</string>
   <string name="translation_lightbox_zoomReset">Reset zoom</string>
+  <string name="translation_listExport_button">Export</string>
+  <string name="translation_listExport_csv">Download as CSV</string>
+  <string name="translation_listExport_disabledTooltip">No data to export</string>
+  <string name="translation_listExport_json">Download as JSON</string>
+  <string name="translation_listExport_menuLabel">Export list</string>
+  <string name="translation_listExport_scopeLegend">Export scope</string>
+  <string name="translation_listExport_selectedWithCount">Selected (%1$s)</string>
+  <string name="translation_listExport_visible">Visible</string>
+  <string name="translation_listExport_visibleWithCount">Visible (%1$s)</string>
   <string name="translation_live_connected">Live</string>
   <string name="translation_live_disconnected">Offline</string>
   <string name="translation_live_reconnecting">Reconnecting…</string>

@@ -1261,6 +1261,17 @@
       "toFleetCta": "Open Fleet comparison →"
     }
   },
+  "listExport": {
+    "menuLabel": "Export list",
+    "disabledTooltip": "No data to export",
+    "button": "Export",
+    "scopeLegend": "Export scope",
+    "visible": "Visible",
+    "visibleWithCount": "Visible ({{count}})",
+    "selectedWithCount": "Selected ({{count}})",
+    "csv": "Download as CSV",
+    "json": "Download as JSON"
+  },
   "live": {
     "connected": "Live",
     "reconnecting": "Reconnecting…",
