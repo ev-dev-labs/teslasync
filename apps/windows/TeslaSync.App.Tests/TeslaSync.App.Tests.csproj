@@ -1459,6 +1459,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\RateLimitBanner.Model.cs" Link="SharedSurfaces\RateLimitBanner.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RateLimitBanner.Source.cs" Link="SharedSurfaces\RateLimitBanner.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RateLimitBanner.ViewModel.cs" Link="SharedSurfaces\RateLimitBanner.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\RecentActivityFeed\RecentActivityFeed.Model.cs" Link="SharedSurfaces\RecentActivityFeed\RecentActivityFeed.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\RecentActivityFeed\RecentActivityFeed.Source.cs" Link="SharedSurfaces\RecentActivityFeed\RecentActivityFeed.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\RecentActivityFeed\RecentActivityFeed.ViewModel.cs" Link="SharedSurfaces\RecentActivityFeed\RecentActivityFeed.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.Model.cs" Link="SharedSurfaces\ReleaseNotes.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ReleaseNotes.ViewModel.cs" Link="SharedSurfaces\ReleaseNotes.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ReloadPrompt.Model.cs" Link="SharedSurfaces\ReloadPrompt.Model.cs" />
