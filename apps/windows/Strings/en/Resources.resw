@@ -14133,6 +14133,15 @@
   <data name="translation.notifications.inbox.selectAll" xml:space="preserve">
     <value>Select all visible</value>
   </data>
+  <data name="translation.notifications.inbox.subtitle" xml:space="preserve">
+    <value>Recent notifications from your alert rules.</value>
+  </data>
+  <data name="translation.notifications.inbox.title" xml:space="preserve">
+    <value>Inbox</value>
+  </data>
+  <data name="translation.notifications.inbox.viewArchived" xml:space="preserve">
+    <value>View archived</value>
+  </data>
   <data name="translation.notifications.log.filterLabel.search" xml:space="preserve">
     <value>Search</value>
   </data>

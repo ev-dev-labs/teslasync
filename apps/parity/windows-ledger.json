@@ -88,5 +88,14 @@
     "requiredCount": 41,
     "promptId": "p2-windows/W7/windows-page-driving-TripPlannerPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-TripPlannerPage.log"
+  },
+  {
+    "unitId": "page:notifications/Inbox",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 4,
+    "requiredCount": 4,
+    "promptId": "p2-windows/W7/windows-page-notifications-InboxPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-notifications-InboxPage.log"
   }
 ]
