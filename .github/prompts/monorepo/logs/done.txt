@@ -645,3 +645,4 @@ p3-android/shared-meaningful/A-0054-AITirePressureTrendReasoning.prompt.md
 p3-android/shared-meaningful/A-0055-AITripPlannerLLMAgent.prompt.md
 p3-android/shared-meaningful/A-0056-AITripPostcardShareCardImageGeneration.prompt.md
 p3-android/shared-meaningful/A-0058-AIVehiclePaintPreview.prompt.md
+p3-android/shared-meaningful/A-0061-AIYearReviewNarration.prompt.md
