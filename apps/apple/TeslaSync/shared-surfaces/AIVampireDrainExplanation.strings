@@ -1,0 +1,45 @@
+/*
+  AIVampireDrainExplanation.strings
+  TeslaSync — P4 shared surface · 0057 · AIVampireDrainExplanation (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `AIVampireDrainExplanation` resolves (table "AIVampireDrainExplanation") lives here with its web
+  English value. These entries fold into the app `Localizable.xcstrings` master catalog at
+  integration time; they are kept in a per-surface table so each parallel surface prompt owns its
+  own strings without editing the shared catalog.
+
+  The first group is the parity set extracted from the web source
+  (web/src/components/ai/AIVampireDrainExplanation.tsx + the shared AIFeatureCard / AiOutputPanel /
+  AIThinkingIndicator literals it composes). The second group backs the native P4 leaf chrome (the
+  freshness / connectivity / loading / error copy) so the Swift sources hold no English prose.
+*/
+
+/* --- Parity: the web source's t(key, default) calls --- */
+"vampireDrain.aiNarrative.title" = "Explain the recent vampire drain";
+"vampireDrain.aiNarrative.description" = "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference’s correlational nature honestly.";
+"vampireDrain.aiNarrative.generateButton" = "Narrate drain";
+"vampireDrain.aiNarrative.badge" = "Helix";
+
+/* --- Parity: shared AIFeatureCard / AiOutputPanel / AIThinkingIndicator literals --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Output panel: friendly empty hints (P4 "never a blank box") --- */
+"vampireDrain.output.a11yTitle" = "Vampire-drain explanation";
+"vampireDrain.output.emptyHint" = "No narration yet — ask Helix to explain the vampire drain.";
+"vampireDrain.output.noVehicleHint" = "Select a vehicle to ask Helix to explain the vampire drain.";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"vampireDrain.live" = "Live";
+"vampireDrain.stale" = "Stale";
+"vampireDrain.offline" = "Offline";
+"vampireDrain.staleBanner" = "Reconnecting — Helix may be stale";
+"vampireDrain.offlineBanner" = "Offline — showing the last known explanation";
+"vampireDrain.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error states --- */
+"vampireDrain.loadingA11y" = "Loading vampire-drain explanation";
+"vampireDrain.errorTitle" = "Couldn't load Helix";
+"vampireDrain.retry" = "Retry";
