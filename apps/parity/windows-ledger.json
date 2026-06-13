@@ -18,6 +18,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-ApiPlaygroundPage.log"
   },
   {
+    "unitId": "page:admin/DLQInspector",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 15,
+    "requiredCount": 15,
+    "promptId": "p2-windows/W7/windows-page-admin-DLQInspectorPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-DLQInspectorPage.log"
+  },
+  {
     "unitId": "page:admin/FeedbackQueue",
     "platform": "windows",
     "status": "done",

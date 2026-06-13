@@ -133,6 +133,9 @@ public sealed partial class ShellWindow : Window
         // Admin / Schema drift page (P2/W7) — parity port of web SchemaDriftPage at route /admin/schema-drift.
         _viewModel.PageFactory.Register("SchemaDrift", static () => new FeatureViews.Admin.SchemaDriftPage());
 
+        // Admin / DLQ Inspector page (P2/W7) — parity port of web DLQInspectorPage at route /admin/dlq.
+        _viewModel.PageFactory.Register("DLQInspector", static () => new FeatureViews.Admin.DLQInspectorPage());
+
         // System / DB Health page (P2/W7) — parity port of web DBHealthPage at route /db-health (group Diagnostics).
         _viewModel.PageFactory.Register("DBHealthDashboard", static () => new FeatureViews.Diagnostics.DBHealthPage());
         // System / Diagnostic page (P2/W7) — parity port of web DiagnosticPage (the operator self-test wizard). The web
