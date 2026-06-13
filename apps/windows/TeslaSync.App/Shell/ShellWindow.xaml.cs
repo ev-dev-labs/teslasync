@@ -181,6 +181,12 @@ public sealed partial class ShellWindow : Window
         // "ProjectedRange" route name.
         _viewModel.PageFactory.Register("ProjectedRange", static () => new FeatureViews.Battery.ProjectedRangePage());
 
+        // Vehicles / VehicleDetail page (P2/W7) — parity port of web VehicleDetailPage at route /vehicles/:id.
+        // The route vehicle id is read from the live match; the web page has no in-body back affordance (the shell
+        // NavigationView owns back navigation), so no BackRequested wiring is needed.
+        _viewModel.PageFactory.Register("VehicleDetail", () =>
+            new FeatureViews.Vehicles.VehicleDetailPage(ParseSessionId(_viewModel.Current.Param("id"))));
+
         // Driving / DriveDetail page (P2/W7) — parity port of web DriveDetailPage at route /drives/:id.
         // The route drive id is read from the live match and the back affordance maps to the drives list.
         _viewModel.PageFactory.Register("DriveDetail", () =>
