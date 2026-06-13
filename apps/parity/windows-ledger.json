@@ -115,5 +115,14 @@
     "requiredCount": 17,
     "promptId": "p2-windows/W7/windows-page-settings-SettingsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-settings-SettingsPage.log"
+  },
+  {
+    "unitId": "page:system/Diagnostic",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 24,
+    "requiredCount": 24,
+    "promptId": "p2-windows/W7/windows-page-system-DiagnosticPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-DiagnosticPage.log"
   }
 ]
