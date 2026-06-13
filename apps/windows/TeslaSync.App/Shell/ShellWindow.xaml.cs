@@ -224,6 +224,8 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Maps.LocationsPage();
             page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
 
         // Notifications / Archived page (P2/W7) — parity port of web ArchivedPage at route /notifications/archived.
         // The header "Back to inbox" action maps to the inbox; the hosted InboxBody's "View context" / empty-state
@@ -266,6 +268,16 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register(
             "NotificationsWebhooks",
             static () => new FeatureViews.Notifications.WebhooksPage());
+
+        // Sharing / Shared Drive public report (P2/W7) — parity port of web SharedDrivePage at route /s/:token
+        // (chrome-less + unauthenticated). The share token is read from the live match; the expired view's
+        // "Go to TeslaSync" home link maps to the dashboard index (web ExpiredShareView href="/").
+        _viewModel.PageFactory.Register("SharedDrive", () =>
+        {
+            var page = new FeatureViews.Sharing.SharedDrivePage(_viewModel.Current.Param("token") ?? string.Empty);
+            page.HomeRequested += (_, _) => NavigateTo(string.Empty);
+            return page;
+        });
 
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
