@@ -97,5 +97,14 @@
     "requiredCount": 31,
     "promptId": "p2-windows/W7/windows-page-notifications-AlertRulesPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-notifications-AlertRulesPage.log"
+  },
+  {
+    "unitId": "page:power-user/Dashboards",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 16,
+    "requiredCount": 16,
+    "promptId": "p2-windows/W7/windows-page-power-user-DashboardsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-power-user-DashboardsPage.log"
   }
 ]

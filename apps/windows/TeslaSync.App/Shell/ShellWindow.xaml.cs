@@ -209,6 +209,12 @@ public sealed partial class ShellWindow : Window
             page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
+
+        // Power User / Dashboard composer page (P2/W7) — parity port of web DashboardsPage at route
+        // /power/dashboards. A purely local-state surface: it composes Grafana dashboard JSON and copies it to
+        // the clipboard; it never pushes to Grafana.
+        _viewModel.PageFactory.Register(
+            "PowerDashboards", static () => new FeatureViews.PowerUser.DashboardsPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
