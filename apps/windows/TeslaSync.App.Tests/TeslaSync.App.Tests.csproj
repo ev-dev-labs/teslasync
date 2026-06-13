@@ -1580,6 +1580,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\Toast\Toast.ViewModel.cs" Link="SharedSurfaces\Toast\Toast.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Toggle\Toggle.Model.cs" Link="SharedSurfaces\Toggle\Toggle.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Toggle\Toggle.ViewModel.cs" Link="SharedSurfaces\Toggle\Toggle.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TourOverlay.Model.cs" Link="SharedSurfaces\TourOverlay.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TourOverlay.Source.cs" Link="SharedSurfaces\TourOverlay.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\TourOverlay.ViewModel.cs" Link="SharedSurfaces\TourOverlay.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UnitInput.Model.cs" Link="SharedSurfaces\UnitInput.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UnitInput.Source.cs" Link="SharedSurfaces\UnitInput.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\UnitInput.ViewModel.cs" Link="SharedSurfaces\UnitInput.ViewModel.cs" />
