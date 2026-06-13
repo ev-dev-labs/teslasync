@@ -986,6 +986,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\WebhookChannelsSection\WebhookChannelsSection.Model.cs" Link="FeatureViews\WebhookChannelsSection\WebhookChannelsSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WebhookChannelsSection\WebhookChannelsSection.Source.cs" Link="FeatureViews\WebhookChannelsSection\WebhookChannelsSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WebhookChannelsSection\WebhookChannelsSection.ViewModel.cs" Link="FeatureViews\WebhookChannelsSection\WebhookChannelsSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\WebhooksPage\WebhooksPage.Model.cs" Link="FeatureViews\WebhooksPage\WebhooksPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\WebhooksPage\WebhooksPage.Source.cs" Link="FeatureViews\WebhooksPage\WebhooksPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\WebhooksPage\WebhooksPage.ViewModel.cs" Link="FeatureViews\WebhooksPage\WebhooksPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WeeklyDigestPage\WeeklyDigestPage.Model.cs" Link="FeatureViews\WeeklyDigestPage\WeeklyDigestPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WeeklyDigestPage\WeeklyDigestPage.Source.cs" Link="FeatureViews\WeeklyDigestPage\WeeklyDigestPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WeeklyDigestPage\WeeklyDigestPage.ViewModel.cs" Link="FeatureViews\WeeklyDigestPage\WeeklyDigestPage.ViewModel.cs" />

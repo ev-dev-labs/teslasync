@@ -261,6 +261,12 @@ public sealed partial class ShellWindow : Window
             page.ConfigureAlertRulesRequested += (_, _) => NavigateTo("notifications/studio");
             return page;
         });
+
+        // Notifications / Webhooks page (P2/W7) — parity port of web WebhooksPage at route /notifications/webhooks.
+        _viewModel.PageFactory.Register(
+            "NotificationsWebhooks",
+            static () => new FeatureViews.Notifications.WebhooksPage());
+
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
