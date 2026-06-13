@@ -1,0 +1,84 @@
+=== P2 Shared surface 0131 OnboardingWizard (Windows) ===
+date: 2026-06-13T04:58:56.7304556-07:00
+dotnet: 10.0.300
+runner: net10.0 SDK present; Microsoft.WindowsAppSDK 2.1.3 (WinUI 3) restored; target net10.0-windows10.0.19041.0; OS Windows_NT
+
+--- Scope / parity ---
+Surface = native WinUI 3 port of web/src/components/feedback/OnboardingWizard.tsx (the first-run intro modal).
+New code (apps/windows/TeslaSync.App/shared-surfaces/OnboardingWizard.*):
+  OnboardingWizard.Model.cs     - registration (slug, automation ids, Segoe Fluent glyphs for the web Lucide
+                                  Zap/Car/Settings/CheckCircle + ChevronRight/X, the teslasync-onboarded flag +
+                                  'onboarded' broadcast type, the 1500ms reveal delay, the cyan step-indicator
+                                  token, the 4-step catalogue, i18n keys+verbatim web fallbacks), the pure
+                                  OnboardingWizardProjection (per-step content, Next/Get Started switch, dot map,
+                                  step-progress a11y label, clamping) + OnboardingWizardDiagnostics.
+  OnboardingWizard.Source.cs    - P1/S8 IOnboardingStore seam + InMemory / Delegated stores (web localStorage
+                                  onboarded flag + cross-tab 'onboarded' broadcast).
+  OnboardingWizard.ViewModel.cs - UI-thread-free state holder: reveal delay, step advance, skip/dismiss completion,
+                                  external-completion collapse, INotifyPropertyChanged + IDisposable.
+  OnboardingWizard.cs           - WinUI 3 view: top-level Popup modal, scrim backdrop (click=dismiss), step dots,
+                                  per-step accent icon chip, title/description, Skip + Next/Get Started, Esc-to-close,
+                                  focus move/restore, fade+scale w/ reduce-motion snap, Narrator dialog semantics,
+                                  view.opened diagnostic, ApplicationData-backed onboarded store.
+Web source fetches no data (pure presentational) => loading/error/stale/offline data-lifecycle states collapse to
+the hidden state (same precedent as shared-surfaces/InstallPrompt). States reproduced: hidden (onboarded, or before
+the reveal delay) and presented (the wizard across all 4 steps). Tests link the 3 UI-free files into the headless
+TeslaSync.App.Tests project (Model/Source/ViewModel) as SharedSurfaces\OnboardingWizard.* (the .cs view is WinUI and
+exercised by the app build), matching the InstallPrompt precedent.
+
+=== STEP 1: dotnet build TeslaSync.sln -c Release ===
+  0 Warning(s)
+  0 Error(s)
+  Time Elapsed 00:03:21.50
+BUILD_EXIT=0
+
+=== STEP 2: dotnet test TeslaSync.sln -c Release ===
+[full suite, includes environment-gated UIAutomation E2E]
+  Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 658 ms - TeslaSync.App.UITests.dll (net10.0)
+  Passed!  - Failed:     0, Passed: 28345, Skipped:     0, Total: 28345, Duration: 9 s - TeslaSync.App.Tests.dll (net10.0)
+  full_suite_exit=1
+  representative failure: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+[headless suite, Category!=UIAutomation -- the surface-validating suite; UITests run independently via run-ui-automation.ps1]
+  Passed!  - Failed:     0, Passed: 28345, Skipped:     0, Total: 28345, Duration: 18 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+=== STEP 3: dotnet format TeslaSync.sln --verify-no-changes ===
+format issue lines: 0
+FORMAT_EXIT=0
+
+=== STEP 4: check-placeholders.ps1 (scanning the shipped OnboardingWizard.* surface files) ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- UIAutomation E2E capability note ---
+TeslaSync.App.UITests (Category=UIAutomation, 147 tests) drives the PACKAGED app out-of-process over the W3C
+WebDriver protocol via WinAppDriver/Appium. This runner has no WinAppDriver/Appium listener (nothing on
+http://127.0.0.1:4723/) and no deployed MSIX, so the suite fails fast BY DESIGN (WinAppDriverSession.EnsureReady
+throws UiAutomationUnavailableException; the fixture states it is never silently skipped). apps/windows/run-ui-automation.ps1
+classifies exactly this condition as STATUS=BLOCKED, never green/red. These are repo-wide app-shell E2E tests, NOT
+part of this surface (this surface adds zero UIAutomation tests). The required surface capability (WinUI 3 /
+Windows App SDK / .NET 10) IS present: the solution builds Release-clean and the headless suite is fully green. The
+headless suite (Category!=UIAutomation) is the surface gate; the 147 UIAutomation failures are an environment/runner
+gap, not a defect.
+
+--- Acceptance criteria ---
+[x] Surface renders all web-source states: hidden (onboarded / pre-reveal) + presented (4 steps). Data-lifecycle
+    states (loading/error/stale/offline) collapse to hidden (web fetches no data) -- documented precedent.
+[x] Binds the onboarded flag via the P1/S8 state-holder (OnboardingWizardViewModel over IOnboardingStore); the view
+    does no storage/timer I/O beyond the reveal delay; completion + cross-instance 'onboarded' broadcast are seams.
+[x] Every web literal is keyed through the i18n facade with verbatim English fallbacks (translation.onboardingWizard.*);
+    no hardcoded English in the view (web source uses no t() -- keys invented per the InstallPrompt precedent).
+[x] Accessibility: dialog AutomationProperties.IsDialog + Name(step title) + FullDescription(step description); Skip /
+    primary / close carry Narrator names + tooltips; step strip exposes a 'Step N of 4' name; chip is AccessibilityView.Raw;
+    Esc closes; focus moves into the card on open and is restored on close; fade/scale honour OS reduce-motion (snap).
+[x] Tests: registration, the 4-step catalogue (verbatim titles/descriptions/glyphs/accents), the onboarded helper,
+    OnboardingWizardProjection per-step + dot-map + step-progress + clamping + a11y contract, the InMemory/Delegated
+    stores (incl. read/write-failure degradation + external completion), the ViewModel (reveal/advance/finish/skip/
+    dismiss/external-collapse/dispose), and diagnostics -- 45 tests, all pass (within the 28345-test headless suite).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped surface code (PLACEHOLDER_COUNT=0).
+[x] Telemetry: view.opened slug=OnboardingWizard via OnboardingWizardDiagnostics, emitted once on first present.
+
+SUMMARY: BUILD_EXIT=0 TEST_EXIT(headless)=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0 (full-suite incl. env-gated UIAutomation=1)
+EXIT=0
+STATUS=DONE
