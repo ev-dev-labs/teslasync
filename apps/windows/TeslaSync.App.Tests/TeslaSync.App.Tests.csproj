@@ -396,6 +396,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\AutomationListPage\AutomationListPage.Model.cs" Link="FeatureViews\AutomationListPage\AutomationListPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AutomationListPage\AutomationListPage.Source.cs" Link="FeatureViews\AutomationListPage\AutomationListPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AutomationListPage\AutomationListPage.ViewModel.cs" Link="FeatureViews\AutomationListPage\AutomationListPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CommandHistoryPage\CommandHistoryPage.Model.cs" Link="FeatureViews\CommandHistoryPage\CommandHistoryPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CommandHistoryPage\CommandHistoryPage.Source.cs" Link="FeatureViews\CommandHistoryPage\CommandHistoryPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CommandHistoryPage\CommandHistoryPage.ViewModel.cs" Link="FeatureViews\CommandHistoryPage\CommandHistoryPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ExportsPage\ExportsPage.Model.cs" Link="FeatureViews\ExportsPage\ExportsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ExportsPage\ExportsPage.Source.cs" Link="FeatureViews\ExportsPage\ExportsPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ExportsPage\ExportsPage.ViewModel.cs" Link="FeatureViews\ExportsPage\ExportsPage.ViewModel.cs" />

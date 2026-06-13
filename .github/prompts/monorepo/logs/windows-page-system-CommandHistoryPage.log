@@ -1,0 +1,108 @@
+=== p2-windows · W7 · page:system/CommandHistory (WinUI 3 / Fluent) ===
+Parity unit : page:system/CommandHistory   kind=page   web route=/command-history
+Web source  : web/src/features/system/pages/CommandHistoryPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300); maui-windows workload installed;
+              full WinUI Release build of the solution succeeds — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the data feed / generated-client adapter, also headless),
+  <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable observable state holder, the established testable
+  pattern — see TimelinePageViewModel / ApiLogsPageViewModel) and <Name>.cs (the Fluent view). The generated
+  prompt's idealized "CommandHistoryPage.xaml + ViewModel.cs under TeslaSync/Features/System" is mapped onto these
+  real conventions; the surface registers itself with the W4 ShellPageFactory by route name ("CommandHistory").
+- Namespace: TeslaSync.App.FeatureViews.SystemOps (NOT ".System" — a sibling namespace segment literally named
+  "System" shadows global::System for every other FeatureViews.* file that writes an inline System.* name, which
+  broke the whole app compile; "SystemOps" mirrors the route's RouteGroup.SystemOps and is collision-free).
+- Data sources (manifest: useCommandHistory → GET /vehicles/{vehicleId}/commands/history [limit]): bound through an
+  injected ICommandHistoryFeed (P1/S8 seam). The generated-client-backed CommandHistoryClientFeed (ADR-004) reads
+  the web page's two sources — the useSelectedVehicle fleet list (generated op get_api_v1_vehicles) and the
+  per-vehicle log (op get_api_v1_vehicles_vehicleID_commands_history with the snake_case limit=200 query the web
+  useCommandHistory hook requests). Default EmptyCommandHistoryFeed resolves the empty state with no HTTP. The
+  view never performs HTTP. Both generated op ids verified present in Generated/Api/ApiEndpoints.cs.
+- Stats (Commands-24h / Success-Rate / Most-Used / Last-Sent), client-side status+search filtering and the 25-row
+  pagination are computed in CommandHistoryProjection exactly as the web useMemo blocks do, including the
+  COMMAND_LABELS friendly-name map + formatCommandName fallback and the params/error buildSubtitle. Timestamps
+  format through the shared DateTimeFormatting port; the timeline renders on the W3 TsTimeline (severity-coloured
+  markers). No charts / maps in this unit (manifest declares 0 / 0).
+- All 18 i18n keys already exist verbatim in Strings/{en,ar,he}/Resources.resw (translation.commandHistory.* +
+  translation.filter.pending); the surface resolves them through the ILocalizer facade with the web key names
+  (no new catalog rows required). The "{0} commands" showing-count + "{rate}%" use the .resw {0} placeholders.
+- Three false-positive "Placeholder" matches (the required commandHistory.searchPlaceholder key + its projected
+  field/Hint) carry the repo's // parity:allow <reason> opt-out, the same mechanism TsSelect/TsInput use for the
+  WinUI PlaceholderText API. No stubs, no TODO/FIXME, no "Coming soon" (ADR-011).
+
+=== PARITY ===
+PARITY_REQUIRED=28
+
+# Panels (6) — the four web StatCards + the two web GlassPanel regions (filters + timeline).
+[x] panel - Commands-24h -> CommandHistoryProjection.ComputeStats/BuildStatCards StatCards[0] (label commandHistory.total24h, value=24h window count) | view CommandHistoryPage._total24hCard (TsStatCard) via BuildStatsGrid + ApplyStatCard | test Projection_computes_the_four_stat_tiles_from_the_full_history
+[x] panel - Success-Rate -> BuildStatCards StatCards[1] (label commandHistory.successRate, value="{rate}%") | view CommandHistoryPage._successRateCard | test Projection_computes_the_four_stat_tiles_from_the_full_history
+[x] panel - Most-Used    -> BuildStatCards StatCards[2] (label commandHistory.mostUsed, value=FormatCommandName(mostUsed)) | view CommandHistoryPage._mostUsedCard | test Projection_computes_the_four_stat_tiles_from_the_full_history
+[x] panel - Last-Sent    -> BuildStatCards StatCards[3] (label commandHistory.lastSent, value=relative of commands[0]) | view CommandHistoryPage._lastSentCard | test Projection_computes_the_four_stat_tiles_from_the_full_history
+[x] panel - GlassPanel5  -> CommandHistoryPage.BuildFiltersPanel (_filtersPanel TsGlassPanel: status TabNav _allTab/_successTab/_failedTab + _searchInput + _searchPending) <- CommandHistoryProjection StatusTabs/SearchPlaceholder/SearchPendingLabel | tests Projection_status_tabs_mark_the_active_filter, Projection_search_matches_friendly_and_raw_command_names
+[x] panel - GlassPanel6  -> CommandHistoryPage.BuildTimelinePanel (_timelinePanel TsGlassPanel: _timelineTitle + _showingText + _timeline TsTimeline + _emptyState) <- CommandHistoryProjection TimelineRows/ShowingText/EmptyMessage | tests Projection_paginates_to_the_page_size_and_shows_the_pager, Projection_status_filter_failed_keeps_only_failed_rows
+
+# States (4) — for the useCommandHistory data source (loading / empty / error / success).
+[x] state - loading -> CommandHistoryProjection.ResolveState => CommandHistoryState.Loading; view _loadingSkeleton (TsPageLoadSkeleton) Show(display.ShowLoading) | tests ViewModel_initial_state_is_loading, Projection_loading_with_no_rows_is_the_loading_state
+[x] state - empty   -> CommandHistoryState.Empty; view _emptyState (TsEmptyState), message commandHistory.noCommands / noFilterResults | tests ViewModel_empty_feed_is_the_empty_state, Projection_unfiltered_empty_is_the_no_commands_state, Projection_search_with_no_match_is_the_filtered_empty_state
+[x] state - error   -> CommandHistoryState.Error; view _errorBanner (TsAlertBanner Danger), ErrorBannerText=error.loadFailed | tests ViewModel_vehicles_failure_is_the_error_state, ViewModel_history_failure_is_the_error_state, Projection_error_with_no_rows_is_the_error_state_with_detail
+[x] state - success -> CommandHistoryState.Success; view _timeline (TsTimeline) rows | tests ViewModel_loads_into_success_and_selects_the_first_vehicle, Projection_status_filter_failed_keeps_only_failed_rows
+
+# Strings (18) — every visible literal resolves through ILocalizer with the web key names.
+[x] string - commandHistory.backToCommands -> CommandHistoryProjection.Project GetString("commandHistory.backToCommands","Commands")
+[x] string - commandHistory.filterAll      -> CommandHistoryProjection.BuildStatusTabs GetString("commandHistory.filterAll","All")
+[x] string - commandHistory.filterFailed   -> CommandHistoryProjection.BuildStatusTabs GetString("commandHistory.filterFailed","Failed")
+[x] string - commandHistory.filterSuccess  -> CommandHistoryProjection.BuildStatusTabs GetString("commandHistory.filterSuccess","Success")
+[x] string - commandHistory.lastSent       -> CommandHistoryProjection.BuildStatCards GetString("commandHistory.lastSent","Last Sent")
+[x] string - commandHistory.mostUsed       -> CommandHistoryProjection.BuildStatCards GetString("commandHistory.mostUsed","Most Used")
+[x] string - commandHistory.noCommands     -> CommandHistoryProjection.Project GetString("commandHistory.noCommands","No commands have been sent yet")
+[x] string - commandHistory.noFilterResults-> CommandHistoryProjection.Project GetString("commandHistory.noFilterResults","No commands match the current filters")
+[x] string - commandHistory.searchCommands -> CommandHistoryProjection.Project GetString("commandHistory.searchCommands","Search commands") (AutomationProperties name on _searchInput)
+[x] string - commandHistory.searchPlaceholder -> CommandHistoryProjection.Project GetString("commandHistory.searchPlaceholder","Search commands…") (_searchInput.Hint)
+[x] string - commandHistory.selectVehicle  -> CommandHistoryProjection.Project GetString("commandHistory.selectVehicle","Select vehicle") (AutomationProperties name on _vehicleSelect)
+[x] string - commandHistory.showing        -> CommandHistoryProjection.Project string.Format(GetString("commandHistory.showing","{0} commands"), filtered.Count)
+[x] string - commandHistory.subtitle       -> CommandHistoryProjection.Project / CommandHistoryRegistration.Subtitle GetString("commandHistory.subtitle","Audit log of all vehicle commands")
+[x] string - commandHistory.successRate    -> CommandHistoryProjection.BuildStatCards GetString("commandHistory.successRate","Success Rate")
+[x] string - commandHistory.timelineTitle  -> CommandHistoryProjection.Project GetString("commandHistory.timelineTitle","Command Timeline")
+[x] string - commandHistory.title          -> CommandHistoryProjection.Project / CommandHistoryRegistration.Title GetString("commandHistory.title","Command History")
+[x] string - commandHistory.total24h       -> CommandHistoryProjection.BuildStatCards GetString("commandHistory.total24h","Commands (24h)")
+[x] string - filter.pending                -> CommandHistoryProjection.Project GetString("filter.pending","Filtering…") (_searchPending AutomationProperties name / tooltip)
+
+PARITY_COVERED=28
+# Coverage asserted headlessly in apps/windows/TeslaSync.App.Tests/FeatureViews/CommandHistoryPageTests.cs (38 tests):
+# Projection_resolves_every_required_string_key records all 18 keys above through a RecordingLocalizer across the
+# no-commands + filtered-empty scenarios (so both noCommands and noFilterResults resolve); the stat / status-tab /
+# vehicle-picker / filter / pagination / state-matrix / parser / client-feed / diagnostics / registration tests
+# assert each panel + state + the request shaping renders from the bound CommandHistoryDisplay state holder.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/CommandHistoryPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo)
+#   3 "Placeholder" hits are the required commandHistory.searchPlaceholder key + field/Hint, each // parity:allow'd.
+PLACEHOLDER_ALLOWED=3
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (compiles TeslaSync.App + .Tests + .UITests;
+#   only the 17 pre-existing TeslaSync.App.Core CA warnings, none in the new sources)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes (whole solution)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27114, Failed: 0, Skipped: 0
+#   (the headless suite per the p2-windows gate contract; the new 38 CommandHistoryPageTests are included.
+#   The WinAppDriver UITests project requires a live UI-automation runner + deployed MSIX, out of scope here;
+#   it still compiles in the Release build above.)
+TEST_EXIT=0
+PARITY_COVERED=28
+PARITY_REQUIRED=28
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/CommandHistoryPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/CommandHistoryPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-system-CommandHistoryPage.log
+# git commit -m "feat(apps/windows): CommandHistoryPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE
