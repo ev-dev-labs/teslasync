@@ -133,5 +133,14 @@
     "requiredCount": 4,
     "promptId": "p2-windows/W7/windows-page-system-StatusApiDocsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-StatusApiDocsPage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/ClimateControl",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 129,
+    "requiredCount": 129,
+    "promptId": "p2-windows/W7/windows-page-vehicle-systems-ClimateControlPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicle-systems-ClimateControlPage.log"
   }
 ]

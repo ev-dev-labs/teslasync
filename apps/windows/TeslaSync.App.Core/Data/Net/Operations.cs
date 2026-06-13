@@ -91,6 +91,7 @@ public static class Operations
     public static class Climate
     {
         public const string Latest = "get_api_v1_climate_latest";
+        public const string History = "get_api_v1_climate";
     }
 
     /// <summary>Automations, history and presets.</summary>

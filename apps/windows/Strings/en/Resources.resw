@@ -24781,4 +24781,202 @@
   <data name="translation.locations.retry" xml:space="preserve">
     <value>Retry</value>
   </data>
+  <data name="translation.Above Target" xml:space="preserve">
+    <value>Above Target</value>
+  </data>
+  <data name="translation.AC On Time" xml:space="preserve">
+    <value>AC On Time</value>
+  </data>
+  <data name="translation.AC On/Off" xml:space="preserve">
+    <value>AC On/Off</value>
+  </data>
+  <data name="translation.AC State &amp; Fan Speed" xml:space="preserve">
+    <value>AC State &amp; Fan Speed</value>
+  </data>
+  <data name="translation.Adjusting" xml:space="preserve">
+    <value>Adjusting</value>
+  </data>
+  <data name="translation.Auto Climate (Left)" xml:space="preserve">
+    <value>Auto Climate (Left)</value>
+  </data>
+  <data name="translation.Auto Climate (Right)" xml:space="preserve">
+    <value>Auto Climate (Right)</value>
+  </data>
+  <data name="translation.Auto Conditioning" xml:space="preserve">
+    <value>Auto Conditioning</value>
+  </data>
+  <data name="translation.Avg Fan Speed" xml:space="preserve">
+    <value>Avg Fan Speed</value>
+  </data>
+  <data name="translation.Battery Heater" xml:space="preserve">
+    <value>Battery Heater</value>
+  </data>
+  <data name="translation.Below Target" xml:space="preserve">
+    <value>Below Target</value>
+  </data>
+  <data name="translation.Camp Mode" xml:space="preserve">
+    <value>Camp Mode</value>
+  </data>
+  <data name="translation.Clearing rear window" xml:space="preserve">
+    <value>Clearing rear window</value>
+  </data>
+  <data name="translation.Clearing windshield before drive" xml:space="preserve">
+    <value>Clearing windshield before drive</value>
+  </data>
+  <data name="translation.Climate Control" xml:space="preserve">
+    <value>Climate Control</value>
+  </data>
+  <data name="translation.Climate Efficiency" xml:space="preserve">
+    <value>Climate Efficiency</value>
+  </data>
+  <data name="translation.Climate History" xml:space="preserve">
+    <value>Climate History</value>
+  </data>
+  <data name="translation.Climate Keeper" xml:space="preserve">
+    <value>Climate Keeper</value>
+  </data>
+  <data name="translation.Comfort Score" xml:space="preserve">
+    <value>Comfort Score</value>
+  </data>
+  <data name="translation.Defrost for Preconditioning" xml:space="preserve">
+    <value>Defrost for Preconditioning</value>
+  </data>
+  <data name="translation.Defrost Mode" xml:space="preserve">
+    <value>Defrost Mode</value>
+  </data>
+  <data name="translation.Dog Mode" xml:space="preserve">
+    <value>Dog Mode</value>
+  </data>
+  <data name="translation.Driver Set Temp" xml:space="preserve">
+    <value>Driver Set Temp</value>
+  </data>
+  <data name="translation.Fan Level" xml:space="preserve">
+    <value>Fan Level</value>
+  </data>
+  <data name="translation.Fan Speed" xml:space="preserve">
+    <value>Fan Speed</value>
+  </data>
+  <data name="translation.Fan Status" xml:space="preserve">
+    <value>Fan Status</value>
+  </data>
+  <data name="translation.Far from target" xml:space="preserve">
+    <value>Far from target</value>
+  </data>
+  <data name="translation.Front Left" xml:space="preserve">
+    <value>Front Left</value>
+  </data>
+  <data name="translation.Front Right" xml:space="preserve">
+    <value>Front Right</value>
+  </data>
+  <data name="translation.Heating windshield wipers" xml:space="preserve">
+    <value>Heating windshield wipers</value>
+  </data>
+  <data name="translation.HVAC Power" xml:space="preserve">
+    <value>HVAC Power</value>
+  </data>
+  <data name="translation.HVAC status, temperatures, and seat heaters" xml:space="preserve">
+    <value>HVAC status, temperatures, and seat heaters</value>
+  </data>
+  <data name="translation.HVAC System" xml:space="preserve">
+    <value>HVAC System</value>
+  </data>
+  <data name="translation.Inside Temp" xml:space="preserve">
+    <value>Inside Temp</value>
+  </data>
+  <data name="translation.Insufficient Power to Heat" xml:space="preserve">
+    <value>Insufficient Power to Heat</value>
+  </data>
+  <data name="translation.Level 0-10" xml:space="preserve">
+    <value>Level 0-10</value>
+  </data>
+  <data name="translation.Low" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="translation.Medium" xml:space="preserve">
+    <value>Medium</value>
+  </data>
+  <data name="translation.Near Target" xml:space="preserve">
+    <value>Near Target</value>
+  </data>
+  <data name="translation.No history records found." xml:space="preserve">
+    <value>No history records found.</value>
+  </data>
+  <data name="translation.No HVAC history available." xml:space="preserve">
+    <value>No HVAC history available.</value>
+  </data>
+  <data name="translation.No temperature history available." xml:space="preserve">
+    <value>No temperature history available.</value>
+  </data>
+  <data name="translation.of samples" xml:space="preserve">
+    <value>of samples</value>
+  </data>
+  <data name="translation.Outside Temp" xml:space="preserve">
+    <value>Outside Temp</value>
+  </data>
+  <data name="translation.Overheat Protection" xml:space="preserve">
+    <value>Overheat Protection</value>
+  </data>
+  <data name="translation.Overheat Temp Limit" xml:space="preserve">
+    <value>Overheat Temp Limit</value>
+  </data>
+  <data name="translation.Passenger Setting" xml:space="preserve">
+    <value>Passenger Setting</value>
+  </data>
+  <data name="translation.Peak Fan Speed" xml:space="preserve">
+    <value>Peak Fan Speed</value>
+  </data>
+  <data name="translation.Rear Center" xml:space="preserve">
+    <value>Rear Center</value>
+  </data>
+  <data name="translation.Rear Defrost" xml:space="preserve">
+    <value>Rear Defrost</value>
+  </data>
+  <data name="translation.Rear Display HVAC" xml:space="preserve">
+    <value>Rear Display HVAC</value>
+  </data>
+  <data name="translation.Rear Left" xml:space="preserve">
+    <value>Rear Left</value>
+  </data>
+  <data name="translation.Rear passengers can control HVAC" xml:space="preserve">
+    <value>Rear passengers can control HVAC</value>
+  </data>
+  <data name="translation.Rear Right" xml:space="preserve">
+    <value>Rear Right</value>
+  </data>
+  <data name="translation.Seat Cooling" xml:space="preserve">
+    <value>Seat Cooling</value>
+  </data>
+  <data name="translation.Seat Heaters" xml:space="preserve">
+    <value>Seat Heaters</value>
+  </data>
+  <data name="translation.Set Temp" xml:space="preserve">
+    <value>Set Temp</value>
+  </data>
+  <data name="translation.Steering Wheel Heat Auto" xml:space="preserve">
+    <value>Steering Wheel Heat Auto</value>
+  </data>
+  <data name="translation.Steering Wheel Heat Level" xml:space="preserve">
+    <value>Steering Wheel Heat Level</value>
+  </data>
+  <data name="translation.Steering Wheel Heater" xml:space="preserve">
+    <value>Steering Wheel Heater</value>
+  </data>
+  <data name="translation.Temp Delta" xml:space="preserve">
+    <value>Temp Delta</value>
+  </data>
+  <data name="translation.Temperature History" xml:space="preserve">
+    <value>Temperature History</value>
+  </data>
+  <data name="translation.Thermal Comfort" xml:space="preserve">
+    <value>Thermal Comfort</value>
+  </data>
+  <data name="translation.Too Cold" xml:space="preserve">
+    <value>Too Cold</value>
+  </data>
+  <data name="translation.Too Warm" xml:space="preserve">
+    <value>Too Warm</value>
+  </data>
+  <data name="translation.Wiper Heater" xml:space="preserve">
+    <value>Wiper Heater</value>
+  </data>
 </root>
