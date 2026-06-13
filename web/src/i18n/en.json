@@ -6981,6 +6981,10 @@
       "drives": "Drives"
     }
   },
+  "route": {
+    "noLocationData": "No location data",
+    "roundTrip": "round trip"
+  },
   "routeEfficiency": {
     "trips": "trips",
     "avg": "avg",
