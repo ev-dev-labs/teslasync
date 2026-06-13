@@ -716,3 +716,4 @@ p3-android/shared-meaningful/A-0131-OnboardingWizard.prompt.md
 p3-android/shared-meaningful/A-0130-OfflineBanner.prompt.md
 p3-android/shared-meaningful/A-0128-NavigationGuardProvider.prompt.md
 p3-android/shared-meaningful/A-0126-LiveStaleDataBanner.prompt.md
+p3-android/shared-meaningful/A-0134-RateLimitBanner.prompt.md
