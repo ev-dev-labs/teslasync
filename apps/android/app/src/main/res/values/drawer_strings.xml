@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Surface-owned strings for the Drawer modal/dialog
+  (com/teslasync/modals-dialogs/Drawer), the native port of
+  web/src/components/ui/Drawer.tsx (the slide-in side panel).
+
+  The web component is NOT i18n-aware for its own chrome: the title is a caller
+  prop and the only two literals it bakes in are the close button aria-label
+  ("Close") and the fallback dialog aria-label when no title is supplied
+  (aria-label={title || 'Panel'}). The native port resolves every string through
+  stringResource (no English literals in Kotlin):
+
+    - the close affordance reuses the generic catalog key translation_common_close
+      ("Close"), already present in values/strings.xml — no duplicate is added; and
+    - this file supplies the one value the auto-generated catalog has no key for:
+      the title-less fallback accessible name, verbatim from the web 'Panel' literal.
+
+  Uses the same hand-authored *_strings.xml mechanism as confirm_dialog_strings.xml /
+  incident_form_strings.xml / nav_strings.xml.
+-->
+<resources>
+    <string name="translation_drawer_panelLabel">Panel</string>
+</resources>
