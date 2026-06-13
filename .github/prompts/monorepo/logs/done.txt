@@ -620,3 +620,4 @@ p3-android/shared-meaningful/A-0030-AINLAutomationBuilder.prompt.md
 p3-android/shared-meaningful/A-0036-AiOutputPanel.prompt.md
 p3-android/shared-meaningful/A-0034-AINLSearch.prompt.md
 p3-android/shared-meaningful/A-0037-AIPeriodCompareNarration.prompt.md
+p3-android/shared-meaningful/A-0038-AIPiiRedactionSharedExports.prompt.md
