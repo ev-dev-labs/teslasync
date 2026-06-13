@@ -684,3 +684,4 @@ p3-android/shared-meaningful/A-0094-LiveIndicator.prompt.md
 p3-android/shared-meaningful/A-0095-MetricCard.prompt.md
 p3-android/shared-meaningful/A-0101-RouteDisplay.prompt.md
 p3-android/shared-meaningful/A-0099-ProgressRing.prompt.md
+p3-android/shared-meaningful/A-0092-InsightsEngine.prompt.md
