@@ -1341,6 +1341,7 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\DraftRestorePrompt.Model.cs" Link="SharedSurfaces\DraftRestorePrompt.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DraftRestorePrompt.Source.cs" Link="SharedSurfaces\DraftRestorePrompt.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DraftRestorePrompt.ViewModel.cs" Link="SharedSurfaces\DraftRestorePrompt.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DriveScore.Model.cs" Link="SharedSurfaces\DriveScore.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\EditConflictBanner.Model.cs" Link="SharedSurfaces\EditConflictBanner.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\EditConflictBanner.Source.cs" Link="SharedSurfaces\EditConflictBanner.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\EditConflictBanner.ViewModel.cs" Link="SharedSurfaces\EditConflictBanner.ViewModel.cs" />
