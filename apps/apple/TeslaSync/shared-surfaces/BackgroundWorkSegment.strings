@@ -1,0 +1,51 @@
+/*
+  BackgroundWorkSegment.strings
+  TeslaSync — P4 shared surface · 0177 · BackgroundWorkSegment (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The keys in the first block mirror the web
+  source (components/layout/status-bar/BackgroundWorkSegment.tsx) one-for-one — the task-count summary,
+  the tooltip + aria segment label, and the popover heading. The second block localises the job-row data
+  the web `useBackgroundJobs` hook builds inline (the export fallback label + status lines, and the
+  composite "Saving…" mutation label) so the native sources hold no English literals. The remaining keys
+  are the native P4 leaf chrome (loading / empty / error pills, the open hint, the per-kind VoiceOver
+  names, and the freshness axis).
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table ("BackgroundWorkSegment") so each parallel surface prompt owns its own
+  strings without editing the shared catalog. In test / preview bundles `NSLocalizedString` returns the
+  value below, keeping the labels deterministic.
+*/
+
+/* --- Web source keys (BackgroundWorkSegment.tsx) --- */
+"statusBar.background.one" = "1 task";
+"statusBar.background.many" = "{{count}} tasks";
+"statusBar.background.tooltip" = "Background work in progress";
+"statusBar.background.aria" = "Background tasks";
+"statusBar.background.heading" = "Running";
+
+/* --- Job-row data (web useBackgroundJobs inline labels) --- */
+"statusBar.background.saving" = "Saving…";
+"statusBar.background.savingMany" = "Saving {{count}} changes…";
+"statusBar.background.exportFallback" = "{{type}} export";
+"statusBar.background.exportQueued" = "Queued";
+"statusBar.background.exportProcessing" = "Processing";
+
+/* --- Per-kind VoiceOver names (web KIND_ICON categories) --- */
+"statusBar.background.kind.export" = "Export";
+"statusBar.background.kind.mutation" = "Saving";
+"statusBar.background.kind.custom" = "Task";
+
+/* --- Loading / empty / error chrome (P4 leaf contract) --- */
+"statusBar.background.empty" = "No background work";
+"statusBar.background.emptyA11y" = "No background work in progress";
+"statusBar.background.loadingA11y" = "Loading background work";
+"statusBar.background.error" = "Background work unavailable";
+"statusBar.background.retryA11y" = "Background work check failed — tap to retry";
+"statusBar.background.openHint" = "Opens the list of running tasks";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"statusBar.background.live" = "Live";
+"statusBar.background.stale" = "Stale";
+"statusBar.background.offline" = "Offline";
+"statusBar.background.staleA11y" = "Background work is stale — tap to refresh";
+"statusBar.background.offlineA11y" = "Offline — showing the last known tasks";
