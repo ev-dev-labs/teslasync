@@ -460,6 +460,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ClimateControlPage\ClimateControlPage.Model.cs" Link="FeatureViews\ClimateControlPage\ClimateControlPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClimateControlPage\ClimateControlPage.Source.cs" Link="FeatureViews\ClimateControlPage\ClimateControlPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClimateControlPage\ClimateControlPage.ViewModel.cs" Link="FeatureViews\ClimateControlPage\ClimateControlPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ClimatePanel\ClimatePanel.Model.cs" Link="FeatureViews\ClimatePanel\ClimatePanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ClimatePanel\ClimatePanel.Source.cs" Link="FeatureViews\ClimatePanel\ClimatePanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ClimatePanel\ClimatePanel.ViewModel.cs" Link="FeatureViews\ClimatePanel\ClimatePanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.Model.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.Source.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.ViewModel.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.ViewModel.cs" />
