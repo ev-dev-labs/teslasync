@@ -1038,6 +1038,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.Model.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.Source.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UnixPermissionTool\UnixPermissionTool.ViewModel.cs" Link="FeatureViews\UnixPermissionTool\UnixPermissionTool.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\UpdateAvailableCallout\UpdateAvailableCallout.Model.cs" Link="FeatureViews\UpdateAvailableCallout\UpdateAvailableCallout.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UrlEncoder\UrlEncoder.Model.cs" Link="FeatureViews\UrlEncoder\UrlEncoder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UrlEncoder\UrlEncoder.ViewModel.cs" Link="FeatureViews\UrlEncoder\UrlEncoder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.Model.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.Model.cs" />
