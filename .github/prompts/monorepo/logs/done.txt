@@ -568,3 +568,4 @@ p3-android/modals-dialogs/A-0011-GeofenceDrawer.prompt.md
 p3-android/modals-dialogs/A-0005-JobProgressDrawer.prompt.md
 p3-android/modals-dialogs/A-0013-Drawer.prompt.md
 p3-android/modals-dialogs/A-0010-NotificationBellPopover.prompt.md
+p3-android/modals-dialogs/A-0012-ConfirmDialog.prompt.md
