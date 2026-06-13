@@ -26921,6 +26921,11 @@
       "translated": true,
       "value": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name."
     },
+    "translation.search.aiSearch.placeholder": {
+      "tokens": [],
+      "translated": true,
+      "value": "e.g. drives last weekend over 200 km with phantom drain"
+    },
     "translation.search.aiSearch.searchButton": {
       "tokens": [],
       "translated": true,

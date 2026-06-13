@@ -5435,6 +5435,7 @@
   <string name="translation_savedViews_unsetDefault">Clear default</string>
   <string name="translation_search_aiSearch_badge">Helix</string>
   <string name="translation_search_aiSearch_description">Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.</string>
+  <string name="translation_search_aiSearch_placeholder">e.g. drives last weekend over 200 km with phantom drain</string>
   <string name="translation_search_aiSearch_searchButton">Search with Helix</string>
   <string name="translation_search_aiSearch_title">Search with natural language</string>
   <string name="translation_search_empty_message">Search across vehicles, drives, charging sessions, alerts, geofences, automations and more.</string>
