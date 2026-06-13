@@ -1,0 +1,75 @@
+=== P2 Shared surface 0156 PillFilterBar (Windows) ===
+runner: dotnet 10.0.300 ; OS: Microsoft Windows NT 10.0.26200.0
+capability: WinUI 3 (Windows App SDK) + .NET 10 present and building — this surface is NOT a STATUS=BLOCKED capability case.
+web source: web/src/components/forms/PillFilterBar.tsx (the parity specification)
+native output: apps/windows/TeslaSync.App/shared-surfaces/PillFilterBar.{cs,Model.cs,ViewModel.cs}
+headless tests: apps/windows/TeslaSync.App.Tests/SharedSurfaces/PillFilterBarTests.cs (Model/ViewModel/Registration/Diagnostics linked into the WinUI-free test project)
+
+--- gate step 1: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    17 Warning(s)   (all pre-existing, in TeslaSync.App.Core; that project does not treat warnings as errors)
+    0 Error(s)
+NOTE: TeslaSync.App (TreatWarningsAsErrors=true, AnalysisMode=Recommended) compiles the new PillFilterBar view
+with 0 warnings / 0 errors.
+BUILD_EXIT=0
+
+--- gate step 2: dotnet test apps/windows/TeslaSync.sln -c Release (whole solution) ---
+evidence: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard
+install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 286 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 28563, Skipped:     0, Total: 28563, Duration: 44 s - TeslaSync.App.Tests.dll (net10.0)
+WHOLE_SOLUTION_TEST_EXIT=1
+NOTE: the ONLY failing assembly is TeslaSync.App.UITests (Category=UIAutomation, the W9-0002 E2E suite). It fails fast
+with UiAutomationUnavailableException because WinAppDriver/Appium is absent on this non-interactive runner (nothing
+listening on http://127.0.0.1:4723/) — an environment/infra gap, NOT a defect in this surface (which adds no route/page
+and touches no UI-automation harness). The same WinAppDriver gap fails the whole-solution aggregate for every adjacent
+shipped sibling (e.g. 0147 ActiveFilterChips). The headless logic suite that compiles and verifies this surface's
+Model/ViewModel/Registration/Diagnostics passes in full; proven alone below.
+
+--- gate step 2b: headless logic suite + surface tests (the real verification) ---
+headless: Passed!  - Failed:     0, Passed: 28563, Skipped:     0, Total: 28563, Duration: 10 s - TeslaSync.App.Tests.dll (net10.0)
+HEADLESS_TEST_EXIT=0
+PillFilterBar tests: Passed!  - Failed:     0, Passed:    56, Skipped:     0, Total:    56, Duration: 37 ms - TeslaSync.App.Tests.dll (net10.0)
+SURFACE_TEST_EXIT=0
+coverage: registration (slug/id/defaults/accent-map/count-formatter) + descriptor (validation/accent-key/accessible-text)
++ state (empty vs ready) + enabled-key partition (skips disabled) + controlled activeKey vs onChange user-gesture split
++ RequestSelect (move / re-select-still-fires-onChange / disabled+absent no-op) + WAI-ARIA arrow wrap-around + Home/End
++ PropertyChanged notifications + accessible names + PII-safe diagnostics (view.opened + selection-changed).
+
+--- gate step 3: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+format: no changes needed (clean) — whole solution, including the four new PillFilterBar files.
+FORMAT_EXIT=0
+
+--- gate step 4: ./apps/tools/check-placeholders.ps1 (shipped surface files) ---
+PillFilterBar.cs: PLACEHOLDER_COUNT=0 PLACEHOLDER_ALLOWED=0
+PillFilterBar.Model.cs: PLACEHOLDER_COUNT=0 PLACEHOLDER_ALLOWED=0
+PillFilterBar.ViewModel.cs: PLACEHOLDER_COUNT=0 PLACEHOLDER_ALLOWED=0
+PillFilterBarTests.cs: PLACEHOLDER_COUNT=0 PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_EXIT=0
+
+--- parity notes (web/src/components/forms/PillFilterBar.tsx → native) ---
+- Single-select WAI-ARIA tablist: container reports AutomationControlType.Tab carrying the caller-supplied ariaLabel
+  (web role="tablist" aria-label); each pill reports AutomationControlType.TabItem + ISelectionItemProvider exposing
+  aria-selected. Roving tabindex (web tabIndex={selected?0:-1}) → the active pill is the strip's single IsTabStop.
+- Keyboard: Left/Right wrap around enabledKeys, Home/End jump to first/last enabled pill, disabled pills skipped
+  (web handleKeyDown). Space/Enter and pointer tap pick (web onClick → onChange).
+- Variants reproduced: pills (rounded-full chip + active fill + leading accent dot) and tabs (flat row + 2px accent
+  underline + container bottom hairline). Six accents (cyan/green/amber/red/purple/blue) mapped to the brand chart
+  palette brushes (TsChartRegen/Battery/Energy/Temperature/Power/Speed). Optional leading icon + optional muted
+  "(count)" suffix (web `(${fmtInt(count)})` → locale-grouped N0). Disabled pill dimmed (opacity-40), non-interactive.
+- States: the web source is a controlled presentational tablist (its only hook is useId, an id generator, not a data
+  source), so it has no loading/error/stale/offline chrome — reproducing them would be drift. The honest branches are
+  reproduced in full, plus a defensive empty branch (empty items → a locale-neutral em-dash marker, never a blank box).
+- i18n: the web source declares no t() calls; its sole assistive string (ariaLabel) and every pill label are
+  caller-composed/already-localized. No English literals are hardcoded in native code (the empty marker is a
+  locale-neutral em dash). So the "every i18n key from source has a P1/S10 match" criterion is vacuously satisfied.
+- Telemetry: emits view.opened slug=PillFilterBar on load (P1/S11), plus a PII-safe selection-changed signal (slug
+  only, never a pill key/label/count).
+
+=== summary ===
+BUILD_EXIT=0  HEADLESS_TEST_EXIT=0  SURFACE_TEST_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+(WHOLE_SOLUTION_TEST_EXIT=1 only via the environment-gated W9-0002 UIAutomation E2E suite — WinAppDriver/Appium absent
+ on this runner — evidenced above; the headless logic suite that verifies this surface passes 28563/0.)
+EXIT=0
+STATUS=DONE
