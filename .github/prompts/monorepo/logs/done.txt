@@ -791,3 +791,4 @@ p2-windows/pages/telemetry/MQTTInspectorPage.prompt.md
 p2-windows/pages/trips/TripReplayPage.prompt.md
 p2-windows/pages/trips/TripDetailPage.prompt.md
 p2-windows/pages/telemetry/SignalsWorkspacePage.prompt.md
+p2-windows/pages/telemetry/SignalLogViewerPage.prompt.md
