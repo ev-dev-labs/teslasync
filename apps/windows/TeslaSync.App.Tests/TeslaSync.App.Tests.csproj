@@ -741,6 +741,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\MotorSection\MotorSection.Model.cs" Link="FeatureViews\MotorSection\MotorSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MotorSection\MotorSection.Source.cs" Link="FeatureViews\MotorSection\MotorSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MotorSection\MotorSection.ViewModel.cs" Link="FeatureViews\MotorSection\MotorSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MQTTInspectorPage\MQTTInspectorPage.Model.cs" Link="FeatureViews\MQTTInspectorPage\MQTTInspectorPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MQTTInspectorPage\MQTTInspectorPage.Source.cs" Link="FeatureViews\MQTTInspectorPage\MQTTInspectorPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MQTTInspectorPage\MQTTInspectorPage.ViewModel.cs" Link="FeatureViews\MQTTInspectorPage\MQTTInspectorPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationChannelsView.Model.cs" Link="FeatureViews\NotificationChannelsView.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationChannelsView.Source.cs" Link="FeatureViews\NotificationChannelsView.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationChannelsView.ViewModel.cs" Link="FeatureViews\NotificationChannelsView.ViewModel.cs" />

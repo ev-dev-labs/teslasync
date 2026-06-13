@@ -349,6 +349,12 @@ public sealed partial class ShellWindow : Window
         // list (loading / empty / success), the static share-card hint and the default-off trip-postcard drafter.
         _viewModel.PageFactory.Register(
             "SharingTrips", static () => new FeatureViews.Sharing.SharingTripsPage());
+        // Telemetry / MQTT Inspector page (P2/W7) — parity port of web MQTTInspectorPage at route /mqtt-inspector
+        // (group TelemetrySignals). RouteTable already maps Page("MQTTInspector","mqtt-inspector",TelemetrySignals);
+        // the page binds the broker-status query (loading / empty / success), the Signal-Throughput area chart and
+        // the per-vehicle streaming breakdown table.
+        _viewModel.PageFactory.Register(
+            "MQTTInspector", static () => new FeatureViews.Telemetry.MQTTInspectorPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

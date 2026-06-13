@@ -124,5 +124,14 @@
     "requiredCount": 5,
     "promptId": "p2-windows/W7/windows-page-system-HelpPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-HelpPage.log"
+  },
+  {
+    "unitId": "page:telemetry/MQTTInspector",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 41,
+    "requiredCount": 41,
+    "promptId": "p2-windows/W7/windows-page-telemetry-MQTTInspectorPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-telemetry-MQTTInspectorPage.log"
   }
 ]
