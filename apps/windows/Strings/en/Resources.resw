@@ -36,6 +36,9 @@
   <data name="translation.All" xml:space="preserve">
     <value>All</value>
   </data>
+  <data name="translation.All Vehicles" xml:space="preserve">
+    <value>All Vehicles</value>
+  </data>
   <data name="translation.Artist" xml:space="preserve">
     <value>Artist</value>
   </data>
@@ -62,6 +65,9 @@
   </data>
   <data name="translation.Battery" xml:space="preserve">
     <value>Battery</value>
+  </data>
+  <data name="translation.By Count" xml:space="preserve">
+    <value>By Count</value>
   </data>
   <data name="translation.CFD" xml:space="preserve">
     <value>CFD</value>
@@ -288,6 +294,18 @@
   <data name="translation.Explore" xml:space="preserve">
     <value>Explore</value>
   </data>
+  <data name="translation.Export Failed" xml:space="preserve">
+    <value>Export Failed</value>
+  </data>
+  <data name="translation.Export Failed Msg" xml:space="preserve">
+    <value>Export Failed Msg</value>
+  </data>
+  <data name="translation.Export Started" xml:space="preserve">
+    <value>Export Started</value>
+  </data>
+  <data name="translation.Export Started Msg" xml:space="preserve">
+    <value>Export Started Msg</value>
+  </data>
   <data name="translation.FCW" xml:space="preserve">
     <value>FCW</value>
   </data>
@@ -396,6 +414,9 @@
   <data name="translation.Last" xml:space="preserve">
     <value>Last</value>
   </data>
+  <data name="translation.Last Export" xml:space="preserve">
+    <value>Last Export</value>
+  </data>
   <data name="translation.Latency" xml:space="preserve">
     <value>Latency</value>
   </data>
@@ -464,6 +485,9 @@
   </data>
   <data name="translation.More" xml:space="preserve">
     <value>More</value>
+  </data>
+  <data name="translation.Most Exported" xml:space="preserve">
+    <value>Most Exported</value>
   </data>
   <data name="translation.Motor" xml:space="preserve">
     <value>Motor</value>
@@ -714,6 +738,9 @@
   <data name="translation.Start" xml:space="preserve">
     <value>Start</value>
   </data>
+  <data name="translation.Start Export" xml:space="preserve">
+    <value>Start Export</value>
+  </data>
   <data name="translation.State" xml:space="preserve">
     <value>State</value>
   </data>
@@ -767,6 +794,12 @@
   </data>
   <data name="translation.Total Energy" xml:space="preserve">
     <value>Total Energy</value>
+  </data>
+  <data name="translation.Total Exports" xml:space="preserve">
+    <value>Total Exports</value>
+  </data>
+  <data name="translation.Total Size" xml:space="preserve">
+    <value>Total Size</value>
   </data>
   <data name="translation.Track" xml:space="preserve">
     <value>Track</value>

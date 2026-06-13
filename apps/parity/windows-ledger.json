@@ -106,5 +106,14 @@
     "requiredCount": 28,
     "promptId": "p2-windows/W7/windows-page-onboarding-OnboardingPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-onboarding-OnboardingPage.log"
+  },
+  {
+    "unitId": "page:system/DataExport",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 75,
+    "requiredCount": 75,
+    "promptId": "p2-windows/W7/windows-page-system-DataExportPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-DataExportPage.log"
   }
 ]
