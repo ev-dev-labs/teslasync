@@ -818,3 +818,4 @@ p2-windows/shared-meaningful/W-0121-GotoIndicator.prompt.md
 p2-windows/shared-meaningful/W-0128-NavigationGuardProvider.prompt.md
 p2-windows/shared-meaningful/W-0131-OnboardingWizard.prompt.md
 p2-windows/shared-meaningful/W-0132-PageSkeleton.prompt.md
+p2-windows/shared-meaningful/W-0172-PageHeaderSticky.prompt.md
