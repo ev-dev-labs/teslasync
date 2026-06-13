@@ -1,0 +1,49 @@
+/*
+  RecentActivity.Vehicles.strings
+  TeslaSync — P4 feature view · 0277 · RecentActivity (Apple)
+
+  The P1/S10 i18n catalog contribution for the vehicles "Recent Activity" surface. Every key the
+  native `VehicleRecentActivity` resolves (table "RecentActivityVehicles") lives here with its web
+  `t(key, default)` English value. The table is distinct from the dashboard surface's
+  "RecentActivity" table so the two same-named surfaces stay self-contained; both fold into the app
+  `Localizable.xcstrings` master catalog at integration time.
+
+  The first group is the exact keys extracted from the web source
+  (features/vehicles/components/RecentActivity.tsx). The remainder back the native state envelope
+  (relative time, freshness chip, connectivity banner, loading / error / empty chrome) and the
+  VoiceOver summaries — strings the web builds as template literals or that the parent owns.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"common.recentDrives" = "Recent Drives";
+"common.recentCharges" = "Recent Charges";
+"common.viewAll" = "View all";
+"common.noDrives" = "No drives recorded yet";
+"common.noCharges" = "No charging sessions recorded yet";
+
+/* --- Relative time (web `<TimeStamp>` relative body) --- */
+"activity.relative.justNow" = "Just now";
+"activity.relative.minutes" = "%dm ago";
+"activity.relative.hours" = "%dh ago";
+"activity.relative.days" = "%dd ago";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"activity.live" = "Live";
+"activity.stale" = "Stale";
+"activity.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"activity.staleBanner" = "Reconnecting — recent activity may be stale";
+"activity.offlineBanner" = "Offline — showing the last known activity";
+
+/* --- Loading / error / empty chrome --- */
+"activity.loading" = "Loading recent activity";
+"activity.errorTitle" = "Couldn't load recent activity";
+"activity.retry" = "Retry";
+"activity.empty" = "No recent activity";
+"activity.emptyHint" = "Recent drives and charges will appear here";
+
+/* --- Accessibility summary --- */
+"activity.title" = "Recent Activity";
+"activity.a11y.drives" = "%d recent drives";
+"activity.a11y.charges" = "%d recent charges";
