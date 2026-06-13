@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AiOutputPanel shared-surface strings (P3/shared-surfaces/0036; app-owned, like ai_settings_strings.xml —
+  not part of the auto-generated translation_* i18n catalog). The web AiOutputPanel
+  (web/src/components/ai/AiOutputPanel.tsx) and its default pending child AIThinkingIndicator
+  (web/src/components/ai/AIThinkingIndicator.tsx) resolve these keys with INLINE defaults:
+    helix.errorLabel        -> "Helix error:"        (t('helix.errorLabel', 'Helix error:'))
+    ai.common.errorUnknown  -> "unknown"             (t('ai.common.errorUnknown', 'unknown'))
+    helix.thinking          -> "Helix is thinking"   (t('helix.thinking', 'Helix is thinking'))
+  Because the i18n generator only emits keys present in the locale source, it never produced
+  translation_helix_errorLabel / translation_ai_common_errorUnknown / translation_helix_thinking
+  entries. They live here so the native surface still resolves every source string through the
+  R.string facade (P1/S10) — no hardcoded English literals in the composable.
+-->
+<resources>
+    <string name="ai_output_panel_error_label">Helix error:</string>
+    <string name="ai_output_panel_error_unknown">unknown</string>
+    <string name="ai_output_panel_thinking">Helix is thinking</string>
+</resources>
