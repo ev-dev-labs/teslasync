@@ -4519,6 +4519,9 @@
     "factors": "Range Factors",
     "tips": "Tips to Maximize Range"
   },
+  "score": {
+    "aria": "Score {{grade}}"
+  },
   "sleep": {
     "title": "Sleep Efficiency",
     "drainRate": "Drain Rate (%/hr)",
