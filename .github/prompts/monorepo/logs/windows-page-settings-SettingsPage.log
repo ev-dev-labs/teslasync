@@ -1,0 +1,132 @@
+=== p2-windows · W7 · page:settings/Settings (WinUI 3 / Fluent) ===
+Parity unit : page:settings/Settings   kind=page   web route=/settings
+Web source  : web/src/features/settings/pages/SettingsPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ExportsPage / OnboardingPage do. The generated prompt's idealized "SettingsPage.xaml + SettingsPageViewModel.cs
+  under TeslaSync/Features/Settings" is mapped onto these real conventions (namespace TeslaSync.App.FeatureViews.Settings).
+- Pre-existing build blocker (FIXED, tightly coupled to the registration seam I had to edit): dotnet build of the
+  solution was red BEFORE any change — the WinUI XAML markup compiler crashed with WMC9999 ("Object reference not set")
+  which cascaded into spurious "unknown type" errors for every shared component. Root cause: a malformed code-behind in
+  the exact Register(...) block I extend — ShellWindow.xaml.cs Register("Locations", () => { … }) was never closed
+  (missing `return page; });`), so the next Register nested inside it and the constructor's brace balance broke. The
+  XAML compiler chokes parsing the broken partial class. Closing the Locations lambda greens dotnet build (0/0) and is a
+  prerequisite for adding the Settings registration to a file that compiles.
+- Scope (manifest is the source of truth): apps/parity/parity-manifest.json scopes page:settings/Settings to exactly 17
+  items — 3 panels (GlassPanel1/2/3, note "component: GlassPanel"), 2 states (loading, success) and 12 strings. The web
+  page also mounts four named settings SECTIONS (<GeneralSettings/>, <AppearanceSettings/>, <AdvancedSettings/>,
+  <ResetSection/>); these are their OWN parity units (separate component files already in-repo) and require an
+  ISettingsRepository + generated IApiClient with no empty/in-memory source, exactly as the sibling pages deliberately
+  avoid wiring a live client. They are out of this page's scope. The page reproduces every region it OWNS: the
+  PageContainer chrome, the SettingsSearch box, the EditConflictBanner, and the three glass panels.
+- Navigation entry (ADR / W4 seam): route "Settings" (RouteTable.cs path `settings`) already exists. Registration
+  (ShellWindow.xaml.cs) is a factory: new FeatureViews.Settings.SettingsPage() whose NavigationRequested -> NavigateTo
+  (the cross-page search deep-links + the Data Export panel -> "data-export", a real RouteTable route) and
+  TourLauncherRequested -> NavigateTo("onboarding") (web dispatchTourLauncherOpen -> re-run the guided walkthrough).
+- Data binding (ADR-004): the manifest data source is useSettings (GET /settings). The view-model reads through an
+  injected ISettingsFeed; the default EmptySettingsFeed resolves the empty snapshot (the host-injection precedent the
+  sibling W7 pages set), and the generated-client-backed SettingsClientFeed (SettingsPage.Source.cs) binds the generated
+  OpenAPI contract client operation get_api_v1_settings (Operations.Settings.Get). No HTTP touches the view; the read
+  JSON round-trips through the tolerant SettingsSnapshot.FromJson (accepts the bare object + the platform {data:…} envelope).
+- Two data states (manifest: loading -> success): the web page consumes useSettings SOLELY for the PageContainer
+  `loading` prop and then renders its (static) content for every resolved value. The native port reproduces exactly these
+  two states per ADR-006: loading -> PageContainer.IsLoading spinner; success -> the SettingsSearch + EditConflictBanner
+  + the three FadeIn glass panels. The PageContainer body is never blank. A feed exception is caught in
+  SettingsPageViewModel.LoadAsync and resolves to success (the web pessimistic gate — content always renders after the
+  initial spinner), asserted by ViewModel_transitions_from_loading_to_success_after_load.
+- Panels: GlassPanel1 (Data Export) is the whole-card deep-link the web renders as <a href="/data-export"> — reproduced
+  as a transparent Button wrapping a TsGlassPanel so it carries link keyboard+pointer+Narrator semantics; GlassPanel2
+  (Onboarding Tour) hosts a Subtle TsButton "Open Tour Launcher"; GlassPanel3 (Setup Checklist) hosts a Subtle TsButton
+  "Restart Checklist" and surfaces the web success toast (checklist.settings.restarted) via an InfoBar on restart.
+  Each panel = BuildIconBox (tokenized accent FontIcon, ADR-005) + PanelTitle + Caption + trailing affordance.
+- Live freshness / polling (ADR-013): N/A — settings is a one-shot REST read with no SSE/live signal source and no
+  refetch interval on the web page; no >2-min staleness pill applies.
+- SI units (ADR / P1-S5): N/A — this surface bears no unit values (it is preference chrome + static link/tour/checklist
+  cards); the unit-bearing selectors live in the separate GeneralSettings unit.
+- i18n (ADR-014): all 12 keys are present verbatim (web key names) in Strings/en/Resources.resw as translation.* with the
+  web English values; the surface resolves them through the ILocalizer facade with the web key names + English defaults
+  (PassthroughLocalizer in tests records every key). The flat translation.* catalog shares the short keys title/subtitle
+  across pages, so the SI converters' display boundary uses the verbatim web English defaults; the ar/he catalogs lag en
+  by design and fall back to the English default via ILocalizer until translated.
+- a11y (ADR-015): the PageContainer carries the page heading-level-1 landmark so the UserControl wrapper is
+  AccessibilityView.Raw; the Data Export card is a Button (link role) with AutomationProperties.Name + ToolTip; the tour
+  and checklist actions carry AutomationProperties.Name; decorative icon boxes / the external-link glyph are
+  AccessibilityView.Raw; the page exposes a Group automation peer; design tokens drive light/dark.
+
+=== PARITY ===
+PARITY_REQUIRED=17
+
+# Panels (3) — each web inline GlassPanel reproduced as a Fluent Mica/glass Card (always visible; body switches states)
+[x] panel  - GlassPanel1   -> SettingsPage.cs#BuildExportPanel (_exportPanel TsGlassPanel wrapped by _exportLink Button;
+             BuildIconBox green + _exportTitle/_exportSubtitle + external-link FontIcon); web SettingsPage.tsx
+             <a href="/data-export"><GlassPanel>; OnExportClick -> NavigationRequested("data-export");
+             test Projection_carries_every_panel_string
+[x] panel  - GlassPanel2   -> SettingsPage.cs#BuildTourPanel (_tourPanel TsGlassPanel; BuildIconBox cyan +
+             _tourTitle/_tourDescription + _tourButton "Open Tour Launcher"); web GlassPanel data-tour=settings-tour;
+             OnTourClick -> TourLauncherRequested; test Projection_carries_every_panel_string
+[x] panel  - GlassPanel3   -> SettingsPage.cs#BuildChecklistPanel (_checklistPanel TsGlassPanel; BuildIconBox cyan +
+             _checklistTitle/_checklistDescription + _checklistButton "Restart Checklist"; _checklistToast InfoBar shows
+             the restarted message); web GlassPanel; OnChecklistClick -> ChecklistRestartRequested + toast;
+             test Projection_carries_every_panel_string
+
+# Data states (2 declared: loading -> success) — each a visible region, never blank
+[x] state  - loading       -> SettingsState.Loading (SettingsProjection.Project: model.Loading -> ShowLoading); rendered
+             SettingsPage.cs#Render -> _container.IsLoading (PageContainer spinner); test State_loading_when_query_in_flight
+             + Projection_resolves_all_keys_even_in_the_loading_state + ViewModel_transitions_from_loading_to_success_after_load
+[x] state  - success       -> SettingsState.Success (resolved, incl. pessimistic-degraded read); rendered PageContainer
+             content (SettingsSearch + EditConflictBanner + 3 FadeIn panels); test State_success_when_query_resolved +
+             ViewModel_transitions_from_loading_to_success_after_load
+
+# Strings (12) — every visible literal resolves from Strings/*.resw via ILocalizer with the exact web key names
+[x] string - checklist.settings.description -> SettingsProjection.Project localizer.GetString("checklist.settings.description", "Restart the first-run checklist widget …") -> ChecklistDescription
+[x] string - checklist.settings.restart     -> SettingsProjection.Project localizer.GetString("checklist.settings.restart", "Restart Checklist") -> ChecklistActionLabel
+[x] string - checklist.settings.restarted   -> SettingsProjection.Project localizer.GetString("checklist.settings.restarted", "Setup checklist restarted — re-add the widget …") -> ChecklistRestartedMessage (InfoBar on restart)
+[x] string - checklist.settings.title       -> SettingsProjection.Project localizer.GetString("checklist.settings.title", "Setup Checklist") -> ChecklistTitle
+[x] string - editConflict.resource.settings -> SettingsProjection.Project localizer.GetString("editConflict.resource.settings", "Your settings") -> ConflictResourceLabel (-> EditConflictBanner ctor resourceLabel)
+[x] string - export.subtitle                -> SettingsProjection.Project localizer.GetString("export.subtitle", "Export drives, charging, analytics, or full backup as CSV/JSON") -> ExportSubtitle
+[x] string - export.title                   -> SettingsProjection.Project localizer.GetString("export.title", "Data Export") -> ExportTitle
+[x] string - subtitle                       -> SettingsProjection.Project / SettingsRegistration.Subtitle localizer.GetString("subtitle", "Configure TeslaSync preferences and Tesla account connection") -> Subtitle
+[x] string - title                          -> SettingsProjection.Project / SettingsRegistration.Title localizer.GetString("title", "Settings") -> Title
+[x] string - tour.description               -> SettingsProjection.Project localizer.GetString("tour.description", "Re-run the guided walkthrough of TeslaSync features") -> TourDescription
+[x] string - tour.restart                   -> SettingsProjection.Project localizer.GetString("tour.restart", "Open Tour Launcher") -> TourActionLabel
+[x] string - tour.title                     -> SettingsProjection.Project localizer.GetString("tour.title", "Onboarding Tour") -> TourTitle
+
+PARITY_COVERED=17
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/SettingsPageTests.cs, 7 tests, all passing):
+# Projection_resolves_every_required_string_key (+ _even_in_the_loading_state) record every one of the 12 keys above
+# through a RecordingLocalizer; the two-state tests (State_loading_when_query_in_flight / State_success_when_query_resolved
+# + ViewModel_transitions_from_loading_to_success_after_load) assert each state renders from the bound SettingsDisplay
+# state holder; Projection_carries_every_panel_string pins the three panels' resolved strings; the tolerant
+# Snapshot_parser_reads_bare_object_and_data_envelope completes the data-binding contract.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SettingsPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Settings path does not exist in-repo)
+#   + the SettingsPageTests.cs test file: both PLACEHOLDER_COUNT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (SettingsPage Model/Source/ViewModel/view
+#   + SettingsPageTests + ShellWindow registration + test csproj links, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26984, Failed: 0, Skipped: 0 (incl. 7 SettingsPageTests)
+TEST_EXIT=0
+PARITY_COVERED=17
+PARITY_REQUIRED=17
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SettingsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SettingsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-settings-SettingsPage.log
+# git commit -m "feat(apps/windows): SettingsPage at web parity (W7 settings)"
+
+EXIT=0
+STATUS=DONE

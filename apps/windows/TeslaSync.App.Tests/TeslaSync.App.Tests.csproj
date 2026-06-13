@@ -825,6 +825,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SettingsExportImport\SettingsExportImport.Model.cs" Link="FeatureViews\SettingsExportImport\SettingsExportImport.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SettingsExportImport\SettingsExportImport.Source.cs" Link="FeatureViews\SettingsExportImport\SettingsExportImport.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SettingsExportImport\SettingsExportImport.ViewModel.cs" Link="FeatureViews\SettingsExportImport\SettingsExportImport.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SettingsPage\SettingsPage.Model.cs" Link="FeatureViews\SettingsPage\SettingsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SettingsPage\SettingsPage.Source.cs" Link="FeatureViews\SettingsPage\SettingsPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SettingsPage\SettingsPage.ViewModel.cs" Link="FeatureViews\SettingsPage\SettingsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SettingsSearch\SettingsSearch.Model.cs" Link="FeatureViews\SettingsSearch\SettingsSearch.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SettingsSearch\SettingsSearch.Source.cs" Link="FeatureViews\SettingsSearch\SettingsSearch.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SettingsSearch\SettingsSearch.ViewModel.cs" Link="FeatureViews\SettingsSearch\SettingsSearch.ViewModel.cs" />

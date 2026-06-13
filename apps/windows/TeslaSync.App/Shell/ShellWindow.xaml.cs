@@ -224,6 +224,8 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Maps.LocationsPage();
             page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
 
         // Notifications / Archived page (P2/W7) — parity port of web ArchivedPage at route /notifications/archived.
         // The header "Back to inbox" action maps to the inbox; the hosted InboxBody's "View context" / empty-state
@@ -250,6 +252,17 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register(
             "NotificationsQuietHours",
             static () => new FeatureViews.Notifications.QuietHoursPage());
+        // Settings / Account / Integrations — Settings page (P2/W7) — parity port of web SettingsPage at route
+        // /settings. The cross-page search box and the Data Export panel deep-link to other routes; the Onboarding
+        // Tour launcher re-runs the guided walkthrough (web dispatchTourLauncherOpen → the Onboarding route). The
+        // setup-checklist restart surfaces its own confirmation toast in-page (web restartChecklist + toast).
+        _viewModel.PageFactory.Register("Settings", () =>
+        {
+            var page = new FeatureViews.Settings.SettingsPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            page.TourLauncherRequested += (_, _) => NavigateTo("onboarding");
+            return page;
+        });
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

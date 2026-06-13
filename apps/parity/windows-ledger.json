@@ -106,5 +106,14 @@
     "requiredCount": 28,
     "promptId": "p2-windows/W7/windows-page-onboarding-OnboardingPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-onboarding-OnboardingPage.log"
+  },
+  {
+    "unitId": "page:settings/Settings",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 17,
+    "requiredCount": 17,
+    "promptId": "p2-windows/W7/windows-page-settings-SettingsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-settings-SettingsPage.log"
   }
 ]
