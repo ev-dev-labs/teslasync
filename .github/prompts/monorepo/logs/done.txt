@@ -607,3 +607,4 @@ p3-android/shared-meaningful/A-0009-AICabinTemperatureImpactNarrative.prompt.md
 p3-android/shared-meaningful/A-0018-AIFeatureCard.prompt.md
 p3-android/shared-meaningful/A-0019-AIFeedbackQueueTriage.prompt.md
 p3-android/shared-meaningful/A-0022-AIIncidentTimelineSummarizer.prompt.md
+p3-android/shared-meaningful/A-0021-AIInboxAutoCategorization.prompt.md
