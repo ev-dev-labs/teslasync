@@ -634,3 +634,4 @@ p3-android/shared-meaningful/A-0042-AIRAGHelp.prompt.md
 p3-android/shared-meaningful/A-0049-AISpeedProfileInsights.prompt.md
 p3-android/shared-meaningful/A-0046-AISignalExplorerNlFilter.prompt.md
 p3-android/shared-meaningful/A-0045-AISafetySettingExplainer.prompt.md
+p3-android/shared-meaningful/A-0052-AITCONarration.prompt.md
