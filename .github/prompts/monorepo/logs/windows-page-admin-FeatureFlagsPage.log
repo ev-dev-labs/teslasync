@@ -1,0 +1,142 @@
+=== p2-windows · W7 · page:admin/FeatureFlags (WinUI 3 / Fluent) ===
+Parity unit : page:admin/FeatureFlags   kind=page   web route=/admin/flags
+Web source  : web/src/features/admin/pages/FeatureFlagsPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked. WindowsAppSDK / maui-windows
+              workload builds the full solution (verified BUILD_EXIT=0). WinAppDriver UI-automation runner (W9 scope)
+              is absent, so the W7 test gate runs the headless TeslaSync.App.Tests project (the sibling-W7 convention).
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  DLQInspectorPage / FeedbackQueuePage / ApiLogsPage do. The generated prompt's idealized "FeatureFlagsPage.xaml +
+  FeatureFlagsPageViewModel.cs under TeslaSync/Features/Admin" is mapped onto these real conventions; the surface
+  registers with the W4 ShellPageFactory by route name ("FeatureFlagsAdmin", already in RouteTable.cs → /admin/flags).
+- The page COMPOSES the three feature-flag sub-surfaces that already exist (W3): FlagsTable, ChangesPanel
+  (feature-views/, namespace TeslaSync.App.FeatureViews.FeatureFlags) and the FlagEditDrawer create/edit side sheet
+  (modals-dialogs/, namespace TeslaSync.App.ModalsDialogs). The page owns the orchestration the web page owns: the
+  "Add flag" CTA + a row's Edit open the FlagEditDrawer (create vs. seeded edit); the drawer's SaveRequested routes to
+  the set-flag mutation and closes on success (kept open on failure for retry); a row's Delete opens the reason-gated
+  ContentDialog whose confirm routes to the delete mutation. A successful set/delete re-runs BOTH reads (web invalidates
+  the ['system','flags'] query family).
+- Data binding (ADR-004): the four manifest data sources are the web hooks useFlags / useFlagChanges / useSetFlag /
+  useDeleteFlag. The view-model reads/writes through three injected ports (IFeatureFlagsFeed / IFlagChangesFeed /
+  IFlagWriteService, FeatureFlagsPage.Model.cs); the default Empty*/Noop feeds resolve the empty state (the
+  DLQInspectorPage/FeedbackQueuePage host-injection precedent), and the generated-client-backed FeatureFlagsClientFeed /
+  FlagChangesClientFeed / FlagWriteClientService (FeatureFlagsPage.Source.cs) bind to the generated OpenAPI contract
+  client operations get_api_v1_system_flags / get_api_v1_system_flags_changes / put_api_v1_system_flags_key /
+  delete_api_v1_system_flags_key, asserted against the generated endpoint table + the FakeApiClient in tests. No HTTP
+  touches the view. The PUT body posts the parsed JSON value + reason; the DELETE passes the audit reason as a query
+  param. The generated C# client (W1) is regenerated deterministically from api/openapi/teslasync.openapi.json via
+  apps/tools/codegen/gen-clients.ts (it is git-ignored, not committed); Generated/Generated.csproj wraps it.
+- The web page passes PageContainer only `query={flags}` (not loading/error/empty), so the body always renders the
+  children; the flag-registry data states surface per ADR-006 as visible Fluent regions: loading -> the page-tier
+  TsDataFreshness chip (IsFetching → "Updating…") + the FlagsTable/ChangesPanel "Loading…" bodies; empty -> the
+  FlagsTable "No feature flags are set on this server." empty state + the ChangesPanel "No flag changes yet" empty
+  state; success -> the populated registry table + the audit table, FlagsUpdatedAt drives the chip ("Live"). A flags
+  read failure drives the freshness chip's IsError ("Error") while the children stay visible (the table falls back to
+  its empty branch) — exactly the web behaviour (PageContainer renders no error region of its own). Never a blank region.
+- SI units N/A (this admin surface bears no unit fields — flag keys, arbitrary JSON values, actor/operation/reason
+  audit rows and timestamps only); the audit timestamps format through the shared DateTimeFormatting port inside the
+  composed ChangesPanel at the display boundary.
+- All 11 i18n keys already exist verbatim (web key names) in Strings/{en,he,ar}/Resources.resw under the
+  translation.* prefix (admin.flags.pageTitle/subtitle/actions.add/panels.registry/panels.changes/delete.title/
+  delete.message/delete.reasonLabel/delete.reasonPlaceholder/delete.confirm + common.cancel); the surface resolves
+  them through the ILocalizer facade with the web English defaults as fallbacks. delete.message is stored with the
+  positional {0} marker (the web {{key}} template); DeleteMessage interpolates the flag key.
+
+=== PARITY ===
+PARITY_REQUIRED=16
+
+# Panels (2) — every web <GlassPanel> reproduced as a Fluent Mica region (TsGlassPanel), each a visible branch
+[x] panel  - GlassPanel1   -> registry panel: FeatureFlagsPage.cs#BuildPanel(RegistryGlyph, _registryTitle,
+             _flagsTable) — a TsGlassPanel hosting the Flag FontIcon + _registryTitle PanelTitle
+             (FeatureFlagsRegistration.PanelRegistry) + the FlagsTable surface bound to
+             FeatureFlagsPageViewModel.FlagsModel (web <GlassPanel><Flag/><PanelTitle>Registry</PanelTitle>
+             <FlagsTable rows={flags.data?.flags ?? []} loading={flags.isLoading} onEdit onAskDelete/></GlassPanel>);
+             edit/delete wired FeatureFlagsPage.cs#OnEditRequested → FlagEditDrawer.ViewModel.Open and
+             #OnDeleteRequested → ShowDeleteDialogAsync; test LoadAsync_Success_ReachesReadyState_AndPopulatesBothModels
+             (FlagsModel.Rows) + SaveFlagAsync_Success_WritesAndReloads_ReturnsTrue + DeleteFlagAsync_Success_*
+[x] panel  - GlassPanel2   -> recent-changes panel: FeatureFlagsPage.cs#BuildPanel(ChangesGlyph, _changesTitle,
+             _changesPanel) — a TsGlassPanel hosting the History FontIcon + _changesTitle PanelTitle
+             (FeatureFlagsRegistration.PanelChanges) + the ChangesPanel surface bound to
+             FeatureFlagsPageViewModel.ChangesModel (global scope, useFlagChanges(null, 50)) (web <GlassPanel>
+             <History/><PanelTitle>Recent changes</PanelTitle><ChangesPanel rows={changes.data?.rows ?? []}
+             loading={changes.isLoading}/></GlassPanel>); test LoadAsync_Success_ReachesReadyState_AndPopulatesBothModels
+             (ChangesModel.Rows single, ChangesModel.Loading false) + ChangesClientFeed_ShapesTheRequest_WithLimit_AndParsesRows
+
+# Data states (3) — loading / empty / success, each a visible region (never blank)
+[x] state  - loading       -> FeatureFlagsState.Loading (the VM initial state + while the flags query is in flight):
+             FeatureFlagsPage.cs#Render maps it to _freshness.IsFetching (TsDataFreshness "Updating…") and the child
+             surfaces' own loading bodies via FlagsModel.Loading / ChangesModel.Loading (FeatureFlagsPageViewModel);
+             test InitialState_IsLoading_WithLoadingChildModels
+[x] state  - empty         -> the resolved-but-empty branch (FeatureFlagsState.Ready, zero rows): FlagsModel.Rows empty +
+             Loading false → the FlagsTable "No feature flags are set on this server." empty state, and ChangesModel.Rows
+             empty → the ChangesPanel "No flag changes yet" friendly empty state (FlagsTableState.Empty /
+             ChangesPanelState.Empty); test LoadAsync_Empty_ReachesReadyState_WithEmptyModels
+[x] state  - success       -> FeatureFlagsState.Ready (both reads resolved with rows): FeatureFlagsPage.cs#Render binds
+             the populated FlagsModel/ChangesModel into the registry table + the audit table, FlagsUpdatedAt drives the
+             freshness chip ("Live"); a flags read failure instead drives _freshness.IsError ("Error") while the table
+             stays visible-empty; tests LoadAsync_Success_ReachesReadyState_AndPopulatesBothModels +
+             LoadAsync_FlagsFailure_ReachesErrorState_ButKeepsTheTableVisibleEmpty + LoadAsync_ChangesFailure_KeepsFlagsReady
+
+# Strings (11) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - admin.flags.actions.add              -> FeatureFlagsRegistration.AddLabel localizer.GetString("translation.admin.flags.actions.add", "Add flag")
+[x] string - admin.flags.delete.confirm           -> FeatureFlagsRegistration.DeleteConfirmLabel localizer.GetString("translation.admin.flags.delete.confirm", "Delete flag")
+[x] string - admin.flags.delete.message           -> FeatureFlagsRegistration.DeleteMessage localizer.GetString("translation.admin.flags.delete.message", "Permanently remove flag \"{0}\". …") (key interpolated)
+[x] string - admin.flags.delete.reasonLabel       -> FeatureFlagsRegistration.DeleteReasonLabel localizer.GetString("translation.admin.flags.delete.reasonLabel", "Reason")
+[x] string - admin.flags.delete.reasonPlaceholder -> FeatureFlagsRegistration.DeleteReasonPrompt localizer.GetString("translation.admin.flags.delete.reasonPlaceholder", "Why this delete? (logged in audit)")
+[x] string - admin.flags.delete.title             -> FeatureFlagsRegistration.DeleteTitle localizer.GetString("translation.admin.flags.delete.title", "Delete flag?")
+[x] string - admin.flags.pageTitle                -> FeatureFlagsRegistration.Title localizer.GetString("translation.admin.flags.pageTitle", "Feature Flags")
+[x] string - admin.flags.panels.changes           -> FeatureFlagsRegistration.PanelChanges localizer.GetString("translation.admin.flags.panels.changes", "Recent changes")
+[x] string - admin.flags.panels.registry          -> FeatureFlagsRegistration.PanelRegistry localizer.GetString("translation.admin.flags.panels.registry", "Registry")
+[x] string - admin.flags.subtitle                 -> FeatureFlagsRegistration.Subtitle localizer.GetString("translation.admin.flags.subtitle", "Typed feature-flag registry — all changes are sudo-gated and logged.")
+[x] string - common.cancel                        -> FeatureFlagsRegistration.CancelLabel localizer.GetString("translation.common.cancel", "Cancel")
+
+PARITY_COVERED=16
+# Coverage asserted headlessly by apps/windows/TeslaSync.App.Tests/FeatureViews/FeatureFlagsPageTests.cs (17 tests):
+# - Registration_ResolvesEveryRequiredCatalogKey records all 11 keys through a RecordingLocalizer;
+#   DeleteMessage_InterpolatesTheFlagKey asserts the {0} → key interpolation.
+# - InitialState_IsLoading_WithLoadingChildModels (loading), LoadAsync_Empty_ReachesReadyState_WithEmptyModels (empty),
+#   LoadAsync_Success_ReachesReadyState_AndPopulatesBothModels (success) assert the three data states + the
+#   GlassPanel1/GlassPanel2 bound child models; LoadAsync_FlagsFailure_* + LoadAsync_ChangesFailure_* assert the
+#   freshness-error / visible-empty fallback.
+# - SaveFlagAsync_Success_WritesAndReloads_ReturnsTrue / SaveFlagAsync_Failure_ReturnsFalse_WithoutReload /
+#   DeleteFlagAsync_Success_WritesAndReloads_ReturnsTrue / DeleteFlagAsync_Failure_ReturnsFalse assert the set/delete
+#   flows (success re-runs both reads; failure keeps the editor open).
+# - Operations_ResolveAgainstTheGeneratedEndpointTable + the *ClientFeed/*ClientService request-shaping tests
+#   (FlagsClientFeed/ChangesClientFeed[+camelCase alias]/WriteService Set+Delete) assert the generated-client binding
+#   (web hook → operation id, path/query params + JSON body, tolerant parsing).
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/FeatureFlagsPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+#   (PLACEHOLDER_ALLOWED=1 = the FeatureFlagsPage.Model.cs reasonPlaceholder i18n-key line, // parity:allow web i18n
+#    key kept verbatim for catalog parity; the same allow marker covers the test's required-keys array entry.)
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (FeatureFlagsPage Model/Source/ViewModel/view
+#   + FeatureFlagsPageTests + ShellWindow registration + TeslaSync.App.Tests.csproj links + windows-ledger.json, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29281, Failed: 0, Skipped: 0 (incl. 17 FeatureFlagsPageTests)
+#   (W7 test gate = the headless TeslaSync.App.Tests project, the sibling-W7 convention; the WinAppDriver UI-automation
+#    tests under TeslaSync.App.UITests are W9 scope and require the WinAppDriver runner, which is absent in this
+#    environment — they BLOCK at WinAppDriverSession.EnsureReady by design and are not part of the W7 gate.)
+TEST_EXIT=0
+PARITY_COVERED=16
+PARITY_REQUIRED=16
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/FeatureFlagsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/FeatureFlagsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-FeatureFlagsPage.log
+# git commit -m "feat(apps/windows): FeatureFlagsPage at web parity (W7 admin)"
+# (apps/windows/Generated/ is the deterministically-regenerated, git-ignored W1 client — intentionally not committed.)
+
+EXIT=0
+STATUS=DONE

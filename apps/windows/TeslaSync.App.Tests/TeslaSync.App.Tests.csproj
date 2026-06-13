@@ -621,6 +621,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentalImpact.ViewModel.cs" Link="FeatureViews\EnvironmentalImpact.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnvironmentSlide\EnvironmentSlide.Model.cs" Link="FeatureViews\EnvironmentSlide\EnvironmentSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EventHistoryTable.Model.cs" Link="FeatureViews\EventHistoryTable.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FeatureFlagsPage\FeatureFlagsPage.Model.cs" Link="FeatureViews\FeatureFlagsPage\FeatureFlagsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FeatureFlagsPage\FeatureFlagsPage.Source.cs" Link="FeatureViews\FeatureFlagsPage\FeatureFlagsPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FeatureFlagsPage\FeatureFlagsPage.ViewModel.cs" Link="FeatureViews\FeatureFlagsPage\FeatureFlagsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FeatureToggles.Model.cs" Link="FeatureViews\FeatureToggles.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FeatureToggles.Source.cs" Link="FeatureViews\FeatureToggles.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FeatureToggles.ViewModel.cs" Link="FeatureViews\FeatureToggles.ViewModel.cs" />
