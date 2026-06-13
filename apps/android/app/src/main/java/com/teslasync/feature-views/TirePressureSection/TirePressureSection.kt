@@ -1,420 +1,327 @@
-// The native Jetpack Compose + Material 3 Tire Pressure feature view — a parity port of
-// web/src/features/driving/components/drive-detail/TirePressureSection.tsx. The web component is purely
-// presentational: inside a `<FadeIn>` it wraps the shared `<ChartContainer title="Tire Pressure During Drive"
-// height={310}>` around — when `stats.hasTirePressure` — a four-column grid of per-wheel min/max tiles
-// (Front/Rear × Left/Right) plus a Recharts `<LineChart>` of the four (conditional) per-wheel pressure lines;
-// otherwise the container shows its "No telemetry data available" empty state.
+// The native Jetpack Compose + Material 3 TirePressureSection feature view — a parity port of
+// web/src/features/vehicles/components/vehicle-detail/TirePressureSection.tsx. The web component takes a
+// `TirePressureSnapshot` prop and renders a `GlassPanel` titled "Tire Pressure" (CircleDot icon) containing,
+// when the snapshot is present, a responsive grid of four per-corner tiles (Front Left / Front Right / Rear Left
+// / Rear Right); each tile is a nested `GlassPanel` showing the corner's localized label, the formatted current
+// pressure, and a status `Badge` (Normal / Low / Critical / No Data). When the snapshot is null it renders a
+// friendly "No tire pressure data available" empty state. This native port keeps that exact composition and
+// additionally surfaces the cache-then-network states the P3 contract mandates (loading / empty / error / stale /
+// offline) by binding the shared latest-tire-pressure feed (P1/S8) through a [TirePressureSectionViewModel]: the
+// title always renders, a skeleton covers the first load, a `QueryError` covers a hard failure with no cache, a
+// freshness chip + auto-refresh covers stale/offline, and an absent snapshot still renders the titled panel with
+// the empty state (never a blank box). The view performs no HTTP. Pressures are Pa→kPa→display converted at this
+// render boundary via the shared [UnitFormatter] (web `useUnits()`); every visible string resolves through the
+// i18n catalog (P1/S10); and every tile carries a merged TalkBack label.
 //
-// This port keeps that contract end to end. It performs NO HTTP and binds no data hook of its own; its web
-// hooks map as: `useTranslation` → the i18n catalog (P1/S10) and `useUnits` → the live [UnitFormatter]
-// (P1/S8) for the pressure unit label + locale + precision. The host supplies the per-sample trace through
-// the shared P1/S8 state-holder layer as a [UiState] (the cache-then-network projection of the selected
-// drive's `chartData`), so this feature view renders every lifecycle state that layer can carry — loading,
-// hard error with retry, empty, content, and stale/offline (cached "last known") — without ever fetching. A
-// web-parity overload that takes the raw `chartData` prop is also provided. The web component uses no synced
-// cursor / `<ReferenceLine>` (unlike the Drive Overview chart), so this port deliberately adds no marker rail.
-//
-// Colors map to the generated CB-safe categorical palette (never raw hex in render code): FL → `paletteColor(0)`,
-// FR → `1`, RL → `2`, RR → `3`. The web component picks its own per-wheel hex literals (`#3b82f6` … `#ef4444`);
-// reproducing those verbatim would reintroduce raw hex into component code (forbidden) and bypass light/dark
-// theming, so — as the sibling surfaces do — each wheel takes a distinct, color-blind-safe categorical slot
-// shared by its tile value and its plotted line so the two always agree. Following the web's deliberate
-// `chart-a11y:no-table` choice, the dense per-sample trace exposes no data table; the min/max per-wheel tiles
-// above the chart carry the screen-reader-honest figures and the chart carries an accessible description.
+// The native icon uses the sanctioned [DataDisplayGlyphs.Gauge] tire glyph (the sibling TirePressurePanel's
+// mapping for the same domain); the web `CircleDot` is decorative (`contentDescription = null`), so semantic
+// parity is preserved through the title text. The tile value uses the neutral [MetricValue] role (web
+// `text-[var(--text-primary)]`); the band color lives only in the `Badge`, exactly as the web tile does.
 //
 // `InvalidPackageDeclaration` is suppressed: the mandated surface directory
-// (com/teslasync/feature-views/TirePressureSection — the P3 prompt's allowed-files path) cannot form a valid
-// Kotlin package, so the package intentionally diverges from the path. `MatchingDeclarationName` is suppressed
-// for the co-located supporting declarations.
+// (com/teslasync/feature-views/TirePressureSection) cannot form a valid Kotlin package.
 @file:Suppress("MatchingDeclarationName", "InvalidPackageDeclaration")
 
 package io.teslasync.android.featureviews.tirepressuresection
 
-import android.annotation.SuppressLint
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import io.teslasync.android.R
-import io.teslasync.android.components.charts.ChartContainer
-import io.teslasync.android.components.charts.ChartSeries
-import io.teslasync.android.components.charts.ChartSeriesKind
-import io.teslasync.android.components.charts.ChartStatus
-import io.teslasync.android.components.charts.ComboChart
-import io.teslasync.android.components.charts.paletteColor
+import io.teslasync.android.components.datadisplay.DataDisplayGlyphs
 import io.teslasync.android.components.datadisplay.DataFreshness
 import io.teslasync.android.components.datadisplay.FreshnessAge
+import io.teslasync.android.components.feedback.EmptyState
+import io.teslasync.android.components.feedback.QueryError
+import io.teslasync.android.components.feedback.QueryErrorKind
+import io.teslasync.android.components.feedback.Skeleton
 import io.teslasync.android.components.motion.FadeIn
-import io.teslasync.android.components.ui.Card
-import io.teslasync.android.components.ui.CardPadding
-import io.teslasync.android.components.ui.Heading
-import io.teslasync.android.components.ui.HeadingLevel
+import io.teslasync.android.components.ui.Badge
+import io.teslasync.android.components.ui.BadgeVariant
+import io.teslasync.android.components.ui.GlassPanel
+import io.teslasync.android.components.ui.Icon
+import io.teslasync.android.components.ui.IconSize
 import io.teslasync.android.components.ui.MetricLabel
+import io.teslasync.android.components.ui.MetricValue
+import io.teslasync.android.components.ui.PanelPadding
+import io.teslasync.android.components.ui.SectionTitle
 import io.teslasync.android.data.ErrorKind
 import io.teslasync.android.data.LocalDataContainer
 import io.teslasync.android.data.UiPhase
 import io.teslasync.android.data.UiState
+import io.teslasync.android.data.UnitFormatter
 import io.teslasync.android.ui.theme.TeslaSyncTheme
+import io.teslasync.android.ui.theme.TeslaTokens
 import io.teslasync.android.ui.theme.generated.Spacing
 import io.teslasync.shared.core.diagnostics.Logger
-import io.teslasync.shared.core.units.PressureUnitPref
-import java.util.Locale
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
-/** The web `<ChartContainer height={310}>` body height (used by the loading / error / empty states). */
-private val CHART_HEIGHT: Dp = 310.dp
+/** The entry stagger (50 ms), matching the sibling telemetry panels' `<FadeIn>`. */
+private const val FADE_DELAY_MS: Int = 50
 
-/** The web `<ResponsiveContainer height={220}>` line-chart plot height inside the container. */
-private val PLOT_HEIGHT: Dp = 220.dp
+private val SKELETON_TILE_HEIGHT: Dp = 92.dp
+private const val SKELETON_TILE_ROWS: Int = 2
 
-/** Y-axis tick precision — the web `<YAxis>` renders whole pressure values. */
-private const val AXIS_DECIMALS: Int = 0
-
-/** Series keys — the web `<Line dataKey="tireFl" />` … keys, one per wheel. */
-private const val FL_KEY: String = "tireFl"
-private const val FR_KEY: String = "tireFr"
-private const val RL_KEY: String = "tireRl"
-private const val RR_KEY: String = "tireRr"
+private const val HTTP_NOT_FOUND: Int = 404
+private const val HTTP_UNAUTHORIZED: Int = 401
+private const val HTTP_FORBIDDEN: Int = 403
+private const val HTTP_SERVER_ERROR_MIN: Int = 500
+private const val HTTP_SERVER_ERROR_MAX: Int = 599
 
 /**
- * The per-wheel series-name abbreviations the web hard-codes in each `<Line name={`FL (${unit})`} />` (the web
- * source uses these literal symbols directly, with no `t()` call — they are axis-style abbreviations, not
- * translatable prose; the full localized wheel names appear in the tiles). Reproduced verbatim so the chart
- * legend reads identically to the web.
- */
-private const val FL_ABBREV: String = "FL"
-private const val FR_ABBREV: String = "FR"
-private const val RL_ABBREV: String = "RL"
-private const val RR_ABBREV: String = "RR"
-
-/** Em dash shown for an unknown freshness age — the shared freshness `'—'` fallback. */
-private const val EM_DASH: String = "\u2014"
-
-/**
- * The already-localized microcopy the composable reads from the i18n catalog (P1/S10) — the keys the web
- * component resolves via `t(...)`: the panel [title] (`driveDetail.tirePressure`), the four wheel labels
- * ([frontLeft]/[frontRight]/[rearLeft]/[rearRight]), and the accessible chart description ([ariaLabel],
- * catalog-absent ⇒ the web English fallback). Lifecycle-chrome strings (empty / error / retry / offline /
- * freshness) are resolved inline at the Compose boundary.
- */
-data class TirePressureSectionStrings(
-    val title: String,
-    val frontLeft: String,
-    val frontRight: String,
-    val rearLeft: String,
-    val rearRight: String,
-    val ariaLabel: String,
-)
-
-/**
- * Stateful entry point for the Tire Pressure section. Records the one-shot PII-safe `view.opened` diagnostic
- * (P1/S11), resolves the live pressure unit (web `useUnits`) from the shared [UnitFormatter], and renders every
- * lifecycle [state] the shared drive-trace feed can carry. The host owns the feed (P1/S8) and supplies
- * [onRetry] (the feed's `refetch`); this view never performs HTTP.
- *
- * @param state the cache-then-network projection of the `ChartDataPoint[]` (web `chartData`).
- * @param onRetry re-runs the host's load — wired to the hard-error retry and the stale auto-refresh.
- * @param logger the sanctioned redacting logger; defaults to the app's `LocalDataContainer`.
+ * Stateful entry point — the faithful 1:1 port of the web `TirePressureSection({ tireData })`. Binds the shared
+ * latest-tire-pressure feed via [source] into a [TirePressureSectionViewModel], records the one-shot
+ * `view.opened` diagnostic (P1/S11), resolves the live display-[UnitFormatter] (web `useUnits()`, P1/S8) and the
+ * localized [TirePressureSectionStrings] (P1/S10), and renders. A host supplies the selected [vehicleId] (the web
+ * prop's source); a `null`/non-positive id falls back to the first enrolled vehicle and, when none resolves,
+ * renders the empty state.
  */
 @Composable
 fun TirePressureSection(
-    state: UiState<List<TirePressurePoint>>,
-    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    vehicleId: Long? = null,
+    source: TirePressureSectionSource = LocalDataContainer.current.vehiclesStore.asTirePressureSectionSource(),
     logger: Logger = LocalDataContainer.current.logger,
+    instanceKey: String = TIRE_PRESSURE_SECTION_SLUG,
 ) {
-    LaunchedEffect(Unit) { recordTirePressureSectionOpened(logger) }
+    val viewModel: TirePressureSectionViewModel =
+        viewModel(key = instanceKey, factory = TirePressureSectionViewModel.factory(source, logger, vehicleId))
+    LaunchedEffect(viewModel) { viewModel.onViewOpened() }
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val formatter by LocalDataContainer.current.unitFormatter.collectAsStateWithLifecycle()
+    val strings = rememberTirePressureSectionStrings()
+
     TirePressureSectionContent(
         state = state,
-        onRetry = onRetry,
+        formatter = formatter,
+        strings = strings,
+        onRefresh = viewModel::refresh,
         modifier = modifier,
-        pressureUnit = formatter.prefs.pressure.label,
-        locale = localeOf(formatter.prefs.locale),
-        precision = formatter.prefs.precision ?: TirePressureFormat.DEFAULT_PRECISION,
     )
 }
 
 /**
- * Web-parity overload mirroring the web component's `chartData: ChartDataPoint[]` prop, for hosts that already
- * hold the loaded trace. The web `stats.hasTirePressure` boundary is reproduced from the trace itself (the web
- * `hasTirePressure` is `some(d => d.tireFl !== null || …)`): a trace with any non-null wheel sample renders the
- * tiles + chart, one without renders the empty state. Records `view.opened` like the stateful entry; with no
- * fetch behind it, it offers no retry affordance.
+ * Resolves the surface's localized labels from the generated catalog (P1/S10) — the `vehicles.detail.*` /
+ * `common.*` keys the web component reads via `t(...)`. Every key exists in the catalog, so all resolve at
+ * compile time.
  */
 @Composable
-fun TirePressureSection(
-    chartData: List<TirePressurePoint>?,
-    modifier: Modifier = Modifier,
-    logger: Logger = LocalDataContainer.current.logger,
-) {
-    val state =
-        remember(chartData) {
-            val items = chartData ?: emptyList()
-            val hasTirePressure =
-                items.any {
-                    it.frontLeft != null || it.frontRight != null || it.rearLeft != null || it.rearRight != null
-                }
-            val phase = if (hasTirePressure) UiPhase.Content else UiPhase.Empty
-            UiState(phase = phase, data = items)
-        }
-    TirePressureSection(state = state, onRetry = {}, modifier = modifier, logger = logger)
-}
+fun rememberTirePressureSectionStrings(): TirePressureSectionStrings =
+    TirePressureSectionStrings(
+        title = stringResource(R.string.translation_vehicles_detail_tirePressure),
+        frontLeft = stringResource(R.string.translation_vehicles_detail_tireFl),
+        frontRight = stringResource(R.string.translation_vehicles_detail_tireFr),
+        rearLeft = stringResource(R.string.translation_vehicles_detail_tireRl),
+        rearRight = stringResource(R.string.translation_vehicles_detail_tireRr),
+        normal = stringResource(R.string.translation_common_normal),
+        low = stringResource(R.string.translation_common_low),
+        critical = stringResource(R.string.translation_common_critical),
+        noData = stringResource(R.string.translation_common_noData),
+        noTireData = stringResource(R.string.translation_vehicles_detail_noTireData),
+    )
 
 /**
- * Stateless renderer for every surface state — the unit/UI-test entry point. Maps the host feed's [UiState]
- * onto the [ChartContainer] lifecycle (loading / error+retry / empty / ready), and in the ready state renders
- * the four per-wheel min/max tiles followed by the [ComboChart] of the present per-wheel pressure lines inside
- * a [FadeIn] — reproducing the web `FadeIn` + `ChartContainer` + tile grid + `LineChart` composition. A
- * freshness chip appears when cached data is refreshing / stale / offline, and stale (non-error) data
- * auto-refreshes, mirroring the web freshness contract. [pressureUnit]/[locale]/[precision] are the web
- * `useUnits` outputs the tiles format with.
+ * Stateless renderer for every surface state — the unit/UI-test and preview entry point. The `GlassPanel` +
+ * gauge "Tire Pressure" title always render; then the skeleton body while the first load is in flight, a
+ * `QueryError` with retry on a hard failure with no cache, the full tile grid when a snapshot is present (web
+ * `tireData` truthy), or the friendly empty state otherwise. A stale/offline cached snapshot keeps its body
+ * visible with a freshness chip flagged and auto-refreshes. No surface is ever blank.
  */
 @Composable
 fun TirePressureSectionContent(
-    state: UiState<List<TirePressurePoint>>,
-    onRetry: () -> Unit,
+    state: UiState<JsonElement>,
+    formatter: UnitFormatter,
+    strings: TirePressureSectionStrings,
     modifier: Modifier = Modifier,
-    pressureUnit: String = PressureUnitPref.BAR.label,
-    locale: Locale = Locale.getDefault(),
-    precision: Int = TirePressureFormat.DEFAULT_PRECISION,
-    strings: TirePressureSectionStrings = rememberTirePressureSectionStrings(),
+    onRefresh: () -> Unit = {},
 ) {
-    LaunchedEffect(state.stale, state.refreshing, state.hasError) {
-        if (state.stale && !state.refreshing && !state.hasError) onRetry()
+    LaunchedEffect(state.stale, state.refreshing, state.isError) {
+        if (state.stale && !state.refreshing && !state.isError) onRefresh()
     }
+    FadeIn(modifier = modifier, delayMs = FADE_DELAY_MS) {
+        GlassPanel(modifier = Modifier.fillMaxWidth(), padding = PanelPadding.Lg) {
+            TirePressureSectionHeader(title = strings.title, state = state)
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            when {
+                state.isLoading -> TirePressureSectionLoadingBody()
+                state.isError && !state.hasData ->
+                    QueryError(
+                        kind = queryErrorKindOf(state),
+                        resourceName = strings.snapshotLabel,
+                        onRetry = onRefresh,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
-    val formatters =
-        remember(pressureUnit, locale, precision) {
-            TirePressureFormatters(
-                number = { TirePressureFormat.number(it, precision, locale) },
-                pressureUnit = pressureUnit,
-            )
-        }
-
-    val result =
-        remember(state.data, formatters) {
-            TirePressureSectionProjection.project(state.data ?: emptyList(), formatters)
-        }
-
-    val status =
-        when {
-            state.isLoading -> ChartStatus.Loading
-            state.isError -> ChartStatus.Error
-            result.isEmpty -> ChartStatus.Empty
-            else -> ChartStatus.Ready
-        }
-
-    val series =
-        remember(result, pressureUnit) {
-            buildTireSeries(result, pressureUnit)
-        }
-
-    val emptyMessage = stringResource(R.string.translation_driveDetail_noChartData)
-    val showFreshness = !state.isLoading && !state.isError && (state.refreshing || state.stale || state.hasError)
-
-    FadeIn(modifier = modifier) {
-        ChartContainer(
-            title = strings.title,
-            status = status,
-            height = CHART_HEIGHT,
-            action =
-                if (showFreshness) {
-                    { TirePressureFreshnessChip(state) }
-                } else {
-                    null
-                },
-            accessibleDescription = strings.ariaLabel,
-            emptyMessage = emptyMessage,
-            errorMessage = stringResource(R.string.translation_error_serverError_message),
-            retryLabel = stringResource(R.string.translation_common_retry),
-            onRetry = onRetry,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                TirePressureTiles(tiles = result.tiles, strings = strings, modifier = Modifier.fillMaxWidth())
-                ComboChart(
-                    series = series,
-                    xLabels = result.xLabels,
-                    height = PLOT_HEIGHT,
-                    yValueFormatter = { value -> TirePressureFormat.number(value, AXIS_DECIMALS, locale) },
-                    emptyMessage = emptyMessage,
-                )
+                else -> TirePressureSectionLoaded(snapshot = state.data, formatter = formatter, strings = strings)
             }
         }
     }
 }
 
-/**
- * Builds the present per-wheel line [ChartSeries] from the projection — the native analogue of the web four
- * conditional `<Line>`s. Each wheel is included only when its value column survived the projection's
- * `some(d => d[key] !== null)` presence guard. Series names carry the web `FL (unit)` abbreviation + unit, and
- * colors take the per-wheel categorical slot shared with the tile value.
- */
-private fun buildTireSeries(
-    result: TirePressureSectionProjectionResult,
-    pressureUnit: String,
-): List<ChartSeries> =
-    buildList {
-        result.frontLeftValues?.let { add(lineSeries(FL_KEY, FL_ABBREV, it, TireWheelId.FrontLeft, pressureUnit)) }
-        result.frontRightValues?.let { add(lineSeries(FR_KEY, FR_ABBREV, it, TireWheelId.FrontRight, pressureUnit)) }
-        result.rearLeftValues?.let { add(lineSeries(RL_KEY, RL_ABBREV, it, TireWheelId.RearLeft, pressureUnit)) }
-        result.rearRightValues?.let { add(lineSeries(RR_KEY, RR_ABBREV, it, TireWheelId.RearRight, pressureUnit)) }
-    }
-
-/** Builds one line [ChartSeries] (web `<Line>`) named `"$abbrev ($unit)"` with the per-wheel categorical color. */
-private fun lineSeries(
-    key: String,
-    abbrev: String,
-    values: List<Double?>,
-    id: TireWheelId,
-    unit: String,
-): ChartSeries =
-    ChartSeries(
-        key = key,
-        label = "$abbrev ($unit)",
-        values = values,
-        kind = ChartSeriesKind.Line,
-        color = tireWheelColor(id),
-        unit = unit,
-    )
-
-/**
- * The four per-wheel min/max tiles — the native counterpart of the web `grid grid-cols-4` tile row. Each tile
- * shows the localized wheel label and the formatted min–max value (or `'—'`) in the wheel's color, and is
- * exposed to TalkBack as one grouped, self-describing node so the dense per-wheel summary reads as a unit.
- */
+/** The web header `<div className="flex items-center gap-2">` — gauge glyph + title, with a freshness chip once a fetch has run. */
 @Composable
-private fun TirePressureTiles(
-    tiles: List<TireWheelTile>,
-    strings: TirePressureSectionStrings,
+private fun TirePressureSectionHeader(
+    title: String,
+    state: UiState<*>,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-        tiles.forEach { tile ->
-            TireTile(
-                label = wheelLabel(tile.id, strings),
-                value = tile.value,
-                color = tireWheelColor(tile.id),
-                modifier = Modifier.weight(1f),
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Icon(
+            imageVector = DataDisplayGlyphs.Gauge,
+            contentDescription = null,
+            size = IconSize.Sm,
+            tint = TeslaTokens.status.info,
+        )
+        SectionTitle(title, modifier = Modifier.semantics { heading() })
+        Spacer(modifier = Modifier.weight(1f))
+        if ((state.fetchedAt ?: 0L) > 0L || state.refreshing || state.hasError) {
+            DataFreshness(
+                updatedAtMillis = state.fetchedAt?.takeIf { it > 0 },
+                isFetching = state.refreshing,
+                isStale = state.stale,
+                isError = state.hasError,
+                compact = true,
+                fetchingLabel = stringResource(R.string.translation_common_loading),
+                errorLabel = stringResource(R.string.translation_common_offline),
+                formatAge = rememberRelativeAgeFormatter(),
             )
         }
     }
 }
 
-/** A single wheel tile: the web `rounded-lg ... text-center` div with a muted label and a bold colored value. */
+/** The loaded branch: the full four-corner tile grid (web `tireData` truthy) or the friendly empty state. */
 @Composable
-private fun TireTile(
-    label: String,
-    value: String,
-    color: Color,
+private fun TirePressureSectionLoaded(
+    snapshot: JsonElement?,
+    formatter: UnitFormatter,
+    strings: TirePressureSectionStrings,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.semantics(mergeDescendants = true) { contentDescription = "$label. $value" },
-        padding = CardPadding.Sm,
+    val display =
+        remember(snapshot, formatter, strings) {
+            TirePressureSectionProjection.project(snapshot, formatter, strings)
+        }
+    if (!display.hasData) {
+        EmptyState(message = strings.noTireData, icon = DataDisplayGlyphs.Gauge, modifier = modifier.fillMaxWidth())
+        return
+    }
+    TireCornerTileGrid(tiles = display.tiles, modifier = modifier)
+}
+
+/** Web `grid grid-cols-2 sm:grid-cols-4` — the four per-corner tiles laid out as two rows of two. */
+@Composable
+private fun TireCornerTileGrid(
+    tiles: List<TireCornerTile>,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            tiles.getOrNull(0)?.let { TireCornerTileView(tile = it, modifier = Modifier.weight(1f)) }
+            tiles.getOrNull(1)?.let { TireCornerTileView(tile = it, modifier = Modifier.weight(1f)) }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            tiles.getOrNull(2)?.let { TireCornerTileView(tile = it, modifier = Modifier.weight(1f)) }
+            tiles.getOrNull(3)?.let { TireCornerTileView(tile = it, modifier = Modifier.weight(1f)) }
+        }
+    }
+}
+
+/**
+ * A single corner tile — the web `<GlassPanel className="p-4 text-center">` cell with a muted label, a bold
+ * neutral value, and a status `Badge`. The whole tile is one merged TalkBack node (label + value + status).
+ */
+@Composable
+private fun TireCornerTileView(
+    tile: TireCornerTile,
+    modifier: Modifier = Modifier,
+) {
+    GlassPanel(
+        modifier = modifier.semantics(mergeDescendants = true) { contentDescription = tile.contentDescription },
+        padding = PanelPadding.Md,
     ) {
-        MetricLabel(label, modifier = Modifier.align(Alignment.CenterHorizontally))
-        Heading(
-            text = value,
-            level = HeadingLevel.Sub,
-            color = color,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        )
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        ) {
+            MetricLabel(tile.label)
+            MetricValue(tile.valueText)
+            Badge(text = tile.statusText, variant = badgeVariantOf(tile.tone))
+        }
     }
 }
 
-/** The categorical-palette slot for each wheel — the native stand-in for the web per-wheel hex literals. */
-private fun tireWheelColorIndex(id: TireWheelId): Int =
-    when (id) {
-        TireWheelId.FrontLeft -> 0
-        TireWheelId.FrontRight -> 1
-        TireWheelId.RearLeft -> 2
-        TireWheelId.RearRight -> 3
-    }
-
-/** Resolves the generated CB-safe categorical color for [id]; shared by the tile value and the plotted line. */
-private fun tireWheelColor(id: TireWheelId): Color = paletteColor(tireWheelColorIndex(id))
-
-/** Maps a wheel id to its localized tile label — the web `t('driveDetail.frontLeft', …)` strings. */
-private fun wheelLabel(
-    id: TireWheelId,
-    strings: TirePressureSectionStrings,
-): String =
-    when (id) {
-        TireWheelId.FrontLeft -> strings.frontLeft
-        TireWheelId.FrontRight -> strings.frontRight
-        TireWheelId.RearLeft -> strings.rearLeft
-        TireWheelId.RearRight -> strings.rearRight
-    }
-
-/**
- * The freshness chip rendered in the container header when cached data is refreshing / stale / offline — the
- * honest "last known + retry" affordance. Offline (a failed refresh over cached data) reads the localized
- * "Offline" label; a stale-but-reachable value reads its relative age. Mirrors the sibling surfaces' freshness
- * contract; carries no English literal.
- */
+/** The first-load skeleton body — two rows of two tile blocks (the grid the content fills). */
 @Composable
-private fun TirePressureFreshnessChip(state: UiState<*>) {
-    DataFreshness(
-        updatedAtMillis = state.fetchedAt?.takeIf { it > 0 },
-        isFetching = state.refreshing,
-        isStale = state.stale,
-        isError = state.hasError,
-        compact = true,
-        fetchingLabel = stringResource(R.string.translation_common_loading),
-        errorLabel = stringResource(R.string.translation_common_offline),
-        formatAge = rememberTirePressureFreshnessFormatter(),
-    )
-}
-
-/**
- * Builds the localized [TirePressureSectionStrings] from the i18n catalog (P1/S10): the title + four wheel
- * labels resolve through compile-time resources; the aria description resolves by-name with the web
- * `t(key, default)` fallback, since the catalog defines no key for it. Remembered against the resolved strings
- * so a locale change re-projects.
- */
-@Composable
-private fun rememberTirePressureSectionStrings(): TirePressureSectionStrings {
-    val context = LocalContext.current
-    val title = stringResource(R.string.translation_driveDetail_tirePressure)
-    val frontLeft = stringResource(R.string.translation_driveDetail_frontLeft)
-    val frontRight = stringResource(R.string.translation_driveDetail_frontRight)
-    val rearLeft = stringResource(R.string.translation_driveDetail_rearLeft)
-    val rearRight = stringResource(R.string.translation_driveDetail_rearRight)
-    val ariaLabel = resolveOptional({ context.optionalString(it) }, KEY_ARIA, TirePressureSectionDefaults.ARIA_LABEL)
-    return remember(title, frontLeft, frontRight, rearLeft, rearRight, ariaLabel) {
-        TirePressureSectionStrings(
-            title = title,
-            frontLeft = frontLeft,
-            frontRight = frontRight,
-            rearLeft = rearLeft,
-            rearRight = rearRight,
-            ariaLabel = ariaLabel,
-        )
+private fun TirePressureSectionLoadingBody(modifier: Modifier = Modifier) {
+    val loadingLabel = stringResource(R.string.translation_a11y_loading)
+    Column(
+        modifier = modifier.fillMaxWidth().semantics { contentDescription = loadingLabel },
+        verticalArrangement = Arrangement.spacedBy(Spacing.md),
+    ) {
+        repeat(SKELETON_TILE_ROWS) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+                Skeleton(modifier = Modifier.weight(1f), height = SKELETON_TILE_HEIGHT, rounded = true)
+                Skeleton(modifier = Modifier.weight(1f), height = SKELETON_TILE_HEIGHT, rounded = true)
+            }
+        }
     }
 }
 
+/** Maps the web `tirePressureVariant` tone onto the shared [Badge] variant. */
+private fun badgeVariantOf(tone: TireBadgeTone): BadgeVariant =
+    when (tone) {
+        TireBadgeTone.Success -> BadgeVariant.Success
+        TireBadgeTone.Warning -> BadgeVariant.Warning
+        TireBadgeTone.Danger -> BadgeVariant.Danger
+        TireBadgeTone.Neutral -> BadgeVariant.Neutral
+    }
+
+/** Classify a [UiState] failure into the recovery copy the `QueryError` branch shows. */
+private fun queryErrorKindOf(state: UiState<*>): QueryErrorKind =
+    when (state.errorKind) {
+        ErrorKind.Http ->
+            when (state.httpStatus) {
+                HTTP_NOT_FOUND -> QueryErrorKind.NotFound
+                HTTP_UNAUTHORIZED, HTTP_FORBIDDEN -> QueryErrorKind.Unauthorized
+                in HTTP_SERVER_ERROR_MIN..HTTP_SERVER_ERROR_MAX -> QueryErrorKind.ServerError
+                else -> QueryErrorKind.Network
+            }
+        ErrorKind.CircuitOpen -> QueryErrorKind.Waiting
+        ErrorKind.Decode -> QueryErrorKind.ServerError
+        else -> QueryErrorKind.Network
+    }
+
 /**
- * Localized relative-age formatter for the freshness chip (`translation_freshness_*`) — the same render-only
- * concern the sibling surfaces resolve, kept out of the pure projection.
+ * Builds the localized relative-age formatter the freshness chip folds [FreshnessAge] buckets through (P1/S10
+ * `translation_freshness_*`), so the pure freshness logic carries no English microcopy.
  */
 @Composable
-private fun rememberTirePressureFreshnessFormatter(): (FreshnessAge) -> String {
+private fun rememberRelativeAgeFormatter(): (FreshnessAge) -> String {
     val justNow = stringResource(R.string.translation_freshness_justNow)
     val seconds = stringResource(R.string.translation_freshness_seconds)
     val minutes = stringResource(R.string.translation_freshness_minutes)
@@ -436,91 +343,92 @@ private fun rememberTirePressureFreshnessFormatter(): (FreshnessAge) -> String {
     }
 }
 
-/** Builds a [Locale] from a BCP-47 [tag]; null/blank ⇒ the device default (web `deriveLocale` fallback). */
-private fun localeOf(tag: String?): Locale = if (tag.isNullOrBlank()) Locale.getDefault() else Locale.forLanguageTag(tag)
-
-/**
- * Optional by-name read from the Android string catalog — the seam [resolveOptional] uses to reproduce web
- * `t(key, default)`. `getIdentifier` is the only way to attempt a key that may be absent (a compile-time
- * `R.string` reference cannot express "resolve if present, else fall back"), so `DiscouragedApi` is
- * suppressed. Release builds keep resource names (resource shrinking is off), so the lookup stays stable.
- */
-@SuppressLint("DiscouragedApi")
-private fun Context.optionalString(resourceName: String): String? {
-    val id = resources.getIdentifier(resourceName, "string", packageName)
-    return if (id != 0) getString(id) else null
-}
-
-// ── Previews (tooling-only; @Preview entry points exercise each render branch) ──────────────────────
+// ── Previews — one per rendered state (content / empty / loading / error / offline). ───────────────────────
 
 private val PREVIEW_STRINGS =
     TirePressureSectionStrings(
-        title = "Tire Pressure During Drive",
+        title = "Tire Pressure",
         frontLeft = "Front Left",
         frontRight = "Front Right",
         rearLeft = "Rear Left",
         rearRight = "Rear Right",
-        ariaLabel = "Front and rear tire pressure lines over the drive timeline",
+        normal = "Normal",
+        low = "Low",
+        critical = "Critical",
+        noData = "No Data",
+        noTireData = "No tire pressure data available",
     )
 
-private val PREVIEW_POINTS =
-    listOf(
-        TirePressurePoint("09:00", frontLeft = 42.0, frontRight = 42.5, rearLeft = 41.0, rearRight = 41.5),
-        TirePressurePoint("09:05", frontLeft = 42.5, frontRight = 43.0, rearLeft = 41.5, rearRight = 42.0),
-        TirePressurePoint("09:10", frontLeft = 43.0, frontRight = 43.5, rearLeft = 42.0, rearRight = 42.5),
-    )
-
-@Preview(name = "Loading", showBackground = true)
-@Composable
-private fun TirePressureSectionLoadingPreview() {
-    TeslaSyncTheme(dynamicColor = false) {
-        TirePressureSectionContent(
-            state = UiState(UiPhase.Loading),
-            onRetry = {},
-            pressureUnit = "psi",
-            locale = Locale.US,
-            strings = PREVIEW_STRINGS,
-        )
+/** A mixed snapshot: FL normal, FR soft-low, RL critical, RR absent → one of each badge state. */
+private fun previewMixedTires(): JsonElement =
+    buildJsonObject {
+        put("front_left", 250_000.0)
+        put("front_right", 230_000.0)
+        put("rear_left", 180_000.0)
     }
-}
 
-@Preview(name = "Empty", showBackground = true)
-@Composable
-private fun TirePressureSectionEmptyPreview() {
-    TeslaSyncTheme(dynamicColor = false) {
-        TirePressureSectionContent(
-            state = UiState(UiPhase.Empty, data = emptyList()),
-            onRetry = {},
-            pressureUnit = "psi",
-            locale = Locale.US,
-            strings = PREVIEW_STRINGS,
-        )
-    }
-}
-
-@Preview(name = "Error", showBackground = true)
-@Composable
-private fun TirePressureSectionErrorPreview() {
-    TeslaSyncTheme(dynamicColor = false) {
-        TirePressureSectionContent(
-            state = UiState(UiPhase.Error, errorKind = ErrorKind.Network),
-            onRetry = {},
-            pressureUnit = "psi",
-            locale = Locale.US,
-            strings = PREVIEW_STRINGS,
-        )
-    }
-}
-
-@Preview(name = "Content", showBackground = true)
+@Preview(name = "Tire section · content", showBackground = true, widthDp = 420)
 @Composable
 private fun TirePressureSectionContentPreview() {
     TeslaSyncTheme(dynamicColor = false) {
         TirePressureSectionContent(
-            state = UiState(UiPhase.Content, data = PREVIEW_POINTS),
-            onRetry = {},
-            pressureUnit = "psi",
-            locale = Locale.US,
+            state = UiState(phase = UiPhase.Content, data = previewMixedTires(), fetchedAt = 1L),
+            formatter = UnitFormatter.default(),
+            strings = PREVIEW_STRINGS,
+        )
+    }
+}
+
+@Preview(name = "Tire section · empty", showBackground = true, widthDp = 420)
+@Composable
+private fun TirePressureSectionEmptyPreview() {
+    TeslaSyncTheme(dynamicColor = false) {
+        TirePressureSectionContent(
+            state = UiState(phase = UiPhase.Empty, data = null, fetchedAt = 1L),
+            formatter = UnitFormatter.default(),
+            strings = PREVIEW_STRINGS,
+        )
+    }
+}
+
+@Preview(name = "Tire section · loading", showBackground = true, widthDp = 420)
+@Composable
+private fun TirePressureSectionLoadingPreview() {
+    TeslaSyncTheme(dynamicColor = false) {
+        TirePressureSectionContent(
+            state = UiState.loading(),
+            formatter = UnitFormatter.default(),
+            strings = PREVIEW_STRINGS,
+        )
+    }
+}
+
+@Preview(name = "Tire section · error", showBackground = true, widthDp = 420)
+@Composable
+private fun TirePressureSectionErrorPreview() {
+    TeslaSyncTheme(dynamicColor = false) {
+        TirePressureSectionContent(
+            state = UiState(phase = UiPhase.Error, errorKind = ErrorKind.Network),
+            formatter = UnitFormatter.default(),
+            strings = PREVIEW_STRINGS,
+        )
+    }
+}
+
+@Preview(name = "Tire section · offline", showBackground = true, widthDp = 420)
+@Composable
+private fun TirePressureSectionOfflinePreview() {
+    TeslaSyncTheme(dynamicColor = false) {
+        TirePressureSectionContent(
+            state =
+                UiState(
+                    phase = UiPhase.Content,
+                    data = previewMixedTires(),
+                    stale = true,
+                    fetchedAt = 1_700_000_000_000L,
+                    errorKind = ErrorKind.Network,
+                ),
+            formatter = UnitFormatter.default(),
             strings = PREVIEW_STRINGS,
         )
     }

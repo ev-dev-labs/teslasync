@@ -8,80 +8,99 @@ import androidx.compose.ui.test.performClick
 import io.teslasync.android.data.ErrorKind
 import io.teslasync.android.data.UiPhase
 import io.teslasync.android.data.UiState
+import io.teslasync.android.data.UnitFormatter
 import io.teslasync.android.ui.theme.TeslaSyncTheme
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import java.util.Locale
 
 /**
  * On-device Compose UI + accessibility verification of [TirePressureSectionContent] across every state the
  * surface renders: the loading chrome, the hard-error retry surface, the no-data empty state, the populated
- * tiles + line chart, and the stale/offline cached view. Asserts the rendered i18n strings, the chart's
- * accessible description (web `ariaLabel`, resolved via the catalog-absent fallback), a per-wheel tile's
- * grouped TalkBack label, and the freshness chip's TalkBack label. The offline gate's `testReleaseUnitTest`
- * covers the pure logic; this covers render + a11y. Mirrors the web spec
- * (web/src/features/driving/components/drive-detail/TirePressureSection.tsx).
+ * four-corner tiles, and the stale/offline cached view. Asserts the rendered i18n strings, each per-corner tile's
+ * grouped TalkBack label (corner name + value + status), and the freshness chip's offline label. The offline
+ * gate's `testReleaseUnitTest` covers the pure logic + per-state projection; this covers render + a11y. Mirrors
+ * the web spec (web/src/features/vehicles/components/vehicle-detail/TirePressureSection.tsx). Requires a device /
+ * emulator to execute (instrumented); not part of the offline gate.
  */
 class TirePressureSectionUiTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private val ariaLabel = "Front and rear tire pressure lines over the drive timeline"
+    private val strings =
+        TirePressureSectionStrings(
+            title = "Tire Pressure",
+            frontLeft = "Front Left",
+            frontRight = "Front Right",
+            rearLeft = "Rear Left",
+            rearRight = "Rear Right",
+            normal = "Normal",
+            low = "Low",
+            critical = "Critical",
+            noData = "No Data",
+            noTireData = "No tire pressure data available",
+        )
 
     private fun setContent(
-        state: UiState<List<TirePressurePoint>>,
-        onRetry: () -> Unit = {},
+        state: UiState<JsonElement>,
+        onRefresh: () -> Unit = {},
     ) {
         compose.setContent {
             TeslaSyncTheme(dynamicColor = false) {
                 TirePressureSectionContent(
                     state = state,
-                    onRetry = onRetry,
-                    pressureUnit = "psi",
-                    locale = Locale.US,
+                    formatter = UnitFormatter.default(),
+                    strings = strings,
+                    onRefresh = onRefresh,
                 )
             }
         }
     }
 
-    private fun trace(): List<TirePressurePoint> =
-        listOf(
-            TirePressurePoint("09:00", frontLeft = 42.0, frontRight = 42.5, rearLeft = 41.0, rearRight = 41.5),
-            TirePressurePoint("09:05", frontLeft = 42.5, frontRight = 43.0, rearLeft = 41.5, rearRight = 42.0),
-            TirePressurePoint("09:10", frontLeft = 43.0, frontRight = 43.5, rearLeft = 42.0, rearRight = 42.5),
-        )
+    // FL normal, FR soft-low, RL critical, RR absent → one of each badge state.
+    private fun snapshot(): JsonElement =
+        buildJsonObject {
+            put("front_left", 250_000.0)
+            put("front_right", 230_000.0)
+            put("rear_left", 180_000.0)
+        }
 
     @Test
     fun loadingShowsTitleChromeNotABlankPanel() {
-        setContent(UiState(UiPhase.Loading))
-        compose.onNodeWithText("Tire Pressure During Drive").assertIsDisplayed()
+        setContent(UiState.loading())
+        compose.onNodeWithText("Tire Pressure").assertIsDisplayed()
     }
 
     @Test
     fun errorShowsRetryAffordanceAndInvokesRetry() {
         var retried = false
-        setContent(state = UiState(UiPhase.Error, errorKind = ErrorKind.Network), onRetry = { retried = true })
-        compose.onNodeWithText("Something went wrong on our end. Please try again.").assertIsDisplayed()
+        setContent(state = UiState(UiPhase.Error, errorKind = ErrorKind.Network), onRefresh = { retried = true })
+        compose.onNodeWithText("Tire Pressure").assertIsDisplayed()
         compose.onNodeWithText("Retry").performClick()
         assertTrue(retried)
     }
 
     @Test
-    fun emptyShowsTitleAndNoTelemetryMessage() {
-        setContent(UiState(UiPhase.Empty, data = emptyList()))
-        compose.onNodeWithText("Tire Pressure During Drive").assertIsDisplayed()
-        compose.onNodeWithText("No telemetry data available").assertIsDisplayed()
+    fun emptyShowsTitleAndNoTireDataMessage() {
+        setContent(UiState(UiPhase.Empty, data = null))
+        compose.onNodeWithText("Tire Pressure").assertIsDisplayed()
+        compose.onNodeWithText("No tire pressure data available").assertIsDisplayed()
     }
 
     @Test
-    fun contentRendersTitleAccessibleChartDescriptionAndWheelTiles() {
-        setContent(UiState(UiPhase.Content, data = trace()))
-        compose.onNodeWithText("Tire Pressure During Drive").assertIsDisplayed()
-        compose.onNodeWithContentDescription(ariaLabel).assertExists()
-        // Each wheel tile is a grouped node whose TalkBack label carries the wheel name + its min–max value.
+    fun contentRendersTitleAndPerCornerTileAccessibilityLabels() {
+        setContent(UiState(UiPhase.Content, data = snapshot(), fetchedAt = 1L))
+        compose.onNodeWithText("Tire Pressure").assertIsDisplayed()
+        // Each corner tile is a grouped node whose TalkBack label carries the corner name + value + status.
         compose.onNodeWithContentDescription("Front Left", substring = true).assertExists()
+        compose.onNodeWithContentDescription("Front Right", substring = true).assertExists()
+        compose.onNodeWithContentDescription("Rear Left", substring = true).assertExists()
         compose.onNodeWithContentDescription("Rear Right", substring = true).assertExists()
+        // The absent rear-right corner reads its "No Data" status in its grouped label.
+        compose.onNodeWithContentDescription("No Data", substring = true).assertExists()
     }
 
     @Test
@@ -89,13 +108,13 @@ class TirePressureSectionUiTest {
         setContent(
             UiState(
                 phase = UiPhase.Content,
-                data = trace(),
+                data = snapshot(),
                 stale = true,
                 fetchedAt = 1_700_000_000_000L,
                 errorKind = ErrorKind.Network,
             ),
         )
-        compose.onNodeWithText("Tire Pressure During Drive").assertIsDisplayed()
+        compose.onNodeWithText("Tire Pressure").assertIsDisplayed()
         compose.onNodeWithContentDescription("Offline").assertExists()
     }
 
@@ -106,14 +125,14 @@ class TirePressureSectionUiTest {
             state =
                 UiState(
                     phase = UiPhase.Content,
-                    data = trace(),
+                    data = snapshot(),
                     stale = true,
                     fetchedAt = 1_700_000_000_000L,
                 ),
-            onRetry = { refreshed = true },
+            onRefresh = { refreshed = true },
         )
         compose.waitForIdle()
-        compose.onNodeWithText("Tire Pressure During Drive").assertIsDisplayed()
+        compose.onNodeWithText("Tire Pressure").assertIsDisplayed()
         assertTrue(refreshed)
     }
 }
