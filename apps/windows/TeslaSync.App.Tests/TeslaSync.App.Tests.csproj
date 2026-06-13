@@ -390,6 +390,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\AlertsSection\AlertsSection.Model.cs" Link="FeatureViews\AlertsSection\AlertsSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ApiLogsPage\ApiLogsPage.Model.cs" Link="FeatureViews\ApiLogsPage\ApiLogsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ApiLogsPage\ApiLogsPage.ViewModel.cs" Link="FeatureViews\ApiLogsPage\ApiLogsPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ApiPlaygroundPage\ApiPlaygroundPage.Model.cs" Link="FeatureViews\ApiPlaygroundPage\ApiPlaygroundPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ApiPlaygroundPage\ApiPlaygroundPage.ViewModel.cs" Link="FeatureViews\ApiPlaygroundPage\ApiPlaygroundPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MaintenancePage\MaintenancePage.Model.cs" Link="FeatureViews\MaintenancePage\MaintenancePage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MaintenancePage\MaintenancePage.Source.cs" Link="FeatureViews\MaintenancePage\MaintenancePage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MaintenancePage\MaintenancePage.ViewModel.cs" Link="FeatureViews\MaintenancePage\MaintenancePage.ViewModel.cs" />

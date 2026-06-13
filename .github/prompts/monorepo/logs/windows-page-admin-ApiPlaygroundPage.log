@@ -1,0 +1,181 @@
+=== p2-windows · W7 · page:admin/ApiPlayground (WinUI 3 / Fluent) ===
+Parity unit : page:admin/ApiPlayground   kind=page   web route=/api-playground
+Web source  : web/src/features/admin/pages/ApiPlaygroundPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/ApiPlaygroundPage/ (+ NavigationView registration, test, ledger)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- Layout mapping: the repository's WinUI app is code-first C# (no .xaml page files). Every feature surface lives
+  under apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.ViewModel.cs (INotifyPropertyChanged state holder) and <Name>.cs (the Fluent
+  view), exactly as the sibling W7 ApiLogsPage / StatusApiDocsPage do. The generated prompt's idealized
+  "TeslaSync/Features/Admin/ApiPlaygroundPage.xaml + ApiPlaygroundPageViewModel.cs" is mapped onto these real
+  conventions. Namespace = TeslaSync.App.FeatureViews.Admin (aligns with RouteGroup.AdminDevTools).
+- Data binding (ADR-004): the manifest declares NO API data sources ("renders from navigation params / local
+  state"). The web page actually fetches /system/openapi via useQuery, but the generated C# client exposes no
+  parsed-OpenAPI-catalog endpoint — so, following the established ApiLogsPage precedent, the page is driven by an
+  injected IApiPlaygroundFeed. The default CatalogApiPlaygroundFeed resolves a static catalog of the documented
+  TeslaSync API endpoints (the native source-of-truth mirror of internal/api/router.go, exactly as
+  StatusApiDocsPage ships its 6 status endpoints), so the populated success state renders without a network
+  round-trip; EmptyApiPlaygroundFeed (and a host-supplied live-spec feed) keep the loading/empty/error states
+  genuinely reachable and unit-tested. ApiPlaygroundPageViewModel.LoadAsync/RefreshAsync honour the page
+  lifecycle (OnLoaded → LoadAsync); SetQuery/SelectEndpoint/ClearSelection re-project without a reload.
+- Four data states (manifest: loading/empty/error/success), ApiPlaygroundProjection.ResolveState:
+  · loading — catalog feed in flight with nothing loaded yet → the sidebar renders a Fluent skeleton (web the
+    EndpointSidebar Skeleton rows). ApiPlaygroundState.Loading.
+  · empty  — the catalog (or the active search) yielded no rows → a friendly TsEmptyState (web
+    playground.noResults "No matching endpoints"), never a blank region (ADR-011). ApiPlaygroundState.Empty.
+  · error  — the feed threw → an inline TsErrorDisplay with a Retry affordance wired to RefreshAsync (web the
+    PageContainer error branch; ADR-013 surfacing). ApiPlaygroundState.Error.
+  · success— ≥1 row → the tag-grouped, selectable endpoint list. ApiPlaygroundState.Success.
+- Panels (ADR-005), the manifest's two GlassPanel slots (web ApiPlaygroundPage.tsx, the two <GlassPanel>s):
+  · GlassPanel1 = the w-72 sidebar. A TsGlassPanel hosting a TsInput search box (web the EndpointSidebar search;
+    playground.search) over a scrollable list rendered by state (skeleton | error+retry | empty | grouped rows).
+    Each row is a TsButton (Subtle; Secondary when selected) carrying a method TsBadge (StatusKind: GET=Info,
+    POST=Success, mutate=Warning, DELETE=Danger) + the mono path, grouped under tag headers (web the
+    EndpointSidebar tag sections, sorted by tag → method weight → path).
+  · GlassPanel2 = the main panel. With no selection it shows the BookOpen TsEmptyState prompt
+    (playground.selectEndpoint) and, when the catalog is non-empty, the "{n} endpoints available" caption
+    (playground.endpointCount, formatted via string.Format). With a selection it shows the endpoint detail
+    (method badge + mono path + tag + summary + description + grouped Path/Query parameters) — the native
+    analogue of the web RequestBuilder header (never a blank box, ADR-011).
+  No hardcoded colours/typography — DisplayTokens (TsColorText*/Border/TsTypeFontFamilyMono) drive
+  light/dark/high-contrast from W1.
+- Header (web PageContainer title/subtitle): the shared native PageContainer surface carries the
+  heading-level-1 title (playground.title) + muted subtitle (playground.subtitle).
+- Navigation entry: RouteTable.cs already maps Page("ApiPlayground","api-playground",RouteGroup.AdminDevTools)
+  — unchanged. ShellWindow.xaml.cs registers the page factory next to ApiLogs
+  (new FeatureViews.Admin.ApiPlaygroundPage()). This page introduces NO new route.
+- i18n (ADR-014): the four manifest keys (playground.title/subtitle/selectEndpoint/endpointCount) plus the
+  feature's sibling keys (playground.search/noResults/pathParams/queryParams) ALREADY EXIST in the
+  AUTO-GENERATED catalog Strings/en|ar|he/Resources.resw ("do not edit by hand") as translation.playground.*.
+  Per the established ApiLogsPage/StatusApiDocsPage precedent every literal is resolved through
+  ILocalizer.GetString("playground.<key>", englishFallback) using the bare web key names; absent/locale keys
+  resolve to the verbatim web English copy via the ShellLocalizer → ResourceLoader bridge. Zero hardcoded UI
+  text; zero hand-edit of the generated catalog. The few introduced labels (loadError/retry/required/optional)
+  carry English fallbacks, mirroring how StatusApiDocs introduced statusApiDocs.empty/back.
+- a11y (ADR-015): AutomationProperties names on the page (title), the sidebar (Navigation landmark) and the main
+  panel (Main landmark + the selected endpoint's method+path+summary); each endpoint row carries a method+path
+  Narrator name + summary tooltip; decorative glyphs set AccessibilityView=Raw; a Group automation peer;
+  light/dark/high-contrast via the W1 tokens; TsButton/TsInput keyboard + pointer for free.
+- Units (ADR-005/P1-S5): the page documents an API contract and renders no measured quantities, so no unit
+  conversion is involved.
+
+PRE-EXECUTION FINDING (environment setup — build-blocking at baseline, NOT caused by this change):
+- TeslaSync.App.Core and TeslaSync.App.Tests ProjectReference ..\Generated\Generated.csproj — the W1/ADR-004
+  generated OpenAPI C# client. apps/windows/Generated/ is GITIGNORED (.gitignore `apps/**/generated/`) — a
+  regenerated, not-committed artifact — and was ABSENT in this fresh worktree, so the solution did not build
+  (CS0234 "TeslaSync.Windows does not exist"). It is produced by apps/tools/codegen/gen-clients.ts. Ran
+  `pwsh apps/tools/codegen/gen-clients.ps1` → emitted 10 C# records to apps/windows/Generated/Api/. The emitter
+  writes only the Api/*.cs records (no project file), so a thin local Generated/Generated.csproj shim (net10,
+  compiles Api/*.cs into TeslaSync.Windows.Generated.Api, mirroring apps/tools/codegen/verify/csharp/Verify.csproj)
+  was created so Core/Tests resolve the client. Both apps/windows/Generated/Api/*.cs AND that csproj are gitignored
+  and are therefore NOT part of this commit — pure local build setup of the W1 predecessor.
+
+=== PARITY ===
+PARITY_REQUIRED=10
+- [x] panel — GlassPanel1 (the w-72 endpoint sidebar)
+      evidence: ApiPlaygroundPage.cs → RenderSidebar(ApiPlaygroundDisplay) + _sidebarPanel (TsGlassPanel),
+      BuildGroupHeader / BuildEndpointRow (TsButton + method TsBadge), fed by ApiPlaygroundProjection.GroupByTag
+      → ApiEndpointGroup[] (Model.cs). Search box = _searchBox (TsInput, playground.search).
+      headless asserts: Groups_are_ordered_by_tag_then_method_then_path, Method_badges_carry_the_semantic_status,
+      Selected_row_is_flagged_in_the_sidebar, Row_automation_name_is_method_and_path, Search_filters_rows_case_insensitively.
+- [x] panel — GlassPanel2 (the main select-prompt / endpoint-detail panel)
+      evidence: ApiPlaygroundPage.cs → RenderMain(ApiPlaygroundDisplay) + _mainPanel (TsGlassPanel): the BookOpen
+      TsEmptyState prompt + count caption when no selection, else BuildDetail(ApiEndpointDetail). Detail from
+      ApiPlaygroundProjection.ResolveDetail / ProjectParameterSections (Model.cs).
+      headless asserts: No_selection_has_no_detail, Unknown_selection_has_no_detail,
+      Selecting_endpoint_projects_grouped_parameter_detail, Parameterless_endpoint_detail_has_no_sections.
+- [x] state — loading data state
+      evidence: ApiPlaygroundState.Loading (Model.cs) via ApiPlaygroundProjection.ResolveState; rendered by
+      ApiPlaygroundPage.RenderSidebar → BuildSkeleton (10 TsSkeleton rows); VM seeds _loading=true.
+      headless assert: Loading_with_no_endpoints_projects_loading_state.
+- [x] state — empty data state
+      evidence: ApiPlaygroundState.Empty; ApiPlaygroundPage.RenderSidebar → TsEmptyState(SidebarEmptyMessage);
+      reachable via an empty catalog AND a no-match search (total count preserved).
+      headless asserts: Empty_catalog_projects_empty_state, Search_with_no_match_projects_empty_state_but_keeps_total_count,
+      ViewModel_empty_feed_degrades_to_empty, ViewModel_set_query_filters_without_dropping_total.
+- [x] state — error data state
+      evidence: ApiPlaygroundState.Error; ApiPlaygroundPage.RenderSidebar → BuildError (TsErrorDisplay +
+      RetryLabel → OnRetryInvoked → RefreshAsync); VM LoadAsync catch sets _hasError.
+      headless asserts: Error_projects_error_state_with_message, ViewModel_failed_feed_surfaces_error.
+- [x] state — success data state
+      evidence: ApiPlaygroundState.Success; ApiPlaygroundPage.RenderSidebar default → grouped selectable rows;
+      surfaced by ApiPlaygroundPageViewModel.State.
+      headless asserts: Default_catalog_projects_success_state, ViewModel_default_feed_loads_success_with_endpoints,
+      ViewModel_select_endpoint_shows_detail.
+- [x] string — playground.endpointCount
+      evidence: ApiPlaygroundProjection.EndpointCountKey + FormatEndpointCount(ILocalizer,int); rendered as the
+      GlassPanel2 count caption (ApiPlaygroundPage.RenderMain). Default "{0} endpoints available".
+      headless asserts: Projection_resolves_every_manifest_string_key, Endpoint_count_label_formats_the_total,
+      Endpoint_count_label_is_null_when_catalog_is_empty.
+- [x] string — playground.selectEndpoint
+      evidence: ApiPlaygroundProjection.SelectEndpointKey → Display.SelectEndpointMessage; the GlassPanel2 prompt.
+      Default "Select an endpoint from the sidebar to start testing".
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults.
+- [x] string — playground.subtitle
+      evidence: ApiPlaygroundProjection.SubtitleKey → Display.Subtitle → PageContainer.Subtitle.
+      Default "Explore and test TeslaSync API endpoints".
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults.
+- [x] string — playground.title
+      evidence: ApiPlaygroundProjection.TitleKey → Display.Title → PageContainer title; ApiPlaygroundRegistration.Title.
+      Default "API Playground".
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults,
+      Registration_exposes_route_slug_and_title.
+PARITY_COVERED=10
+
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/ApiPlaygroundPageTests.cs — 32 tests, all
+# passing). The four manifest string keys are pinned by Projection_resolves_every_manifest_string_key through a
+# RecordingLocalizer; the web English defaults by Manifest_strings_resolve_the_web_defaults; the detail param
+# keys by Detail_projection_resolves_the_parameter_section_keys; the view-model load/search/select/clear flow +
+# registration (slug=ApiPlaygroundPage, route=ApiPlayground) + PII-safe Diagnostics
+# (view.opened slug=ApiPlaygroundPage) round it out. The WinUI view itself is exercised by the app build.
+
+=== GATE ===
+# Note: the generated gate scopes -Path to apps/windows/TeslaSync/Features/Admin and builds
+# apps/windows/TeslaSync.sln. The real layout is apps/windows/TeslaSync.App/feature-views/ApiPlaygroundPage/ and
+# apps/windows/TeslaSync.sln; the commands below are the faithful real-path equivalents.
+
+# 1) Placeholder / stub scan (ADR-011) — scoped to the new feature subtree + the new test file:
+#    pwsh apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ApiPlaygroundPage -Language csharp
+#    pwsh apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App.Tests/FeatureViews/ApiPlaygroundPageTests.cs -Language csharp
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+#    (1 allow = the WinUI TsInput.PlaceholderText hint API, marked `// parity:allow`.)
+
+# 2) Build (solution) — dotnet build apps/windows/TeslaSync.sln -c Release
+#    Result: Build succeeded. 0 Error(s). The only warnings on a full rebuild are 17 PRE-EXISTING CA* analyzer
+#    warnings in TeslaSync.App.Core (GeneratedApiClient / SseEventDecoder / RepositoryResult / VehicleOption /
+#    LiveEvent / DateTimeFormatting) — none from this prompt's files. (Generated client produced first; see
+#    PRE-EXECUTION FINDING.)
+BUILD_EXIT=0
+
+# 3) Lint / format — dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+#    Whole-solution verify is clean (all files LF / utf-8, no changes). Also re-verified scoped to this
+#    changeset's files (the page subtree + ApiPlaygroundPageTests.cs + ShellWindow.xaml.cs) = no changes.
+LINT_EXIT=0
+
+# 4) Test — dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+#    Passed: 29241, Failed: 0, Skipped: 0 (incl. the 32 new ApiPlaygroundPageTests; no regressions — the
+#    ShellWindow registration is a WinUI view file not linked into the headless test project, validated by the
+#    Release build). TeslaSync.App.UITests is WinAppDriver/packaged-app gated (environment-skipped); this change
+#    adds no UI-automation test.
+TEST_EXIT=0
+
+PARITY_COVERED=10
+PARITY_REQUIRED=10
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ApiPlaygroundPage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ApiPlaygroundPageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-admin-ApiPlaygroundPage.log
+# git commit -m "feat(apps/windows): ApiPlaygroundPage at web parity (W7 admin)"
+# (apps/windows/Generated/ is gitignored W1 output — regenerated via apps/tools/codegen, never committed.)
+
+EXIT=0
+STATUS=DONE

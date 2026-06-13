@@ -91,6 +91,10 @@ public sealed partial class ShellWindow : Window
         // Admin / API Logs page (P2/W7) — parity port of web ApiLogsPage at route /api-logs.
         _viewModel.PageFactory.Register("ApiLogs", static () => new FeatureViews.Admin.ApiLogsPage());
 
+        // Admin / API Playground page (P2/W7) — parity port of web ApiPlaygroundPage at route /api-playground.
+        // RouteTable already maps Page("ApiPlayground","api-playground",RouteGroup.AdminDevTools).
+        _viewModel.PageFactory.Register("ApiPlayground", static () => new FeatureViews.Admin.ApiPlaygroundPage());
+
         // Telemetry / Signals workspace page (P2/W7) — parity port of web SignalsWorkspacePage at route /signals.
         _viewModel.PageFactory.Register("SignalsWorkspace", static () => new FeatureViews.Telemetry.SignalsWorkspacePage());
 
