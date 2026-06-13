@@ -760,3 +760,4 @@ p2-windows/pages/driving/TripReplayPage.prompt.md
 p2-windows/pages/exports/ExportsPage.prompt.md
 p2-windows/pages/maps/TemperatureImpactPage.prompt.md
 p2-windows/pages/maps/LocationsPage.prompt.md
+p2-windows/pages/notifications/AlertRulesPage.prompt.md
