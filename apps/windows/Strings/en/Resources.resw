@@ -1728,6 +1728,93 @@
   <data name="translation.admin.schemaDrift.tables" xml:space="preserve">
     <value>Tables</value>
   </data>
+  <data name="translation.admin.secretRotation.colAge" xml:space="preserve">
+    <value>Age (days)</value>
+  </data>
+  <data name="translation.admin.secretRotation.colExpiry" xml:space="preserve">
+    <value>Expires</value>
+  </data>
+  <data name="translation.admin.secretRotation.colKind" xml:space="preserve">
+    <value>Kind</value>
+  </data>
+  <data name="translation.admin.secretRotation.colRotated" xml:space="preserve">
+    <value>Last rotated</value>
+  </data>
+  <data name="translation.admin.secretRotation.colSeverity" xml:space="preserve">
+    <value>Severity</value>
+  </data>
+  <data name="translation.admin.secretRotation.colThresholds" xml:space="preserve">
+    <value>Warn / critical</value>
+  </data>
+  <data name="translation.admin.secretRotation.criticalLabel" xml:space="preserve">
+    <value>Critical</value>
+  </data>
+  <data name="translation.admin.secretRotation.criticalMessage" xml:space="preserve">
+    <value>{0} secrets are past their critical rotation threshold. These should be rotated immediately to reduce blast radius.</value>
+  </data>
+  <data name="translation.admin.secretRotation.criticalTitle" xml:space="preserve">
+    <value>Overdue rotations</value>
+  </data>
+  <data name="translation.admin.secretRotation.daysToExpiry" xml:space="preserve">
+    <value>{0}d remaining</value>
+  </data>
+  <data name="translation.admin.secretRotation.emptyMessage" xml:space="preserve">
+    <value>No rotation events have been recorded yet. The tracker captures observations on every credential rotation.</value>
+  </data>
+  <data name="translation.admin.secretRotation.emptyTable" xml:space="preserve">
+    <value>No tracked secrets</value>
+  </data>
+  <data name="translation.admin.secretRotation.emptyTitle" xml:space="preserve">
+    <value>No tracked secrets</value>
+  </data>
+  <data name="translation.admin.secretRotation.kindAppSigningKey" xml:space="preserve">
+    <value>App signing key</value>
+  </data>
+  <data name="translation.admin.secretRotation.kindAuthentikSecret" xml:space="preserve">
+    <value>Authentik client secret</value>
+  </data>
+  <data name="translation.admin.secretRotation.kindDatabasePassword" xml:space="preserve">
+    <value>Database password</value>
+  </data>
+  <data name="translation.admin.secretRotation.kindMqttMtlsCert" xml:space="preserve">
+    <value>MQTT mTLS certificate</value>
+  </data>
+  <data name="translation.admin.secretRotation.kindSessionJwk" xml:space="preserve">
+    <value>Session JWK</value>
+  </data>
+  <data name="translation.admin.secretRotation.kindTeslaRefreshToken" xml:space="preserve">
+    <value>Tesla refresh token</value>
+  </data>
+  <data name="translation.admin.secretRotation.notConfigured" xml:space="preserve">
+    <value>The rotation tracker is not configured on this deployment. Enable secret rotation tracking in config to populate this page.</value>
+  </data>
+  <data name="translation.admin.secretRotation.okLabel" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="translation.admin.secretRotation.pageTitle" xml:space="preserve">
+    <value>Secret Rotation</value>
+  </data>
+  <data name="translation.admin.secretRotation.severityCritical" xml:space="preserve">
+    <value>Overdue</value>
+  </data>
+  <data name="translation.admin.secretRotation.severityOk" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="translation.admin.secretRotation.severityWarn" xml:space="preserve">
+    <value>Rotate soon</value>
+  </data>
+  <data name="translation.admin.secretRotation.subtitle" xml:space="preserve">
+    <value>Status of every tracked credential. Severity reflects per-kind warn/critical thresholds; rotate anything in the critical tier as soon as possible.</value>
+  </data>
+  <data name="translation.admin.secretRotation.tableTitle" xml:space="preserve">
+    <value>Rotation status</value>
+  </data>
+  <data name="translation.admin.secretRotation.totalLabel" xml:space="preserve">
+    <value>Tracked secrets</value>
+  </data>
+  <data name="translation.admin.secretRotation.warnLabel" xml:space="preserve">
+    <value>Warn</value>
+  </data>
   <data name="translation.admin.security.active" xml:space="preserve">
     <value>Active</value>
   </data>

@@ -1045,6 +1045,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\DiskForecastPage\DiskForecastPage.Model.cs" Link="FeatureViews\DiskForecastPage\DiskForecastPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DiskForecastPage\DiskForecastPage.Source.cs" Link="FeatureViews\DiskForecastPage\DiskForecastPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DiskForecastPage\DiskForecastPage.ViewModel.cs" Link="FeatureViews\DiskForecastPage\DiskForecastPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecretRotationPage\SecretRotationPage.Model.cs" Link="FeatureViews\SecretRotationPage\SecretRotationPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecretRotationPage\SecretRotationPage.Source.cs" Link="FeatureViews\SecretRotationPage\SecretRotationPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecretRotationPage\SecretRotationPage.ViewModel.cs" Link="FeatureViews\SecretRotationPage\SecretRotationPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.Model.cs" Link="FeatureViews\SecurityPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.Source.cs" Link="FeatureViews\SecurityPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.ViewModel.cs" Link="FeatureViews\SecurityPanel.ViewModel.cs" />
