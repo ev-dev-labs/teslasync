@@ -721,3 +721,4 @@ p3-android/shared-meaningful/A-0135-ReleaseNotes.prompt.md
 p3-android/shared-meaningful/A-0129-NewVersionBanner.prompt.md
 p3-android/shared-meaningful/A-0132-PageSkeleton.prompt.md
 p3-android/shared-meaningful/A-0133-QueryError.prompt.md
+p3-android/shared-meaningful/A-0137-RequiresAuth.prompt.md
