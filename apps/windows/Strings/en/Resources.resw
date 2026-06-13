@@ -17981,6 +17981,18 @@
   <data name="translation.signalQuery.to" xml:space="preserve">
     <value>To</value>
   </data>
+  <data name="translation.skeleton.chart" xml:space="preserve">
+    <value>Loading chart</value>
+  </data>
+  <data name="translation.skeleton.pageHeader" xml:space="preserve">
+    <value>Loading page header</value>
+  </data>
+  <data name="translation.skeleton.statCards" xml:space="preserve">
+    <value>Loading stat cards</value>
+  </data>
+  <data name="translation.skeleton.table" xml:space="preserve">
+    <value>Loading table</value>
+  </data>
   <data name="translation.sleep.avgBatteryLost" xml:space="preserve">
     <value>Avg Battery Lost (%)</value>
   </data>
