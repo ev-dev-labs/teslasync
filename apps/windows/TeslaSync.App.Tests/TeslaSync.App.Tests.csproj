@@ -1255,6 +1255,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIYearReviewNarration.Model.cs" Link="SharedSurfaces\AIYearReviewNarration.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIYearReviewNarration.Source.cs" Link="SharedSurfaces\AIYearReviewNarration.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AIYearReviewNarration.ViewModel.cs" Link="SharedSurfaces\AIYearReviewNarration.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AlertBanner.Model.cs" Link="SharedSurfaces\AlertBanner.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AlertBanner.Source.cs" Link="SharedSurfaces\AlertBanner.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\AlertBanner.ViewModel.cs" Link="SharedSurfaces\AlertBanner.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnimatedMarker\AnimatedMarker.Model.cs" Link="SharedSurfaces\AnimatedMarker\AnimatedMarker.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnimatedMarker\AnimatedMarker.Source.cs" Link="SharedSurfaces\AnimatedMarker\AnimatedMarker.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AnimatedMarker\AnimatedMarker.ViewModel.cs" Link="SharedSurfaces\AnimatedMarker\AnimatedMarker.ViewModel.cs" />
