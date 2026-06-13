@@ -1,0 +1,69 @@
+/*
+  ActiveVehicleSegment.strings
+  TeslaSync — P4 shared surface · 0176 · ActiveVehicleSegment (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface — the native peer of the strings used by
+  `components/layout/status-bar/ActiveVehicleSegment.tsx`. The web component's `t()` keys are mirrored
+  VERBATIM below (same key, same English fallback) so the native surface resolves the identical catalog
+  entries:
+    • statusBar.vehicle.fallback  — the "Vehicle" word in the `Vehicle ${id}` label fallback
+    • statusBar.vehicle.none      — the "No vehicle" label when nothing is selected
+    • statusBar.vehicle.tooltip   — the "Active vehicle" tooltip prefix
+    • statusBar.vehicle.aria      — the "Active vehicle" accessible name (chip + listbox)
+    • statusBar.vehicle.switch    — the "Switch vehicle" switcher-button accessible name
+
+  The remaining entries are the NATIVE chrome / accessibility additions for the P4 always-render leaf states
+  (loading / empty / error) and the freshness axis (live / stale / offline) — the web renders nothing for an
+  empty fleet and has no loading / error / connectivity chrome, whereas the native HIG calls for a labelled
+  state rather than a blank box.
+
+  These fold into the app `Localizable.xcstrings` master catalog at integration time; kept in a per-surface
+  table ("ActiveVehicleSegment") so each parallel surface prompt owns its own strings. In test / preview
+  bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web source keys (verbatim) --- */
+
+/* The "Vehicle" word in the `Vehicle ${id}` label fallback (web `t('statusBar.vehicle.fallback', 'Vehicle')`). */
+"statusBar.vehicle.fallback" = "Vehicle";
+
+/* The label shown when nothing is selected (web `t('statusBar.vehicle.none', 'No vehicle')`). */
+"statusBar.vehicle.none" = "No vehicle";
+
+/* The hover/VoiceOver tooltip prefix (web `t('statusBar.vehicle.tooltip', 'Active vehicle')`). */
+"statusBar.vehicle.tooltip" = "Active vehicle";
+
+/* The accessible name of the chip / switcher listbox (web `t('statusBar.vehicle.aria', 'Active vehicle')`). */
+"statusBar.vehicle.aria" = "Active vehicle";
+
+/* The accessible name of the switcher button (web `t('statusBar.vehicle.switch', 'Switch vehicle')`). */
+"statusBar.vehicle.switch" = "Switch vehicle";
+
+/* --- Native chrome / a11y additions (no blank box — see the leaf states) --- */
+
+/* VoiceOver label for the initial loading skeleton (web has no loading state). */
+"activeVehicleSegment.loadingA11y" = "Loading vehicles";
+
+/* Title of the compact error tile shown when the fleet read fails (web has no QueryError peer). */
+"activeVehicleSegment.errorTitle" = "Couldn't load vehicles";
+
+/* Retry action on the error tile. */
+"activeVehicleSegment.retry" = "Retry";
+
+/* Freshness chip label — the live state is fresh. */
+"activeVehicleSegment.live" = "Live";
+
+/* Freshness chip label — the live state is older than the freshness window. */
+"activeVehicleSegment.stale" = "Stale";
+
+/* Freshness chip label — no connectivity; the cached value is shown. */
+"activeVehicleSegment.offline" = "Offline";
+
+/* Expanded VoiceOver label for the stale freshness chip (it is a refresh button). */
+"activeVehicleSegment.staleA11y" = "Stale — tap to refresh";
+
+/* Expanded VoiceOver label for the offline freshness chip. */
+"activeVehicleSegment.offlineA11y" = "Offline — showing the last value";
+
+/* VoiceOver hint appended to the currently-selected switcher row (the web trailing check mark). */
+"activeVehicleSegment.selectedA11y" = "Selected";
