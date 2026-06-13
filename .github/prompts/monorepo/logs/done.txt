@@ -614,3 +614,4 @@ p3-android/shared-meaningful/A-0026-AILogTraceSummarization.prompt.md
 p3-android/shared-meaningful/A-0024-AILifetimeStatsQA.prompt.md
 p3-android/shared-meaningful/A-0027-AIMLChargingCurveClustering.prompt.md
 p3-android/shared-meaningful/A-0028-AIMqttSseInspectorExplanations.prompt.md
+p3-android/shared-meaningful/A-0029-AINLAlertBuilder.prompt.md
