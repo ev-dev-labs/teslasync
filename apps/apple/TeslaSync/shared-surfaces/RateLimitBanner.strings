@@ -1,0 +1,34 @@
+/*
+  RateLimitBanner.strings
+  TeslaSync — P4 shared surface · 0134 · RateLimitBanner (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The keys mirror the web source
+  (components/feedback/RateLimitBanner.tsx) one-for-one — the two banner messages, the "Retry now"
+  action, and the dismiss label — plus the native P4 leaf chrome (loading / empty / error) and the
+  freshness axis (live / stale / offline) so the Swift sources hold no English literals. The web
+  i18next `{{n}}` interpolation is rewritten as the native `{n}` token. These entries fold into the
+  app `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table
+  ("RateLimitBanner") so each parallel surface prompt owns its own strings without editing the shared
+  catalog.
+*/
+
+/* --- Banner messages (web `t('ratelimit.banner' / 'upstream.banner', { n: remaining })`) --- */
+"ratelimit.banner" = "Too many requests — pausing for {n}s";
+"upstream.banner" = "Tesla upstream unavailable — retry in {n}s";
+
+/* --- Actions (web `Button` label + dismiss `aria-label`) --- */
+"ratelimit.retry" = "Retry now";
+"common.dismiss" = "Dismiss";
+
+/* --- Loading / empty / error chrome (P4 leaf contract) --- */
+"ratelimit.loadingA11y" = "Checking request limits";
+"ratelimit.empty" = "No active rate limit";
+"ratelimit.emptyMessage" = "Requests are flowing normally. A notice appears here if the server rate-limits the app or the Tesla upstream is paused.";
+"ratelimit.errorTitle" = "Couldn't check request limits";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"ratelimit.live" = "Live";
+"ratelimit.stale" = "Stale";
+"ratelimit.offline" = "Offline";
+"ratelimit.staleA11y" = "Stale — tap to refresh";
+"ratelimit.offlineA11y" = "Offline — showing the last known status";
