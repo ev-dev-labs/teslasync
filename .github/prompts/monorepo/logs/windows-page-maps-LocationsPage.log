@@ -1,0 +1,155 @@
+P2-WINDOWS W7 — page:maps/Locations — WinUI 3 / Fluent parity port
+=================================================================
+Web source : web/src/features/maps/pages/LocationsPage.tsx (route /locations)
+Output     : apps/windows/TeslaSync.App/feature-views/LocationsPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done pages QuickStatsPage/EfficiencyPage/ApiLogsPage/EnergyProductsPage)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("Locations", …)
+             (RouteTable already maps Page("Locations","locations",MapsLocation); the empty-state
+              "View drives" CTA raises NavigationRequested -> NavigateTo("drives"), web Link to="/drives")
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw. 10 of the 28 keys already existed
+             (translation.{Hours,Last,Locations,Visits,avg,total,visits,locations.empty.cta,
+              locations.filterLabel.search,locations.aiAutoName.applied}); the remaining 18 plain web
+              keys (t('Unique Places'), t('Most Visited'), … the web page uses the English literal as
+              the i18n key) were added as translation.* entries to en/he/ar, plus translation.locations.retry.
+             Note: the resw is normally catalog-generated; this prompt's Allowed-files scope is windows-only
+              (Strings/*.resw), so the keys were added in-place rather than via the cross-platform i18n
+              generator (which would also rewrite android/apple). A pre-existing malformed entry in
+              en/Resources.resw (translation.tesla_sessions.col.cost_decimal was missing its </data>
+              close tag) was repaired so the file I edited is well-formed XML.
+
+Files:
+  feature-views/LocationsPage/LocationsPage.Model.cs      (parser + projection + registration + diagnostics + strings + feed port)
+  feature-views/LocationsPage/LocationsPage.Source.cs     (generated C# client read: GET /locations?vehicle_id&limit&offset)
+  feature-views/LocationsPage/LocationsPage.ViewModel.cs  (INotifyPropertyChanged 4-state holder + search + pagination + units)
+  feature-views/LocationsPage/LocationsPage.cs            (WinUI 3 UserControl, Fluent + design tokens; persistent search/pagination)
+  TeslaSync.App.Tests/FeatureViews/LocationsPageTests.cs  (24 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj          (link the 3 UI-free files; the WinUI view is build-only)
+
+Data sources (P1/S8 ObservableObject VM → generated C# client, web hook name kept at the C# call site):
+  useQuery(['visited-locations', vehicleId, page, pageSize]) -> LocationsClientFeed.FetchAsync,
+    ApiRequest(Operations.Locations.List) Query{ vehicle_id, limit=50, offset=(page-1)*50 }.
+  (Manifest declares no dataSources for this unit, but the web page genuinely fetches /locations and
+   declares 4 data states; the feed is bound so loading/empty/error/success are real, not faked.)
+Units (P1/S5): SI read from the API; total_duration_s formatted only at the display boundary in
+  LocationsProjection via UnitFormatters.FormatDuration (no non-SI stored/computed). The visit/time
+  charts and counts are unit-agnostic integers.
+Live data: none (web page is a single TanStack-Query read, no useLiveX/SSE), so no SSE subscription /
+  staleness chip beyond the header TsDataFreshness chip (ADR-013 live-SSE path n/a).
+
+=== PARITY ===
+PARITY_REQUIRED=44
+
+[1/44]  panel  Unique-Places
+        LocationsProjection.Project -> metrics[0] (s.UniquePlaces, MapPinGlyph, TsColorSuccessBrush=green);
+        LocationsPage.cs::RenderMetrics -> TsMetricCard. evidence-test: Metric_cards_project_six_tiles_with_web_aggregations
+[2/44]  panel  Unique-Cities
+        metrics[1] (s.UniqueCities, WorldGlyph, TsColorInfoBrush=blue), HashSet city dedupe excluding "Unknown"/blank.
+        evidence-test: Metric_cards_project_six_tiles_with_web_aggregations, Unique_cities_ignores_unknown_and_blank
+[3/44]  panel  Total-Visits
+        metrics[2] (s.TotalVisits, HashGlyph, TsColorAccentBrush=cyan), sum(visit_count).
+        evidence-test: Metric_cards_project_six_tiles_with_web_aggregations
+[4/44]  panel  Total-Time
+        metrics[3] (s.TotalTime, ClockGlyph, TsChartPowerBrush=purple), UnitFormatters.FormatDuration(sum(total_duration_s)).
+        evidence-test: Metric_cards_project_six_tiles_with_web_aggregations
+[5/44]  panel  Most-Visited
+        metrics[4] (s.MostVisited, TrophyGlyph, TsColorWarningBrush=amber), locations[0].AddressName ?? em-dash.
+        evidence-test: Metric_cards_project_six_tiles_with_web_aggregations, Most_visited_falls_back_to_em_dash_when_top_location_unnamed
+[6/44]  panel  Avg-Visit
+        metrics[5] (s.AvgVisit, ClockGlyph, TsColorAccentBrush=cyan), FormatDuration(totalTime/totalVisits).
+        evidence-test: Metric_cards_project_six_tiles_with_web_aggregations
+[7/44]  panel  GlassPanel7 (Top Locations by Visits)
+        LocationsPage.cs::_visitsChart (TsChartContainer) wrapped in TsGlassPanel in BuildContent.
+        evidence-test: Charts_have_data_with_brand_roles, Charts_empty_when_no_locations
+[8/44]  panel  GlassPanel8 (Top Locations by Time Spent)
+        LocationsPage.cs::_timeChart (TsChartContainer) wrapped in TsGlassPanel in BuildContent.
+        evidence-test: Charts_have_data_with_brand_roles, Charts_empty_when_no_locations
+[9/44]  panel  GlassPanel9 (All Locations list)
+        LocationsPage.cs::BuildListPanel (TsGlassPanel) — title + TsSearchInput + filter chip + rows + TsPagination + empty.
+        evidence-test: Rows_project_rank_name_and_visit_count, Search_filters_rows_by_address_case_insensitively
+[10/44] panel  GlassPanel10 (per-row location card)
+        LocationsPage.cs::BuildRow (TsGlassPanel) — rank chip + name/stats + visit-count chip; LocationsProjection.BuildRows.
+        evidence-test: Rows_project_rank_name_and_visit_count
+[11/44] chart  BarChart (visits)
+        LocationsProjection.BuildVisitsChart -> ChartRole.Battery (web #10b981 = TsChartBatteryBrush), slice(0,15);
+        LocationsPage.cs::RenderChart -> TsBarChart. evidence-test: Charts_have_data_with_brand_roles, Visits_chart_caps_at_fifteen_bars
+[12/44] chart  BarChart (time/hours)
+        LocationsProjection.BuildTimeChart -> ChartRole.Power (web #a855f7 = TsChartPowerBrush), slice(0,10), hours=round(s/3600,1).
+        evidence-test: Charts_have_data_with_brand_roles, Visits_chart_caps_at_fifteen_bars
+[13/44] state  loading
+        LocationsState.Loading ; LocationsDisplay.ShowLoading ; LocationsPage.cs::_loadingSkeleton (6×TsSkeleton + 3 chart skeletons).
+        evidence-test: State_loading_when_query_in_flight, Projection_resolves_all_keys_even_in_the_loading_state
+[14/44] state  empty
+        LocationsState.Empty (resolved, !HasData) ; ShowContent true with list TsEmptyState "No visited locations recorded yet" + "View drives".
+        evidence-test: State_empty_when_resolved_with_no_locations
+[15/44] state  error
+        LocationsState.Error ; LocationsDisplay.ShowError ; LocationsPage.cs::_errorState (TsQueryError + Retry = locations.retry).
+        evidence-test: State_error_when_query_failed
+[16/44] state  success
+        LocationsState.Success ; LocationsDisplay.ShowContent ; cards + charts + rows + pagination render.
+        evidence-test: State_success_when_locations_present
+[17/44] string All Locations                          LocationsStrings.Resolve s.AllLocations = GetString("All Locations", …) (list title)
+[18/44] string Avg Visit                               s.AvgVisit = GetString("Avg Visit", …) (metric 6 label)
+[19/44] string Clear search                            s.ClearSearch = GetString("Clear search", …) (filtered-empty action)
+[20/44] string Hours                                   s.Hours = GetString("Hours", …) (time chart series)
+[21/44] string Last                                    s.Last = GetString("Last", …) (row stats last-visited)
+[22/44] string Locations                               s.NavTitle = GetString("Locations", …) (nav/window title)
+[23/44] string Most Visited                            s.MostVisited = GetString("Most Visited", …) (metric 5 label)
+[24/44] string No locations                            s.NoLocations = GetString("No locations", …) (list empty title)
+[25/44] string No locations match your search          s.NoLocationsMatch = GetString("No locations match your search", …)
+[26/44] string No time-spent data available            s.NoTimeSpentData = GetString("No time-spent data available", …) (time chart empty)
+[27/44] string No visited location data                s.NoVisitedLocationData = GetString("No visited location data", …) (visits chart empty)
+[28/44] string No visited locations recorded yet       s.NoVisitedRecorded = GetString("No visited locations recorded yet", …)
+[29/44] string Places you've been — ranked by frequency s.Subtitle = GetString("Places you've been \u2014 ranked by frequency", …) (page subtitle)
+[30/44] string Search by address…                      s.SearchByAddress = GetString("Search by address\u2026", …) (SearchHint -> TsSearchInput.PromptText)
+[31/44] string Top Locations by Time Spent (hours)     s.TopByTime = GetString("Top Locations by Time Spent (hours)", …)
+[32/44] string Top Locations by Visits                 s.TopByVisits = GetString("Top Locations by Visits", …)
+[33/44] string Total Time                              s.TotalTime = GetString("Total Time", …) (metric 4 label)
+[34/44] string Total Visits                            s.TotalVisits = GetString("Total Visits", …) (metric 3 label)
+[35/44] string Unique Cities                           s.UniqueCities = GetString("Unique Cities", …) (metric 2 label)
+[36/44] string Unique Places                           s.UniquePlaces = GetString("Unique Places", …) (metric 1 label)
+[37/44] string Visited Locations                       s.Title = GetString("Visited Locations", …) (page header / LocationsRegistration.Title)
+[38/44] string Visits                                  s.Visits = GetString("Visits", …) (visits chart series)
+[39/44] string avg                                     s.Avg = GetString("avg", …) (row stats avg)
+[40/44] string locations.aiAutoName.applied            s.AiAutoNameApplied = GetString("locations.aiAutoName.applied", …)
+[41/44] string locations.empty.cta                     s.EmptyCta = GetString("locations.empty.cta", "View drives") (no-data list CTA)
+[42/44] string locations.filterLabel.search            s.FilterLabelSearch = GetString("locations.filterLabel.search", "Search") (active filter chip)
+[43/44] string total                                   s.Total = GetString("total", …) (row stats total)
+[44/44] string visits                                  s.VisitsLower = GetString("visits", …) (row stats visits)
+# All 28 string keys asserted resolved headlessly via a RecordingLocalizer:
+#   LocationsPageTests.Projection_resolves_every_required_string_key (+ ..._even_in_the_loading_state,
+#   Required_string_key_set_has_exactly_twenty_eight_unique_keys).
+# All four data states + every panel/chart assert their render from the bound LocationsDisplay state holder
+#   (State_*/Metric_cards_*/Charts_*/Rows_*/Search_* tests). Feed request shaping (Operations.Locations.List with
+#   vehicle_id/limit/offset) is pinned by Feed_requests_locations_scoped_to_vehicle_with_paging; VM paging+search
+#   by ViewModel_recomputes_offset_on_page_change + ViewModel_search_filters_without_refetch.
+
+PARITY_COVERED=44
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Maps does not
+# exist in-repo; scanned the real target instead:
+# pwsh ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/LocationsPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App also built standalone: 0 Error(s) / 0 Warning(s); solution warnings are pre-existing CA* in other projects)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (LF/utf-8; new files normalized)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26707, Failed: 0, Skipped: 0
+#   (incl. 24 LocationsPageTests). UITests (TeslaSync.App.UITests) require a WinAppDriver runner and are
+#   RunnerAvailability-gated; the headless parity logic above is fully covered by the unit suite.
+TEST_EXIT=0
+PARITY_COVERED=44
+PARITY_REQUIRED=44
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/LocationsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/LocationsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/he/Resources.resw apps/windows/Strings/ar/Resources.resw \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-maps-LocationsPage.log
+# git commit -m "feat(apps/windows): LocationsPage at web parity (W7 maps)"
+
+EXIT=0
+STATUS=DONE

@@ -192,6 +192,14 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("Exports", static () => new FeatureViews.Exports.ExportsPage());
         // Maps / Temperature Impact page (P2/W7) — parity port of web TemperatureImpactPage at route /temperature-impact.
         _viewModel.PageFactory.Register("TemperatureImpact", static () => new FeatureViews.Maps.TemperatureImpactPage());
+        // Maps / Locations page (P2/W7) — parity port of web LocationsPage at route /locations. The empty-state
+        // "View drives" call-to-action navigates to the drives list (web Link to="/drives").
+        _viewModel.PageFactory.Register("Locations", () =>
+        {
+            var page = new FeatureViews.Maps.LocationsPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
