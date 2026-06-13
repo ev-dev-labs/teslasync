@@ -124,5 +124,14 @@
     "requiredCount": 5,
     "promptId": "p2-windows/W7/windows-page-system-HelpPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-HelpPage.log"
+  },
+  {
+    "unitId": "page:system/StatusApiDocs",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 4,
+    "requiredCount": 4,
+    "promptId": "p2-windows/W7/windows-page-system-StatusApiDocsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-StatusApiDocsPage.log"
   }
 ]
