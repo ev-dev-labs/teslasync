@@ -1,0 +1,163 @@
+=== P4 Shared surface 0145 TourOverlay (Apple) ===
+Artifact : components/feedback/TourOverlay.tsx  →  apps/apple/TeslaSync/shared-surfaces/TourOverlay.*
+Runner   : macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2, iOS 26.5 SDK, swiftlint + swiftformat (brew),
+           xcodegen 2.x, KMP Kotlin/Native 2.4.0 toolchain present (~/.konan).
+Capability: SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 — AVAILABLE. iPhone 16 (iOS) simulator present.
+           ⇒ NOT a platform-capability BLOCKED case.
+
+──────────────────────────────────────────────────────────────────────────────
+SHIPPED FILES (11; allowed scope = apps/apple/TeslaSync/shared-surfaces/TourOverlay.* + this log)
+──────────────────────────────────────────────────────────────────────────────
+TourOverlay.swift            — public surface; GeometryReader viewport; phase switch; scrim; freshness chip
+TourOverlay.Adapter.swift    — slug, load/connection/phase enums, step/rect/placement/viewport, spotlight geom,
+                               projection, a11y dialog-label  (233 lines, under file_length 400)
+TourOverlay.Geometry.swift   — getTooltipPosition port (gap/pad/bottomNav clamps, 4 placements, origin),
+                               progress dots, step counter, nav model  (split out for file_length)
+TourOverlay.Seams.swift      — telemetry (view.opened) + controller (next/prev/skip) seams, update snapshot,
+                               P1/S8 source protocol, in-memory source, P1/S10 i18n facade
+TourOverlay.Model.swift      — @MainActor @Observable state holder; phase + spotlight/tooltip/dots/nav
+                               derivations; next/prev/skip forwarding; stale auto-refresh; view.opened
+TourOverlay.States.swift     — loading skeleton / empty / error leaf chrome (TSEmptyState, TSCard, TSButton)
+TourOverlay.Views.swift      — spotlight even-odd cutout mask, accent border-glow, tooltip card (close/counter/
+                               title/desc/skip/back/next-or-finish), progress dots, freshness chip, active view
+TourOverlay.Previews.swift   — first/middle/last/single step, 4 placements, loading/empty/error/stale/offline
+TourOverlay.strings          — i18n catalog (tour.dialogLabel/close/skip/prev/next/finish + leaf + freshness)
+TourOverlay.AdapterTests.swift — geometry/positioner(all placements+clamps+origin)/dots/counter/nav/projection/a11y
+TourOverlay.Tests.swift      — model lifecycle/commands/auto-refresh/inline-error/derivations
+
+Parity with web source (every branch reproduced):
+  • spotlight cutout (6pt pad) + accent border-glow                       → even-odd mask + RoundedRectangle ring
+  • getTooltipPosition(placement, rect) for top/bottom/left/right + clamps → faithful pure port (unit tested)
+  • close "×" (44pt), step counter {n}/{total}, title, description        → tooltip card
+  • Skip / Back(>0) / Next  •  "Get Started!" on the last step + arrow     → nav model + TSButton
+  • progress dots (wide active accent / narrow muted)                      → TourOverlayProgressDotsView
+  • aria dialogLabel "Tour step {{current}} of {{total}}"                  → VoiceOver container label
+  • `if (!targetRect) return null`                                         → widened to loading/empty/error
+States: loading · empty · error · stale · offline · data — all render, never a blank box.
+i18n: every string via the P1/S10 facade (NSLocalizedString table "TourOverlay"); zero English literals in code.
+Telemetry: model.start() emits P1/S11 view.opened surface="TourOverlay" (once, idempotent).
+A11y: dialog label, per-control labels (close/skip/back/next), scrim = labelled .isButton dismiss, reduce-motion.
+
+──────────────────────────────────────────────────────────────────────────────
+[1] SURFACE-ISOLATED xcodebuild — the REAL TourOverlay.* files compiled + tested against the REAL shared
+    component kit (Sources/Components + Sources/Design) + DesignTokens, byte-identical copies verified
+    (cmp -s, "ALL COPIES BYTE-IDENTICAL TO REAL SURFACE FILES"), Swift 6 strict concurrency, no KMP, no
+    225 sibling surfaces. Module name = TeslaSync so the tests' `@testable import TeslaSync` resolves.
+──────────────────────────────────────────────────────────────────────────────
+iOS  (iPhone 16, iOS 18 simulator):  ** BUILD SUCCEEDED **   ** TEST SUCCEEDED **
+     Executed 42 tests, with 0 failures (0 unexpected).
+     Suites: Accessibility(2) Model(10) Nav(4) Placement(2) Progress(3) Projection(7)
+             SpotlightGeometry(4) StepCounter(1) TooltipPositioner(9).
+IOS_EXIT=0
+
+macOS (macOS 15):                    ** BUILD SUCCEEDED **   ** TEST SUCCEEDED **
+     Executed 42 tests, with 0 failures (0 unexpected).  (benign linkd.autoShortcut service noise only)
+MAC_EXIT=0
+
+Note: a real Swift-6 strict-concurrency error was caught + fixed by this harness — the top-level
+`identityLocalize` test closure required `@Sendable`. Fixed in both test files; re-run green (42/42).
+
+──────────────────────────────────────────────────────────────────────────────
+[2] swiftlint --strict (TourOverlay scope — 10 .swift files)
+──────────────────────────────────────────────────────────────────────────────
+"Done linting! Found 0 violations, 0 serious in 10 files."   (after splitting Adapter→Geometry for file_length)
+LINT_EXIT=0
+
+──────────────────────────────────────────────────────────────────────────────
+[3] swiftformat --lint (TourOverlay scope — 10 .swift files)
+──────────────────────────────────────────────────────────────────────────────
+"0/10 files require formatting."
+FORMAT_EXIT=0
+
+──────────────────────────────────────────────────────────────────────────────
+[4] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/TourOverlay
+──────────────────────────────────────────────────────────────────────────────
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+(manual scan for TODO/FIXME/stub/mock/placeholder/Lorem/fatalError: NONE FOUND)
+PLACEHOLDER_EXIT=0
+
+──────────────────────────────────────────────────────────────────────────────
+[5] WHOLE-TREE / WHOLE-APP gates — RAN, captured honestly, DEFERRED (blocked SOLELY by out-of-allowed-files
+    pre-existing breakage + the shared-runner monolithic-module compile, never by TourOverlay)
+──────────────────────────────────────────────────────────────────────────────
+swiftformat --lint apps/apple (whole tree): 1/5412 files require formatting — the ONE hit is the pre-existing
+    sibling TeslaSync/feature-views/RecentDrivesSection.Previews.swift (redundantType). ZERO in TourOverlay.
+
+swiftlint --strict (whole tree): 3 violations — ALL pre-existing in the sibling
+    TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift (identifier_name a/b/c). ZERO in TourOverlay.
+
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build (whole app):
+    KMP pre-action assembled Shared.xcframework OK (Kotlin/Native 2.4.0). The monolithic single-module
+    compile of ~5,400 Swift files then ** BUILD FAILED ** with a swift-frontend COMPILER CRASH:
+        "Please submit a bug report ... Stack dump:"
+        4. While evaluating request IRGenRequest(IR Generation for file
+           ".../TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+        5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+        "Command SwiftCompile failed with a nonzero exit code"
+    Diagnostics: grep over the full 23,856-line build log → TourOverlay_error_refs=0 (the crash is in the
+    sibling feature-view AppearanceSettings.Controls.swift; an out-of-allowed-files file; a compiler IRGen
+    crash on a SwiftUI `@convention` thunk, aggravated by the single giant TeslaSync module compiled on a
+    shared runner with a concurrent parallel slot). ZERO TourOverlay.* files produced any error or crash.
+
+These whole-tree/whole-app gates are DEFERRED to the integration runner, matching the established P4 Apple
+"surface code-complete + DEFERRED whole-tree gate" precedent (see sibling logs). Every red shown above is
+attributed to a specific pre-existing out-of-scope sibling — none is painted green, none originates in
+TourOverlay.
+
+──────────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+──────────────────────────────────────────────────────────────────────────────
+[x] Surface renders all web-source states on Apple (iOS+macOS): loading/empty/error/stale/offline/data.
+[x] Hooks bind to the shared P1/S8 state-holder layer (TourOverlaySource/Model); no direct HTTP in the view.
+[x] Every i18n key from the source has a matching key in the per-surface P1/S10 catalog (TourOverlay.strings).
+[x] Accessibility labels on every interactive element (close/skip/back/next + scrim) + dialog label + reduce-motion.
+[x] Tests: adapter/geometry unit tests + per-state model/projection tests + a11y label tests (42, all green iOS+macOS).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[x] view.opened telemetry emitted with surface slug "TourOverlay".
+
+──────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+──────────────────────────────────────────────────────────────────────────────
+ 1 No red-as-green   : the whole-tree swiftlint/swiftformat reds + the whole-app swift-frontend crash are
+                       SHOWN with file:line and attributed to specific pre-existing out-of-scope siblings
+                       (RecentDrivesSection.Previews, WidgetChartSummary.Tests, AppearanceSettings.Controls) —
+                       not painted green. The SURFACE-scoped results are the REAL captured exits.
+ 2 No scope narrowing: every web branch — inactive→empty, active first/middle/last/single, all 4 placements,
+                       reduce-motion, progress dots, step counter, skip/back/next/finish — implemented + tested.
+ 3 No skip-and-assume: iOS xcodebuild build+test RAN (42/42); macOS xcodebuild build+test RAN (42/42); the
+                       whole-app build RAN to its crash; the whole-tree lint/format RAN; all observed directly.
+ 4 No stubs as final : complete implementations; PLACEHOLDER_COUNT=0.
+ 5 No parity shortcuts: faithful port of the spotlight + getTooltipPosition geometry, the first/last button
+                       shapes, the progress dots, the dialog label, and every i18n key.
+ 6 No delegation      : authored directly (no sub-agent delegation of the surface).
+ 7 No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat / Tokens.swift / shared
+                       components / sibling surfaces; strings ship as the per-surface "TourOverlay" table; the
+                       isolated xcodegen project + the generated app .xcodeproj live in /tmp or were removed —
+                       not committed.
+ 8 No commit on red   : committing on green SURFACE-scoped gates — iOS build+test (42/42), macOS build+test
+                       (42/42), scoped swiftlint (0), scoped swiftformat (0), placeholder (0). The whole-app
+                       build + whole-tree lint/format are DEFERRED, each blocked SOLELY by pre-existing
+                       out-of-allowed-files breakage / the shared-runner monolith compile, never by this surface.
+ 9 No silent drift    : `git status` lists ONLY apps/apple/TeslaSync/shared-surfaces/TourOverlay.* (+ this log).
+                       project.yml / .swiftlint.yml / .swiftformat / Tokens.swift are byte-for-byte unchanged.
+10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED> below.
+
+──────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+──────────────────────────────────────────────────────────────────────────────
+Production-polished native TourOverlay shipped at parity with the web source and verified by every in-scope
+means: SURFACE-isolated `xcodebuild` ** BUILD SUCCEEDED ** + ** TEST SUCCEEDED ** (42/42) on the iPhone 16
+iOS-18 simulator AND ** BUILD SUCCEEDED ** + ** TEST SUCCEEDED ** (42/42) on macOS-15, both under Swift 6
+strict concurrency against the REAL shared component kit + tokens, plus green scoped swiftlint (0) + scoped
+swiftformat (0) + placeholder (0). The whole-app `xcodebuild build` and whole-tree `swiftlint --strict` /
+`swiftformat --lint apps/apple` are DEFERRED to the integration runner — blocked SOLELY by (i) a swift-frontend
+IRGen COMPILER CRASH on the out-of-scope sibling feature-view AppearanceSettings.Controls.swift inside the one
+giant TeslaSync module, and (ii) two pre-existing sibling lint/format reds (RecentDrivesSection.Previews,
+WidgetChartSummary.Tests). ZERO errors originate in any TourOverlay.* file (TourOverlay_error_refs=0 across the
+full 23,856-line whole-app build log). This matches the established P4 Apple "surface code-complete + DEFERRED
+whole-tree/whole-app gate" precedent.
+
+EXIT=0
+STATUS=DONE
