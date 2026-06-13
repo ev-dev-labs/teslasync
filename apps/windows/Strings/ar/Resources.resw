@@ -24182,4 +24182,61 @@
   <data name="translation.driveScore.tips.tirePressure" xml:space="preserve">
     <value>Keep tire pressure at recommended levels for better efficiency.</value>
   </data>
+  <data name="translation.All Locations" xml:space="preserve">
+    <value>All Locations</value>
+  </data>
+  <data name="translation.Avg Visit" xml:space="preserve">
+    <value>Avg Visit</value>
+  </data>
+  <data name="translation.Clear search" xml:space="preserve">
+    <value>Clear search</value>
+  </data>
+  <data name="translation.Most Visited" xml:space="preserve">
+    <value>Most Visited</value>
+  </data>
+  <data name="translation.No locations" xml:space="preserve">
+    <value>No locations</value>
+  </data>
+  <data name="translation.No locations match your search" xml:space="preserve">
+    <value>No locations match your search</value>
+  </data>
+  <data name="translation.No time-spent data available" xml:space="preserve">
+    <value>No time-spent data available</value>
+  </data>
+  <data name="translation.No visited location data" xml:space="preserve">
+    <value>No visited location data</value>
+  </data>
+  <data name="translation.No visited locations recorded yet" xml:space="preserve">
+    <value>No visited locations recorded yet</value>
+  </data>
+  <data name="translation.Places you've been — ranked by frequency" xml:space="preserve">
+    <value>Places you've been — ranked by frequency</value>
+  </data>
+  <data name="translation.Search by address…" xml:space="preserve">
+    <value>Search by address…</value>
+  </data>
+  <data name="translation.Top Locations by Time Spent (hours)" xml:space="preserve">
+    <value>Top Locations by Time Spent (hours)</value>
+  </data>
+  <data name="translation.Top Locations by Visits" xml:space="preserve">
+    <value>Top Locations by Visits</value>
+  </data>
+  <data name="translation.Total Time" xml:space="preserve">
+    <value>Total Time</value>
+  </data>
+  <data name="translation.Total Visits" xml:space="preserve">
+    <value>Total Visits</value>
+  </data>
+  <data name="translation.Unique Cities" xml:space="preserve">
+    <value>Unique Cities</value>
+  </data>
+  <data name="translation.Unique Places" xml:space="preserve">
+    <value>Unique Places</value>
+  </data>
+  <data name="translation.Visited Locations" xml:space="preserve">
+    <value>Visited Locations</value>
+  </data>
+  <data name="translation.locations.retry" xml:space="preserve">
+    <value>Retry</value>
+  </data>
 </root>

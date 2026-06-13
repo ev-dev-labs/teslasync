@@ -79,5 +79,14 @@
     "requiredCount": 18,
     "promptId": "p2-windows/W7/windows-page-dashboard-QuickStatsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-dashboard-QuickStatsPage.log"
+  },
+  {
+    "unitId": "page:maps/Locations",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 44,
+    "requiredCount": 44,
+    "promptId": "p2-windows/W7/windows-page-maps-LocationsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-maps-LocationsPage.log"
   }
 ]
