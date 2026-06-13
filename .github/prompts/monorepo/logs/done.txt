@@ -592,3 +592,4 @@ p3-android/shared-meaningful/A-0004-AIAlertTuningSuggestions.prompt.md
 p3-android/shared-meaningful/A-0006-AIAutoNameUnnamedLocations.prompt.md
 p3-android/shared-meaningful/A-0002-RouteAnnouncer.prompt.md
 p3-android/shared-meaningful/A-0001-AnnouncerRegion.prompt.md
+p3-android/shared-meaningful/A-0007-AIAutoTripNameSuggestion.prompt.md
