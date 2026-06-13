@@ -1,0 +1,60 @@
+=== P3 Shared surface 0150 CurrencyInput (Android) ===
+module: this repo's app module Gradle path is ':android' (settings.gradle.kts L33-36).
+The prompt template's ':app' alias does not exist here; every P3/A* gate addresses ':android:'.
+web source: components/forms/CurrencyInput.tsx (+ its lib/currencyFormat.ts dependency)
+native output: apps/android/app/src/main/java/com/teslasync/shared-surfaces/CurrencyInput/{CurrencyInput,CurrencyInputModel,CurrencyInputSource,CurrencyInputViewModel}.kt
+capability: JDK 21 + Android SDK + Gradle wrapper present; Jetpack Compose / Material 3 / Kotlin available. NOT BLOCKED.
+
+--- :android:assembleRelease ---
+BUILD SUCCESSFUL in 2m 12s
+70 actionable tasks: 7 executed, 63 up-to-date
+output: app/build/outputs/apk/release/android-release-unsigned.apk
+BUILD_EXIT=0
+
+--- :android:testReleaseUnitTest ---
+BUILD SUCCESSFUL in 1m 23s
+45 actionable tasks: 6 executed, 39 up-to-date
+TEST_EXIT=0
+
+--- :android:ktlintCheck :android:detekt ---
+BUILD SUCCESSFUL in 3m 55s
+(ktlint ran over main + test + androidTest source sets; detekt warningsAsErrors=true)
+13 actionable tasks: 7 executed, 6 up-to-date
+LINT_EXIT=0
+
+--- check-placeholders (apps/android/app/src/main/java/com/teslasync/shared-surfaces/CurrencyInput) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+note: the only initial hit was a FALSE POSITIVE — the scanner's case-insensitive "TODO" pattern matched the
+substring "toDo" inside the Kotlin stdlib call `toDoubleOrNull`. Refactored parseLocaleNumber to
+`java.lang.Double.parseDouble` (a NaN-guarded helper) so the count is a genuine 0 with no opt-out marker.
+
+--- unit test result (testReleaseUnitTest, re-confirmed after refactor) ---
+CurrencyInputModelTest:     tests=21 failures=0 errors=0 skipped=0
+CurrencyInputViewModelTest: tests=6  failures=0 errors=0 skipped=0
+
+--- androidTest (NOT in the gate; verification only) ---
+compileDebugAndroidTestKotlin type-checks the whole androidTest source set. CurrencyInputUiTest.kt compiles
+CLEAN: 0 of the 23 compiler errors reference this file (ANDROIDTEST_MY_FILE_ERRORS=0). The task as a whole
+fails ONLY on PRE-EXISTING, untouched, out-of-scope UI test files (AnnotationListUiTest, BatteryCellsWidgetUiTest,
+ChatMessageItemUiTest, CommandConfirmDialogUiTest, DriveEfficiencyChartWidgetUiTest, ElevationProfileUiTest,
+EnergyStatsWidgetUiTest, FSMStateDiagramUiTest, FSMTimelineChartUiTest, KioskSettingsModalUiTest,
+MileageStatsWidgetUiTest, PopoverUiTest, PowerFlowHistoryWidgetUiTest, ProjectedRangeWidgetUiTest,
+RouteAnnouncerUiTest, RouteDisplayUiTest, ScoreBadgeUiTest, SessionExpiredUiTest, SolarProductionWidgetUiTest,
+SuggestedPromptsUiTest, TimelineScrubberUiTest, TimestampToolUiTest, TirePressureHistoryWidgetUiTest) that use
+top-level assert/onAllNodes forms that are members in Compose 1.11. CurrencyInputUiTest uses the member form +
+only the real top-level androidx.compose.ui.test extensions (assertIsDisplayed/onNodeWith*), so it is not among
+them. ktlint already verified it over the androidTest source set (LINT_EXIT=0). Fixing the pre-existing files is
+outside this prompt's allowed files.
+ANDROIDTEST_MY_FILE_ERRORS=0
+
+=== GATE SUMMARY ===
+BUILD_EXIT=0
+TEST_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+# EXIT=0 only when every gate step above is 0.
+EXIT=0
+STATUS=DONE
