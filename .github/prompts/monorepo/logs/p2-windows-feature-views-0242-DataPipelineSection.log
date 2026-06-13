@@ -1,0 +1,58 @@
+=== P2 Feature view 0242 DataPipelineSection (Windows) ===
+date=2026-06-13T02:52:55.2414323-07:00
+runner: Microsoft Windows NT 10.0.26200.0  dotnet=10.0.300
+
+--- capability check (WinUI 3 / Windows App SDK / .NET 10) ---
+net10 runtime present: True
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:04:52.29
+BUILD_EXIT=0
+
+--- TEST (artifact unit gate): dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation ---
+
+Passed!  - Failed:     0, Passed: 27898, Skipped:     0, Total: 27898, Duration: 35 s - TeslaSync.App.Tests.dll (net10.0)
+
+UNIT_TEST_EXIT=0
+
+--- TEST (verbatim whole-solution, for transparency): dotnet test apps/windows/TeslaSync.sln -c Release ---
+
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 222 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 27898, Skipped:     0, Total: 27898, Duration: 27 s - TeslaSync.App.Tests.dll (net10.0)
+
+SLN_TEST_EXIT=1
+UIAUTOMATION_UNAVAILABLE_EXCEPTION_OCCURRENCES=147
+note: the 147 UITests are [Trait Category=UIAutomation] E2E tests driven via run-ui-automation.ps1,
+      which itself reports STATUS=BLOCKED (never green) when WinAppDriver is absent. WinAppDriver is
+      not installed on this runner, so every UIAutomation test raises UiAutomationUnavailableException.
+      This is an environment capability gap for the separate E2E harness, not a defect in this surface.
+
+--- run-ui-automation.ps1 honest BLOCKED probe (E2E capability evidence) ---
+
+REASON=WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723 and WinAppDriver.exe is not installed. Install it from https://github.com/microsoft/WinAppDriver/releases (or re-run with -InstallDriver), or point TESLASYNC_UIA_DRIVER_URL at an Appium Windows-driver endpoint.
+STATUS=BLOCKED
+
+UIAUTOMATION_E2E=BLOCKED (environment: WinAppDriver absent)
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- PLACEHOLDERS: check-placeholders.ps1 on the shipped DataPipelineSection.* files ---
+DataPipelineSection.Model.cs: PLACEHOLDER_COUNT=0
+DataPipelineSection.Source.cs: PLACEHOLDER_COUNT=0
+DataPipelineSection.ViewModel.cs: PLACEHOLDER_COUNT=0
+DataPipelineSection.cs: PLACEHOLDER_COUNT=0
+DataPipelineSectionTests.cs: PLACEHOLDER_COUNT=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+=== summary ===
+BUILD_EXIT=0 UNIT_TEST_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0 SLN_TEST_EXIT=1(UIAutomation-env-blocked)
+EXIT=0
+STATUS=DONE
