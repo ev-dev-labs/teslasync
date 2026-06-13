@@ -579,3 +579,4 @@ p3-android/modals-dialogs/A-0018-EntryDrawer.prompt.md
 p3-android/modals-dialogs/A-0025-KioskSettingsModal.prompt.md
 p3-android/modals-dialogs/A-0023-ExportModal.prompt.md
 p3-android/modals-dialogs/A-0020-QueueJobDrawer.prompt.md
+p3-android/modals-dialogs/A-0021-TOUSettingsModal.prompt.md
