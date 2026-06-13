@@ -758,3 +758,4 @@ p2-windows/pages/driving/SpeedProfilePage.prompt.md
 p2-windows/pages/driving/TripPlannerPage.prompt.md
 p2-windows/pages/driving/TripReplayPage.prompt.md
 p2-windows/pages/exports/ExportsPage.prompt.md
+p2-windows/pages/maps/TemperatureImpactPage.prompt.md
