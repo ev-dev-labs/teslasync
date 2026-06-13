@@ -585,3 +585,4 @@ p3-android/modals-dialogs/A-0027-WidgetSettingsModal.prompt.md
 p3-android/modals-dialogs/A-0024-ImportPreviewModal.prompt.md
 p3-android/modals-dialogs/A-0029-CommandConfirmDialog.prompt.md
 p3-android/modals-dialogs/A-0030-CommandInputDialog.prompt.md
+p3-android/modals-dialogs/A-0031-CommandSelectDialog.prompt.md
