@@ -604,3 +604,4 @@ p3-android/shared-meaningful/A-0014-AICrossRuleConflictDetection.prompt.md
 p3-android/shared-meaningful/A-0017-AIDriveCoaching.prompt.md
 p3-android/shared-meaningful/A-0016-AIDigestNarration.prompt.md
 p3-android/shared-meaningful/A-0009-AICabinTemperatureImpactNarrative.prompt.md
+p3-android/shared-meaningful/A-0018-AIFeatureCard.prompt.md
