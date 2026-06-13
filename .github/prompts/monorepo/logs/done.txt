@@ -811,3 +811,4 @@ p2-windows/shared-meaningful/W-0099-ProgressRing.prompt.md
 p2-windows/shared-meaningful/W-0113-AlertBanner.prompt.md
 p2-windows/shared-meaningful/W-0116-DraftRecoveryBanner.prompt.md
 p2-windows/shared-meaningful/W-0096-PlaybackControls.prompt.md
+p2-windows/shared-meaningful/W-0123-ImpersonationBanner.prompt.md
