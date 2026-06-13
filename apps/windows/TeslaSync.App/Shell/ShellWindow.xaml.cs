@@ -149,6 +149,9 @@ public sealed partial class ShellWindow : Window
         // route /tesla-charging-sessions.
         _viewModel.PageFactory.Register("TeslaChargingSessions", static () => new FeatureViews.Charging.TeslaChargingSessionsPage());
 
+        // Driving / Trip Planner page (P2/W7) — parity port of web TripPlannerPage at route /trip-planner.
+        _viewModel.PageFactory.Register("TripPlanner", static () => new FeatureViews.Driving.TripPlannerPage());
+
         // Dashboard / Quick Stats page (P2/W7) — parity port of web QuickStatsPage at route /quick-stats. The
         // footer "Open Dashboard" link navigates to the dashboard root (web Link to="/").
         _viewModel.PageFactory.Register("QuickStats", () =>
