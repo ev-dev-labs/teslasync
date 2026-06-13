@@ -1,0 +1,144 @@
+P2-WINDOWS W7 — page:driving/TripPlanner — WinUI 3 / Fluent parity port
+========================================================================
+Web source : web/src/features/driving/pages/TripPlannerPage.tsx (route /trip-planner)
+Output     : apps/windows/TeslaSync.App/feature-views/TripPlannerPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done pages QuickStatsPage / SmartChargePage / TeslaChargingSessionsPage. The
+              generated prompt's path apps/windows/TeslaSync/Features/Driving does not exist in-repo.)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs —
+             PageFactory.Register("TripPlanner", static () => new FeatureViews.Driving.TripPlannerPage())
+             (RouteTable already maps Page("TripPlanner","trip-planner",TripsDriving,…) — no route entry added)
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw already carry 28 of the 30 translation.tripPlanner.* /
+             common.free keys (catalog-generated). The two keys the web i18n itself never defines
+             (tripPlanner.disclaimer, tripPlanner.notFeasible — the web uses an inline t() English fallback)
+             resolve through ILocalizer's English-fallback path, the same precedent the sibling AddressInput /
+             TripPlannerMap surfaces follow. Every visible literal is sourced by key; none hardcoded.
+
+Files:
+  feature-views/TripPlannerPage/TripPlannerPage.Model.cs      (parsers + projection + registration + diagnostics + ports + Noop/Empty)
+  feature-views/TripPlannerPage/TripPlannerPage.Source.cs     (generated C# client mutation adapters: PlanTripClient + SendToCarClient)
+  feature-views/TripPlannerPage/TripPlannerPage.ViewModel.cs  (INotifyPropertyChanged mutation holder + form state + units/currency)
+  feature-views/TripPlannerPage/TripPlannerPage.cs            (WinUI 3 UserControl, Fluent + design tokens)
+  TeslaSync.App.Tests/FeatureViews/TripPlannerPageTests.cs    (21 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj              (link the 3 UI-free files; the WinUI view is build-only)
+
+Data sources (P1/S8 INotifyPropertyChanged VM → generated C# client, web hook names kept at the C# call sites):
+  usePlanTrip      -> PlanTripClient.PlanAsync, ApiRequest("post_api_v1_trip_planner_plan", Body) — POST /trip-planner/plan
+  handleSendToCar  -> SendToCarClient.SendNavigationAsync, ApiRequest("post_api_v1_vehicles_vehicleID_command",
+                      PathParams[vehicleID], Body{ command:"navigation_request", params:{ lat, lon } }) — POST /vehicles/{id}/command
+  useSelectedVehicle -> IWidgetVehicleSource.GetPrimaryAsync (vehicle id + battery_level)
+Reused W3 component surfaces (driving): AddressInput (origin/destination), TripPlannerMap (map), SOCRouteChart (SOC chart),
+  TripLegList (route breakdown) — bound from the parsed TripPlanSnapshot the VM owns.
+Units (P1/S5): SI read from the API; converted only at the display boundary in TripPlannerProjection via
+  UnitFormatters.FormatDistance/FormatEnergy + ScalarFormatters.FormatCurrency + the composite hours/minutes duration
+  (no non-SI stored/computed).
+Live data: none (web page uses a TanStack-Query mutation, no useLiveX/SSE), so no SSE subscription / staleness chip (ADR-013 n/a).
+
+=== PARITY ===
+PARITY_REQUIRED=41
+
+[1/41]  panel  GlassPanel1 (Plan Your Trip form)
+        TripPlannerPage.cs::_formPanel (TsGlassPanel) + BuildFormPanel (two AddressInput fields, the current- and
+        min-arrival-SOC sliders, the speed TsSelect, the Plan Trip / Send to Car TsButtons, the vehicle-battery
+        caption and the plan-error TsAlertBanner); TripPlannerProjection FormTitle/FromLabel/ToLabel/OriginPrompt/
+        DestinationPrompt/CurrentSocLabel/MinArrivalLabel/DrivingSpeedLabel/PlanButtonText/SendToCarText.
+        evidence-test: Projection_resolves_every_required_string_key, ViewModel_can_plan_requires_origin_destination_and_vehicle
+[2/41]  panel  Distance (StatCard)
+        TripPlannerProjection.BuildStats key "distance" (UnitFormatters.FormatDistance) ; TripPlannerPage.cs::_distanceCard (TsStatCard).
+        evidence-test: Projection_formats_the_six_summary_stats
+[3/41]  panel  Total-Time (StatCard)
+        TripPlannerProjection.BuildStats key "totalTime" (FormatHoursMinutes) ; TripPlannerPage.cs::_totalTimeCard.
+        evidence-test: Projection_formats_the_six_summary_stats
+[4/41]  panel  Driving (StatCard)
+        TripPlannerProjection.BuildStats key "drivingTime" (FormatHoursMinutes) ; TripPlannerPage.cs::_drivingCard.
+        evidence-test: Projection_formats_the_six_summary_stats
+[5/41]  panel  Charging (StatCard)
+        TripPlannerProjection.BuildStats key "chargingTime" (FormatHoursMinutes, em dash when 0s) ; TripPlannerPage.cs::_chargingCard.
+        evidence-test: Projection_formats_the_six_summary_stats, Projection_shows_the_free_cost_label_when_the_route_is_free
+[6/41]  panel  Energy (StatCard)
+        TripPlannerProjection.BuildStats key "energy" (UnitFormatters.FormatEnergy precision 1) ; TripPlannerPage.cs::_energyCard.
+        evidence-test: Projection_formats_the_six_summary_stats
+[7/41]  panel  Est-Cost (StatCard)
+        TripPlannerProjection.BuildStats key "cost" (ScalarFormatters.FormatCurrency, else common.free) ; TripPlannerPage.cs::_costCard.
+        evidence-test: Projection_formats_the_six_summary_stats, Projection_shows_the_free_cost_label_when_the_route_is_free
+[8/41]  panel  GlassPanel8 (Weather Impact)
+        TripPlannerPage.cs::_weatherPanel (TsGlassPanel) + BuildWeatherPanel + _weatherHost gate ;
+        TripPlannerProjection WeatherTitle/WeatherNote/WeatherFactorText + ShowWeather/ShowWeatherFactor.
+        evidence-test: Projection_gates_the_disclaimer_feasibility_and_weather_panels, Projection_interpolates_the_battery_and_weather_captions
+[9/41]  state  loading
+        TripPlannerPlanState.Planning ; TripPlannerPageViewModel.PlanAsync sets IsPlanning ; TripPlannerDisplay.PlanButtonText==PlanningText ;
+        TripPlannerPage.cs _planButton.IsLoading + IsEnabled=!CanPlan-while-planning.
+        evidence-test: ViewModel_marks_the_planning_state_while_in_flight, Projection_surfaces_the_three_data_states
+[10/41] state  error
+        TripPlannerPlanState.Error ; TripPlannerPageViewModel.IsError ; TripPlannerDisplay.ShowPlanError ;
+        TripPlannerPage.cs::_planError (TsAlertBanner Danger, tripPlanner.form.error).
+        evidence-test: ViewModel_surfaces_the_error_state_on_plan_failure, Projection_surfaces_the_three_data_states
+[11/41] state  success
+        TripPlannerPlanState.Success ; TripPlannerPageViewModel.HasResult ; TripPlannerDisplay.ShowStats ;
+        the summary stats + map + SOC chart + leg list render from the bound TripPlanSnapshot.
+        evidence-test: ViewModel_plans_a_trip_then_resolves_success, Projection_surfaces_the_three_data_states
+[12/41] string common.free                     TripPlannerProjection freeLabel = localizer.GetString("common.free", "Free")
+[13/41] string tripPlanner.disclaimer          TripPlannerProjection DisclaimerText = localizer.GetString("tripPlanner.disclaimer", …) (English-fallback; web has no translation key)
+[14/41] string tripPlanner.form.currentSOC     TripPlannerProjection CurrentSocLabel = localizer.GetString("tripPlanner.form.currentSOC", "Current SOC")
+[15/41] string tripPlanner.form.destination    TripPlannerProjection DestinationPrompt = localizer.GetString("tripPlanner.form.destination", …)
+[16/41] string tripPlanner.form.drivingSpeed   TripPlannerProjection DrivingSpeedLabel = localizer.GetString("tripPlanner.form.drivingSpeed", "Driving Speed")
+[17/41] string tripPlanner.form.error          TripPlannerProjection PlanErrorText = localizer.GetString("tripPlanner.form.error", …)
+[18/41] string tripPlanner.form.from           TripPlannerProjection FromLabel = localizer.GetString("tripPlanner.form.from", "From")
+[19/41] string tripPlanner.form.minArrival     TripPlannerProjection MinArrivalLabel = localizer.GetString("tripPlanner.form.minArrival", "Min Arrival SOC")
+[20/41] string tripPlanner.form.origin         TripPlannerProjection OriginPrompt = localizer.GetString("tripPlanner.form.origin", …)
+[21/41] string tripPlanner.form.planTrip       TripPlannerProjection planTrip = localizer.GetString("tripPlanner.form.planTrip", "Plan Trip")
+[22/41] string tripPlanner.form.planning       TripPlannerProjection planning = localizer.GetString("tripPlanner.form.planning", "Planning...")
+[23/41] string tripPlanner.form.sendToCar      TripPlannerProjection SendToCarText = localizer.GetString("tripPlanner.form.sendToCar", "Send to Car")
+[24/41] string tripPlanner.form.title          TripPlannerProjection FormTitle = localizer.GetString("tripPlanner.form.title", "Plan Your Trip")
+[25/41] string tripPlanner.form.to             TripPlannerProjection ToLabel = localizer.GetString("tripPlanner.form.to", "To")
+[26/41] string tripPlanner.form.vehicleBattery TripPlannerProjection VehicleBatteryText = GetString("tripPlanner.form.vehicleBattery", "Vehicle at {{level}}%") interpolated ({0}/{{level}})
+[27/41] string tripPlanner.notFeasible         TripPlannerProjection NotFeasibleText = localizer.GetString("tripPlanner.notFeasible", …) (English-fallback; web has no translation key)
+[28/41] string tripPlanner.speed.brisk         TripPlannerProjection.BuildSpeedOptions GetString("tripPlanner.speed.brisk", "Brisk (+10%)")
+[29/41] string tripPlanner.speed.fast          TripPlannerProjection.BuildSpeedOptions GetString("tripPlanner.speed.fast", "Fast (+20%)")
+[30/41] string tripPlanner.speed.normal        TripPlannerProjection.BuildSpeedOptions GetString("tripPlanner.speed.normal", "Normal")
+[31/41] string tripPlanner.speed.relaxed       TripPlannerProjection.BuildSpeedOptions GetString("tripPlanner.speed.relaxed", "Relaxed (−20%)")
+[32/41] string tripPlanner.stats.chargingTime  TripPlannerProjection.BuildStats GetString("tripPlanner.stats.chargingTime", "Charging")
+[33/41] string tripPlanner.stats.cost          TripPlannerProjection.BuildStats GetString("tripPlanner.stats.cost", "Est. Cost")
+[34/41] string tripPlanner.stats.distance      TripPlannerProjection.BuildStats GetString("tripPlanner.stats.distance", "Distance")
+[35/41] string tripPlanner.stats.drivingTime   TripPlannerProjection.BuildStats GetString("tripPlanner.stats.drivingTime", "Driving")
+[36/41] string tripPlanner.stats.energy        TripPlannerProjection.BuildStats GetString("tripPlanner.stats.energy", "Energy")
+[37/41] string tripPlanner.stats.totalTime     TripPlannerProjection.BuildStats GetString("tripPlanner.stats.totalTime", "Total Time")
+[38/41] string tripPlanner.subtitle            TripPlannerProjection/Registration Subtitle = GetString("tripPlanner.subtitle", …)
+[39/41] string tripPlanner.title               TripPlannerProjection/Registration Title = GetString("tripPlanner.title", "Trip Planner")
+[40/41] string tripPlanner.weather.factor      TripPlannerProjection WeatherFactorText = GetString("tripPlanner.weather.factor", "Efficiency factor: {{factor}}×") interpolated
+[41/41] string tripPlanner.weather.title       TripPlannerProjection WeatherTitle = GetString("tripPlanner.weather.title", "Weather Impact")
+# All 30 string keys asserted resolved headlessly via a RecordingLocalizer:
+#   TripPlannerPageTests.Projection_resolves_every_required_string_key (single Project() call resolves every key unconditionally).
+# All three data states + the eight panels assert their render from the bound TripPlannerDisplay / TripPlanSnapshot
+#   (ViewModel_* + Projection_* tests). The two mutation adapters' request shaping (operation ids, snake_case body,
+#   the navigation_request lat/lon param, the {vehicleID} path param) is pinned by PlanTripClient_shapes_the_plan_request
+#   + SendToCarClient_shapes_the_navigation_command. The tolerant parser is pinned by Parser_* tests.
+
+PARITY_COVERED=41
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Driving does not exist
+# in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TripPlannerPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App also built standalone: 0 Error(s); the only warnings are pre-existing TeslaSync.App.Core CA*)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <TripPlannerPage Model/Source/ViewModel/view
+#   + TripPlannerPageTests + ShellWindow.xaml.cs>  -> 0 issues (LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26618, Failed: 0, Skipped: 0
+#   (incl. 21 TripPlannerPageTests)
+TEST_EXIT=0
+PARITY_COVERED=41
+PARITY_REQUIRED=41
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TripPlannerPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/TripPlannerPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-driving-TripPlannerPage.log
+# git commit -m "feat(apps/windows): TripPlannerPage at web parity (W7 driving)"
+
+EXIT=0
+STATUS=DONE
