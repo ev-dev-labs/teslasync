@@ -282,6 +282,17 @@ public sealed partial class ShellWindow : Window
         // bound to useSettings) around the already-ported AISettings surface. RouteTable already maps
         // Page("Helix","integrations/helix",SettingsAccountIntegrations).
         _viewModel.PageFactory.Register("Helix", static () => new FeatureViews.Settings.HelixPage());
+        // Settings / Account / Integrations — Settings page (P2/W7) — parity port of web SettingsPage at route
+        // /settings. The cross-page search box and the Data Export panel deep-link to other routes; the Onboarding
+        // Tour launcher re-runs the guided walkthrough (web dispatchTourLauncherOpen → the Onboarding route). The
+        // setup-checklist restart surfaces its own confirmation toast in-page (web restartChecklist + toast).
+        _viewModel.PageFactory.Register("Settings", () =>
+        {
+            var page = new FeatureViews.Settings.SettingsPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            page.TourLauncherRequested += (_, _) => NavigateTo("onboarding");
+            return page;
+        });
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
