@@ -142,5 +142,14 @@
     "requiredCount": 42,
     "promptId": "p2-windows/W7/windows-page-trips-TripReplayPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-trips-TripReplayPage.log"
+  },
+  {
+    "unitId": "page:vehicles/VehicleAccess",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 32,
+    "requiredCount": 32,
+    "promptId": "p2-windows/W7/windows-page-vehicles-VehicleAccessPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicles-VehicleAccessPage.log"
   }
 ]
