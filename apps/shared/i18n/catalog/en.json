@@ -21954,6 +21954,47 @@
       "translated": true,
       "value": "Unknown"
     },
+    "translation.nav.favorites": {
+      "tokens": [],
+      "translated": true,
+      "value": "Favorites"
+    },
+    "translation.nav.filterClear": {
+      "tokens": [],
+      "translated": true,
+      "value": "Clear filter"
+    },
+    "translation.nav.filterNoMatch": {
+      "tokens": [],
+      "translated": true,
+      "value": "No matches."
+    },
+    "translation.nav.pinPage": {
+      "tokens": [
+        "page"
+      ],
+      "translated": true,
+      "value": "Pin {{page}} to favorites"
+    },
+    "translation.nav.sidebar": {
+      "tokens": [],
+      "translated": true,
+      "value": "Sidebar navigation"
+    },
+    "translation.nav.staleCount": {
+      "tokens": [
+        "count"
+      ],
+      "translated": true,
+      "value": "{{count}} stale rows"
+    },
+    "translation.nav.vehicleCount": {
+      "tokens": [
+        "count"
+      ],
+      "translated": true,
+      "value": "{{count}} vehicles"
+    },
     "translation.nav.unpinCurrent": {
       "tokens": [],
       "translated": true,
