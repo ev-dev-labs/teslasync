@@ -1,0 +1,126 @@
+P2-WINDOWS W7 — page:system/Commands — WinUI 3 / Fluent parity port
+=========================================================================
+Web source : web/src/features/system/pages/CommandsPage.tsx (route /commands)
+Output     : apps/windows/TeslaSync.App/feature-views/CommandsPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done pages QuickStatsPage/ExportsPage/ApiLogsPage). The generated prompt's path
+              apps/windows/TeslaSync/Features/System/CommandsPage.xaml does not exist in-repo;
+              the real WinUI feature-view target was used instead.
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("Commands", …)
+             (RouteTable already maps Page("Commands","commands",SystemOps,"Commands","\uE756");
+              the header "View History" link navigates to CommandHistory route "command-history",
+              web Link to="/command-history").
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw already carry all 13 required keys
+             (translation.{Asleep,Online,Refresh,Vehicles,online,common.noData,
+              commands.{pageTitle,subtitle,title,viewHistory,statesError,noVehicles,connectFleet}})
+             — catalog-generated, resolved by key; none added.
+
+Files:
+  feature-views/CommandsPage/CommandsPage.Model.cs      (parsers + projection + registration + diagnostics + source port)
+  feature-views/CommandsPage/CommandsPage.Source.cs     (generated C# client cache-then-network: vehicles + per-vehicle state)
+  feature-views/CommandsPage/CommandsPage.ViewModel.cs  (3-state holder loading/loaded/empty + units, 15s refresh path)
+  feature-views/CommandsPage/CommandsPage.cs            (WinUI 3 UserControl, Fluent + design tokens, DispatcherTimer 15s)
+  TeslaSync.App.Tests/FeatureViews/CommandsPageTests.cs (31 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj        (link the 3 UI-free files; the WinUI view is build-only)
+  apps/parity/windows-ledger.json                       (page:system/Commands → done 21/21)
+
+Data sources (P1/S8 ObservableObject VM → generated C# client, web hook names kept at the C# call sites):
+  useVehicles (GET /vehicles)               -> CommandsSource.FetchAsync step 1, ApiRequest(Operations.Vehicles.List)
+  command-vehicle-states (per-vehicle       -> CommandsSource.FetchAsync step 2, ApiRequest(Operations.Vehicles.State, vehicleID),
+    GET /vehicles/{vehicleID}/state)            per-vehicle try/catch → null (web catch → null); systemic outage → StatesError
+  The manifest declares no dataSources for this page (the web page reads inline request() rather than a named
+  hook), so the generator saw none; the real reads are still ported in full — no scope narrowing.
+Units (P1/S5): SI read from the API; converted only at the display boundary in CommandsProjection.Center via
+  UnitConverters.DistanceFromSi (rated_range metres) + UnitConverters.TemperatureFromSi (inside_temp °C) +
+  ScalarFormatters/UnitLabels (no non-SI stored/computed).
+Live data: web uses TanStack-Query polling (refetchInterval 15_000), not useLiveX/SSE — reproduced with a
+  DispatcherTimer(15s) → ViewModel.RefreshAsync in CommandsPage.cs (no SSE subscription / staleness chip; the
+  per-vehicle freshness is shown by TsFreshnessIndicator over updated_at, the 2-min contract).
+Scope note: the per-vehicle interactive command catalogue (search / favourites / category tiles) is delivered
+  by the separately-tracked CommandTile / CommandSearch / CollapsibleCommandGroup parity units; this page
+  reproduces the VehicleCommandCenter header region (identity + state badge + freshness + model·vin + the live
+  battery / range / temperature readouts) so the success state renders one centre per roster vehicle. The
+  manifest's panels for this unit are the 4 stat MetricCards + the statesError GlassPanel only.
+
+=== PARITY ===
+PARITY_REQUIRED=21
+
+[1/21]  panel  Vehicles
+        CommandsProjection metric key "vehicles" (CyanAccentBrushKey) ; CommandsPage.cs::_vehiclesCard (TsMetricCard).
+        evidence-test: Projection_emits_four_stat_tiles_in_order, Projection_assigns_the_web_metric_accent_colours,
+                       Projection_tallies_online_and_asleep_from_the_roster
+[2/21]  panel  Online
+        CommandsProjection metric key "online" (GreenAccentBrushKey) ; CommandsPage.cs::_onlineCard (TsMetricCard).
+        evidence-test: Projection_emits_four_stat_tiles_in_order, Projection_tallies_online_and_asleep_from_the_roster
+[3/21]  panel  Asleep
+        CommandsProjection metric key "asleep" (AmberAccentBrushKey) ; CommandsPage.cs::_asleepCard (TsMetricCard).
+        evidence-test: Projection_emits_four_stat_tiles_in_order, Projection_tallies_online_and_asleep_from_the_roster
+[4/21]  panel  Refresh
+        CommandsProjection metric key "refresh" (PurpleAccentBrushKey, value "15s") ; CommandsPage.cs::_refreshCard.
+        evidence-test: Projection_emits_four_stat_tiles_in_order, Projection_tallies_online_and_asleep_from_the_roster
+[5/21]  panel  GlassPanel5 (statesError banner)
+        CommandsDisplay.HasStatesError / StatesErrorText (web {statesError && <GlassPanel>}) ;
+        CommandsPage.cs::_statesErrorPanel (TsGlassPanel + AlertGlyph + danger token).
+        evidence-test: Projection_surfaces_the_states_error_banner_with_detail, Projection_hides_the_states_error_banner_when_clear
+[6/21]  state  loading
+        CommandsState.Loading ; CommandsPageViewModel.SetLoading ; CommandsDisplay.ShowLoading ;
+        CommandsPage.cs::_loadingSkeleton (2×TsSkeleton).
+        evidence-test: ViewModel_starts_loading_then_resolves_loaded
+[7/21]  state  empty
+        CommandsState.Empty ; CommandsPageViewModel.SetEmpty (no-vehicles snapshot + hard-failure mapping) ;
+        CommandsDisplay.ShowEmptyVehicles ; CommandsPage.cs::_vehiclesEmpty (TsEmptyState noVehicles + connectFleet) ;
+        stats fall back to _statsEmpty (common.noData).
+        evidence-test: ViewModel_classifies_a_no_vehicles_snapshot_as_empty, ViewModel_maps_a_hard_failure_to_the_empty_state,
+                       Projection_hides_stats_and_exposes_empty_copy_with_no_vehicles
+[8/21]  state  success
+        CommandsState.Loaded ; CommandsPageViewModel.ApplySnapshot ; CommandsDisplay.ShowContent ;
+        CommandsPage.cs::_centersStack (one TsGlassPanel command-centre header per vehicle).
+        evidence-test: ViewModel_starts_loading_then_resolves_loaded, Projection_renders_one_centre_per_vehicle_with_name_and_sub_line,
+                       Projection_converts_range_and_temperature_to_metric_and_imperial
+[9/21]  string Asleep              CommandsProjection asleep label = localizer.GetString("Asleep", …)
+[10/21] string Online              CommandsProjection online label = localizer.GetString("Online", …)
+[11/21] string Refresh             CommandsProjection refresh label = localizer.GetString("Refresh", …)
+[12/21] string Vehicles            CommandsProjection vehicles label = localizer.GetString("Vehicles", …)
+[13/21] string commands.connectFleet  CommandsProjection ConnectFleetMessage = localizer.GetString("commands.connectFleet", …)
+[14/21] string commands.noVehicles    CommandsProjection NoVehiclesTitle = localizer.GetString("commands.noVehicles", …)
+[15/21] string commands.pageTitle     CommandsProjection Title = localizer.GetString("commands.pageTitle", …)
+[16/21] string commands.statesError   CommandsProjection StatesErrorText = localizer.GetString("commands.statesError", …)
+[17/21] string commands.subtitle      CommandsProjection Subtitle = localizer.GetString("commands.subtitle", …)
+[18/21] string commands.title         CommandsProjection/Registration DocumentTitle = localizer.GetString("commands.title", …)
+[19/21] string commands.viewHistory   CommandsProjection ViewHistoryText = localizer.GetString("commands.viewHistory", …)
+[20/21] string common.noData          CommandsProjection NoDataMessage = localizer.GetString("common.noData", …)
+[21/21] string online                 CommandsProjection OnlineWord = localizer.GetString("online", …)
+# All 13 string keys asserted resolved headlessly via a RecordingLocalizer:
+#   CommandsPageTests.Projection_resolves_every_required_string_key.
+# The 3 data states + the 5 panels assert their render from the bound CommandsDisplay state holder
+#   (ViewModel_* + Projection_* tests). Source request shaping (Operations.Vehicles.List + per-vehicle
+#   Operations.Vehicles.State) is pinned by CommandsSource + Registration_mirrors_the_web_route_and_window.
+
+PARITY_COVERED=21
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/System does not
+# exist in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/CommandsPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App also built standalone: 0 Error(s); the only warning is the pre-existing TeslaSync.App.Core CA1716)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <CommandsPage Model/Source/ViewModel/view
+#   + CommandsPageTests + ShellWindow.xaml.cs + TeslaSync.App.Tests.csproj>  -> 0 issues (LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27107, Failed: 0, Skipped: 0
+#   (incl. 31 CommandsPageTests)
+TEST_EXIT=0
+PARITY_COVERED=21
+PARITY_REQUIRED=21
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/CommandsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/CommandsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-system-CommandsPage.log
+# git commit -m "feat(apps/windows): CommandsPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE
