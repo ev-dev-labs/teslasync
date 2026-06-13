@@ -1,0 +1,90 @@
+P2-WINDOWS W7 — page:notifications/Archived — WinUI 3 / Fluent parity port
+==========================================================================
+Web source : web/src/features/notifications/pages/ArchivedPage.tsx (route /notifications/archived)
+Output     : apps/windows/TeslaSync.App/feature-views/ArchivedPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done pages QuickStatsPage/ApiLogsPage/InboxBody. The prompt's idealized
+              Features/Notifications/*.xaml path does not exist in this repo.)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("NotificationsArchived", …)
+             (RouteTable already maps Page("NotificationsArchived","notifications/archived",Notifications,"Archived"))
+Strings    : resolved via ILocalizer.GetString(webKey, englishDefault). The auto-generated
+             Strings/{en,he,ar}/Resources.resw carry only translation.* word entries (no dotted
+             page keys), so — exactly like every done W7 page (QuickStats/ApiLogs/Dashboard) — the
+             three notifications.archived.* keys resolve by key with the verbatim web English
+             default as fallback. The generated catalog (marked "do not edit by hand") was NOT
+             hand-edited.
+
+Architecture note: the web ArchivedPage is THIN — <PageContainer title subtitle copyLink
+  actions={BackToInbox}> wrapping <InboxBody archived vehicles rules />. The InboxBody body is an
+  already-shipped shared feature-view (feature-views/InboxBody/, its own parity unit) and is reused
+  unmodified in archive mode (archived: true) so the bulk-action set swaps Archive→Restore. The two
+  page-level hooks (useVehicles + useAlertRules) are bound by ArchivedPageViewModel into the
+  vehicle/rule context (web vehicleMap/ruleMap); that read is non-blocking (the inbox always renders)
+  and only a hard failure surfaces a retriable InfoBar strip.
+
+Files:
+  feature-views/ArchivedPage/ArchivedPage.Model.cs       (context parsers + projection + registration + diagnostics + source port + Empty source)
+  feature-views/ArchivedPage/ArchivedPage.Source.cs      (generated C# client cache-then-network: GET /vehicles + GET /alerts/rules)
+  feature-views/ArchivedPage/ArchivedPage.ViewModel.cs   (UI-free 4-state holder: loading/loaded/empty/error + the three header literals)
+  feature-views/ArchivedPage/ArchivedPage.cs             (WinUI 3 UserControl: PageContainer + InboxBody(archived) + non-blocking context strip)
+  Shell/ShellWindow.xaml.cs                              (PageFactory.Register("NotificationsArchived", …) + back-to-inbox / view-context / configure-rules nav)
+  apps/parity/windows-ledger.json                        (append page:notifications/Archived, covered 4/4)
+  TeslaSync.App.Tests/FeatureViews/ArchivedPageTests.cs  (14 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj         (link the 3 UI-free files; the WinUI view is build-only)
+
+Data sources (P1/S8 VM → generated C# client, web hook names kept at the C# call sites):
+  useVehicles   -> ArchivedContextSource.FetchAsync step 1, ApiRequest(Operations.Vehicles.List = get_api_v1_vehicles)
+  useAlertRules -> ArchivedContextSource.FetchAsync step 2, ApiRequest(ArchivedRegistration.AlertRulesOperation = get_api_v1_alerts_rules)
+Live data: none (web page uses TanStack-Query hooks, no useLiveX/SSE), so no SSE subscription / staleness chip (ADR-013 n/a).
+Units (P1/S5): the two reads carry no unit-bearing scalars (id + name only), so no SI conversion is required on this page.
+
+=== PARITY ===
+PARITY_REQUIRED=4
+
+[1/4]  state   success
+        ArchivedContextState.Loaded ; ArchivedPageViewModel.ApplyContext (context.HasData) ; ArchivedDisplay (State=Loaded,
+        ShowContextError=false) ; ArchivedPage.cs renders PageContainer.PageContent = [_contextError(collapsed), _inbox].
+        evidence-test: ArchivedPageTests.ViewModel_starts_loading_then_resolves_loaded
+                       ArchivedPageTests.Projection_shows_the_failure_strip_only_in_the_error_state
+[2/4]  string  notifications.archived.title
+        ArchivedRegistration.Title -> GetString("notifications.archived.title","Archived notifications") ;
+        ArchivedProjection.Project -> ArchivedDisplay.Title ; ArchivedPage.cs::Render -> _container.Title.
+        evidence-test: ArchivedPageTests.Projection_resolves_the_three_web_string_keys_with_verbatim_defaults
+                       ArchivedPageTests.Registration_mirrors_the_web_route_and_keys
+[3/4]  string  notifications.archived.subtitle
+        ArchivedRegistration.Subtitle -> GetString("notifications.archived.subtitle",
+        "Notifications you previously archived. Restore to bring them back.") ; ArchivedDisplay.Subtitle ;
+        ArchivedPage.cs::Render -> _container.Subtitle.
+        evidence-test: ArchivedPageTests.Projection_resolves_the_three_web_string_keys_with_verbatim_defaults
+[4/4]  string  notifications.archived.backToInbox
+        ArchivedRegistration.BackToInbox -> GetString("notifications.archived.backToInbox","Back to inbox") ;
+        ArchivedDisplay.BackToInboxText ; ArchivedPage.cs::Render -> _backButton.Text (the PageContainer header action).
+        evidence-test: ArchivedPageTests.Projection_resolves_the_three_web_string_keys_with_verbatim_defaults
+                       ArchivedPageTests.Registration_mirrors_the_web_route_and_keys
+
+PARITY_COVERED=4
+
+Additional fidelity (beyond the 4 required parity items, no scope narrowing):
+  - 3 data states implemented for the page context source as well: loading (ArchivedContextState.Loading),
+    empty (ArchivedContextState.Empty), error (ArchivedContextState.Error -> retriable TsAlertBanner InfoBar). The
+    inbox is never blank — InboxBody owns loading/empty/error/success for the notification list itself.
+  - copyLink parity (web copyLink) -> PageContainer.CopyLink=true + CopyLinkText="teslasync://notifications/archived".
+  - back-to-inbox action -> InboxRoute "notifications/inbox" (web Link to="/notifications/inbox").
+  - a11y: AutomationProperties names on the page + back action; PageContainer/InboxBody carry their own peers; Group peer on the page.
+  - PII-safe diagnostics: view.opened slug=ArchivedPage (no notification/VIN/vehicle/rule payload).
+
+=== GATE ===
+# check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ArchivedPage -Language csharp -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release -> 0 Error(s) (the 17 warnings are pre-existing CA hints in TeslaSync.App.Core, which does not treat warnings as errors; the App project does and is clean)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes -> no changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 26783, Failed: 0, Skipped: 0 (includes the 14 new ArchivedPageTests; per the p2-windows README gate contract + every done W7 page log, the unit-test step targets TeslaSync.App.Tests)
+# note: TeslaSync.App.UITests (147) require a WinAppDriver/Appium runner listening on http://127.0.0.1:4723/ which is absent in this headless environment; they are a separate driver-gated suite (apps/windows/run-ui-automation.ps1), not part of the headless unit gate. The full-solution Release BUILD still compiles the UITest project (BUILD_EXIT=0), so this change does not break it.
+TEST_EXIT=0
+
+PARITY_COVERED == PARITY_REQUIRED (4 == 4)
+
+EXIT=0
+STATUS=DONE

@@ -207,6 +207,17 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Maps.LocationsPage();
             page.NavigationRequested += (_, route) => NavigateTo(route);
+
+        // Notifications / Archived page (P2/W7) — parity port of web ArchivedPage at route /notifications/archived.
+        // The header "Back to inbox" action maps to the inbox; the hosted InboxBody's "View context" / empty-state
+        // CTA map to the inbox / alert-rule studio (web Link targets). RouteTable already maps
+        // Page("NotificationsArchived","notifications/archived",Notifications).
+        _viewModel.PageFactory.Register("NotificationsArchived", () =>
+        {
+            var page = new FeatureViews.Notifications.ArchivedPage();
+            page.BackToInboxRequested += (_, _) => NavigateTo(FeatureViews.Notifications.ArchivedRegistration.InboxRoute);
+            page.ViewContextRequested += (_, _) => NavigateTo(FeatureViews.Notifications.ArchivedRegistration.InboxRoute);
+            page.ConfigureAlertRulesRequested += (_, _) => NavigateTo("notifications/studio");
             return page;
         });
         ReauthBannerHost.Content = _authBanner;
