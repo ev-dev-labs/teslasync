@@ -526,6 +526,10 @@
     <Compile Include="..\TeslaSync.App\feature-views\TripReplayPage\TripReplayPage.Model.cs" Link="FeatureViews\TripReplayPage\TripReplayPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TripReplayPage\TripReplayPage.Source.cs" Link="FeatureViews\TripReplayPage\TripReplayPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TripReplayPage\TripReplayPage.ViewModel.cs" Link="FeatureViews\TripReplayPage\TripReplayPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TwoFactorAuthPage\TotpEnrollmentSection.Model.cs" Link="FeatureViews\TwoFactorAuthPage\TotpEnrollmentSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TwoFactorAuthPage\TotpEnrollmentSection.ViewModel.cs" Link="FeatureViews\TwoFactorAuthPage\TotpEnrollmentSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TwoFactorAuthPage\TwoFactorAuthPage.Model.cs" Link="FeatureViews\TwoFactorAuthPage\TwoFactorAuthPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TwoFactorAuthPage\TwoFactorAuthPage.ViewModel.cs" Link="FeatureViews\TwoFactorAuthPage\TwoFactorAuthPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveHighlightSlide\DriveHighlightSlide.Model.cs" Link="FeatureViews\DriveHighlightSlide\DriveHighlightSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.Model.cs" Link="FeatureViews\DriveOverviewChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.Source.cs" Link="FeatureViews\DriveOverviewChart.Source.cs" />
