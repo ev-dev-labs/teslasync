@@ -630,3 +630,4 @@ p3-android/shared-meaningful/A-0043-AIRangePrediction.prompt.md
 p3-android/shared-meaningful/A-0044-AIRouteEfficiencySuggestions.prompt.md
 p3-android/shared-meaningful/A-0032-AINLDriveSearch.prompt.md
 p3-android/shared-meaningful/A-0047-AISmartChargeScheduleSuggestion.prompt.md
+p3-android/shared-meaningful/A-0042-AIRAGHelp.prompt.md
