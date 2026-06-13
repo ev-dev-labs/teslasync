@@ -647,3 +647,4 @@ p3-android/shared-meaningful/A-0056-AITripPostcardShareCardImageGeneration.promp
 p3-android/shared-meaningful/A-0058-AIVehiclePaintPreview.prompt.md
 p3-android/shared-meaningful/A-0061-AIYearReviewNarration.prompt.md
 p3-android/shared-meaningful/A-0066-ChartExportMenu.prompt.md
+p3-android/shared-meaningful/A-0062-withAiFeature.prompt.md
