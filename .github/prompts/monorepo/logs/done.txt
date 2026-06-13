@@ -758,3 +758,4 @@ p3-android/shared-meaningful/A-0173-ScrollRestoration.prompt.md
 p3-android/shared-meaningful/A-0172-PageHeaderSticky.prompt.md
 p3-android/shared-meaningful/A-0170-LayoutBreadcrumbs.prompt.md
 p3-android/shared-meaningful/A-0171-PageContainer.prompt.md
+p3-android/shared-meaningful/A-0174-LinearSidebar.prompt.md
