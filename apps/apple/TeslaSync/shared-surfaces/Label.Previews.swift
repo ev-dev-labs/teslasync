@@ -12,7 +12,7 @@ import SwiftUI
 
 #if DEBUG
     @MainActor
-    private func staged(_ caption: String, @ViewBuilder _ content: () -> some View) -> some View {
+    private func staged(_ caption: String, @ViewBuilder _ content: @escaping () -> some View) -> some View {
         VStack(alignment: .leading, spacing: TSSpacing.sm) {
             Text(verbatim: caption)
                 .font(Font.TS.label)

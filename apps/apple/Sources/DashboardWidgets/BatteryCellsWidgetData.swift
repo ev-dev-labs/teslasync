@@ -105,7 +105,7 @@ public extension BatteryCellSummary {
 // MARK: - Pure rendering projection
 
 /// Deviation status of one cell vs. the pack average (web `cellStatus`).
-public enum BatteryCellStatus: Equatable, Sendable {
+public enum BatteryCellsWidgetStatus: Equatable, Sendable {
     case ok
     case warning
     case error
@@ -122,7 +122,7 @@ public enum BatteryCellStatus: Equatable, Sendable {
     }
 
     /// ≤5 mV → ok, ≤15 mV → warning, >15 mV → error, missing → unknown.
-    public static func classify(voltage: Double?, average: Double) -> BatteryCellStatus {
+    public static func classify(voltage: Double?, average: Double) -> BatteryCellsWidgetStatus {
         guard let voltage, voltage.isFinite else { return .unknown }
         let deviationMv = abs(voltage - average) * 1000
         if deviationMv <= 5 { return .ok }
@@ -136,9 +136,9 @@ public struct BatteryCellStatusItem: Identifiable, Equatable, Sendable {
     public let id: String
     public let label: String
     public let value: String
-    public let status: BatteryCellStatus
+    public let status: BatteryCellsWidgetStatus
 
-    public init(id: String, label: String, value: String, status: BatteryCellStatus) {
+    public init(id: String, label: String, value: String, status: BatteryCellsWidgetStatus) {
         self.id = id
         self.label = label
         self.value = value
@@ -179,7 +179,7 @@ public struct BatteryCellsProjection: Equatable, Sendable {
         let average = summary.avgVoltage
 
         let items = summary.cells.map { cell -> BatteryCellStatusItem in
-            let status = BatteryCellStatus.classify(voltage: cell.voltage, average: average)
+            let status = BatteryCellsWidgetStatus.classify(voltage: cell.voltage, average: average)
             let label: String = isWide
                 ? "\(cellWord) \(cell.cellID) · M\(cell.module)"
                 : "C\(cell.cellID)"

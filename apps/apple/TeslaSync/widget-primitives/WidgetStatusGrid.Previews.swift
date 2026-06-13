@@ -13,7 +13,10 @@ import SwiftUI
 
 #if DEBUG
     @MainActor
-    private func staged(_ label: String, width: CGFloat = 360, @ViewBuilder _ content: () -> some View) -> some View {
+    private func staged(
+        _ label: String, width: CGFloat = 360,
+        @ViewBuilder _ content: @escaping () -> some View
+    ) -> some View {
         VStack(alignment: .leading, spacing: TSSpacing.md) {
             Text(verbatim: label)
                 .font(Font.TS.label)

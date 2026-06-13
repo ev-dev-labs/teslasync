@@ -81,7 +81,7 @@ public struct SettingsSearch: View {
         }
     }
 
-    private func panel(@ViewBuilder _ content: () -> some View) -> some View {
+    private func panel(@ViewBuilder _ content: @escaping () -> some View) -> some View {
         content()
             .padding(TSSpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)

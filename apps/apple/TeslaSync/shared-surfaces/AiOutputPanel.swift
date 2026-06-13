@@ -95,7 +95,7 @@ public struct AiOutputPanel<Pending: View>: View {
 
     /// The bordered glass container (web `rounded-lg border border-[--border-subtle] bg-white/2`),
     /// with the resolved branch spoken as one coherent VoiceOver element.
-    private func panel(@ViewBuilder _ content: () -> some View) -> some View {
+    private func panel(@ViewBuilder _ content: @escaping () -> some View) -> some View {
         content()
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(TSSpacing.md)

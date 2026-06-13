@@ -14,7 +14,7 @@ import SwiftUI
 
 #if DEBUG
     @MainActor
-    private func stagedMap(_ label: String, @ViewBuilder _ content: () -> some View) -> some View {
+    private func stagedMap(_ label: String, @ViewBuilder _ content: @escaping () -> some View) -> some View {
         VStack(alignment: .leading, spacing: TSSpacing.md) {
             Text(verbatim: label)
                 .font(Font.TS.label)

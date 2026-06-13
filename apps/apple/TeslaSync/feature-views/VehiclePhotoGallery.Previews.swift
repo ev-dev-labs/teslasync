@@ -68,7 +68,7 @@ import SwiftUI
         return model
     }
 
-    private func framed(@ViewBuilder _ content: () -> some View) -> some View {
+    private func framed(@ViewBuilder _ content: @escaping () -> some View) -> some View {
         content()
             .frame(maxWidth: 520)
             .padding(TSSpacing.lg)

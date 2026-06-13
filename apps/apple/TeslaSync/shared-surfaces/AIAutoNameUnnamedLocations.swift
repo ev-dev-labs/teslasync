@@ -119,7 +119,7 @@ public struct AIAutoNameUnnamedLocations: View {
 
     // MARK: Panel shell
 
-    private func glass(@ViewBuilder _ content: () -> some View) -> some View {
+    private func glass(@ViewBuilder _ content: @escaping () -> some View) -> some View {
         TSGlassPanel {
             content()
                 .frame(maxWidth: .infinity, alignment: .leading)

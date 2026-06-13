@@ -28,7 +28,7 @@ import SwiftUI
     }
 
     @MainActor
-    private func staged(_ label: String, @ViewBuilder _ content: () -> some View) -> some View {
+    private func staged(_ label: String, @ViewBuilder _ content: @escaping () -> some View) -> some View {
         VStack(alignment: .leading, spacing: TSSpacing.sm) {
             Text(verbatim: label)
                 .font(Font.TS.label)

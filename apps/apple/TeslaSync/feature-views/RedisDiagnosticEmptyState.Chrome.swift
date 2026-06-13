@@ -101,7 +101,7 @@ struct RedisOtherVehicles: View {
         }
     }
 
-    private func section(@ViewBuilder _ content: () -> some View) -> some View {
+    private func section(@ViewBuilder _ content: @escaping () -> some View) -> some View {
         VStack(alignment: .leading, spacing: TSSpacing.sm) {
             Text(verbatim: RedisDiagnosticCopy.otherVehicles.resolved(RDStrings.string))
                 .font(Font.TS.label)

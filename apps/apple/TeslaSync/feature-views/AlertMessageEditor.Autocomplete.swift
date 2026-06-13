@@ -57,7 +57,7 @@ struct TokenAutocompletePanel: View {
         .frame(maxHeight: 240)
     }
 
-    private func panel(@ViewBuilder _ content: () -> some View) -> some View {
+    private func panel(@ViewBuilder _ content: @escaping () -> some View) -> some View {
         content()
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.TS.surface, in: RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous))

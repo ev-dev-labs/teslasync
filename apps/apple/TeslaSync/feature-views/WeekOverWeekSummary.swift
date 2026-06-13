@@ -170,7 +170,7 @@ public struct WeekOverWeekSummary: View {
 
     // MARK: Responsive grid (web `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`)
 
-    private func grid(@ViewBuilder content: () -> some View) -> some View {
+    private func grid(@ViewBuilder content: @escaping () -> some View) -> some View {
         LazyVGrid(
             columns: [GridItem(.adaptive(minimum: 160), spacing: TSSpacing.md, alignment: .top)],
             alignment: .leading,

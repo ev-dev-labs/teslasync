@@ -283,12 +283,12 @@ struct BatteryDegradationCyclesPanel: View {
 
     private var legend: some View {
         HStack(spacing: TSSpacing.lg) {
-            BatteryLegendItem(
+            BatteryTabLegendItem(
                 colorIndex: BatterySeries.degradation,
                 key: "analytics.battery.degradPct",
                 fallback: "Degradation %"
             )
-            BatteryLegendItem(
+            BatteryTabLegendItem(
                 colorIndex: BatterySeries.cycle,
                 key: "analytics.battery.cycleCount",
                 fallback: "Cycle Count"
@@ -300,7 +300,7 @@ struct BatteryDegradationCyclesPanel: View {
 }
 
 /// One legend swatch + localized series name (web `<Legend/>` entry).
-private struct BatteryLegendItem: View {
+private struct BatteryTabLegendItem: View {
     let colorIndex: Int
     let key: String
     let fallback: String

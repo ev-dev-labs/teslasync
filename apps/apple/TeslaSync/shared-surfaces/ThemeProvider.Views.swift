@@ -306,7 +306,7 @@ public struct ThemeModeSwatch: View {
             .background(Color.TS.bg)
         }
 
-        private func section(_ title: String, @ViewBuilder _ content: () -> some View) -> some View {
+        private func section(_ title: String, @ViewBuilder _ content: @escaping () -> some View) -> some View {
             VStack(alignment: .leading, spacing: TSSpacing.sm) {
                 Text(verbatim: title)
                     .font(Font.TS.section)

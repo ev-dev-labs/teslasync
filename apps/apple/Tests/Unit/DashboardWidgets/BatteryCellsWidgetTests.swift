@@ -65,11 +65,11 @@ import XCTest
 
     func testClassifyThresholds() {
         let average = 3.950
-        XCTAssertEqual(BatteryCellStatus.classify(voltage: 3.950, average: average), .ok)
-        XCTAssertEqual(BatteryCellStatus.classify(voltage: 3.955, average: average), .ok) // 5 mV
-        XCTAssertEqual(BatteryCellStatus.classify(voltage: 3.965, average: average), .warning) // 15 mV
-        XCTAssertEqual(BatteryCellStatus.classify(voltage: 3.966, average: average), .error) // 16 mV
-        XCTAssertEqual(BatteryCellStatus.classify(voltage: nil, average: average), .unknown)
+        XCTAssertEqual(BatteryCellsWidgetStatus.classify(voltage: 3.950, average: average), .ok)
+        XCTAssertEqual(BatteryCellsWidgetStatus.classify(voltage: 3.955, average: average), .ok) // 5 mV
+        XCTAssertEqual(BatteryCellsWidgetStatus.classify(voltage: 3.965, average: average), .warning) // 15 mV
+        XCTAssertEqual(BatteryCellsWidgetStatus.classify(voltage: 3.966, average: average), .error) // 16 mV
+        XCTAssertEqual(BatteryCellsWidgetStatus.classify(voltage: nil, average: average), .unknown)
     }
 
     // MARK: - Number formatting parity (web fmtNumber / safeNumber)

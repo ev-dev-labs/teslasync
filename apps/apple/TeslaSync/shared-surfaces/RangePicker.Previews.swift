@@ -56,7 +56,7 @@ import SwiftUI
     }
 
     @MainActor
-    private func rpStaged(_ label: String, @ViewBuilder _ content: () -> some View) -> some View {
+    private func rpStaged(_ label: String, @ViewBuilder _ content: @escaping () -> some View) -> some View {
         VStack(alignment: .leading, spacing: TSSpacing.md) {
             Text(verbatim: label)
                 .font(Font.TS.label)

@@ -105,7 +105,7 @@ extension SummarySlide {
     }
 
     /// Centers content in the available space (web `items-center justify-center`).
-    private func centered(@ViewBuilder _ content: () -> some View) -> some View {
+    private func centered(@ViewBuilder _ content: @escaping () -> some View) -> some View {
         VStack {
             Spacer(minLength: 0)
             content()

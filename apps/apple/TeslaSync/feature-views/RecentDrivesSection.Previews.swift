@@ -22,13 +22,19 @@
         static func items(count: Int = 4) -> [RecentDriveItem] {
             let base = Date(timeIntervalSince1970: 1_717_000_000)
             return (0 ..< count).map { index in
-                RecentDriveItem(
-                    id: Int64(index + 1),
-                    startTimestamp: base.addingTimeInterval(Double(-index) * 7200),
-                    distanceMeters: Double((index % 7) + 1) * 8540,
-                    durationSeconds: Double((index % 5) + 1) * 1080,
-                    startBatteryPercent: 82 - Double(index % 30),
-                    endBatteryPercent: index == 1 ? nil : 64 - Double(index % 20)
+                let itemID = Int64(index + 1)
+                let start = base.addingTimeInterval(Double(-index) * 7200)
+                let distance: Double = Double((index % 7) + 1) * 8540
+                let duration: Double = Double((index % 5) + 1) * 1080
+                let startSOC: Double = 82 - Double(index % 30)
+                let endSOC: Double? = index == 1 ? nil : 64 - Double(index % 20)
+                return RecentDriveItem(
+                    id: itemID,
+                    startTimestamp: start,
+                    distanceMeters: distance,
+                    durationSeconds: duration,
+                    startBatteryPercent: startSOC,
+                    endBatteryPercent: endSOC
                 )
             }
         }

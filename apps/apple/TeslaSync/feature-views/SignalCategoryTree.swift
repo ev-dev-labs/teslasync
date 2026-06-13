@@ -300,7 +300,7 @@ struct SignalCategoryConnectivityBanner: View {
 
 /// The bordered, scroll-capable frame wrapping the tree body and its inline states
 /// (web `role="tree"` container: `rounded-md border bg-surface-1`).
-func treeFrame(@ViewBuilder _ content: () -> some View) -> some View {
+func treeFrame(@ViewBuilder _ content: @escaping () -> some View) -> some View {
     content()
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(Color.TS.surface.opacity(0.5), in: RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous))
