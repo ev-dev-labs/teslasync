@@ -915,3 +915,4 @@ p2-windows/pages/admin/LiveSignalInspectorPage.prompt.md
 p2-windows/pages/admin/RbacMatrixPage.prompt.md
 p2-windows/pages/admin/SecretRotationPage.prompt.md
 p2-windows/pages/admin/IngestXRayPage.prompt.md
+p2-windows/pages/admin/RedisSignalViewerPage.prompt.md
