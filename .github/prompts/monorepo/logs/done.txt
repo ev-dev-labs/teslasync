@@ -751,3 +751,4 @@ p2-windows/pages/charging/TeslaChargingSessionsPage.prompt.md
 p2-windows/pages/dashboard/QuickStatsPage.prompt.md
 p2-windows/pages/diagnostics/AnomalyDashboardPage.prompt.md
 p2-windows/pages/driving/DriveDetailPage.prompt.md
+p2-windows/pages/driving/EfficiencyPage.prompt.md
