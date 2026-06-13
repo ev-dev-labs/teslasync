@@ -1,0 +1,286 @@
+# p2-windows — W7 — page:driving/DriveScore — evidence log
+
+Artifact : page:driving/DriveScore
+Prompt   : p2-windows/W7/windows-page-driving-DriveScorePage
+Web src  : web/src/features/driving/pages/DriveScorePage.tsx  (route /drive-score, 1698 lines)
+Output   : apps/windows/TeslaSync.App/feature-views/DriveScorePage/
+             DriveScorePage.Model.cs       (samples + score + snapshot + scoreDrive maths + JSON + diagnostics + registration)
+             DriveScorePage.Projection.cs  (i18n strings + display records + pure projection — all aggregations)
+             DriveScorePage.Source.cs      (generated-client feed — 2 endpoints + empty feed)
+             DriveScorePage.ViewModel.cs   (INotifyPropertyChanged state holder — LoadAsync/RefreshAsync/Page)
+             DriveScorePage.cs             (WinUI 3 UserControl view — thin renderer)
+Nav reg  : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs (PageFactory.Register("DriveScore", …))
+Route    : apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs L265 (pre-existing: Page("DriveScore","drive-score",RouteGroup.TripsDriving,…))
+Tests    : apps/windows/TeslaSync.App.Tests/FeatureViews/DriveScorePageTests.cs (33 tests, all green)
+Strings  : apps/windows/Strings/{en,ar,he}/Resources.resw (24 missing translation.driveScore.* keys added → all 116 present)
+Ledger   : apps/parity/windows-ledger.json (page:driving/DriveScore → done, 160/160)
+
+NOTE on idealized paths: the prompt header lists an idealized output path
+(apps/windows/TeslaSync/Features/Driving/DriveScorePage.xaml). The real repo is a C#-markup
+WinUI 3 app — every sibling W7 page (BatteryDegradation, VehicleCost, TrueCost, Timeline,
+WeeklyDigest, ApiLogs, FeedbackQueue, SchemaDrift, EnergyProducts, …) lives under
+apps/windows/TeslaSync.App/feature-views/<Page>/ as <Page>.{Model,Source,ViewModel}.cs + <Page>.cs
+(no per-page .xaml). This unit follows that established convention exactly (verified against
+BatteryDegradationPage). Pure logic lives in the WinUI-free .Model/.Projection/.Source/.ViewModel
+(compiled + unit-tested headlessly by TeslaSync.App.Tests via explicit <Compile Include> links);
+the .cs is the thin Fluent view exercised by the app build.
+
+## Honesty Covenant (binding — verbatim)
+
+```
+1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+```
+
+## Architecture mapping (web → native)
+
+  useDrives(vehicleId)      → DriveScoreClientFeed (GET /drives?vehicle_id, get_api_v1_drives) — PRIMARY read
+  useDriveScore(vehicleId)  → DriveScoreClientFeed.FetchScoreAsync (GET /drives/score, get_api_v1_drives_score) — best-effort
+                              (web retry:false; transport failure degrades to client-computed averages)
+  scoreDrive(drive)         → ScoreMath.ScoreDrive (1:1: eff/40, smooth/30, speed/30; grade ladder 90/80/70/60/50)
+  avgScores/overall/trend   → DriveScoreProjection.Project (api score wins, else client average)
+  filteredDrives (30d)      → DriveScoreProjection (WindowDays=30; StartTs ∈ [now-30d, now])
+  units (Wh/km, km, km/h)   → UnitFormatters/UnitConverters at the render boundary only (SI on disk)
+  pagination (10/page)      → DriveScoreProjection.DrivesPerPage + ViewModel.Page + TsPagination
+
+## === PARITY ===
+
+PARITY_REQUIRED=160
+
+--- panels (29) — every web GlassPanel / ChartContainer / StatCard / Card region reproduced ---
+[x] panel - GlassPanel1        → DriveScorePage.BuildHero            (TsGlassPanel: hero overall-score gauge — web §1)
+[x] panel - GlassPanel2        → DriveScorePage.BuildGrade           (TsGlassPanel: grade banner + trend — web §3)
+[x] panel - GlassPanel3        → DriveScorePage.BuildCategoryPanel   (Categories[0] Efficiency — web §2)
+[x] panel - GlassPanel4        → DriveScorePage.BuildCategoryPanel   (Categories[1] Smoothness — web §2)
+[x] panel - GlassPanel5        → DriveScorePage.BuildCategoryPanel   (Categories[2] Speed Discipline — web §2)
+[x] panel - GlassPanel6        → DriveScorePage.BuildTrendChart      (TsGlassPanel wrapper around Score-Trend — web §4)
+[x] panel - Score-Trend        → DriveScorePage.BuildTrendChart      (TsChartContainer Title=ScoreTrend, State Ready/Empty)
+[x] panel - GlassPanel8        → DriveScorePage.BuildCategoryChart   (TsGlassPanel wrapper around Category-Breakdown — web §5)
+[x] panel - Category-Breakdown → DriveScorePage.BuildCategoryChart   (TsChartContainer Title=CategoryBreakdown)
+[x] panel - GlassPanel10       → DriveScorePage.BuildDistributionChart (TsGlassPanel wrapper around Score-Distribution — web §5b)
+[x] panel - Score-Distribution → DriveScorePage.BuildDistributionChart (TsChartContainer Title=ScoreDistribution)
+[x] panel - GlassPanel12       → DriveScorePage.BuildTips            (TsGlassPanel: improvement tips — web §6)
+[x] panel - GlassPanel13       → DriveScorePage.BuildBestWorstPanel  (display.Best — web §6b)
+[x] panel - GlassPanel14       → DriveScorePage.BuildBestWorstPanel  (display.Worst — web §6b)
+[x] panel - GlassPanel15       → DriveScorePage.BuildHistory         (TsGlassPanel: drive-history table + pagination — web §7)
+[x] panel - Avg-Score          → DriveScorePage.BuildStatCards       (TsStatCard StatCards[0] driveScore.avgScore — web §8)
+[x] panel - Best-Score         → DriveScorePage.BuildStatCards       (TsStatCard StatCards[1] driveScore.bestScore)
+[x] panel - Total-Drives       → DriveScorePage.BuildStatCards       (TsStatCard StatCards[2] driveScore.totalDrivesLabel)
+[x] panel - Avg-Efficiency     → DriveScorePage.BuildStatCards       (TsStatCard StatCards[3] driveScore.avgEffLabel)
+[x] panel - GlassPanel20       → DriveScorePage.BuildPeriodPanel     (PeriodPanels[0] This Week — web §9)
+[x] panel - GlassPanel21       → DriveScorePage.BuildPeriodPanel     (PeriodPanels[1] This Month)
+[x] panel - GlassPanel22       → DriveScorePage.BuildPeriodPanel     (PeriodPanels[2] Best Week)
+[x] panel - GlassPanel23       → DriveScorePage.BuildPeriodPanel     (PeriodPanels[3] Best Month)
+[x] panel - GlassPanel24       → DriveScorePage.BuildPeriodPanel     (PeriodPanels[4] Total Drives)
+[x] panel - GlassPanel25       → DriveScorePage.BuildPeriodPanel     (PeriodPanels[5] Rated A+/A)
+[x] panel - GlassPanel26       → DriveScorePage.BuildAchievements    (TsGlassPanel: 8 achievement badges — web §10)
+[x] panel - GlassPanel27       → DriveScorePage.BuildPeriod          (else-branch TsGlassPanel + TsEmptyState noPeriodStats — web §9 else)
+[x] panel - Card28             → DriveScorePage.BuildKvCard          (TsCard ScoreBreakdown KVList — web Score Breakdown)
+[x] panel - Card29             → DriveScorePage.BuildKvCard          (TsCard PeriodStatistics KVList — web Period Statistics)
+
+--- charts (12) — native W3 wrappers (TsRadialGauge / TsChartContainer / TsLineChart / TsBarChart) ---
+[x] chart - RadialGauge        → DriveScorePage.BuildHero            (TsRadialGauge overall, Diameter 200)
+[x] chart - RadialGauge        → DriveScorePage.BuildCategoryPanel   (TsRadialGauge Efficiency, Diameter 120)
+[x] chart - RadialGauge        → DriveScorePage.BuildCategoryPanel   (TsRadialGauge Smoothness, Diameter 120)
+[x] chart - RadialGauge        → DriveScorePage.BuildCategoryPanel   (TsRadialGauge Speed Discipline, Diameter 120)
+[x] chart - ChartContainer     → DriveScorePage.BuildTrendChart      (TsChartContainer Score-Trend)
+[x] chart - LineChart          → DriveScorePage.BuildTrendChart      (TsLineChart 4 series + 80-line annotation "A")
+[x] chart - ChartContainer     → DriveScorePage.BuildCategoryChart   (TsChartContainer Category-Breakdown)
+[x] chart - BarChart           → DriveScorePage.BuildCategoryChart   (TsBarChart value+max series)
+[x] chart - ChartContainer     → DriveScorePage.BuildDistributionChart (TsChartContainer Score-Distribution)
+[x] chart - BarChart           → DriveScorePage.BuildDistributionChart (TsBarChart 5-bucket histogram)
+[x] chart - RadialGauge        → DriveScorePage.BuildBestWorstPanel  (TsRadialGauge Best, Diameter 80)
+[x] chart - RadialGauge        → DriveScorePage.BuildBestWorstPanel  (TsRadialGauge Worst, Diameter 80)
+
+--- data states (3 declared) — implemented for the drives + score sources ---
+[x] state - loading data state → DriveScoreState.Loading / Display.ShowLoading; view _loadingSkeleton (TsSkeleton shimmer); test State_loading_when_query_in_flight_with_no_data
+[x] state - empty data state   → DriveScoreState.Empty / Display.ShowEmpty; view _emptyState (TsEmptyState); test State_empty_when_no_drives (+ State_empty_when_all_drives_fall_outside_the_window)
+[x] state - success data state → DriveScoreState.Success / Display.ShowContent; view BuildContent; test State_success_when_drives_present
+    (error state also implemented — Display.ShowError + TsQueryError + Retry; test State_error_when_feed_failed)
+
+--- strings (116) — DriveScoreStrings.Resolve(ILocalizer) in DriveScorePage.Projection.cs (verbatim web keys + defaults);
+    catalogued as translation.<key> in Strings/{en,ar,he}/Resources.resw; asserted en-masse by
+    DriveScorePageTests.Projection_resolves_every_required_string_key + Required_string_key_set_has_exactly_one_hundred_sixteen_unique_keys ---
+[x] string - common.noData                               (DriveScoreStrings.NoData)
+[x] string - driveScore.aPlusCount                       (DriveScoreStrings.APlusCount)
+[x] string - driveScore.achievements.aPlusStreak         (DriveScoreStrings.AchAPlusStreak)
+[x] string - driveScore.achievements.aPlusStreakDesc     (DriveScoreStrings.AchAPlusStreakDesc — added to resw)
+[x] string - driveScore.achievements.efficiencyMaster    (DriveScoreStrings.AchEfficiencyMaster)
+[x] string - driveScore.achievements.efficiencyMasterDesc(DriveScoreStrings.AchEfficiencyMasterDesc — added to resw)
+[x] string - driveScore.achievements.fiftyDrives         (DriveScoreStrings.AchFiftyDrives)
+[x] string - driveScore.achievements.fiftyDrivesDesc     (DriveScoreStrings.AchFiftyDrivesDesc — added to resw)
+[x] string - driveScore.achievements.firstDrive          (DriveScoreStrings.AchFirstDrive)
+[x] string - driveScore.achievements.firstDriveDesc      (DriveScoreStrings.AchFirstDriveDesc — added to resw)
+[x] string - driveScore.achievements.perfectScore        (DriveScoreStrings.AchPerfectScore)
+[x] string - driveScore.achievements.perfectScoreDesc    (DriveScoreStrings.AchPerfectScoreDesc — added to resw)
+[x] string - driveScore.achievements.smoothOperator      (DriveScoreStrings.AchSmoothOperator)
+[x] string - driveScore.achievements.smoothOperatorDesc  (DriveScoreStrings.AchSmoothOperatorDesc — added to resw)
+[x] string - driveScore.achievements.speedSaint          (DriveScoreStrings.AchSpeedSaint)
+[x] string - driveScore.achievements.speedSaintDesc      (DriveScoreStrings.AchSpeedSaintDesc — added to resw)
+[x] string - driveScore.achievements.tenDrives           (DriveScoreStrings.AchTenDrives)
+[x] string - driveScore.achievements.tenDrivesDesc       (DriveScoreStrings.AchTenDrivesDesc — added to resw)
+[x] string - driveScore.achievements.title               (DriveScoreStrings.AchievementsTitle)
+[x] string - driveScore.achievements.unlocked            (DriveScoreStrings.Unlocked)
+[x] string - driveScore.avgConsumption                   (DriveScoreStrings.AvgConsumption)
+[x] string - driveScore.avgDistance                      (DriveScoreStrings.AvgDistance)
+[x] string - driveScore.avgDuration                      (DriveScoreStrings.AvgDuration — added to resw)
+[x] string - driveScore.avgEffLabel                      (DriveScoreStrings.AvgEffLabel)
+[x] string - driveScore.avgMaxSpeed                      (DriveScoreStrings.AvgMaxSpeed)
+[x] string - driveScore.avgScore                         (DriveScoreStrings.AvgScore)
+[x] string - driveScore.basedOn                          (DriveScoreStrings.BasedOn)
+[x] string - driveScore.bestDrive                        (DriveScoreStrings.BestDrive)
+[x] string - driveScore.bestMonth                        (DriveScoreStrings.BestMonth)
+[x] string - driveScore.bestScore                        (DriveScoreStrings.BestScore)
+[x] string - driveScore.bestWeek                         (DriveScoreStrings.BestWeek)
+[x] string - driveScore.breakdown                        (DriveScoreStrings.Breakdown)
+[x] string - driveScore.categoryBreakdown                (DriveScoreStrings.CategoryBreakdown)
+[x] string - driveScore.categoryBreakdown.aria           (DriveScoreStrings.CategoryBreakdownAria — added to resw)
+[x] string - driveScore.col.category                     (DriveScoreStrings.ColCategory)
+[x] string - driveScore.col.date                         (DriveScoreStrings.ColDate)
+[x] string - driveScore.col.drives                       (DriveScoreStrings.ColDrives)
+[x] string - driveScore.col.efficiency                   (DriveScoreStrings.ColEfficiency)
+[x] string - driveScore.col.max                          (DriveScoreStrings.ColMax)
+[x] string - driveScore.col.range                        (DriveScoreStrings.ColRange)
+[x] string - driveScore.col.score                        (DriveScoreStrings.ColScore)
+[x] string - driveScore.col.smoothness                   (DriveScoreStrings.ColSmoothness)
+[x] string - driveScore.col.speed                        (DriveScoreStrings.ColSpeed)
+[x] string - driveScore.col.value                        (DriveScoreStrings.ColValue)
+[x] string - driveScore.colConsumption                   (DriveScoreStrings.ColConsumption)
+[x] string - driveScore.colDate                          (DriveScoreStrings.ColDateHeader)
+[x] string - driveScore.colDistance                      (DriveScoreStrings.ColDistance)
+[x] string - driveScore.colDuration                      (DriveScoreStrings.ColDuration)
+[x] string - driveScore.colEfficiency                    (DriveScoreStrings.ColEffHeader)
+[x] string - driveScore.colGrade                         (DriveScoreStrings.ColGrade)
+[x] string - driveScore.colRoute                         (DriveScoreStrings.ColRoute)
+[x] string - driveScore.colScore                         (DriveScoreStrings.ColScoreHeader)
+[x] string - driveScore.consumption                      (DriveScoreStrings.Consumption)
+[x] string - driveScore.distance                         (DriveScoreStrings.Distance)
+[x] string - driveScore.driveHistory                     (DriveScoreStrings.DriveHistory)
+[x] string - driveScore.drives                           (DriveScoreStrings.Drives)
+[x] string - driveScore.drivesInPeriod                   (DriveScoreStrings.DrivesInPeriod)
+[x] string - driveScore.drivesScored                     (DriveScoreStrings.DrivesScored)
+[x] string - driveScore.durationLabel                    (DriveScoreStrings.DurationLabel)
+[x] string - driveScore.efficiency                       (DriveScoreStrings.Efficiency)
+[x] string - driveScore.efficiencyLabel                  (DriveScoreStrings.EfficiencyLabel — added to resw)
+[x] string - driveScore.empty                            (DriveScoreStrings.Empty — added to resw)
+[x] string - driveScore.emptyTitle                       (DriveScoreStrings.EmptyTitle)
+[x] string - driveScore.gradeALine                       (DriveScoreStrings.GradeALine)
+[x] string - driveScore.gradeLabel                       (DriveScoreStrings.GradeLabel)
+[x] string - driveScore.highestSpeed                     (DriveScoreStrings.HighestSpeed)
+[x] string - driveScore.noDrives                         (DriveScoreStrings.NoDrives)
+[x] string - driveScore.noPeriodStats                    (DriveScoreStrings.NoPeriodStats)
+[x] string - driveScore.ofDrives                         (DriveScoreStrings.OfDrives)
+[x] string - driveScore.overall                          (DriveScoreStrings.Overall)
+[x] string - driveScore.periodStats                      (DriveScoreStrings.PeriodStats)
+[x] string - driveScore.powerRange                       (DriveScoreStrings.PowerRange)
+[x] string - driveScore.ratedAPlus                       (DriveScoreStrings.RatedAPlus)
+[x] string - driveScore.score                            (DriveScoreStrings.Score)
+[x] string - driveScore.scoreDistribution                (DriveScoreStrings.ScoreDistribution)
+[x] string - driveScore.scoreDistribution.aria           (DriveScoreStrings.ScoreDistributionAria — added to resw)
+[x] string - driveScore.scoreTrend                       (DriveScoreStrings.ScoreTrend)
+[x] string - driveScore.scoreTrend.aria                  (DriveScoreStrings.ScoreTrendAria — added to resw)
+[x] string - driveScore.smoothness                       (DriveScoreStrings.Smoothness)
+[x] string - driveScore.smoothnessLabel                  (DriveScoreStrings.SmoothnessLabel — added to resw)
+[x] string - driveScore.speedDiscipline                  (DriveScoreStrings.SpeedDiscipline)
+[x] string - driveScore.speedLabel                       (DriveScoreStrings.SpeedLabel)
+[x] string - driveScore.subtitle                         (DriveScoreStrings.Subtitle)
+[x] string - driveScore.thisMonth                        (DriveScoreStrings.ThisMonth)
+[x] string - driveScore.thisWeek                         (DriveScoreStrings.ThisWeek)
+[x] string - driveScore.tipBestEff                       (DriveScoreStrings.TipBestEff)
+[x] string - driveScore.tipBestSmooth                    (DriveScoreStrings.TipBestSmooth)
+[x] string - driveScore.tipBestSpeed                     (DriveScoreStrings.TipBestSpeed)
+[x] string - driveScore.tipWorstEff                      (DriveScoreStrings.TipWorstEff)
+[x] string - driveScore.tipWorstSmooth                   (DriveScoreStrings.TipWorstSmooth)
+[x] string - driveScore.tipWorstSpeed                    (DriveScoreStrings.TipWorstSpeed)
+[x] string - driveScore.tips.coastMore                   (DriveScoreStrings.TipCoastMore — added to resw)
+[x] string - driveScore.tips.cruiseControl               (DriveScoreStrings.TipCruiseControl — added to resw)
+[x] string - driveScore.tips.followDistance              (DriveScoreStrings.TipFollowDistance — added to resw)
+[x] string - driveScore.tips.preCondition                (DriveScoreStrings.TipPreCondition — added to resw)
+[x] string - driveScore.tips.regenBraking                (DriveScoreStrings.TipRegenBraking — added to resw)
+[x] string - driveScore.tips.routePlanning               (DriveScoreStrings.TipRoutePlanning — added to resw)
+[x] string - driveScore.tips.smoothAccel                 (DriveScoreStrings.TipSmoothAccel — added to resw)
+[x] string - driveScore.tips.speedLimit                  (DriveScoreStrings.TipSpeedLimit — added to resw)
+[x] string - driveScore.tips.tirePressure                (DriveScoreStrings.TipTirePressure — added to resw)
+[x] string - driveScore.tipsSubtitle                     (DriveScoreStrings.TipsSubtitle)
+[x] string - driveScore.tipsTitle                        (DriveScoreStrings.TipsTitle)
+[x] string - driveScore.title                            (DriveScoreStrings.Title)
+[x] string - driveScore.totalDistance                    (DriveScoreStrings.TotalDistance)
+[x] string - driveScore.totalDrivesLabel                 (DriveScoreStrings.TotalDrivesLabel)
+[x] string - driveScore.totalDuration                    (DriveScoreStrings.TotalDuration)
+[x] string - driveScore.totalLabel                       (DriveScoreStrings.TotalLabel)
+[x] string - driveScore.totalScore                       (DriveScoreStrings.TotalScore)
+[x] string - driveScore.trendDown                        (DriveScoreStrings.TrendDown)
+[x] string - driveScore.trendFlat                        (DriveScoreStrings.TrendFlat)
+[x] string - driveScore.trendUp                          (DriveScoreStrings.TrendUp)
+[x] string - driveScore.unknownRoute                     (DriveScoreStrings.UnknownRoute)
+[x] string - driveScore.vsLastMonth                      (DriveScoreStrings.VsLastMonth)
+[x] string - driveScore.vsLastWeek                       (DriveScoreStrings.VsLastWeek)
+[x] string - driveScore.worstDrive                       (DriveScoreStrings.WorstDrive)
+[x] string - help.driveScore.iconLabel                   (DriveScoreStrings.HelpIconLabel)
+
+PARITY_COVERED=160
+
+## Gate
+
+```powershell
+# 1) placeholder / stub scan (ADR-011)
+& ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DriveScorePage -Language csharp
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# 2) build (full solution, Release)
+dotnet build apps/windows/TeslaSync.sln -c Release
+  Build succeeded.  TeslaSync.App: 0 Warning(s) 0 Error(s)
+  (17 pre-existing CA-rule warnings in TeslaSync.App.Core — not this unit; Core does not treat warnings as errors)
+BUILD_EXIT=0
+
+# 3) lint (full-solution format verify; repo .editorconfig — LF + analyzer style)
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (0 error lines — all DriveScorePage sources + test file clean; CRLF→LF normalized)
+LINT_EXIT=0
+
+# 4) test
+#   4a) unit + projection suite (TeslaSync.App.Tests — includes the 33 new DriveScorePage tests that
+#       exercise this page's scoreDrive maths, grade ladder, four-state matrix, every section's count,
+#       the 116-key i18n coverage, the tolerant parsers, the client feed and the view-model state matrix):
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release --filter DriveScorePageTests
+  Passed!  Failed: 0, Passed: 33, Skipped: 0, Total: 33
+  (full suite: Passed! Failed: 0, Passed: 26465, Skipped: 0, Total: 26465)
+UNIT_TEST_EXIT=0
+
+#   4b) UI-automation suite (TeslaSync.App.UITests) — environment-blocked, NOT a code failure:
+dotnet test apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App.Tests  : Passed 26465 / Failed 0
+  TeslaSync.App.UITests: Failed 147 / 147 — ALL with the identical environment error
+    "UiAutomationUnavailableException: UI automation cannot run: WinAppDriver/Appium runner is absent:
+     nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found"
+  → The WinAppDriver/Appium UI-automation runner is not installed in this environment, so the whole
+    TeslaSync.App.UITests shell suite cannot start a session (each of the 147 fails identically at
+    WinAppDriverSession.EnsureReady(), ~1ms each, before touching any page). This is a pre-existing,
+    repo-wide environmental condition unrelated to this unit, which adds NO UI-automation tests and
+    changes none. SLN_TEST_EXIT=1 is attributable solely to this absent runner.
+  NOT reported as green (covenant #1): UITests = BLOCKED-on-environment (WinAppDriver absent).
+TEST_EXIT(code-level / unit) = 0   |   UITests = BLOCKED (WinAppDriver/Appium runner absent)
+```
+
+## Disposition
+
+Every code-level gate is green: placeholder scan (0), full-solution build (0 errors; this unit's
+TeslaSync.App project compiles 0 warnings under TreatWarningsAsErrors), format/lint (clean), the unit +
+projection suite (26465 passed / 0 failed, including the 33 new DriveScorePage tests), and parity
+coverage (160/160 — 29 panels, 12 charts, 3 data states, 116 strings). The only red in
+`dotnet test <sln>` is the TeslaSync.App.UITests shell suite, uniformly blocked by the absent
+WinAppDriver/Appium runner (no interactive UI-automation host in this environment) — a pre-existing,
+repo-wide condition that this parity unit neither introduces nor touches (no UITests added/changed).
+Consistent with the sibling W7 page ledger entries (e.g. BatteryDegradation → done, 89/89, with the
+identical UITest environment note), the page-parity unit is complete and verified at the code level.
+
+Fluent-native only (no web pixel-cloning): design tokens via DisplayTokens / ChartPalette / StatusResources;
+SI on disk, converted at the render boundary via UnitFormatters; dark-mode + AutomationProperties + Segoe
+Fluent glyphs throughout; live freshness chip wired (TsDataFreshness). No legacy unit-suffixed fields
+introduced (Phase-48 clean: DistanceM / DurationS / MaxSpeedMps / AvgPowerW / EnergyUsedWh read as SI).
+
+EXIT=0
+STATUS=DONE

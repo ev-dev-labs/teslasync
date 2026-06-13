@@ -419,6 +419,10 @@
     <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPage\EfficiencyPage.Model.cs" Link="FeatureViews\EfficiencyPage\EfficiencyPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPage\EfficiencyPage.Source.cs" Link="FeatureViews\EfficiencyPage\EfficiencyPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPage\EfficiencyPage.ViewModel.cs" Link="FeatureViews\EfficiencyPage\EfficiencyPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveScorePage\DriveScorePage.Model.cs" Link="FeatureViews\DriveScorePage\DriveScorePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveScorePage\DriveScorePage.Projection.cs" Link="FeatureViews\DriveScorePage\DriveScorePage.Projection.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveScorePage\DriveScorePage.Source.cs" Link="FeatureViews\DriveScorePage\DriveScorePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DriveScorePage\DriveScorePage.ViewModel.cs" Link="FeatureViews\DriveScorePage\DriveScorePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailPage\ChargingDetailPage.Model.cs" Link="FeatureViews\ChargingDetailPage\ChargingDetailPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailPage\ChargingDetailPage.Source.cs" Link="FeatureViews\ChargingDetailPage\ChargingDetailPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailPage\ChargingDetailPage.ViewModel.cs" Link="FeatureViews\ChargingDetailPage\ChargingDetailPage.ViewModel.cs" />
