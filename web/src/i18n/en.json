@@ -1,4 +1,10 @@
 {
+  "sortControl": {
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "fieldLabel": "Sort by",
+    "direction": "Sort direction"
+  },
   "No stats available": "No stats available",
   "Stats Summary": "Stats Summary",
   "signalStats": {
