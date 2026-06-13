@@ -572,3 +572,4 @@ p3-android/modals-dialogs/A-0012-ConfirmDialog.prompt.md
 p3-android/modals-dialogs/A-0014-Modal.prompt.md
 p3-android/modals-dialogs/A-0015-Popover.prompt.md
 p3-android/modals-dialogs/A-0017-AcknowledgeAlertDialog.prompt.md
+p3-android/modals-dialogs/A-0016-SignalConfigModal.prompt.md
