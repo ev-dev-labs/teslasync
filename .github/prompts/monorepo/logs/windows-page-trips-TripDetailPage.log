@@ -1,0 +1,173 @@
+# p2-windows — W7 — page:trips/TripDetail — evidence log
+
+Artifact : page:trips/TripDetail
+Prompt   : p2-windows/W7/windows-page-trips-TripDetailPage
+Web src  : web/src/features/trips/pages/TripDetailPage.tsx  (route /trips/:id, nav name TripDetail)
+Output   : apps/windows/TeslaSync.App/feature-views/TripDetailPage/
+             TripDetailPage.Model.cs      (parser + snapshot + display + projection + strings + registration + diagnostics + json)
+             TripDetailPage.Source.cs     (generated-client feed — 1 endpoint)
+             TripDetailPage.ViewModel.cs   (INotifyPropertyChanged state holder — LoadAsync/RefreshAsync)
+             TripDetailPage.cs            (WinUI 3 UserControl view)
+Nav reg  : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs (PageFactory.Register("TripDetail", … ParseSessionId(Current.Param("id"))))
+Route    : apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs L182 Hidden("TripDetail","trips/:id",RouteGroup.TripsDriving,"Trip") (pre-existing)
+Op id    : apps/windows/TeslaSync.App.Core/Data/Net/Operations.cs L40 Trips.Detail = get_api_v1_trips_trip_id
+           apps/windows/Generated/Api/ApiEndpoints.cs L500 get_api_v1_trips_trip_id GET /trips/{trip_id} path-param trip_id (pre-existing)
+Strings  : apps/windows/Strings/{en,ar,he}/Resources.resw — all 12 trips.detail.* keys PRE-EXISTING (translation.trips.detail.*); 0 added
+Tests    : apps/windows/TeslaSync.App.Tests/FeatureViews/TripDetailPageTests.cs  (30 tests)
+           apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj (3 WinUI-free files added to the headless host's Compile seam)
+Ledger   : apps/parity/windows-ledger.json (page:trips/TripDetail → done, 21/21)
+
+NOTE on idealized paths: the prompt header lists an idealized output path
+(apps/windows/TeslaSync/Features/Trips/TripDetailPage.xaml + TripDetailPageViewModel.cs). The real repo is a
+C#-markup WinUI 3 app — every sibling W7 page (ChargingDetailPage, DriveDetailPage, TripReplayPage,
+BatteryDegradationPage, …) lives under apps/windows/TeslaSync.App/feature-views/<Page>/ as
+<Page>.{Model,Source,ViewModel}.cs + <Page>.cs (no per-page .xaml; the solution is TeslaSync.sln, not
+TeslaSync.App.sln). This unit follows that established convention exactly (verified against ChargingDetailPage /
+DriveDetailPage). Pure logic lives in the WinUI-free .Model/.Source/.ViewModel (unit-tested headlessly via the
+.csproj <Compile Include> seam); the .cs is the thin view, exercised by the app build.
+
+NOTE on the useTrip contract: the web hook useTrip (web/src/api/hooks/useTrips.ts) is documented @deprecated — the
+Go router registers only GET /trips (list), so GET /trips/{id} resolves to a 404 that surfaces through the
+PageContainer error path. The port preserves that contract faithfully: TripDetailPageClientFeed issues the single
+read and PROPAGATES its failure (it is the primary read) so the view-model folds it into the never-blank error
+branch — asserted by Client_feed_propagates_the_primary_read_failure. The generated contract client still pins the
+endpoint (ApiEndpoints L500), so the request shaping is real and tested.
+
+NOTE on scope: the manifest enumerates exactly 5 panels (Distance, Energy-Used, Efficiency, Cost, GlassPanel5),
+4 states and 12 strings = PARITY_REQUIRED 21. The web page also renders <AIAutoTripNameSuggestion> (an AI
+propose-a-name overlay with its own trips.detail.aiSuggestName.* keys). That component is NOT a manifest parity
+unit (it is not one of the 5 panels and uses none of the 12 required keys), and wiring an AI-provider feed is
+out of scope per "Out of Scope (reject): new product features". It is therefore intentionally not ported; every
+one of the 21 manifest items IS implemented. No scope narrowing of the declared 21.
+
+## Honesty Covenant (binding — verbatim)
+
+```
+1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+```
+
+Delegation: NONE (implemented directly; no sub-agents used).
+
+## Architecture mapping (web → native)
+
+- useTrip (GET /trips/{id})  → TripDetailPageClientFeed (Registration.DetailOperation = get_api_v1_trips_trip_id,
+                              GET /trips/{trip_id}, path-param trip_id) — the single primary read; its failure
+                              drives the page error state (web PageContainer error path; useTrip is 404-bound).
+- PageContainer(title,subtitle,loading,error) → TripDetailPage.cs header (PageTitle + success-only Subhead) +
+                              the loading shimmer / TsQueryError / TsEmptyState / content host, gated by the
+                              TripDetailDisplay.Show{Loading,Error,Empty,Content} flags.
+- StatCard ×4 (Grid cols 2/4) → TripDetailProjection.BuildStatCards → TripStatCardDisplay → View TsStatCard grid.
+- GlassPanel + KVList (6 rows) → TripDetailProjection.BuildDetailRows → View TsGlassPanel + TsKVList.
+- convertDistanceFromSI / KM_PER_MILE efficiency / formatCurrency → Core.Units UnitConverters.DistanceFromSi +
+                              ScalarFormatters.FormatNumber/currency, applied ONLY at this display boundary; SI
+                              (meters / watt-hours) is read straight from the wire (Phase-48 SI canonical).
+- i18n t('trips.detail.*')   → ILocalizer.GetString with web key names verbatim (TripDetailStrings.Resolve).
+
+## Data states (4 declared: loading / empty / error / success) — all implemented
+
+[x] loading  : Model TripDetailState.Loading / ShowLoading ; View _loadingSkeleton (TsSkeleton shimmer mirroring
+               the 4-card + panel content shape) ; Test State_loading_when_trip_query_in_flight
+[x] empty    : Model TripDetailState.Empty / ShowEmpty (EmptyMessage = trips.detail.notFound) ; View _emptyState
+               (TsEmptyState, Car glyph) ; Test State_empty_when_resolved_without_a_trip
+[x] error    : Model TripDetailState.Error / ShowError (error.loadFailed + detail) ; View _errorState
+               (TsQueryError + Retry → RefreshAsync) ; Test State_error_when_read_failed
+[x] success  : Model TripDetailState.Success / ShowContent ; View _contentHost (stat cards + detail panel) ;
+               Test State_success_when_trip_resolved
+
+## === PARITY ===
+
+PARITY_REQUIRED=21
+
+# panels (5)
+[x] panel   Distance      : Model.cs TripDetailProjection.BuildStatCards[0] (s.Distance, UnitConverters.DistanceFromSi, DistanceGlyph) ; View.cs BuildStatCards→TsStatCard ; Test Success_renders_four_stat_cards_in_web_order[0] + Metric_distance_card_converts_meters_to_kilometers + Imperial_distance_card_converts_meters_to_miles
+[x] panel   Energy-Used   : Model.cs TripDetailProjection.BuildStatCards[1] (s.Energy, ScalarFormatters.FormatNumber Wh @2) ; View.cs BuildStatCards→TsStatCard ; Test Success_renders_four_stat_cards_in_web_order[1] + Energy_card_formats_watt_hours_at_global_precision
+[x] panel   Efficiency    : Model.cs TripDetailProjection.BuildStatCards[2] (s.Efficiency, whPerKm + KmPerMile, Wh/km|Wh/mi) ; View.cs BuildStatCards→TsStatCard ; Test Success_renders_four_stat_cards_in_web_order[2] + Metric_efficiency_is_wh_per_km + Imperial_efficiency_scales_wh_per_km_by_km_per_mile + Efficiency_is_zero_when_distance_is_zero
+[x] panel   Cost          : Model.cs TripDetailProjection.BuildStatCards[3] (s.Cost, currencySymbol + ScalarFormatters.FormatNumber @2) ; View.cs BuildStatCards→TsStatCard ; Test Success_renders_four_stat_cards_in_web_order[3] + Cost_card_prefixes_the_currency_symbol
+[x] panel   GlassPanel5   : Model.cs TripDetailProjection.BuildDetailRows (6 TripKvRow: TripId/Name/Started/Ended/Drives/Charges) ; View.cs BuildDetailPanel→TsGlassPanel+TsKVList ; Test Success_renders_six_detail_rows_in_web_order + Unnamed_trip_renders_dash_in_the_name_row + Open_ended_trip_renders_dash_for_the_ended_row
+
+# states (4)
+[x] state   loading       : Model.cs TripDetailDisplay.ShowLoading ; View.cs _loadingSkeleton (TsSkeleton) ; Test State_loading_when_trip_query_in_flight + Loading_and_empty_states_render_no_panels
+[x] state   empty         : Model.cs TripDetailDisplay.ShowEmpty (trips.detail.notFound) ; View.cs _emptyState (TsEmptyState) ; Test State_empty_when_resolved_without_a_trip + View_model_folds_a_missing_trip_into_the_empty_state
+[x] state   error         : Model.cs TripDetailDisplay.ShowError ; View.cs _errorState (TsQueryError+Retry) ; Test State_error_when_read_failed + View_model_surfaces_a_failed_read_as_the_error_state
+[x] state   success       : Model.cs TripDetailDisplay.ShowContent ; View.cs _contentHost ; Test State_success_when_trip_resolved + View_model_folds_a_resolved_trip_into_the_success_state
+
+# strings (12) — resolved through ILocalizer (web key names preserved) in TripDetailStrings.Resolve;
+#                asserted by TripDetailPageTests.RequiredStringKeys + Projection_resolves_every_required_string_key (+ _loading_state)
+[x] string  trips.detail.charges     : Model.cs TripDetailStrings.Resolve (Charges)    ; DetailRows[5]
+[x] string  trips.detail.cost        : Model.cs TripDetailStrings.Resolve (Cost)       ; StatCards[3]
+[x] string  trips.detail.distance    : Model.cs TripDetailStrings.Resolve (Distance)   ; StatCards[0]
+[x] string  trips.detail.drives      : Model.cs TripDetailStrings.Resolve (Drives)     ; DetailRows[4]
+[x] string  trips.detail.efficiency  : Model.cs TripDetailStrings.Resolve (Efficiency) ; StatCards[2]
+[x] string  trips.detail.ended       : Model.cs TripDetailStrings.Resolve (Ended)      ; DetailRows[3]
+[x] string  trips.detail.energy      : Model.cs TripDetailStrings.Resolve (Energy)     ; StatCards[1]
+[x] string  trips.detail.name        : Model.cs TripDetailStrings.Resolve (Name)       ; DetailRows[1] + subtitle fallback
+[x] string  trips.detail.notFound    : Model.cs TripDetailStrings.Resolve (NotFound)   ; EmptyMessage
+[x] string  trips.detail.started     : Model.cs TripDetailStrings.Resolve (Started)    ; DetailRows[2]
+[x] string  trips.detail.title       : Model.cs TripDetailStrings.Resolve (Title)      ; PageTitle + Registration.Title
+[x] string  trips.detail.tripId      : Model.cs TripDetailStrings.Resolve (TripId)     ; DetailRows[0]
+
+PARITY_COVERED=21
+
+## Gate (windows triad: placeholder + build + lint + test)
+
+```
+# 1) placeholder / stub scan (csharp) over the feature directory
+& ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TripDetailPage -Language csharp
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# 2) build (full solution)
+dotnet build apps/windows/TeslaSync.sln -c Release
+  Build succeeded.  0 Error(s)
+  TripDetailPage code (TeslaSync.App + TeslaSync.App.Tests): 0 warnings / 0 errors.
+  (The only solution warnings are the 17 pre-existing TeslaSync.App.Core analyzer warnings — CA1720/CA1716/
+   CA1000/CA1859 in LiveEvent / LoadState / DateTimeFormatting / RepositoryResult / VehicleOption /
+   GeneratedApiClient / SseEventDecoder — identical to baseline; this unit touches none of them.)
+  (One iteration: an initial CA1822 on TripDetailPage.BuildContent — "can be marked static" — was promoted to an
+   error by the App project's analysis settings and fixed by making the method static. Re-build: 0/0.)
+BUILD_EXIT=0
+
+# 3) lint / format verify (full solution)
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes --no-restore
+  (clean — new files LF-normalized per .editorconfig end_of_line=lf, charset utf-8, final newline)
+LINT_EXIT=0
+
+# 4) test
+#   4a) unit + projection suite (TeslaSync.App.Tests — includes the 30 new TripDetailPage tests that exercise
+#       this page's projection, parser, view-model state matrix, client-feed request shaping and diagnostics):
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+  Passed!  Failed: 0, Passed: 27566, Skipped: 0, Total: 27566
+  (filtered TripDetailPageTests: Passed 30 / Failed 0)
+UNIT_TEST_EXIT=0
+
+#   4b) UI-automation suite (TeslaSync.App.UITests) — environment-blocked, NOT a code failure:
+#       The WinAppDriver/Appium UI-automation runner is absent in this environment (nothing listening on
+#       127.0.0.1:4723 — verified: TcpTestSucceeded=False), a pre-existing repo-wide condition that blocks the
+#       shell UITests suite. This unit adds NO UI-automation tests and changes none, so its code-level
+#       disposition is unaffected.
+TEST_EXIT(code-level / unit) = 0   |   UITests = BLOCKED (WinAppDriver/Appium runner absent)
+
+# 5) parity coverage
+PARITY_REQUIRED=21
+PARITY_COVERED=21
+```
+
+## Disposition
+
+Every code-level gate is green: placeholder scan (0 placeholders), full-solution build (0 errors; TripDetailPage
+code 0 warnings / 0 errors), format/lint (clean), the unit + projection suite (27566 passed / 0 failed, including
+the 30 new TripDetailPageTests), and parity coverage (21/21 — the four headline stat cards Distance / Energy-Used /
+Efficiency / Cost, the six-row detail GlassPanel, the loading / empty / error / success data states, and all 12
+trips.detail.* i18n keys). The page is the native C#-markup WinUI 3 parity port of TripDetailPage following the
+established sibling-page convention; the single web useTrip hook is bound through the generated OpenAPI client feed
+(and its 404 contract is preserved as the error branch), SI meters / watt-hours are converted only at the display
+boundary via the shared Core.Units converters, every string flows through ILocalizer with web key names preserved,
+and AutomationProperties names cover the page, every stat card and the detail panel. The only red anywhere is the
+TeslaSync.App.UITests shell suite, uniformly blocked by the absent WinAppDriver/Appium runner — a repo-wide
+environmental condition this unit neither introduces nor touches.
+
+EXIT=0
+STATUS=DONE

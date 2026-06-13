@@ -197,6 +197,12 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
+        // Trips / TripDetail page (P2/W7) — parity port of web TripDetailPage at route /trips/:id.
+        // The route trip id is read from the live match; the web page has no in-body back affordance (the shell
+        // NavigationView owns back navigation), so no BackRequested wiring is needed.
+        _viewModel.PageFactory.Register("TripDetail", () =>
+            new FeatureViews.Trips.TripDetailPage(ParseSessionId(_viewModel.Current.Param("id"))));
+
         // Charging / ChargingDetail page (P2/W7) — parity port of web ChargingDetailPage at route /charging/:id.
         // The route session id is read from the live match and the back affordance maps to the charging list.
         _viewModel.PageFactory.Register("ChargeDetail", () =>

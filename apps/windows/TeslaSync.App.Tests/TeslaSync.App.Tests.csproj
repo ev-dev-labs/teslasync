@@ -548,6 +548,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SharedDrivePage\SharedDrivePage.Model.cs" Link="FeatureViews\SharedDrivePage\SharedDrivePage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SharedDrivePage\SharedDrivePage.Source.cs" Link="FeatureViews\SharedDrivePage\SharedDrivePage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SharedDrivePage\SharedDrivePage.ViewModel.cs" Link="FeatureViews\SharedDrivePage\SharedDrivePage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TripDetailPage\TripDetailPage.Model.cs" Link="FeatureViews\TripDetailPage\TripDetailPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TripDetailPage\TripDetailPage.Source.cs" Link="FeatureViews\TripDetailPage\TripDetailPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TripDetailPage\TripDetailPage.ViewModel.cs" Link="FeatureViews\TripDetailPage\TripDetailPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TripReplayPage\TripReplayPage.Model.cs" Link="FeatureViews\TripReplayPage\TripReplayPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TripReplayPage\TripReplayPage.Source.cs" Link="FeatureViews\TripReplayPage\TripReplayPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TripReplayPage\TripReplayPage.ViewModel.cs" Link="FeatureViews\TripReplayPage\TripReplayPage.ViewModel.cs" />

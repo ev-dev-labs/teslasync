@@ -133,5 +133,14 @@
     "requiredCount": 4,
     "promptId": "p2-windows/W7/windows-page-system-StatusApiDocsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-StatusApiDocsPage.log"
+  },
+  {
+    "unitId": "page:trips/TripDetail",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 21,
+    "requiredCount": 21,
+    "promptId": "p2-windows/W7/windows-page-trips-TripDetailPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-trips-TripDetailPage.log"
   }
 ]
