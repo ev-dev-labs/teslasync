@@ -1829,7 +1829,8 @@
       "title": "Search with natural language",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
       "badge": "Helix",
-      "searchButton": "Search with Helix"
+      "searchButton": "Search with Helix",
+      "placeholder": "e.g. drives last weekend over 200 km with phantom drain"
     },
     "tooShort": {
       "title": "Type at least 2 characters",
