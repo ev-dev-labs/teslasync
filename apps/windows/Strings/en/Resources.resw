@@ -12,6 +12,12 @@
   <data name="translation.AC Power" xml:space="preserve">
     <value>AC Power</value>
   </data>
+  <data name="translation.ADAS Features" xml:space="preserve">
+    <value>ADAS Features</value>
+  </data>
+  <data name="translation.ADAS features, safety score, and driving stats" xml:space="preserve">
+    <value>ADAS features, safety score, and driving stats</value>
+  </data>
   <data name="translation.AEB" xml:space="preserve">
     <value>AEB</value>
   </data>
@@ -27,11 +33,20 @@
   <data name="translation.Active" xml:space="preserve">
     <value>Active</value>
   </data>
+  <data name="translation.Adaptive cruise headway setting" xml:space="preserve">
+    <value>Adaptive cruise headway setting</value>
+  </data>
   <data name="translation.Admin" xml:space="preserve">
     <value>Admin</value>
   </data>
   <data name="translation.Alerts" xml:space="preserve">
     <value>Alerts</value>
+  </data>
+  <data name="translation.Alerts for blind-spot hazards" xml:space="preserve">
+    <value>Alerts for blind-spot hazards</value>
+  </data>
+  <data name="translation.Alerts when exceeding speed limit" xml:space="preserve">
+    <value>Alerts when exceeding speed limit</value>
   </data>
   <data name="translation.All" xml:space="preserve">
     <value>All</value>
@@ -51,6 +66,12 @@
   <data name="translation.Auto" xml:space="preserve">
     <value>Auto</value>
   </data>
+  <data name="translation.Auto Emergency Braking" xml:space="preserve">
+    <value>Auto Emergency Braking</value>
+  </data>
+  <data name="translation.Automatic collision mitigation" xml:space="preserve">
+    <value>Automatic collision mitigation</value>
+  </data>
   <data name="translation.Avg" xml:space="preserve">
     <value>Avg</value>
   </data>
@@ -66,6 +87,12 @@
   <data name="translation.Battery" xml:space="preserve">
     <value>Battery</value>
   </data>
+  <data name="translation.Blind Spot Camera" xml:space="preserve">
+    <value>Blind Spot Camera</value>
+  </data>
+  <data name="translation.Blind Spot Collision Warning" xml:space="preserve">
+    <value>Blind Spot Collision Warning</value>
+  </data>
   <data name="translation.By Count" xml:space="preserve">
     <value>By Count</value>
   </data>
@@ -74,6 +101,9 @@
   </data>
   <data name="translation.CO₂ Saved" xml:space="preserve">
     <value>CO₂ Saved</value>
+  </data>
+  <data name="translation.Camera view when signaling" xml:space="preserve">
+    <value>Camera view when signaling</value>
   </data>
   <data name="translation.Cancel" xml:space="preserve">
     <value>Cancel</value>
@@ -158,6 +188,9 @@
   </data>
   <data name="translation.Critical" xml:space="preserve">
     <value>Critical</value>
+  </data>
+  <data name="translation.Cruise Follow Distance" xml:space="preserve">
+    <value>Cruise Follow Distance</value>
   </data>
   <data name="translation.DC Power" xml:space="preserve">
     <value>DC Power</value>
@@ -249,6 +282,9 @@
   <data name="translation.Efficiency Metrics" xml:space="preserve">
     <value>Efficiency Metrics</value>
   </data>
+  <data name="translation.Emergency Lane Departure Avoidance" xml:space="preserve">
+    <value>Emergency Lane Departure Avoidance</value>
+  </data>
   <data name="translation.Empty" xml:space="preserve">
     <value>Empty</value>
   </data>
@@ -330,6 +366,9 @@
   <data name="translation.Formatted" xml:space="preserve">
     <value>Formatted</value>
   </data>
+  <data name="translation.Forward Collision Warning" xml:space="preserve">
+    <value>Forward Collision Warning</value>
+  </data>
   <data name="translation.From" xml:space="preserve">
     <value>From</value>
   </data>
@@ -410,6 +449,9 @@
   </data>
   <data name="translation.LDA" xml:space="preserve">
     <value>LDA</value>
+  </data>
+  <data name="translation.Lane Departure Avoidance" xml:space="preserve">
+    <value>Lane Departure Avoidance</value>
   </data>
   <data name="translation.Last" xml:space="preserve">
     <value>Last</value>
@@ -534,8 +576,17 @@
   <data name="translation.No energy records found." xml:space="preserve">
     <value>No energy records found.</value>
   </data>
+  <data name="translation.No history records found." xml:space="preserve">
+    <value>No history records found.</value>
+  </data>
   <data name="translation.No live data" xml:space="preserve">
     <value>No live data</value>
+  </data>
+  <data name="translation.No safety data available for this vehicle." xml:space="preserve">
+    <value>No safety data available for this vehicle.</value>
+  </data>
+  <data name="translation.No safety state history to chart yet." xml:space="preserve">
+    <value>No safety state history to chart yet.</value>
   </data>
   <data name="translation.Nominal" xml:space="preserve">
     <value>Nominal</value>
@@ -606,6 +657,9 @@
   <data name="translation.Permissions" xml:space="preserve">
     <value>Permissions</value>
   </data>
+  <data name="translation.Pin to Drive" xml:space="preserve">
+    <value>Pin to Drive</value>
+  </data>
   <data name="translation.Playing" xml:space="preserve">
     <value>Playing</value>
   </data>
@@ -629,6 +683,9 @@
   </data>
   <data name="translation.Presets" xml:space="preserve">
     <value>Presets</value>
+  </data>
+  <data name="translation.Prevents unintentional lane changes" xml:space="preserve">
+    <value>Prevents unintentional lane changes</value>
   </data>
   <data name="translation.Previous" xml:space="preserve">
     <value>Previous</value>
@@ -681,6 +738,9 @@
   <data name="translation.Requests" xml:space="preserve">
     <value>Requests</value>
   </data>
+  <data name="translation.Requires PIN before driving" xml:space="preserve">
+    <value>Requires PIN before driving</value>
+  </data>
   <data name="translation.Resolved" xml:space="preserve">
     <value>Resolved</value>
   </data>
@@ -701,6 +761,18 @@
   </data>
   <data name="translation.SLW" xml:space="preserve">
     <value>SLW</value>
+  </data>
+  <data name="translation.Safety Score" xml:space="preserve">
+    <value>Safety Score</value>
+  </data>
+  <data name="translation.Safety Settings" xml:space="preserve">
+    <value>Safety Settings</value>
+  </data>
+  <data name="translation.Safety Settings History" xml:space="preserve">
+    <value>Safety Settings History</value>
+  </data>
+  <data name="translation.Safety States Over Time" xml:space="preserve">
+    <value>Safety States Over Time</value>
   </data>
   <data name="translation.Save" xml:space="preserve">
     <value>Save</value>
@@ -732,6 +804,9 @@
   <data name="translation.Source" xml:space="preserve">
     <value>Source</value>
   </data>
+  <data name="translation.Speed Limit Warning" xml:space="preserve">
+    <value>Speed Limit Warning</value>
+  </data>
   <data name="translation.Standby" xml:space="preserve">
     <value>Standby</value>
   </data>
@@ -746,6 +821,9 @@
   </data>
   <data name="translation.Status" xml:space="preserve">
     <value>Status</value>
+  </data>
+  <data name="translation.Steers back on unintentional departure" xml:space="preserve">
+    <value>Steers back on unintentional departure</value>
   </data>
   <data name="translation.Stopped" xml:space="preserve">
     <value>Stopped</value>
@@ -797,6 +875,9 @@
   </data>
   <data name="translation.Total Exports" xml:space="preserve">
     <value>Total Exports</value>
+  </data>
+  <data name="translation.Total Features" xml:space="preserve">
+    <value>Total Features</value>
   </data>
   <data name="translation.Total Size" xml:space="preserve">
     <value>Total Size</value>
@@ -866,6 +947,9 @@
   </data>
   <data name="translation.Warnings" xml:space="preserve">
     <value>Warnings</value>
+  </data>
+  <data name="translation.Warns of potential frontal collisions" xml:space="preserve">
+    <value>Warns of potential frontal collisions</value>
   </data>
   <data name="translation.a11y.breadcrumb" xml:space="preserve">
     <value>Breadcrumb</value>
