@@ -5995,6 +5995,7 @@
   <string name="translation_sleep_title">Sleep Efficiency</string>
   <string name="translation_slider_thumbMax">%1$s maximum</string>
   <string name="translation_slider_thumbMin">%1$s minimum</string>
+  <string name="translation_smallMultiples_noData">No data</string>
   <string name="translation_softwareUpdates_aiNarration_badge">Helix</string>
   <string name="translation_softwareUpdates_aiNarration_button">Summarize updates</string>
   <string name="translation_softwareUpdates_aiNarration_description">Ask Helix to walk through your firmware update history — the current version, the install cadence, and the headline release-note themes. The narrator quotes only the deterministic update events your vehicle reported plus public Tesla release notes for the versions you have installed; it never invents firmware versions or claims features your installed build does not have.</string>
