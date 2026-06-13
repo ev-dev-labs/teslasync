@@ -1,0 +1,215 @@
+=== p2-windows · W7 · page:vehicle-systems/ClimateControl (WinUI 3 / Fluent) ===
+Parity unit : page:vehicle-systems/ClimateControl   kind=page   web route=/climate
+Web source  : web/src/features/vehicle-systems/pages/ClimateControlPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection +
+  parsing, unit-tested headlessly), <Name>.Source.cs (the IXxxFeed data port + Empty + generated-client feed),
+  <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable observable state holder) and <Name>.cs (the Fluent
+  view, a UserControl). The generated prompt's idealized "ClimateControlPage.xaml + ViewModel.cs under
+  TeslaSync/Features/VehicleSystems" is mapped onto these real conventions. The surface registers with the W4
+  ShellPageFactory under route name "ClimateControl" (RouteTable already declares Page("ClimateControl",
+  "climate-control") + Hidden("ClimateControl", "climate")).
+- Three data sources, each bound through the generated C# client (ADR-004) on the ClimateClientFeed:
+  GET /climate/latest (web useClimate, Operations.Climate.Latest), GET /climate (web useClimateHistory, the new
+  Operations.Climate.History = get_api_v1_climate) and GET /charging-telemetry/latest (web
+  useChargingTelemetryLatest, Operations.Charging.TelemetryLatest, read only for the not-enough-power-to-heat
+  banner). Field names are the snake_case wire names the Go climate handler projects
+  (internal/api/climate/handler.go: inside_temp, outside_temp, driver_temp_setting, passenger_temp_setting,
+  hvac_power, is_ac_on, hvac_auto_mode, fan_speed, hvac_fan_status, climate_keeper_mode, defrost_mode,
+  defrost_for_preconditioning, rear_defrost_enabled, wiper_heat_enabled, rear_display_hvac_enabled,
+  battery_heater, overheat_protection, cabin_overheat_protection_temp_limit, hvac_steering_wheel_heat_auto,
+  hvac_steering_wheel_heat_level, seat_heater_{left,right,rear_left,rear_center,rear_right},
+  auto_seat_climate_{left,right}, climate_seat_cooling_front_{left,right}, seat_vent_enabled; history adds id /
+  created_at / timestamp; charging adds not_enough_power_to_heat).
+- SI units honored: temperatures are SI Celsius on disk and converted to the active unit ONLY at the display
+  boundary via the shared P1/S5 ports UnitConverters.TemperatureFromSi / UnitFormatters.FormatTemperature /
+  UnitLabels.Label (web convertTempFromSI). Gauge max mirrors the web (131 °F / 55 °C). Comfort score and temp
+  delta are computed in Celsius exactly as the web memos do.
+- i18n: every visible literal flows through the ILocalizer facade with the web key names in the resw
+  translation.* catalog form (localizer.GetString("translation.<web phrase>", "<web phrase>")). 55 of the 84
+  manifest strings were missing from Strings/en/Resources.resw and were added (plus 11 non-manifest helper
+  strings the page also localizes: Low/Medium/Front Left/Front Right/Rear Left/Rear Center/Rear Right/Adjusting/
+  Far from target/Dog Mode/Camp Mode); "High" + 28 of the 84 already existed verbatim.
+- Charts use the W3 native wrappers only: three TsRadialGauge (Components.Charts), one TsLineChart and one
+  TsComposedChart (area AC-state + line fan-speed). No web canvas / recharts. No maps (manifest declares 0).
+- Headless test wiring: the three Microsoft.UI-free logic files (.Model.cs/.Source.cs/.ViewModel.cs) are linked
+  into TeslaSync.App.Tests.csproj (mirroring every sibling page) so the parser + projection + view-model + feed
+  are asserted by ClimateControlPageTests without a UI host.
+
+=== PARITY ===
+PARITY_REQUIRED=129
+
+# Panels (36) — every named panel + every anonymous GlassPanel region from the web source.
+# (Anonymous GlassPanelN are mapped in source order onto the native regions; every web region is reproduced.)
+[x] panel  - GlassPanel1   -> ClimateControlPage.cs#BuildBanner (HVAC status banner, TsGlassPanel, glow cyan when AC on) <- Model BuildHvacStatusChip/BuildComfortChip/BuildBannerChips
+[x] panel  - GlassPanel2   -> ClimateControlPage.cs#BuildGaugePanel Gauges[0] (Inside Temp, TsGlassPanel) <- Model BuildGauges/Gauge
+[x] panel  - GlassPanel3   -> ClimateControlPage.cs#BuildGaugePanel Gauges[1] (Outside Temp, TsGlassPanel)
+[x] panel  - GlassPanel4   -> ClimateControlPage.cs#BuildGaugePanel Gauges[2] (Driver Set Temp, TsGlassPanel)
+[x] panel  - GlassPanel5   -> ClimateControlPage.cs#BuildStatusCards (HVAC status-card grid container) <- Model BuildStatusCards
+[x] panel  - GlassPanel6   -> ClimateControlPage.cs#BuildProtectionCards (protection & safety grid container) <- Model BuildProtectionCards
+[x] panel  - HVAC-Power               -> Model BuildStatusCards[0] (On/Off + "State: {hvac_power}"); rendered MetricCards TsMetricCard
+[x] panel  - Auto-Conditioning        -> Model BuildStatusCards[1] (hvac_auto_mode != Off ? On : Off)
+[x] panel  - Climate-Keeper           -> Model BuildStatusCards[2] (KeeperLabel + Active subtitle)
+[x] panel  - Fan-Speed                -> Model BuildStatusCards[3] (fan_speed + "Level 0–10")
+[x] panel  - Fan-Status               -> Model BuildStatusCards[4] (hvac_fan_status>0 Running/Idle + "Code {n}")
+[x] panel  - Steering-Wheel-Heater    -> Model BuildStatusCards[5] (level>0 ? On : Off)
+[x] panel  - Steering-Wheel-Heat-Level-> Model BuildStatusCards[6] (HeatLabel + "Level {n}")
+[x] panel  - Steering-Wheel-Heat-Auto -> Model BuildStatusCards[7] (Auto/Manual)
+[x] panel  - Defrost-Mode             -> Model BuildStatusCards[8] (defrost_mode != Off ? mode : Off)
+[x] panel  - Defrost-for-Preconditioning -> Model BuildStatusCards[9] (Active/Inactive + "Clearing windshield before drive")
+[x] panel  - Rear-Defrost             -> Model BuildStatusCards[10] (On/Off + "Clearing rear window")
+[x] panel  - Wiper-Heater             -> Model BuildStatusCards[11] (On/Off + "Heating windshield wipers")
+[x] panel  - Rear-Display-HVAC        -> Model BuildStatusCards[12] (Enabled/Disabled + "Rear passengers can control HVAC")
+[x] panel  - Overheat-Protection      -> Model BuildProtectionCards[0] (overheat_protection ?? Unknown)
+[x] panel  - Overheat-Temp-Limit      -> Model BuildProtectionCards[1] (cabin_overheat_protection_temp_limit ?? —)
+[x] panel  - Battery-Heater           -> Model BuildProtectionCards[2] (battery_heater ? On : Off)
+[x] panel  - Passenger-Setting        -> Model BuildProtectionCards[3] (FormatTemperature passenger_temp_setting)
+[x] panel  - GlassPanel24  -> ClimateControlPage.cs#BuildComfort (Thermal Comfort outer panel, TsGlassPanel) <- Model BuildComfortTiles
+[x] panel  - GlassPanel25  -> ClimateControlPage.cs#BuildComfortTile ComfortTiles[0] (Comfort Score ring)
+[x] panel  - GlassPanel26  -> ClimateControlPage.cs#BuildComfortTile ComfortTiles[1] (Temp Delta ring)
+[x] panel  - GlassPanel27  -> ClimateControlPage.cs#BuildComfortTile ComfortTiles[2] (Status ring + glyph)
+[x] panel  - GlassPanel28  -> ClimateControlPage.cs#BuildEfficiency (Climate Efficiency outer panel, TsGlassPanel) <- Model BuildEfficiencyCards
+[x] panel  - Avg-Fan-Speed -> Model BuildEfficiencyCards[0] (avgFan + "Level 0-10")
+[x] panel  - Peak-Fan-Speed-> Model BuildEfficiencyCards[1] (peakFan + "Level 0-10")
+[x] panel  - AC-On-Time    -> Model BuildEfficiencyCards[2] (acOnPct% + "of samples")
+[x] panel  - Comfort-Score -> Model BuildEfficiencyCards[3] (comfortScore%)
+[x] panel  - GlassPanel33  -> ClimateControlPage.cs#BuildSeats (Seat Heaters panel: front/auto/rear/cooling/legend, TsGlassPanel) <- Model BuildFrontSeats/BuildRearSeats/BuildCoolingSeats/BuildSeatLegend/BuildAutoSeatChip/BuildSeatVentChip
+[x] panel  - GlassPanel34  -> ClimateControlPage.cs#BuildTempChart (Temperature History panel, TsGlassPanel) <- Model BuildTempHistorySeries
+[x] panel  - GlassPanel35  -> ClimateControlPage.cs#BuildAcFanChart (AC State & Fan Speed panel, TsGlassPanel) <- Model BuildAcFanSeries
+[x] panel  - GlassPanel36  -> ClimateControlPage.cs#BuildHistoryTable (Climate History table panel, TsGlassPanel) <- Model BuildHistoryColumns/BuildHistoryRows
+
+# Charts (5) — native W3 chart wrappers only.
+[x] chart  - RadialGauge   -> ClimateControlPage.cs#BuildGaugePanel TsRadialGauge (Inside Temp, ColorIndex 0) <- Model Gauge value via UnitConverters.TemperatureFromSi
+[x] chart  - RadialGauge   -> ClimateControlPage.cs#BuildGaugePanel TsRadialGauge (Outside Temp)
+[x] chart  - RadialGauge   -> ClimateControlPage.cs#BuildGaugePanel TsRadialGauge (Driver Set Temp)
+[x] chart  - LineChart     -> ClimateControlPage.cs#BuildTempChart TsLineChart <- Model BuildTempHistorySeries (Inside/Outside/Driver Set series, ChartRole.Temperature)
+[x] chart  - AreaChart     -> ClimateControlPage.cs#BuildAcFanChart TsComposedChart <- Model BuildAcFanSeries (AC On/Off Area + Fan Speed Line)
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank), for every source.
+[x] state  - loading       -> Model ClimateControlState.Loading + Display.ShowLoading (ClimateControlProjection.SelectState); rendered ClimateControlPage.cs#_loadingSkeleton (TsSkeleton shimmer); test Loading_model_is_the_loading_state / ViewModel(empty feed→load)
+[x] state  - empty         -> Model ClimateControlState.Empty + ShowEmpty (no latest object AND no history); rendered _emptyState (TsEmptyState) plus per-source empties: TempHistoryEmptyMessage/AcFanEmptyMessage/HistoryEmptyMessage + gauge TsEmptyState; tests Empty_snapshot_is_the_empty_state / ViewModel_empty_feed_is_the_empty_state
+[x] state  - error         -> Model ClimateControlState.Error + ShowError + ErrorText; rendered _errorState (TsQueryError InfoBar-equivalent + Retry); tests Error_detail_is_the_error_state / ViewModel_feed_failure_is_the_error_state
+[x] state  - success       -> Model ClimateControlState.Success + ShowContent; rendered _contentHost (all sections); tests Latest_object_is_the_success_state / Success_renders_history_charts_and_table_when_history_present
+
+# Strings (84) — every visible literal resolves from Strings/en/Resources.resw via ILocalizer with the web key
+# names (translation.<web phrase>); all resolved in ClimateControlProjection.Project (local T()) unless noted.
+# Coverage asserted headlessly by ClimateControlPageTests.Projection_resolves_every_manifest_string_in_the_translation_catalog_form
+# (the union of four branch-covering models records all 84 translation.* keys through a RecordingLocalizer).
+[x] string - AC                                          -> Project AcFanAxisCaption ($"{T(\"AC\")} · {T(\"Fan Level\")}")
+[x] string - AC On Time                                  -> Model BuildEfficiencyCards[2] label
+[x] string - AC On/Off                                   -> Model BuildAcFanSeries area series name
+[x] string - AC State & Fan Speed                        -> Project AcFanTitle
+[x] string - Above Target                                -> Model BuildComfortTiles delta tile caption (delta>1)
+[x] string - Active                                      -> Model BuildHvacStatusChip / Climate-Keeper subtitle / Defrost-for-Preconditioning value
+[x] string - Auto                                        -> Model Steering-Wheel-Heat-Auto / BuildAutoSeatChip
+[x] string - Auto Climate (Left)                         -> Project AutoSeatLeftLabel
+[x] string - Auto Climate (Right)                        -> Project AutoSeatRightLabel
+[x] string - Auto Conditioning                           -> Model BuildStatusCards[1] label
+[x] string - Avg Fan Speed                               -> Model BuildEfficiencyCards[0] label
+[x] string - Battery Heater                              -> Model BuildProtectionCards[2] label + BuildBannerChips
+[x] string - Below Target                                -> Model BuildComfortTiles delta tile caption (delta<-1)
+[x] string - Clearing rear window                        -> Model BuildStatusCards[10] subtitle
+[x] string - Clearing windshield before drive            -> Model BuildStatusCards[9] subtitle
+[x] string - Climate Control                             -> Project Title + ClimateControlRegistration.Title
+[x] string - Climate Efficiency                          -> Project EfficiencyTitle
+[x] string - Climate History                             -> Project HistoryTitle
+[x] string - Climate Keeper                              -> Model BuildStatusCards[2] label + BuildHistoryColumns[6]
+[x] string - Code                                        -> Model BuildStatusCards[4] subtitle
+[x] string - Comfort Score                               -> Model BuildComfortTiles[0] label + BuildEfficiencyCards[3] label
+[x] string - Comfortable                                 -> Model ComfortBadge / BuildComfortTiles status caption
+[x] string - Defrost                                     -> Model BuildBannerChips defrost chip
+[x] string - Defrost Mode                                -> Model BuildStatusCards[8] label
+[x] string - Defrost for Preconditioning                 -> Model BuildStatusCards[9] label
+[x] string - Disabled                                    -> Model BuildStatusCards[12] (rear_display_hvac false)
+[x] string - Driver Set Temp                             -> Model BuildGauges Gauges[2] label + BuildTempHistorySeries
+[x] string - Enabled                                     -> Model BuildStatusCards[12] (rear_display_hvac true)
+[x] string - Excellent                                   -> Model BuildComfortTiles[0] caption (score>=80)
+[x] string - Fan                                         -> Model BuildHistoryColumns[4]
+[x] string - Fan Level                                   -> Project AcFanAxisCaption
+[x] string - Fan Speed                                   -> Model BuildStatusCards[3] label + BuildAcFanSeries line series name
+[x] string - Fan Status                                  -> Model BuildStatusCards[4] label
+[x] string - HVAC                                        -> Model BuildHistoryColumns[5]
+[x] string - HVAC Power                                  -> Model BuildStatusCards[0] label
+[x] string - HVAC System                                 -> Project HvacSystemLabel
+[x] string - HVAC status, temperatures, and seat heaters -> Project Subtitle
+[x] string - Heating windshield wipers                   -> Model BuildStatusCards[11] subtitle
+[x] string - Idle                                        -> Model BuildStatusCards[4] value (hvac_fan_status==0)
+[x] string - Inactive                                    -> Model BuildStatusCards[9] value (defrost_for_preconditioning false)
+[x] string - Inside                                      -> Model BuildHistoryColumns[1]
+[x] string - Inside Temp                                 -> Model BuildGauges Gauges[0] label + BuildTempHistorySeries
+[x] string - Insufficient Power to Heat                  -> Model BuildBannerChips (not_enough_power_to_heat)
+[x] string - Level                                       -> Model BuildStatusCards[3]/[6] subtitle ("{Level} 0–10" / "{Level} {n}")
+[x] string - Level 0-10                                  -> Model BuildEfficiencyCards levelRange
+[x] string - Manual                                      -> Model Steering-Wheel-Heat-Auto / BuildAutoSeatChip (false)
+[x] string - Moderate                                    -> Model BuildComfortTiles[0] caption (50<=score<80)
+[x] string - N/A                                         -> Model BuildComfortTiles delta tile caption (delta null)
+[x] string - Near Target                                 -> Model BuildComfortTiles delta tile caption (|delta|<=1)
+[x] string - No HVAC history available.                  -> Project AcFanEmptyMessage
+[x] string - No history records found.                   -> Project HistoryEmptyMessage + EmptyMessage
+[x] string - No temperature history available.           -> Project TempHistoryEmptyMessage
+[x] string - Off                                         -> Model status cards / BuildSeatLegend / BuildSeatVentChip
+[x] string - On                                          -> Model status cards / BuildSeatVentChip / BuildHistoryRows HVAC cell
+[x] string - Outside                                     -> Model BuildHistoryColumns[2]
+[x] string - Outside Temp                                -> Model BuildGauges Gauges[1] label + BuildTempHistorySeries
+[x] string - Overheat Protection                         -> Model BuildProtectionCards[0] label
+[x] string - Overheat Temp Limit                         -> Model BuildProtectionCards[1] label
+[x] string - Passenger Setting                           -> Model BuildProtectionCards[3] label
+[x] string - Peak Fan Speed                              -> Model BuildEfficiencyCards[1] label
+[x] string - Poor                                        -> Model BuildComfortTiles[0] caption (score<50/null)
+[x] string - Rear Defrost                                -> Model BuildStatusCards[10] label
+[x] string - Rear Display HVAC                           -> Model BuildStatusCards[12] label
+[x] string - Rear passengers can control HVAC            -> Model BuildStatusCards[12] subtitle
+[x] string - Refresh                                     -> Project RefreshLabel + RetryLabel; rendered _refresh TsButton + _errorState ActionText
+[x] string - Running                                     -> Model BuildStatusCards[4] value (hvac_fan_status>0)
+[x] string - Seat Cooling                                -> Project SeatCoolingTitle
+[x] string - Seat Heaters                                -> Project SeatHeadersTitle
+[x] string - Set Temp                                    -> Model BuildHistoryColumns[3]
+[x] string - State                                       -> Model BuildStatusCards[0] subtitle ("State: {hvac_power}")
+[x] string - Status                                      -> Model BuildComfortTiles[2] label
+[x] string - Steering Wheel Heat Auto                    -> Model BuildStatusCards[7] label
+[x] string - Steering Wheel Heat Level                   -> Model BuildStatusCards[6] label
+[x] string - Steering Wheel Heater                       -> Model BuildStatusCards[5] label
+[x] string - Temp Delta                                  -> Model BuildComfortTiles[1] label
+[x] string - Temperature History                         -> Project TempHistoryTitle
+[x] string - Thermal Comfort                             -> Project ThermalComfortTitle
+[x] string - Time                                        -> Model BuildHistoryColumns[0]
+[x] string - Too Cold                                    -> Model BuildComfortTiles[2] caption (delta<-2)
+[x] string - Too Warm                                    -> Model BuildComfortTiles[2] caption (delta>2)
+[x] string - Unknown                                     -> Model BuildProtectionCards[0] (overheat_protection empty) + Project ErrorText fallback
+[x] string - Ventilation                                 -> Model BuildSeatVentChip
+[x] string - Wiper Heater                                -> Model BuildStatusCards[11] label
+[x] string - of samples                                  -> Model BuildEfficiencyCards[2] subtitle
+
+PARITY_COVERED=129
+
+=== GATE ===
+# powershell -ExecutionPolicy Bypass -File ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ClimateControlPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/VehicleSystems path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes (ClimateControlPage sources + tests + Operations + ShellWindow registration)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27572, Failed: 0, Skipped: 0
+#   (headless gate, per established W7 precedent; the apps/windows/TeslaSync.App.UITests project is a WinAppDriver/
+#    Appium UI-automation suite that requires a live runner on 127.0.0.1:4723 — absent in this sandbox — and is
+#    not part of the headless definition-of-done gate.)
+TEST_EXIT=0
+PARITY_COVERED=129
+PARITY_REQUIRED=129
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ClimateControlPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Core/Data/Net/Operations.cs apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ClimateControlPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-vehicle-systems-ClimateControlPage.log
+# git commit -m "feat(apps/windows): ClimateControlPage at web parity (W7 vehicle-systems)"
+
+EXIT=0
+STATUS=DONE
