@@ -1,5 +1,5 @@
 {
-  "ledger": "P4 apple program \u2014 page parity rows (apple-macos + apple-ios)",
+  "ledger": "P4 apple program — page parity rows (apple-macos + apple-ios)",
   "generatedBy": ".github/prompts/monorepo/p4-apple/pages/p4-apple-P7-page-admin-ApiPlayground.prompt.md",
   "rows": [
     {
@@ -163,6 +163,24 @@
       "requiredCount": 11,
       "promptId": "p4-apple/P7/page:automations/AutomationActivityFeed",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationActivityFeed.log"
+    },
+    {
+      "unitId": "page:automations/AutomationsList",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 33,
+      "requiredCount": 33,
+      "promptId": "p4-apple/P7/page:automations/AutomationsList",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationsListPage.log"
+    },
+    {
+      "unitId": "page:automations/AutomationsList",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 33,
+      "requiredCount": 33,
+      "promptId": "p4-apple/P7/page:automations/AutomationsList",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationsListPage.log"
     }
   ]
 }
