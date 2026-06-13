@@ -1,0 +1,130 @@
+P2-WINDOWS W7 — page:vehicle-systems/SoftwareUpdates — WinUI 3 / Fluent parity port
+==================================================================================
+Web source : web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx (routes /software-updates, /vehicle-systems/software)
+Output     : apps/windows/TeslaSync.App/feature-views/SoftwareUpdatesPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done pages QuickStatsPage/ApiLogsPage/EnergyProductsPage. The generated prompt's
+              Features/VehicleSystems/*.xaml path does not exist in-repo.)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register(SoftwareUpdatesRegistration.RouteName, …)
+             (RouteTable.cs L165-166 already maps Page("SoftwareUpdates","software-updates",VehicleSystems)
+              + Hidden("SoftwareUpdates","vehicle-systems/software",VehicleSystems) — route pre-existing, no RouteTable edit.)
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw — added 13 keys per locale (9 parity literal keys
+             + 4 status-badge labels). Pre-existing/reused: translation.Scheduled, translation.Unknown,
+             translation.Vehicle, translation.error.loadFailed, translation.softwareUpdates.title, translation.common.retry.
+             (he/ar carry English placeholder values, matching the existing catalog convention; en is the superset.)
+
+Files:
+  feature-views/SoftwareUpdatesPage/SoftwareUpdatesPage.Model.cs      (parsers + status map + projection + registration + diagnostics)
+  feature-views/SoftwareUpdatesPage/SoftwareUpdatesPage.Source.cs     (ISoftwareUpdatesSource + generated C# client cache-then-network + EmptySoftwareUpdatesSource)
+  feature-views/SoftwareUpdatesPage/SoftwareUpdatesPage.ViewModel.cs  (INotifyPropertyChanged 4-state holder, clock-injected)
+  feature-views/SoftwareUpdatesPage/SoftwareUpdatesPage.cs            (WinUI 3 UserControl, Fluent + design tokens)
+  TeslaSync.App.Tests/FeatureViews/SoftwareUpdatesPageTests.cs        (30 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                      (link the 3 UI-free files; the WinUI view is build-only)
+
+Data sources (P1/S8 INotifyPropertyChanged VM → generated C# client; the manifest records "no API data sources"
+  but the web page DOES fetch GET /software-updates via an inline useQuery, so a real cache-then-network source
+  drives the four declared states rather than faking them):
+  useSelectedVehicle  -> SoftwareUpdatesSource.FetchAsync step 1, ApiRequest(Operations.Vehicles.List) → vehicles[0] = selected
+  useSoftwareUpdates  -> SoftwareUpdatesSource.FetchAsync step 2, ApiRequest("get_api_v1_software_updates", vehicle_id/limit/offset)
+Units (P1/S5): no unit-bearing quantities on this surface; timestamps formatted at the display boundary via
+  DateTimeFormatting.Format(DateTimeVariant.Date) (1:1 with the web formatDate). No non-SI stored/computed.
+Live data: none (web page uses a TanStack-Query useQuery, no useLiveX/SSE), so no SSE subscription / staleness chip (ADR-013 n/a).
+Scope note: the web PageContainer actions (VehicleSelect, RangePicker) + the timeline Pagination are platform chrome,
+  not declared parity panels/strings for this unit; omitted to avoid un-cataloged literals (parity-only per the prompt).
+  The source resolves the selected (primary) vehicle, matching useSelectedVehicle's default.
+
+=== PARITY ===
+PARITY_REQUIRED=23
+
+[1/23]  panel  Current-Version (MetricCard)
+        SoftwareUpdatesProjection metric key "currentVersion" (CyanAccentBrushKey, updates[0].Version ?? Unknown);
+        SoftwareUpdatesPage.cs::_currentVersionCard (TsMetricCard) via RenderMetric.
+        evidence-test: Projection_current_version_is_the_first_update_version, Projection_current_version_falls_back_to_unknown, Projection_uses_the_web_metric_accent_tokens
+[2/23]  panel  Updates-Installed (MetricCard)
+        SoftwareUpdatesProjection metric key "updatesInstalled" (GreenAccentBrushKey, count(status==installed));
+        SoftwareUpdatesPage.cs::_updatesInstalledCard (TsMetricCard).
+        evidence-test: Projection_counts_installed_and_total, Projection_uses_the_web_metric_accent_tokens
+[3/23]  panel  Total-Updates (MetricCard)
+        SoftwareUpdatesProjection metric key "totalUpdates" (PurpleAccentBrushKey, updates.Count);
+        SoftwareUpdatesPage.cs::_totalUpdatesCard (TsMetricCard).
+        evidence-test: Projection_counts_installed_and_total, Projection_uses_the_web_metric_accent_tokens
+[4/23]  panel  GlassPanel4 (Update Timeline outer)
+        SoftwareUpdatesPage.cs::_timelinePanel (TsGlassPanel) hosting _timelineTitle/_timelineLoading/_timelineEmpty/_rowsPanel;
+        SoftwareUpdatesDisplay.TimelineTitle + ShowLoading/ShowEmpty/ShowRows.
+        evidence-test: Projection_loaded_state_shows_the_rows, Projection_empty_state_shows_the_empty_surface
+[5/23]  panel  GlassPanel5 (per-update timeline card)
+        SoftwareUpdatesPage.cs::BuildRow (TsGlassPanel per SoftwareUpdateTimelineRow: status FontIcon + version PanelTitle +
+        TsBadge + release-notes HyperlinkButton + vehicle Caption + install/scheduled/created lines);
+        SoftwareUpdatesProjection.BuildRows.
+        evidence-test: Projection_resolves_vehicle_name_and_falls_back_to_id, Projection_builds_scheduled_line_and_release_notes_uri, Projection_shows_installed_date_when_present
+[6/23]  state  loading
+        SoftwareUpdatesState.Loading ; SoftwareUpdatesPageViewModel.SetLoading ; SoftwareUpdatesDisplay.ShowLoading ;
+        SoftwareUpdatesPage.cs::_timelineLoading (4×TsSkeleton).
+        evidence-test: ViewModel_starts_loading_then_resolves_loaded, Projection_loading_state_shows_only_the_skeleton
+[7/23]  state  empty
+        SoftwareUpdatesState.Empty ; SoftwareUpdatesPageViewModel.SetEmpty (snapshot !HasData) ;
+        SoftwareUpdatesDisplay.ShowEmpty ; SoftwareUpdatesPage.cs::_timelineEmpty (TsEmptyState).
+        evidence-test: ViewModel_classifies_a_no_data_result_as_empty, ViewModel_classifies_a_resolved_empty_snapshot_as_empty, Projection_empty_state_shows_the_empty_surface
+[8/23]  state  error
+        SoftwareUpdatesState.Error ; SoftwareUpdatesPageViewModel.SetError ; SoftwareUpdatesDisplay.ShowError ;
+        SoftwareUpdatesPage.cs::_errorBanner (TsAlertBanner Danger + Retry, error.loadFailed/common.retry) → RetryAsync.
+        evidence-test: ViewModel_surfaces_the_error_state_on_failure, Projection_error_state_shows_the_banner_and_empty_timeline
+[9/23]  state  success
+        SoftwareUpdatesState.Loaded ; SoftwareUpdatesPageViewModel.ApplySnapshot ; SoftwareUpdatesDisplay.ShowRows ;
+        SoftwareUpdatesPage.cs::_rowsPanel (RenderRows → BuildRow per row).
+        evidence-test: ViewModel_starts_loading_then_resolves_loaded, Projection_loaded_state_shows_the_rows
+[10/23] string Current Version                            SoftwareUpdatesProjection currentVersionLabel = localizer.GetString("Current Version", …)
+[11/23] string No software update history available       SoftwareUpdatesProjection EmptyMessage  = localizer.GetString("No software update history available", …)
+[12/23] string No update history                          SoftwareUpdatesProjection EmptyTitle    = localizer.GetString("No update history", …)
+[13/23] string Scheduled                                  SoftwareUpdatesProjection.BuildRows scheduledLabel = localizer.GetString("Scheduled", …)
+[14/23] string Software Updates                           SoftwareUpdatesProjection title         = localizer.GetString("Software Updates", …)  (visible PageTitle)
+[15/23] string Total Updates                              SoftwareUpdatesProjection totalUpdatesLabel = localizer.GetString("Total Updates", …)
+[16/23] string Track firmware versions and update history SoftwareUpdatesProjection subtitle      = localizer.GetString("Track firmware versions and update history", …)
+[17/23] string Unknown                                    SoftwareUpdatesProjection unknown       = localizer.GetString("Unknown", …)
+[18/23] string Update Timeline                            SoftwareUpdatesProjection TimelineTitle = localizer.GetString("Update Timeline", …)
+[19/23] string Updates Installed                          SoftwareUpdatesProjection updatesInstalledLabel = localizer.GetString("Updates Installed", …)
+[20/23] string Vehicle                                    SoftwareUpdatesProjection.BuildRows vehicleLabel = localizer.GetString("Vehicle", …)  ("Vehicle {id}" fallback)
+[21/23] string View release notes                         SoftwareUpdatesProjection.BuildRows releaseNotesTooltip = localizer.GetString("View release notes", …)
+[22/23] string error.loadFailed                           SoftwareUpdatesProjection ErrorText     = localizer.GetString("error.loadFailed", …)
+[23/23] string softwareUpdates.title                      SoftwareUpdatesProjection documentTitle / SoftwareUpdatesRegistration.Title = localizer.GetString("softwareUpdates.title", …)
+# All 14 string keys asserted resolved headlessly via a RecordingLocalizer:
+#   SoftwareUpdatesPageTests.Projection_resolves_every_required_string_key (projects a Loaded snapshot with a
+#   scheduled row, hitting the metric labels, header, timeline labels, row labels and error/title keys at once).
+# All four data states + the five panels assert their render from the bound SoftwareUpdatesDisplay state holder
+#   (ViewModel_* + Projection_* tests). Source request shaping (Operations.Vehicles.List + get_api_v1_software_updates
+#   vehicle_id/limit/offset) lives in SoftwareUpdatesSource; Registration_mirrors_the_web_route pins the route metadata.
+# Status presentation (web STATUS_CONFIG) pinned by Status_presentation_maps_each_status + _falls_back_to_available_for_unknown.
+
+PARITY_COVERED=23
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/VehicleSystems does not
+# exist in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SoftwareUpdatesPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s), 17 Warning(s) (all pre-existing)
+#   (TeslaSync.App also built standalone: 0 Error(s). Pre-existing baseline blocker repaired: MQTTInspectorPage.cs
+#    BuildConnectionContent/BuildThroughputContent were instance methods flagged CA1822 [warnings-as-errors] by an
+#    integration-merge regression — marked static, the minimal correct fix, so the solution compiles green.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (LF/utf-8, whole solution)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27631, Failed: 0, Skipped: 0
+#   (incl. 30 SoftwareUpdatesPageTests). Canonical W7 unit-test gate per sibling done-page logs.
+#   NB: the full-solution `dotnet test` additionally exercises TeslaSync.App.UITests (W9, 147 WinAppDriver UI tests)
+#   which fail-closed with UiAutomationUnavailableException because no WinAppDriver/Appium runner is present on this
+#   host (http://127.0.0.1:4723 down) — an infrastructure gap outside W7 page scope, not a code defect.
+TEST_EXIT=0
+PARITY_COVERED=23
+PARITY_REQUIRED=23
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SoftwareUpdatesPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App/feature-views/MQTTInspectorPage/MQTTInspectorPage.cs apps/windows/Strings \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SoftwareUpdatesPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-vehicle-systems-SoftwareUpdatesPage.log
+# git commit -m "feat(apps/windows): SoftwareUpdatesPage at web parity (W7 vehicle-systems)"
+
+EXIT=0
+STATUS=DONE
