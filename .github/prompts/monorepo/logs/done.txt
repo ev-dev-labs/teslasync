@@ -900,3 +900,4 @@ p2-windows/shared-meaningful/W-0233-VehicleHeroCard.prompt.md
 p2-windows/widget-primitives/W-0001-WidgetBigNumber.prompt.md
 p2-windows/widget-primitives/W-0008-WidgetMapView.prompt.md
 p2-windows/widget-primitives/W-0010-WidgetStatGrid.prompt.md
+p2-windows/pages/admin/ApiPlaygroundPage.prompt.md
