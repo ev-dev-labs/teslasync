@@ -1,0 +1,161 @@
+=== p2-windows · W7 · page:admin/RbacMatrix (WinUI 3 / Fluent) ===
+Parity unit : page:admin/RbacMatrix   kind=page   web route=(unrouted)
+Web source  : web/src/features/admin/pages/RbacMatrixPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked. WindowsAppSDK builds the full
+              solution (verified BUILD_EXIT=0). WinAppDriver UI-automation runner (W9 scope) is absent, so the W7 test
+              gate runs the headless TeslaSync.App.Tests project (the sibling-W7 convention).
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  FeatureFlagsPage / ActiveSessionsPage / DLQInspectorPage do. The generated prompt's idealized
+  "RbacMatrixPage.xaml + RbacMatrixPageViewModel.cs under TeslaSync/Features/Admin" is mapped onto these real
+  conventions. The web page is unrouted in App.tsx, so the surface is registered Hidden in RouteTable.cs
+  (Hidden("RbacMatrix","admin/rbac",RouteGroup.AdminDevTools)) — deep-linkable / route-coverage visible without
+  inventing a nav entry the web does not have — and wired to the W4 ShellPageFactory by route name "RbacMatrix"
+  (ShellWindow.xaml.cs).
+- The page reproduces every web region with Fluent components + design tokens (ADR-005): the page header
+  (PageTitle + Subhead), GlassPanel 1 = the AUTH_MODE_OPEN forward-auth notice (TsGlassPanel + Heading + HelperText),
+  GlassPanel 2 = the summary (the MyRoles + Effective TsBadge pills, the optional groups-header Caption and the
+  Edit / Save / Cancel TsButtons), GlassPanel 3 = the matrix (a role × permission Grid with read-only check/dash
+  cells or, in edit mode, TsCheckbox toggles, rebuilt structurally on snapshot/edit change so an in-edit toggle never
+  tears down the check boxes). The loading / empty / error branches render through the shared feedback surfaces
+  (TsSpinner / TsEmptyState / TsAlertBanner + Retry). Never a blank region (ADR-006).
+- Edit flow (web handleEnterEdit / handleToggle / handleCancelEdit / handleSave): EnterEdit reseeds a mutable draft
+  from the snapshot; Toggle mutates one draft cell; DirtyCount = RbacMatrix.DiffMatrices(snapshot.Matrix, draft).Count
+  drives the "Save (n)" label + the enabled state; SaveAsync PUTs only the changed cells and, on success, exits edit
+  and re-runs the read (web invalidates the ['admin','rbac','matrix'] query); a save failure keeps the matrix in edit
+  mode and records submitError. The PUT is RequireSudo-gated upstream; the reauth challenge fires transparently.
+- Data binding (ADR-004): the manifest data sources are the web hooks useRbacMatrix / useUpsertRbacCells and the pure
+  helpers diffMatrices / isRbacOpenMode (kept at their web names: RbacMatrix.DiffMatrices / RbacMatrix.IsRbacOpenMode).
+  The view-model reads/writes through two injected ports (IRbacMatrixFeed / IRbacWriteService, RbacMatrixPage.Model.cs);
+  the default OpenModeRbacMatrixFeed/NoopRbacWriteService resolve the truthful local-state open-auth notice (the
+  sibling host-injection precedent), and the generated-client-backed RbacMatrixClientFeed / RbacUpsertClientService
+  (RbacMatrixPage.Source.cs) bind the generated OpenAPI contract client operations get_api_v1_admin_rbac_matrix /
+  put_api_v1_admin_rbac_matrix, asserted against the generated endpoint table + the FakeApiClient in tests. No HTTP
+  touches the view. A 501 AUTH_MODE_OPEN (or an explicit { mode: "open" } body) maps to the open-auth notice exactly
+  as the web hook treats it; any other non-success surfaces as ApiException → the error branch. The PUT body posts
+  { cells: [{ role_id, permission_id, allowed }] } in the snake_case wire shape (never the camelCase record names).
+- The web page has no charts and no map (manifest charts=0, maps=0) — none added.
+- SI units N/A (this admin surface bears no unit fields — role ids, permission ids/names/categories and allow/deny
+  booleans only); nothing is stored or computed in non-SI.
+- All 23 i18n keys already exist verbatim (web key names) in Strings/{en,he,ar}/Resources.resw under the
+  translation.rbac.* prefix; the surface resolves them through the ILocalizer facade with the web English defaults as
+  fallbacks. Parameterized values (actions.save, cell.toggle, effective.count, myRoles.label, groupsHeader.label) are
+  stored with the catalog's positional {0}/{1} markers and interpolated via RbacMatrixRegistration.
+
+=== PARITY ===
+PARITY_REQUIRED=30
+
+# Panels (3) — every web <GlassPanel> reproduced as a Fluent Mica region (TsGlassPanel), each a visible branch
+[x] panel  - GlassPanel1   -> forward-auth (AUTH_MODE_OPEN) notice: RbacMatrixPage.cs#BuildOpenModePanel / _openModePanel
+             — a TsGlassPanel hosting _openModeTitle (Heading, RbacMatrixRegistration.OpenModeTitle) + _openModeMessage
+             (HelperText, OpenModeMessage); shown when RbacMatrixPageViewModel.State == RbacMatrixState.OpenMode (web
+             isRbacOpenMode(data) → <GlassPanel data-testid="rbac-open-mode"><Heading/><HelperText/></GlassPanel>);
+             test LoadAsync_OpenAuth_ReachesOpenModeState + MatrixClientFeed_MapsAuthModeOpenException_ToOpenSnapshot
+[x] panel  - GlassPanel2   -> summary: RbacMatrixPage.cs#BuildSummaryPanel / _summaryPanel — a TsGlassPanel hosting the
+             MyRoles pill (_myRolesBadge TsBadge, VM.MyRolesText/MyRolesStatus), the Effective pill (_effectiveBadge
+             TsBadge + Shield FontIcon, VM.EffectiveText/EffectiveStatus + EffectiveTooltip), the groups-header
+             _groupsHeaderCaption (Caption, VM.GroupsHeaderCaption/HasGroupsHeader) and the _editButton /
+             _cancelButton / _saveButton cluster (web GlassPanel data-testid="rbac-summary": MyRolesPill + EffectivePill
+             + groups-header Caption + Edit | Cancel/Save); tests LoadAsync_Session_ReachesReadyState_WithProjections +
+             EnterEdit_Toggle_TracksDirtyCount + SaveAsync_Success_WritesDiff_AndExitsEdit
+[x] panel  - GlassPanel3   -> matrix: RbacMatrixPage.cs#BuildMatrixPanel / _matrixPanel + #BuildMatrixGrid — a TsGlassPanel
+             (padding 0) hosting a horizontal ScrollViewer over the role × permission Grid: a permission-column Label
+             header + per-role Label headers, category bands (VM.GroupedPermissions / CategoryLabel) and per-cell
+             #BuildReadCell (✓/– glyph, allowed/denied AutomationProperties) or #BuildEditCell (TsCheckbox →
+             VM.Toggle) (web GlassPanel p-0 <MatrixGrid payload draft editing onToggle/>); tests
+             LoadAsync_Session_ReachesReadyState_WithProjections (IsAllowed admin/user × cmd.send) +
+             MatrixClientFeed_ShapesTheRequest_AndParsesTheSnapshot
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading       -> RbacMatrixState.Loading (VM initial state + while the matrix query is in flight):
+             RbacMatrixPage.cs#Render shows _loadingRegion (TsSpinner _loading, ControlSize.Large); VM.State getter;
+             test InitialState_IsLoading
+[x] state  - empty         -> RbacMatrixState.Empty (query resolved, roles.length === 0): RbacMatrixPage.cs#Render shows
+             _emptyState (TsEmptyState, VM.EmptyTitle/EmptyMessage, Shield glyph) (web roles.length === 0 → <EmptyState
+             data-testid="rbac-empty"/>); test LoadAsync_NoRoles_ReachesEmptyState
+[x] state  - error         -> RbacMatrixState.Error (matrixQuery.isError || !data): RbacMatrixPage.cs#Render shows
+             _errorBanner (TsAlertBanner variant Danger, VM.ErrorLoadTitle/ErrorLoadMessage) with ActionText
+             VM.RetryLabel → #OnRetryInvoked → VM.RefreshAsync (web <AlertBanner data-testid="rbac-load-error"> + Retry,
+             code ?? loadGeneric); test LoadAsync_Failure_ReachesErrorState_WithCode
+[x] state  - success       -> RbacMatrixState.Ready (query resolved with roles): RbacMatrixPage.cs#Render shows
+             _readyHost (summary GlassPanel2 + the submitError TsAlertBanner + matrix GlassPanel3); VM.Snapshot
+             projections (pills, grouped permissions, IsAllowed); tests LoadAsync_Session_ReachesReadyState_WithProjections
+             + SaveAsync_Success_WritesDiff_AndExitsEdit + CancelEdit_DiscardsDraftEdits
+
+# Strings (23) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - rbac.actions.cancel     -> RbacMatrixRegistration.CancelLabel localizer.GetString("translation.rbac.actions.cancel", "Cancel") (VM.CancelLabel → _cancelButton)
+[x] string - rbac.actions.edit       -> RbacMatrixRegistration.EditLabel localizer.GetString("translation.rbac.actions.edit", "Edit") (VM.EditLabel → _editButton)
+[x] string - rbac.actions.retry      -> RbacMatrixRegistration.RetryLabel localizer.GetString("translation.rbac.actions.retry", "Retry") (VM.RetryLabel → _errorBanner.ActionText)
+[x] string - rbac.actions.save       -> RbacMatrixRegistration.SaveLabel localizer.GetString("translation.rbac.actions.save", "Save ({0})") (count interpolated; VM.SaveLabel → _saveButton)
+[x] string - rbac.actions.saving     -> RbacMatrixRegistration.SavingLabel localizer.GetString("translation.rbac.actions.saving", "Saving…") (VM.SavingLabel → _saveButton while IsSaving)
+[x] string - rbac.cell.allowed       -> RbacMatrixRegistration.CellAllowed localizer.GetString("translation.rbac.cell.allowed", "Allowed") (VM.CellAllowedLabel → BuildReadCell AutomationProperties)
+[x] string - rbac.cell.denied        -> RbacMatrixRegistration.CellDenied localizer.GetString("translation.rbac.cell.denied", "Denied") (VM.CellDeniedLabel → BuildReadCell AutomationProperties)
+[x] string - rbac.cell.toggle        -> RbacMatrixRegistration.CellToggle localizer.GetString("translation.rbac.cell.toggle", "Toggle {0} / {1}") (role/perm interpolated; VM.CellToggleLabel → BuildEditCell AutomationProperties)
+[x] string - rbac.effective.count    -> RbacMatrixRegistration.EffectiveCount localizer.GetString("translation.rbac.effective.count", "{0} / {1} effective") (count/total interpolated; VM.EffectiveText → _effectiveBadge)
+[x] string - rbac.effective.tooltip  -> RbacMatrixRegistration.EffectiveTooltip localizer.GetString("translation.rbac.effective.tooltip", "Permissions effective for your current roles") (VM.EffectiveTooltip → ToolTipService on _effectiveBadge)
+[x] string - rbac.empty.message      -> RbacMatrixRegistration.EmptyMessage localizer.GetString("translation.rbac.empty.message", "No roles have been forwarded by the upstream proxy …") (VM.EmptyMessage → _emptyState.Message)
+[x] string - rbac.empty.title        -> RbacMatrixRegistration.EmptyTitle localizer.GetString("translation.rbac.empty.title", "No roles configured") (VM.EmptyTitle → _emptyState.Title)
+[x] string - rbac.errors.loadGeneric -> RbacMatrixRegistration.ErrorLoadGeneric localizer.GetString("translation.rbac.errors.loadGeneric", "The matrix endpoint returned an error.") (VM.ErrorLoadMessage = code ?? loadGeneric → _errorBanner.Message)
+[x] string - rbac.errors.loadTitle   -> RbacMatrixRegistration.ErrorLoadTitle localizer.GetString("translation.rbac.errors.loadTitle", "Failed to load RBAC matrix") (VM.ErrorLoadTitle → _errorBanner.Title)
+[x] string - rbac.errors.saveGeneric -> RbacMatrixRegistration.ErrorSaveGeneric localizer.GetString("translation.rbac.errors.saveGeneric", "The matrix endpoint rejected the update.") (VM.SaveAsync → SubmitError → _submitErrorBanner.Message)
+[x] string - rbac.groupsHeader.label -> RbacMatrixRegistration.GroupsHeaderLabel localizer.GetString("translation.rbac.groupsHeader.label", "Groups header: {0}") (name interpolated; VM.GroupsHeaderCaption → _groupsHeaderCaption)
+[x] string - rbac.myRoles.label      -> RbacMatrixRegistration.MyRolesLabel localizer.GetString("translation.rbac.myRoles.label", "My roles: {0}") (roles interpolated; VM.MyRolesText → _myRolesBadge)
+[x] string - rbac.myRoles.none       -> RbacMatrixRegistration.MyRolesNone localizer.GetString("translation.rbac.myRoles.none", "No roles claimed") (VM.MyRolesText when MyRoles empty → _myRolesBadge)
+[x] string - rbac.openMode.message   -> RbacMatrixRegistration.OpenModeMessage localizer.GetString("translation.rbac.openMode.message", "The RBAC matrix is meaningful only when an upstream proxy …") (VM.OpenModeMessage → _openModeMessage)
+[x] string - rbac.openMode.title     -> RbacMatrixRegistration.OpenModeTitle localizer.GetString("translation.rbac.openMode.title", "RBAC requires forward-auth mode") (VM.OpenModeTitle → _openModeTitle)
+[x] string - rbac.permissionColumn   -> RbacMatrixRegistration.PermissionColumn localizer.GetString("translation.rbac.permissionColumn", "Permission") (VM.PermissionColumn → matrix header Label)
+[x] string - rbac.subtitle           -> RbacMatrixRegistration.Subtitle localizer.GetString("translation.rbac.subtitle", "Provider-agnostic role-permission bindings") (VM.Subtitle → _subtitle)
+[x] string - rbac.title              -> RbacMatrixRegistration.Title localizer.GetString("translation.rbac.title", "RBAC matrix") (VM.Title → _title + AutomationProperties)
+
+PARITY_COVERED=30
+# Coverage asserted headlessly by apps/windows/TeslaSync.App.Tests/FeatureViews/RbacMatrixPageTests.cs (21 tests):
+# - Registration_ResolvesEveryRequiredCatalogKey records all 23 keys through a RecordingLocalizer;
+#   ParameterizedStrings_Interpolate asserts the {0}/{1} interpolation (save count, cell.toggle role/perm,
+#   effective.count count/total, groupsHeader.label name); CategoryLabel_FallsBackToTheRawCategory asserts the
+#   t(`rbac.category.${cat}`, cat) fallback.
+# - InitialState_IsLoading (loading), LoadAsync_NoRoles_ReachesEmptyState (empty), LoadAsync_Failure_ReachesErrorState_WithCode
+#   (error, code ?? loadGeneric), LoadAsync_Session_ReachesReadyState_WithProjections (success: pills + grouped
+#   permissions + IsAllowed) and LoadAsync_OpenAuth_ReachesOpenModeState (the open-auth notice) assert every render branch.
+# - EnterEdit_Toggle_TracksDirtyCount / SaveAsync_Success_WritesDiff_AndExitsEdit / SaveAsync_NoChanges_ExitsEdit_WithoutWriting
+#   / SaveAsync_Failure_StaysInEdit_WithSubmitError / CancelEdit_DiscardsDraftEdits assert the edit/save/diff flow;
+#   DiffMatrices_ReturnsOnlyChangedCells / DiffMatrices_IdenticalMatrices_AreEmpty assert the ported diffMatrices helper.
+# - Operations_ResolveAgainstTheGeneratedEndpointTable + MatrixClientFeed_ShapesTheRequest_AndParsesTheSnapshot +
+#   MatrixClientFeed_MapsAuthModeOpenException_ToOpenSnapshot + MatrixClientFeed_MapsExplicitOpenEnvelope_ToOpenSnapshot +
+#   MatrixClientFeed_RethrowsOtherApiErrors + UpsertClientService_ShapesThePutRequest_WithSnakeCaseCellsBody assert the
+#   generated-client binding (web hook → operation id, JSON parsing, AUTH_MODE_OPEN mapping, snake_case PUT body).
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/RbacMatrixPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+#   (the test file apps/windows/TeslaSync.App.Tests/FeatureViews/RbacMatrixPageTests.cs also scanned clean)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (RbacMatrixPage Model/Source/ViewModel/view
+#   + RbacMatrixPageTests + RouteTable.cs + ShellWindow.xaml.cs registration + TeslaSync.App.Tests.csproj links, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29382, Failed: 0, Skipped: 0 (incl. 21 RbacMatrixPageTests)
+#   (W7 test gate = the headless TeslaSync.App.Tests project, the sibling-W7 convention; the WinAppDriver UI-automation
+#    tests under TeslaSync.App.UITests are W9 scope and require the WinAppDriver runner, which is absent in this
+#    environment — they are not part of the W7 gate.)
+TEST_EXIT=0
+PARITY_COVERED=30
+PARITY_REQUIRED=30
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/RbacMatrixPage apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/RbacMatrixPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-RbacMatrixPage.log
+# git commit -m "feat(apps/windows): RbacMatrixPage at web parity (W7 admin)"
+# (apps/windows/Generated/ is the deterministically-regenerated, git-ignored W1 client — intentionally not committed.)
+
+EXIT=0
+STATUS=DONE

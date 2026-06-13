@@ -45,6 +45,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-FeedbackQueuePage.log"
   },
   {
+    "unitId": "page:admin/RbacMatrix",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 30,
+    "requiredCount": 30,
+    "promptId": "p2-windows/W7/windows-page-admin-RbacMatrixPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-RbacMatrixPage.log"
+  },
+  {
     "unitId": "page:admin/SchemaDrift",
     "platform": "windows",
     "status": "done",

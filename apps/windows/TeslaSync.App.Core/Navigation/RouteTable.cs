@@ -207,6 +207,9 @@ public static class RouteTable
         Page("FleetTelemetryCoverage", "admin/telemetry/coverage", RouteGroup.AdminDevTools, "Telemetry Coverage"),
         Page("DLQInspector", "admin/dlq", RouteGroup.AdminDevTools, "DLQ Inspector"),
         Page("FeatureFlagsAdmin", "admin/flags", RouteGroup.AdminDevTools, "Feature Flags"),
+        // Web RbacMatrixPage is unrouted in App.tsx; registered hidden here so it is deep-linkable / route-coverage
+        // visible without inventing a nav entry the web does not have.
+        Hidden("RbacMatrix", "admin/rbac", RouteGroup.AdminDevTools, "RBAC Matrix"),
         Page("IngestXRay", "admin/ingest-xray", RouteGroup.AdminDevTools, "Ingest X-Ray"),
         Page("LiveSignalInspector", "admin/live-signals", RouteGroup.AdminDevTools, "Live Signal Inspector"),
         Page("SchemaDrift", "admin/schema-drift", RouteGroup.AdminDevTools, "Schema Drift"),

@@ -850,6 +850,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Model.cs" Link="FeatureViews\RateLimitStatusPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.Source.cs" Link="FeatureViews\RateLimitStatusPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RateLimitStatusPanel.ViewModel.cs" Link="FeatureViews\RateLimitStatusPanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RbacMatrixPage\RbacMatrixPage.Model.cs" Link="FeatureViews\RbacMatrixPage\RbacMatrixPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RbacMatrixPage\RbacMatrixPage.Source.cs" Link="FeatureViews\RbacMatrixPage\RbacMatrixPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RbacMatrixPage\RbacMatrixPage.ViewModel.cs" Link="FeatureViews\RbacMatrixPage\RbacMatrixPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RecentActivity\RecentActivity.Model.cs" Link="FeatureViews\RecentActivity\RecentActivity.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RecentActivity\RecentActivity.Vehicles.Model.cs" Link="FeatureViews\RecentActivity\RecentActivity.Vehicles.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RecentDrivesSection\RecentDrivesSection.Model.cs" Link="FeatureViews\RecentDrivesSection\RecentDrivesSection.Model.cs" />
