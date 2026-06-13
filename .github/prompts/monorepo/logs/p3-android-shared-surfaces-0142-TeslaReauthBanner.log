@@ -1,0 +1,308 @@
+=== P3 Shared surface 0142 TeslaReauthBanner (Android) ===
+# Runner adaptation (transparent, no behavior change): the app module's Gradle path is ':android'
+# (settings.gradle.kts L33-36 maps the app/ dir to :android; 'every P3/A* prompt gate addresses :android:'),
+# so the prompt's ':app:' target maps 1:1 to ':android:'; Windows PowerShell invokes the wrapper as .\gradlew.bat.
+# Toolchain: Gradle 8.14.5, JDK 21 (Android Studio JBR), Android SDK present, Kotlin 2.x (>= prompt's 2.2.x).
+# Capability present -> not BLOCKED. Generated: 2026-06-13T13:05:07.8848286-07:00
+.\gradlew.bat :android:assembleRelease
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :shared:core:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeReleaseNativeLibs NO-SOURCE
+> Task :shared:core:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :android:checkReleaseDuplicateClasses UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :shared:core:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:generateReleaseResources UP-TO-DATE
+> Task :shared:core:packageReleaseResources UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata UP-TO-DATE
+> Task :shared:core:parseReleaseLocalResources UP-TO-DATE
+> Task :shared:core:generateReleaseRFile UP-TO-DATE
+> Task :android:mergeReleaseNativeLibs UP-TO-DATE
+> Task :android:stripReleaseDebugSymbols UP-TO-DATE
+> Task :android:extractReleaseNativeSymbolTables UP-TO-DATE
+> Task :android:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :android:generateReleaseBuildConfig UP-TO-DATE
+> Task :android:generateReleaseResValues UP-TO-DATE
+> Task :android:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :android:generateReleaseResources UP-TO-DATE
+> Task :android:mergeReleaseResources UP-TO-DATE
+> Task :android:packageReleaseResources UP-TO-DATE
+> Task :android:parseReleaseLocalResources UP-TO-DATE
+> Task :android:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksRelease UP-TO-DATE
+> Task :android:javaPreCompileRelease UP-TO-DATE
+> Task :android:desugarReleaseFileDependencies UP-TO-DATE
+> Task :android:mergeReleaseStartupProfile UP-TO-DATE
+> Task :android:mergeExtDexRelease UP-TO-DATE
+> Task :android:mergeReleaseShaders UP-TO-DATE
+> Task :android:compileReleaseShaders NO-SOURCE
+> Task :android:generateReleaseAssets UP-TO-DATE
+> Task :android:extractReleaseVersionControlInfo UP-TO-DATE
+> Task :android:collectReleaseDependencies UP-TO-DATE
+> Task :android:sdkReleaseDependencyData UP-TO-DATE
+> Task :android:writeReleaseAppMetadata UP-TO-DATE
+> Task :android:writeReleaseSigningConfigVersions UP-TO-DATE
+> Task :shared:core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileRelease UP-TO-DATE
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :shared:core:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:processReleaseManifest UP-TO-DATE
+> Task :shared:core:compileReleaseLibraryResources UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :shared:core:prepareReleaseArtProfile UP-TO-DATE
+> Task :android:checkReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :shared:core:mergeReleaseShaders UP-TO-DATE
+> Task :shared:core:compileReleaseShaders NO-SOURCE
+> Task :shared:core:generateReleaseAssets UP-TO-DATE
+> Task :shared:core:releaseAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:mergeReleaseAssets UP-TO-DATE
+> Task :shared:core:processReleaseJavaRes UP-TO-DATE
+> Task :android:processReleaseMainManifest UP-TO-DATE
+> Task :android:processReleaseManifest UP-TO-DATE
+> Task :android:processReleaseManifestForPackage UP-TO-DATE
+> Task :android:processReleaseResources UP-TO-DATE
+> Task :android:compileReleaseKotlin UP-TO-DATE
+> Task :android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :android:dexBuilderRelease UP-TO-DATE
+> Task :android:mergeDexRelease UP-TO-DATE
+> Task :android:mergeReleaseArtProfile UP-TO-DATE
+> Task :android:mergeReleaseGlobalSynthetics UP-TO-DATE
+> Task :android:compileReleaseArtProfile UP-TO-DATE
+> Task :android:mergeReleaseAssets UP-TO-DATE
+> Task :android:compressReleaseAssets UP-TO-DATE
+> Task :android:processReleaseJavaRes UP-TO-DATE
+> Task :android:mergeReleaseJavaResource UP-TO-DATE
+> Task :android:optimizeReleaseResources UP-TO-DATE
+> Task :android:packageRelease UP-TO-DATE
+> Task :android:createReleaseApkListingFileRedirect UP-TO-DATE
+> Task :android:assembleRelease UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-04/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 57s
+70 actionable tasks: 2 executed, 68 up-to-date
+BUILD_EXIT=0
+.\gradlew.bat :android:testReleaseUnitTest --rerun-tasks
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:pluginDescriptors
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:compileKotlin
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+
+> Task :buildSrc:jar
+:jar: No valid plugin descriptors were found in META-INF/gradle-plugins
+
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :shared:core:writeReleaseAarMetadata
+> Task :shared:core:generateReleaseResValues
+> Task :android:generateReleaseBuildConfig
+> Task :shared:core:generateReleaseResources
+> Task :android:generateReleaseResValues
+> Task :android:checkReleaseAarMetadata
+> Task :android:generateReleaseResources
+> Task :shared:core:packageReleaseResources
+> Task :shared:core:extractDeepLinksRelease
+> Task :shared:core:compileReleaseLibraryResources
+> Task :shared:core:processReleaseManifest
+> Task :shared:core:parseReleaseLocalResources
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateReleaseRFile
+> Task :shared:core:javaPreCompileRelease
+> Task :android:packageReleaseResources
+> Task :android:mapReleaseSourceSetPaths
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface
+
+> Task :android:mergeReleaseResources
+F:\github\teslasync-wt\wt-04\apps\android\app\src\main\res\values\strings.xml:1452:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_cells_insight_highSpreadDesc. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-04\apps\android\app\src\main\res\values\strings.xml:1591:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_tip_avoid100. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-04\apps\android\app\src\main\res\values-ar\strings.xml:1398:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_cells_insight_highSpreadDesc. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-04\apps\android\app\src\main\res\values\strings.xml:5167:2: Multiple substitutions specified in non-positional format of string resource string/translation_rateLimitStatus_subtitle. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-04\apps\android\app\src\main\res\values-ar\strings.xml:1537:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_tip_avoid100. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-04\apps\android\app\src\main\res\values-ar\strings.xml:5094:2: Multiple substitutions specified in non-positional format of string resource string/translation_rateLimitStatus_subtitle. Did you mean to add the formatted="false" attribute?
+
+> Task :android:createReleaseCompatibleScreenManifests
+> Task :android:extractDeepLinksRelease
+> Task :android:parseReleaseLocalResources
+> Task :android:processReleaseMainManifest
+> Task :android:processReleaseManifest
+> Task :android:preReleaseUnitTestBuild
+> Task :android:javaPreCompileRelease
+> Task :android:javaPreCompileReleaseUnitTest
+> Task :android:processReleaseManifestForPackage
+
+> Task :android:mergeReleaseResources
+F:\github\teslasync-wt\wt-04\apps\android\app\src\main\res\values-he\strings.xml:1398:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_cells_insight_highSpreadDesc. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-04\apps\android\app\src\main\res\values-he\strings.xml:1537:2: Multiple substitutions specified in non-positional format of string resource string/translation_battery_tip_avoid100. Did you mean to add the formatted="false" attribute?
+F:\github\teslasync-wt\wt-04\apps\android\app\src\main\res\values-he\strings.xml:5094:2: Multiple substitutions specified in non-positional format of string resource string/translation_rateLimitStatus_subtitle. Did you mean to add the formatted="false" attribute?
+
+> Task :android:processReleaseResources
+> Task :shared:core:compileReleaseKotlinAndroid
+w: file:///F:/github/teslasync-wt/wt-04/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/SettingsBackupRepository.kt:77:19 'val monthNumber: Int' is deprecated. Use the 'month' property instead.
+
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :shared:core:processReleaseJavaRes
+> Task :shared:core:bundleLibCompileToJarRelease
+> Task :shared:core:bundleLibRuntimeToJarRelease
+> Task :android:compileReleaseKotlin
+w: file:///F:/github/teslasync-wt/wt-04/apps/android/app/src/main/java/io/teslasync/android/components/ui/CopyButton.kt:33:21 'val LocalClipboardManager: ProvidableCompositionLocal<ClipboardManager>' is deprecated. Use LocalClipboard instead which supports suspend functions.
+w: file:///F:/github/teslasync-wt/wt-04/apps/android/app/src/main/java/io/teslasync/android/components/ui/HelpIcon.kt:31:44 'fun rememberRichTooltipPositionProvider(spacingBetweenTooltipAndAnchor: Dp = ...): PopupPositionProvider' is deprecated. Deprecated in favor of rememberTooltipPositionProvider API.
+w: file:///F:/github/teslasync-wt/wt-04/apps/android/app/src/main/java/io/teslasync/android/components/ui/Tooltip.kt:28:44 'fun rememberPlainTooltipPositionProvider(spacingBetweenTooltipAndAnchor: Dp = ...): PopupPositionProvider' is deprecated. Deprecated in favor of rememberTooltipPositionProvider API.
+
+> Task :android:compileReleaseJavaWithJavac
+> Task :android:processReleaseJavaRes
+> Task :android:bundleReleaseClassesToRuntimeJar
+> Task :android:bundleReleaseClassesToCompileJar
+> Task :android:compileReleaseUnitTestKotlin
+w: file:///F:/github/teslasync-wt/wt-04/apps/android/app/src/test/java/com/teslasync/shared-surfaces/RateLimitBanner/RateLimitBannerModelTest.kt:122:13 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///F:/github/teslasync-wt/wt-04/apps/android/app/src/test/java/com/teslasync/shared-surfaces/RateLimitBanner/RateLimitBannerModelTest.kt:126:13 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///F:/github/teslasync-wt/wt-04/apps/android/app/src/test/java/com/teslasync/shared-surfaces/RateLimitBanner/RateLimitBannerModelTest.kt:150:13 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///F:/github/teslasync-wt/wt-04/apps/android/app/src/test/java/com/teslasync/shared-surfaces/RateLimitBanner/RateLimitBannerModelTest.kt:154:13 This declaration needs opt-in. Its usage should be marked with '@kotlinx.coroutines.ExperimentalCoroutinesApi' or '@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)'
+w: file:///F:/github/teslasync-wt/wt-04/apps/android/app/src/test/java/io/teslasync/android/dashboardwidgets/chargecosttracker/ChargeCostTrackerWidgetTest.kt:253:39 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ChargeCostMetrics'.
+
+> Task :android:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :android:processReleaseUnitTestJavaRes
+> Task :android:testReleaseUnitTest
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-04/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 9m 12s
+45 actionable tasks: 45 executed
+TEST_EXIT=0
+.\gradlew.bat :android:ktlintCheck :android:detekt
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :android:loadKtlintReporters UP-TO-DATE
+> Task :android:runKtlintCheckOverAndroidTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestSourceSet UP-TO-DATE
+> Task :android:ktlintAndroidTestSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverDebugSourceSet NO-SOURCE
+> Task :android:ktlintDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :android:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverMainSourceSet UP-TO-DATE
+> Task :android:ktlintMainSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverReleaseSourceSet NO-SOURCE
+> Task :android:ktlintReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestSourceSet UP-TO-DATE
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :android:ktlintCheck UP-TO-DATE
+> Task :android:detekt UP-TO-DATE
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-04/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 16s
+13 actionable tasks: 13 up-to-date
+LINT_EXIT=0
+check-placeholders.ps1 -Path apps/android/app/src/main/java/com/teslasync/shared-surfaces/TeslaReauthBanner
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== Gate summary ===
+BUILD_EXIT=0   (:android:assembleRelease)
+TEST_EXIT=0    (:android:testReleaseUnitTest --rerun-tasks - full suite executed; TeslaReauthBanner Projection(5)/Bus(5)/ViewModel(6)/Diagnostics(3) = 19 tests, 0 failures, 0 errors, 0 skipped)
+LINT_EXIT=0    (:android:ktlintCheck + :android:detekt - main, test, androidTest source sets)
+PLACEHOLDER_EXIT=0 (apps/tools/check-placeholders.ps1 over com/teslasync/shared-surfaces/TeslaReauthBanner; PLACEHOLDER_COUNT=0)
+
+Note (transparency, no red-as-green): the first gate pass hit a one-off, non-deterministic
+:android:compileReleaseArtProfile "Failed requirement" (an AGP baseline-profile PACKAGING task, NOT a Kotlin
+compile - :android:compileReleaseKotlin was UP-TO-DATE throughout). An immediate clean re-run of
+:android:assembleRelease succeeded with that task UP-TO-DATE; the summary above is the green re-run. No source
+change was involved.
+
+Note (transparency, no red-as-green): the instrumented androidTest source set is NOT part of this gate
+(assembleRelease + testReleaseUnitTest do not compile androidTest). TeslaReauthBannerUiTest.kt is authored to the
+known-good convention - it calls .assertDoesNotExist() as a SemanticsNodeInteraction member (no import) and
+imports only top-level helpers (onNodeWithTag / onNodeWithText / onNodeWithContentDescription / assertIsDisplayed
+/ assertHasClickAction / performClick), the SAME imports 19 sibling androidTest files use. It mirrors the
+known-good OfflineBannerUiTest exactly.
+
+Binding note (web parity): web TeslaReauthBanner.tsx has no data hook - it subscribes to two app-GLOBAL document
+CustomEvents (teslasync:tesla-auth-expired / -recovered) and replays the teslaAuthRecovery.ts mutation queue, with
+useNavigate('/tesla-account') + a local dismiss. Neither the event target nor the queue was ported to the shared
+core, and the native Authentik AuthController is the SessionExpiredModal analogue (a distinct hard blocker). So
+this surface owns the faithful native analogue of that global bus + queue, TeslaReauthBus (app-scoped hot event
+SharedFlow + best-effort mutation replay queue, process-global instance), which external producers (a future
+Tesla-401 interceptor / the tesla-account reconnect screen) dispatch onto - exactly as web resilientFetch /
+TeslaAccountSection dispatch onto document. i18n binds the P1/S10 catalog (translation_tesla_reauth_title/_body/
+_cta + translation_common_dismiss, exact web copy); navigation binds via onReconnect (web useNavigate, host-wired
+to Destinations id teslaAccount, the same pattern TeslaAuthCard.onManage uses; no LocalNavController exists). The
+web's generic loading/empty/error/stale template states do not apply to a binary event banner and fold onto the
+two honest web branches reproduced here: Dormant (web 'if (!visible) return null') and Expired (the visible
+warning banner). The banner is an assertive live region (web role="alert" / aria-live="assertive"); the one-shot
+view.opened diagnostic (P1/S11) carries only the surface slug.
+
+EXIT=0
+STATUS=DONE
