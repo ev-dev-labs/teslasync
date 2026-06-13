@@ -760,3 +760,4 @@ p3-android/shared-meaningful/A-0170-LayoutBreadcrumbs.prompt.md
 p3-android/shared-meaningful/A-0171-PageContainer.prompt.md
 p3-android/shared-meaningful/A-0174-LinearSidebar.prompt.md
 p3-android/shared-meaningful/A-0176-ActiveVehicleSegment.prompt.md
+p3-android/shared-meaningful/A-0178-ConnectionSegment.prompt.md
