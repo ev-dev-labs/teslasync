@@ -1462,6 +1462,7 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\RequiresAuth.ViewModel.cs" Link="SharedSurfaces\RequiresAuth.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" Link="SharedSurfaces\RouteAnnouncer\RouteAnnouncer.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\RouteDisplay.Model.cs" Link="SharedSurfaces\RouteDisplay.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RoutePlayback.Model.cs" Link="SharedSurfaces\RoutePlayback.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RoutePlayback.Source.cs" Link="SharedSurfaces\RoutePlayback.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\RoutePlayback.ViewModel.cs" Link="SharedSurfaces\RoutePlayback.ViewModel.cs" />
