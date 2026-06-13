@@ -651,3 +651,4 @@ p3-android/shared-meaningful/A-0062-withAiFeature.prompt.md
 p3-android/shared-meaningful/A-0059-AIVoiceMode.prompt.md
 p3-android/shared-meaningful/A-0060-AIWatchFaceNLResponse.prompt.md
 p3-android/shared-meaningful/A-0063-AnnotationList.prompt.md
+p3-android/shared-meaningful/A-0064-AreaChartWrapper.prompt.md
