@@ -618,3 +618,4 @@ p3-android/shared-meaningful/A-0029-AINLAlertBuilder.prompt.md
 p3-android/shared-meaningful/A-0025-AiLimitBanner.prompt.md
 p3-android/shared-meaningful/A-0030-AINLAutomationBuilder.prompt.md
 p3-android/shared-meaningful/A-0036-AiOutputPanel.prompt.md
+p3-android/shared-meaningful/A-0034-AINLSearch.prompt.md
