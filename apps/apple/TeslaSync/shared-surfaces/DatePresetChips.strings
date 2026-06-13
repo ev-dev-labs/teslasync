@@ -1,0 +1,58 @@
+/*
+  DatePresetChips.strings
+  TeslaSync — P4 shared surface · 0151 · DatePresetChips (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface — the native peers of the web `t(key, default)` keys
+  in `components/forms/DatePresetChips.tsx` and the preset labels in `web/src/lib/datePresets.ts`. Every
+  key/fallback pair below is byte-identical to the web source so the chips read the same on both platforms.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("DatePresetChips") so each parallel surface prompt owns its own strings. In
+  test / preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Group accessible name (web `DatePresetChips.tsx` `t('date.preset.label', 'Quick date range')`) --- */
+
+/* The chip group's accessible name (web `date.preset.label`). */
+"date.preset.label" = "Quick date range";
+
+/* --- Preset labels (verbatim from web/src/lib/datePresets.ts) --- */
+
+/* Today (web `date.preset.today`). */
+"date.preset.today" = "Today";
+
+/* Yesterday (web `date.preset.yesterday`). */
+"date.preset.yesterday" = "Yesterday";
+
+/* Last 7 days (web `date.preset.last7`). */
+"date.preset.last7" = "Last 7 days";
+
+/* Last 30 days (web `date.preset.last30`). */
+"date.preset.last30" = "Last 30 days";
+
+/* Last 90 days (web `date.preset.last90`). */
+"date.preset.last90" = "Last 90 days";
+
+/* Month to date (web `date.preset.mtd`). */
+"date.preset.mtd" = "Month to date";
+
+/* Quarter to date (web `date.preset.qtd`). */
+"date.preset.qtd" = "Quarter to date";
+
+/* Year to date (web `date.preset.ytd`). */
+"date.preset.ytd" = "Year to date";
+
+/* Last month (web `date.preset.lastMonth`). */
+"date.preset.lastMonth" = "Last month";
+
+/* Last year (web `date.preset.last1y`). */
+"date.preset.last1y" = "Last year";
+
+/* All time (web `date.preset.all`). */
+"date.preset.all" = "All time";
+
+/* --- Native a11y addition (no blank box — see the empty branch) --- */
+
+/* Friendly body shown when no preset matched `presetIds`, so the row never renders a bare box. The web
+   simply renders an empty group; the native HIG calls for a labelled empty state. */
+"datePresetChips.empty" = "No quick ranges";
