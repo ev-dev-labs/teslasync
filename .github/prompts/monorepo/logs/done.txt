@@ -784,3 +784,4 @@ p2-windows/pages/system/DiagnosticPage.prompt.md
 p2-windows/pages/system/RoadmapPage.prompt.md
 p2-windows/pages/system/NotFoundPage.prompt.md
 p2-windows/pages/system/MyActivityPage.prompt.md
+p2-windows/pages/system/SearchPage.prompt.md
