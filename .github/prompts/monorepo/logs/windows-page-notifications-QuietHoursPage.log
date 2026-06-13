@@ -1,0 +1,85 @@
+P2-WINDOWS W7 — page:notifications/QuietHours — WinUI 3 / Fluent parity port
+============================================================================
+Web source : web/src/features/notifications/pages/QuietHoursPage.tsx (route /notifications/quiet-hours)
+Output     : apps/windows/TeslaSync.App/feature-views/QuietHoursPage/
+             (repo convention = C#-markup feature-views, NOT Features/*.xaml; the generated prompt's
+              templated path apps/windows/TeslaSync/Features/Notifications does not exist in this repo.
+              Mirrors every sibling done page: QuickStatsPage / ApiLogsPage / TripPlannerPage.)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("NotificationsQuietHours", …)
+             (RouteTable already maps Page("NotificationsQuietHours","notifications/quiet-hours",RouteGroup.Notifications,"Quiet Hours"))
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw — added the two page-tier keys
+             translation.notifications.quietHours.title / .subtitle (the panel's own
+             translation.quietHours.* keys are distinct and already present).
+
+Files:
+  feature-views/QuietHoursPage/QuietHoursPage.Model.cs      (registration + diagnostics + EmptyQuietHoursSource)
+  feature-views/QuietHoursPage/QuietHoursPage.ViewModel.cs  (presentation-only state holder: the 2 page strings + view.opened)
+  feature-views/QuietHoursPage/QuietHoursPage.cs            (WinUI 3 UserControl: PageContainer[title+subtitle+copyLink] hosting QuietHoursPanel)
+  Shell/ShellWindow.xaml.cs                                 (route -> page registration)
+  Strings/{en,ar,he}/Resources.resw                         (2 page-tier i18n keys)
+  TeslaSync.App.Tests/FeatureViews/QuietHoursPageTests.cs   (9 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj            (link the 2 UI-free files; the WinUI view is build-only)
+
+Composition (parity with the web page, which is a thin PageContainer wrapper):
+  web <PageContainer title subtitle copyLink>            -> native SharedSurfaces.PageContainer(localizer, title){ Subtitle, CopyLink=true,
+                                                              CopyLinkText = DeepLink.BuildUri("notifications/quiet-hours") }
+  web <QuietHoursPanel seedDraft onSeedConsumed/>        -> native FeatureViews.QuietHoursPanel hosted as PageContainer.PageContent.
+                                                              The panel (already a done component surface) owns its own cache-then-network
+                                                              read and renders loading / empty / error / stale states (web useQuietHours).
+  web <AIQuietHoursSuggestion/> (withAiFeature-gated)    -> ABSENT by design. The advisor is gated OFF by default (ADR-015 §I3: the
+                                                              deterministic QuietHoursPanel is the canonical baseline when AI is off) and is
+                                                              tracked as its own opt-in surface (AI feature "quiet-hours-suggestion",
+                                                              AIFeatureToggleList.Registry). The parity manifest record for THIS page unit
+                                                              declares no dataSources / panels / charts / maps — only the 2 page strings —
+                                                              and sibling done pages (TripPlanner, SmartCharge) likewise do not host their
+                                                              AI siblings inline. So the AI section is out of scope for page:notifications/QuietHours.
+
+Data sources : none at the page tier (manifest: no dataSources). The hosted QuietHoursPanel owns GET /notifications/quiet-hours.
+Data states  : none declared for this page unit (manifest: no states). The hosted panel renders loading/empty/error/stale itself.
+Live data    : none (web page uses no useLiveX/SSE), so no SSE subscription / staleness chip at the page tier (ADR-013 n/a).
+Units (P1/S5): n/a — the page renders no SI quantities; the hosted panel formats at its own display boundary.
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+[1/2]  string  notifications.quietHours.subtitle
+        QuietHoursPageRegistration.Subtitle(ILocalizer) ->
+          localizer.GetString("notifications.quietHours.subtitle",
+                              "Suppress non-critical notifications during a configurable window.")
+          (feature-views/QuietHoursPage/QuietHoursPage.Model.cs);
+        bound via QuietHoursPageViewModel.Subtitle -> PageContainer.Subtitle (QuietHoursPage.cs).
+        catalog: Strings/{en,ar,he}/Resources.resw :: translation.notifications.quietHours.subtitle
+        evidence-test: Registration_resolves_the_two_page_strings_with_web_defaults,
+                       ViewModel_resolves_every_required_string_key,
+                       ViewModel_exposes_the_localized_title_subtitle_and_copy_link_route
+[2/2]  string  notifications.quietHours.title
+        QuietHoursPageRegistration.Title(ILocalizer) ->
+          localizer.GetString("notifications.quietHours.title", "Quiet hours")
+          (feature-views/QuietHoursPage/QuietHoursPage.Model.cs);
+        bound via QuietHoursPageViewModel.Title -> PageContainer(localizer, title) + AutomationProperties.SetName (QuietHoursPage.cs).
+        catalog: Strings/{en,ar,he}/Resources.resw :: translation.notifications.quietHours.title
+        evidence-test: Registration_resolves_the_two_page_strings_with_web_defaults,
+                       ViewModel_resolves_every_required_string_key,
+                       ViewModel_exposes_the_localized_title_subtitle_and_copy_link_route
+PARITY_COVERED=2
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Notifications does not
+# exist (templated); scanned the real output dir too. Both clean.
+# check-placeholders.ps1 -Path apps/windows/TeslaSync/Features/Notifications -Language csharp  -> PLACEHOLDER_COUNT=0
+# check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/QuietHoursPage -Language csharp -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s) (TreatWarningsAsErrors=true; no warnings in the new files)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (new files normalized to LF / UTF-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26890, Failed: 0, Skipped: 0
+#   (incl. 9 QuietHoursPageTests: Registration_*, ViewModel_*, EmptyQuietHoursSource_*)
+# NOTE: the W9 UI suite TeslaSync.App.UITests (WinAppDriver/Appium) is environment-gated and cannot run here —
+#   UiAutomationUnavailableException: nothing listening on http://127.0.0.1:4723/ and WinAppDriver.exe absent.
+#   It is unchanged by this unit and is exercised separately (run-ui-automation.ps1), consistent with the prior
+#   W7 page units whose logs scope the unit test gate to TeslaSync.App.Tests.
+TEST_EXIT=0
+
+EXIT=0
+STATUS=DONE

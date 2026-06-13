@@ -226,6 +226,13 @@ public sealed partial class ShellWindow : Window
         // /notifications/browser. The page wraps the shared NotificationSettings surface in a PageContainer
         // (title + subtitle + copy-link), mirroring the web page's thin <PageContainer><NotificationSettings/> shape.
         _viewModel.PageFactory.Register("NotificationsBrowser", static () => new FeatureViews.Notifications.BrowserNotificationsPage());
+
+        // Notifications / Quiet Hours page (P2/W7) — parity port of web QuietHoursPage at route
+        // /notifications/quiet-hours. Hosts the deterministic QuietHoursPanel inside the shared PageContainer
+        // (title + subtitle + copy-link); RouteTable already maps Page("NotificationsQuietHours","notifications/quiet-hours").
+        _viewModel.PageFactory.Register(
+            "NotificationsQuietHours",
+            static () => new FeatureViews.Notifications.QuietHoursPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

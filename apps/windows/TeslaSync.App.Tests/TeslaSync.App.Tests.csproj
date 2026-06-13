@@ -756,6 +756,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\QuickMetrics\QuickMetrics.ViewModel.cs" Link="FeatureViews\QuickMetrics\QuickMetrics.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\QuickNav\QuickNav.Model.cs" Link="FeatureViews\QuickNav\QuickNav.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\QuickStatsGrid.Model.cs" Link="FeatureViews\QuickStatsGrid.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\QuietHoursPage\QuietHoursPage.Model.cs" Link="FeatureViews\QuietHoursPage\QuietHoursPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\QuietHoursPage\QuietHoursPage.ViewModel.cs" Link="FeatureViews\QuietHoursPage\QuietHoursPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\QuietHoursPanel\QuietHoursPanel.Model.cs" Link="FeatureViews\QuietHoursPanel\QuietHoursPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\QuietHoursPanel\QuietHoursPanel.Source.cs" Link="FeatureViews\QuietHoursPanel\QuietHoursPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\QuietHoursPanel\QuietHoursPanel.ViewModel.cs" Link="FeatureViews\QuietHoursPanel\QuietHoursPanel.ViewModel.cs" />
