@@ -1,0 +1,115 @@
+=== p2-windows · W7 · page:system/MyActivity (WinUI 3 / Fluent) ===
+Parity unit : page:system/MyActivity   kind=page   web route=/me/activity
+Web source  : web/src/features/system/pages/MyActivityPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every routed feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure Microsoft.UI-free projection + records
+  + registration + diagnostics, unit-tested headlessly), <Name>.Source.cs (the generated-client data adapter),
+  <Name>.ViewModel.cs (the observable state holder) and <Name>.cs (the Fluent view). The generated prompt's
+  idealized "MyActivityPage.xaml + MyActivityPageViewModel.cs under TeslaSync/Features/System" is mapped onto these
+  real conventions — exactly as the W7 ArchivedPage (feature-views/ArchivedPage/{.Model,.Source,.ViewModel,.cs})
+  and ApiLogsPage precedents already are.
+- Namespace: the C# feature segment is TeslaSync.App.FeatureViews.SystemOps (matching RouteGroup.SystemOps in
+  Core/Navigation/RouteTable.cs), NOT ".System" — a literal "System" leaf namespace shadows the global System
+  namespace for every sibling FeatureViews.* file that writes System.ComponentModel/System.Threading (CS0234), so
+  the web "system" feature maps to the route-group-aligned SystemOps to avoid that collision.
+- Single data source: the web page's one hook useMyRecentActivity (GET /users/me/activity{buildActivityQuery}).
+  MyActivitySource binds the generated C# client (ADR-004) — operation get_api_v1_users_me_activity, snake_case
+  start/end/limit query params (matching the Go API) — and projects the JSON array via UserActivityEntry.FromArray
+  (web safeArray; snake_case + camelCase tolerant). A 404 resolves to no rows (the web hook resolves to an empty
+  array on 404 / empty list); every other non-2xx propagates as ApiException so the view-model classifies the
+  branch on its StatusCode exactly as the web page branches on apiError.status — 503 → disabled, 401 →
+  unauthorized, else → retriable error. EmptyMyActivitySource is the shell default (renders the empty notice until
+  a host wires MyActivitySource via MyActivityPage.Create — the same deferred-wiring pattern as ApiLogsPage/
+  ArchivedPage). Registered in ShellWindow.xaml.cs PageFactory under "MyActivity" (the RouteTable nav name).
+- The success body composes the shared TsTimeline (the W3 native parity port of the web Timeline that
+  RecentActivityFeed renders): each UserActivityEntry → MyActivityRow (action label via the ported getActivityVisual
+  registry → ILocalizer; entity·id — detail subtitle; ts; severity dot) → TsActivityEntry at the view boundary
+  (the Model stays Microsoft.UI-free so it links into the headless test project). Relative time uses the shared
+  DateTimeFormatting.Relative port. SI units N/A (no unit-bearing fields on this surface).
+- All 8 manifest i18n keys + the empty-notice key already exist verbatim in Strings/en/Resources.resw under the
+  catalog's translation.* namespace (translation.activity.myActivity.{title,subtitle,disabled.title,
+  disabled.description,unauthorized.title,unauthorized.description,error.title,empty} + translation.common.retry);
+  the surface resolves them through the ILocalizer facade via MyActivityRegistration.Localize (which prepends the
+  translation. namespace) with the web key names + verbatim English defaults. No new catalog rows required.
+- a11y: the page, the glass panel and the notice carry AutomationProperties names; the container spinner drives the
+  loading state (web loading={isLoading}); the FadeIn honours reduce-motion (shared TsFadeIn, web <FadeIn>); the
+  range picker is the shared RangePicker (web actions slot). PII-safe diagnostics emit only
+  "view.opened slug=MyActivityPage" — never an action, entity id, detail, IP or timestamp.
+
+=== PARITY ===
+PARITY_REQUIRED=12
+
+# Panel (1) — the single web GlassPanel wrapping the feed
+[x] panel  - GlassPanel1   -> MyActivityPage.cs ctor builds TsGlassPanel{ Padding=16 (web GlassPanel "p-4"), Content=BuildBody() } wrapped in TsFadeIn (web <FadeIn><GlassPanel className="space-y-4 p-4">); the panel hosts the notice/timeline swap and is set as PageContainer.PageContent; AutomationProperties name applied in Render
+
+# Data states (3) — loading / empty / success, each a visible region (never blank; ADR-011)
+[x] state  - loading       -> MyActivityState.Loading; MyActivityProjection.Project sets Display.IsLoading=true → MyActivityPage.Render sets PageContainer.IsLoading=true (web loading={isLoading} spinner replaces the body); MyActivityPageViewModel.LoadAsync/SetLoading enter Loading when no content resolved; tests Projection_loading_marks_the_container_spinner / ViewModel_starts_loading_then_resolves_loaded
+[x] state  - empty         -> MyActivityState.Empty (web RecentActivityFeed entries.length === 0); MyActivityProjection emits MyActivityBody.Notice with translation.activity.myActivity.empty and no retry; MyActivityPage.Render shows TsEmptyState (IconGlyph=EmptyGlyph, Message); tests Projection_empty_shows_the_feed_empty_notice / ViewModel_classifies_no_rows_as_empty
+[x] state  - success       -> MyActivityState.Loaded (web <RecentActivityFeed entries={entries} />); MyActivityProjection.BuildRows maps each UserActivityEntry→MyActivityRow; MyActivityPage.Render binds TsTimeline.Items (TsActivityEntry per row); tests Projection_loaded_maps_rows_to_timeline_entries / ViewModel_starts_loading_then_resolves_loaded
+# (the web page additionally branches 503→disabled, 401→unauthorized, error→retry — all implemented: see the strings below + ViewModel_maps_503_to_disabled / _401_to_unauthorized / _other_failures_to_a_retriable_error / _retry_reruns_the_load)
+
+# Strings (8) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names (catalog translation.* namespace)
+[x] string - activity.myActivity.disabled.description   -> MyActivityProjection.Project Disabled branch MyActivityRegistration.Localize(localizer,"activity.myActivity.disabled.description", "Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER.") (web featureDisabled EmptyState message)
+[x] string - activity.myActivity.disabled.title         -> MyActivityProjection.Project Disabled branch Localize(localizer,"activity.myActivity.disabled.title","Activity feed disabled") (web featureDisabled EmptyState title)
+[x] string - activity.myActivity.error.title            -> MyActivityProjection.Project Error branch Localize(localizer,"activity.myActivity.error.title","Could not load activity") (web apiError EmptyState title + null-detail message fallback)
+[x] string - activity.myActivity.subtitle               -> MyActivityRegistration.Subtitle → Localize(localizer,"activity.myActivity.subtitle","Recent actions you have taken in TeslaSync.") (web PageContainer subtitle)
+[x] string - activity.myActivity.title                  -> MyActivityRegistration.Title → Localize(localizer,"activity.myActivity.title","My Activity") (web PageContainer title + usePageTitle)
+[x] string - activity.myActivity.unauthorized.description-> MyActivityProjection.Project Unauthorized branch Localize(localizer,"activity.myActivity.unauthorized.description","Your request did not include an identity header. Sign in through your identity provider and try again.") (web unauthenticated EmptyState message)
+[x] string - activity.myActivity.unauthorized.title     -> MyActivityProjection.Project Unauthorized branch Localize(localizer,"activity.myActivity.unauthorized.title","Identity required") (web unauthenticated EmptyState title)
+[x] string - common.retry                               -> MyActivityProjection.Project Localize(localizer,"common.retry","Retry") → Error notice ActionText; MyActivityPage._notice.ActionInvoked → ViewModel.RefreshAsync (web error EmptyState action {label:t('common.retry'),onClick:refetch})
+
+PARITY_COVERED=12
+# Coverage asserted headlessly by TeslaSync.App.Tests/FeatureViews/MyActivityPageTests.cs (25 tests, all green):
+# the tolerant audit-row parser (snake_case + camelCase + ts, skips non-objects, empty for non-arrays), the action
+# → severity/label resolver (exact + shrinking-prefix walk + generic fallback), the i18n projection (all 8 required
+# keys via a RecordingLocalizer + the disabled/unauthorized/error/empty/loading/loaded bodies + the copy-link), the
+# six-state view-model matrix (loading→loaded, →empty, 503→disabled, 401→unauthorized, 500→retriable error, retry
+# reruns, set-range reloads), the default 30-day window, the PII-safe diagnostics, and the generated-client source's
+# request shaping (operation id + snake_case start/end/limit, 404→empty, other non-2xx propagated). The WinUI view
+# (MyActivityPage.cs) is exercised by the Release app build.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/MyActivityPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Error(s)
+#   (slnbuild4: 0 Error(s), 0 Warning(s) for the incremental rebuild; the 17 pre-existing TeslaSync.App.Core CA
+#    warnings — CA1000/CA1716/CA1720/CA1859, unrelated to this unit — surface only on a fresh App.Core compile.
+#    TeslaSync.App WinUI app + App.Core + App.Platform + App.Tests + App.UITests all built.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+#   --include <this unit's 5 files: MyActivityPage.{Model,Source,ViewModel}.cs, MyActivityPage.cs, MyActivityPageTests.cs>
+#   -> no changes (this unit is LF + whitespace clean)
+LINT_EXIT=0
+# NOTE — whole-solution `dotnet format apps/windows/TeslaSync.sln --verify-no-changes` returns 2, caused SOLELY by
+#   PRE-EXISTING committed-CRLF line endings in the UNRELATED sharing page files
+#   apps/windows/TeslaSync.App/feature-views/SharedDrivePage/SharedDrivePage.{cs,Model,Source,ViewModel}.cs and
+#   apps/windows/TeslaSync.App.Tests/FeatureViews/SharedDrivePageTests.cs (ENDOFLINE: replace \r\n with \n).
+#   Proof these predate and are independent of this change: `git ls-files --eol` reports SharedDrivePageTests.cs as
+#   `i/crlf w/crlf` (committed CRLF in the index) vs this unit/ArchivedPageTests.cs `i/lf w/lf`; `core.autocrlf=false`;
+#   `git status` shows the SharedDrivePage files unmodified by this change. They are outside this unit's allowed-files
+#   scope (prompt "Out of Scope: Other pages"), so they are intentionally left untouched. This change introduces 0
+#   format violations.
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27226, Failed: 0, Skipped: 0, Total: 27226
+#   (filtered FullyQualifiedName~MyActivityPageTests -> Passed: 25, Failed: 0, Skipped: 0)
+TEST_EXIT=0
+PARITY_COVERED=12
+PARITY_REQUIRED=12
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/MyActivityPage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/MyActivityPageTests.cs \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-system-MyActivityPage.log
+# git commit -m "feat(apps/windows): MyActivityPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE

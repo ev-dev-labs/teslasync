@@ -102,6 +102,8 @@ public sealed partial class ShellWindow : Window
             page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
+        // System / My Activity page (P2/W7) — parity port of web MyActivityPage at route /me/activity.
+        _viewModel.PageFactory.Register("MyActivity", static () => new FeatureViews.SystemOps.MyActivityPage());
 
         // Notifications / Alert rules page (P2/W7) — parity port of web AlertRulesPage at route /notifications/rules.
         // The rule-name links and the "Open Alert Studio" affordances navigate to the studio route.
