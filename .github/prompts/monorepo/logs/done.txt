@@ -918,3 +918,4 @@ p2-windows/pages/admin/IngestXRayPage.prompt.md
 p2-windows/pages/admin/RedisSignalViewerPage.prompt.md
 p2-windows/pages/admin/SlowQueriesPage.prompt.md
 p2-windows/pages/admin/SystemPage.prompt.md
+p2-windows/pages/admin/TeslaOrdersPage.prompt.md
