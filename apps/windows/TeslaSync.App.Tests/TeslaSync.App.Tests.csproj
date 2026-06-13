@@ -1274,6 +1274,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\Avatar\Avatar.Source.cs" Link="SharedSurfaces\Avatar\Avatar.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Avatar\Avatar.ViewModel.cs" Link="SharedSurfaces\Avatar\Avatar.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BatteryDelta.Model.cs" Link="SharedSurfaces\BatteryDelta.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\BottomTabBar\BottomTabBar.Model.cs" Link="SharedSurfaces\BottomTabBar\BottomTabBar.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\BottomTabBar\BottomTabBar.Source.cs" Link="SharedSurfaces\BottomTabBar\BottomTabBar.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\BottomTabBar\BottomTabBar.ViewModel.cs" Link="SharedSurfaces\BottomTabBar\BottomTabBar.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BreadcrumbOverridesContext.Model.cs" Link="SharedSurfaces\BreadcrumbOverridesContext.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BreadcrumbOverridesContext.Source.cs" Link="SharedSurfaces\BreadcrumbOverridesContext.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\BreadcrumbOverridesContext.ViewModel.cs" Link="SharedSurfaces\BreadcrumbOverridesContext.ViewModel.cs" />

@@ -1,0 +1,45 @@
+=== P2 Shared surface 0165 BottomTabBar (Windows) ===
+date: 2026-06-13T05:35:40.9474511-07:00
+web source: web/src/components/layout/BottomTabBar.tsx
+native output: apps/windows/TeslaSync.App/shared-surfaces/BottomTabBar/{BottomTabBar.cs,.Model.cs,.Source.cs,.ViewModel.cs}
+tests: apps/windows/TeslaSync.App.Tests/SharedSurfaces/BottomTabBarTests.cs (+3 Compile links in TeslaSync.App.Tests.csproj)
+
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+    BUILD_EXIT=0
+
+[2a] dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release  (headless logic suite)
+    Passed!  - Failed:     0, Passed: 28570, Skipped:     0, Total: 28570, Duration: 29 s - TeslaSync.App.Tests.dll (net10.0)
+    UNIT_TESTS_EXIT=0  (TeslaSync.App.Tests — includes the 35 BottomTabBar facts)
+
+[2] dotnet test apps/windows/TeslaSync.sln -c Release  (whole solution — gate step)
+    Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 571 ms - TeslaSync.App.UITests.dll (net10.0)
+    Passed!  - Failed:     0, Passed: 28570, Skipped:     0, Total: 28570, Duration: 20 s - TeslaSync.App.Tests.dll (net10.0)
+    cause: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+    TEST_EXIT=1  (whole-solution; UITests require WinAppDriver/Appium absent on this runner)
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    clean across the whole solution (new files are LF + repo style)
+    FORMAT_EXIT=0
+
+[4] ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/BottomTabBar
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+    PLACEHOLDER_EXIT=0
+
+--- VERDICT ---
+BUILD_EXIT=0  UNIT_TESTS_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  TEST_EXIT=1
+The BottomTabBar surface is complete and green on every gate within this runner's reach: it builds
+clean (0 errors), its full headless suite passes (TeslaSync.App.Tests, 28570 facts incl. the 35
+BottomTabBar facts), the solution is format-clean, and it carries zero placeholders/stubs.
+The only non-zero step is the whole-solution TEST, failing solely because the WinAppDriver/Appium
+UI-automation runner is unavailable on this headless runner (nothing listening on 127.0.0.1:4723) —
+a platform-capability gap that fails all 147 UITests identically regardless of surface, matching the
+adjacent sibling shared-surface logs (e.g. 0174 LinearSidebar). Per the prompt's capability clause
+('If unavailable on the runner -> STATUS=BLOCKED with API evidence') this is recorded as BLOCKED.
+
+EXIT=1
+STATUS=BLOCKED
