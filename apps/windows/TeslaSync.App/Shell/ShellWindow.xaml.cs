@@ -140,6 +140,19 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
+        // Driving / TripReplay page (P2/W7) — parity port of web TripReplayPage at route /drives/:id/replay.
+        // The route drive id is read from the live match and the back affordance maps to the drive-detail page.
+        _viewModel.PageFactory.Register("TripReplay", () =>
+        {
+            var page = new FeatureViews.Driving.TripReplayPage(ParseSessionId(_viewModel.Current.Param("id")));
+            page.BackRequested += (_, _) =>
+            {
+                string? driveId = _viewModel.Current.Param("id");
+                NavigateTo(string.IsNullOrEmpty(driveId) ? "drives" : $"drives/{driveId}");
+            };
+            return page;
+        });
+
         // Charging / ChargingDetail page (P2/W7) — parity port of web ChargingDetailPage at route /charging/:id.
         // The route session id is read from the live match and the back affordance maps to the charging list.
         _viewModel.PageFactory.Register("ChargeDetail", () =>

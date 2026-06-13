@@ -1,0 +1,109 @@
+================================================================================
+ p2-windows · W7 · page:driving/TripReplay — WinUI 3 / Fluent parity port
+ prompt: p2-windows/W7/windows-page-driving-TripReplayPage
+================================================================================
+
+ARTIFACT
+  unitId        : page:driving/TripReplay   (kind=page, requiredCount=0)
+  web source    : web/src/features/driving/pages/TripReplayPage.tsx
+                  (relocation shim → re-exports web/src/features/trips/pages/TripReplayPage.tsx,
+                   the real 638-line implementation that was ported)
+  route         : drives/:id/replay  (RouteTable nav name "TripReplay", already present)
+
+PATH ADAPTATION (generator template vs. real repo layout)
+  The generated prompt names the output dir apps/windows/TeslaSync/Features/Driving and a
+  XAML page. The real Windows app is a C#-markup (no-XAML) UserControl architecture under
+  apps/windows/TeslaSync.App/feature-views/. This port follows the established sibling
+  convention exactly (DriveDetailPage, TripReplayMap, TripReplayCharts):
+    apps/windows/TeslaSync.App/feature-views/TripReplayPage/TripReplayPage.cs           (UserControl view, C# markup)
+    apps/windows/TeslaSync.App/feature-views/TripReplayPage/TripReplayPage.Model.cs     (records / projection / strings / registration / merge)
+    apps/windows/TeslaSync.App/feature-views/TripReplayPage/TripReplayPage.Source.cs    (feed + empty child sources)
+    apps/windows/TeslaSync.App/feature-views/TripReplayPage/TripReplayPage.ViewModel.cs (ObservableObject-style state holder)
+    apps/windows/TeslaSync.App.Core/DataDisplay/TripReplayEngine.cs                     (pure useTripReplay port)
+    apps/windows/TeslaSync.App.Tests/TripReplayEngineTests.cs                           (11 tests)
+    apps/windows/TeslaSync.App.Tests/FeatureViews/TripReplayPageTests.cs                (19 tests)
+  NavigationView registration: apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+    PageFactory.Register("TripReplay", …) with BackRequested → drives/{id}.
+  Strings: the established sibling convention resolves every visible literal through
+    ILocalizer.GetString("replay.<key>", "<English default>") (web key names verbatim);
+    no new .resw rows added, matching TripReplayMap / TripReplayCharts.
+
+================================================================================
+ === PARITY ===
+================================================================================
+PARITY_REQUIRED=0
+(The parity extractor saw only the re-export shim, so it enumerated 0 binding items.
+ The Honesty Covenant forbids scope narrowing, so ALL six regions of the real web page
+ were reproduced as Fluent-native sections. Evidence = file:symbol below.)
+
+[x] Reproduce the web source's region structure verbatim (no enumerable parity items extracted)
+    Region 1 — Map (web <TripReplayMap>)
+        TripReplayPage.cs : EnsureContentBuilt() mounts FeatureViews.TripReplayMap (W3 surface);
+        playhead driven by map.CurrentIndex; map.SeekRequested → ViewModel.SeekToIndex.
+    Region 2 — Playback controls (web <PlaybackControls> + Sparkline scrubberBackground)
+        TripReplayPage.cs : BuildPlaybackPanel() → TsSparkline (speed) + TsTimelineScrubber + TsPlaybackControls;
+        TripReplayPage.ViewModel.cs : Play/Pause/Stop/SetSpeed/SeekToSeconds/Tick over TripReplayEngine.
+    Region 3 — Current Position Stats (web 6× <MetricCard>)
+        TripReplayPage.Model.cs : TripReplayPageProjection.CurrentStats() → 6× TripReplayMetric
+        (speed/power/battery/elevation/range/temperature, SI→display via UnitConverters);
+        TripReplayPage.cs : ApplyReplayState() repaints 6× TsMetricCard per frame.
+    Region 4 — Elevation profile (web <ElevationProfile>)
+        TripReplayPage.Model.cs : BuildElevation() (cumulative haversine distance X, elevation Y);
+        TripReplayPage.cs : TsElevationProfile bound to display.ElevationPoints.
+    Region 5 — Speed & Power timeline (web <TripReplayCharts>)
+        TripReplayPage.cs : EnsureContentBuilt() mounts FeatureViews.TripReplayCharts (W3 surface);
+        charts.SeekTo(CurrentIndex) cursor sync; charts.SeekToIndexRequested → ViewModel.SeekToIndex.
+    Region 6 — Drive Summary (web 8× <StatCard>)
+        TripReplayPage.Model.cs : BuildSummary() → 8× TripReplaySummaryCard
+        (distance/duration/efficiency/elevGain/elevLoss/maxSpeed/avgSpeed/battery);
+        TripReplayPage.cs : BuildSummaryPanel() → 8× TsStatCard.
+    Data states (loading / empty(no-GPS) / error / success):
+        TripReplayPage.Model.cs : TripReplayPageState + TripReplayPageProjection.SelectState();
+        TripReplayPage.cs : Render() toggles TsSkeleton / TsEmptyState / TsQueryError / content host.
+    Cursor-sync source of truth (web useTripReplay + handleSeekToIndex):
+        TripReplayEngine (timeline offsets, indexAtTime, tick, seek, speed) threaded through
+        map ⇄ scrubber ⇄ charts ⇄ metric tiles via ViewModel.CurrentIndex.
+PARITY_COVERED=0
+
+================================================================================
+ GATE (windows triad: placeholder + build + lint + test)
+================================================================================
+# Placeholder / stub scan (ADR-011). Nominal prompt path apps/windows/TeslaSync/Features/Driving
+# does not exist in this repo layout; scanned the real feature dir + the Core engine instead.
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TripReplayPage -Language csharp
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App.Core/DataDisplay/TripReplayEngine.cs -Language csharp
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ dotnet build apps/windows/TeslaSync.sln -c Release
+Build succeeded.
+    17 Warning(s)   (all pre-existing Core analyzer warnings; identical to baseline)
+    0 Error(s)
+BUILD_EXIT=0
+
+$ dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+(no files needed formatting)
+LINT_EXIT=0
+
+$ dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+Passed!  - Failed: 0, Passed: 26650, Skipped: 0, Total: 26650
+  (includes the 30 new TripReplay tests: 11 TripReplayEngineTests + 19 TripReplayPageTests;
+   filtered run "FullyQualifiedName~TripReplay" = 126 passed incl. existing map/charts suites)
+TEST_EXIT=0
+
+================================================================================
+ ACCEPTANCE
+================================================================================
+[x] Every named panel implemented; every anonymous region from the web source reproduced (6/6 + states).
+[x] All parity items render from the bound C# state holder (TripReplayPageViewModel + TripReplayEngine).
+[x] loading / empty / error implemented for the page data source; child surfaces add stale/offline.
+[x] All visible strings sourced through ILocalizer (web key names verbatim); zero hardcoded literals.
+[x] Dark mode + accessibility (AutomationPeer, AutomationProperties) + SI units (UnitConverters) honored; Fluent-native only.
+[x] build + lint + test + placeholder gates green; PARITY_COVERED(0) == PARITY_REQUIRED(0).
+[x] windows ledger row page:driving/TripReplay set covered (apps/parity/windows-ledger.json).
+
+EXIT=0
+STATUS=DONE
