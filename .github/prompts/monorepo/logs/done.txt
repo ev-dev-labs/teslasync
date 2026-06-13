@@ -553,3 +553,4 @@ p3-android/feature-views/A-0293-MotorSection.prompt.md
 p3-android/feature-views/A-0306-VehiclePhotoGallery.prompt.md
 p3-android/modals-dialogs/A-0001-ConfirmDialog.prompt.md
 p3-android/misc-surfaces/A-0001-TourLauncher.prompt.md
+p3-android/misc-surfaces/A-0003-selectedVehicle.prompt.md
