@@ -1,0 +1,186 @@
+# p2-windows — W7 — page:vehicles/VehicleDetail — evidence log
+
+Artifact : page:vehicles/VehicleDetail
+Prompt   : p2-windows/W7/windows-page-vehicles-VehicleDetailPage
+Web src  : web/src/features/vehicles/pages/VehicleDetailPage.tsx  (route /vehicles/:id)
+Output   : apps/windows/TeslaSync.App/feature-views/VehicleDetailPage/
+             VehicleDetailPage.Model.cs     (parsers + snapshot + model + state + display + projection + strings + registration + diagnostics + json)
+             VehicleDetailPage.Source.cs    (generated-client feed — settings GET + wake POST)
+             VehicleDetailPage.ViewModel.cs (INotifyPropertyChanged state holder — LoadAsync/RefreshAsync/WakeAsync)
+             VehicleDetailPage.cs           (WinUI 3 UserControl view — thin renderer)
+Nav reg  : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+             PageFactory.Register("VehicleDetail", … new FeatureViews.Vehicles.VehicleDetailPage(ParseSessionId(Param("id"))))
+Route    : apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs L99
+             Hidden("VehicleDetail","vehicles/:id",RouteGroup.Vehicles,"Vehicle")  (pre-existing)
+Strings  : apps/windows/Strings/{en,ar,he}/Resources.resw — all 19 required keys (translation.vehicles.detail.*)
+             + the wake button label (translation.common.wakeUp) PRE-EXISTING; 0 added.
+Tests    : apps/windows/TeslaSync.App.Tests/FeatureViews/VehicleDetailPageTests.cs  (25 tests)
+           apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj L1036-1038 (3 WinUI-free files added to the headless host)
+Ledger   : apps/parity/windows-ledger.json (page:vehicles/VehicleDetail → done, 23/23)
+
+## Honesty Covenant (binding — verbatim)
+
+```
+1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+```
+
+Delegation: NONE (implemented directly; no sub-agents used).
+
+NOTE on idealized paths: the prompt header lists an idealized output path
+(apps/windows/TeslaSync/Features/Vehicles/*.xaml + the placeholder-scan path
+apps/windows/TeslaSync/Features/Vehicles). The real repo is a C#-markup WinUI 3 app — every sibling W7
+page (DriveDetail, ChargingDetail, TripDetail, VehicleCost, …) lives under
+apps/windows/TeslaSync.App/feature-views/<Page>/ as <Page>.{Model,Source,ViewModel}.cs + <Page>.cs
+(no per-page .xaml). This unit follows that established convention exactly (verified against
+DriveDetailPage). Pure logic lives in the WinUI-free .Model/.Source/.ViewModel (unit-tested headlessly
+via the .csproj <Compile Include> seam); the .cs is the thin view, exercised by the app build. The
+placeholder scan was run against the REAL output dir (clean, below).
+
+NOTE on parity scope: the manifest record for page:vehicles/VehicleDetail extracts exactly two
+dataSources (findEffectiveSetting + useVehicleSettings → GET /vehicles/{vehicleId}/settings), one panel
+(GlassPanel1), three states (loading/error/success) and 19 strings — requiredCount=23. The generator
+captured the page's two NAMED settings hooks (the rest of the web page composes inline
+useQuery(request(...)) reads + child components that are their own parity units). The native port binds
+that one settings data source, reproduces the web nickname resolver
+(findEffectiveSetting(settings,'nickname') → page title) verbatim, lays out the single Mica GlassPanel1
+hosting the sixteen <SectionErrorBoundary fallbackTitle=…> regions (the 16 vehicles.detail.section.*Failed
+strings ARE those boundary titles), and ports the header wake affordance whose toasts are
+vehicles.detail.wakeSuccess / wakeFailed.
+
+## Architecture mapping (web → native)
+
+- useVehicleSettings(id)   → VehicleDetailPageClientFeed (Registration.SettingsOperation =
+                            get_api_v1_vehicles_vehicleID_settings, GET /vehicles/{id}/settings) — the
+                            primary read; its failure drives the page error state. (ApiEndpoints.cs L545.)
+- findEffectiveSetting     → VehicleSettingsData.Find + VehicleDetailProjection nickname resolver
+                            (ValueIsText && value != '' ? value : title), ported verbatim from the web
+                            typeof value === 'string' guard.
+- wake mutation           → VehicleDetailPageClientFeed.WakeAsync (Registration.WakeOperation =
+                            post_api_v1_vehicles_vehicleID_wake, POST /vehicles/{id}/wake) →
+                            ViewModel.WakeAsync → WakeStatus (wakeSuccess on success, API message else
+                            wakeFailed on error), exactly as the web onSuccess/onError handlers.
+- isLoading / error       → VehicleDetailPageViewModel.LoadAsync → VehicleDetailState (Loading/Empty/Error/
+                            Success) → Display.Show{Loading,Empty,Error,Content}.
+- t(...) / useTranslation → ILocalizer.GetString (web key names verbatim) via VehicleDetailStrings.Resolve.
+- Units                   : the bound settings values are non-measure (nickname text, booleans, scalar
+                            counts), so there is nothing to convert at the display boundary; no non-SI
+                            value is stored or computed (P1/S5 honored vacuously for this unit).
+
+## === PARITY ===
+
+PARITY_REQUIRED=23
+
+# panel (1) — file : symbol
+[x] panel  GlassPanel1 : VehicleDetailPage.cs field _glassPanel1 (TsGlassPanel, Components.UI) built in BuildLayout, content set in Render→BuildContent ; AutomationProperties.SetName = effective vehicle name ; Test Success_builds_all_sixteen_section_regions_in_order (the panel hosts the rendered section stack)
+
+# data states (3) — file : symbol
+[x] state  loading : Model.cs VehicleDetailProjection.Project (state=Loading when model.Loading && settings is null) → Display.ShowLoading ; View.cs Render→_loadingSkeleton (web VehicleDetailSkeleton parity: header+battery+2×4 stat grids+2 panels+chart+2 panels+6-card grid) ; Test State_loading_when_settings_query_in_flight
+[x] state  error   : Model.cs Project (state=Error when model.ErrorDetail != null) → Display.ShowError + ErrorText/RetryLabel ; View.cs Render→_errorState (TsQueryError + Retry→RefreshAsync) ; Tests State_error_when_read_failed + View_model_surfaces_a_failed_read_as_the_error_state
+[x] state  success : Model.cs Project (state=Success when settings resolved) → Display.ShowContent ; View.cs Render→_glassPanel1 + 16 sections ; Tests State_success_when_settings_resolved + View_model_folds_resolved_settings_into_the_success_state
+# (empty state also implemented — Display.ShowEmpty / _emptyState TsEmptyState — exceeding the 3 required; Test State_empty_when_resolved_without_settings)
+
+# strings (19) — web key : file : symbol (resolved verbatim through ILocalizer)
+[x] string vehicles.detail.title                              : Model.cs VehicleDetailStrings.Resolve→Title ; Projection effectiveName fallback + header row ; Registration.Title ; View _title.Value
+[x] string vehicles.detail.wakeSuccess                        : Model.cs Resolve→WakeSuccess ; Display.WakeSuccess ; ViewModel.WakeAsync success ; Test View_model_wake_success_surfaces_the_wake_success_toast
+[x] string vehicles.detail.wakeFailed                         : Model.cs Resolve→WakeFailed ; Display.WakeFailed ; ViewModel.WakeAsync error fallback ; Test View_model_wake_failure_surfaces_the_api_message
+[x] string vehicles.detail.section.headerFailed               : Model.cs Resolve→HeaderFailed ; Section("header") FallbackTitle ; View BuildSection→SectionErrorBoundary.FallbackTitle
+[x] string vehicles.detail.section.batteryRangeFailed         : Model.cs Resolve→BatteryRangeFailed ; Section("battery-range") FallbackTitle
+[x] string vehicles.detail.section.liveStateFailed            : Model.cs Resolve→LiveStateFailed ; Section("live-state") FallbackTitle
+[x] string vehicles.detail.section.quickStatsFailed           : Model.cs Resolve→QuickStatsFailed ; Section("quick-stats") FallbackTitle
+[x] string vehicles.detail.section.motorFailed                : Model.cs Resolve→MotorFailed ; Section("motor") FallbackTitle
+[x] string vehicles.detail.section.climateFailed              : Model.cs Resolve→ClimateFailed ; Section("climate") FallbackTitle
+[x] string vehicles.detail.section.securityFailed             : Model.cs Resolve→SecurityFailed ; Section("security") FallbackTitle
+[x] string vehicles.detail.section.tireFailed                 : Model.cs Resolve→TireFailed ; Section("tire-pressure") FallbackTitle
+[x] string vehicles.detail.section.chargingTelemetryFailed    : Model.cs Resolve→ChargingTelemetryFailed ; Section("charging-telemetry") FallbackTitle
+[x] string vehicles.detail.section.batteryChartsFailed        : Model.cs Resolve→BatteryChartsFailed ; Section("battery-charts") FallbackTitle
+[x] string vehicles.detail.section.recentDrivesFailed         : Model.cs Resolve→RecentDrivesFailed ; Section("recent-drives") FallbackTitle
+[x] string vehicles.detail.section.recentChargesFailed        : Model.cs Resolve→RecentChargesFailed ; Section("recent-charges") FallbackTitle
+[x] string vehicles.detail.section.vehicleConfigFailed        : Model.cs Resolve→VehicleConfigFailed ; Section("vehicle-config") FallbackTitle
+[x] string vehicles.detail.section.aiPaintPreviewFailed       : Model.cs Resolve→AiPaintPreviewFailed ; Section("ai-paint-preview") FallbackTitle
+[x] string vehicles.detail.section.quickLinksFailed           : Model.cs Resolve→QuickLinksFailed ; Section("quick-links") FallbackTitle
+[x] string vehicles.detail.section.settingsFailed             : Model.cs Resolve→SettingsFailed ; Section("settings") FallbackTitle
+
+# String coverage proven mechanically: Tests Projection_resolves_every_required_string_key (success) and
+# Projection_resolves_all_keys_even_in_the_loading_state (loading) assert all 19 web keys are requested
+# through a RecordingLocalizer in BOTH states. Required_string_key_set_has_exactly_nineteen_unique_keys.
+
+PARITY_COVERED=23
+
+## Section reproduction (all 16 web SectionErrorBoundary regions — never blank)
+
+header, battery-range, live-state, quick-stats, motor, climate, security, tire-pressure,
+charging-telemetry, battery-charts, recent-drives, recent-charges, vehicle-config, ai-paint-preview,
+quick-links, settings.
+  Each region is a real SharedSurfaces.SectionErrorBoundary(FallbackTitle=<localized>) wrapping a stack
+  (SectionTitle + a TsKVList of real data OR a localized TsEmptyState caption). header renders the
+  resolved effective vehicle name; settings renders the resolved per-vehicle EffectiveSetting rows
+  (key → value (source)); the other 14 render their localized "no data" caption (their per-section data
+  sources are separate parity units, out of this unit's manifest scope) — never a blank region. Verified
+  by Tests Success_builds_all_sixteen_section_regions_in_order, Every_section_carries_its_localized_fallback_title,
+  Sections_without_in_scope_data_carry_a_localized_empty_message, Settings_section_renders_the_resolved_effective_settings,
+  Effective_name_uses_the_nickname_override_when_present / _falls_back_to_the_title_without_a_nickname /
+  _ignores_a_blank_or_non_text_nickname.
+
+## a11y / Fluent
+
+AutomationProperties.Name on the page (effective name + title), the wake button (common.wakeUp), the
+error surface, the wake-result banner (TsAlertBanner, Success/Danger CalloutVariant) and every section
+column (section AccessibleName). Mica GlassPanel1 + tokenized typography/components only (no hardcoded
+colors); light/dark honored through the shared component tokens. Wake-result surfaced through a live
+InfoBar-style banner.
+
+## Gate (windows triad: build + lint + test + placeholder scan)
+
+# placeholder scan — prompt's idealized path (apps/windows/TeslaSync/Features/Vehicles) does not exist → clean;
+# scanned the REAL output dir + the new test file:
+check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/VehicleDetailPage -Language csharp
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+dotnet build apps/windows/TeslaSync.sln -c Release
+  Build succeeded.  0 Error(s)  (17 warnings — all PRE-EXISTING in TeslaSync.App.Core: CA1716/CA1720/
+                    CA1859/CA1000; zero in TeslaSync.App or TeslaSync.App.Tests; my code is warning-clean)
+BUILD_EXIT=0
+
+# PRE-EXISTING BUILD BREAK (not introduced by this unit, fixed to reach a green build): HEAD (d391a1ea6)
+# shipped two CA1822 analyzer ERRORS in an UNRELATED file —
+#   TeslaSync.App/feature-views/MQTTInspectorPage/MQTTInspectorPage.cs(329,30) BuildConnectionContent
+#   TeslaSync.App/feature-views/MQTTInspectorPage/MQTTInspectorPage.cs(389,30) BuildThroughputContent
+# — both methods touch no instance data (they only consume their `display` param + static helpers), so
+# CA1822 is correct. They were committed at 3f642976f and block the ENTIRE TeslaSync.App build (so no W7
+# page could compile). Resolved with the analyzer-prescribed `static` modifier (call sites are unqualified
+# in-class, so the change is behavior-preserving). This is the minimal precondition to verify ANY page
+# build; it neither narrows nor pads this unit's parity scope.
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (initial run flagged ENDOFLINE in the new files only — CRLF from the editor; normalized to LF; re-verify clean)
+LINT_EXIT=0
+
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+  Passed!  - Failed: 0, Passed: 27693, Skipped: 0, Total: 27693
+  (includes the 25 new VehicleDetailPageTests — Failed: 0, Passed: 25 under --filter VehicleDetailPageTests)
+TEST_EXIT=0
+
+## Summary
+
+Native C#-markup WinUI 3 parity port of the web VehicleDetailPage composition shell, following the
+established sibling-page convention (Model/Source/ViewModel/.cs + headless .csproj compile-seam tests).
+The bound web data source (useVehicleSettings → GET /vehicles/{id}/settings) is read through the
+generated OpenAPI client feed; the nickname resolver (findEffectiveSetting) is ported verbatim and feeds
+the page title; the single Mica GlassPanel1 hosts all sixteen SectionErrorBoundary regions, each carrying
+its localized fallback title and a never-blank real-data-or-empty body; the header wake affordance posts
+the wake command and surfaces wakeSuccess / wakeFailed in a live banner; loading / empty / error / success
+states are all implemented; every visible string flows through ILocalizer with web key names preserved
+(all 19 required keys + common.wakeUp already present in the resw catalog — 0 added);
+AutomationProperties names cover the page, the wake affordance, the banner, the error surface and every
+section. Build + lint + test + placeholder gates are green and parity coverage is 23/23 (GlassPanel1 +
+loading/error/success + all 19 i18n keys). One pre-existing CA1822 build break in the unrelated
+MQTTInspectorPage was fixed (analyzer-prescribed `static`) to reach a green build — documented above. The
+only red anywhere in the windows suite is the pre-existing TeslaSync.App.UITests shell suite (absent
+WinAppDriver/Appium runner) — an environmental condition this unit neither introduces nor touches.
+
+EXIT=0
+STATUS=DONE

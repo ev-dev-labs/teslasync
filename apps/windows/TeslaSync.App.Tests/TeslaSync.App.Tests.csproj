@@ -1045,6 +1045,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCostPage\VehicleCostPage.Model.cs" Link="FeatureViews\VehicleCostPage\VehicleCostPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCostPage\VehicleCostPage.Source.cs" Link="FeatureViews\VehicleCostPage\VehicleCostPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCostPage\VehicleCostPage.ViewModel.cs" Link="FeatureViews\VehicleCostPage\VehicleCostPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleDetailPage\VehicleDetailPage.Model.cs" Link="FeatureViews\VehicleDetailPage\VehicleDetailPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleDetailPage\VehicleDetailPage.Source.cs" Link="FeatureViews\VehicleDetailPage\VehicleDetailPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleDetailPage\VehicleDetailPage.ViewModel.cs" Link="FeatureViews\VehicleDetailPage\VehicleDetailPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Model.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.Source.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleGauges\VehicleGauges.ViewModel.cs" Link="FeatureViews\VehicleGauges\VehicleGauges.ViewModel.cs" />
