@@ -540,3 +540,4 @@ p3-android/feature-views/A-0289-BatteryRangePanel.prompt.md
 p3-android/feature-views/A-0294-QuickLinksSection.prompt.md
 p3-android/feature-views/A-0292-LiveStateIndicators.prompt.md
 p3-android/feature-views/A-0295-QuickStatsGrid.prompt.md
+p3-android/feature-views/A-0298-SecuritySection.prompt.md
