@@ -1440,6 +1440,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\PinButton.Model.cs" Link="SharedSurfaces\PinButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PinButton.Source.cs" Link="SharedSurfaces\PinButton.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PinButton.ViewModel.cs" Link="SharedSurfaces\PinButton.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackControls\PlaybackControls.Model.cs" Link="SharedSurfaces\PlaybackControls\PlaybackControls.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackControls\PlaybackControls.Source.cs" Link="SharedSurfaces\PlaybackControls\PlaybackControls.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackControls\PlaybackControls.ViewModel.cs" Link="SharedSurfaces\PlaybackControls\PlaybackControls.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.Model.cs" Link="SharedSurfaces\PlaybackSpeedMenu.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.Source.cs" Link="SharedSurfaces\PlaybackSpeedMenu.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PlaybackSpeedMenu.ViewModel.cs" Link="SharedSurfaces\PlaybackSpeedMenu.ViewModel.cs" />
