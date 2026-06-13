@@ -803,3 +803,4 @@ p2-windows/pages/vehicles/VehicleAccessPage.prompt.md
 p2-windows/pages/vehicle-systems/TirePressurePage.prompt.md
 p2-windows/pages/vehicles/DigitalTwinPage.prompt.md
 p2-windows/feature-views/W-0242-DataPipelineSection.prompt.md
+p2-windows/feature-views/W-0308-VehicleSettingsTab.prompt.md
