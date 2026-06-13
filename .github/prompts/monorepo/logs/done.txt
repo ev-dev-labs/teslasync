@@ -729,3 +729,4 @@ p3-android/shared-meaningful/A-0139-SkipToContent.prompt.md
 p3-android/shared-meaningful/A-0136-ReloadPrompt.prompt.md
 p3-android/shared-meaningful/A-0142-TeslaReauthBanner.prompt.md
 p3-android/shared-meaningful/A-0145-TourOverlay.prompt.md
+p3-android/shared-meaningful/A-0143-TimeMachineBanner.prompt.md
