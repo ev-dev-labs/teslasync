@@ -741,6 +741,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\MotorSection\MotorSection.Model.cs" Link="FeatureViews\MotorSection\MotorSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MotorSection\MotorSection.Source.cs" Link="FeatureViews\MotorSection\MotorSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MotorSection\MotorSection.ViewModel.cs" Link="FeatureViews\MotorSection\MotorSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\NotFoundPage\NotFoundPage.Model.cs" Link="FeatureViews\NotFoundPage\NotFoundPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\NotFoundPage\NotFoundPage.ViewModel.cs" Link="FeatureViews\NotFoundPage\NotFoundPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationChannelsView.Model.cs" Link="FeatureViews\NotificationChannelsView.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationChannelsView.Source.cs" Link="FeatureViews\NotificationChannelsView.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationChannelsView.ViewModel.cs" Link="FeatureViews\NotificationChannelsView.ViewModel.cs" />
