@@ -639,3 +639,4 @@ p3-android/shared-meaningful/A-0041-AIQuietHoursSuggestion.prompt.md
 p3-android/shared-meaningful/A-0051-AISuggestNewGeofences.prompt.md
 p3-android/shared-meaningful/A-0050-AIStateMachineDebuggerNarrator.prompt.md
 p3-android/shared-meaningful/A-0048-AISoftwareUpdateChangelogSummarizer.prompt.md
+p3-android/shared-meaningful/A-0057-AIVampireDrainExplanation.prompt.md
