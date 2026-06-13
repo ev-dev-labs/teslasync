@@ -649,3 +649,4 @@ p3-android/shared-meaningful/A-0061-AIYearReviewNarration.prompt.md
 p3-android/shared-meaningful/A-0066-ChartExportMenu.prompt.md
 p3-android/shared-meaningful/A-0062-withAiFeature.prompt.md
 p3-android/shared-meaningful/A-0059-AIVoiceMode.prompt.md
+p3-android/shared-meaningful/A-0060-AIWatchFaceNLResponse.prompt.md
