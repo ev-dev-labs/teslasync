@@ -69,7 +69,8 @@ struct TeslaSyncApp: App {
                 .teslaSyncTheme()
         } else {
             RootView(coordinator: auth, selection: $selection)
-                .environment(\.routeHosts, StatisticsRouteRegistration.registry(
+                .environment(\.routeHosts, AutomationsListRouteRegistration.registry(
+                    base: StatisticsRouteRegistration.registry(
                     base: FleetCompareRouteRegistration.registry(
                         base: TeslaOrdersRouteRegistration.registry(
                             base: LiveSignalInspectorRouteRegistration.registry(
@@ -89,7 +90,7 @@ struct TeslaSyncApp: App {
                         ),
                         onNavigate: { selection = $0 }
                     )
-                ))
+                )))
                 .platformIntegration(selection: $selection, settingsModel: settingsModel, onCommand: runCommand)
                 .commandActionsPresentation(commandActions)
                 .task {
