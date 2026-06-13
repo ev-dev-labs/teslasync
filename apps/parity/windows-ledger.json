@@ -27,6 +27,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-DLQInspectorPage.log"
   },
   {
+    "unitId": "page:admin/FeatureFlags",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 16,
+    "requiredCount": 16,
+    "promptId": "p2-windows/W7/windows-page-admin-FeatureFlagsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-FeatureFlagsPage.log"
+  },
+  {
     "unitId": "page:admin/FeedbackQueue",
     "platform": "windows",
     "status": "done",
