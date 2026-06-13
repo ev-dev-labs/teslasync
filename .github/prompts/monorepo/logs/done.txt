@@ -756,3 +756,4 @@ p2-windows/pages/driving/DriveScorePage.prompt.md
 p2-windows/pages/driving/RegenEfficiencyPage.prompt.md
 p2-windows/pages/driving/SpeedProfilePage.prompt.md
 p2-windows/pages/driving/TripPlannerPage.prompt.md
+p2-windows/pages/driving/TripReplayPage.prompt.md
