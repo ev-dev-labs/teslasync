@@ -1,0 +1,93 @@
+//
+//  FadeIn.Previews.swift
+//  TeslaSync — P4 shared surface · 0191 · FadeIn (Apple)
+//
+//  Xcode previews for every real branch of the fade-in entrance wrapper: the single-item full-motion
+//  entrance, the delayed entrance (web `delay`), the reduced-motion variant (content settled in its final
+//  state with no movement), and the empty-content leaf. DEBUG-only; compiled by the app targets and skipped
+//  by the shipped-surface gate scope.
+//
+
+import SwiftUI
+
+#if DEBUG
+    @MainActor
+    private func staged(_ label: String, @ViewBuilder _ content: @escaping () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: TSSpacing.md) {
+            Text(verbatim: label)
+                .font(Font.TS.label)
+                .foregroundStyle(Color.TS.textMuted)
+            content()
+        }
+        .padding(TSSpacing.md)
+        .frame(maxWidth: 420, alignment: .leading)
+        .background(Color.TS.bg)
+    }
+
+    private func sampleCard(_ title: String) -> some View {
+        HStack(spacing: TSSpacing.sm) {
+            Image(systemName: "bolt.car")
+                .foregroundStyle(Color.TS.accent)
+                .accessibilityHidden(true)
+            Text(verbatim: title)
+                .font(Font.TS.panel)
+                .foregroundStyle(Color.TS.textPrimary)
+            Spacer(minLength: 0)
+        }
+        .padding(TSSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            Color.TS.surfaceGlass,
+            in: RoundedRectangle(cornerRadius: TSRadius.lg, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: TSRadius.lg, style: .continuous)
+                .strokeBorder(Color.TS.border, lineWidth: 1)
+        )
+    }
+
+    #Preview("Single item — full motion") {
+        staged("one item · lifts + fades in over 400 ms") {
+            FadeIn {
+                sampleCard("Battery health")
+            }
+        }
+    }
+
+    #Preview("Delayed entrance") {
+        staged("staggered by delay · 0 / 0.15 / 0.30 s") {
+            VStack(spacing: TSSpacing.md) {
+                ForEach(0 ..< 3, id: \.self) { index in
+                    FadeIn(delay: Double(index) * 0.15) {
+                        sampleCard("Row \(index + 1)")
+                    }
+                }
+            }
+        }
+    }
+
+    #Preview("Reduced motion — final state") {
+        staged("reduce motion on · no movement") {
+            VStack(spacing: TSSpacing.md) {
+                ForEach(0 ..< 3, id: \.self) { index in
+                    FadeIn(
+                        model: FadeInModel(
+                            input: FadeInInput(delaySeconds: Double(index) * 0.15),
+                            reduceMotion: true
+                        )
+                    ) {
+                        sampleCard("Row \(index + 1)")
+                    }
+                }
+            }
+        }
+    }
+
+    #Preview("Empty-content leaf") {
+        staged("nothing to fade in · never a blank box") {
+            FadeIn {
+                FadeInEmptyContent()
+            }
+        }
+    }
+#endif
