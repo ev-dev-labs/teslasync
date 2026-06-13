@@ -1,0 +1,44 @@
+/*
+  AIChargingDiagnosis.strings
+  TeslaSync — P4 shared surface · 0011 · AIChargingDiagnosis (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `AIChargingDiagnosis`
+  resolves (table "AIChargingDiagnosis") lives here with its web English value. These entries fold into
+  the app `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface
+  table so each parallel surface prompt owns its own strings without editing the shared catalog.
+
+  The first group is the parity set extracted from the web source
+  (web/src/components/ai/AIChargingDiagnosis.tsx + the shared AIFeatureCard / AiOutputPanel /
+  AIThinkingIndicator literals it composes). The second group backs the native P4 leaf chrome (the
+  freshness / connectivity / loading / error copy) so the Swift sources hold no English prose.
+*/
+
+/* --- Parity: the web source's t(key, default) calls --- */
+"charging.detail.aiDiagnosis.title" = "Charging diagnosis";
+"charging.detail.aiDiagnosis.description" = "Get a 2-4 paragraph plain-language explanation of any flags raised on this charging session — trickle, expensive, low-power, or interrupted — generated from the same deterministic aggregation metrics shown above.";
+"charging.detail.aiDiagnosis.generateButton" = "Generate diagnosis";
+"charging.detail.aiDiagnosis.badge" = "Helix";
+
+/* --- Parity: shared AIFeatureCard / AiOutputPanel / AIThinkingIndicator literals --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Output panel: friendly empty hints (P4 "never a blank box") --- */
+"charging.detail.aiDiagnosis.output.a11yTitle" = "Charging diagnosis narrative";
+"charging.detail.aiDiagnosis.output.emptyHint" = "No diagnosis yet — ask Helix to diagnose this charging session.";
+"charging.detail.aiDiagnosis.output.noSessionHint" = "Open a charging session to ask Helix to diagnose it.";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"charging.detail.aiDiagnosis.live" = "Live";
+"charging.detail.aiDiagnosis.stale" = "Stale";
+"charging.detail.aiDiagnosis.offline" = "Offline";
+"charging.detail.aiDiagnosis.staleBanner" = "Reconnecting — Helix may be stale";
+"charging.detail.aiDiagnosis.offlineBanner" = "Offline — showing the last known diagnosis";
+"charging.detail.aiDiagnosis.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error states --- */
+"charging.detail.aiDiagnosis.loadingA11y" = "Loading charging diagnosis";
+"charging.detail.aiDiagnosis.errorTitle" = "Couldn't load Helix";
+"charging.detail.aiDiagnosis.retry" = "Retry";
