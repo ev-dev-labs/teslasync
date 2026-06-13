@@ -4116,6 +4116,12 @@
     "empty": "No automations yet. Create a typed automation to get started!",
     "noMatch": "No automations match your filters"
   },
+  "emptyState": {
+    "threshold": {
+      "defaultItem": "items",
+      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
+    }
+  },
   "energy": {
     "tou": {
       "tabPreset": "Preset Tariff",

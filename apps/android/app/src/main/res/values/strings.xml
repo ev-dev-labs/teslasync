@@ -3420,6 +3420,8 @@
   <string name="translation_efficiency_totalDistance">Total</string>
   <string name="translation_efficiency_totalDriveTime">Total Drive Time</string>
   <string name="translation_efficiency_totalRegen">Total Regen</string>
+  <string name="translation_emptyState_threshold_defaultItem">items</string>
+  <string name="translation_emptyState_threshold_message">Need at least %1$s %2$s to show meaningful patterns. You have %3$s so far.</string>
   <string name="translation_enabled">enabled</string>
   <string name="translation_energy_breakdown_sessions">sessions</string>
   <string name="translation_energy_chart_chargerBreakdown">Charger Type Breakdown</string>
