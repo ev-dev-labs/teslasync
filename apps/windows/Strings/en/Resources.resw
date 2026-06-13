@@ -25589,5 +25589,211 @@
   </data>
   <data name="translation.admin.auditLog.verifying" xml:space="preserve">
     <value>Verifying…</value>
+  <data name="translation.fleetApi.navTitle" xml:space="preserve">
+    <value>Fleet API</value>
+  </data>
+  <data name="translation.fleetApi.title" xml:space="preserve">
+    <value>Fleet API Settings</value>
+  </data>
+  <data name="translation.fleetApi.subtitle" xml:space="preserve">
+    <value>Control Tesla Fleet API polling, endpoint toggles, and telemetry capture</value>
+  </data>
+  <data name="translation.fleetApi.polling.title" xml:space="preserve">
+    <value>Tesla API Polling</value>
+  </data>
+  <data name="translation.fleetApi.polling.suspendedStatus" xml:space="preserve">
+    <value>All Tesla Fleet API calls are suspended</value>
+  </data>
+  <data name="translation.fleetApi.polling.activeStatus" xml:space="preserve">
+    <value>Vehicle data is being polled from Tesla</value>
+  </data>
+  <data name="translation.fleetApi.polling.suspendedNote" xml:space="preserve">
+    <value>Polling and commands are paused. Token refresh continues so you won't need to re-authenticate. Useful when your vehicle is in service.</value>
+  </data>
+  <data name="translation.fleetApi.controls.title" xml:space="preserve">
+    <value>API Endpoint Controls</value>
+  </data>
+  <data name="translation.fleetApi.controls.subtitle" xml:space="preserve">
+    <value>Toggle individual Tesla Fleet API endpoints on or off</value>
+  </data>
+  <data name="translation.fleetApi.controls.enabled" xml:space="preserve">
+    <value>enabled</value>
+  </data>
+  <data name="translation.fleetApi.section.polling" xml:space="preserve">
+    <value>Polling Endpoints</value>
+  </data>
+  <data name="translation.fleetApi.section.onDemand" xml:space="preserve">
+    <value>On-Demand Endpoints</value>
+  </data>
+  <data name="translation.fleetApi.section.commands" xml:space="preserve">
+    <value>Commands</value>
+  </data>
+  <data name="translation.fleetApi.section.telemetryCapture" xml:space="preserve">
+    <value>Telemetry Capture</value>
+  </data>
+  <data name="translation.fleetApi.capture.connected" xml:space="preserve">
+    <value>MongoDB Connected</value>
+  </data>
+  <data name="translation.fleetApi.capture.notConfigured" xml:space="preserve">
+    <value>MongoDB Not Configured</value>
+  </data>
+  <data name="translation.fleetApi.capture.rawTitle" xml:space="preserve">
+    <value>Raw Signal Recording</value>
+  </data>
+  <data name="translation.fleetApi.capture.enabledDesc" xml:space="preserve">
+    <value>Capture every fleet telemetry signal to MongoDB for debugging</value>
+  </data>
+  <data name="translation.fleetApi.capture.disabledDesc" xml:space="preserve">
+    <value>Set MONGODB_ENABLED=true and configure MONGODB_URI to enable</value>
+  </data>
+  <data name="translation.fleetApi.capture.retentionTitle" xml:space="preserve">
+    <value>Retention Period</value>
+  </data>
+  <data name="translation.fleetApi.capture.retentionDesc" xml:space="preserve">
+    <value>Auto-delete captured signals after this many days</value>
+  </data>
+  <data name="translation.fleetApi.capture.signalsCaptured" xml:space="preserve">
+    <value>signals captured from</value>
+  </data>
+  <data name="translation.fleetApi.capture.vehicle" xml:space="preserve">
+    <value>vehicle</value>
+  </data>
+  <data name="translation.fleetApi.retention.d1" xml:space="preserve">
+    <value>1 day</value>
+  </data>
+  <data name="translation.fleetApi.retention.d3" xml:space="preserve">
+    <value>3 days</value>
+  </data>
+  <data name="translation.fleetApi.retention.d7" xml:space="preserve">
+    <value>7 days</value>
+  </data>
+  <data name="translation.fleetApi.retention.d14" xml:space="preserve">
+    <value>14 days</value>
+  </data>
+  <data name="translation.fleetApi.retention.d30" xml:space="preserve">
+    <value>30 days</value>
+  </data>
+  <data name="translation.fleetApi.endpoints.title" xml:space="preserve">
+    <value>API Endpoints</value>
+  </data>
+  <data name="translation.fleetApi.endpoints.configured" xml:space="preserve">
+    <value>Configured Endpoints</value>
+  </data>
+  <data name="translation.fleetApi.endpoint.api" xml:space="preserve">
+    <value>API (Internal)</value>
+  </data>
+  <data name="translation.fleetApi.endpoint.web" xml:space="preserve">
+    <value>Web Frontend</value>
+  </data>
+  <data name="translation.fleetApi.endpoint.oauth" xml:space="preserve">
+    <value>OAuth Callback</value>
+  </data>
+  <data name="translation.fleetApi.endpoint.teslaApi" xml:space="preserve">
+    <value>Tesla Fleet API</value>
+  </data>
+  <data name="translation.fleetApi.toast.suspendedTitle" xml:space="preserve">
+    <value>API suspended</value>
+  </data>
+  <data name="translation.fleetApi.toast.suspendedBody" xml:space="preserve">
+    <value>All Tesla API calls have been paused</value>
+  </data>
+  <data name="translation.fleetApi.toast.resumedTitle" xml:space="preserve">
+    <value>API resumed</value>
+  </data>
+  <data name="translation.fleetApi.toast.resumedBody" xml:space="preserve">
+    <value>Tesla API polling has been re-enabled</value>
+  </data>
+  <data name="translation.fleetApi.toast.failedTitle" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="translation.fleetApi.toast.suspendError" xml:space="preserve">
+    <value>Could not toggle API suspension</value>
+  </data>
+  <data name="translation.fleetApi.toast.pollingUpdated" xml:space="preserve">
+    <value>Polling config updated</value>
+  </data>
+  <data name="translation.fleetApi.toast.pollingError" xml:space="preserve">
+    <value>Failed to update polling config</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.vehicleDiscovery" xml:space="preserve">
+    <value>Vehicle Discovery</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.chargeState" xml:space="preserve">
+    <value>Charge State</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.climateState" xml:space="preserve">
+    <value>Climate State</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.driveState" xml:space="preserve">
+    <value>Drive State</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.locationData" xml:space="preserve">
+    <value>Location Data</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.vehicleState" xml:space="preserve">
+    <value>Vehicle State</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.vehicleConfig" xml:space="preserve">
+    <value>Vehicle Config</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.nearbyCharging" xml:space="preserve">
+    <value>Nearby Charging</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.releaseNotes" xml:space="preserve">
+    <value>Release Notes</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.recentAlerts" xml:space="preserve">
+    <value>Recent Alerts</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.serviceData" xml:space="preserve">
+    <value>Service Data</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.wakeUp" xml:space="preserve">
+    <value>Wake Up</value>
+  </data>
+  <data name="translation.fleetApi.ep.label.commands" xml:space="preserve">
+    <value>Vehicle Commands</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.listVehicles" xml:space="preserve">
+    <value>List vehicles from Tesla</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.batteryCharging" xml:space="preserve">
+    <value>Battery &amp; charging data</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.climateTemp" xml:space="preserve">
+    <value>Climate &amp; temperature data</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.locationSpeed" xml:space="preserve">
+    <value>Location &amp; speed data</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.gps" xml:space="preserve">
+    <value>GPS coordinates</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.locksDoors" xml:space="preserve">
+    <value>Locks, doors, odometer</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.modelTrim" xml:space="preserve">
+    <value>Model, trim, options</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.syncVehicles" xml:space="preserve">
+    <value>Sync vehicles from Tesla</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.superchargers" xml:space="preserve">
+    <value>Supercharger locations</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.firmwareNotes" xml:space="preserve">
+    <value>Firmware release notes</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.alertHistory" xml:space="preserve">
+    <value>Vehicle alert history</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.serviceHistory" xml:space="preserve">
+    <value>Service history &amp; status</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.wakeSleep" xml:space="preserve">
+    <value>Wake vehicle from sleep</value>
+  </data>
+  <data name="translation.fleetApi.ep.desc.lockUnlock" xml:space="preserve">
+    <value>Lock, unlock, climate, etc.</value>
   </data>
 </root>
