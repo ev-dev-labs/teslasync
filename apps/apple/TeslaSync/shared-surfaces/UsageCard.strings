@@ -1,0 +1,31 @@
+/*
+  UsageCard.strings
+  TeslaSync — P4 shared surface · 0109 · UsageCard (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web `components/data-display/UsageCard.tsx`
+  is an anonymous presentational primitive — it calls no `t()` — so there are no web translation keys to
+  mirror. Its only own copy is the hardcoded English empty-state default, localized below as an
+  improvement. The remaining entries are native accessibility additions: the budget bar's spoken percent
+  value (the spoken peer of the web `aria-valuenow`), the external footer-link hint (the spoken peer of
+  `target="_blank"`), and the combined banner label (the spoken peer of the `role="status"` region).
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table ("UsageCard") so each parallel surface prompt owns its own strings. In test
+  / preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web copy (the source's one literal) --- */
+
+/* Empty state — shown when the card has no section to render (web `emptyMessage ?? '…'`). */
+"usageCard.empty.default" = "No data to display yet.";
+
+/* --- Native a11y additions (the web source is anonymous; no `t()` key exists) --- */
+
+/* Budget bar VoiceOver value — the rounded percent (spoken peer of web aria-valuenow). %1$d is the value. */
+"usageCard.budget.percentValue" = "%1$d%%";
+
+/* VoiceOver hint announced on an external footer link (spoken peer of web target="_blank"). */
+"usageCard.footer.externalHint" = "Opens in browser";
+
+/* Combined VoiceOver label for the callout banner (spoken peer of web role="status"). %1$@ title, %2$@ description. */
+"usageCard.banner.label" = "%1$@. %2$@";
