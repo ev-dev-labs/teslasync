@@ -142,5 +142,14 @@
     "requiredCount": 42,
     "promptId": "p2-windows/W7/windows-page-trips-TripReplayPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-trips-TripReplayPage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/TirePressure",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 34,
+    "requiredCount": 34,
+    "promptId": "p2-windows/W7/windows-page-vehicle-systems-TirePressurePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicle-systems-TirePressurePage.log"
   }
 ]

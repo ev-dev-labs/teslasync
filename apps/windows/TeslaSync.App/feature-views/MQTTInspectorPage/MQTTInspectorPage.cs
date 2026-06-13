@@ -326,7 +326,7 @@ public sealed partial class MQTTInspectorPage : UserControl, IDisposable
         AutomationProperties.SetName(card, $"{model.Label} {model.Value}");
     }
 
-    private FrameworkElement BuildConnectionContent(MqttInspectorDisplay display)
+    private static FrameworkElement BuildConnectionContent(MqttInspectorDisplay display)
     {
         if (!display.HasStatus)
         {
@@ -386,7 +386,7 @@ public sealed partial class MQTTInspectorPage : UserControl, IDisposable
         return block;
     }
 
-    private FrameworkElement BuildThroughputContent(MqttInspectorDisplay display)
+    private static FrameworkElement BuildThroughputContent(MqttInspectorDisplay display)
     {
         if (display.ChartReady && display.ThroughputSeries is { } series)
         {

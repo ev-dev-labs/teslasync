@@ -24781,4 +24781,67 @@
   <data name="translation.locations.retry" xml:space="preserve">
     <value>Retry</value>
   </data>
+  <data name="translation.Avg Pressure" xml:space="preserve">
+    <value>Avg Pressure</value>
+  </data>
+  <data name="translation.Current Readings" xml:space="preserve">
+    <value>Current Readings</value>
+  </data>
+  <data name="translation.Hard Warning" xml:space="preserve">
+    <value>Hard Warning</value>
+  </data>
+  <data name="translation.Hard Warning Active" xml:space="preserve">
+    <value>Hard Warning Active</value>
+  </data>
+  <data name="translation.History Table" xml:space="preserve">
+    <value>History Table</value>
+  </data>
+  <data name="translation.Last Updated" xml:space="preserve">
+    <value>Last Updated</value>
+  </data>
+  <data name="translation.Min Pressure" xml:space="preserve">
+    <value>Min Pressure</value>
+  </data>
+  <data name="translation.No History Data" xml:space="preserve">
+    <value>No History Data</value>
+  </data>
+  <data name="translation.Pressure History" xml:space="preserve">
+    <value>Pressure History</value>
+  </data>
+  <data name="translation.Soft Warning" xml:space="preserve">
+    <value>Soft Warning</value>
+  </data>
+  <data name="translation.Soft Warning Active" xml:space="preserve">
+    <value>Soft Warning Active</value>
+  </data>
+  <data name="translation.Warning Count" xml:space="preserve">
+    <value>Warning Count</value>
+  </data>
+  <data name="translation.tirePressure.selectVehicle" xml:space="preserve">
+    <value>Select vehicle</value>
+  </data>
+  <data name="translation.tirePressure.frontLeft" xml:space="preserve">
+    <value>Front Left</value>
+  </data>
+  <data name="translation.tirePressure.frontRight" xml:space="preserve">
+    <value>Front Right</value>
+  </data>
+  <data name="translation.tirePressure.rearLeft" xml:space="preserve">
+    <value>Rear Left</value>
+  </data>
+  <data name="translation.tirePressure.rearRight" xml:space="preserve">
+    <value>Rear Right</value>
+  </data>
+  <data name="translation.tirePressure.status.normal" xml:space="preserve">
+    <value>Normal</value>
+  </data>
+  <data name="translation.tirePressure.status.low" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="translation.tirePressure.status.high" xml:space="preserve">
+    <value>High</value>
+  </data>
+  <data name="translation.tirePressure.status.critical" xml:space="preserve">
+    <value>Critical</value>
+  </data>
 </root>

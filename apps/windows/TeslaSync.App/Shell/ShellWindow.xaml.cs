@@ -178,6 +178,10 @@ public sealed partial class ShellWindow : Window
         // "ProjectedRange" route name.
         _viewModel.PageFactory.Register("ProjectedRange", static () => new FeatureViews.Battery.ProjectedRangePage());
 
+        // Vehicle Systems / Tire Pressure page (P2/W7) — parity port of web TirePressurePage at route
+        // /tire-pressure. RouteTable already maps Page("TirePressure","tire-pressure",RouteGroup.VehicleSystems).
+        _viewModel.PageFactory.Register("TirePressure", static () => new FeatureViews.VehicleSystems.TirePressurePage());
+
         // Driving / DriveDetail page (P2/W7) — parity port of web DriveDetailPage at route /drives/:id.
         // The route drive id is read from the live match and the back affordance maps to the drives list.
         _viewModel.PageFactory.Register("DriveDetail", () =>

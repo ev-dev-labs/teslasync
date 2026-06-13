@@ -1,0 +1,109 @@
+# p2-windows / W7 / page:vehicle-systems/TirePressure — WinUI 3 / Fluent parity port
+#
+# Parity unit : page:vehicle-systems/TirePressure
+# Web source  : web/src/features/vehicle-systems/pages/TirePressurePage.tsx  (route /tire-pressure)
+# Native impl : apps/windows/TeslaSync.App/feature-views/TirePressurePage/{TirePressurePage.cs,
+#               TirePressurePage.Model.cs, TirePressurePage.Source.cs, TirePressurePage.ViewModel.cs}
+#               (the in-repo feature-view convention is pure-C# Fluent views — one Page + Model/Source/ViewModel
+#                quad, no XAML markup; the generated prompt's apps/windows/TeslaSync/Features/VehicleSystems/*.xaml
+#                path does not exist in this repo. Following the established convention, not the template path —
+#                no silent drift: this divergence is recorded here.)
+# Nav         : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs registers route name "TirePressure"
+#               (RouteTable already maps Page("TirePressure","tire-pressure",RouteGroup.VehicleSystems)).
+# Strings     : apps/windows/Strings/en/Resources.resw — 13 missing manifest keys + 8 corner/status keys added
+#               (6 of the 19 manifest keys — Ok, Time, Warnings, error.loadFailed, tirePressure.title,
+#                tirePressure.subtitle — already existed). Code resolves the web key names verbatim via ILocalizer.
+# Tests       : apps/windows/TeslaSync.App.Tests/FeatureViews/TirePressurePageTests.cs (52 cases, all pass).
+
+=== PARITY ===
+PARITY_REQUIRED=34
+
+# panels (9) — every web region implemented as a Fluent Card/GlassPanel; evidence = file + symbol
+[x] panel  - GlassPanel1     -> TirePressurePage.cs BuildWarningBanner (Display.HasWarning / WarningBannerText / WarningStatus)
+[x] panel  - GlassPanel2     -> TirePressurePage.cs BuildCurrentReadings (Display.CurrentReadingsLabel)
+[x] panel  - GlassPanel3     -> TirePressurePage.cs BuildGaugeCard (Display.Gauges — 4 per-corner cards)
+[x] panel  - Avg-Pressure    -> TirePressurePage.Model.cs BuildSummaryCards (Display.SummaryCards[0], strings.AvgPressure)
+[x] panel  - Min-Pressure    -> TirePressurePage.Model.cs BuildSummaryCards (Display.SummaryCards[1], strings.MinPressure)
+[x] panel  - Warning-Count   -> TirePressurePage.Model.cs BuildSummaryCards (Display.SummaryCards[2], strings.WarningCount)
+[x] panel  - Last-Updated    -> TirePressurePage.Model.cs BuildSummaryCards (Display.SummaryCards[3], strings.LastUpdated)
+[x] panel  - GlassPanel8     -> TirePressurePage.cs BuildHistoryChart (Display.HistoryChart, strings.PressureHistory)
+[x] panel  - GlassPanel9     -> TirePressurePage.cs BuildHistoryTable (Display.TableRows, strings.HistoryTable)
+
+# charts (2) — native W3 chart wrappers (never a web canvas)
+[x] chart  - RadialGauge     -> TirePressurePage.cs BuildGaugeCard -> new TsRadialGauge { Value, Max, Unit, ColorIndex } (x4)
+[x] chart  - LineChart       -> TirePressurePage.cs BuildHistoryChart -> new TsLineChart { Series=BuildSeries(Display.HistoryChart.Series) }
+
+# data states (4) — projection branch precedence loading -> error -> empty -> success
+[x] state  - loading         -> TirePressureProjection.Project (Display.ShowLoading / TirePressurePageState.Loading); skeleton in TirePressurePage.cs BuildLoadingSkeleton
+[x] state  - empty           -> TirePressureProjection.Project (Display.ShowEmpty); TsEmptyState in TirePressurePage.cs (no latest object + no history)
+[x] state  - error           -> TirePressureProjection.Project (Display.ShowError); TsQueryError + Retry in TirePressurePage.cs
+[x] state  - success         -> TirePressureProjection.Project (Display.ShowContent); BuildContent in TirePressurePage.cs
+
+# strings (19) — every visible literal resolves from Strings/*.resw via the web key name (TirePressureStrings.Resolve)
+[x] string - Avg Pressure               -> strings.AvgPressure         (resw translation.Avg Pressure)
+[x] string - Current Readings           -> strings.CurrentReadings     (resw translation.Current Readings)
+[x] string - Hard Warning               -> strings.HardWarning         (resw translation.Hard Warning)
+[x] string - Hard Warning Active        -> strings.HardWarningActive   (resw translation.Hard Warning Active)
+[x] string - History Table              -> strings.HistoryTable        (resw translation.History Table)
+[x] string - Last Updated               -> strings.LastUpdated         (resw translation.Last Updated)
+[x] string - Min Pressure               -> strings.MinPressure         (resw translation.Min Pressure)
+[x] string - No History Data            -> strings.NoHistoryData       (resw translation.No History Data)
+[x] string - Ok                         -> strings.Ok                  (resw translation.Ok — pre-existing)
+[x] string - Pressure History           -> strings.PressureHistory     (resw translation.Pressure History)
+[x] string - Soft Warning               -> strings.SoftWarning         (resw translation.Soft Warning)
+[x] string - Soft Warning Active        -> strings.SoftWarningActive   (resw translation.Soft Warning Active)
+[x] string - Time                       -> strings.Time                (resw translation.Time — pre-existing)
+[x] string - Warning Count              -> strings.WarningCount        (resw translation.Warning Count)
+[x] string - Warnings                   -> strings.Warnings            (resw translation.Warnings — pre-existing)
+[x] string - error.loadFailed           -> strings.LoadFailed          (resw translation.error.loadFailed — pre-existing)
+[x] string - tirePressure.selectVehicle -> strings.SelectVehicle       (resw translation.tirePressure.selectVehicle)
+[x] string - tirePressure.subtitle      -> strings.Subtitle            (resw translation.tirePressure.subtitle — pre-existing)
+[x] string - tirePressure.title         -> strings.Title               (resw translation.tirePressure.title — pre-existing)
+
+PARITY_COVERED=34
+# Coverage asserted headlessly in apps/windows/TeslaSync.App.Tests/FeatureViews/TirePressurePageTests.cs (52 cases):
+# the 19-key one-pass coverage (success + loading passes + a "19 unique keys" guard), the four data states, the
+# SI-Pascal pressure bands (web pressureStatus/statusVariant), the four corner gauges (web order + null->0->critical),
+# the four summary cards (avg/min/warning-count/last-updated, em-dash fallback), the line-chart's four web-coloured
+# series + has-data/empty gate, the six-column history table newest-first + Hard/Soft/Ok warning cell, the warning
+# banner (hidden / hard-danger / soft-warning), hasTpmsWarning's any-true heuristic, the tolerant JSON parsers,
+# Imperial psi conversion at the boundary, the view-model loading/empty/error/refresh matrix, the generated-client
+# feed's two-operation request shaping (vehicle_id + range, propagate-latest / degrade-history), the registration
+# operations and the PII-safe diagnostics. All pass.
+
+=== GATE ===
+# Runner: dotnet 10.0.300 on Windows. A .NET/Windows build+unit-test runner IS available (build green, 27688 unit
+# tests pass). The App.UITests project needs a WinAppDriver/Appium UI-automation host (nothing on 127.0.0.1:4723,
+# WinAppDriver.exe absent) and is out of scope for this gate — same as every prior W7 page log.
+#
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TirePressurePage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/VehicleSystems path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Warning(s) 0 Error(s)
+#   (pre-existing remediation: under SDK 10.0.300 the App project's AnalysisLevel=latest + TreatWarningsAsErrors
+#    surfaced two CA1822 warnings-as-errors in the unrelated, earlier-committed MQTTInspectorPage.cs
+#    BuildConnectionContent / BuildThroughputContent — both genuinely instance-data-free; marked `static`. Two-line,
+#    behaviour-preserving fix required for the shared solution to compile on this SDK. Recorded here — no silent drift.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27688, Failed: 0, Skipped: 0
+#   (scoped to the headless unit-test project, as every prior W7 page log; App.UITests needs a WinAppDriver UI host)
+TEST_EXIT=0
+PARITY_COVERED=34
+PARITY_REQUIRED=34
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TirePressurePage \
+#         apps/windows/TeslaSync.App/feature-views/MQTTInspectorPage/MQTTInspectorPage.cs \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/TirePressurePageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-vehicle-systems-TirePressurePage.log
+# git commit -m "feat(apps/windows): TirePressurePage at web parity (W7 vehicle-systems)"
+
+EXIT=0
+STATUS=DONE
