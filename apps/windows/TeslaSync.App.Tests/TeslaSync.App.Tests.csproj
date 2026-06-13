@@ -834,6 +834,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SettingsSearch\SettingsSearch.Model.cs" Link="FeatureViews\SettingsSearch\SettingsSearch.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SettingsSearch\SettingsSearch.Source.cs" Link="FeatureViews\SettingsSearch\SettingsSearch.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SettingsSearch\SettingsSearch.ViewModel.cs" Link="FeatureViews\SettingsSearch\SettingsSearch.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SharingTripsPage\SharingTripsPage.Model.cs" Link="FeatureViews\SharingTripsPage\SharingTripsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SharingTripsPage\SharingTripsPage.Source.cs" Link="FeatureViews\SharingTripsPage\SharingTripsPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SharingTripsPage\SharingTripsPage.ViewModel.cs" Link="FeatureViews\SharingTripsPage\SharingTripsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalChartPanel.Model.cs" Link="FeatureViews\SignalChartPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalCompareControls\SignalCompareControls.Model.cs" Link="FeatureViews\SignalCompareControls\SignalCompareControls.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalDiffTable\SignalDiffTable.Model.cs" Link="FeatureViews\SignalDiffTable\SignalDiffTable.Model.cs" />

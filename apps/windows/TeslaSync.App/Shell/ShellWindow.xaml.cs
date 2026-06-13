@@ -224,6 +224,8 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Maps.LocationsPage();
             page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
 
         // Notifications / Archived page (P2/W7) — parity port of web ArchivedPage at route /notifications/archived.
         // The header "Back to inbox" action maps to the inbox; the hosted InboxBody's "View context" / empty-state
@@ -273,6 +275,12 @@ public sealed partial class ShellWindow : Window
         // the clipboard; it never pushes to Grafana.
         _viewModel.PageFactory.Register(
             "PowerDashboards", static () => new FeatureViews.PowerUser.DashboardsPage());
+
+        // Sharing / Trip Sharing page (P2/W7) — parity port of web SharingTripsPage at route /sharing/trips.
+        // RouteTable already maps Page("SharingTrips","sharing/trips",Sharing); the page wires the recent-trips
+        // list (loading / empty / success), the static share-card hint and the default-off trip-postcard drafter.
+        _viewModel.PageFactory.Register(
+            "SharingTrips", static () => new FeatureViews.Sharing.SharingTripsPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

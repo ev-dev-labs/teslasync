@@ -106,5 +106,14 @@
     "requiredCount": 28,
     "promptId": "p2-windows/W7/windows-page-onboarding-OnboardingPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-onboarding-OnboardingPage.log"
+  },
+  {
+    "unitId": "page:sharing/SharingTrips",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 13,
+    "requiredCount": 13,
+    "promptId": "p2-windows/W7/windows-page-sharing-SharingTripsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-sharing-SharingTripsPage.log"
   }
 ]
