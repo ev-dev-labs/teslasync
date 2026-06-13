@@ -106,6 +106,11 @@ public sealed partial class ShellWindow : Window
         // Admin / API Keys page (P2/W7) — parity port of web APIKeysPage at route /api-keys.
         // RouteTable already maps Page("APIKeys","api-keys",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("APIKeys", static () => new FeatureViews.Admin.APIKeysPage());
+
+        // Admin / GDPR Export page (P2/W7) — parity port of web GDPRExportPage at route /admin/gdpr-exports.
+        // RouteTable already maps Page("GDPRExport","admin/gdpr-exports",RouteGroup.AdminDevTools).
+        _viewModel.PageFactory.Register("GDPRExport", static () => new FeatureViews.Admin.GDPRExportPage());
+
         // Admin / DevTools page (P2/W7) — parity port of web DevToolsPage at route /dev-tools.
         // RouteTable already maps Page("DevTools","dev-tools",RouteGroup.AdminDevTools). The page is a thin shell:
         // a header (title/subtitle) over a five-tab navigator mounting the Fleet API, Telemetry, Infrastructure,

@@ -1,0 +1,180 @@
+=== p2-windows · W7 · page:admin/GDPRExport (WinUI 3 / Fluent) ===
+Parity unit : page:admin/GDPRExport   kind=page   web route=/admin/gdpr-exports
+Web source  : web/src/features/admin/pages/GDPRExportPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/GDPRExportPage/ (namespace TeslaSync.App.FeatureViews.Admin)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked. WinUI/Windows App SDK workload present (full solution builds).
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection, unit-tested
+  headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable
+  state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7 AuditLogPage / ApiLogsPage / SchemaDriftPage
+  do. The generated prompt's idealized "GDPRExportPage.xaml + GDPRExportPageViewModel.cs under TeslaSync/Features/Admin"
+  is mapped onto these real conventions; the surface registers with the W4 ShellPageFactory by route name ("GDPRExport",
+  already in RouteTable.cs -> admin/gdpr-exports) via ShellWindow.xaml.cs.
+- Data binding (ADR-004): the one manifest data source is useGDPRExport (GET /admin/gdpr/exports/{id}). The view-model
+  reads through an injected IGDPRExportFeed; the default EmptyGDPRExportFeed resolves the "no artifact selected" empty
+  surface (the sibling-page host-injection precedent), and the generated-client-backed GDPRExportClientFeed
+  (GDPRExportPage.Source.cs) binds to the generated OpenAPI contract client operation get_api_v1_admin_gdpr_exports_id
+  with the id filling the {id} path slot (asserted in tests). No HTTP touches the view. A non-success response surfaces
+  as ApiException; the view-model maps StatusCode==503 to the distinct subsystem-unavailable banner (web
+  `subsystemMissing`), StatusCode==404 (and a null artifact) to the not-found banner (web `notFound`), and every other
+  failure to the generic InfoBar+Retry. The lookup is a manual submit (web handleLookup: setActiveId(idInput.trim())):
+  the query stays disabled until an id is submitted, so the initial state is the empty surface (web !activeId), exactly
+  as the web page renders before a ?id= is supplied.
+- The web page renders its data states inside the PageContainer body, so the native port reproduces them as visible
+  Fluent regions per ADR-006: loading -> ProgressRing + caption; error -> TsQueryError (InfoBar-equivalent) + Retry
+  (generic) or the TsAlertBanner(Danger) not-found banner (404); 503 subsystem-missing -> TsAlertBanner(Warning)
+  notConfigured above the panels; empty -> TsEmptyState (download glyph); success -> the artifact section. Every web
+  GlassPanel/StatCard is reproduced as a TsGlassPanel/TsStatCard Mica region, always present and toggled by the
+  projected flags. Never a blank region.
+- The artifact section composes the web regions from shared primitives: the status TsBadge (web Badge, STATUS_VARIANT
+  map), the format/size/storage TsStatCards (web StatCard; size formatted by the 1:1 binary-unit formatBytes port), the
+  artifact-details TsGlassPanel (id + TsCopyButton, user, created/completed/expires with absolute + relative time via
+  DateTimeFormatting = web formatDateTime/formatRelative, SHA-256 mono + TsCopyButton), the optional export-failed
+  TsAlertBanner(Danger) (web artifact.error), and the download TsGlassPanel — the Download-bundle TsButton when
+  status==complete (web downloadUrl href; the conventional /api/v1/admin/gdpr/exports/{id}/download path is surfaced for
+  parity/automation and the server-supplied absolute download_url is launched via Windows.System.Launcher) or the
+  waiting / expired / failed caption otherwise (web downloadWait/downloadExpired/downloadFailed).
+- SI units N/A (no unit-bearing fields on this admin surface — an artifact-id lookup with a byte size + SHA-256 only).
+  The byte size formats through the binary-unit formatBytes port (web formatBytes) and timestamps through
+  DateTimeFormatting (web formatDateTime / formatRelative) at the display boundary.
+- All 31 i18n keys resolve through the ILocalizer facade with the verbatim web key names. The 30 admin.gdprExport.* keys
+  were added to Strings/{en,ar,he}/Resources.resw as translation.admin.gdprExport.* (admin.subsystem.unavailableTitle
+  already present, shared with the other admin pages). The ar/he catalogs carry the English default until translated;
+  the app falls back to the English default via ILocalizer regardless. The four lines carrying the input-hint key
+  (admin.gdprExport.idPlaceholder) carry `// parity:allow` markers (web i18n key name, not a stub placeholder).
+- W1 materialization: the generated C# client (apps/windows/Generated, gitignored build artifact) was already present
+  in this worktree (Generated/Api/*.cs incl. the get_api_v1_admin_gdpr_exports_id[/download] endpoints + the scaffolded
+  Generated/Generated.csproj), so the whole solution builds green at baseline (0 errors). Not committed.
+
+=== PARITY ===
+PARITY_REQUIRED=42
+
+# Panels (8) — every web GlassPanel/StatCard reproduced as a Fluent TsGlassPanel/TsStatCard region (always present)
+[x] panel  - GlassPanel1  -> lookup panel: GDPRExportPage.cs#BuildLookupPanel (TsGlassPanel hosting _lookupTitle
+             PanelTitle + _idLabel Label/_idInput TsInput + _lookupButton TsButton + _lookupHint Caption); web
+             GDPRExportPage.tsx GlassPanel "Lookup artifact"; projected LookupTitle/IdLabel/IdPlaceholder/IdValue/
+             LookupButtonLabel/LookupEnabled/LookupHint; tests ViewModel_typing_an_id_enables_the_lookup_button +
+             ViewModel_lookup_loads_artifact_into_the_success_state + ViewModel_empty_id_stays_in_the_empty_state...
+[x] panel  - GlassPanel2  -> empty "no artifact selected": GDPRExportPage.cs#BuildEmptyPanel (_emptyPanel TsGlassPanel
+             hosting _emptyState TsEmptyState, download glyph); web !activeId GlassPanel/EmptyState; projected
+             ShowEmpty/EmptyTitle/EmptyMessage; test State_empty_when_no_id_submitted
+[x] panel  - GlassPanel3  -> status badge: GDPRExportPage.cs#BuildStatGrid (status TsGlassPanel hosting _statusCaption
+             Caption + _statusBadge TsBadge); web GlassPanel "Status" Badge(STATUS_VARIANT); projected
+             StatusLabel/StatusText/StatusVariant; tests Artifact_projects_status_badge_stat_tiles_and_meta_rows +
+             Artifact_error_raises_the_export_failed_banner + StatusVariant_matches_the_web_map
+[x] panel  - Format       -> _formatCard TsStatCard (web StatCard "Format"); projected FormatLabel/FormatValue
+             (artifact.format || em-dash); tests Artifact_projects... + Artifact_renders_em_dash_for_absent_optionals
+[x] panel  - Size         -> _sizeCard TsStatCard (web StatCard "Size", formatBytes); projected BytesLabel/BytesValue;
+             tests FormatBytes_uses_binary_units + FormatBytes_null_is_em_dash + Artifact_projects... (2.4 MB)
+[x] panel  - Storage      -> _storageCard TsStatCard (web StatCard "Storage"); projected StorageLabel/StorageValue
+             (artifact.storage || em-dash); tests Artifact_projects... + Artifact_renders_em_dash_for_absent_optionals
+[x] panel  - GlassPanel7  -> artifact details: GDPRExportPage.cs#BuildDetailsPanel (TsGlassPanel hosting _metaTitle
+             PanelTitle + _metaRowsPanel: the id row [mono + TsCopyButton] then the GDPRMetaRow rows via BuildMetaRow —
+             user, created/completed/expires [absolute + relative], SHA-256 [mono + TsCopyButton]); web GlassPanel
+             "Artifact details" dl/MetaRow + CopyButton; projected MetaTitle/IdRowLabel/IdRowValue/MetaRows/CopyLabel;
+             test Artifact_projects_status_badge_stat_tiles_and_meta_rows (5 meta rows incl. the copyable/mono SHA)
+[x] panel  - GlassPanel8  -> download: GDPRExportPage.cs#BuildDownloadPanel (TsGlassPanel hosting _downloadTitle
+             PanelTitle + _downloadGroup [_downloadHint Text + _downloadButton TsButton] + _downloadCaption Caption);
+             web GlassPanel "Download" (download href when complete, else waiting/expired/failed caption); projected
+             DownloadTitle/ShowDownloadButton/DownloadHint/DownloadButtonLabel/DownloadUrl/ShowDownloadCaption/
+             DownloadCaptionText; tests Download_button_shows_when_complete_with_the_conventional_path +
+             Download_caption_matches_the_non_complete_status (queued/running/expired/failed)
+
+# Data states (3 required: empty/error/success; +loading and the 503 subsystem banner also implemented) — visible regions
+[x] state  - empty   -> GDPRExportState.Empty + GDPRExportDisplay.ShowEmpty; rendered _emptyPanel (TsEmptyState) — and
+             the 503 subsystem-missing case raises _subsystemBanner (TsAlertBanner Warning) above the panels while the
+             state stays Empty; tests State_empty_when_no_id_submitted +
+             State_503_subsystem_missing_raises_the_banner_and_suppresses_artifact +
+             ViewModel_http_503_is_the_subsystem_unavailable_branch
+[x] state  - error   -> GDPRExportState.Error + ShowError (generic InfoBar via _errorState TsQueryError + Retry ->
+             RefreshAsync) or ShowNotFound (_notFoundBanner TsAlertBanner Danger, web 404); tests
+             State_error_shows_failure_surface_with_detail + State_404_not_found_raises_the_banner_in_the_error_state +
+             ViewModel_generic_failure_is_the_error_state + ViewModel_http_404_is_the_not_found_branch +
+             ViewModel_null_result_is_treated_as_not_found
+[x] state  - success -> GDPRExportState.Success + ShowArtifact; rendered _artifactSection (status + stat tiles + details
+             + download); tests State_success_when_artifact_present + ViewModel_lookup_loads_artifact_into_the_success_state
+
+# Strings (31) — every visible literal resolves from Strings/*.resw via ILocalizer with the verbatim web key names
+[x] string - admin.gdprExport.bytesLabel       -> GDPRExportProjection.Project GetString("admin.gdprExport.bytesLabel", "Size") -> BytesLabel
+[x] string - admin.gdprExport.downloadButton    -> GetString("admin.gdprExport.downloadButton", "Download bundle") -> DownloadButtonLabel
+[x] string - admin.gdprExport.downloadExpired   -> GetString("admin.gdprExport.downloadExpired", "This artifact has expired …") -> DownloadCaptionText (expired)
+[x] string - admin.gdprExport.downloadFailed    -> GetString("admin.gdprExport.downloadFailed", "No bundle available — see the error above.") -> DownloadCaptionText (failed)
+[x] string - admin.gdprExport.downloadHint      -> GetString("admin.gdprExport.downloadHint", "The bundle streams from the backend …") -> DownloadHint
+[x] string - admin.gdprExport.downloadTitle     -> GetString("admin.gdprExport.downloadTitle", "Download") -> DownloadTitle
+[x] string - admin.gdprExport.downloadWait      -> GetString("admin.gdprExport.downloadWait", "Download becomes available once the export completes.") -> DownloadCaptionText (queued/running)
+[x] string - admin.gdprExport.emptyMessage      -> GetString("admin.gdprExport.emptyMessage", "Enter an artifact ID above …") -> EmptyMessage
+[x] string - admin.gdprExport.emptyTitle        -> GetString("admin.gdprExport.emptyTitle", "No artifact selected") -> EmptyTitle
+[x] string - admin.gdprExport.errorTitle        -> GetString("admin.gdprExport.errorTitle", "Export failed") -> ArtifactErrorTitle
+[x] string - admin.gdprExport.formatLabel       -> GetString("admin.gdprExport.formatLabel", "Format") -> FormatLabel
+[x] string - admin.gdprExport.idLabel           -> GetString("admin.gdprExport.idLabel", "Artifact ID") -> IdLabel
+[x] string - admin.gdprExport.idPlaceholder     -> GetString("admin.gdprExport.idPlaceholder", "e.g. 8f4c…") -> IdPlaceholder
+[x] string - admin.gdprExport.lookupButton      -> GetString("admin.gdprExport.lookupButton", "Look up") -> LookupButtonLabel
+[x] string - admin.gdprExport.lookupHint        -> GetString("admin.gdprExport.lookupHint", "IDs come from the GDPR export queue email …") -> LookupHint
+[x] string - admin.gdprExport.lookupTitle       -> GetString("admin.gdprExport.lookupTitle", "Lookup artifact") -> LookupTitle
+[x] string - admin.gdprExport.metaCompleted     -> GetString("admin.gdprExport.metaCompleted", "Completed") -> MetaRows[Completed].Label
+[x] string - admin.gdprExport.metaCreated       -> GetString("admin.gdprExport.metaCreated", "Created") -> MetaRows[Created].Label
+[x] string - admin.gdprExport.metaExpires       -> GetString("admin.gdprExport.metaExpires", "Expires") -> MetaRows[Expires].Label
+[x] string - admin.gdprExport.metaId            -> GetString("admin.gdprExport.metaId", "ID") -> IdRowLabel
+[x] string - admin.gdprExport.metaSha256        -> GetString("admin.gdprExport.metaSha256", "SHA-256") -> MetaRows[SHA-256].Label
+[x] string - admin.gdprExport.metaTitle         -> GetString("admin.gdprExport.metaTitle", "Artifact details") -> MetaTitle
+[x] string - admin.gdprExport.metaUser          -> GetString("admin.gdprExport.metaUser", "User") -> MetaRows[User].Label
+[x] string - admin.gdprExport.notConfigured     -> GetString("admin.gdprExport.notConfigured", "GDPR export subsystem is not configured on this deployment.") -> SubsystemMessage
+[x] string - admin.gdprExport.notFoundMessage   -> GetString("admin.gdprExport.notFoundMessage", "No artifact with that id exists …") -> NotFoundMessage
+[x] string - admin.gdprExport.notFoundTitle     -> GetString("admin.gdprExport.notFoundTitle", "Artifact not found") -> NotFoundTitle
+[x] string - admin.gdprExport.pageTitle         -> GDPRExportProjection.Project / GDPRExportRegistration.Title GetString("admin.gdprExport.pageTitle", "GDPR Export") -> Title
+[x] string - admin.gdprExport.statusLabel       -> GetString("admin.gdprExport.statusLabel", "Status") -> StatusLabel
+[x] string - admin.gdprExport.storageLabel      -> GetString("admin.gdprExport.storageLabel", "Storage") -> StorageLabel
+[x] string - admin.gdprExport.subtitle          -> GetString("admin.gdprExport.subtitle", "Look up the status of a GDPR data export …") -> Subtitle
+[x] string - admin.subsystem.unavailableTitle   -> GetString("admin.subsystem.unavailableTitle", "Subsystem unavailable") -> SubsystemTitle
+
+PARITY_COVERED=42
+# Coverage asserted headlessly: GDPRExportPageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_empty_state) records every one of the 31 keys above through a RecordingLocalizer (the projection
+# resolves every chrome/panel/meta/download string on every projection regardless of data state, visibility gated
+# separately); the empty/error/success state tests + the 503 subsystem and 404 not-found branch tests + the artifact
+# projection tests (status badge variant, format/size/storage tiles, the 5 meta rows incl. the copyable/mono SHA) + the
+# download (complete-path / queued / running / expired / failed) tests assert each panel and region renders from the
+# bound GDPRExportDisplay state holder; Registration_operation_matches_the_generated_endpoint_id asserts the hook URL
+# maps to the generated get_api_v1_admin_gdpr_exports_id endpoint id (router.go parity); the ViewModel_* tests assert
+# the empty/loading/error(503+404+null+generic)/success matrix and the lookup-submit behaviour; FormatBytes_uses_binary_units
+# + StatusVariant_matches_the_web_map pin the web formatBytes / STATUS_VARIANT ports.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/GDPRExportPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+#   The four lines carrying the web input-hint i18n key (admin.gdprExport.idPlaceholder) carry inline `// parity:allow`.
+PLACEHOLDER_ALLOWED=4
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s) (17 pre-existing TeslaSync.App.Core
+#   CA warnings only — unchanged from baseline). Whole solution incl. the WinUI TeslaSync.App view compiles.
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues for the changed files (GDPRExportPage
+#   Model/Source/ViewModel/view + GDPRExportPageTests + ShellWindow.xaml.cs; files normalised to LF). Baseline solution
+#   already format-clean.
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29363, Failed: 0, Skipped: 0
+#   (incl. 37 GDPRExportPageTests). This is the headless, parity-bearing suite that drives the W7 page gate (same
+#   convention as the sibling AuditLogPage/SchemaDriftPage/ApiLogsPage W7 logs).
+TEST_EXIT=0
+# NOTE (environment): the whole-solution `dotnet test apps/windows/TeslaSync.sln -c Release` additionally runs
+#   TeslaSync.App.UITests, whose WinAppDriver UI-automation cases abort with UiAutomationUnavailableException
+#   ("nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found") — the WinAppDriver/Appium
+#   runner is absent in this headless environment. These are W9-scope UI-automation tests (not authored or modified by
+#   this W7 page task) and are environment-gated, not a code regression. The headless TeslaSync.App.Tests suite that
+#   verifies this page's parity is fully green.
+PARITY_COVERED=42
+PARITY_REQUIRED=42
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/GDPRExportPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/GDPRExportPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-GDPRExportPage.log
+# git commit -m "feat(apps/windows): GDPRExportPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE
