@@ -277,6 +277,11 @@ public sealed partial class ShellWindow : Window
             "PowerDashboards", static () => new FeatureViews.PowerUser.DashboardsPage());
         // Settings / Active Sessions page (P2/W7) — parity port of web ActiveSessionsPage at route /account/sessions.
         _viewModel.PageFactory.Register("ActiveSessions", static () => new FeatureViews.Settings.ActiveSessionsPage());
+        // Settings / Helix (AI) integration page (P2/W7) — parity port of web HelixPage at route /integrations/helix.
+        // Thin PageContainer wrapper (title + subtitle + integrations/helix breadcrumb overrides, page-level loading
+        // bound to useSettings) around the already-ported AISettings surface. RouteTable already maps
+        // Page("Helix","integrations/helix",SettingsAccountIntegrations).
+        _viewModel.PageFactory.Register("Helix", static () => new FeatureViews.Settings.HelixPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
