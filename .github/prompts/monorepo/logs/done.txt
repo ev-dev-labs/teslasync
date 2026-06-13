@@ -776,3 +776,4 @@ p2-windows/pages/settings/TwoFactorAuthPage.prompt.md
 p2-windows/pages/sharing/SharedDrivePage.prompt.md
 p2-windows/pages/system/CommandsPage.prompt.md
 p2-windows/pages/system/CommandHistoryPage.prompt.md
+p2-windows/pages/sharing/SharingTripsPage.prompt.md
