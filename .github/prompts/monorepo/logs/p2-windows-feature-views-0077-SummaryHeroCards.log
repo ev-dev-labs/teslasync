@@ -1,0 +1,113 @@
+=== P2 Feature view 0077 SummaryHeroCards (Windows) ===
+runner: dotnet 10.0.300; OS=Microsoft Windows NT 10.0.26200.0; UTC=2026-06-13T14:09:17Z
+web source: web/src/features/analytics/components/weekly-digest/SummaryHeroCards.tsx (THE spec)
+
+CAPABILITY: WinUI 3 (Windows App SDK) + .NET 10 are present — the Release solution build is green
+and the new surface compiles into TeslaSync.App (net10.0-windows10.0.19041.0, x64). The ONLY red is
+the absent WinAppDriver/Appium E2E runner (platform-capability gap; see TEST below), which the prompt's
+capability note sanctions as STATUS=BLOCKED with evidence.
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+Build succeeded.
+    17 Warning(s)   (all pre-existing in TeslaSync.App.Core: CA1000/CA1716/CA1720/CA1859 — none from this surface)
+    0 Error(s)
+  TeslaSync.App.Core      -> bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.Platform  -> bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.Tests     -> bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App.UITests   -> bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App           -> bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+BUILD_EXIT=0
+
+--- TEST: dotnet test apps/windows/TeslaSync.sln -c Release ---
+  Error Message:
+   TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium
+   runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its
+   standard install paths or on PATH.
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 342 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 29058, Skipped:     0, Total: 29058, Duration: 14 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=1
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+no formatting changes required (whole-solution clean; the three new files are LF / UTF-8 no-BOM)
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 on SummaryHeroCards.{cs,Model.cs} ---
+(the prompt path .../feature-views/SummaryHeroCards is a file PREFIX, not a dir, under the flat feature-views
+ layout; the gate's literal invocation resolves clean, and the two surface files are ALSO scanned directly so the
+ gate inspects shipped code)
+  gate-literal (-Path .../feature-views/SummaryHeroCards): PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  apps/windows/TeslaSync.App/feature-views/SummaryHeroCards.cs       => PLACEHOLDER_COUNT=0  EXIT=0
+  apps/windows/TeslaSync.App/feature-views/SummaryHeroCards.Model.cs => PLACEHOLDER_COUNT=0  EXIT=0
+  self-test: SELFTEST_EXIT=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+GATE: BUILD_EXIT=0 TEST_EXIT=1 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0
+
+=== CONCLUSION ===
+
+DELIVERED — native WinUI 3 SummaryHeroCards at parity with
+web/src/features/analytics/components/weekly-digest/SummaryHeroCards.tsx:
+  apps/windows/TeslaSync.App/feature-views/SummaryHeroCards.Model.cs  (WinUI-free projection, records,
+    diagnostics, registration — the loading/ready branch selection; the five always-present tiles in web order
+    (Total Distance / Total Drives / Energy Used / Charging Cost / CO2 Saved) with the web Lucide->Segoe Fluent
+    glyph + color mapping; the per-tile web trendFor change — flat "0%"/positive, otherwise a signed pctChange
+    whose desirability flips for the lower-is-better energy & cost metrics via invertPositive; the fmtNumber+unit
+    / fmtInt / formatCurrency readouts; the optional sixth fun-fact tile gated on funFact (the web {funFact && ...})
+    rendering "{times}x" with the localized "~ {times}x {from} -> {to}" caption; per-state Narrator name; PII-safe
+    view.opened diagnostics). Reuses the shared HighlightCardModel/HighlightColor/HighlightCardProjection (slide
+    0076) and Core NumberFormatting — no duplicated logic.
+  apps/windows/TeslaSync.App/feature-views/SummaryHeroCards.cs  (the ContentControl view: the web composition —
+    a single entrance TsFadeIn (web <FadeIn delay={0.05}>) over a TsGlassPanel (web p-6 / space-y-4) holding the
+    PanelTitle "Week Summary" heading and the responsive HighlightCard grid that reflows 1 -> 2 -> 3 columns across
+    the web sm / lg breakpoints (web grid-cols-1 sm:grid-cols-2 lg:grid-cols-3, gap-4); TsSkeleton loading chrome
+    inside the panel — never a blank box; live-region loading announcement; reduced-motion honoured by TsFadeIn;
+    emits view.opened slug=SummaryHeroCards).
+  apps/windows/TeslaSync.App.Tests/FeatureViews/SummaryHeroCardsTests.cs  (40 headless xUnit cases, all PASS:
+    loading/ready branch + loading-over-data precedence; the adapter projection (model -> display); five-vs-six tile
+    composition + web order + color + glyph presence; fmtNumber/unit, grouped fmtInt, formatCurrency (default +
+    custom + blank-falls-back-to-$); trendFor up/flat/invert-positive/invert-negative; pctChange parity incl.
+    zero-previous and absolute-denominator; fun-fact value "{times}x" + interpolated caption + drop-when-absent;
+    the i18n keys fed through the facade (KeyEcho); per-state a11y Narrator names; PII-safe diagnostics; stable
+    slug; argument validation).
+
+i18n: every string resolves through the i18n facade using the EXACT web key names — analytics.weeklyDigest
+.weekSummary / .totalDistance / .totalDrives / .energyUsed / .chargingCost / .co2Saved / .funFact / .funFactDesc
+plus the shared common.loading. All are already present in Strings/{en,ar,he}/Resources.resw (verified en row-for-row,
+funFactDesc uses the {0}/{1}/{2} String.Format slots the native port feeds). No English literals outside i18n fallbacks.
+
+States: the web source is a pure presentational composite — it takes already-resolved metrics + optional funFact
+props and renders the panel, with NO fetch-driven error/stale/offline branch of its own (the owning WeeklyDigestPage
+owns the useWeeklyDigest lifecycle and renders its DigestSkeleton / page error / "No Data" empty state once for the
+whole digest before this surface mounts). The card-local loading/ready branches plus the funFact conditional are
+reproduced exactly; error/stale/offline are documented as parent-owned in the model XML docs — the same precedent
+the committed siblings 0076 HighlightCard and SummaryStatsRow set.
+
+BASELINE SETUP (prerequisite, transparently disclosed — git-ignored infra, not tracked deliverables):
+  1. apps/windows/Generated/ (gitignored via .gitignore:380 "apps/**/generated/") was ABSENT in this fresh worktree,
+     so TeslaSync.App.Core / TeslaSync.App.Tests could not resolve the TeslaSync.Windows.Generated.Api namespace
+     (10x CS0234 before repair). The generator apps/tools/codegen/gen-clients.ts emits only the Api/*.cs (not the
+     wrapping .csproj). Restored the project from a sibling worktree whose api/openapi/teslasync.openapi.json is
+     byte-identical (SHA-256 verified) to this worktree's spec, so the generated client is in-sync. This is the
+     same local build-artifact every predecessor's green build relied on.
+  2. apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj — added ONE <Compile Include> linking
+     feature-views/SummaryHeroCards.Model.cs (Link=FeatureViews\SummaryHeroCards.Model.cs). The headless test
+     project cannot reference the WinUI App project, so every feature-view's WinUI-free Model.cs is source-linked in
+     (the established pattern — HighlightCard.Model.cs and SummaryStatsRow.Model.cs are linked the same way). No test
+     logic elsewhere was touched.
+
+TEST_EXIT=1 — ROOT CAUSE = ABSENT UI-AUTOMATION RUNNER (platform-capability gap, not a defect):
+  TeslaSync.App.Tests (headless): Passed 29058 / Failed 0 — includes the 40 new SummaryHeroCards tests
+    (the headless baseline before this surface was 29018; delta = +40).
+  TeslaSync.App.UITests (E2E):    Failed 147 / Passed 0 — EVERY failure is UiAutomationUnavailableException:
+    "WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was
+    not found." None of the 147 reference SummaryHeroCards; they exercise pre-existing shell / navigation / auth /
+    page-state chrome and fail identically at HEAD, independent of this surface.
+  This is the same WinAppDriver gap recorded as STATUS=BLOCKED by every predecessor feature-view log
+  (0002 BackendTool ... 0076 HighlightCard ... 0078 WeekOverWeekSummary). The prompt's capability note
+  ("requires WinUI 3 (Windows App SDK 1.6+) + .NET 10 ... If unavailable on the runner -> STATUS=BLOCKED with API
+  evidence") sanctions BLOCKED for exactly this gap. WinUI 3 + .NET 10 THEMSELVES are present — the Release solution
+  build is green and the surface compiles into TeslaSync.App with zero new warnings.
+
+EXIT=1
+STATUS=BLOCKED
