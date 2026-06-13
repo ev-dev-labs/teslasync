@@ -326,6 +326,22 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
+        // System / NotFound catch-all page (P2/W7) — parity port of web NotFoundPage at the wildcard route /*.
+        // The unmatched path is read from the live match (web location.pathname) so the body + closest-route
+        // suggestions reflect the actual URL. The three escape hatches map to the native shell: "Go back" to the
+        // history stack (web window.history.back()), "Go to dashboard" to the index route (web navigate('/')), and
+        // "Open command palette" to the shell search box (web toggle-command-palette); suggestion links navigate to
+        // the chosen route path (web Link to={s.path}).
+        _viewModel.PageFactory.Register("NotFound", () =>
+        {
+            var page = new FeatureViews.SystemOps.NotFoundPage(_viewModel.Current.MatchedPath);
+            page.GoBackRequested += (_, _) => GoBack();
+            page.GoHomeRequested += (_, _) => NavigateTo(string.Empty);
+            page.OpenSearchRequested += (_, _) => SearchBox.Focus(FocusState.Programmatic);
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

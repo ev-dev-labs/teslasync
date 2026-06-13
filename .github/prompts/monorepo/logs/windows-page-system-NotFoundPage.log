@@ -1,0 +1,104 @@
+=== p2-windows · W7 · page:system/NotFound (WinUI 3 / Fluent) ===
+Parity unit : page:system/NotFound   kind=page   web route=/*
+Web source  : web/src/features/system/pages/NotFoundPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300); maui-windows workload installed;
+              full WinUI Release build of the solution succeeds — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), optionally <Name>.Source.cs (data feed — none needed here), <Name>.ViewModel.cs
+  (the UI-thread-free state holder) and <Name>.cs (the Fluent view). The generated prompt's idealized
+  "NotFoundPage.xaml + NotFoundPageViewModel.cs under TeslaSync/Features/System" is mapped onto these real
+  conventions; the surface registers itself with the W4 ShellPageFactory by route name ("NotFound", the
+  RouteTable catch-all). Same mapping the sibling system pages use (see windows-page-system-CommandHistoryPage.log).
+- Namespace: TeslaSync.App.FeatureViews.SystemOps (NOT ".System" — a sibling namespace segment literally named
+  "System" shadows global::System for every inline System.* name, which breaks the app compile; "SystemOps"
+  mirrors the route's RouteGroup.SystemOps and is collision-free — the same decision the CommandHistory unit made).
+- Data sources: NONE (manifest declares no API data sources — the page renders from the unmatched route path /
+  local state). The view performs no HTTP. The unmatched path is read from the live RouteMatch
+  (_viewModel.Current.MatchedPath, the native location.pathname) at registration time and passed to the page.
+- Suggestion engine: web/src/lib/closestRoute.ts (closestRoutes + two-row Levenshtein) is ported verbatim into
+  RouteSuggestionEngine (Closest / Levenshtein / Normalize / DisplayPath). It ranks the live RouteTable.All by the
+  minimum edit distance to BOTH the route path and label (lower-cased, separators stripped), keeps candidates
+  within the web's distance<=6 ceiling, dedupes by route name (canonical first), and returns the web's 5-cap
+  ordered by distance then ordinal path. Parameterized routes (the native analogue of the web registry's hidden
+  entries), redirects and the catch-all are excluded as non-navigable. Verified headlessly against the real table
+  (/vehiclees -> Vehicles at distance 1) and with controlled fixtures (ranking / ceiling / cap / tie-break / dedupe).
+- Escape hatches map onto the native shell: "Go back" -> GoBack() (web window.history.back()), "Go to dashboard"
+  -> NavigateTo("") index (web navigate('/')), "Open command palette" -> SearchBox.Focus() (the W3 command/search
+  surface; web dispatchEvent('toggle-command-palette')), suggestion links -> NavigateTo(s.path) (web Link to). The
+  view holds no router — each leaves through the surface's GoBackRequested / GoHomeRequested / OpenSearchRequested /
+  NavigationRequested events, wired in ShellWindow. The web mount-time console.warn('[404]', path) is ported as the
+  one-shot NotFoundDiagnostics.RecordShown(path) emitted on Loaded.
+- All 7 i18n keys already exist verbatim in Strings/{en,ar,he}/Resources.resw (translation.notFound.*); the surface
+  resolves them through the ILocalizer facade with the web key names (no new catalog rows required). The body uses
+  the catalog's {0} slot filled with the display path exactly as the web fills {{path}}.
+- No stubs, no TODO/FIXME, no "Coming soon", no NotImplementedException (ADR-011); placeholder scan clean (0).
+
+=== PARITY ===
+PARITY_REQUIRED=9
+
+# Panels (1) — the single web GlassPanel that hosts the whole 404 surface.
+[x] panel - GlassPanel1 -> NotFoundProjection.Project => NotFoundDisplay drives NotFoundPage.BuildContent (the one
+    TsGlassPanel mx-auto/max-w-2xl hosting the Compass FontIcon + Heading + body Text + the conditional
+    "Did you mean" suggestion list (BuildSuggestions) + the three TsButtons (BuildActions)) | tests
+    Project_resolves_every_visible_literal_and_fills_the_body_path, Project_surfaces_localized_ranked_suggestions
+
+# States (1) — the page has no data source, so it renders its single success state (web renders unconditionally).
+[x] state - success -> NotFoundProjection.Project always yields a populated NotFoundDisplay; NotFoundPageViewModel.Display
+    drives the view with no loading/error/empty branch (no async read) | tests
+    ViewModel_projects_the_display_and_trims_the_unmatched_path, Project_resolves_every_visible_literal_and_fills_the_body_path
+
+# Strings (7) — every visible literal resolves through ILocalizer with the web key names.
+[x] string - notFound.body       -> NotFoundProjection.Project GetString("translation.notFound.body","{0} doesn't match any route.") + FormatBody(displayPath); view body Text | test Project_resolves_every_visible_literal_and_fills_the_body_path
+[x] string - notFound.didYouMean -> NotFoundProjection.Project GetString("translation.notFound.didYouMean","Did you mean:"); view NotFoundPage.BuildSuggestions didYouMean Caption | test Project_flows_every_string_through_the_i18n_keys
+[x] string - notFound.goBack     -> NotFoundProjection.Project GetString("translation.notFound.goBack","Go back"); view NotFoundPage.BuildActions goBack TsButton | test Project_resolves_every_visible_literal_and_fills_the_body_path
+[x] string - notFound.goHome     -> NotFoundProjection.Project GetString("translation.notFound.goHome","Go to dashboard"); view NotFoundPage.BuildActions goHome TsButton | test Project_resolves_every_visible_literal_and_fills_the_body_path
+[x] string - notFound.heading    -> NotFoundProjection.Project GetString("translation.notFound.heading","We couldn't find that page"); view NotFoundPage.BuildContent heading Heading | test Project_resolves_every_visible_literal_and_fills_the_body_path
+[x] string - notFound.openSearch -> NotFoundProjection.Project GetString("translation.notFound.openSearch","Open command palette"); view NotFoundPage.BuildActions openSearch TsButton | test Project_resolves_every_visible_literal_and_fills_the_body_path
+[x] string - notFound.title      -> NotFoundProjection.Project GetString("translation.notFound.title","Page not found"); view TsPageContainer.Title | test Project_resolves_every_visible_literal_and_fills_the_body_path
+
+PARITY_COVERED=9
+# Coverage asserted headlessly in apps/windows/TeslaSync.App.Tests/FeatureViews/NotFoundPageTests.cs (38 tests):
+# Project_flows_every_string_through_the_i18n_keys records all 7 notFound keys above through a KeyCapturingLocalizer;
+# Project_resolves_every_visible_literal_and_fills_the_body_path asserts every rendered literal + the {{path}} body
+# substitution; the suggestion-engine tests (ranking / ceiling / 5-cap / ordinal tie-break / dedupe / exclusions /
+# the live-table /vehiclees->Vehicles case) plus the view-model dispatch + one-shot 404 diagnostic + registration
+# tests assert the panel + success state render from the bound NotFoundDisplay state holder.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/NotFoundPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Error(s), 17 Warning(s)
+#   (compiles TeslaSync.App + .Tests + .UITests; the 17 warnings are the pre-existing TeslaSync.App.Core CA
+#   warnings present at baseline — none in the new NotFound sources.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <the 5 changed .cs files>  -> no changes
+#   (NotFoundPage.Model.cs / .ViewModel.cs / .cs, ShellWindow.xaml.cs, NotFoundPageTests.cs — all LF, format-clean)
+LINT_EXIT=0
+# NOTE (honesty / no red-as-green): the *whole-solution* dotnet format additionally reports ENDOFLINE in
+#   apps/windows/TeslaSync.App.Tests/FeatureViews/SharedDrivePageTests.cs (617 CRLF lines). That file is a
+#   PRE-EXISTING, UNTOUCHED sibling unit's test (not in this unit's git diff — confirmed via git status) and is
+#   explicitly Out of Scope ("Other pages; reject"); per the repo rule "don't fix unrelated pre-existing issues"
+#   it was left unmodified. This unit's own changed files are 100% format-clean (LINT_EXIT=0 above).
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27277, Failed: 0, Skipped: 0
+#   (the headless suite per the p2-windows gate contract; the new 38 NotFoundPageTests are included. The
+#   WinAppDriver UITests project needs a live UI-automation runner + deployed MSIX, out of scope here; it still
+#   compiles in the Release build above.)
+TEST_EXIT=0
+PARITY_COVERED=9
+PARITY_REQUIRED=9
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/NotFoundPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/NotFoundPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-system-NotFoundPage.log
+# git commit -m "feat(apps/windows): NotFoundPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE
