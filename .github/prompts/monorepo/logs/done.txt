@@ -907,3 +907,4 @@ p2-windows/pages/admin/BackupRestorePage.prompt.md
 p2-windows/pages/admin/AuditLogPage.prompt.md
 p2-windows/pages/admin/DevToolsPage.prompt.md
 p2-windows/pages/admin/FeatureFlagsPage.prompt.md
+p2-windows/pages/admin/GasPriceAutoPollPage.prompt.md
