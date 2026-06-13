@@ -13881,6 +13881,12 @@
   <data name="translation.notifications.bellPopover.viewAll" xml:space="preserve">
     <value>View all</value>
   </data>
+  <data name="translation.notifications.browser.subtitle" xml:space="preserve">
+    <value>Native browser push notifications when alerts fire.</value>
+  </data>
+  <data name="translation.notifications.browser.title" xml:space="preserve">
+    <value>Browser notifications</value>
+  </data>
   <data name="translation.notifications.bulk.announceArchived" xml:space="preserve">
     <value>{0} items archived</value>
   </data>

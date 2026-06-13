@@ -192,6 +192,10 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("Exports", static () => new FeatureViews.Exports.ExportsPage());
         // Maps / Temperature Impact page (P2/W7) — parity port of web TemperatureImpactPage at route /temperature-impact.
         _viewModel.PageFactory.Register("TemperatureImpact", static () => new FeatureViews.Maps.TemperatureImpactPage());
+        // Notifications / Browser notifications page (P2/W7) — parity port of web BrowserNotificationsPage at route
+        // /notifications/browser. The page wraps the shared NotificationSettings surface in a PageContainer
+        // (title + subtitle + copy-link), mirroring the web page's thin <PageContainer><NotificationSettings/> shape.
+        _viewModel.PageFactory.Register("NotificationsBrowser", static () => new FeatureViews.Notifications.BrowserNotificationsPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
