@@ -79,5 +79,14 @@
     "requiredCount": 18,
     "promptId": "p2-windows/W7/windows-page-dashboard-QuickStatsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-dashboard-QuickStatsPage.log"
+  },
+  {
+    "unitId": "page:driving/TripReplay",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 0,
+    "requiredCount": 0,
+    "promptId": "p2-windows/W7/windows-page-driving-TripReplayPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-TripReplayPage.log"
   }
 ]

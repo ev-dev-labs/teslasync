@@ -501,6 +501,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\DriveDetailPage\DriveDetailPage.Model.cs" Link="FeatureViews\DriveDetailPage\DriveDetailPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveDetailPage\DriveDetailPage.Source.cs" Link="FeatureViews\DriveDetailPage\DriveDetailPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveDetailPage\DriveDetailPage.ViewModel.cs" Link="FeatureViews\DriveDetailPage\DriveDetailPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TripReplayPage\TripReplayPage.Model.cs" Link="FeatureViews\TripReplayPage\TripReplayPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TripReplayPage\TripReplayPage.Source.cs" Link="FeatureViews\TripReplayPage\TripReplayPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TripReplayPage\TripReplayPage.ViewModel.cs" Link="FeatureViews\TripReplayPage\TripReplayPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveHighlightSlide\DriveHighlightSlide.Model.cs" Link="FeatureViews\DriveHighlightSlide\DriveHighlightSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.Model.cs" Link="FeatureViews\DriveOverviewChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveOverviewChart.Source.cs" Link="FeatureViews\DriveOverviewChart.Source.cs" />
