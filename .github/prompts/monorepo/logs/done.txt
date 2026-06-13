@@ -636,3 +636,4 @@ p3-android/shared-meaningful/A-0046-AISignalExplorerNlFilter.prompt.md
 p3-android/shared-meaningful/A-0045-AISafetySettingExplainer.prompt.md
 p3-android/shared-meaningful/A-0052-AITCONarration.prompt.md
 p3-android/shared-meaningful/A-0041-AIQuietHoursSuggestion.prompt.md
+p3-android/shared-meaningful/A-0051-AISuggestNewGeofences.prompt.md
