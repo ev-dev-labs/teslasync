@@ -1,0 +1,121 @@
+P2-WINDOWS W7 — page:exports/Exports — WinUI 3 / Fluent parity port
+===================================================================
+Web source : web/src/features/exports/pages/ExportsPage.tsx (route /exports)
+Output     : apps/windows/TeslaSync.App/feature-views/ExportsPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done pages ApiLogsPage / AutomationListPage / QuickStatsPage)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("Exports", …)
+             (RouteTable already maps Page("Exports","exports",SystemOps,"Exports","\uEDE1"))
+Strings    : resolved by web key through ILocalizer.GetString(key, englishFallback); the repo ships no
+             Strings/*.resw catalog yet, so the in-code English fallback is the catalog (same mechanism
+             every shipped W7 page uses — ApiLogsPage / AutomationListPage). No keys hardcoded inline.
+
+Files:
+  feature-views/ExportsPage/ExportsPage.Model.cs      (parsers + projection + registration + diagnostics)
+  feature-views/ExportsPage/ExportsPage.Source.cs     (generated C# client feed: GET /export/jobs + POST /export/jobs/bulk)
+  feature-views/ExportsPage/ExportsPage.ViewModel.cs  (INotifyPropertyChanged 4-state holder + bulk selection)
+  feature-views/ExportsPage/ExportsPage.cs            (WinUI 3 UserControl, Fluent + design tokens)
+  TeslaSync.App.Tests/FeatureViews/ExportsPageTests.cs (46 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj       (link the 3 UI-free files; the WinUI view is build-only)
+  Shell/ShellWindow.xaml.cs                            (PageFactory.Register("Exports", …))
+  apps/parity/windows-ledger.json                      (page:exports/Exports -> done, 24/24)
+
+Data sources (P1/S8 INotifyPropertyChanged VM → generated C# client, web hook names kept at the C# call sites):
+  useExportJobs                 -> ExportsClientFeed.FetchAsync, ApiRequest("get_api_v1_export_jobs")
+                                   evidence-test: ClientFeed_sends_the_list_operation
+  useBulkExportsDelete (bulk)   -> ExportsClientFeed.BulkDeleteAsync, ApiRequest("post_api_v1_export_jobs_bulk",
+                                   Body { ids, op:"delete" })  evidence-test: ClientFeed_posts_the_bulk_delete_with_ids_and_op_body
+  exportDownloadUrl             -> ExportsRegistration.DownloadPath(id) = "/api/v1/export/jobs/{id}/download";
+                                   ExportsProjection builds the absolute DownloadUri from IExportsFeed.DownloadBaseUri.
+                                   evidence-test: Registration_builds_the_web_download_url,
+                                                  Table_row_formats_every_cell_for_a_ready_job,
+                                                  Download_uri_is_null_when_no_origin_is_known
+Units (P1/S5): no unit-suffixed fields stored/computed; byte size formatted at the display boundary via
+  ExportsRegistration.FormatBytes (binary units, 1:1 with web formatBytes); created via DateTimeFormatting.Full.
+  evidence-test: FormatBytes_matches_web_binary_units.
+Live data: none — the web page reads via the TanStack-Query useExportJobs hook (poll-while-active refetch),
+  no useLiveX/SSE subscription, so no SSE wiring / >2-min staleness chip (ADR-013 n/a). The VM reloads the
+  list after a successful bulk delete (web onSuccess invalidate), pinned by ViewModel_bulk_delete_runs_clears_selection_and_reloads.
+Failure semantics: feed errors surface the TsErrorDisplay + Retry; a bulk-delete failure preserves the selection
+  for retry (web onError toast leaves selection intact) — ViewModel_bulk_failure_keeps_the_selection.
+
+=== PARITY ===
+PARITY_REQUIRED=24
+
+[1/24]  panel  GlassPanel1
+        ExportsPage.cs::_panel (TsGlassPanel, Glow=None) hosting the always-visible 4-state body Grid
+        (_loadingSkeleton | _errorState | _emptyState | _tableRoot); table chrome + rows from
+        ExportsProjection.Project (ExportsDisplay.Rows / column headers / master state).
+        evidence-test: Table_projects_the_five_column_headers_and_select_labels,
+                       Table_row_formats_every_cell_for_a_ready_job, State_success_when_jobs_present
+[2/24]  state  loading
+        ExportsState.Loading ; ExportsPageViewModel.LoadAsync sets _loading ; ExportsDisplay.ShowLoading ;
+        ExportsPage.cs::_loadingSkeleton (3× TsSkeleton h-40, matching web 3× Skeleton h-10).
+        evidence-test: State_loading_when_query_in_flight, Projection_resolves_all_keys_even_in_the_loading_state
+[3/24]  state  empty
+        ExportsState.Empty ; ShowEmpty (jobs.length==0) ; ExportsPage.cs::_emptyState (TsEmptyState,
+        exportsList.empty.title/body).
+        evidence-test: State_empty_when_resolved_with_no_jobs, ViewModel_empty_snapshot_is_the_empty_state
+[4/24]  state  error
+        ExportsState.Error ; ShowError ; ExportsPage.cs::_errorState (TsErrorDisplay + Retry,
+        error.loadFailed/common.retry).
+        evidence-test: State_error_shows_failure_and_retry, ViewModel_feed_failure_is_the_error_state
+[5/24]  state  success
+        ExportsState.Success ; ShowTable ; ExportsPage.cs::_tableRoot (header + per-row checkbox/type/format/
+        size/created/status chip/download link).
+        evidence-test: State_success_when_jobs_present, Table_row_formats_every_cell_for_a_ready_job
+[6/24]  string bulk.selectAll               ExportsProjection selectAll  = localizer.GetString("bulk.selectAll", "Select all")
+[7/24]  string bulk.selectRow               ExportsProjection selectRow  = localizer.GetString("bulk.selectRow", "Select row")
+[8/24]  string common.delete                ExportsProjection deleteConfirmLabel = localizer.GetString("common.delete", "Delete")
+[9/24]  string exportsList.bulk.delete       ExportsProjection deleteLabel = localizer.GetString("exportsList.bulk.delete", "Delete")
+[10/24] string exportsList.bulk.deleteConfirm.body   ExportsProjection deleteConfirmBody = localizer.GetString("exportsList.bulk.deleteConfirm.body", …)
+[11/24] string exportsList.bulk.deleteConfirm.title  ExportsProjection deleteConfirmTitle = localizer.GetString("exportsList.bulk.deleteConfirm.title", "Delete export jobs?")
+[12/24] string exportsList.col.created       ExportsProjection createdHeader = localizer.GetString("exportsList.col.created", "Created")
+[13/24] string exportsList.col.format        ExportsProjection formatHeader  = localizer.GetString("exportsList.col.format", "Format")
+[14/24] string exportsList.col.size          ExportsProjection sizeHeader    = localizer.GetString("exportsList.col.size", "Size")
+[15/24] string exportsList.col.status        ExportsProjection statusHeader  = localizer.GetString("exportsList.col.status", "Status")
+[16/24] string exportsList.col.type          ExportsProjection typeHeader    = localizer.GetString("exportsList.col.type", "Type")
+[17/24] string exportsList.download          ExportsProjection downloadLabel = localizer.GetString("exportsList.download", "Download")
+[18/24] string exportsList.empty.body        ExportsProjection emptyMessage  = localizer.GetString("exportsList.empty.body", …)
+[19/24] string exportsList.empty.title       ExportsProjection emptyTitle    = localizer.GetString("exportsList.empty.title", "No exports yet")
+[20/24] string exportsList.noun.one          ExportsProjection nounOne       = localizer.GetString("exportsList.noun.one", "export")
+[21/24] string exportsList.noun.other        ExportsProjection nounOther     = localizer.GetString("exportsList.noun.other", "exports")
+[22/24] string exportsList.selectExport      ExportsProjection selectExportTemplate = localizer.GetString("exportsList.selectExport", "Select export {{id}}") ({{id}} interpolated per row)
+[23/24] string exportsList.subtitle          ExportsProjection/Registration subtitle = localizer.GetString("exportsList.subtitle", …)
+[24/24] string exportsList.title             ExportsProjection/Registration title = localizer.GetString("exportsList.title", "Exports")
+# All 19 string keys are asserted resolved headlessly via a RecordingLocalizer in EVERY data state:
+#   ExportsPageTests.Projection_resolves_every_required_string_key + Projection_resolves_all_keys_even_in_the_loading_state.
+# The single GlassPanel1 panel + all four data states assert their render from the bound ExportsDisplay state holder
+#   (State_* + ViewModel_* + Table_* tests). The per-row status chip colour mirrors web statusVariant
+#   (Status_chip_colour_matches_web_statusVariant) and the master tri-state mirrors useBulkSelection
+#   (Master_state_reflects_the_visible_selection). Tolerant snake_case parsing + the {data:…} envelope are pinned by
+#   Snapshot_parses_a_bare_array / Snapshot_unwraps_the_data_envelope / Snapshot_treats_non_array_as_no_data.
+
+PARITY_COVERED=24
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Exports does not exist
+# in-repo (repo convention is TeslaSync.App/feature-views); scanned the real target instead:
+#   powershell -ExecutionPolicy Bypass -File ./apps/tools/check-placeholders.ps1 \
+#       -Path apps/windows/TeslaSync.App/feature-views/ExportsPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App + TeslaSync.App.Tests build clean; the only warnings are pre-existing TeslaSync.App.Core CA*)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (files normalised to LF / utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26729, Failed: 0, Skipped: 0
+#   (incl. 46 ExportsPageTests; full headless suite, no regressions)
+TEST_EXIT=0
+PARITY_COVERED=24
+PARITY_REQUIRED=24
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ExportsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ExportsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-exports-ExportsPage.log
+# git commit -m "feat(apps/windows): ExportsPage at web parity (W7 exports)"
+
+EXIT=0
+STATUS=DONE
