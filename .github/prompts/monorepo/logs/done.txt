@@ -654,3 +654,4 @@ p3-android/shared-meaningful/A-0063-AnnotationList.prompt.md
 p3-android/shared-meaningful/A-0064-AreaChartWrapper.prompt.md
 p3-android/shared-meaningful/A-0067-ChartHiddenSeriesContext.prompt.md
 p3-android/shared-meaningful/A-0068-ChartLegend.prompt.md
+p3-android/shared-meaningful/A-0071-ElevationProfile.prompt.md
