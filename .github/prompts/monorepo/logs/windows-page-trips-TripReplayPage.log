@@ -1,0 +1,172 @@
+# p2-windows / W7 / page:trips/TripReplay — WinUI 3 / Fluent parity
+#
+# Native WinUI 3 (.NET 10 / Windows App SDK / CommunityToolkit-style ObservableObject) parity port of the web page
+# web/src/features/trips/pages/TripReplayPage.tsx (route /drives/:id/replay, nav name "TripReplay"). Implemented
+# with the repo's established headless 4-file feature pattern (siblings: feature-views/DriveDetailPage,
+# feature-views/TripReplayMap, feature-views/TripReplayCharts), NOT the generated prompt's
+# apps/windows/TeslaSync/Features/Trips/*.xaml path (which does not exist in-repo — the codebase builds WinUI views
+# in code-behind, not XAML markup, and compiles the UI-free Model/Source/ViewModel into the headless test assembly).
+#
+# Output:
+#   apps/windows/TeslaSync.App/feature-views/TripReplayPage/TripReplayPage.cs           (UserControl view — 6 web regions)
+#   apps/windows/TeslaSync.App/feature-views/TripReplayPage/TripReplayPage.Model.cs      (records + projection + merge + registration + diagnostics)
+#   apps/windows/TeslaSync.App/feature-views/TripReplayPage/TripReplayPage.Source.cs     (feed: ITripReplayPageFeed + Empty + generated-client ClientFeed)
+#   apps/windows/TeslaSync.App/feature-views/TripReplayPage/TripReplayPage.ViewModel.cs  (TripReplayPageViewModel + replay clock)
+#   apps/windows/TeslaSync.App.Tests/FeatureViews/TripReplayPageTests.cs                 (headless projection / state / merge / feed / view-model tests)
+#   NavigationView registration: TeslaSync.App.Core/Navigation/RouteTable.cs:157  Hidden("TripReplay","drives/:id/replay",RouteGroup.TripsDriving,"Trip Replay")
+#                                TeslaSync.App/Shell/ShellWindow.xaml.cs:189       PageFactory.Register("TripReplay", () => new FeatureViews.Driving.TripReplayPage(ParseSessionId(...id)))
+#   String catalog: i18n keys + verbatim English fallbacks resolved at the localizer call sites
+#       (TripReplayPageStrings.Resolve / TripReplayPageProjection, Model.cs) and present in Strings/en/Resources.resw
+#       (translation.replay.* — backToDrive, currentStats, drive, noGps, stat.*, summary.*); ILocalizer.GetString
+#       falls back to the verbatim English default for any untranslated key (gate-passing sibling precedent).
+#
+# Data source — bound to the generated C# client through the ObservableObject view-model (P1/S8, ADR-004):
+#   useDrive   GET /drives/{id}  ->  TripReplayPageClientFeed.FetchAsync  (op get_api_v1_drives_driveID;
+#              TripReplayPageRegistration.DriveOperation). The single read the web page performs; positions +
+#              telemetry arrays are merged nearest-by-timestamp (TripReplayPositionMerge) into the replay samples.
+#   Live: the page owns a replay clock (TripReplayEngine, the native useTripReplay) threading one source of truth —
+#   CurrentIndex — through the map playhead, chart cursor, scrubber and per-frame metric tiles. SI conversion is
+#   applied only at the display boundary (UnitConverters.SpeedFromSi / DistanceFromSi / TemperatureFromSi).
+
+=== PARITY ===
+# PARITY_REQUIRED=42. Each item: parity kind — name — binding evidence (file + symbol).
+
+# panels (16) — 2 GlassPanel regions + 6 current-stat metric tiles + 8 drive-summary tiles
+[x] panel  - GlassPanel1
+       TripReplayPage.cs BuildCurrentStatsPanel() -> TsGlassPanel { Content = _currentStatsTitle + UniformGrid(_metricCards[6]) }
+       (web Section 3 "Current Position Stats" GlassPanel). Title = display.CurrentStatsTitle (replay.currentStats).
+[x] panel  - Speed
+       TripReplayPageProjection.CurrentStats[0] = new TripReplayMetric(s.StatSpeed, speed, SpeedGlyph, AccentKey)
+       -> TripReplayPage.cs ApplyReplayState() _metricCards[0]. SI: UnitConverters.SpeedFromSi. test: Current_stats_have_six_tiles_and_track_the_index.
+[x] panel  - Power
+       Projection.CurrentStats[1] = TripReplayMetric(s.StatPower, power "{n} kW") -> _metricCards[1].
+[x] panel  - Battery
+       Projection.CurrentStats[2] = TripReplayMetric(s.StatBattery, battery "{n}%") -> _metricCards[2].
+[x] panel  - Elevation
+       Projection.CurrentStats[3] = TripReplayMetric(s.StatElevation, elevation "{n} m") -> _metricCards[3].
+[x] panel  - Range
+       Projection.CurrentStats[4] = TripReplayMetric(s.StatRange, range) -> _metricCards[4]. SI: UnitConverters.DistanceFromSi.
+[x] panel  - Temperature
+       Projection.CurrentStats[5] = TripReplayMetric(s.StatTemp, temp) -> _metricCards[5]. SI: UnitConverters.TemperatureFromSi.
+       test: Current_stats_convert_to_imperial_units, Current_stats_dash_when_no_positions (never-blank em dash).
+[x] panel  - GlassPanel8
+       TripReplayPage.cs BuildSummaryPanel() -> TsGlassPanel { Content = _summaryTitle + UniformGrid(_summaryCards[8]) }
+       (web Section 6 "Drive Summary" GlassPanel). Title = display.SummaryTitle (replay.summary.title).
+[x] panel  - Distance
+       TripReplayPageProjection.BuildSummary[0] = new TripReplaySummaryCard(s.SummaryDistance, distanceValue, distLabel, RangeGlyph)
+       -> TripReplayPage.cs UpdateContent() _summaryCards[0]. SI: UnitConverters.DistanceFromSi.
+[x] panel  - Duration
+       BuildSummary[1] = TripReplaySummaryCard(s.SummaryDuration, FormatDriveTime(durationS/60)) -> _summaryCards[1].
+[x] panel  - Efficiency
+       BuildSummary[2] = TripReplaySummaryCard(s.SummaryEfficiency, eff, "Wh/km") -> _summaryCards[2] ((startSoc-endSoc)/distanceUser*1000).
+[x] panel  - Elevation-Gain
+       BuildSummary[3] = TripReplaySummaryCard(s.SummaryElevGain, Dash, ElevGainGlyph) -> _summaryCards[3] (web "—" parity).
+[x] panel  - Elevation-Loss
+       BuildSummary[4] = TripReplaySummaryCard(s.SummaryElevLoss, Dash, ElevLossGlyph) -> _summaryCards[4] (web "—" parity).
+[x] panel  - Max-Speed
+       BuildSummary[5] = TripReplaySummaryCard(s.SummaryMaxSpeed, maxSpeed, speedLabel, SpeedGlyph) -> _summaryCards[5].
+       SI: UnitConverters.SpeedFromSi(drive.MaxSpeedMps). test: Summary_max_speed_converts_to_imperial.
+[x] panel  - Avg-Speed
+       BuildSummary[6] = TripReplaySummaryCard(s.SummaryAvgSpeed, avgSpeed, speedLabel, SpeedGlyph) -> _summaryCards[6].
+[x] panel  - Battery-2
+       BuildSummary[7] = TripReplaySummaryCard(s.SummaryBattery, "{startSoc}% -> {endSoc}%") -> _summaryCards[7].
+       test: Summary_has_eight_tiles_with_metric_values.
+
+# charts (2) — native W3 chart wrappers (no web canvas)
+[x] chart  - Sparkline
+       TripReplayPage.cs _sparkline = new TsSparkline { Role = ChartRole.Speed }; Data = display.SpeedSparkData set in
+       UpdateContent(). Projection.BuildSparkData down-samples speed to 80 points (web speedSparkData). Rendered behind
+       the scrubber in BuildPlaybackPanel(). test: Elevation_and_spark_match_the_position_count.
+[x] chart  - ElevationProfile
+       TripReplayPage.cs _elevation = new TsElevationProfile { Unit = "m" }; Points = display.ElevationPoints set in
+       UpdateContent(). Projection.BuildElevation builds cumulative-distance/elevation points (TripReplayGeo.HaversineMeters,
+       distance via UnitConverters.DistanceFromSi). Wrapped in BuildElevationPanel() TsGlassPanel.
+
+# data states (4) — web parity: error -> positions.length>0 success -> (!isLoading ? empty : loading)
+[x] state  - loading data state
+       TripReplayPageProjection.SelectState -> TripReplayPageState.Loading (Loading && no positions);
+       Display.ShowLoading -> TripReplayPage.cs Render() _loadingSkeleton (TsSkeleton blocks mirroring the 6 regions).
+       test: Loading_state_when_loading_with_no_data, ViewModel_initial_state Loading.
+[x] state  - empty data state
+       SelectState -> TripReplayPageState.Empty (resolved, no positions); Display.ShowEmpty -> _emptyState (TsEmptyState,
+       Message = replay.noGps). test: Empty_state_when_resolved_with_no_positions, Empty_feed_resolves_to_the_empty_snapshot.
+[x] state  - error data state
+       SelectState -> TripReplayPageState.Error (ErrorDetail present); Display.ShowError -> _errorState (TsQueryError) with
+       Message = ErrorText and ActionText = replay.retry; OnRetryInvoked -> RefreshAsync.
+       test: Error_state_when_error_detail_present, ViewModel_surfaces_error_state.
+[x] state  - success data state
+       SelectState -> TripReplayPageState.Success (HasPositions); Display.ShowContent -> EnsureContentBuilt() renders the six
+       FadeIn regions (map, playback, current-stats, elevation, charts, summary).
+       test: Success_state_with_positions, ViewModel_loads_success_and_seek_updates_stats.
+
+# strings (20) — every visible literal resolves through ILocalizer.GetString(key, verbatim-English-fallback)
+#   Resolution site: TripReplayPageStrings.Resolve / TripReplayPageProjection (Model.cs).
+#   Coverage asserted: TripReplayPageTests.Required_string_keys_are_all_requested over RequiredStringKeys.
+[x] string - replay.backToDrive          Resolve.BackToDrive       "Back to Drive"
+[x] string - replay.currentStats         Resolve.CurrentStats      "Current Position Stats"
+[x] string - replay.drive                Resolve.Drive             "Drive"
+[x] string - replay.noGps                Resolve.NoGps             "No GPS data available for this drive. ..."
+[x] string - replay.stat.battery         Resolve.StatBattery       "Battery"
+[x] string - replay.stat.elevation       Resolve.StatElevation     "Elevation"
+[x] string - replay.stat.power           Resolve.StatPower         "Power"
+[x] string - replay.stat.range           Resolve.StatRange         "Range"
+[x] string - replay.stat.speed           Resolve.StatSpeed         "Speed"
+[x] string - replay.stat.temp            Resolve.StatTemp          "Temperature"
+[x] string - replay.summary.avgSpeed     Resolve.SummaryAvgSpeed   "Avg Speed"
+[x] string - replay.summary.battery      Resolve.SummaryBattery    "Battery"
+[x] string - replay.summary.distance     Resolve.SummaryDistance   "Distance"
+[x] string - replay.summary.duration     Resolve.SummaryDuration   "Duration"
+[x] string - replay.summary.efficiency   Resolve.SummaryEfficiency "Efficiency"
+[x] string - replay.summary.elevGain     Resolve.SummaryElevGain   "Elevation Gain"
+[x] string - replay.summary.elevLoss     Resolve.SummaryElevLoss   "Elevation Loss"
+[x] string - replay.summary.maxSpeed     Resolve.SummaryMaxSpeed   "Max Speed"
+[x] string - replay.summary.title        Resolve.SummaryTitle      "Drive Summary"
+[x] string - replay.title                Resolve.Title             "Trip Replay"
+
+PARITY_COVERED=42
+PARITY_REQUIRED=42
+
+=== GATE ===
+# Real target paths (the generated prompt's apps/windows/TeslaSync/Features/Trips path does not exist in-repo; the
+# in-repo feature lives at apps/windows/TeslaSync.App/feature-views/TripReplayPage — same convention as the sibling
+# W7 pages, e.g. windows-page-system-ScheduledExportsPanel.log).
+
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TripReplayPage -Language csharp
+#   No stub / placeholder / "Coming soon" / NotImplementedException markers in the four feature files.
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded.
+#   0 Error(s); 17 pre-existing TeslaSync.App.Core CA warnings only (identical to the baseline build; the
+#   TripReplayPage sources add 0 warnings / 0 errors). Compiles TeslaSync.App + .Core + .Platform + .Tests + .UITests.
+BUILD_EXIT=0
+
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes (whole solution).
+#   Scoped re-verify of the parity unit: "Formatted 0 of 2258 files" over
+#   apps/windows/TeslaSync.App/feature-views/TripReplayPage/ — the four feature sources + the test are format-clean
+#   (LF, .editorconfig). No pre-existing whole-solution defects surfaced.
+LINT_EXIT=0
+
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27536, Failed: 0, Skipped: 0
+#   (headless suite per the p2-windows gate contract; includes the TripReplayPageTests — four-state matrix, the six
+#   current-stat tiles tracking CurrentIndex with SI conversion, the eight drive-summary tiles, elevation/spark point
+#   counts, the nearest-telemetry position merge dropping the null island, the client-feed drive-operation request
+#   shape, the empty-feed snapshot, the view-model load/seek/play-tick/error transitions, and the i18n key coverage.
+#   NavigationTests pass with the Hidden "drives/:id/replay" -> "TripReplay" deep-link route. The WinAppDriver UITests
+#   project needs a live UI-automation runner + deployed MSIX, out of scope here; it still compiles in the Release build.)
+TEST_EXIT=0
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TripReplayPage \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/TripReplayPageTests.cs \
+#         apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-trips-TripReplayPage.log
+# git commit -m "feat(apps/windows): TripReplayPage at web parity (W7 trips)"
+#   (the feature sources + nav registration + tests were committed earlier at a12668d8f; this commit finalizes the
+#   parity gate — ledger row + evidence log.)
+
+EXIT=0
+STATUS=DONE
