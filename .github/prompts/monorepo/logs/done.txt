@@ -602,3 +602,4 @@ p3-android/shared-meaningful/A-0010-AIChargingCurveFingerprintClustering.prompt.
 p3-android/shared-meaningful/A-0015-AIDataRepairSuggestions.prompt.md
 p3-android/shared-meaningful/A-0014-AICrossRuleConflictDetection.prompt.md
 p3-android/shared-meaningful/A-0017-AIDriveCoaching.prompt.md
+p3-android/shared-meaningful/A-0016-AIDigestNarration.prompt.md
