@@ -2405,6 +2405,35 @@
     }
   },
   "ai": {
+    "limit": {
+      "useBaseline": "Use baseline",
+      "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
+      "title": {
+        "costCap": "Daily cost cap reached",
+        "costCapUnavailable": "Cost cap check unavailable",
+        "settingsUnavailable": "Helix settings unavailable",
+        "burst": "Too many Helix requests at once",
+        "perMinute": "Helix rate limit hit",
+        "perDay": "Daily Helix usage limit reached",
+        "tokens": "Helix token quota exhausted",
+        "providerUnavailable": "Helix provider unavailable",
+        "featureMisconfigured": "Helix feature misconfigured",
+        "generic": "Helix temporarily unavailable"
+      },
+      "desc": {
+        "costCap": "You have reached your daily Helix cost limit. Helix features will resume tomorrow or after you raise the cap in Settings.",
+        "costCapUnavailable": "Could not read your Helix usage history. Failing closed for safety.",
+        "settingsUnavailable": "Could not load your Helix settings. Helix is paused until settings are reachable.",
+        "burst": "Too many Helix requests are in flight. The limiter is keeping the system responsive.",
+        "perMinute": "You have sent more Helix requests than allowed per minute. The window resets shortly.",
+        "perDay": "You have used your daily Helix request budget. The budget resets at UTC midnight.",
+        "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt.",
+        "providerUnavailable": "The Helix provider is not responding. The system will retry automatically.",
+        "featureMisconfigured": "This page is missing a Helix feature registration. Please report this to your administrator.",
+        "generic": "Helix features are temporarily unavailable. The non-Helix baseline continues to work."
+      }
+    },
     "settings": {
       "title": "Helix",
       "subtitle": "Optional. Helix is off by default; nothing is enabled until you opt in here.",

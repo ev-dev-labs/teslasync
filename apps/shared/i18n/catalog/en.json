@@ -1,6 +1,123 @@
 {
   "direction": "ltr",
   "entries": {
+    "translation.ai.limit.useBaseline": {
+      "tokens": [],
+      "translated": true,
+      "value": "Use baseline"
+    },
+    "translation.ai.limit.retry": {
+      "tokens": [],
+      "translated": true,
+      "value": "Retry"
+    },
+    "translation.ai.limit.retryIn": {
+      "tokens": [
+        "seconds"
+      ],
+      "translated": true,
+      "value": "Try again in {{seconds}}s"
+    },
+    "translation.ai.limit.title.costCap": {
+      "tokens": [],
+      "translated": true,
+      "value": "Daily cost cap reached"
+    },
+    "translation.ai.limit.title.costCapUnavailable": {
+      "tokens": [],
+      "translated": true,
+      "value": "Cost cap check unavailable"
+    },
+    "translation.ai.limit.title.settingsUnavailable": {
+      "tokens": [],
+      "translated": true,
+      "value": "Helix settings unavailable"
+    },
+    "translation.ai.limit.title.burst": {
+      "tokens": [],
+      "translated": true,
+      "value": "Too many Helix requests at once"
+    },
+    "translation.ai.limit.title.perMinute": {
+      "tokens": [],
+      "translated": true,
+      "value": "Helix rate limit hit"
+    },
+    "translation.ai.limit.title.perDay": {
+      "tokens": [],
+      "translated": true,
+      "value": "Daily Helix usage limit reached"
+    },
+    "translation.ai.limit.title.tokens": {
+      "tokens": [],
+      "translated": true,
+      "value": "Helix token quota exhausted"
+    },
+    "translation.ai.limit.title.providerUnavailable": {
+      "tokens": [],
+      "translated": true,
+      "value": "Helix provider unavailable"
+    },
+    "translation.ai.limit.title.featureMisconfigured": {
+      "tokens": [],
+      "translated": true,
+      "value": "Helix feature misconfigured"
+    },
+    "translation.ai.limit.title.generic": {
+      "tokens": [],
+      "translated": true,
+      "value": "Helix temporarily unavailable"
+    },
+    "translation.ai.limit.desc.costCap": {
+      "tokens": [],
+      "translated": true,
+      "value": "You have reached your daily Helix cost limit. Helix features will resume tomorrow or after you raise the cap in Settings."
+    },
+    "translation.ai.limit.desc.costCapUnavailable": {
+      "tokens": [],
+      "translated": true,
+      "value": "Could not read your Helix usage history. Failing closed for safety."
+    },
+    "translation.ai.limit.desc.settingsUnavailable": {
+      "tokens": [],
+      "translated": true,
+      "value": "Could not load your Helix settings. Helix is paused until settings are reachable."
+    },
+    "translation.ai.limit.desc.burst": {
+      "tokens": [],
+      "translated": true,
+      "value": "Too many Helix requests are in flight. The limiter is keeping the system responsive."
+    },
+    "translation.ai.limit.desc.perMinute": {
+      "tokens": [],
+      "translated": true,
+      "value": "You have sent more Helix requests than allowed per minute. The window resets shortly."
+    },
+    "translation.ai.limit.desc.perDay": {
+      "tokens": [],
+      "translated": true,
+      "value": "You have used your daily Helix request budget. The budget resets at UTC midnight."
+    },
+    "translation.ai.limit.desc.tokens": {
+      "tokens": [],
+      "translated": true,
+      "value": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
+    },
+    "translation.ai.limit.desc.providerUnavailable": {
+      "tokens": [],
+      "translated": true,
+      "value": "The Helix provider is not responding. The system will retry automatically."
+    },
+    "translation.ai.limit.desc.featureMisconfigured": {
+      "tokens": [],
+      "translated": true,
+      "value": "This page is missing a Helix feature registration. Please report this to your administrator."
+    },
+    "translation.ai.limit.desc.generic": {
+      "tokens": [],
+      "translated": true,
+      "value": "Helix features are temporarily unavailable. The non-Helix baseline continues to work."
+    },
     "translation.system.slo.a11y.targetInput": {
       "tokens": [],
       "translated": true,
