@@ -1384,6 +1384,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\FullscreenButton\FullscreenButton.Model.cs" Link="SharedSurfaces\FullscreenButton\FullscreenButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FullscreenButton\FullscreenButton.Source.cs" Link="SharedSurfaces\FullscreenButton\FullscreenButton.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\FullscreenButton\FullscreenButton.ViewModel.cs" Link="SharedSurfaces\FullscreenButton\FullscreenButton.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\GotoIndicator.Model.cs" Link="SharedSurfaces\GotoIndicator.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\GotoIndicator.ViewModel.cs" Link="SharedSurfaces\GotoIndicator.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Model.cs" Link="SharedSurfaces\HealthRow\HealthRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Source.cs" Link="SharedSurfaces\HealthRow\HealthRow.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.ViewModel.cs" Link="SharedSurfaces\HealthRow\HealthRow.ViewModel.cs" />
