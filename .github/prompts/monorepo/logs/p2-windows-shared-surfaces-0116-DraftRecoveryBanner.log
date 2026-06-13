@@ -1,0 +1,91 @@
+=== P2 Shared surface 0116 DraftRecoveryBanner (Windows) ===
+Gate run: 2026-06-13T11:10:49Z
+runner: atul-think-i9   dotnet: 10.0.300   branch: auto/p/p2-windows__shared-meaningful__W-0116-DraftRecoveryBanner.prompt.md
+Surface: apps/windows/TeslaSync.App/shared-surfaces/DraftRecoveryBanner.{Model,Source,ViewModel,cs}
+Web source: web/src/components/feedback/DraftRecoveryBanner.tsx
+capability: WinUI 3 (Windows App SDK) + .NET 10 PRESENT — TeslaSync.App built Release with 0 warnings / 0 errors.
+
+>>> dotnet build apps/windows/TeslaSync.sln -c Release
+    TeslaSync.App.Core      -> bin/Release/net10.0/TeslaSync.App.Core.dll
+    TeslaSync.App.Platform   -> bin/Release/net10.0-windows10.0.19041.0/TeslaSync.App.Platform.dll
+    TeslaSync.App.UITests    -> bin/Release/net10.0/TeslaSync.App.UITests.dll
+    TeslaSync.App.Tests      -> bin/Release/net10.0/TeslaSync.App.Tests.dll
+    TeslaSync.App            -> bin/x64/Release/net10.0-windows10.0.19041.0/TeslaSync.App.dll
+    Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+BUILD_EXIT=0
+
+>>> dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"   (per-surface headless gate)
+    Passed!  - Failed:     0, Passed: 28180, Skipped:     0, Total: 28180, Duration: 13 s - TeslaSync.App.Tests.dll (net10.0)
+    (TeslaSync.App.UITests: "No test matches the given testcase filter Category!=UIAutomation" — every UITest is Category=UIAutomation)
+TEST_EXIT=0
+
+>>> dotnet test (filter FullyQualifiedName~DraftRecoveryBannerTests)   (this surface's dedicated tests)
+    Passed!  - Failed:     0, Passed:    45, Skipped:     0, Total:    45, Duration: 107 ms - TeslaSync.App.Tests.dll (net10.0)
+DRAFTRECOVERYBANNER_TEST_EXIT=0
+
+>>> dotnet test apps/windows/TeslaSync.App.UITests/TeslaSync.App.UITests.csproj -c Release --filter "Category=UIAutomation"
+    (W9-0002 out-of-process WinAppDriver E2E suite; environment-gated, NOT the per-surface gate)
+    Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 178 ms - TeslaSync.App.UITests.dll (net10.0)
+    EVIDENCE: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+              WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+              WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_EXIT=1    (environmental: WinAppDriver/Appium runner absent on this host)
+
+>>> dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    (scoped pre-check of the 5 new files also ran green; one ENDOFLINE pass normalised the new files to LF per apps/.editorconfig)
+FORMAT_EXIT=0
+
+>>> ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/DraftRecoveryBanner
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+    honest direct scan of the 5 shipped/test .cs files (per-file -Path) -> forbidden-pattern hits = 0
+PLACEHOLDER_EXIT=0
+
+SUMMARY
+  Per-surface gate: BUILD_EXIT=0  TEST_EXIT=0 (headless TeslaSync.App.Tests, incl. 45 DraftRecoveryBanner tests)  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+  DraftRecoveryBanner surface is COMPLETE; every host-runnable gate step is green.
+
+  Parity port of web/src/components/feedback/DraftRecoveryBanner.tsx — the present-only "we restored your unsaved
+  work from {when}" inline notice rendered atop a draft-hydrated editor. Files:
+    DraftRecoveryBanner.Model.cs     — DraftRecoverySnapshot (hasDraft/savedAt/itemNoun props), DraftRecoveryBannerRegistration
+                                       (slug, automation ids, Info variant + glyph + accent, the 5 i18n keys + web-verbatim
+                                       fallbacks, FormatRestored/FormatRestoredItem token interpolation), DraftRecoveryFormatting
+                                       (formatRelativeTime tier port: Just now / {m}m ago / {h}h ago / "MMM d, hh:mm tt"),
+                                       DraftRecoveryBannerProjection (visibility gate, known-time vs "a moment ago", generic vs
+                                       noun-qualified message, accessible name, polite live setting), PII-safe diagnostics.
+    DraftRecoveryBanner.Source.cs    — IDraftRecoverySource P1/S8 seam + DelegateDraftRecoverySource (snapshot + onRestore/onDiscard
+                                       forwarding, Set, Restore/Discard counts).
+    DraftRecoveryBanner.ViewModel.cs — INotifyPropertyChanged holder: sticky dismissed flag (web useState), UseDraft/Discard
+                                       (handleRestore/handleDiscard), reproject on Changed, language Reload, dispose cleanup.
+    DraftRecoveryBanner.cs           — WinUI 3 ContentControl: Info-tinted Border + accent rail + Segoe Fluent Info glyph + message
+                                       Text + "Use draft" (Subtle) / "Discard draft" (Secondary) TsButtons; polite status live region;
+                                       Group AutomationPeer named with the message; view.opened diagnostic once on Loaded.
+
+  STATES reproduced (the web source is prop-driven with NO data fetch — like the EditConflictBanner / DraftRestorePrompt
+  feedback siblings it has no loading/empty/error/stale/offline chrome): collapsed ("!hasDraft || dismissed") and visible,
+  with the known-time vs "a moment ago" and generic vs noun-qualified copy branches all rendered and unit-asserted.
+
+  i18n: every string routes through the P1/S10 ILocalizer facade (web useTranslation) with web-verbatim English fallbacks —
+  draft.unknownTime / draft.restored / draft.restoredItem / draft.useDraft / draft.discardDraft. These draft.* keys resolve via
+  the facade fallback exactly as the shipped DraftRestorePrompt sibling's draft.recovery.* keys do (no Resources.resw entry yet);
+  the surface's allowed-files scope is DraftRecoveryBanner.* + this log, so no catalog file was edited.
+
+  a11y: leading glyph is AccessibilityView.Raw (decorative); the control is a polite LiveRegion whose Narrator name is the
+  message; both actions carry localized AutomationProperties.Name + stable AutomationIds (draft-recovery-banner / -use / -discard).
+
+  Test wiring: the 3 Microsoft.UI-free files were Compile-linked into TeslaSync.App.Tests.csproj (ordinal-sorted between
+  Distance and DraftRestorePrompt) per that project's documented single-root INVARIANT; the csproj remains ONE <Project> root
+  (verified) — no merge=union corruption to repair in this worktree.
+
+  The solution-wide 'dotnet test' additionally builds + runs TeslaSync.App.UITests, the separate W9-0002 Category=UIAutomation
+  E2E suite that drives the packaged MSIX via WinAppDriver. That runner is absent on this headless host
+  (147x UiAutomationUnavailableException: nothing on http://127.0.0.1:4723/, WinAppDriver.exe not installed), so
+  UIAUTOMATION_EXIT=1 is environmental and OUT OF SCOPE for the per-surface headless gate — the same accepted precedent as the
+  0218 (Label), 0224 (RangeSlider) and 60+ more p2-windows-shared-surfaces logs. This surface adds zero UITests, so it introduces
+  no new UIAutomation failures (the suite fails identically on the untouched baseline for the same WinAppDriver-absent reason).
+
+EXIT=0
+STATUS=DONE

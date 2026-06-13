@@ -1350,6 +1350,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\Distance\Distance.Model.cs" Link="SharedSurfaces\Distance\Distance.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Distance\Distance.Source.cs" Link="SharedSurfaces\Distance\Distance.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Distance\Distance.ViewModel.cs" Link="SharedSurfaces\Distance\Distance.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DraftRecoveryBanner.Model.cs" Link="SharedSurfaces\DraftRecoveryBanner.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DraftRecoveryBanner.Source.cs" Link="SharedSurfaces\DraftRecoveryBanner.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\DraftRecoveryBanner.ViewModel.cs" Link="SharedSurfaces\DraftRecoveryBanner.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DraftRestorePrompt.Model.cs" Link="SharedSurfaces\DraftRestorePrompt.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DraftRestorePrompt.Source.cs" Link="SharedSurfaces\DraftRestorePrompt.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\DraftRestorePrompt.ViewModel.cs" Link="SharedSurfaces\DraftRestorePrompt.ViewModel.cs" />
