@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Surface-owned strings for the ConfirmDialog modal/dialog
+  (com/teslasync/modals-dialogs/ConfirmDialog), the native port of
+  web/src/components/ai/ConfirmDialog.tsx (the AI tool-use confirmation dialog).
+
+  The web component IS i18n-aware: it calls t('ai.confirm.title', 'Approve Helix
+  action') etc. with inline English fallbacks. However the ai.confirm.* keys are
+  NOT present in the web catalog (web/src/i18n/en.json carries an "ai.settings"
+  branch but no "ai.confirm"), so the auto-generated translation_* catalog
+  (web/src/i18n -> apps/shared/i18n -> values/strings.xml) carries no key for this
+  surface. These keys provide that copy so the native dialog resolves every string
+  through stringResource (no English literals in Kotlin), using the same
+  hand-authored *_strings.xml mechanism as incident_form_strings.xml /
+  nav_strings.xml / settings_strings.xml. Values are verbatim from the web source's
+  t() fallbacks; the resource names mirror the web ai.confirm.* key suffixes.
+-->
+<resources>
+    <string name="translation_aiConfirm_title">Approve Helix action</string>
+    <string name="translation_aiConfirm_introMutates">The assistant wants to make a change to your data. Review what it will do, then approve or cancel.</string>
+    <string name="translation_aiConfirm_introRead">The assistant wants to run a tool. Review the inputs, then approve or cancel.</string>
+    <string name="translation_aiConfirm_toolLabel">Tool</string>
+    <string name="translation_aiConfirm_argsLabel">Arguments</string>
+    <string name="translation_aiConfirm_run">Approve</string>
+    <string name="translation_aiConfirm_cancel">Cancel</string>
+    <string name="translation_aiConfirm_close">Close</string>
+</resources>
