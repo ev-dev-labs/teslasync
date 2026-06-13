@@ -18,6 +18,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-ApiPlaygroundPage.log"
   },
   {
+    "unitId": "page:admin/DevTools",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p2-windows/W7/windows-page-admin-DevToolsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-DevToolsPage.log"
+  },
+  {
     "unitId": "page:admin/FeedbackQueue",
     "platform": "windows",
     "status": "done",

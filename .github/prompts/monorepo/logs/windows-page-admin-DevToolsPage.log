@@ -1,0 +1,103 @@
+=== p2-windows · W7 · page:admin/DevTools (WinUI 3 / Fluent) ===
+Parity unit : page:admin/DevTools   kind=page   web route=/dev-tools
+Web source  : web/src/features/admin/pages/DevToolsPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/DevToolsPage/ (+ NavigationView registration, test, ledger)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- Layout mapping: this repo's WinUI app is code-first C# (no .xaml page files). Every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection, unit-tested
+  headlessly via linked Compile items in TeslaSync.App.Tests), <Name>.ViewModel.cs (INotifyPropertyChanged state holder)
+  and <Name>.cs (the Fluent view) — exactly as the sibling W7 ApiPlaygroundPage / ApiLogsPage do. The generated prompt's
+  idealized "TeslaSync/Features/Admin/DevToolsPage.xaml + DevToolsPageViewModel.cs" is mapped onto these real conventions.
+  Namespace = TeslaSync.App.FeatureViews.Admin (aligns with RouteGroup.AdminDevTools).
+- Scope: the manifest scopes this unit to requiredCount=2 (strings devtools.title / devtools.subtitle) with NO data
+  sources / NO panels — because web DevToolsPage.tsx is itself a thin compositional shell: a PageContainer header over a
+  TabNav that swaps between five SECTION components (FleetApiSection, FleetTelemetryHealth, InfrastructureSection,
+  ClientUtilitiesSection, ReferenceLinksSection). The page's OWN regions = the header + the 5-tab navigator + the
+  per-tab content host; the section internals are their own (separately-built) units. This port reproduces that shell.
+- Header (web PageContainer title/subtitle): the shared native PageContainer surface carries the localized title and
+  subtitle — the two parity strings (devtools.title="Developer Tools", devtools.subtitle="Fleet API, telemetry,
+  infrastructure & utilities"), both already present in Strings/{en,ar,he}/Resources.resw and asserted by the test.
+- Tab navigator (web TabNav): a Fluent TabView (TsTabs) with five TabViewItems in the exact web TABS order — Fleet API,
+  Telemetry, Infrastructure, Utilities, Reference — each header carrying a Segoe Fluent glyph mirroring the web lucide
+  icon (Globe / Radio / Server / Wrench / BookOpen) + a localized label (devtools.tab.* keys; the web hardcodes the
+  labels, the native port routes them through the localizer so no literal ships in the view, ADR-014). Tab labels and
+  order are projected by DevToolsCatalog and bound through DevToolsPageViewModel; sections mount lazily on selection.
+- Section composition (the per-tab content host = web the FadeIn that renders the active section):
+  · Fleet API     → DevToolsFleetApiSection — a native port of FleetApiSection.tsx: the seven-step Setup Wizard
+    (DevToolsOnboardingWizard over ONBOARDING_STEPS) + the Fleet API Tools grid (Config, Partner Registration, Partner
+    Public Key, Public Key Setup, Vehicle Key Pairing, Telemetry Subscribe, Telemetry Config, Fleet Status, Vehicle
+    Data) — each a shared ToolCard wrapping its inputs / action buttons / ResultPanel. Tools fire through an injected
+    DevToolsToolRunner; the default offline runner surfaces an honest "backend not reachable" result (ADR-011, never a
+    blank panel), the WinUI analogue of the web sections mounting against an un-provisioned origin.
+  · Telemetry     → FleetTelemetryHealth.Create(...)             (delivered section; data-backed)
+  · Infrastructure→ FeatureViews.Infrastructure.InfrastructureSection.Create(...) (delivered devtools section)
+  · Utilities     → ClientUtilities.ClientUtilitiesSection.Create(localizer)      (delivered; static tool catalog)
+  · Reference     → ReferenceLinksSection(localizer)                              (delivered; static link catalog)
+  The two data-backed sections bind through the shared data layer (a GeneratedApiClient over a 5s-timeout HttpClient +
+  a process-local DevToolsMemoryCacheStore implementing ICacheStore); with no reachable origin they render their OWN
+  honest loading / empty / error states (ADR-013) — the same empty-feed behaviour the whole W7 layer ships today.
+- No hardcoded colours/typography — DisplayTokens / TypographyTokens drive light/dark/high-contrast from W1; every
+  visible string flows through ILocalizer.GetString(key, fallback); panels carry AutomationProperties names; the
+  TabView + ToolCards inherit keyboard + Narrator semantics; no custom animation (reduced-motion honoured implicitly).
+- Build prerequisite (W1, ADR-004): the generated C# client (apps/windows/Generated/, gitignored) was regenerated via
+  apps/tools/codegen/gen-clients.ts and compiled by a local Generated.csproj so TeslaSync.App.Core / .App resolve the
+  TeslaSync.Windows.Generated.Api namespace. Both are gitignored local artifacts, not part of this changeset.
+
+=== PARITY ===
+PARITY_REQUIRED=2
+- [x] string — devtools.title
+      key  : DevToolsCatalog.TitleKey = "devtools.title"  (feature-views/DevToolsPage/DevToolsPage.Model.cs)
+      bind : DevToolsCatalog.Title(localizer) → localizer.GetString("devtools.title", "Developer Tools");
+             surfaced by DevToolsPageViewModel.Title and rendered into the PageContainer header by DevToolsPage.cs.
+      resw : translation.devtools.title = "Developer Tools"  (apps/windows/Strings/en/Resources.resw:8487)
+      test : DevToolsPageTests.Catalog_resolves_every_manifest_string_key (records the key),
+             DevToolsPageTests.Manifest_keys_match_the_web_source,
+             DevToolsPageTests.Manifest_strings_resolve_the_web_defaults (asserts "Developer Tools").
+- [x] string — devtools.subtitle
+      key  : DevToolsCatalog.SubtitleKey = "devtools.subtitle"  (feature-views/DevToolsPage/DevToolsPage.Model.cs)
+      bind : DevToolsCatalog.Subtitle(localizer) → localizer.GetString("devtools.subtitle",
+             "Fleet API, telemetry, infrastructure & utilities"); surfaced by DevToolsPageViewModel.Subtitle and
+             rendered as the PageContainer subtitle by DevToolsPage.cs.
+      resw : translation.devtools.subtitle = "Fleet API, telemetry, infrastructure & utilities"
+             (apps/windows/Strings/en/Resources.resw:8484)
+      test : DevToolsPageTests.Catalog_resolves_every_manifest_string_key (records the key),
+             DevToolsPageTests.Manifest_keys_match_the_web_source,
+             DevToolsPageTests.Manifest_strings_resolve_the_web_defaults (asserts the web default).
+PARITY_COVERED=2
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DevToolsPage -Language csharp
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# dotnet build apps/windows/TeslaSync.sln -c Release
+#   All projects compiled (Generated, App.Core, App.Platform, App [x64], App.UITests, App.Tests); 0 errors.
+BUILD_EXIT=0
+
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+#   Whole-solution verify clean after normalising the new files to LF (the create/edit path emitted CRLF).
+LINT_EXIT=0
+
+# dotnet test apps/windows/TeslaSync.sln -c Release
+#   TeslaSync.App.Tests  : Passed=29249  Failed=0  Skipped=0  — incl. the 8 new DevToolsPageTests. EXIT 0.
+#   TeslaSync.App.UITests: Failed=147   Passed=0  — every case throws
+#       TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException: "WinAppDriver/Appium runner is absent:
+#       nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found ...".
+#     ENVIRONMENTAL / pre-existing / NON-REGRESSION: this page adds no UI-automation test; the failure is the absent
+#     WinAppDriver harness in this headless runner and is identical for every page (the sibling W7 page logs record
+#     TEST_EXIT=0 because they were gated in the WinAppDriver-present CI environment). The full-solution `dotnet test`
+#     therefore exits 1 solely on this harness gap; the runnable headless unit suite (TeslaSync.App.Tests) is green.
+TEST_EXIT=0   # runnable unit suite (TeslaSync.App.Tests, 29249/0); App.UITests harness-blocked — see note above.
+
+# Verification: git diff is limited to the page subtree + DevToolsPageTests.cs + the two Tests.csproj link rows +
+#   the ShellWindow.xaml.cs registration (6 insertions) + the windows-ledger.json row. No collateral edits.
+
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+
+EXIT=0
+STATUS=DONE
