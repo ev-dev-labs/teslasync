@@ -797,3 +797,4 @@ p2-windows/pages/vehicle-systems/ClimateControlPage.prompt.md
 p2-windows/pages/vehicle-systems/MaintenancePage.prompt.md
 p2-windows/pages/vehicle-systems/MediaPlayerPage.prompt.md
 p2-windows/pages/vehicles/VehicleDetailPage.prompt.md
+p2-windows/pages/vehicle-systems/SafetySettingsPage.prompt.md
