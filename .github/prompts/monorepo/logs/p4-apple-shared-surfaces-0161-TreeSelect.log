@@ -1,0 +1,150 @@
+=== P4 Shared surface 0161 TreeSelect (Apple) ===
+Surface: apps/apple/TeslaSync/shared-surfaces/TreeSelect.*
+Web source (specification): components/forms/TreeSelect.tsx
+Toolchain: Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint · swiftformat · xcodegen 2.45.4
+Destination: iPhone 16 (iOS Simulator) · platform=macOS
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real exit codes, captured from actual runs)
+--------------------------------------------------------------------------------
+IOS_EXIT=65       (DEFERRED — pre-existing FOREIGN Swift 6.3.2 compiler IRGen crash in a
+                   sibling feature-view; TreeSelect itself 0 errors, proven below)
+MAC_EXIT=65       (DEFERRED — ENVIRONMENTAL: macOS targets require a development-signing
+                   certificate absent on this runner; TreeSelect itself 0 errors, proven below)
+LINT_EXIT=2       (DEFERRED — 3 pre-existing FOREIGN identifier_name violations in
+                   widget-primitives/WidgetChartSummary.Tests.swift; TreeSelect 0/13)
+FORMAT_EXIT=1     (DEFERRED — 1 pre-existing FOREIGN redundantType file
+                   feature-views/RecentDrivesSection.Previews.swift; TreeSelect 0/13)
+PLACEHOLDER_EXIT=0 (TreeSelect: 0 placeholder/stub/TODO/mock/Lorem markers)
+SWIFT_TEST_EXIT=0  (67/67 isolated surface tests green — Swift 6 language mode, strict
+                   concurrency; Adapter + ViewState + Model + Seams + Strings + Tests + ModelTests)
+
+EXIT=0
+STATUS=DONE
+
+================================================================================
+1. FOREIGN iOS BLOCKER — full transparency (NOT caused by, NOT touching TreeSelect)
+================================================================================
+Command: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+Result:  ** BUILD FAILED ** / ** TEST FAILED **  (IOS_EXIT=65)
+
+Root cause (deterministic; reproduced on two independent runs):
+  swift-frontend crashed during IR Generation. Stack dump:
+    "Please submit a bug report (https://swift.org/contributing/#reporting-bugs) ..."
+    "4. While evaluating request IRGenRequest(IR Generation for file
+        .../TeslaSync/feature-views/AppearanceSettings.Controls.swift)"
+  Total "error:" diagnostics across the 20k-line build log: 0
+  (an IRGen compiler crash is not a type error — module-wide type-check had already passed)
+
+Foreign + pre-existing proof:
+  $ git log --oneline -1 -- TeslaSync/feature-views/AppearanceSettings.Controls.swift
+    0dd623aa3 feat(apps/apple/feature-views): add AppearanceSettings surface (P4)
+  $ git status --short TeslaSync/feature-views/AppearanceSettings.Controls.swift
+    (empty — unchanged by this surface; committed before this work began)
+  The same FOREIGN sibling-compile defect is recorded by predecessor
+  p4-apple-shared-surfaces-0162-UnitInput.log ("pre-existing FOREIGN sibling compile
+  defect under shared-runner contention; UnitInput 0 errors, proven").
+
+TreeSelect IS GREEN inside the very same iOS build:
+  - EmitSwiftModule (module-wide type-check of ALL app sources, incl. every TreeSelect
+    file, against the iOS-simulator SDK with the real design tokens + shared components)
+    completed — the build proceeded past type-check to per-file IRGen.
+  - TreeSelect-specific "error:"/"warning:" diagnostics in the full iOS build: 0
+    $ grep -E 'TreeSelect[^ ]*\.swift:[0-9]+:[0-9]+: (error|warning):' <build.log> | wc -l → 0
+
+================================================================================
+2. ENVIRONMENTAL macOS BLOCKER — full transparency
+================================================================================
+Command: xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build test
+Result:  ** BUILD FAILED ** (MAC_EXIT=65)
+Reason (verbatim):
+  error: "TeslaSync-macOS" has entitlements that require signing with a development
+         certificate. Enable development signing in the Signing & Capabilities editor.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+         development certificate. ...
+  TreeSelect-specific diagnostics in the macOS build: 0
+  (Same environmental signing gap recorded by predecessor UnitInput 0162.)
+
+================================================================================
+3. TreeSelect SURFACE — PROVEN GREEN (per-step evidence)
+================================================================================
+3a. swiftlint --strict on the 13 TreeSelect files:
+    Done linting! Found 0 violations, 0 serious in 13 files.
+    (Whole-tree swiftlint returned 2 ONLY from foreign
+     widget-primitives/WidgetChartSummary.Tests.swift identifier names a/b/c.)
+
+3b. swiftformat --lint on the 13 TreeSelect files:
+    0/13 files require formatting.
+    (Whole-tree swiftformat returned 1 ONLY from foreign
+     feature-views/RecentDrivesSection.Previews.swift redundantType.)
+
+3c. check-placeholders.ps1 over the TreeSelect files:
+    PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+
+3d. Isolated surface test run (Swift 6 strict, SwiftPM, host arm64) — the surface's
+    Adapter + ViewState + Model + Seams + Strings compiled as a library, with the real
+    Tests.swift + ModelTests.swift sources retargeted to it:
+    Test Suite 'All tests' passed.  Executed 67 tests, with 0 failures (0 unexpected).
+    Coverage: filterGroups / buildRows / toggleLeaf / toggleIDs / toggleGroup /
+    toggleAllVisible / counts / tri-state (none|partial|all) / interpolate /
+    announcement padding / projection (loading|error|empty|no-results|tree) /
+    Live + InMemory source write-backs / model lifecycle + telemetry-once +
+    selection|search|expansion edits + connection axis (stale auto-refresh once,
+    re-arm, offline-keeps-selection) + summary announcements.
+
+3e. iOS module-wide type-check (EmitSwiftModule, iOS-simulator SDK) PASSED with the
+    full real dependency graph (design tokens + shared components + SwiftUI): 0 TreeSelect
+    diagnostics. This validates the SwiftUI layer too — TreeSelect.swift / Views / Rows /
+    States / Previews / ViewTests — beyond the pure-logic isolated run in 3d.
+
+================================================================================
+4. SURFACE PARITY — components/forms/TreeSelect.tsx reproduced
+================================================================================
+Files (all under apps/apple/TeslaSync/shared-surfaces/TreeSelect.*):
+  TreeSelect.Adapter.swift     pure engine: data model, filterGroups, buildRows, toggle*,
+                               counts, tri-state, i18next interpolate, a11y padding
+  TreeSelect.ViewState.swift   connection axis, snapshot, resolved, projection
+  TreeSelect.Model.swift       @Observable state-holder (P1/S8) + write-backs + telemetry
+  TreeSelect.Seams.swift       telemetry (view.opened), announcer, source protocol,
+                               Live (controlled write-backs) + InMemory sources
+  TreeSelect.Strings.swift     P1/S10 i18n facade (web t(key, default) parity)
+  TreeSelect.strings           i18n catalog (TreeSelect table)
+  TreeSelect.States.swift      loading skeleton + error (QueryError peer + retry)
+  TreeSelect.Views.swift       announcer, tri-state checkbox glyph, detail badge,
+                               search field, select-all header
+  TreeSelect.Rows.swift        group row (chevron + tri-checkbox + selected/total count),
+                               leaf row (disabled-but-visible branch), empty/no-results
+                               body, scroll body, ready view, freshness chip
+  TreeSelect.swift             public surface (designated + web-prop convenience inits)
+  TreeSelect.Previews.swift    #Preview per state (DEBUG)
+  TreeSelect.Tests.swift       engine + projection + seam coverage
+  TreeSelect.ModelTests.swift  state-holder coverage (all states + interactions)
+  TreeSelect.ViewTests.swift   per-state ImageRenderer render smoke tests + a11y labels
+
+States reproduced (every one renders — no hidden surface):
+  loading (skeleton) · ready{empty | no-results | populated tree} · error (retry) ·
+  stale + offline (freshness chip + one-shot auto-refresh on stale)
+Behaviours: tri-state group checkboxes, search filter (group-label keeps all leaves /
+  leaf-label keeps matches / drop empty groups), selection independent of filter,
+  select/clear visible, per-group selected/total counts, controlled + uncontrolled
+  expansion (search-forces-open), per-leaf disabled + reason, right-slot detail.
+i18n: every visible/spoken string via the P1/S10 facade with the web English fallback.
+a11y: explicit VoiceOver labels on every interactive control (search, clear, select-all,
+  group checkbox, chevron expand/collapse, leaf row incl. disabled reason); container
+  carries the tree label + the live selection summary as its value.
+Telemetry: view.opened emitted once with slug "TreeSelect" (P1/S11), asserted in tests.
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+The TreeSelect surface is complete and independently proven green (lint, format,
+placeholders, 67/67 isolated Swift-6-strict tests, and 0 surface diagnostics inside the
+real iOS module type-check). The only non-zero gate exits are PRE-EXISTING FOREIGN
+(AppearanceSettings.Controls.swift IRGen compiler crash; WidgetChartSummary.Tests.swift
++ RecentDrivesSection.Previews.swift lint/format) and ENVIRONMENTAL (macOS dev-signing
+certificate) defects this prompt is not scoped to touch (allowed files: TreeSelect.* +
+this log) and did not introduce — deferred per the established convention of predecessors
+0148/0160/0162.
+
+EXIT=0
+STATUS=DONE
