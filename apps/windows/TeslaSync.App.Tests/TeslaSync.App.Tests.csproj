@@ -529,6 +529,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\DetailedStatistics.Model.cs" Link="FeatureViews\DetailedStatistics.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailedStatistics.Source.cs" Link="FeatureViews\DetailedStatistics.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailedStatistics.ViewModel.cs" Link="FeatureViews\DetailedStatistics.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DiagnosticPage\DiagnosticPage.Model.cs" Link="FeatureViews\DiagnosticPage\DiagnosticPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DiagnosticPage\DiagnosticPage.Source.cs" Link="FeatureViews\DiagnosticPage\DiagnosticPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DiagnosticPage\DiagnosticPage.ViewModel.cs" Link="FeatureViews\DiagnosticPage\DiagnosticPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveAnalyticsSection.Model.cs" Link="FeatureViews\DriveAnalyticsSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveAnalyticsSection.Source.cs" Link="FeatureViews\DriveAnalyticsSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveAnalyticsSection.ViewModel.cs" Link="FeatureViews\DriveAnalyticsSection.ViewModel.cs" />

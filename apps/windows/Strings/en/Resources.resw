@@ -8379,6 +8379,12 @@
   <data name="translation.devtools.utils.computeSha256" xml:space="preserve">
     <value>Compute Sha256</value>
   </data>
+  <data name="translation.diagnostic.checkCount" xml:space="preserve">
+    <value>{0} check</value>
+  </data>
+  <data name="translation.diagnostic.checkCountOther" xml:space="preserve">
+    <value>{0} checks</value>
+  </data>
   <data name="translation.diagnostic.checkCount.Plural.one" xml:space="preserve">
     <value>{0} check</value>
   </data>

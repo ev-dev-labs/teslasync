@@ -1,0 +1,143 @@
+=== p2-windows · W7 · page:system/Diagnostic (WinUI 3 / Fluent) ===
+Parity unit : page:system/Diagnostic   kind=page   web route=(unrouted)
+Web source  : web/src/features/system/pages/DiagnosticPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  SchemaDriftPage / ApiLogsPage / FeedbackQueuePage do. The generated prompt's idealized "DiagnosticPage.xaml +
+  DiagnosticPageViewModel.cs under TeslaSync/Features/System" is mapped onto these real conventions; the C#
+  namespace is TeslaSync.App.FeatureViews.SystemDiagnostics (NOT ".System", which would shadow the BCL System
+  root). The surface registers itself with the W4 ShellPageFactory under route name "Diagnostic"
+  (ShellWindow.xaml.cs). The web page is unrouted (it is NOT in web/src/App.tsx — confirmed; SystemPage.tsx notes
+  "SystemStatusPage, ApiLogsPage, DiagnosticPage already cover"), so per the prompt's "(if routed) map (unrouted) to
+  it as a deep link" it is wired only as a page-factory deep-link seam and is deliberately NOT added to RouteTable.cs
+  (which mirrors App.tsx and is guarded by NavigationTests).
+- Data binding (ADR-004): the two manifest data sources are useRunDiagnostic (POST /system/diagnostic) and
+  formatDiagnosticReportText. (1) useRunDiagnostic is a MUTATION — the web page intentionally never auto-runs on
+  mount (the endpoint fans out concurrent probes and is rate-limited), so DiagnosticPageViewModel.RunAsync is fired
+  ONLY by the Run/Re-run affordance and the empty-state CTA; it reads through an injected IDiagnosticRunner. The
+  default EmptyDiagnosticRunner (the un-wired shell registration, matching every sibling W7 page's
+  Empty<X>Feed.Instance host-injection precedent) leaves the surface on its empty state and only surfaces the error
+  panel if pressed with no contract client; the generated-client-backed DiagnosticClientRunner
+  (DiagnosticPage.Source.cs) binds to the generated OpenAPI operation post_api_v1_system_diagnostic (no params, no
+  body), asserted in tests via the FakeApiClient. No HTTP touches the view; an ApiException surfaces the failure
+  panel exactly as the web onError path does. (2) formatDiagnosticReportText is ported 1:1 as the pure
+  DiagnosticReportText.Format (the Download .txt body) and asserted byte-for-byte by ReportText_matches_the_web_plain_text_format.
+- The web page renders all of its regions INSIDE the PageContainer body, so the native port reproduces them as
+  visible Fluent regions per ADR-006: the failed-run error panel (TsGlassPanel, danger border + glyph, layered over
+  whatever is below — never hidden), the overall hero (status glyph circle + verdict + generated-at + a check-count
+  TsBadge), the Copy report (TsCopyButton over the report JSON) + Download .txt (TsButton) actions, the per-check
+  cards (one TsGlassPanel each: status glyph + name + id + detail + optional remediation block + status TsBadge +
+  duration), the in-flight TsSpinner panel, and the TsEmptyState panel with a Run CTA. Never a blank region. The
+  Download uses DownloadsFolderReportDownloader (DownloadsFolder.CreateFileAsync + FileIO.WriteTextAsync), the native
+  analogue of the web blob download, behind the injectable IDiagnosticReportDownloader.
+- SI units N/A — the only quantities on this surface are a probe duration in milliseconds (web "{{ms}}ms", rendered
+  verbatim) and a check count (i18n plural); both substitute the raw integer exactly as the web i18next interpolation
+  does. The report timestamp formats through DateTimeFormatting (web formatDateTime) at the display boundary.
+- i18n: all 16 manifest keys (plus the diagnostic.overall.* / diagnostic.status.* the page also resolves) already
+  existed verbatim in Strings/{en,ar,he}/Resources.resw (the generator emitted them from web en.json). The catalog
+  realized the check-count plural as diagnostic.checkCount.Plural.one/.other; to make the manifest key
+  diagnostic.checkCount literally present and resolvable, the plain diagnostic.checkCount ("{0} check") +
+  diagnostic.checkCountOther ("{0} checks") keys were added to all three catalogs. The surface resolves every key
+  through the ILocalizer facade; ar/he fall back to English by design until translated.
+- Test wiring: TeslaSync.App.Tests.csproj Compile-links the Microsoft.UI-free sources (its documented INVARIANT —
+  the case-insensitive ordinal path-sorted, Include-deduplicated union). The 3 new DiagnosticPage
+  Model/Source/ViewModel links were inserted in sorted position (between feature-views\DetailedStatistics.* and
+  feature-views\DriveAnalyticsSection.*); the Microsoft.UI view (DiagnosticPage.cs) is excluded.
+
+=== PARITY ===
+PARITY_REQUIRED=24
+
+# Panels (5) — every web <GlassPanel> region reproduced as a Fluent Card/Mica region (each a visible branch)
+[x] panel  - GlassPanel1 -> per-check cards: DiagnosticPage.cs#BuildCheckCard (one TsGlassPanel per check: status
+             glyph circle + PanelTitle name + Caption id + Text detail + optional remediation Border + status TsBadge
+             + Caption duration), laid out by BuildChecksGrid into _checksHost; web CheckCard GlassPanel
+             (DiagnosticPage.tsx L109); gated by DiagnosticDisplay.ShowChecks; test
+             Check_cards_project_tone_badge_duration_and_remediation + State_success_renders_hero_actions_and_checks
+[x] panel  - GlassPanel2 -> overall hero: DiagnosticPage.cs#BuildOverallPanel (_overallPanel TsGlassPanel hosting the
+             status glyph circle, _overallTitle Heading, _lastRun Caption and the _checkCountBadge TsBadge); web
+             OverallHero GlassPanel (L159); gated by ShowOverall; test Overall_hero_tone_and_title +
+             Overall_hero_last_run_formats_through_the_shared_formatter + Overall_hero_check_count_pluralizes
+[x] panel  - GlassPanel3 -> failed-run error panel: DiagnosticPage.cs#BuildErrorPanel (_errorPanel TsGlassPanel,
+             danger BorderBrush + ShieldAlert FontIcon + _errorTitle PanelTitle + _errorMessage Text); web latestError
+             GlassPanel (L284); gated by ShowError (layers over the empty surface, never hidden); test
+             State_error_panel_layers_over_the_empty_surface + Error_message_falls_back_to_body_when_detail_absent
+[x] panel  - GlassPanel4 -> in-flight spinner panel: DiagnosticPage.cs#BuildRunningPanel (_runningPanel TsGlassPanel
+             centring a TsSpinner(Large) with the Running label); web isRunning GlassPanel (L343); gated by
+             ShowRunning; test State_loading_when_run_in_flight
+[x] panel  - GlassPanel5 -> empty panel: DiagnosticPage.cs#BuildEmptyPanel (_emptyPanel TsGlassPanel + _emptyState
+             TsEmptyState: activity glyph, title, noReport message, Run CTA via ActionInvoked -> RunAsync); web
+             EmptyState GlassPanel (L350); gated by ShowEmpty; test State_empty_before_any_run
+
+# Data states (3) — loading / empty / success, each a visible region (never blank); failure layered as GlassPanel3
+[x] state  - loading -> DiagnosticState.Loading + DiagnosticDisplay.ShowRunning; rendered _runningPanel
+             (TsSpinner Large, web isRunning branch); driven by DiagnosticPageViewModel.RunAsync setting IsRunning;
+             test State_loading_when_run_in_flight
+[x] state  - empty   -> DiagnosticState.Empty + ShowEmpty; rendered _emptyPanel (TsEmptyState + Run CTA); the page
+             never auto-runs (web intent); test State_empty_before_any_run + ViewModel_starts_in_the_empty_state_without_running
+[x] state  - success -> DiagnosticState.Success + ShowOverall/ShowActions/ShowChecks; rendered _overallPanel +
+             actions row + per-check cards; test State_success_renders_hero_actions_and_checks +
+             ViewModel_run_loads_report_into_the_success_state + ViewModel_rerun_replaces_the_prior_report
+
+# Strings (16) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - diagnostic.checkCount        -> DiagnosticProjection.Project localizer.GetString("diagnostic.checkCount", "{0} check") -> CheckCountText (plural diagnostic.checkCountOther)
+[x] string - diagnostic.copyReport         -> DiagnosticProjection.Project localizer.GetString("diagnostic.copyReport", "Copy report") -> CopyReportLabel (TsCopyButton.CopyLabel)
+[x] string - diagnostic.copyReportSuccess  -> DiagnosticProjection.Project localizer.GetString("diagnostic.copyReportSuccess", "Diagnostic report copied to clipboard") -> CopyReportSuccess (download confirmation)
+[x] string - diagnostic.downloadReport     -> DiagnosticProjection.Project localizer.GetString("diagnostic.downloadReport", "Download .txt") -> DownloadReportLabel (TsButton.Text)
+[x] string - diagnostic.duration           -> DiagnosticProjection.Project localizer.GetString("diagnostic.duration", "{0}ms") -> DiagnosticCheckDisplay.DurationText
+[x] string - diagnostic.errorBody          -> DiagnosticProjection.Project localizer.GetString("diagnostic.errorBody", "The diagnostic endpoint returned an error. Check API logs and try again.") -> ErrorMessage fallback
+[x] string - diagnostic.errorTitle         -> DiagnosticProjection.Project localizer.GetString("diagnostic.errorTitle", "Diagnostic failed to run") -> ErrorTitle
+[x] string - diagnostic.filename           -> DiagnosticProjection.Project localizer.GetString("diagnostic.filename", "teslasync-diagnostic-{0}.txt") -> DiagnosticFilename.Build -> DownloadFilename
+[x] string - diagnostic.lastRun            -> DiagnosticProjection.Project localizer.GetString("diagnostic.lastRun", "Generated {0}") -> LastRunText
+[x] string - diagnostic.noReport           -> DiagnosticProjection.Project localizer.GetString("diagnostic.noReport", "No diagnostic has been run in this session yet. …") -> EmptyMessage
+[x] string - diagnostic.remediationLabel   -> DiagnosticProjection.Project localizer.GetString("diagnostic.remediationLabel", "Remediation") -> DiagnosticCheckDisplay.RemediationLabel
+[x] string - diagnostic.rerun              -> DiagnosticProjection.Project localizer.GetString("diagnostic.rerun", "Re-run diagnostic") -> RunLabel (report present)
+[x] string - diagnostic.run                -> DiagnosticProjection.Project localizer.GetString("diagnostic.run", "Run diagnostic") -> RunLabel / EmptyActionLabel
+[x] string - diagnostic.running            -> DiagnosticProjection.Project localizer.GetString("diagnostic.running", "Running diagnostic…") -> RunningText / RunLabel (in flight)
+[x] string - diagnostic.subtitle           -> DiagnosticProjection.Project localizer.GetString("diagnostic.subtitle", "Run an aggregated self-test against the database, MQTT broker, Redis, Tesla API, and resilience monitors. …") -> Subtitle
+[x] string - diagnostic.title              -> DiagnosticProjection.Project / DiagnosticRegistration.Title localizer.GetString("diagnostic.title", "System diagnostic") -> Title / EmptyTitle / AutomationName
+
+PARITY_COVERED=24
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/DiagnosticPageTests.cs, 42 tests):
+# Projection_resolves_every_required_string_key (+ _even_in_the_empty_state) records every one of the 16 keys above
+# through a RecordingLocalizer; Projection_resolves_overall_and_status_keys covers the extra overall.*/status.* keys.
+# The three state tests + the error-layer test assert each region renders from the bound DiagnosticDisplay; the
+# overall-hero (tone/title/last-run/check-count plural) and check-card (tone/badge/duration/remediation) tests assert
+# the success regions; ReportText_matches_the_web_plain_text_format pins the formatDiagnosticReportText port byte for
+# byte; Filename_* pin the download-filename slug; the JSON parse tests pin the tolerant parsers + status collapses;
+# ClientRunner_posts_the_diagnostic_operation_with_no_params + ClientRunner_propagates_api_exception assert the
+# generated-client POST request shaping (web useRunDiagnostic); the ViewModel_* tests assert the no-auto-run /
+# empty / success / error(generic+ApiException) / re-run matrix; Downloader_records_filename_and_content,
+# Diagnostics_record_only_view_opened and Registration_exposes_route_and_operation cover the side ports.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DiagnosticPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo)
+#   + the same scan on apps/windows/TeslaSync.App.Tests/FeatureViews/DiagnosticPageTests.cs
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (DiagnosticPage Model/Source/ViewModel/view
+#   + DiagnosticPageTests + ShellWindow registration + Resources.resw + test csproj links, all LF/utf-8 no BOM)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27175, Failed: 0, Skipped: 0 (incl. 42 DiagnosticPageTests)
+TEST_EXIT=0
+PARITY_COVERED=24
+PARITY_REQUIRED=24
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/DiagnosticPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/DiagnosticPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-system-DiagnosticPage.log
+# git commit -m "feat(apps/windows): DiagnosticPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE
