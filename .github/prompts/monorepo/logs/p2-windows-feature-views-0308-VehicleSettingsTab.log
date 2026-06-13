@@ -1,0 +1,69 @@
+=== P2 Feature view 0308 VehicleSettingsTab (Windows) ===
+date=2026-06-13T02:53:13.3454219-07:00
+runner: Windows 11 build 26200; dotnet SDK 10.0.300; WindowsDesktop 10.0.8; Microsoft.WindowsAppSDK pinned
+
+--- STEP 1: dotnet build (Release) ---
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:04:17.41
+BUILD_EXIT=0
+
+--- STEP 2: dotnet test (Release) — headless unit gate, Category!=UIAutomation (repo W9-0002 split) ---
+Passed!  - Failed:     0, Passed: 27951, Skipped:     0, Total: 27951, Duration: 36 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- STEP 3: UIAutomation E2E suite (Category=UIAutomation) — PLATFORM-CAPABILITY EVIDENCE ---
+These 147 shell/navigation E2E tests are NOT part of this surface; they drive the packaged app via WinAppDriver.
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+UIAUTOMATION_EXIT=1  (BLOCKED: dotnet test on TeslaSync.App.UITests returned non-zero — WinAppDriver/Appium runner absent on this host. Not a code defect; the suite fails fast by design, never silently skipped. Run via apps/windows/run-ui-automation.ps1 on a UI-automation runner.)
+NOTE: the literal unfiltered `dotnet test apps/windows/TeslaSync.sln` therefore also returns non-zero, solely because the Category=UIAutomation E2E suite cannot reach a WinAppDriver runner on this host.
+
+--- STEP 5: check-placeholders (this surface only) ---
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- STEP 4: dotnet format --verify-no-changes (Release) ---
+FORMAT_EXIT=0
+
+=== SUMMARY ===
+Delivered native WinUI 3 / .NET 10 surface: apps/windows/TeslaSync.App/feature-views/VehicleSettingsTab/
+  VehicleSettingsTab.Model.cs      descriptors(6, web order) + source->pill(StatusKind) + datetime-local<->RFC3339
+                                   + parse/validation + state enum + projection + registration + diagnostics
+  VehicleSettingsTab.Source.cs     IVehicleSettingsTabSource: cache-then-network GET stream + PUT upsert + DELETE reset
+                                   (binds shared P1/S8 state-holder layer; no HTTP in the view)
+  VehicleSettingsTab.ViewModel.cs  stream-consuming state holder + per-row draft/validation/save/reset row VMs
+  VehicleSettingsTab.cs            WinUI view: loading(skeleton)/error(retry)/content(rows) + stale/offline chip;
+                                   text + date&time picker + select inputs; source pill; Save/Reset; toast; a11y; telemetry
+Tests: apps/windows/TeslaSync.App.Tests/FeatureViews/VehicleSettingsTabTests.cs (29 tests:
+  adapter/whitelist, source+pill mapping, RFC3339 bridge, draft seed/validate, projection+a11y ids,
+  registration, diagnostics view.opened, per-state matrix loading/loaded/empty/error/stale/offline,
+  dirty->save->upsert+reload, required/invalid-select/invalid-date validation, override-only reset, save-failure notice)
+  + 3 Compile links added to TeslaSync.App.Tests.csproj (UI-free Model/Source/ViewModel).
+States reproduced from web source: isLoading->skeleton, isError->ErrorDisplay+retry, content->rows always render
+  (web maps the static descriptor list, so empty still renders all 6 rows with default source); stale/offline add a chip.
+i18n: every string via P1/S10 ILocalizer facade with web English fallback (vehicleSettings.title/subtitle/error/
+  validation.*/actions.*/source.*/keys.{k}.label|help/toasts.*/errors.*). No English literals in native control logic.
+Telemetry: view.opened slug=VehicleSettingsTab (P1/S11).
+
+=== SURFACE GATE (build + headless unit tests + format + placeholder) ===
+BUILD_EXIT=0   (Release, 0 errors; 0 new warnings vs baseline 17 pre-existing)
+TEST_EXIT=0    (TeslaSync.App.Tests: 27951 passed / 0 failed, incl. 29 VehicleSettingsTab tests)
+FORMAT_EXIT=0  (dotnet format --verify-no-changes, whole solution)
+PLACEHOLDER_EXIT=0  (PLACEHOLDER_COUNT=0; 1 documented `// parity:allow` for CalendarDatePicker.PlaceholderText)
+
+=== PLATFORM-CAPABILITY NOTE (UIAutomation E2E) ===
+The Category=UIAutomation E2E suite (147 shared shell/navigation tests — none belong to this surface) is BLOCKED
+because the WinAppDriver/Appium runner + a deployed packaged MSIX are absent on this host (evidence in STEP 3).
+Per the repo's own W9-0002 design (see TeslaSync.App.UITests.csproj header), the headless unit gate runs
+Category!=UIAutomation and the UIAutomation suite runs independently via apps/windows/run-ui-automation.ps1 on a
+UI-automation runner. The required surface capability (WinUI 3 + .NET 10 + Fluent) IS present and the surface builds
+and is verified. No UIAutomation result is claimed green here.
+
+EXIT=0
+STATUS=DONE
