@@ -149,6 +149,10 @@ public sealed partial class ShellWindow : Window
         // Admin / DLQ Inspector page (P2/W7) — parity port of web DLQInspectorPage at route /admin/dlq.
         _viewModel.PageFactory.Register("DLQInspector", static () => new FeatureViews.Admin.DLQInspectorPage());
 
+        // Admin / Ingest X-Ray page (P2/W7) — parity port of web IngestXRayPage at route /admin/ingest-xray.
+        // RouteTable already maps Page("IngestXRay","admin/ingest-xray",RouteGroup.AdminDevTools).
+        _viewModel.PageFactory.Register("IngestXRay", static () => new FeatureViews.Admin.IngestXRayPage());
+
         // Admin / Feature Flags page (P2/W7) — parity port of web FeatureFlagsPage at route /admin/flags.
         // RouteTable already maps Page("FeatureFlagsAdmin","admin/flags",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("FeatureFlagsAdmin", static () => new FeatureViews.Admin.FeatureFlagsPage());

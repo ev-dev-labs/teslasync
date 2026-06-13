@@ -718,6 +718,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection\InfrastructureSection.Model.cs" Link="FeatureViews\InfrastructureSection\InfrastructureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection\InfrastructureSection.Source.cs" Link="FeatureViews\InfrastructureSection\InfrastructureSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection\InfrastructureSection.ViewModel.cs" Link="FeatureViews\InfrastructureSection\InfrastructureSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\IngestXRayPage\IngestXRayPage.Model.cs" Link="FeatureViews\IngestXRayPage\IngestXRayPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\IngestXRayPage\IngestXRayPage.Source.cs" Link="FeatureViews\IngestXRayPage\IngestXRayPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\IngestXRayPage\IngestXRayPage.ViewModel.cs" Link="FeatureViews\IngestXRayPage\IngestXRayPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InputCommandTile.Model.cs" Link="FeatureViews\InputCommandTile.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JourneyDetailsPanel\JourneyDetailsPanel.Model.cs" Link="FeatureViews\JourneyDetailsPanel\JourneyDetailsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\JsonFormatter\JsonFormatter.Model.cs" Link="FeatureViews\JsonFormatter\JsonFormatter.Model.cs" />

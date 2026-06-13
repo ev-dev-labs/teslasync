@@ -1,0 +1,140 @@
+=== p2-windows · W7 · page:admin/IngestXRay (WinUI 3 / Fluent) ===
+Parity unit : page:admin/IngestXRay   kind=page   web route=/admin/ingest-xray
+Web source  : web/src/features/admin/pages/IngestXRayPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked. WindowsAppSDK builds the full
+              solution (verified BUILD_EXIT=0). WinAppDriver UI-automation runner (W9 scope) is absent, so the W7
+              test gate runs the headless TeslaSync.App.Tests project (the sibling-W7 convention).
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  DLQInspectorPage / SchemaDriftPage do. The generated prompt's idealized "IngestXRayPage.xaml +
+  IngestXRayPageViewModel.cs under TeslaSync/Features/Admin" is mapped onto these real conventions; the surface
+  registers with the W4 ShellPageFactory by route name ("IngestXRay", already in RouteTable.cs → /admin/ingest-xray).
+- The page COMPOSES the four ingest-xray sub-surfaces that already exist (W3): XRayControls, XRayBucketChart,
+  XRayFieldsTable (feature-views/, namespace TeslaSync.App.FeatureViews.IngestXRay) and the XRayHeader stat tiles
+  (rendered through the shared XRayHeaderProjection + TsStatCard from the page's single read, namespace
+  TeslaSync.App.FeatureViews). The page owns the orchestration the web page owns: the selected vehicle gates the
+  X-Ray query (web useIngestXRay enabled only for a positive id); windowSel / bucketSel re-key the query.
+- Data binding (ADR-004): the two manifest data sources are the web hooks useVehicles / useIngestXRay. The
+  view-model reads through one injected port (IIngestXRayPageFeed, IngestXRayPage.Model.cs) with FetchVehiclesAsync
+  + FetchXRayAsync; the default EmptyIngestXRayPageFeed resolves the empty state (the DLQInspectorPage/SchemaDriftPage
+  host-injection precedent), and the generated-client-backed IngestXRayPageClientFeed (IngestXRayPage.Source.cs)
+  binds to the generated OpenAPI contract operations get_api_v1_vehicles / get_api_v1_system_ingest_xray_vehicleID,
+  asserted against the generated endpoint table + the FakeApiClient in tests. No HTTP touches the view. The X-Ray
+  read fills the {vehicleID} path slot and appends snake_case window/bucket/limit query (never camelCase, never a
+  double /api/v1 prefix); the JSON round-trips through the tolerant parsers (snake_case + camelCase aliases).
+- The web page passes PageContainer `query={xray}`, so the body always renders the children; the X-Ray data states
+  surface per ADR-006 as visible Fluent regions: loading -> the page-tier TsDataFreshness chip (IsFetching →
+  "Updating…") + the XRayHeader em-dash tiles + the XRayBucketChart/XRayFieldsTable "Loading…" bodies; empty ->
+  zero-sample tiles + the chart/table EmptyState bodies (and the no-vehicle panel before a vehicle is picked, and
+  the empty-fleet picker hint); success -> populated tiles + the bar chart + the field table; error -> a
+  TsQueryError InfoBar + Retry + the freshness chip IsError ("Error"). Never a blank region.
+- SI units N/A (this admin surface bears no unit fields — vehicle ids, signal field names, sample counts,
+  value-kind enums and last-seen timestamps only); counts/timestamps format through the shared NumberFormatting /
+  DateTimeFormatting ports inside the composed sub-surfaces at the display boundary.
+- All 5 i18n keys already exist verbatim (web key names) in Strings/{en,he,ar}/Resources.resw under the
+  translation.* prefix (admin.xray.pageTitle / subtitle / panels.fields / noVehicle.title / noVehicle.message); the
+  surface resolves them through the ILocalizer facade with the web English defaults as fallbacks.
+
+=== PARITY ===
+PARITY_REQUIRED=12
+
+# Panels (4) — every web <GlassPanel> reproduced as a Fluent Mica region (TsGlassPanel), each a visible branch
+[x] panel  - GlassPanel1   -> controls panel: IngestXRayPage.cs#_controlsPanel — a TsGlassPanel hosting the
+             XRayControls vehicle/window/bucket picker bound to IngestXRayPageViewModel.ControlsModel (web
+             <GlassPanel className="p-6"><XRayControls vehicles={vehicles.data ?? []} vehicleId={vehicleId}
+             windowSel/bucketSel onVehicleChange/onWindowChange/onBucketChange/></GlassPanel>); change events wired
+             IngestXRayPage.cs#OnVehicleChanged/OnWindowChanged/OnBucketChanged → ViewModel.SelectVehicleAsync/
+             SelectWindowAsync/SelectBucketAsync; tests LoadAsync_VehiclesSuccess_ResolvesTheControls +
+             SelectWindow_ReloadsXRay_WithTheNewWindow + SelectBucket_ReloadsXRay_WithTheNewBucket
+[x] panel  - GlassPanel2   -> no-vehicle panel: IngestXRayPage.cs#_noVehiclePanel — a TsGlassPanel hosting a
+             TsEmptyState (Title=ViewModel.NoVehicleTitle, Message=ViewModel.NoVehicleMessage), shown when
+             ViewModel.ShowNoVehicle (web vehicleId === null → <GlassPanel><EmptyState title={t('admin.xray.
+             noVehicle.title')} message={t('admin.xray.noVehicle.message')}/></GlassPanel>); test
+             SelectVehicle_Null_ShowsNoVehiclePanel_AndDropsData + InitialState_IsVehiclesLoading_AndNoVehicleSelected
+[x] panel  - GlassPanel3   -> bucket-chart panel: IngestXRayPage.cs#_chart — the XRayBucketChart surface (which
+             self-wraps in its own TsGlassPanel Mica region) bound to IngestXRayPageViewModel.BucketChartModel
+             (web <GlassPanel className="p-6"><XRayBucketChart buckets={xray.data?.buckets ?? []}
+             loading={xray.isLoading}/></GlassPanel>); test SelectVehicle_XRaySuccess_ReachesReadyState_AndProjects
+             ChildModels (BucketChartModel.Buckets) + SelectVehicle_XRayZeroSamples_ReachesEmptyState
+[x] panel  - GlassPanel4   -> field-statistics panel: IngestXRayPage.cs#BuildFieldsPanel() — a TsGlassPanel hosting
+             the Activity FontIcon + _fieldsTitle PanelTitle (ViewModel.PanelFieldsTitle) + the XRayFieldsTable
+             surface bound to IngestXRayPageViewModel.FieldsTableModel (web <GlassPanel className="p-6"><Activity/>
+             <PanelTitle>Field statistics</PanelTitle><XRayFieldsTable rows={xray.data?.fields ?? []}
+             loading={xray.isLoading}/></GlassPanel>); test SelectVehicle_XRaySuccess_ReachesReadyState_AndProjects
+             ChildModels (FieldsTableModel.Rows)
+
+# Data states (3) — loading / empty / success, each a visible region (never blank)
+[x] state  - loading       -> IngestXRayPageState.Loading (X-Ray query in flight with no data; vehicles fetch in
+             flight = XRayVehiclesStatus.Loading): IngestXRayPage.cs#Render maps it to _freshness.IsFetching
+             (TsDataFreshness "Updating…"), the XRayHeader em-dash tiles (HeaderDisplay.SamplesValue = EmDash via
+             ContentSummary==null) and the child surfaces' own loading bodies (BucketChartModel.Loading /
+             FieldsTableModel.Loading); tests SelectVehicle_XRayLoading_ShowsLoadingState_WithEmDashTiles +
+             InitialState_IsVehiclesLoading_AndNoVehicleSelected
+[x] state  - empty         -> IngestXRayPageState.Empty (X-Ray resolved with zero samples; the no-vehicle gate;
+             the empty fleet): IngestXRayPage.cs#Render shows the XRayBucketChart/XRayFieldsTable EmptyState bodies
+             (FieldsTableModel.Rows empty, BucketChartModel.Buckets empty) + the no-vehicle TsEmptyState
+             (ShowNoVehicle) + the empty-fleet picker hint (ControlsModel.VehiclesStatus Resolved with 0 vehicles);
+             tests SelectVehicle_XRayZeroSamples_ReachesEmptyState + LoadAsync_VehiclesEmpty_ResolvesWithNoVehicles +
+             SelectVehicle_Null_ShowsNoVehiclePanel_AndDropsData
+[x] state  - success       -> IngestXRayPageState.Ready (X-Ray resolved with data; fleet resolved): IngestXRayPage.cs#
+             Render populates the XRayHeader tiles (HeaderDisplay.SamplesValue/FieldsValue/WindowValue) + the bucket
+             chart + the field table from the bound BucketChartModel/FieldsTableModel, UpdatedAt drives the freshness
+             chip ("Live"); the fleet success drives ControlsModel.VehiclesStatus=Resolved; tests
+             SelectVehicle_XRaySuccess_ReachesReadyState_AndProjectsChildModels + LoadAsync_VehiclesSuccess_Resolves
+             TheControls + RetryXRay_AfterFailure_RecoversToReady (error→success recovery)
+
+# Strings (5) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - admin.xray.noVehicle.message -> IngestXRayPageRegistration.NoVehicleMessage localizer.GetString("translation.admin.xray.noVehicle.message", "Pick a vehicle from the dropdown above to load its ingest X-Ray for the selected window.")
+[x] string - admin.xray.noVehicle.title   -> IngestXRayPageRegistration.NoVehicleTitle localizer.GetString("translation.admin.xray.noVehicle.title", "Select a vehicle")
+[x] string - admin.xray.pageTitle         -> IngestXRayPageRegistration.Title localizer.GetString("translation.admin.xray.pageTitle", "Ingest X-Ray")
+[x] string - admin.xray.panels.fields     -> IngestXRayPageRegistration.PanelFields localizer.GetString("translation.admin.xray.panels.fields", "Field statistics")
+[x] string - admin.xray.subtitle          -> IngestXRayPageRegistration.Subtitle localizer.GetString("translation.admin.xray.subtitle", "Per-vehicle telemetry sample counts — pick a vehicle to inspect what the ingest pipeline is receiving.")
+
+PARITY_COVERED=12
+# Coverage asserted headlessly by apps/windows/TeslaSync.App.Tests/FeatureViews/IngestXRayPageTests.cs (20 tests):
+# - Registration_ResolvesEveryRequiredCatalogKey records all 5 required keys through a RecordingLocalizer.
+# - SelectVehicle_XRayLoading_ShowsLoadingState_WithEmDashTiles (loading), SelectVehicle_XRayZeroSamples_Reaches
+#   EmptyState + LoadAsync_VehiclesEmpty_ResolvesWithNoVehicles (empty), SelectVehicle_XRaySuccess_ReachesReadyState_
+#   AndProjectsChildModels + LoadAsync_VehiclesSuccess_ResolvesTheControls (success) assert the three data states +
+#   the GlassPanel1/2/3/4 bound child models (ControlsModel / BucketChartModel / FieldsTableModel / HeaderDisplay).
+# - SelectVehicle_Null_ShowsNoVehiclePanel_AndDropsData + SelectWindow_WithNoVehicle_DoesNotQueryTheXRay assert the
+#   no-vehicle gate; SelectWindow/SelectBucket_ReloadsXRay assert the windowSel/bucketSel re-key; RetryXRay_After
+#   Failure_RecoversToReady + SelectVehicle_XRayFailure_ReachesErrorState assert the error branch + retry recovery.
+# - Operations_ResolveAgainstTheGeneratedEndpointTable + VehiclesClientFeed/XRayClientFeed request-shaping + parsing
+#   tests (ParseVehicles, ParseXRay summary/buckets/fields, snake_case query, path id, non-object tolerance) assert
+#   the generated-client binding (web hook → operation id, path/query params, tolerant parsing).
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/IngestXRayPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (IngestXRayPage Model/Source/ViewModel/view
+#   + IngestXRayPageTests + ShellWindow registration + TeslaSync.App.Tests.csproj compile-links + windows-ledger.json,
+#   all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29363, Failed: 0, Skipped: 0 (incl. 20 IngestXRayPageTests)
+#   (W7 test gate = the headless TeslaSync.App.Tests project, the sibling-W7 convention; the WinAppDriver UI-automation
+#    tests under TeslaSync.App.UITests are W9 scope and require the WinAppDriver runner, which is absent in this
+#    environment — they BLOCK at WinAppDriverSession.EnsureReady by design and are not part of the W7 gate.)
+TEST_EXIT=0
+PARITY_COVERED=12
+PARITY_REQUIRED=12
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/IngestXRayPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/IngestXRayPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-IngestXRayPage.log
+# git commit -m "feat(apps/windows): IngestXRayPage at web parity (W7 admin)"
+# (apps/windows/Generated/ is the deterministically-regenerated, git-ignored W1 client — intentionally not committed.)
+
+EXIT=0
+STATUS=DONE
