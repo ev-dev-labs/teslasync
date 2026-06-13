@@ -486,6 +486,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.Model.cs" Link="FeatureViews\ColorConverter\ColorConverter.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ColorConverter\ColorConverter.ViewModel.cs" Link="FeatureViews\ColorConverter\ColorConverter.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CommandSearch\CommandSearch.Model.cs" Link="FeatureViews\CommandSearch\CommandSearch.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CommandsPage\CommandsPage.Model.cs" Link="FeatureViews\CommandsPage\CommandsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CommandsPage\CommandsPage.Source.cs" Link="FeatureViews\CommandsPage\CommandsPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\CommandsPage\CommandsPage.ViewModel.cs" Link="FeatureViews\CommandsPage\CommandsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CommandTile\CommandTile.Model.cs" Link="FeatureViews\CommandTile\CommandTile.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ComputedMetricEditor\ComputedMetricEditor.Model.cs" Link="FeatureViews\ComputedMetricEditor\ComputedMetricEditor.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ComputedMetricEditor\ComputedMetricEditor.Source.cs" Link="FeatureViews\ComputedMetricEditor\ComputedMetricEditor.Source.cs" />

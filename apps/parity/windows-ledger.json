@@ -106,5 +106,14 @@
     "requiredCount": 28,
     "promptId": "p2-windows/W7/windows-page-onboarding-OnboardingPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-onboarding-OnboardingPage.log"
+  },
+  {
+    "unitId": "page:system/Commands",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 21,
+    "requiredCount": 21,
+    "promptId": "p2-windows/W7/windows-page-system-CommandsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-CommandsPage.log"
   }
 ]
