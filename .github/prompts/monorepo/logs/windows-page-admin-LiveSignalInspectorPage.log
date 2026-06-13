@@ -1,0 +1,79 @@
+=== p2-windows · W7 · page:admin/LiveSignalInspector (WinUI 3 / Fluent) ===
+Parity unit : page:admin/LiveSignalInspector   kind=page   web route=/admin/live-signals
+Web source  : web/src/features/admin/pages/LiveSignalInspectorPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10 SDK present (dotnet --version 10.0.826) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the data-port seam + Empty/client feeds), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view). The generated prompt's
+  idealized "LiveSignalInspectorPage.xaml + ViewModel.cs under TeslaSync/Features/Admin" is mapped onto these
+  real conventions (same precedent as the sibling W7 admin pages — see windows-page-admin-ApiLogsPage.log); the
+  surface registers itself with the W4 ShellPageFactory by route name ("LiveSignalInspector"). The
+  RouteTable already maps Page("LiveSignalInspector","admin/live-signals",RouteGroup.AdminDevTools).
+- The page composes the already-ported native LiveSignalsTable feature-view (the parity port of the web
+  components/live-signal-inspector/LiveSignalsTable.tsx) for the GlassPanel3 snapshot, so the per-second live read
+  (web useVehicleLiveSignals → GET /signals/{vehicleID}/live) and its own loading/empty/error/stale branches are
+  owned by that surface (DRY — not re-implemented). The page's OWN data source is the fleet picker
+  (web useVehicles → GET /vehicles), bound through the injected ILiveSignalInspectorFeed (default
+  EmptyLiveSignalInspectorFeed resolves the empty fleet; LiveSignalInspectorClientFeed binds the generated
+  client operation get_api_v1_vehicles, ADR-004). The vehicle label uses the shared VehicleLabels.Short rule
+  (display_name → VIN → "Vehicle {id}"), matching the web option label verbatim.
+- All 7 i18n keys already exist verbatim in Strings/en/Resources.resw (translation.admin.liveSignals.*); the
+  surface resolves them through the ILocalizer facade with the web key names (no new catalog rows required).
+- SI units N/A at this surface (no unit-bearing fields on the picker); the composed LiveSignalsTable applies the
+  shared SI converters + the >2-minute freshness/staleness chip (ADR-013) at its display boundary.
+
+=== PARITY ===
+PARITY_REQUIRED=13
+
+# Panels (3) — every named GlassPanel region from the web source, each a Fluent TsGlassPanel
+[x] panel  - GlassPanel1   -> LiveSignalInspectorPage.cs#BuildControlsPanel (_controlsPanel TsGlassPanel): the vehicle picker (TsSelect, web VehicleSelect). Bound from LiveSignalInspectorDisplay.SelectVehiclePrompt / VehicleAriaLabel / VehicleOptions (Projection.BuildOptions via VehicleLabels.Short)
+[x] panel  - GlassPanel2   -> LiveSignalInspectorPage.cs#BuildNoVehiclePanel (_noVehiclePanel TsGlassPanel): the no-vehicle TsEmptyState (web vehicleId === null). Bound from Display.ShowNoVehicle / NoVehicleTitle / NoVehicleMessage; icon RadioGlyph \uE93C (web lucide Radio)
+[x] panel  - GlassPanel3   -> LiveSignalInspectorPage.cs#BuildSnapshotPanel (_snapshotPanel TsGlassPanel): Activity-iconed PanelTitle over the composed LiveSignalsTable. Bound from Display.ShowSnapshot / SnapshotTitle; SyncSnapshotTable instantiates LiveSignalsTable(_liveSource, vehicleId, _localizer)
+
+# Data states (3) — loading / empty / success, each a visible region (never blank)
+[x] state  - loading       -> LiveSignalInspectorState.Loading + Display.ShowVehicleLoading (LiveSignalInspectorProjection.Project); rendered LiveSignalInspectorPage.cs#_vehicleLoading (ProgressRing + Caption VehicleLoadingText); test State_loading_when_fleet_fetch_in_flight
+[x] state  - empty         -> LiveSignalInspectorState.Empty + Display.ShowNoVehicle; rendered _noVehiclePanel (TsEmptyState); tests State_empty_when_no_vehicle_selected / Empty_fleet_resolved_renders_the_no_vehicle_guard_not_loading / LoadAsync_degrades_to_an_empty_fleet_when_the_feed_fails
+[x] state  - success       -> LiveSignalInspectorState.Success + Display.ShowSnapshot; rendered _snapshotPanel (composed LiveSignalsTable); tests State_success_when_a_vehicle_is_selected / SelectVehicle_moves_to_the_success_snapshot
+
+# Strings (7) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - admin.liveSignals.controls.selectVehicle -> LiveSignalInspectorProjection.Project localizer.GetString("admin.liveSignals.controls.selectVehicle", "Select vehicle\u2026") -> Display.SelectVehiclePrompt (TsSelect.Hint)
+[x] string - admin.liveSignals.controls.vehicleAria   -> LiveSignalInspectorProjection.Project localizer.GetString("admin.liveSignals.controls.vehicleAria", "Vehicle") -> Display.VehicleAriaLabel (AutomationProperties name on the picker)
+[x] string - admin.liveSignals.noVehicle.message      -> LiveSignalInspectorProjection.Project localizer.GetString("admin.liveSignals.noVehicle.message", "Pick a vehicle from the dropdown above to start streaming its live signal cache.") -> Display.NoVehicleMessage (TsEmptyState.Message)
+[x] string - admin.liveSignals.noVehicle.title        -> LiveSignalInspectorProjection.Project localizer.GetString("admin.liveSignals.noVehicle.title", "Select a vehicle") -> Display.NoVehicleTitle (TsEmptyState.Title)
+[x] string - admin.liveSignals.pageTitle             -> LiveSignalInspectorRegistration.Title / Projection localizer.GetString("admin.liveSignals.pageTitle", "Live Signal Inspector") -> Display.Title (PageTitle)
+[x] string - admin.liveSignals.panels.snapshot       -> LiveSignalInspectorProjection.Project localizer.GetString("admin.liveSignals.panels.snapshot", "Live snapshot") -> Display.SnapshotTitle (PanelTitle)
+[x] string - admin.liveSignals.subtitle              -> LiveSignalInspectorRegistration.Subtitle / Projection localizer.GetString("admin.liveSignals.subtitle", "Realtime view of the Redis-cached live signal snapshot. Refreshes every second while this tab is in the foreground.") -> Display.Subtitle (Subhead)
+
+PARITY_COVERED=13
+# Coverage asserted headlessly: LiveSignalInspectorPageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records every key above through a RecordingLocalizer; the three state tests
+# + the panel / vehicle-option / parser / view-model / diagnostics tests assert each panel + state renders from
+# the bound LiveSignalInspectorDisplay state holder. 17 tests, all green.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/LiveSignalInspectorPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only; 0 new)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes (whole solution; LiveSignalInspectorPage sources + ShellWindow registration + test links)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29378, Failed: 0, Skipped: 0 (incl. 17 LiveSignalInspectorPageTests)
+TEST_EXIT=0
+PARITY_COVERED=13
+PARITY_REQUIRED=13
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/LiveSignalInspectorPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/LiveSignalInspectorPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-LiveSignalInspectorPage.log
+# git commit -m "feat(apps/windows): LiveSignalInspectorPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE

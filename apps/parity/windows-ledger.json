@@ -45,6 +45,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-FeedbackQueuePage.log"
   },
   {
+    "unitId": "page:admin/LiveSignalInspector",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 13,
+    "requiredCount": 13,
+    "promptId": "p2-windows/W7/windows-page-admin-LiveSignalInspectorPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-LiveSignalInspectorPage.log"
+  },
+  {
     "unitId": "page:admin/SchemaDrift",
     "platform": "windows",
     "status": "done",
