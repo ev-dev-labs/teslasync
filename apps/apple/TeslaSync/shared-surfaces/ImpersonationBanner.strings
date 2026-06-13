@@ -1,0 +1,40 @@
+/*
+  ImpersonationBanner.strings
+  TeslaSync — P4 shared surface · 0123 · ImpersonationBanner (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The banner keys mirror the web source
+  (components/feedback/ImpersonationBanner.tsx) verbatim — impersonation.banner.title / .body /
+  .endsIn / .expired / .end / .ending — with the title carrying the {target} token and the "expires
+  in" template carrying the {time} token the native builders substitute (web i18next {{target}} /
+  {{time}}). The empty cards (inactive / open-mode), the error + retry chrome, and the freshness
+  (live / stale / offline) round out the P4 leaf surface so the Swift sources hold no English
+  literals. These entries fold into the app Localizable.xcstrings master catalog at integration time;
+  they are kept in a per-surface table ("ImpersonationBanner") so each parallel surface prompt owns
+  its own strings without editing the shared catalog.
+*/
+
+/* --- Banner (web `impersonation.banner.*`) --- */
+"impersonation.banner.title" = "Impersonating {target}";
+"impersonation.banner.body" = "You are viewing TeslaSync as another subject. End impersonation to restore your session.";
+"impersonation.banner.endsIn" = "Expires in {time}";
+"impersonation.banner.expired" = "Session expired";
+"impersonation.banner.end" = "End impersonation";
+"impersonation.banner.ending" = "Ending…";
+
+/* --- Empty cards (web inactive / open-mode both render nothing; P4 leaf contract) --- */
+"impersonation.banner.empty.inactive.title" = "Not impersonating";
+"impersonation.banner.empty.inactive.message" = "You are viewing TeslaSync as yourself. This banner appears only while an admin impersonation session is active.";
+"impersonation.banner.empty.unavailable.title" = "Impersonation unavailable";
+"impersonation.banner.empty.unavailable.message" = "This install runs in open mode, so there is no per-user identity to impersonate.";
+
+/* --- Loading / error chrome (P4 leaf contract) --- */
+"impersonation.banner.loadingA11y" = "Checking impersonation status";
+"impersonation.banner.errorTitle" = "Couldn't check impersonation status";
+"impersonation.banner.retry" = "Retry";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"impersonation.banner.live" = "Live";
+"impersonation.banner.stale" = "Stale";
+"impersonation.banner.offline" = "Offline";
+"impersonation.banner.staleA11y" = "Stale — tap to re-check impersonation status";
+"impersonation.banner.offlineA11y" = "Offline — showing the last impersonation status";
