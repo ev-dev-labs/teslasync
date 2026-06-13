@@ -747,3 +747,4 @@ p3-android/shared-meaningful/A-0156-PillFilterBar.prompt.md
 p3-android/shared-meaningful/A-0163-VehicleMultiSelect.prompt.md
 p3-android/shared-meaningful/A-0164-VehicleSelect.prompt.md
 p3-android/shared-meaningful/A-0161-TreeSelect.prompt.md
+p3-android/shared-meaningful/A-0160-TagInput.prompt.md
