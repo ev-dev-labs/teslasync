@@ -550,3 +550,4 @@ p3-android/feature-views/A-0300-VehicleConfigSection.prompt.md
 p3-android/feature-views/A-0304-VehicleGauges.prompt.md
 p3-android/feature-views/A-0303-VehicleCharts.prompt.md
 p3-android/feature-views/A-0293-MotorSection.prompt.md
+p3-android/feature-views/A-0306-VehiclePhotoGallery.prompt.md
