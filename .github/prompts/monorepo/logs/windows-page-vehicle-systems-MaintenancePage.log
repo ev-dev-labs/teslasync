@@ -1,0 +1,189 @@
+=== p2-windows · W7 · page:vehicle-systems/Maintenance (WinUI 3 / Fluent) ===
+Parity unit : page:vehicle-systems/Maintenance   kind=page   web route=/maintenance
+Web source  : web/src/features/vehicle-systems/pages/MaintenancePage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/MaintenancePage/{MaintenancePage.Model.cs,
+              MaintenancePage.Source.cs, MaintenancePage.ViewModel.cs, MaintenancePage.cs}
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  VehicleCostPage / ApiLogsPage / DiagnosticPage do. The generated prompt's idealized
+  "MaintenancePage.xaml + MaintenancePageViewModel.cs under TeslaSync/Features/VehicleSystems" is mapped onto these
+  real conventions; the surface registers itself with the W4 ShellPageFactory by route name ("Maintenance", already
+  in RouteTable.cs L270 -> /maintenance, group VehicleSystems) via ShellWindow.xaml.cs.
+- Data binding (ADR-004): the web page runs two raw queries — request<MaintenanceItem[]>('/maintenance') and
+  request<ServiceRecord[]>('/maintenance/records'). Both operations exist in the generated OpenAPI contract client
+  (Generated/Api/ApiEndpoints.cs): get_api_v1_maintenance (GET /maintenance/) and get_api_v1_maintenance_records
+  (GET /maintenance/records), each returning JsonElement with no parameters/body. The manifest's "no API data sources"
+  note reflects the generator not detecting the raw request<>() calls; the surface nonetheless binds both operations
+  through an injected IMaintenanceFeed. The default EmptyMaintenanceFeed resolves the empty state; the
+  generated-client-backed MaintenanceClientFeed (MaintenancePage.Source.cs) issues both operations and combines them
+  into a MaintenanceSnapshot, asserted via the FakeApiClient (ClientFeed_sends_both_maintenance_operations). No HTTP
+  touches the view; a non-success response surfaces as ApiException and the view-model folds it into the failure
+  banner (web anyError), asserted by ViewModel_api_exception_is_the_error_state. Tolerant parsers accept both a bare
+  JSON array and the platform {data:[…]} envelope (Items_parse_from_a_bare_array / Records_parse_from_a_data_envelope).
+- The web page renders its states INSIDE the PageContainer body, so the native port reproduces them as visible Fluent
+  regions per ADR-006: loading -> TsStatGridSkeleton(4)+TsTableSkeleton shimmer; failure -> TsAlertBanner(Danger)
+  above the content (web anyError AlertBanner); empty -> the four summary stat cards + panels still render while the
+  item grid shows a TsEmptyState; success -> the full body. Never a blank region. The error banner sits ABOVE the
+  content exactly as the web composes it (ShowError && ShowContent both true).
+- Client-side category filter (web categoryFilter / setCategoryFilter) and sort (web sortBy / setSortBy /
+  SORT_OPTIONS) are modelled on the view-model and re-project WITHOUT re-fetching
+  (ViewModel_set_category_filters_without_refetching / ViewModel_set_sort_reprojects_without_refetching). The
+  category options are derived from the loaded items (web categories memo) and capitalized; the four sort keys are
+  static (status/name/due_date/category).
+- All per-item logic is a faithful port of the web helpers: computeProgress (mile interval -> month interval ->
+  due-mileage ratio, clamped 0..100), statusFromPct (>=90 overdue / >=70 soon / else good), derivedStatus
+  (completed stays completed), STATUS_BADGE_MAP, STATUS_SORT_ORDER, the cost-stats span-years calculation
+  (single record -> total as annual+avg; >=2 dated records -> total / max(span,0.1)), and the projections build
+  (non-completed interval items, overdue first then by miles remaining, slice 8). Asserted by the ComputeProgress_*,
+  Item_card_*, Cost_*, Projections_* tests.
+- SI / display formatting (ADR-005): counts via NumberFormatting.Format (web fmtNumber, 0 dp); currency via "$" +
+  NumberFormatting (web formatCurrency, 0 dp on the cost cards, 2 dp on the records cost cell, web Currency); dates
+  via DateTimeFormatting Date / Full variants (web formatDate / formatDateTime). Pinned by FormatCount_matches_web /
+  FormatCurrency_matches_web theories.
+- The web AIPredictiveMaintenance card (web/src/components/ai/AIPredictiveMaintenance) is an opt-in shared component
+  that returns null when ai_mode='off' or the predictive-maintenance toggle is off; it is NOT one of the 11 manifest
+  panels (its own W3 component parity unit owns it). The deterministic reminders/summary above remain the canonical
+  baseline exactly as the web comment states, so the surface is at panel parity without it. The header VehicleSelect
+  is shell-level global vehicle chrome (the maintenance endpoints are vehicle-agnostic in the generated contract,
+  taking no vehicle_id param) and is not a manifest panel; the page header reproduces the web title + subtitle.
+- i18n (ADR-014): every visible literal resolves through the ILocalizer facade using the EXACT web key names (the web
+  uses the English string as the key, e.g. t('Total Items'), plus the dotted t('error.loadFailed')). 19 missing
+  manifest keys + 3 supporting keys (Category, Due Date sort labels, the "general" category fallback) were added to
+  Strings/en/Resources.resw as translation.<webKey> (the other 11 manifest keys — Completed, Cost, Date, Description,
+  Due, Maintenance, Mileage, Overdue, Provider, error.loadFailed, mi — already existed). The ar/he catalogs lag en by
+  design; the app falls back to the English default via ILocalizer until translated.
+- Microsoft.UI-free Model/Source/ViewModel links were added to TeslaSync.App.Tests.csproj (the bare WinUI view is
+  excluded — it uses Microsoft.UI). A self-contained internal JsonReadHelpers (Str/Long/Double) lives in the
+  MaintenancePage.Model.cs vehicle-systems namespace (mirrors the DBHealthPage precedent of a per-namespace copy).
+- Pre-existing build break repaired (NOT my surface, but it blocks the shared TeslaSync.App Release build the gate
+  requires): a prior W7 commit (3f642976f "MQTTInspectorPage at web parity") left two CA1822 errors latent in
+  feature-views/MQTTInspectorPage/MQTTInspectorPage.cs (BuildConnectionContent / BuildThroughputContent do not access
+  instance data). They only surface on a clean Release rebuild; the canonical fix (mark both `private static`) was
+  applied so the solution builds 0/0. My own MaintenancePage files compiled clean on the first app-project build (the
+  only two errors reported were the MQTTInspectorPage pair).
+
+=== PARITY ===
+PARITY_REQUIRED=45
+
+# Panels (11) — every web region reproduced as a Fluent Card/Mica region, bound to the MaintenanceDisplay state holder
+[x] panel  - GlassPanel1     -> summary stat-card grid: MaintenancePage.cs#BuildContent (BuildEqualColumns of the four
+             TsMetricCard, AutomationName "Maintenance summary"); MaintenanceProjection.Project -> MaintenanceDisplay.SummaryCards;
+             web MetricCard grid; test Summary_cards_count_by_raw_status
+[x] panel  - Total-Items     -> _totalItemsCard TsMetricCard (MaintenancePage.cs#RenderSummary); SummaryCards[0]
+             (FormatCount(total), AccentCyan="TsColorInfoBrush"); web MetricCard "Total Items"; test Summary_cards_count_by_raw_status
+[x] panel  - Due-Soon        -> _dueSoonCard TsMetricCard; SummaryCards[1] (soon count, AccentAmber="TsColorWarningBrush");
+             web MetricCard "Due Soon"; test Summary_cards_count_by_raw_status
+[x] panel  - Overdue         -> _overdueCard TsMetricCard; SummaryCards[2] (overdue count, AccentRed="TsColorDangerBrush");
+             web MetricCard "Overdue"; test Summary_cards_count_by_raw_status
+[x] panel  - Completed       -> _completedCard TsMetricCard; SummaryCards[3] (completed count, AccentGreen="TsColorSuccessBrush");
+             web MetricCard "Completed"; test Summary_cards_count_by_raw_status
+[x] panel  - GlassPanel6     -> Estimated-Annual-Cost panel: MaintenancePage.cs#BuildCostPanel (_costPanel TsGlassPanel,
+             DollarSign header + _costBodyHost swapping cost cards or TsEmptyState); MaintenanceDisplay.CostTitle/ShowCostCards/
+             ShowCostEmpty; web GlassPanel "Estimated Annual Cost"; test Cost_cards_project_from_service_records + Cost_panel_shows_empty_state_when_no_records
+[x] panel  - Total-Spent     -> CostCards[0] TsMetricCard; projection FormatCurrency(totalCost,0) AccentGreen; web MetricCard
+             "Total Spent"; test Cost_cards_project_from_service_records
+[x] panel  - Annual-Est      -> CostCards[1] TsMetricCard; projection FormatCurrency(annualCost,0)+"/yr" AccentCyan; web MetricCard
+             "Annual Est."; test Cost_cards_project_from_service_records + Cost_with_a_single_record_uses_total_as_annual_and_average
+[x] panel  - Avg-Service     -> CostCards[2] TsMetricCard; projection FormatCurrency(avgPerService,0) AccentPurple; web MetricCard
+             "Avg / Service"; test Cost_cards_project_from_service_records
+[x] panel  - GlassPanel10    -> Service-Projections panel: MaintenancePage.cs#BuildProjectionsPanel (_projectionsPanel TsGlassPanel,
+             TrendingUp header + _projectionsHost rows or TsEmptyState); MaintenanceDisplay.ProjectionsTitle/ShowProjections/
+             ProjectionRows; web GlassPanel "Service Projections"; test Projections_list_overdue_first_then_by_miles_remaining +
+             Projection_row_detail_includes_miles_remaining_and_badge + Projections_empty_when_no_interval_items
+[x] panel  - GlassPanel11    -> Service-Records panel: MaintenancePage.cs#BuildRecordsPanel (_recordsPanel TsGlassPanel hosting the
+             shared TsDataTable or a TsEmptyState); MaintenanceDisplay.RecordColumns/RecordRows/ShowRecords/ShowRecordsEmpty; web
+             GlassPanel + DataTable "Service Records"; test Records_panel_has_five_columns + Record_rows_format_every_cell +
+             Records_panel_shows_empty_state_when_no_records
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading  -> MaintenanceState.Loading + MaintenanceDisplay.ShowLoading; rendered MaintenancePage.cs#BuildLoadingSkeleton
+             (TsStatGridSkeleton(4) + TsTableSkeleton shimmer); test State_loading_when_query_in_flight
+[x] state  - empty    -> MaintenanceState.Empty + ShowContent && ShowItemsEmpty; _itemsHost renders TsEmptyState
+             (itemsEmptyTitle+itemsEmptyMessage) while the summary cards + cost/projection/records panels still render (web
+             items.length===0 EmptyState); test State_empty_when_resolved_with_no_items + Empty_items_message_switches_when_a_category_filter_is_active
+             + ViewModel_empty_snapshot_is_the_empty_state
+[x] state  - error    -> MaintenanceState.Error + ShowError; _errorBanner TsAlertBanner(Danger) shown ABOVE the content (web
+             anyError AlertBanner); errorText = "Failed to load data[: detail]"; test State_error_shows_failure_banner_above_content +
+             ViewModel_feed_failure_is_the_error_state + ViewModel_api_exception_is_the_error_state
+[x] state  - success  -> MaintenanceState.Success + ShowItems; _itemsHost renders the item-card grid (web filteredItems.map ->
+             MaintenanceItemCard); test State_success_when_items_present + ViewModel_loads_items_into_the_success_state +
+             Items_are_filtered_by_the_selected_category + Items_sort_by_status_precedence_by_default
+
+# Strings (30) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names (resolved on
+# EVERY projection so the i18n contract holds in every data state; coverage asserted by
+# Projection_resolves_every_required_string_key + _even_in_the_loading_state through a RecordingLocalizer)
+[x] string - All Categories                                  -> MaintenanceProjection.BuildCategoryOptions GetString("All Categories","All Categories") -> CategoryOptions[0].Label
+[x] string - Annual Est.                                     -> Project GetString("Annual Est.","Annual Est.") -> CostCards[1].Label
+[x] string - Avg / Service                                   -> Project GetString("Avg / Service","Avg / Service") -> CostCards[2].Label
+[x] string - Completed                                       -> Project GetString("Completed","Completed") -> SummaryCards[3].Label + completed badge
+[x] string - Cost                                            -> Project GetString("Cost","Cost") -> RecordColumns[cost].Header
+[x] string - Date                                            -> Project GetString("Date","Date") -> RecordColumns[date].Header
+[x] string - Description                                     -> Project GetString("Description","Description") -> RecordColumns[description].Header
+[x] string - Due                                             -> Project GetString("Due","Due") -> item-card DueText prefix (ProjectItemCard)
+[x] string - Due Soon                                        -> Project GetString("Due Soon","Due Soon") -> SummaryCards[1].Label + soon badge (BadgeFor)
+[x] string - EV maintenance is typically 40-60% cheaper than a comparable gas vehicle. -> Project GetString(…) -> CostNote
+[x] string - Estimated Annual Cost                           -> Project GetString("Estimated Annual Cost","Estimated Annual Cost") -> CostTitle
+[x] string - Maintenance                                     -> Project / MaintenanceRegistration.Title GetString("Maintenance","Maintenance") -> Title + AutomationName
+[x] string - Mileage                                         -> Project GetString("Mileage","Mileage") -> RecordColumns[mileage].Header
+[x] string - No cost data available yet. Log service records to see cost estimates. -> Project GetString(…) -> CostEmptyMessage
+[x] string - No items match the selected category. Try a different filter. -> Project GetString(…) -> ItemsEmptyMessage (filtered branch)
+[x] string - No maintenance items                            -> Project GetString("No maintenance items","No maintenance items") -> ItemsEmptyTitle
+[x] string - No maintenance items found for this vehicle.    -> Project GetString(…) -> ItemsEmptyMessage (unfiltered branch)
+[x] string - No service records found.                       -> Project GetString(…) -> RecordsEmptyTableMessage (TsDataTable.EmptyMessage)
+[x] string - No service records logged yet.                  -> Project GetString(…) -> RecordsEmptyMessage (panel TsEmptyState)
+[x] string - No upcoming service projections available.      -> Project GetString(…) -> ProjectionsEmptyMessage
+[x] string - Overdue                                         -> Project GetString("Overdue","Overdue") -> SummaryCards[2].Label + overdue badge (BadgeFor)
+[x] string - Provider                                        -> Project GetString("Provider","Provider") -> RecordColumns[provider].Header
+[x] string - Schedule Maintenance                            -> Project GetString("Schedule Maintenance","Schedule Maintenance") -> ScheduleLabel (_scheduleButton)
+[x] string - Service Projections                             -> Project GetString("Service Projections","Service Projections") -> ProjectionsTitle
+[x] string - Service Records                                 -> Project GetString("Service Records","Service Records") -> RecordsTitle
+[x] string - Service schedule, records, and upcoming maintenance -> Project GetString(…) -> Subtitle
+[x] string - Total Items                                     -> Project GetString("Total Items","Total Items") -> SummaryCards[0].Label
+[x] string - Total Spent                                     -> Project GetString("Total Spent","Total Spent") -> CostCards[0].Label
+[x] string - error.loadFailed                                -> Project GetString("error.loadFailed","Failed to load data") -> ErrorText
+[x] string - mi                                              -> Project GetString("mi","mi") -> item-card mileage/due chips + records Mileage cell + projection detail
+
+PARITY_COVERED=45
+# Coverage asserted headlessly: MaintenancePageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records all 30 manifest keys through a RecordingLocalizer; the four state tests +
+# the summary/cost/projection/record panel tests + the toolbar/filter/sort tests + the item-card derived-status tests
+# assert each region renders from the bound MaintenanceDisplay; ClientFeed_sends_both_maintenance_operations asserts
+# the generated-client GET shaping (web's two queries); the ViewModel_* tests assert the loading/empty/error/success
+# matrix + refresh + client-side filter/sort re-projection; the FormatCount/FormatCurrency/ComputeProgress theories
+# pin the formatters/progress math to the web truth; the parse tests assert tolerant array/{data:…} parsing.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/MaintenancePage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/VehicleSystems path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s), 0 Warning(s)
+#   (required repairing two pre-existing CA1822 errors in feature-views/MQTTInspectorPage/MQTTInspectorPage.cs left by
+#    commit 3f642976f; my MaintenancePage files compiled clean on the first app build)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <MaintenancePage Model/Source/ViewModel/view
+#   + MaintenancePageTests + MQTTInspectorPage.cs + ShellWindow.xaml.cs> -> 0 issues (all LF/utf-8 after auto-format)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 27627, Failed: 0, Skipped: 0
+#   (incl. 56 MaintenancePageTests)
+TEST_EXIT=0
+PARITY_COVERED=45
+PARITY_REQUIRED=45
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/MaintenancePage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App/feature-views/MQTTInspectorPage/MQTTInspectorPage.cs \
+#         apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/MaintenancePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-vehicle-systems-MaintenancePage.log
+# git commit -m "feat(apps/windows): MaintenancePage at web parity (W7 vehicle-systems)"
+
+EXIT=0
+STATUS=DONE
