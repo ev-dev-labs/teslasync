@@ -1,0 +1,89 @@
+=== P2 Feature view 0278 ClimatePanel (Windows) ===
+
+Capability assessment (prompt clause: "requires WinUI 3 (Windows App SDK 1.6+) + .NET 10, Fluent Design System")
+  .NET SDK present: 10.0.300 (dotnet --list-sdks -> 10.0.300 [C:\Program Files\dotnet\sdk]).
+  Windows App SDK / WinUI 3: present — TeslaSync.App (net10.0-windows10.0.19041.0, UseWinUI=true) builds the new
+    WinUI 3 ClimatePanel ContentControl in Release with 0 errors.
+  => WinUI 3 + .NET 10 capability IS available; the build/headless-test/format/placeholder gates run on this host.
+  WinAppDriver/Appium UI-automation device: ABSENT on this runner (probe: nothing listening on
+    http://127.0.0.1:4723/ and no WinAppDriver.exe on PATH or standard install paths). This is the deferred,
+    catalogued class in apps/environment-pending-verifications.md ("WinAppDriver/Appium absent" + the W9-0002
+    147-case UIAutomation lane). The same condition the prompt's capability clause says to surface as BLOCKED
+    with evidence.
+
+--- Gate results (commands per the prompt Gate block) ---
+BUILD_EXIT=0      dotnet build apps/windows/TeslaSync.sln -c Release        -> "Build succeeded." / 0 Error(s)
+TEST_EXIT=1       dotnet test  apps/windows/TeslaSync.sln -c Release        -> headless green, UIAutomation blocked (see below)
+FORMAT_EXIT=0     dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no formatting changes
+PLACEHOLDER_EXIT=0  apps/tools/check-placeholders.ps1 -Path .../feature-views/ClimatePanel  -> PLACEHOLDER_COUNT=0
+
+--- Test detail (verbatim per-assembly summaries) ---
+Passed!  - Failed:     0, Passed: 29101, Skipped:     0, Total: 29101, Duration: 27 s - TeslaSync.App.Tests.dll (net10.0)
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 625 ms - TeslaSync.App.UITests.dll (net10.0)
+
+  Headless suite (TeslaSync.App.Tests): 29101/29101 PASS — includes this surface's 43 ClimatePanel facts:
+    Passed!  - Failed: 0, Passed: 43, Total: 43  (--filter FullyQualifiedName~ClimatePanelTests)
+  UIAutomation suite (TeslaSync.App.UITests): 147/147 FAILED, every failure identical and environmental:
+    TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+    WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe
+    was not found at its standard install paths or on PATH.
+    (WinAppDriverSession.EnsureReady, WinAppDriverSession.cs:75). These never touch ClimatePanel logic; they
+    drive the packaged app out-of-process over W3C WebDriver and require a provisioned WinAppDriver device.
+    Deferred to run-ui-automation.ps1 on a WinAppDriver-provisioned runner (ADR-012 CI matrix; W9-0002).
+
+--- Surface ---
+apps/windows/TeslaSync.App/feature-views/ClimatePanel/ClimatePanel.{Model,Source,ViewModel}.cs (UI-free) +
+ClimatePanel.cs (WinUI 3 ContentControl view). Parity port of
+web/src/features/vehicles/components/telemetry-panels/ClimatePanel.tsx.
+
+States reproduced (every web branch + the feature-view's own freshness chrome):
+  loading (skeleton), loaded (temps + setpoints + HVAC + fan bars + system badges),
+  empty ("No climate data available"), error (retry affordance), stale (chip + content), offline (chip + content).
+  The web component is a pure child gated on truthy climateData; the native feature-view owns its
+  cache-then-network /climate/latest read and therefore renders the full P2 state matrix.
+
+Component mapping (web -> native): GlassPanel->TsGlassPanel, Thermometer icon->FontIcon (accent),
+  MetricCard (Cabin/Outside)->TsMetricCard, setpoint/HVAC rows->Grid(label muted + mono value),
+  six-bar fan indicator->graduated Borders (lit=accent / unlit=surface) + mono level, status chips->TsBadge(+FontIcon),
+  FadeIn->TsFadeIn, skeleton/empty/error->TsSkeleton/TsEmptyState/TsQueryError, freshness->TsBadge+TsDataFreshness+TsButton.
+
+Data sources (P1/S8): bound via the shared cache-then-network state-holder seam (IClimatePanelSource ->
+  ClimatePanelSource -> CacheThenNetworkEngine over get_api_v1_climate_latest, scoped by vehicle_id;
+  primary-vehicle resolution + disabled-when-no-vehicle short-circuit). The view performs no HTTP.
+  Operation verified against the generated endpoint table (contract-drift guard test).
+
+i18n (P1/S10): every string flows through the ILocalizer facade. All 13 source keys exist in
+  apps/shared/i18n/catalog/en.json: common.climate, common.insideTemp, common.outsideTemp,
+  telemetry.driverSetpoint, telemetry.passengerSetpoint, telemetry.hvacState, telemetry.fanSpeed,
+  telemetry.defrost, common.off, common.on, telemetry.precondition, telemetry.climate, telemetry.noClimateData.
+  English fallbacks asserted via PassthroughLocalizer (the repo's established fallback contract; resw is generated).
+
+Units: SI degrees Celsius read straight from the API; converted to the user's preference only at the render
+  boundary via UnitFormatters.FormatTemperature (web useUnits parity). Changing UnitPref re-projects the temps
+  (asserted metric->imperial).
+
+Accessibility: Narrator names on the panel, every metric/setpoint/HVAC row, the fan readout, each badge, and the
+  refresh button; loading skeleton announced via LiveRegion; reduce-motion honoured on the skeleton; AutomationPeer
+  reports a Group with the localized title.
+
+Tests: adapter (JSON parse incl. numeric/bool strings, missing fields, non-object), projection (temps metric+imperial,
+  HVAC em-dash fallback, fan level/value, defrost/climate/precondition badge selection, empty), result mapper
+  (cached/refreshing/loaded/empty/offline/failure preservation), view-model per-state matrix (loading/loaded/empty/
+  error/stale/offline + fold + retry + unit re-projection + PropertyChanged + i18n), repository source (primary/explicit/
+  no-vehicle/null-snapshot), contract-drift guard, registration + diagnostics. 43/43 green.
+
+Tests.csproj wiring (necessary precondition): TeslaSync.App targets a WinUI TFM and cannot be project-referenced
+  from the plain net10.0 headless host, so each surface's Microsoft.UI-free sources are Compile-linked into
+  TeslaSync.App.Tests. Added the 3 ClimatePanel.{Model,Source,ViewModel}.cs links (path-grouped next to
+  ClimateControlPage) so ClimatePanelTests.cs compiles — mirroring every sibling surface. New files normalized to
+  LF (UTF-8, no BOM) per .editorconfig; whole-solution dotnet format verify is clean (FORMAT_EXIT=0).
+
+Honesty (covenant rules 1 & 10): TEST_EXIT=1 is reported verbatim — no red-as-green. The surface is complete and
+  is verified by every gate this host can run: build (0), 29101/29101 headless tests incl. its own 43 facts,
+  whole-solution format (0), placeholder (0). The sole failing factor is the absent WinAppDriver/Appium device
+  capability driving the 147 [Category=UIAutomation] tests — the exact condition this prompt's capability clause
+  says to surface as BLOCKED with evidence, and the deferred class catalogued in
+  apps/environment-pending-verifications.md (W9-0002, run-ui-automation.ps1 on a WinAppDriver-provisioned runner).
+
+EXIT=1
+STATUS=BLOCKED
