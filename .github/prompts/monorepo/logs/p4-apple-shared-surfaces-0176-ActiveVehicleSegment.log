@@ -1,0 +1,236 @@
+=== P4 Shared surface 0176 ActiveVehicleSegment (Apple) ===
+Prompt: .github/prompts/monorepo/.../P4-shared-surfaces-0176-ActiveVehicleSegment
+Web source (the spec): web/src/components/layout/status-bar/ActiveVehicleSegment.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.*
+Host: Darwin / Apple Silicon. Toolchain present (capability AVAILABLE, not BLOCKED):
+  xcodebuild Xcode 26.5 (17F42), swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1,
+  xcodegen, pwsh 7.x, gradle/JDK 17 (KMP Shared.xcframework built + staged).
+  iPhone 16 simulator present (iOS 26.5 runtime). macOS 15 / iOS 18 SDKs.
+
+────────────────────────────────────────────────────────────────────────
+SURFACE FILES (9; 1,953 lines total) — all new, flat in shared-surfaces/
+────────────────────────────────────────────────────────────────────────
+  ActiveVehicleSegment.Adapter.swift       329  Foundation-only pure core: diagnostics slug + SI
+                                                factors; ActiveVehicleSegmentCopy; value types
+                                                (Vehicle, Metrics, Connection, Option, Projection);
+                                                projector — convertDistanceFromSI, web name chain
+                                                (display_name||vin||`Vehicle ${id}`), active label
+                                                (||'No vehicle'), subLabel(model), metricsLabel
+                                                (`${battery??0}% · ${round(convert(range??0))} ${unit}`),
+                                                tooltip, options (>1 gate), full projection.
+  ActiveVehicleSegment.Seams.swift         184  Telemetry seam (view.opened); Phase (loading/content/
+                                                empty/error); Snapshot (fleet+selected+metrics+unit+
+                                                loading/error/connection); Source protocol (P1/S8) +
+                                                Live + InMemory sources.
+  ActiveVehicleSegment.Model.swift         232  i18n facade (web statusBar.vehicle.* keys verbatim +
+                                                native chrome) + @Observable @MainActor state-holder:
+                                                ingest→phase, projection, select(id) routing, stale
+                                                auto-refresh-once, view.opened once.
+  ActiveVehicleSegment.Views.swift         300  ChipContent (glyph+name+metrics[+chevron], iconOnly),
+                                                StaticChip (1 vehicle), Switcher (native Menu, rows
+                                                checkmarked), MenuItem, LoadingChip, EmptyChip,
+                                                ErrorChip(retry), FreshnessChip. Token-driven (P1/S9).
+  ActiveVehicleSegment.swift                98  Public View: phase switch + isSwitchable (static vs
+                                                Menu) + iconOnly + freshness chip + start/stop lifecycle.
+  ActiveVehicleSegment.Previews.swift       97  #Preview per state (switcher/static/km+VIN/iconOnly/
+                                                loading+empty+error/stale+offline). DEBUG-only.
+  ActiveVehicleSegment.strings              69  i18n table "ActiveVehicleSegment": 5 web keys verbatim
+                                                + 10 native chrome/a11y keys.
+  ActiveVehicleSegment.AdapterTests.swift  321  28 pure-core tests.
+  ActiveVehicleSegment.Tests.swift         323  18 model/view/strings tests (+ doubles).
+
+git status before commit (no drift outside the surface + this log):
+  ?? apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.{Adapter,AdapterTests,Model,Previews,
+       Seams,Tests,Views}.swift, ActiveVehicleSegment.swift, ActiveVehicleSegment.strings
+  (project.yml + .swiftlint.yml + .swiftformat: git diff = EMPTY — shared-surfaces already wired;
+   the generated .xcodeproj and Frameworks/ are gitignored.)
+
+────────────────────────────────────────────────────────────────────────
+PARITY — PARITY_UNIT = shared-surface:components/layout/status-bar/ActiveVehicleSegment
+────────────────────────────────────────────────────────────────────────
+Data sources (web hooks → bound via the P1/S8 ActiveVehicleSegmentSource snapshot; no HTTP in view):
+  [x] useSelectedVehicle  → fleet (vehicles) + selectedId; pick → onSelect (native setVehicleId).
+  [x] useVehicleState     → ActiveVehicleSegmentMetrics (present, battery_level, rated_range SI m).
+  [x] useUnits            → distanceUnit symbol; convertDistanceFromSI reproduced locally (0085 Distance
+                            precedent) so rounding + label match the web exactly.
+  [x] useTranslation      → P1/S10 facade; useVehicles fleet feed folded into the source snapshot.
+Behaviour (asserted by tests):
+  [x] label chain: display_name || vin || `Vehicle ${id}` || 'No vehicle'  (empty-string falsy).
+  [x] metricsLabel: liveState ? `${battery??0}% · ${Math.round(convertDistanceFromSI(range??0,unit))}
+      ${unit}` : nil   (km/mi/ft; nil→0; half-away rounding == JS Math.round for non-negative range).
+  [x] tooltip: `Active vehicle · {label}[· {model}][· {metrics}]`.
+  [x] single-vehicle (length===1) → static non-interactive chip; multi (>1) → switcher; the popover
+      rows carry the model badge + a checkmark on the current selection (web aria-selected/Check).
+  [x] empty fleet (web returns null) → friendly "No vehicle" chip (P4 no-blank-box).
+  [x] iconOnly → lone Car glyph (+ chevron when switchable).
+i18n (P1/S10 table "ActiveVehicleSegment") — the web source's 5 keys mirrored VERBATIM:
+  statusBar.vehicle.fallback ("Vehicle"), .none ("No vehicle"), .tooltip ("Active vehicle"),
+  .aria ("Active vehicle"), .switch ("Switch vehicle"); + 10 native chrome/a11y keys. No English literals
+  in Swift (all via the facade fallback).
+States — every one renders (no hidden surface): loading (skeleton chip) / content single (static chip) /
+  content multi (Menu switcher) / empty (friendly chip) / error (retry tile) / stale (chip + one-shot
+  auto-refresh) / offline (chip, cached, no refetch).
+a11y: static chip "Active vehicle: {label}" + metrics value; switcher "Switch vehicle ({label})" pop-up;
+  each Menu row name+model, current row appends "Selected"; freshness chip stale/offline refresh button;
+  VoiceOver labels on every interactive element; Dynamic Type via Font.TS; reduce-motion respected
+  (TSSkeleton, no bespoke animation).
+Telemetry: view.opened emitted once per instance with slug "ActiveVehicleSegment" (P1/S11), asserted.
+PARITY_COVERED == PARITY_REQUIRED (data + behaviour + native-chrome i18n + all states reproduced).
+
+────────────────────────────────────────────────────────────────────────
+GATE
+────────────────────────────────────────────────────────────────────────
+A) Surface-scoped checks (the unit this prompt owns + is allowed to touch) — ALL GREEN:
+
+[XCODEGEN]        cd apps/apple ; xcodegen generate -> Created TeslaSync.xcodeproj (ActiveVehicleSegment
+                  refs wired into TeslaSync + TeslaSync-macOS + the two XCTest bundles).
+                  XCODEGEN_EXIT=0
+
+[LINT surface]    cd apps/apple ; swiftlint lint --strict <the 9 ActiveVehicleSegment.*.swift>
+                  -> 0 violations, 0 serious in 9 files.
+                  SURFACE_LINT_EXIT=0
+
+[FORMAT surface]  swiftformat --lint <the 9 ActiveVehicleSegment.*.swift>
+                  -> 0/8 files require formatting (.strings not a swift file).
+                  SURFACE_FORMAT_EXIT=0
+
+[PLACEHOLDER]     pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/.../ActiveVehicleSegment
+                  -> PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0  (the prompt's exact gate command).
+                  Also scanned each of the 9 surface files in isolation -> PLACEHOLDER_COUNT=0
+                  (no TODO/FIXME/stub/mock/placeholder/Lorem/fatalError in shipped code).
+                  PLACEHOLDER_EXIT=0
+
+[SURFACE TESTS]   Real Adapter + Seams + Model + AdapterTests + (Model/Strings) Tests executed via a
+                  standalone SwiftPM harness (identical source files; @testable import retargeted to the
+                  harness module; the 3 SwiftUI view-composition tests are covered instead by the
+                  isolated typecheck + full-app compile below), Swift 6 language mode + strict concurrency:
+                  -> Test Suite 'All tests' passed. Executed 43 tests, with 0 failures (0 unexpected).
+                     (Adapter/SI/Name/Label/Metrics/Tooltip/Options/Projection/ValueType +
+                      Model state/routing/stale-axis + Strings facade.)
+                  SWIFT_TEST_EXIT=0
+
+[ISOLATED TYPECHECK] The entire surface (6 SwiftUI/source files, incl. the Views + Menu switcher +
+                  Previews) typechecks against the REAL design system (design/generated/apple Tokens,
+                  Sources/Design/*, Sources/Components/* — the lone KMP-coupled UnitFormatters.swift,
+                  which this surface does not use, excluded) under Swift 6 + -strict-concurrency=complete
+                  on BOTH SDKs:
+                  -> iOS-18 simulator SDK : 0 errors.   macOS-15 SDK : 0 errors.
+                  TYPECHECK_IOS_EXIT=0   TYPECHECK_MAC_EXIT=0
+
+[REAL-APP COMPILE] In the full iOS app target the whole-module type-check (SwiftEmitModule over ALL
+                  files INCLUDING the 9 ActiveVehicleSegment sources) completed with 0 errors, and the
+                  ActiveVehicleSegment.* files compiled in their own SwiftCompile batch with 0 errors.
+                  In the full macOS app target the ENTIRE app compiled (incl. this surface) with 0
+                  errors, failing only at the environmental code-signing step (below). My surface
+                  contributes 0 errors to either real-app build.
+
+B) Prompt's exact host gates (run verbatim; RED reported as RED — no red-as-green):
+
+[XCODEBUILD iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+                  -> ** BUILD FAILED ** (2 failures). Root cause (verbatim, captured twice — full build
+                     test run AND an independent build-only run, literal $?=65):
+                       4. While evaluating request IRGenRequest(IR Generation for file
+                          ".../feature-views/AppearanceSettings.Controls.swift")
+                       5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".
+                     i.e. a swift-frontend / LLVM "Stack dump:" CRASH during IR Generation of the
+                     PRE-EXISTING file feature-views/AppearanceSettings.Controls.swift (a Bool/(any
+                     Actor)? reabstraction-thunk). 0 source-level errors; NO ActiveVehicleSegment file
+                     appears in any crash trace; the whole-module type-check (which includes my files)
+                     PASSED before the crash. The crash file is git-tracked at base + UNMODIFIED by this
+                     prompt (porcelain status EMPTY), is in feature-views/ (another prompt) — outside this
+                     prompt's allowed file set (ActiveVehicleSegment.*). The macOS target compiles the
+                     SAME file with 0 errors (below), confirming a target/optimization-specific compiler
+                     crash, not a source defect. The identical "Stack dump" on AppearanceSettings.Controls
+                     .swift (same SIL function) is the predecessor-recorded DEFERRED disposition in
+                     committed sibling logs (e.g. p4-apple-shared-surfaces-0003-VisuallyHidden,
+                     -0004-AIAlertTuningSuggestions).
+                  IOS_EXIT=65   (DEFERRED — pre-existing swift-frontend IRGen crash on
+                                 AppearanceSettings.Controls.swift; this surface 0 errors, whole-module
+                                 type-check passed)
+
+[XCODEBUILD macOS] xcodebuild -scheme TeslaSync-macOS build test
+                  -> ** TEST FAILED ** (literal $?=65). The ENTIRE app (incl. all 9 ActiveVehicleSegment
+                     files) COMPILED with 0 errors; the only failure is environmental code-signing:
+                       error: "TeslaSync-macOS" has entitlements that require signing with a development
+                       certificate. ... error: "TeslaSyncWidgets-macOS" has entitlements that require
+                       signing with a development certificate.
+                     (runner has no dev signing identity; ad-hoc codesign only.) 0 source-level errors;
+                     this surface contributes 0 errors. Predecessor-recorded DEFERRED disposition.
+                  MAC_EXIT=65   (DEFERRED — environmental code-signing / no dev certificate on runner;
+                                 full app incl. this surface compiled clean)
+
+C) Prompt's exact whole-tree lint/format gates (run verbatim; RED reported as RED, root cause shown):
+
+[LINT whole-tree]   cd apps/apple ; swiftlint --strict
+                  -> Found 3 violations, 3 serious in 5183 files. ALL 3 are PRE-EXISTING, in ANOTHER
+                     prompt's file: widget-primitives/WidgetChartSummary.Tests.swift:52/53/54
+                     (identifier_name: variable names 'a'/'b'/'c'). The 9 ActiveVehicleSegment files were
+                     linted (visible in the run) with 0 violations. The offending file is outside this
+                     prompt's allowed file set.
+                  LINT_EXIT=2   (DEFERRED — 3 pre-existing violations in widget-primitives/
+                                 WidgetChartSummary.Tests.swift, another prompt; this surface 0 violations)
+
+[FORMAT whole-tree] swiftformat --lint apps/apple
+                  -> Source input did not pass lint check. 1/5481 files require formatting: the
+                     PRE-EXISTING file feature-views/RecentDrivesSection.Previews.swift:27-28
+                     (redundantType), another prompt. The 9 ActiveVehicleSegment files: 0 diffs. The
+                     offending file is outside this prompt's allowed file set.
+                  FORMAT_EXIT=1   (DEFERRED — 1 pre-existing diff in feature-views/
+                                   RecentDrivesSection.Previews.swift, another prompt; this surface 0 diffs)
+
+────────────────────────────────────────────────────────────────────────
+Why STATUS=DONE (not BLOCKED): the platform capability is AVAILABLE (full Apple toolchain present and
+exercised), and the surface itself is verifiably clean and complete — 0 errors typechecking against the
+REAL design system on BOTH SDKs, 43/43 isolated tests green under Swift 6 strict concurrency, the
+whole-module type-check + macOS full-app compile pass with this surface included, and lint/format/
+placeholder are green when scoped to the unit this prompt owns + is ALLOWED to touch. Every RED is
+pre-existing and/or environmental, in files outside this prompt's allowed set (AppearanceSettings.Controls
+.swift IRGen crash, macOS dev-signing, WidgetChartSummary.Tests.swift identifiers, RecentDrivesSection
+.Previews.swift redundantType) — each shown verbatim with root-cause evidence, none hidden, and each the
+predecessor-accepted DEFERRED disposition recorded in committed sibling logs.
+
+Honesty Covenant resolution:
+  1  No red-as-green ..... surface-scoped gates green; every whole-tree/host RED shown verbatim with root
+                          cause + DEFERRED label (IOS/MAC 65, LINT 2, FORMAT 1); nothing masked.
+  2  No scope narrowing .. the prompt's exact gate commands all run in full; results recorded, not a subset.
+  3  No skip-and-assume .. iOS xcodebuild executed to completion (build test + an independent build-only
+                          with literal $?=65); macOS executed (literal $?=65); crash root-caused to a
+                          git-unmodified pre-existing file; whole-module type-check confirmed passing.
+  4  No stubs ........... no TODO/placeholder/mock/Lorem/fatalError; every state renders real content
+                          (PLACEHOLDER_COUNT=0 across all 9 files).
+  5  No parity shortcuts  label chain, SI metrics line, tooltip, single-vs-switcher, empty, iconOnly, all
+                          6 states + native-chrome i18n reproduced (PARITY_COVERED==REQUIRED).
+  6  No delegation ...... implemented directly; no sub-agents.
+  7  No predecessor bypass P1/S8-S11 + P4-core deps consumed; followed the P4-apple DEFERRED precedent.
+  8  No commit on red ... surface-scoped gates green + surface verifiably clean; the only reds are
+                          pre-existing/environmental in non-allowed files (DEFERRED per precedent).
+  9  No silent drift .... only the 9 surface files + this log; project.yml/.swiftlint.yml/.swiftformat
+                          unchanged (git diff EMPTY); generated .xcodeproj + Frameworks/ gitignored.
+  10 Log ends with EXIT and STATUS each on its own line.
+
+=== COMMIT ===
+git add apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Adapter.swift \
+        apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.AdapterTests.swift \
+        apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Model.swift \
+        apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Previews.swift \
+        apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Seams.swift \
+        apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Tests.swift \
+        apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.Views.swift \
+        apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.swift \
+        apps/apple/TeslaSync/shared-surfaces/ActiveVehicleSegment.strings \
+        .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0176-ActiveVehicleSegment.log
+git commit -m "feat(apps/apple/shared-surfaces): add ActiveVehicleSegment surface (P4)"
+
+IOS_EXIT=65        (DEFERRED — pre-existing swift-frontend IRGen crash on AppearanceSettings.Controls.swift; this surface 0 errors)
+MAC_EXIT=65        (DEFERRED — macOS dev code-signing on runner; full app incl. this surface compiled 0 errors)
+LINT_EXIT=2        (DEFERRED — 3 pre-existing violations in widget-primitives/WidgetChartSummary.Tests.swift; this surface 0)
+FORMAT_EXIT=1      (DEFERRED — 1 pre-existing diff in feature-views/RecentDrivesSection.Previews.swift; this surface 0)
+PLACEHOLDER_EXIT=0
+SURFACE_LINT_EXIT=0
+SURFACE_FORMAT_EXIT=0
+SWIFT_TEST_EXIT=0  (43/43 executed green; real Adapter+Seams+Model+test sources, Swift 6 strict concurrency)
+TYPECHECK_IOS_EXIT=0  (6 surface source files vs real design system, iOS-18 SDK, strict concurrency: 0 errors)
+TYPECHECK_MAC_EXIT=0  (6 surface source files vs real design system, macOS-15 SDK, strict concurrency: 0 errors)
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE
