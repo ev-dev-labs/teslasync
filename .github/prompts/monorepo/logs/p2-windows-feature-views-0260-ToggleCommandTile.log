@@ -1,0 +1,129 @@
+=== P2 Feature view 0260 ToggleCommandTile (Windows) ===
+Runner: Windows_NT 10.0  |  .NET SDK 10.0.300  |  workloads: maui-windows (WinUI 3 / Windows App SDK tooling present)
+Web source (spec): web/src/features/system/components/ToggleCommandTile.tsx
+Native output:     apps/windows/TeslaSync.App/feature-views/ToggleCommandTile.cs
+                   apps/windows/TeslaSync.App/feature-views/ToggleCommandTile.Model.cs
+Tests:             apps/windows/TeslaSync.App.Tests/FeatureViews/ToggleCommandTileTests.cs  (55 tests)
+Tests wiring:      apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj (Compile-link of the WinUI-free Model.cs)
+
+--- DELIVERABLE SUMMARY ---
+Native WinUI 3 parity port of the web ToggleCommandTile stateful on/off command tile:
+  * Glass command card (TsGlassPanel; padding moved to an inner fill Border so the on-state accent fill covers
+    the whole card) hosted in a chrome-less Button = the whole-card click target (web clickable GlassPanel).
+  * On/off visual state (web onStyles[variant]): while ON the variant accent (default->cyan, danger->red,
+    success->green) tints the card border (/20), the card fill (/5), the status dot (solid), the icon badge
+    (/20) + the icon, and the ON caption; while OFF it collapses to surface-2 (dot + icon badge bg) and
+    text-muted (icon + OFF caption). The off-state hover brightens the hairline (web --border-subtle).
+  * Icon swap (web isOn ? def.icon : def.iconOff ?? def.icon), with a defensive generic-glyph fallback.
+  * Lifecycle: a dispatch in flight (web `loading`) swaps the icon for a TsSpinner busy ring (web Loader2),
+    dims the card (opacity-50) and suppresses the click.
+  * Click semantics (web handleClick): OFF + inputConfig -> DialogRequested (web onRequestDialog(def));
+    OFF + no inputConfig -> CommandExecuted(command, params) (web onExecute(def.command, def.params));
+    ON -> CommandExecuted(commandOff) (web onExecute(def.commandOff!)). Optimistic local toggle for commands
+    with no backing vehicle state field (web setLocalToggle); state-field-backed commands are driven entirely
+    by the host-supplied IsOn (web def.stateField && state ? state[def.stateField] : localToggle).
+  * Status dot top-right (decorative, hidden from Narrator). Favorite-toggle star top-left (TsButton, Icon
+    variant) -> FavoriteToggled (web onToggleFavorite); always reachable for keyboard/Narrator (the web hides it
+    behind opacity-0 group-hover, which is not accessible).
+  * ON/OFF caption (web t('commands.on','ON') / t('commands.off','OFF')), and an optional last-command status
+    caption with the web tone rule (U+2713 prefix -> success/green, any other non-blank -> failure/red),
+    wired as a polite live region so command results are announced.
+  * Every string via the i18n facade; static keys commands.toggleFavorite / commands.on / commands.off all
+    present in the P1/S10 catalog (apps/windows/Strings/en/Resources.resw ->
+    translation.commands.toggleFavorite / translation.commands.on / translation.commands.off).
+  * PII-safe diagnostics (P1/S11): view.opened / command.executed / dialog.requested / favorite.toggled,
+    slug=ToggleCommandTile (never the command id / label / status).
+  * No fetch-driven empty/error/stale/offline branch: the web source's only data source is useTranslation
+    (documented in the Model, matching the sibling InputCommandTile / ToolCard presentational ports). The web
+    source's real branches -- loading, on/off, status none/success/error, favorite -- are ALL reproduced.
+  * Reduced-motion honoured by construction (no bespoke looping motion; the busy ring is the system progress
+    indicator).
+  * All UI-free logic (branch/tone/accent/on-off keys/automation-name/i18n) in ToggleCommandTileProjection ->
+    unit-tested headlessly (55 tests).
+
+============================================================
+GATE RESULTS
+============================================================
+
+[1] dotnet build apps/windows/TeslaSync.sln -c Release
+    -> Build succeeded.  0 Error(s).  Warning(s) ALL pre-existing in TeslaSync.App.Core (CA1720/CA1716/
+       CA1000/CA1859); none in the new files. TeslaSync.App has TreatWarningsAsErrors=true and produced
+       0 errors, so the new view/model are warning-clean.
+    BUILD_EXIT=0
+
+[2] dotnet test apps/windows/TeslaSync.sln -c Release
+    Passed!  - Failed:   0, Passed: 29113, Skipped: 0, Total: 29113 - TeslaSync.App.Tests.dll   (net10.0)
+    Failed!  - Failed: 147, Passed:     0, Skipped: 0, Total:   147 - TeslaSync.App.UITests.dll (net10.0)
+    TEST_EXIT=1
+
+    >>> ALL 147 failures are the W9 out-of-process UI-automation E2E suite (every test
+        [Trait("Category","UIAutomation")]), failing for ONE environmental reason (147/147 identical):
+
+        TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run:
+        WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and
+        WinAppDriver.exe was not found at its standard install paths or on PATH.
+          at WinAppDriverSession.EnsureReady() ... WinAppDriverSession.cs:line 75
+
+        These tests are run via the dedicated harness apps/windows/run-ui-automation.ps1 (P2/W9-0002), which
+        REQUIRES Developer Mode + Windows App SDK runtime + WinAppDriver 1.2.1+ + a deployed packaged app, and
+        is documented in TeslaSync.App.UITests.csproj to FAIL fast (never silently skip) when the runner is
+        absent. 0 of the 147 failures reference TeslaSync.App.Tests (the headless suite); 0 reference
+        ToggleCommandTile. This is identical, pre-existing, surface-independent, and reproduces on every P2
+        surface log on this runner (see the sibling 0232-InputCommandTile / 0266-SignalChartPanel logs).
+
+    Capability probe (this runner): UserInteractive=True, Listening_on_4723=False, WinAppDriver_on_PATH=False,
+        WinAppDriver_at_standard_paths=False. The WinUI 3 / .NET 10 BUILD capability IS present (step [1] built
+        the WinUI 3 surface; step [2b] ran 29113 headless tests). The WinAppDriver UI-automation RUNNER
+        capability (needed only for the unrelated W9 E2E suite, not to build/ship this surface) is NOT present.
+
+[2b] dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"   (isolation evidence)
+    Passed!  - Failed: 0, Passed: 29113, Skipped: 0, Total: 29113 - TeslaSync.App.Tests.dll (net10.0)
+    NONUIA_TEST_EXIT=0
+    -> Everything except the WinAppDriver E2E suite is green, including all 55 ToggleCommandTile adapter /
+       per-state (ready/loading, on/off, status none/success/error, favorite) / accessibility-label /
+       diagnostics tests. The block is isolated entirely to the absent UI-automation runner.
+
+[3] dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+    -> clean (the 3 new files were normalized to LF per .editorconfig end_of_line=lf; targeted
+       --include verify of the 3 files is also clean).
+    FORMAT_EXIT=0
+
+[4] ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ToggleCommandTile
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+    Explicit per-file scan (ToggleCommandTile.cs, ToggleCommandTile.Model.cs, ToggleCommandTileTests.cs):
+       PLACEHOLDER_COUNT=0 each. No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented/
+       NotImplementedException/// stub/mock in shipped code.
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+[x] Surface renders every state from the web source (ready / in-flight loading / on / off /
+    status none-success-error / favorite on-off). No fetch empty/error/stale/offline exists in the web source
+    (useTranslation only) - documented, matching the sibling InputCommandTile / ToolCard presentational ports.
+[x] No direct HTTP from the view; presentational tile, model + projection are WinUI-free and bound through the
+    P1/S8-style shared facade (ILocalizer); the view performs no fetch.
+[x] Every i18n key from source resolves; commands.toggleFavorite / commands.on / commands.off all present in
+    the P1/S10 catalog (translation.commands.*).
+[x] Accessibility names on both interactive elements (whole-card tile + favorite); decorative dot + icon hidden
+    from Narrator; status caption is a polite live region; favorite is a real, always-reachable control.
+[x] Tests: adapter unit test + per-state projection test (incl. on/off + tone) + a11y-label test +
+    diagnostics + executed-payload test (55, all green in [2b]).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (step [4]).
+[ ] EXIT=0 / STATUS=DONE  -> NOT reached: the full-solution `dotnet test` cannot be 0 on this runner because
+    the WinAppDriver UI-automation runner is absent (step [2]). Sanctioned BLOCKED outcome per the prompt's
+    capability clause, with the runner evidence above.
+
+CONCLUSION: The ToggleCommandTile surface is COMPLETE and verified - it builds clean (BUILD_EXIT=0), is fully
+format-clean (FORMAT_EXIT=0) and placeholder-clean (PLACEHOLDER_EXIT=0), and its entire headless unit-test
+suite passes (29113 passed / 0 failed, step [2b]), which includes all 55 ToggleCommandTile tests. The
+full-solution `dotnet test` is red ONLY because the pre-existing W9 WinAppDriver UI-automation E2E suite
+(147 tests, unrelated to this surface) cannot run without the WinAppDriver runner, which is not installed on
+this runner (147/147 UiAutomationUnavailableException). This is the platform-capability gap the prompt's
+capability clause and the repo's own run-ui-automation.ps1 harness treat as an honest BLOCK. Per the Honesty
+Covenant rule 1 (no red-as-green), this is reported as BLOCKED with the evidence above rather than a
+falsely-green DONE; the composite gate EXIT therefore reflects TEST_EXIT=1.
+
+EXIT=1
+STATUS=BLOCKED
