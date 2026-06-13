@@ -1,0 +1,101 @@
+P2-WINDOWS W7 — page:notifications/BrowserNotifications — WinUI 3 / Fluent parity port
+=====================================================================================
+Web source : web/src/features/notifications/pages/BrowserNotificationsPage.tsx (route /notifications/browser)
+Web shape  : <PageContainer title subtitle copyLink><NotificationSettings/></PageContainer> — a thin wrapper.
+Output     : apps/windows/TeslaSync.App/feature-views/BrowserNotificationsPage/
+             (repo convention = C#-markup feature-views, NOT the generated prompt's
+              apps/windows/TeslaSync/Features/Notifications/*.xaml path, which does not exist in-repo;
+              same deviation documented by the sibling done page windows-page-dashboard-QuickStatsPage.log)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("NotificationsBrowser", …)
+             (RouteTable.cs already maps Page("NotificationsBrowser","notifications/browser",Notifications,"Browser Notifications"))
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw — added the two translation.notifications.browser.{title,subtitle}
+             keys (only translation.search.entries.notifications.browser.* existed before), in JS-ordinal sorted
+             position (between …bellPopover.viewAll and …bulk.announceArchived; subtitle before title), preserving
+             LF / UTF-8-no-BOM. English values in all three catalogs: he/ar are placeholder locales
+             (status=placeholder, translated=0, all-English fallback per their resw headers), so English matches what
+             the generator emits, and it also matches the existing untranslated-key convention (e.g.
+             translation.quickStats.title = "Quick Stats" in all three).
+             NOTE (drift, documented — not silent): the resw is generator-owned
+             (apps/shared/i18n/generators/gen-i18n.ts sources from web/src/i18n/en.json). These two hand-added keys
+             would NOT be re-emitted by gen-i18n until the same keys land in web en.json (the web page relies on
+             i18next key-fallback for them today, which ILocalizer.GetString reproduces by returning the English
+             fallback on a catalog miss). Editing web/src/i18n + regenerating all platforms is out of this prompt's
+             allowed-files scope (windows feature dir, nav, Strings/*.resw, log); the gen-i18n --check drift gate is
+             the shared P1/S10 gate, not this windows W7 page gate. The resw is not part of the dotnet build, so this
+             does not affect the build gate. (Same approach + wording as sibling done pages EnergyFlowPage /
+             PowersharePage.) The en/Resources.resw has a PRE-EXISTING strict-XML quirk near its tail (present at HEAD,
+             unrelated to this 6-line edit — my diff is +6 lines at the notifications.browser keys only); left untouched.
+
+Files:
+  feature-views/BrowserNotificationsPage/BrowserNotificationsPage.Model.cs  (Registration: route/slug/strings/copy-link deep link + EmptyNotificationTabSignalsSource — Microsoft.UI-free)
+  feature-views/BrowserNotificationsPage/BrowserNotificationsPage.cs        (WinUI 3 UserControl: PageContainer{Subtitle,CopyLink,PageContent=NotificationSettings})
+  Shell/ShellWindow.xaml.cs                                                 (+1 PageFactory.Register("NotificationsBrowser", …))
+  Strings/{en,he,ar}/Resources.resw                                         (+2 keys each: notifications.browser.title / .subtitle)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                            (Compile-link the UI-free Model.cs; the WinUI view is build-only)
+  TeslaSync.App.Tests/FeatureViews/BrowserNotificationsPageTests.cs         (7 headless tests)
+
+Architecture (ADR-002/004/005/006/011):
+  The web page owns no API data source — it renders from local state and wraps the already-ported NotificationSettings
+  surface (apps/windows/TeslaSync.App/feature-views/NotificationSettings*.cs, its own parity unit with its own state
+  matrix). This page therefore composes the shared PageContainer surface (the parity port of
+  web/src/components/layout/PageContainer.tsx) for the title + muted subtitle + "Copy link" affordance, and hosts the
+  NotificationSettings surface as PageContent. The shell-default NotificationSettings is wired over
+  EmptyNotificationTabSignalsSource + the in-memory permission/push/sound stores (the EmptyXSource convention used by
+  every sibling default port), so the settings surface renders the empty data state (web on-by-default toggles).
+
+Data sources (manifest: none — renders from navigation params / local state):
+  (none at the page tier) — no SSE/live data, so no staleness chip (ADR-013 n/a). The embedded NotificationSettings owns
+  its loading / empty / error / stale / offline matrix; the page-tier PageContainer is shown with content (no page-level
+  loading/empty/error props, exactly as the web page passes none).
+Units (P1/S5): none rendered at this tier (no SI quantities on the page chrome).
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+[1/2] string  notifications.browser.title
+        BrowserNotificationsRegistration.TitleKey = "notifications.browser.title";
+        BrowserNotificationsRegistration.Title(localizer) = localizer.GetString("notifications.browser.title","Browser notifications");
+        rendered by BrowserNotificationsPage.cs::_container (PageContainer ctor title); catalog value in Strings/{en,he,ar}/Resources.resw.
+        evidence-test: BrowserNotificationsPageTests.Title_resolves_the_web_key_with_the_web_fallback,
+                       BrowserNotificationsPageTests.Registration_resolves_every_required_string_key_from_the_catalog
+[2/2] string  notifications.browser.subtitle
+        BrowserNotificationsRegistration.SubtitleKey = "notifications.browser.subtitle";
+        BrowserNotificationsRegistration.Subtitle(localizer) = localizer.GetString("notifications.browser.subtitle","Native browser push notifications when alerts fire.");
+        rendered by BrowserNotificationsPage.cs::_container.Subtitle (PageContainer.Subtitle); catalog value in Strings/{en,he,ar}/Resources.resw.
+        evidence-test: BrowserNotificationsPageTests.Subtitle_resolves_the_web_key_with_the_web_fallback,
+                       BrowserNotificationsPageTests.Registration_resolves_every_required_string_key_from_the_catalog
+# Both keys assert resolved headlessly via a RecordingLocalizer (Registration_resolves_every_required_string_key_from_the_catalog).
+# Route/slug + the shareable copy-link deep link (teslasync://app/notifications/browser) are pinned by
+#   Registration_mirrors_the_web_route_and_slug + CopyLinkUri_is_the_canonical_route_deep_link.
+# The shell-default empty data state is pinned by Default_tab_signals_source_resolves_to_the_empty_state (+ no-op save).
+
+PARITY_COVERED=2
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Notifications does not exist
+# in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/BrowserNotificationsPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (all projects built: Generated, TeslaSync.App.Core, TeslaSync.App.Platform, TeslaSync.App.UITests,
+#    TeslaSync.App.Tests, TeslaSync.App, TeslaSync.TokenGen. The only warnings are pre-existing TeslaSync.App.Core CA*.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <BrowserNotificationsPage.cs + .Model.cs
+#   + ShellWindow.xaml.cs + BrowserNotificationsPageTests.cs>  -> 0 issues (LF/utf-8; new files normalized to LF)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26864, Failed: 0, Skipped: 0
+#   (incl. 7 BrowserNotificationsPageTests)
+TEST_EXIT=0
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/BrowserNotificationsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/he/Resources.resw apps/windows/Strings/ar/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/BrowserNotificationsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-notifications-BrowserNotificationsPage.log
+# git commit -m "feat(apps/windows): BrowserNotificationsPage at web parity (W7 notifications)"
+
+EXIT=0
+STATUS=DONE

@@ -222,6 +222,10 @@ public sealed partial class ShellWindow : Window
         });
         // Notifications / Channels page (P2/W7) — parity port of web ChannelsPage at route /notifications/channels.
         _viewModel.PageFactory.Register("NotificationsChannels", static () => new FeatureViews.Notifications.ChannelsPage());
+        // Notifications / Browser notifications page (P2/W7) — parity port of web BrowserNotificationsPage at route
+        // /notifications/browser. The page wraps the shared NotificationSettings surface in a PageContainer
+        // (title + subtitle + copy-link), mirroring the web page's thin <PageContainer><NotificationSettings/> shape.
+        _viewModel.PageFactory.Register("NotificationsBrowser", static () => new FeatureViews.Notifications.BrowserNotificationsPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
