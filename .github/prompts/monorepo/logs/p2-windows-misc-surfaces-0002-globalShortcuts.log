@@ -1,0 +1,50 @@
+=== P2 Misc surface 0002 globalShortcuts (Windows) ===
+run: 2026-06-13T09:37:45.2067044-07:00
+host: dotnet 10.0.300 ; sdks: 9.0.314 [C:\Program Files\dotnet\sdk], 10.0.300 [C:\Program Files\dotnet\sdk]
+
+--- dotnet build apps/windows/TeslaSync.sln -c Release ---
+TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+Generated -> D:\repos\teslasync-wt2\wt-09\apps\windows\Generated\bin\Debug\net10.0\TeslaSync.Windows.Generated.dll
+TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+TeslaSync.App -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+Build succeeded.
+0 Warning(s)
+0 Error(s)
+BUILD_EXIT=0
+
+--- dotnet test apps/windows/TeslaSync.sln -c Release ---
+Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 342 ms - TeslaSync.App.UITests.dll (net10.0)
+Passed!  - Failed:     0, Passed: 29111, Skipped:     0, Total: 29111, Duration: 15 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=1
+-- UITest failure cause (evidence: absent UI-automation runner) --
+TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.EnsureReady() in D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 75
+at TeslaSync.App.UITests.Fixtures.WinAppDriverSession.RunAsync(String testName, Func`2 body) in D:\repos\teslasync-wt2\wt-09\apps\windows\TeslaSync.App.UITests\Fixtures\WinAppDriverSession.cs:line 108
+
+--- dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+(no formatting changes reported)
+FORMAT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/windows/TeslaSync.App/misc-surfaces/globalShortcuts ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- SUPPLEMENTARY: globalShortcuts surface tests (headless) ---
+Passed!  - Failed:     0, Passed:    27, Skipped:     0, Total:    27, Duration: 97 ms - TeslaSync.App.Tests.dll (net10.0)
+GLOBALSHORTCUTS_TESTS_EXIT=0
+
+=== DETERMINATION ===
+surface-scoped gates: BUILD_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0 GLOBALSHORTCUTS_TESTS_EXIT=0
+full-solution TEST_EXIT=1
+evidence: headless App.Tests assembly passed=True ; UITests assembly failed=True
+note: the only red is the pre-existing WinAppDriver UI-automation suite (TeslaSync.App.UITests),
+      which requires a UI-automation runner (WinAppDriver) + deployed MSIX absent on this headless runner.
+      Every globalShortcuts surface-scoped gate (build, headless surface tests, format, placeholder) is green.
+EXIT=1
+STATUS=BLOCKED
+done: 2026-06-13T09:48:16.0030720-07:00
