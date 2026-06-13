@@ -628,6 +628,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\HelixPage\HelixPage.Model.cs" Link="FeatureViews\HelixPage\HelixPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HelixPage\HelixPage.ViewModel.cs" Link="FeatureViews\HelixPage\HelixPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\helpers\Helpers.Source.cs" Link="FeatureViews\helpers\Helpers.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HelpPage\HelpPage.Model.cs" Link="FeatureViews\HelpPage\HelpPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\HelpPage\HelpPage.ViewModel.cs" Link="FeatureViews\HelpPage\HelpPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\Charging\HeroGauges.Model.cs" Link="FeatureViews\HeroGauges\Charging\HeroGauges.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\Charging\HeroGauges.Source.cs" Link="FeatureViews\HeroGauges\Charging\HeroGauges.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HeroGauges\Charging\HeroGauges.ViewModel.cs" Link="FeatureViews\HeroGauges\Charging\HeroGauges.ViewModel.cs" />

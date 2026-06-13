@@ -193,6 +193,9 @@ public static class RouteTable
         Hidden("IncidentTimeline", "system-status/incidents/:id", RouteGroup.SystemOps, "Incident"),
         Page("StatusApiDocs", "docs/status-api", RouteGroup.SystemOps, "Status API Docs", "\uE8A5"),
         Page("Roadmap", "roadmap", RouteGroup.SystemOps, "Roadmap", "\uE8A7"),
+        // HelpPage is unrouted in web App.tsx (the component exists but is not wired into a visible nav route);
+        // the Windows shell exposes it as a hidden deep-link destination so the W7 parity port is reachable.
+        Hidden("Help", "help", RouteGroup.SystemOps, "Help"),
 
         // ── Admin / DevTools ───────────────────────────────────────────────────
         Page("APIKeys", "api-keys", RouteGroup.AdminDevTools, "API Keys", "\uE192"),
