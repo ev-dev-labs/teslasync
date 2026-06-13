@@ -8,6 +8,7 @@ using TeslaSync.App.Auth;
 using TeslaSync.App.Auth.Onboarding;
 using TeslaSync.App.Components.Feedback;
 using TeslaSync.App.Core.Auth;
+using TeslaSync.App.Core.Data.Net;
 using TeslaSync.App.Core.Lifecycle;
 using TeslaSync.App.Core.Navigation;
 using TeslaSync.App.Core.Settings;
@@ -56,8 +57,24 @@ public sealed partial class ShellWindow : Window
         ShellBreadcrumbs.ItemsSource = _viewModel.Breadcrumbs;
         SearchBox.PlaceholderText = Localization.Get("shell.search.placeholder", "Search"); // parity:allow PlaceholderText is the WinUI hint API
 
-        // Onboarding / sign-in surface (P2/W4-0001) for the public onboarding route.
-        _viewModel.PageFactory.Register("Onboarding", static () => new OnboardingView());
+        // Onboarding (P2/W7) — parity port of web OnboardingPage (the first-run setup checklist) at route /onboarding.
+        // The Windows shell also uses this public route as the signed-out auth gate (P2/W4-0001), so the factory
+        // renders the W7 checklist for an authenticated operator (web /onboarding = the checklist, shown post-auth)
+        // and keeps the W4 sign-in surface while signed out (the only interactive sign-in entry point). The
+        // checklist's internal CTAs (Connect Tesla account, footer account link, Skip, Continue) navigate via
+        // NavigationRequested; its documentation links open in the browser via DocumentationRequested.
+        _viewModel.PageFactory.Register("Onboarding", () =>
+        {
+            if (!AppAuth.IsAuthenticated)
+            {
+                return new OnboardingView();
+            }
+
+            var page = new FeatureViews.Onboarding.OnboardingPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            page.DocumentationRequested += (_, path) => OpenDocumentation(path);
+            return page;
+        });
 
         // Dashboard / Command Center page (P2/W7) — parity port of web DashboardPage at the index route /.
         // The onboarding "Connect Tesla Account" action and the account-warning Settings link navigate to /settings.
@@ -734,6 +751,21 @@ public sealed partial class ShellWindow : Window
         {
             // A sign-out (or expired session) must re-gate the current route immediately.
             NavigateTo(_viewModel.CurrentPath);
+        }
+    }
+
+    // Open an external documentation link in the default browser (web onboarding doc links: <a href target="_blank">).
+    // Resolved against the configured API origin since the self-hosted docs ship from the same deployment.
+    private static void OpenDocumentation(string relativePath)
+    {
+        try
+        {
+            var origin = new ApiClientOptions().BaseAddress;
+            _ = Windows.System.Launcher.LaunchUriAsync(new Uri(origin, relativePath));
+        }
+        catch (Exception)
+        {
+            // Best-effort: opening external documentation must never crash navigation.
         }
     }
 

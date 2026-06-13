@@ -1,0 +1,133 @@
+=== p2-windows · W7 · page:onboarding/Onboarding (WinUI 3 / Fluent) ===
+Parity unit : page:onboarding/Onboarding   kind=page   web route=/onboarding
+Web source  : web/src/features/onboarding/pages/OnboardingPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ExportsPage / DashboardPage do. The generated prompt's idealized "OnboardingPage.xaml + OnboardingPageViewModel.cs
+  under TeslaSync/Features/Onboarding" is mapped onto these real conventions (namespace TeslaSync.App.FeatureViews.Onboarding).
+- Navigation entry (ADR / W4 seam): the route "Onboarding" (RouteTable.cs path `onboarding`, public/auth:false) was a
+  W4 dual-purpose surface — the Windows shell uses it both as the web /onboarding destination AND as the signed-out
+  auth gate (ShellWindow.NavigateTo redirects protected routes to "onboarding" when signed out). The web /onboarding
+  is purely the first-run setup checklist (shown post-auth via OnboardingGate); the only interactive sign-in entry on
+  Windows is the W4 OnboardingView. To deliver web parity WITHOUT bypassing the predecessor sign-in, the registration
+  (ShellWindow.xaml.cs) is now an auth-aware factory: AppAuth.IsAuthenticated -> the W7 FeatureViews.Onboarding.OnboardingPage
+  checklist; otherwise -> the W4 OnboardingView sign-in. The checklist's internal CTAs (Connect Tesla account, footer
+  account link, Skip, Continue) raise NavigationRequested -> ShellWindow.NavigateTo (routes /tesla-account, /); its
+  documentation links raise DocumentationRequested -> ShellWindow.OpenDocumentation (Launcher against the API origin).
+- Data binding (ADR-004): the manifest data source is useOnboardingStatus (GET /onboarding/status). The view-model reads
+  through an injected IOnboardingStatusFeed; the default EmptyOnboardingStatusFeed resolves the pessimistic "nothing
+  connected" snapshot (the outstanding checklist — the host-injection precedent the sibling W7 pages set), and the
+  generated-client-backed OnboardingStatusClientFeed (OnboardingPage.Source.cs) binds to the generated OpenAPI contract
+  client operation get_api_v1_onboarding_status (no params, present in Generated/Api/ApiEndpoints.cs). No HTTP touches
+  the view. The status JSON round-trips through the tolerant OnboardingStatusSnapshot.FromJson (snake_case fields
+  tesla_connected / vehicle_count / data_flowing / is_complete; accepts the platform {data:…} envelope + missing fields).
+- Two data states (manifest: loading -> success): the web page gates only the PageContainer spinner on isLoading and
+  then renders the checklist for every resolved value; its useOnboardingStatus is pessimistic (retry:2, and an
+  undefined result reads as "nothing connected"), so a failed read DEGRADES to the checklist with every step
+  outstanding rather than a dedicated failure region. The native port reproduces exactly these two states per ADR-006:
+  loading -> TsSkeleton shimmer inside GlassPanel1; success -> the intro header + 3-step Stepper + footer. The
+  GlassPanel is always visible (body switches loading<->content) so the region never collapses. A feed exception is
+  caught in OnboardingPageViewModel.LoadAsync and degraded to OnboardingStatusSnapshot.Pending (web pessimistic gate),
+  asserted by ViewModel_feed_failure_degrades_to_the_pessimistic_checklist.
+- Live freshness / polling (ADR-013): the web refetchInterval (30s until is_complete) is reproduced by a
+  DispatcherQueueTimer (OnboardingRegistration.PollIntervalSeconds=30) started on Loaded and stopped on is_complete /
+  Unload; OnboardingPageViewModel.ShouldPoll (resolved && !is_complete) is the contract, asserted by
+  ViewModel_polls_until_complete. This surface has no SSE/live signal source and no >2-min staleness pill (status is a
+  REST read, not a telemetry stream).
+- Stepper parity: OnboardingProjection derives each step's done flag (tesla_connected / vehicle_count>0 / data_flowing),
+  the "current" step (first not-done, web Stepper.stateOf) and the per-step CTA (tesla -> Navigate /tesla-account;
+  vehicle -> Refresh, label "Checking…"/"Refresh" by isFetching; telemetry -> DocumentationLink /docs/fleet-telemetry-setup),
+  rendered by OnboardingPage.cs#BuildStepRow (done=check glyph, current=ProgressRing, pending=number + connector line).
+- SI units N/A (no unit-bearing fields — three booleans + a vehicle count only); no charts, no maps on this surface.
+- i18n (ADR-014): all 25 onboarding.* keys are present verbatim (web key names) in Strings/en/Resources.resw as
+  translation.onboarding.* with the web English values; the surface resolves them through the ILocalizer facade with the
+  web key names + English defaults (PassthroughLocalizer in tests records every key). The ar/he catalogs lag en by
+  design (translations land later); the app falls back to the English default via ILocalizer until translated.
+- a11y (ADR-015): GlassPanel1 + each step row carry AutomationProperties.Name; the skip affordance carries its hint as
+  ToolTip + AutomationProperties.HelpText; decorative indicators/chips are AccessibilityView.Raw; the page exposes a
+  Group automation peer; tokens drive light/dark.
+
+=== PARITY ===
+PARITY_REQUIRED=28
+
+# Panel (1) — the web GlassPanel reproduced as a Fluent Mica/glass Card (always visible; body switches states)
+[x] panel  - GlassPanel1   -> OnboardingPage.cs#BuildContent (_panel TsGlassPanel hosting _loadingSkeleton + _content:
+             intro header + _steps Stepper + footer); web OnboardingPage.tsx GlassPanel; AutomationProperties.SetName(_panel,
+             Slug); test ViewModel_default_feed_is_the_outstanding_checklist + Three_steps_render_in_order
+
+# Data states (2 declared: loading -> success) — each a visible region, never blank
+[x] state  - loading       -> OnboardingState.Loading (OnboardingProjection.Project: !Resolved && Loading); rendered
+             OnboardingPage.cs#_loadingSkeleton (TsSkeleton shimmer inside GlassPanel1); test
+             Unresolved_first_read_projects_loading_state + Projection_resolves_all_keys_even_in_the_loading_state
+[x] state  - success       -> OnboardingState.Success (resolved, incl. pessimistic-degraded read); rendered _content
+             (intro + 3-step Stepper + footer); test Resolved_read_projects_success_state +
+             ViewModel_load_transitions_to_success + ViewModel_feed_failure_degrades_to_the_pessimistic_checklist
+
+# Strings (25) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - onboarding.checkAgain        -> OnboardingProjection.Project localizer.GetString("onboarding.checkAgain", "Check again") -> CheckAgainLabel
+[x] string - onboarding.continue          -> OnboardingProjection.Project localizer.GetString("onboarding.continue", "Continue to dashboard") -> ContinueLabel
+[x] string - onboarding.footer.account    -> OnboardingProjection.Project localizer.GetString("onboarding.footer.account", "Tesla account page") -> FooterAccountLabel
+[x] string - onboarding.footer.docs       -> OnboardingProjection.Project localizer.GetString("onboarding.footer.docs", "documentation") -> FooterDocsLabel
+[x] string - onboarding.footer.help       -> OnboardingProjection.Project localizer.GetString("onboarding.footer.help", "Need help? See the") -> FooterHelp
+[x] string - onboarding.footer.or         -> OnboardingProjection.Project localizer.GetString("onboarding.footer.or", " or the ") -> FooterOr
+[x] string - onboarding.intro.desc        -> OnboardingProjection.Project localizer.GetString("onboarding.intro.desc", "TeslaSync runs entirely on your hardware. …") -> IntroDescription
+[x] string - onboarding.intro.title       -> OnboardingProjection.Project localizer.GetString("onboarding.intro.title", "Setup checklist") -> IntroTitle
+[x] string - onboarding.pageTitle         -> OnboardingProjection.Project localizer.GetString("onboarding.pageTitle", "Welcome to TeslaSync") -> DocumentTitle (web usePageTitle)
+[x] string - onboarding.polling           -> OnboardingProjection.Project localizer.GetString("onboarding.polling", "This page refreshes automatically every 30 seconds.") -> StatusLine (incomplete)
+[x] string - onboarding.ready             -> OnboardingProjection.Project localizer.GetString("onboarding.ready", "You are all set — your dashboard is ready.") -> StatusLine (complete)
+[x] string - onboarding.skip              -> OnboardingProjection.Project localizer.GetString("onboarding.skip", "Skip for now") -> SkipLabel
+[x] string - onboarding.skipHint          -> OnboardingProjection.Project localizer.GetString("onboarding.skipHint", "Explore the app — you can finish setup later from this page.") -> SkipHint
+[x] string - onboarding.subtitle          -> OnboardingProjection.Project / OnboardingRegistration.Subtitle localizer.GetString("onboarding.subtitle", "Three quick steps before your dashboard is ready.") -> Subtitle
+[x] string - onboarding.telemetry.desc    -> OnboardingProjection.Project localizer.GetString("onboarding.telemetry.desc", "Once your vehicle uploads its first signal batch …") -> Steps[2].Description
+[x] string - onboarding.telemetry.docs    -> OnboardingProjection.Project localizer.GetString("onboarding.telemetry.docs", "Setup guide") -> Steps[2].CtaLabel
+[x] string - onboarding.telemetry.title   -> OnboardingProjection.Project localizer.GetString("onboarding.telemetry.title", "Wait for telemetry data") -> Steps[2].Title
+[x] string - onboarding.tesla.cta         -> OnboardingProjection.Project localizer.GetString("onboarding.tesla.cta", "Connect Tesla account") -> Steps[0].CtaLabel
+[x] string - onboarding.tesla.desc        -> OnboardingProjection.Project localizer.GetString("onboarding.tesla.desc", "TeslaSync needs Fleet API access …") -> Steps[0].Description
+[x] string - onboarding.tesla.title       -> OnboardingProjection.Project localizer.GetString("onboarding.tesla.title", "Connect your Tesla account") -> Steps[0].Title
+[x] string - onboarding.vehicle.checking  -> OnboardingProjection.Project localizer.GetString("onboarding.vehicle.checking", "Checking…") -> Steps[1].CtaLabel (fetching)
+[x] string - onboarding.vehicle.cta       -> OnboardingProjection.Project localizer.GetString("onboarding.vehicle.cta", "Refresh") -> Steps[1].CtaLabel (idle)
+[x] string - onboarding.vehicle.desc      -> OnboardingProjection.Project localizer.GetString("onboarding.vehicle.desc", "Vehicles linked to your Tesla account will sync automatically. …") -> Steps[1].Description
+[x] string - onboarding.vehicle.title     -> OnboardingProjection.Project localizer.GetString("onboarding.vehicle.title", "Wait for vehicles to appear") -> Steps[1].Title
+[x] string - onboarding.welcome           -> OnboardingProjection.Project / OnboardingRegistration.Title localizer.GetString("onboarding.welcome", "Welcome to TeslaSync") -> Title
+
+PARITY_COVERED=28
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/OnboardingPageTests.cs, 27 tests, all passing):
+# Projection_resolves_every_required_string_key (+ _even_in_the_loading_state) records every key above through a
+# RecordingLocalizer (Manifest_requires_twenty_five_strings pins the count at 25 distinct); the two-state tests
+# (Unresolved_first_read_projects_loading_state / Resolved_read_projects_success_state) + the ViewModel_* matrix
+# (load->success, default-feed outstanding checklist, feed-failure pessimistic degrade, polls-until-complete) assert
+# each region renders from the bound OnboardingDisplay state holder; the Stepper tests (current-step advance, CTA
+# targets/actions, vehicle CTA checking-vs-refresh) + the footer tests (polling/skip vs ready/continue) + the tolerant
+# FromJson tests + Registration_exposes_route_slug_and_operation + Diagnostics_records_view_opened_with_slug complete it.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/OnboardingPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Onboarding path does not exist in-repo)
+#   + the OnboardingPageTests.cs test file: both PLACEHOLDER_COUNT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Warning(s) 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (OnboardingPage Model/Source/ViewModel/view
+#   + OnboardingPageTests + ShellWindow registration + test csproj links + Resources.resw, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26937, Failed: 0, Skipped: 0 (incl. 27 OnboardingPageTests)
+TEST_EXIT=0
+PARITY_COVERED=28
+PARITY_REQUIRED=28
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/OnboardingPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/OnboardingPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-onboarding-OnboardingPage.log
+# git commit -m "feat(apps/windows): OnboardingPage at web parity (W7 onboarding)"
+
+EXIT=0
+STATUS=DONE
