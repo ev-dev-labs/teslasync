@@ -782,6 +782,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\OperationsSection.Model.cs" Link="FeatureViews\OperationsSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OperationsSection.Source.cs" Link="FeatureViews\OperationsSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OperationsSection.ViewModel.cs" Link="FeatureViews\OperationsSection.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DataPipelineSection.Model.cs" Link="FeatureViews\DataPipelineSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DataPipelineSection.Source.cs" Link="FeatureViews\DataPipelineSection.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DataPipelineSection.ViewModel.cs" Link="FeatureViews\DataPipelineSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OptimizerSection.Model.cs" Link="FeatureViews\OptimizerSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OptimizerSection.Source.cs" Link="FeatureViews\OptimizerSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OptimizerSection.ViewModel.cs" Link="FeatureViews\OptimizerSection.ViewModel.cs" />
