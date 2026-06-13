@@ -795,3 +795,4 @@ p2-windows/pages/telemetry/SignalLogViewerPage.prompt.md
 p2-windows/pages/trips/TripListPage.prompt.md
 p2-windows/pages/vehicle-systems/ClimateControlPage.prompt.md
 p2-windows/pages/vehicle-systems/MaintenancePage.prompt.md
+p2-windows/pages/vehicle-systems/MediaPlayerPage.prompt.md
