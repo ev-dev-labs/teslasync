@@ -1,0 +1,67 @@
+/*
+  MarkerCluster.strings
+  TeslaSync — P4 shared surface · 0186 · MarkerCluster (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/maps/MarkerCluster.tsx) is anonymous — it renders a leaflet cluster group with no
+  visible copy (it returns `null` and only draws marker dots + count bubbles). These keys therefore
+  cover the chrome the native surface introduces around the MapKit clustering layer: the
+  cluster-density legend (naming the web `defaultIconCreate` colour ladder), the marker-count chip
+  (surfacing the web 5000 cap), the cluster colour-mode switcher (web default palette vs
+  `getClusterColor`), the selected-marker callout (web `popupHtml` / `onMarkerClick`), the fullscreen
+  control, the P4 leaf connectivity axis, the per-marker / per-cluster accessibility labels, and the
+  loading / empty / error overlays. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table ("MarkerCluster") so each parallel
+  surface prompt owns its own strings.
+*/
+
+/* --- Fullscreen (shared default keys) --- */
+"common.fullscreen.enter" = "Enter fullscreen";
+"common.fullscreen.exit" = "Exit fullscreen";
+
+/* --- Shared actions --- */
+"action.retry" = "Retry";
+"action.dismiss" = "Dismiss";
+
+/* --- Cluster colour mode (web default palette vs `getClusterColor`) --- */
+"markerCluster.colorModeSwitcher" = "Cluster colour";
+"markerCluster.colorMode.countDensity" = "Colour by density";
+"markerCluster.colorMode.dominantChild" = "Colour by category";
+
+/* --- Cluster-density legend (web `defaultIconCreate` ladder) --- */
+"markerCluster.legendTitle" = "Cluster size";
+"markerCluster.density.low" = "Under 10";
+"markerCluster.density.medium" = "10–24";
+"markerCluster.density.high" = "25–99";
+"markerCluster.density.extreme" = "100+";
+
+/* --- Marker count (web 5000 cap → "showing N of M") --- */
+"markerCluster.count" = "%@ markers";
+"markerCluster.countTruncated" = "Showing %@ of %@";
+
+/* --- Accessibility (map summary + per-marker / per-cluster names) --- */
+"markerCluster.mapA11y" = "Map with %@ markers";
+"markerCluster.markerA11y" = "Map marker";
+"markerCluster.clusterA11y" = "Cluster of %d markers";
+
+/* --- Fullscreen sheet --- */
+"markerCluster.fullscreenTitle" = "Map";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"markerCluster.live" = "Live";
+"markerCluster.stale" = "Stale";
+"markerCluster.offline" = "Offline";
+"markerCluster.staleA11y" = "Stale — tap refresh to update";
+"markerCluster.offlineA11y" = "Offline — showing the last known markers";
+"markerCluster.refresh" = "Refresh";
+
+/* --- Connectivity banner (P4 leaf state) --- */
+"markerCluster.staleBanner" = "Reconnecting — markers may be stale";
+"markerCluster.offlineBanner" = "Offline — showing last known markers";
+
+/* --- Loading / empty / error overlays (every state renders) --- */
+"markerCluster.loading" = "Loading map…";
+"markerCluster.empty" = "No markers to show";
+"markerCluster.emptyDetail" = "There are no points in this view yet.";
+"markerCluster.error" = "Couldn't load markers";
+"markerCluster.errorDetail" = "Showing the last known markers.";
