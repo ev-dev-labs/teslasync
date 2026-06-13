@@ -1183,6 +1183,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Model.cs" Link="SharedSurfaces\ActiveFilterChips.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.Source.cs" Link="SharedSurfaces\ActiveFilterChips.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveFilterChips.ViewModel.cs" Link="SharedSurfaces\ActiveFilterChips.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveVehicleSegment\ActiveVehicleSegment.Model.cs" Link="SharedSurfaces\ActiveVehicleSegment\ActiveVehicleSegment.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveVehicleSegment\ActiveVehicleSegment.Source.cs" Link="SharedSurfaces\ActiveVehicleSegment\ActiveVehicleSegment.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ActiveVehicleSegment\ActiveVehicleSegment.ViewModel.cs" Link="SharedSurfaces\ActiveVehicleSegment\ActiveVehicleSegment.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AICabinTemperatureImpactNarrative.Model.cs" Link="SharedSurfaces\AICabinTemperatureImpactNarrative.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AICabinTemperatureImpactNarrative.Source.cs" Link="SharedSurfaces\AICabinTemperatureImpactNarrative.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\AICabinTemperatureImpactNarrative.ViewModel.cs" Link="SharedSurfaces\AICabinTemperatureImpactNarrative.ViewModel.cs" />
