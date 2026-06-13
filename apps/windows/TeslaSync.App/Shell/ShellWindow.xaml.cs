@@ -218,6 +218,11 @@ public sealed partial class ShellWindow : Window
         // Driving / Trip Planner page (P2/W7) — parity port of web TripPlannerPage at route /trip-planner.
         _viewModel.PageFactory.Register("TripPlanner", static () => new FeatureViews.Driving.TripPlannerPage());
 
+        // Trips / Trip list page (P2/W7) — parity port of web TripListPage at route /trips. The RouteTable
+        // already maps Page("Trips","trips",TripsDriving). The default-feed ctor renders the empty state until a
+        // DI host supplies the generated-client-backed source via TripListPage.Create.
+        _viewModel.PageFactory.Register("Trips", static () => new FeatureViews.Trips.TripListPage());
+
         // Dashboard / Quick Stats page (P2/W7) — parity port of web QuickStatsPage at route /quick-stats. The
         // footer "Open Dashboard" link navigates to the dashboard root (web Link to="/").
         _viewModel.PageFactory.Register("QuickStats", () =>
