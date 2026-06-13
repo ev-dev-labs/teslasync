@@ -688,3 +688,4 @@ p3-android/shared-meaningful/A-0092-InsightsEngine.prompt.md
 p3-android/shared-meaningful/A-0096-PlaybackControls.prompt.md
 p3-android/shared-meaningful/A-0098-PollingEngine.prompt.md
 p3-android/shared-meaningful/A-0102-SavedViewMenu.prompt.md
+p3-android/shared-meaningful/A-0103-ScoreBadge.prompt.md
