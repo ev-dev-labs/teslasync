@@ -1,0 +1,122 @@
+=== p2-windows · W7 · page:system/Help (WinUI 3 / Fluent) ===
+Parity unit : page:system/Help   kind=page   web route=(unrouted)
+Web source  : web/src/features/system/pages/HelpPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), an optional <Name>.Source.cs (the generated-client feed) and <Name>.ViewModel.cs
+  (INotifyPropertyChanged state holder), plus <Name>.cs (the Fluent view), exactly as the sibling W7
+  OnboardingPage / ApiLogsPage / ReferenceLinksSection do. The generated prompt's idealized
+  "TeslaSync/Features/System/HelpPage.xaml + HelpPageViewModel.cs" is mapped onto these real conventions. The
+  namespace is TeslaSync.App.FeatureViews.SystemOps (NOT ...System — a `.System` sub-namespace shadows the global
+  System namespace and breaks unqualified System.* references; SystemOps also aligns with RouteGroup.SystemOps,
+  the manifest's system/ group).
+- Data binding (ADR-004): the manifest declares NO API data sources — the web page renders from navigation params
+  / local state only (it binds just useTranslation + usePageTitle and maps a static, intentionally short curated
+  HELP_LINKS catalog). So there is no generated-client feed and no <Name>.Source.cs; HelpPageViewModel projects
+  the static HelpLinkCatalog through HelpProjection with zero HTTP. LoadAsync/RefreshAsync honour the page
+  lifecycle (OnLoaded → LoadAsync) by re-projecting synchronously (no fabricated network call).
+- One data state (manifest: success): the web page has no fetch/loading/error branch, so the honest native union
+  is HelpState.Success (the curated catalog yielded links → intro panel + card grid) plus a defensive
+  HelpState.Empty branch (a null/empty catalog → the intro panel + a friendly TsEmptyState, never a blank region,
+  ADR-011). The intro GlassPanel is always visible.
+- Panels (ADR-005): GlassPanel1 = the framing intro paragraph (web help.intro) inside a TsGlassPanel (Mica/glass
+  via the W1 surface tokens); GlassPanel2 = the curated link card — one TsGlassPanel per HELP_LINKS entry, laid
+  out in a responsive 1/2/3-column grid (web grid sm:grid-cols-2 lg:grid-cols-3, breakpoints 640/1024) that
+  recomputes on SizeChanged. Each card wraps a chromeless HyperlinkButton (accent icon tile + PanelTitle-weight
+  title + secondary description + trailing chevron) whose Click raises NavigationRequested with the web `to`
+  route. No hardcoded colours/typography — DisplayTokens (TsColor*/TsRadius* + the cyan accent token) drive
+  light/dark/high-contrast from W1.
+- Navigation entry: the web HelpPage is unrouted in App.tsx (the component exists + is unit-tested
+  TestRagHelpAIOffHidesAssistantAndDocsLinksWork, but is not wired into a visible nav route). Per the prompt's
+  "(if routed) map (unrouted) to it as a deep link", the Windows shell exposes it as a HIDDEN deep-link:
+  RouteTable.cs adds Hidden("Help","help",RouteGroup.SystemOps,"Help") (ShowInNav=false — not in the nav pane,
+  matching the web's not-in-nav status) and ShellWindow.xaml.cs registers the factory
+  (new FeatureViews.SystemOps.HelpPage(); NavigationRequested → NavigateTo). The five curated cards navigate to
+  existing canonical routes already in RouteTable (docs/status-api, onboarding, system-status, search, chatbot) —
+  this page introduces NO new surface (web ADR-015 §I3 baseline-intact). NavigationTests stays green (the Hidden,
+  non-parameterised SystemOps route does not affect the single-catch-all, group-coverage or navigable-route
+  assertions).
+- The AIRAGHelp AI surface the web page renders alongside the baseline is a separate, conditional component
+  (web @/components/ai/AIRAGHelp, hidden when ai_mode='off' per ADR-015 §I5) with its own parity unit; it is not
+  part of page:system/Help's manifest record (no data source / panel / string for it) and is out of scope here.
+- SI units N/A (this surface has no unit-bearing fields — only static link copy); no charts, no maps; no SSE/live
+  source and therefore no >2-min staleness pill (ADR-013 N/A).
+- i18n (ADR-014): every visible literal resolves through the ILocalizer facade with the web key names + English
+  defaults. help.title + help.intro + the ten help.baseline.links.* card keys are already present verbatim
+  (web key names) in Strings/en/Resources.resw as translation.help.* with the web English values; no catalog edit
+  was needed. The defensive empty message routes through localizer.GetString("help.empty", …) (fallback only;
+  never a hardcoded literal). RecordingLocalizer asserts every key flows through the facade.
+- a11y (ADR-015): GlassPanel1 carries AutomationProperties.Name; the link region is a Navigation landmark; each
+  card's HyperlinkButton carries its composed Narrator name (title + description) and is keyboard- + pointer-
+  invokable at ≥40px target size; decorative icon tiles / chevrons are AccessibilityView.Raw; the page exposes a
+  Group automation peer; DisplayTokens drive light/dark + high-contrast.
+
+=== PARITY ===
+PARITY_REQUIRED=5
+
+# Panels (2) — the web GlassPanels reproduced as Fluent Mica/glass Cards from W1 tokens
+[x] panel  - GlassPanel1   -> HelpPage.cs#BuildLayout (_introPanel TsGlassPanel hosting _intro, web help.intro);
+             always visible; AutomationProperties.SetName(_introPanel, Slug); web HelpPage.tsx intro <GlassPanel>;
+             test Title_and_intro_resolve_the_web_defaults + Projection_resolves_help_title_and_help_intro
+[x] panel  - GlassPanel2   -> HelpPage.cs#BuildLinkCard (one TsGlassPanel per curated link wrapping a chromeless
+             HyperlinkButton; laid out by BuildCards/LayoutCards in the responsive 1/2/3-col grid); web
+             HelpPage.tsx <GlassPanel> inside HELP_LINKS.map; test Five_curated_links_render_in_web_order +
+             Curated_links_carry_the_web_routes + Curated_links_resolve_their_titles_and_descriptions
+
+# Data state (1 declared: success) — a visible region, never blank
+[x] state  - success       -> HelpState.Success (HelpProjection.Project: links.Count > 0); HelpPageViewModel.State;
+             rendered HelpPage.cs#Render (intro panel + the card grid); test Default_catalog_projects_success_state
+             + ViewModel_default_catalog_is_success_with_five_links (+ defensive Empty_catalog_projects_the_
+             defensive_empty_state)
+
+# Strings (2) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - help.intro    -> HelpProjection.Intro localizer.GetString("help.intro", "Get started with TeslaSync. …")
+             -> HelpDisplay.Intro -> HelpPage.cs _intro; resw translation.help.intro present; test
+             Projection_resolves_help_title_and_help_intro + Title_and_intro_resolve_the_web_defaults
+[x] string - help.title    -> HelpProjection.Title localizer.GetString("help.title", "Help") -> HelpDisplay.Title
+             (header) + DocumentTitle (web usePageTitle); resw translation.help.title present; test
+             Projection_resolves_help_title_and_help_intro + Title_and_intro_resolve_the_web_defaults +
+             Registration_exposes_route_slug_and_card_routes
+
+PARITY_COVERED=5
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/HelpPageTests.cs, 22 tests, all passing):
+# Projection_resolves_help_title_and_help_intro records help.title + help.intro through a RecordingLocalizer
+# (Manifest_requires_two_strings pins the count at 2 distinct); Projection_resolves_every_curated_link_string
+# records the ten help.baseline.links.* card keys; the success state + the two-panel evidence are asserted by
+# Default_catalog_projects_success_state, Five_curated_links_render_in_web_order, Curated_links_carry_the_web_routes,
+# Curated_links_resolve_their_titles_and_descriptions and the ViewModel flow tests
+# (default-catalog success/5-links, empty-catalog defensive degrade, reload reprojects); the icon→glyph theory,
+# catalog/registration route cross-check and the PII-safe Diagnostics (view.opened slug=HelpPage) complete it.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/HelpPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo)
+#   + the HelpPageTests.cs test file: both PLACEHOLDER_COUNT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing CA* warnings in
+#   TeslaSync.App.Core, none from the HelpPage / ShellWindow / RouteTable changes)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes (HelpPage Model/ViewModel/view + HelpPageTests +
+#   ShellWindow registration + RouteTable + test csproj Compile links, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27155, Failed: 0, Skipped: 0
+#   (incl. 22 HelpPageTests + NavigationTests with the new Hidden Help route)
+TEST_EXIT=0
+PARITY_COVERED=5
+PARITY_REQUIRED=5
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/HelpPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/HelpPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-system-HelpPage.log
+# git commit -m "feat(apps/windows): HelpPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE

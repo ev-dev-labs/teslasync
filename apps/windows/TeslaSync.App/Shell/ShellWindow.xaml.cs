@@ -231,6 +231,14 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Commands.CommandsPage();
             page.ViewHistoryRequested += (_, _) => NavigateTo(FeatureViews.Commands.CommandsRegistration.CommandHistoryRoute);
+        // System / Help page (P2/W7) — parity port of web HelpPage (the deterministic RAG-help baseline). The web
+        // page is unrouted in App.tsx; the Windows shell exposes it as the hidden "Help" deep-link (RouteTable path
+        // `help`). The five curated cards navigate to existing canonical routes (docs/status-api, onboarding,
+        // system-status, search, chatbot) via NavigationRequested -> NavigateTo.
+        _viewModel.PageFactory.Register("Help", () =>
+        {
+            var page = new FeatureViews.SystemOps.HelpPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
         // Maps / Temperature Impact page (P2/W7) — parity port of web TemperatureImpactPage at route /temperature-impact.

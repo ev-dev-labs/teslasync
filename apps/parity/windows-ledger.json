@@ -115,5 +115,14 @@
     "requiredCount": 17,
     "promptId": "p2-windows/W7/windows-page-settings-SettingsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-settings-SettingsPage.log"
+  },
+  {
+    "unitId": "page:system/Help",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 5,
+    "requiredCount": 5,
+    "promptId": "p2-windows/W7/windows-page-system-HelpPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-HelpPage.log"
   }
 ]
