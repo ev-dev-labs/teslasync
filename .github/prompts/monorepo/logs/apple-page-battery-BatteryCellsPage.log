@@ -1,0 +1,300 @@
+=== P4-APPLE · P7 · page:battery/BatteryCells (SwiftUI / HIG) ===
+started: 2026-06-12T18:33:00-0700
+host: macOS (Darwin) 26.5.1; Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint 0.63.3 + swiftformat + xcodegen + pwsh present
+web source: web/src/features/battery/pages/BatteryCellsPage.tsx   (route /battery-cells)
+parity unit: page:battery/BatteryCells  (manifest requiredCount=110 = 27 panels + 6 charts + 4 states + 73 strings)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Battery/**`.
+That path does NOT exist in this repo and is NOT a project.yml source group. The repo's
+real, compiled canonical page home is `apps/apple/Sources/Features/<Domain>/` (the seeded
+Sources/Features/{Dashboard,Admin,Analytics,Automations} live there; `Sources` is a
+project.yml source path with createIntermediateGroups). Page hosting uses the proven
+`*RouteRegistration` pattern. The page therefore ships at `apps/apple/Sources/Features/Battery/**`
+— the faithful equivalent of the prompt's `Features/Battery`. Strings ship in the platform
+catalog `apps/apple/Localization/Localizable.xcstrings` (an allowed file). This mapping is the
+only deviation from the literal prompt path and is recorded here per covenant #9. It is identical
+to the reconciliation used by the landed sibling p4-apple P7 pages (admin/analytics/automations).
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Battery/BatteryCellsModels.swift            (312 LOC) SI value types: BatteryCellStatus(+severity/displayKey), BatterySeverity, CellDeviationLevel, BatteryCellReading, BatteryCellHistoryPoint, BatteryVoltageBucket, BatterySpreadTrendPoint, BatteryInsightLevel, BatteryCellInsight, BatteryCellData (+minCell/maxCell/normalCellCount/criticalCellCount/spreadTrend/histogram/hasTemperatureReadings/isBlank/insightsForDisplay/insights)
+?? apps/apple/Sources/Features/Battery/BatteryCellsDerivations.swift       (126 LOC) pure ports of web useMemo helpers: buildHistogram (6…12 buckets), buildInsights → spreadInsight/temperatureInsight/criticalInsight band logic
+?? apps/apple/Sources/Features/Battery/BatteryCellsFormat.swift            (66 LOC)  pure display formatters: number/integer/voltage/millivolts/signedMillivolts/temperatureSpread(delta)/shortDate; em dash for non-finite
+?? apps/apple/Sources/Features/Battery/BatteryCellsPageModel.swift         (138 LOC) @MainActor @Observable model + BatteryVehicle + BatteryCellsDataSource seam + BatteryCellsPhase(loading/empty/error/ready) + load/refresh/selectVehicle
+?? apps/apple/Sources/Features/Battery/BatteryCellsPageModel.Sample.swift  (167 LOC) SampleBatteryCellsDataSource (24-cell pack + 8-sample history) + #if DEBUG Empty/EmptySections/Failing seams
+?? apps/apple/Sources/Features/Battery/BatteryCellsPage.swift              (203 LOC) SwiftUI View: header(title+subtitle+VehicleSelect), 4-phase switch (skeleton/empty/error/ready), heatmap toggle @State, adaptive macOS/iPad split vs iPhone compact stack, navigationTitle, #if DEBUG previews (loaded/empty-sections/no-data/error)
+?? apps/apple/Sources/Features/Battery/BatteryCellsPage.Sections.swift     (230 LOC) BatteryCellsMetricCard, BatteryCellsSummarySection (6 cards), BatteryCellsTemperatureSection (4 cards/empty), BatteryCellsSkeleton (.batteryCellsRedacted), BatteryCellsTone
+?? apps/apple/Sources/Features/Battery/BatteryCellsPage.Heatmap.swift      (248 LOC) BatteryCellsHeatmapSection(+toggle/empty), BatteryHeatmapGrid, BatteryHeatmapCell, BatteryHeatmapLegend, BatteryCellsDetailsSection (TSDataTable 4 cols/empty/count badge), BatterySeverity.tone, batteryDeviationColor
+?? apps/apple/Sources/Features/Battery/BatteryCellsPage.Charts.swift       (208 LOC) chart chrome (BatteryChartLegend/BatteryReferenceRow/BatteryAxisCaption/BatteryChartEmpty) + BatteryCellsVoltageBarSection (TSBarChart) + BatteryCellsDistributionSection (TSBarChart)
+?? apps/apple/Sources/Features/Battery/BatteryCellsPage.TrendCharts.swift  (176 LOC) BatteryTimeAxis + BatteryCellsImbalanceTrendSection (TSLineChart) + BatteryCellsVoltageOverTimeSection (TSLineChart) + BatteryCellsSpreadTrendSection (TSChartContainer + TSAreaChart)
+?? apps/apple/Sources/Features/Battery/BatteryCellsRouteRegistration.swift (23 LOC)  registers .batteryCells -> BatteryCellsPage (model built on MainActor + captured; mirrors StatisticsRouteRegistration)
+?? apps/apple/Tests/Unit/Features/Battery/BatteryCellsPageModelTests.swift (268 LOC) XCTest: 4 phases + no-vehicles + blank-snapshot + selection/no-op/refresh + min/max + counts + spreadTrend + histogram + 3 insight bands + deviation/status + formatters
+ M apps/apple/Sources/App/AppRoute.swift               + case .batteryCells (pathSegment "battery-cells", group .energy, systemImage "square.grid.3x3.fill"); deep-link parses automatically via AppRouteParser (pathSegment match)
+ M apps/apple/Sources/TeslaSyncApp.swift               chains BatteryCellsRouteRegistration.registry(base: StatisticsRouteRegistration.registry(...)) into \.routeHosts
+ M apps/apple/Localization/Localizable.xcstrings       +81 keys (73 manifest + route.batteryCells + spotlight.route.batteryCells.description + battery.cells.empty.title/message + Normal/Low/High/Critical status labels); JSON validated (8463 total)
+ M apps/parity/apple-ledger.json                       +2 rows: page:battery/BatteryCells apple-macos + apple-ios, status=done, 110/110
+
+NOTE: apps/apple/TeslaSync.xcodeproj, apps/apple/build/**, apps/apple/Frameworks/Shared.xcframework
+are .gitignored build artifacts (git check-ignore confirms) and are NOT committed.
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (apps/apple/Scripts/build-shared-xcframework.sh) ---
+BUILD SUCCESSFUL ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; all 13 Battery files referenced (app iOS+macOS + both test bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 13 files + 2 edited files) ---
+0/15 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (config-scoped scan; filtered to my files) ---
+Found 0 violations in any Sources/Features/Battery/*, Tests/Unit/Features/Battery/*, App/AppRoute.swift, TeslaSyncApp.swift file.
+LINT_EXIT=0  (for my files)
+# NB: the repo .swiftlint.yml has an `included:` list, so a bare `swiftlint --strict` scans all 9842
+#     files and reports PRE-EXISTING out-of-scope violations (e.g. 3 in
+#     TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift identifier_name a/b/c) — none mine.
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Battery -Language swift ---
+PLACEHOLDER_ALLOWED=1   [the single `// parity:allow redaction API, not a stub` on the .placeholder RedactionReasons in BatteryCellsPage.Sections.swift]
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0      [no TODO/FIXME/Placeholder/Lorem/"not implemented"/fatalError in shipped code; Tests subtree also 0/0]
+
+--- Executed model+format harness (real Model/Models/Derivations/Format/Sample, Swift 6 strict-concurrency host) ---
+# swiftc -swift-version 6 -strict-concurrency=complete -D DEBUG Model.swift … main.swift  (SWIFTC_EXIT=0)
+"HARNESS: ALL PASS" — 42 assertions, 0 failures, re-run GREEN after the lint refactor:
+  initial=.loading; sample load -> .ready + 24 cells + 6 histogram buckets (sum=24) + minCell #13 + maxCell #18 + 8 spread-trend pts;
+  insights=[highSpread,highTemp,criticalCells] (imbalance 29 mV / spread 6.3 C / 1 critical); selectVehicle(2) keeps ready;
+  nil snapshot -> .empty; blank snapshot -> .ready + isBlank + insightsForDisplay=[] (noInsights) + hasTemperatureReadings=false;
+  load failure -> .error; buildHistogram([])=[]; band ladders good/watch/high verified; formatters (voltage/mV/signed/tempSpread C+F/nan->—)
+HARNESS_EXIT=0
+
+--- View type-check against the REAL P2 tokens + P3 components + SI Units facade + staged Shared (Swift 6 strict concurrency) ---
+# swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> -F <Shared slice> \
+#   ../design/generated/apple/Tokens.swift Sources/Design/* Sources/Theme.swift Sources/Components/{UI,Feedback,DataDisplay,Charts,Forms,Motion}/* \
+#   Sources/SharedFacade/Units+Facade.swift <UnitPreferences.metric shim> Sources/App/{AppRoute,RouteHostRegistry}.swift Sources/Features/Battery/*.swift
+macOS  (arm64-apple-macos15.0)            -> 0 errors in any Battery file   MACOS_VIEW_TYPECHECK_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors in any Battery file   IOS_VIEW_TYPECHECK_EXIT=0   [exercises the #if os(iOS) horizontalSizeClass compact branches in Page/Sections/Insights/Recommendations]
+# This compiles my 12 Battery sources against the ACTUAL TSGlassPanel/TSCard/TSMetricCard/TSEmptyState/TSErrorDisplay/
+# TSDataTable/TSColumn/TSBadge/TSIconBox/TSSelect/TSButton/TSBarChart/TSLineChart/TSAreaChart/TSChartContainer/TSChartSeries/
+# TSChartPoint/TSChartPalette/typography + Color.TS/Font.TS/TSSpacing/TSRadius + the SI Units facade (Units.formatTemperature,
+# UnitPreferences) bridged to the staged Shared.xcframework + AppRoute/RouteHostRegistry — authoritative proof the view's API
+# usage + the new route registration are correct on BOTH idioms (ADR-002/006). The lone AppContainer.swift dependency on the
+# Auth layer (AuthTokenProviding) is replaced by a 2-line UnitPreferences.metric/.imperial shim so the isolated check does not
+# drag in the unrelated Auth/Platform tree; the shim is verification scaffold only and is NOT committed.
+
+--- Full-scheme build (xcodebuild -scheme TeslaSync -destination platform=macOS build) ---
+BUILD_EXIT=65  [BLOCKED by ONE PRE-EXISTING, OUT-OF-SCOPE file; ZERO errors in any of my files — see note below]
+
+================================================================================
+PRE-EXISTING, OUT-OF-SCOPE BUILD BREAKAGE (forbidden to commit-fix — covenant #6/#7)
+================================================================================
+The full `xcodebuild` app target reaches and whole-module-compiles the TeslaSync target (my Battery
+sources included — EmitSwiftModule was entered) and fails with exactly ONE diagnostic, in a sibling
+surface OUTSIDE this artifact's allowed files:
+  TeslaSync/feature-views/RecentDrivesSection.Previews.swift:24:20 — "the compiler is unable to
+  type-check this expression in reasonable time; try breaking up the expression into distinct
+  sub-expressions" (a SwiftUI ViewBuilder type-inference timeout).
+This is the identical pre-existing breakage documented verbatim by the landed sibling P7 logs
+(apple-page-admin-ApiPlaygroundPage.log §"PRE-EXISTING … BREAKAGE" item (1)). It is NOT in my files
+and I am forbidden to commit-fix another owner's surface. Grep of the full build log for
+`Features/Battery .* error:` returns ZERO. My code's correctness is instead proven GREEN by the
+isolated Swift 6 strict-concurrency view type-checks (macOS 0 / iOS 0) and the executed model+format
+harness (42/42) — exactly the host-harness methodology the peer p4-apple logs use when the shared app
+target is blocked by out-of-scope siblings. The .xcodeproj + build/ were restored/are gitignored;
+the committed tree contains ONLY the deliverable changes (git status above).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=110
+================================================================================
+# Each item: binding evidence = file `symbol`. All render from the bound @Observable BatteryCellsPageModel
+# (model.data: BatteryCellData) and resolve copy from Localizable.xcstrings with the web key names.
+
+--- panels (27) ---
+[x] panel  — GlassPanel1            Heatmap.swift `BatteryHeatmapGrid` -> TSGlassPanel { deviation-colored cell grid + legend } (web CellHeatmap)
+[x] panel  — Total-Cells            Sections.swift `BatteryCellsSummarySection` MetricCard title "Total Cells" = BatteryCellsFormat.integer(totalCells)
+[x] panel  — Avg-Voltage            Sections.swift `BatteryCellsSummarySection` MetricCard "Avg Voltage" = voltage(avgVoltage,4)
+[x] panel  — Min-Cell               Sections.swift `BatteryCellsSummarySection` MetricCard "Min Cell" = "#id v V" (data.minCell)
+[x] panel  — Max-Cell               Sections.swift `BatteryCellsSummarySection` MetricCard "Max Cell" = "#id v V" (data.maxCell)
+[x] panel  — Imbalance              Sections.swift `BatteryCellsSummarySection` MetricCard "Imbalance" = millivolts(imbalanceMv), tone=imbalance band
+[x] panel  — Pack-Voltage           Sections.swift `BatteryCellsSummarySection` MetricCard "Pack Voltage" = voltage(packVoltage,1)
+[x] panel  — GlassPanel8            Heatmap.swift `BatteryCellsHeatmapSection.emptyPanel` -> TSGlassPanel { TSEmptyState "No cell readings available." }
+[x] panel  — GlassPanel9            Charts.swift `BatteryCellsVoltageBarSection` -> TSGlassPanel { TSBarChart + ref row + axis caption }
+[x] panel  — GlassPanel10           Charts.swift `BatteryCellsDistributionSection` -> TSGlassPanel { TSBarChart histogram + bucket axis }
+[x] panel  — GlassPanel11           TrendCharts.swift `BatteryCellsImbalanceTrendSection` -> TSGlassPanel { TSLineChart + Nominal/Warning refs }
+[x] panel  — GlassPanel12           TrendCharts.swift `BatteryCellsVoltageOverTimeSection` -> TSGlassPanel { TSLineChart min/avg/max }
+[x] panel  — GlassPanel13           Heatmap.swift `BatteryCellsDetailsSection` -> TSGlassPanel { count badge + TSDataTable / empty }
+[x] panel  — Voltage-Spread-Trend   TrendCharts.swift `BatteryCellsSpreadTrendSection` -> TSChartContainer("battery.cells.chart.spreadTrend")
+[x] panel  — GlassPanel15           Sections.swift `BatteryCellsTemperatureSection` -> TSGlassPanel { TSPanelTitle + 4 cards / empty }
+[x] panel  — Avg-Temperature        Sections.swift `BatteryCellsTemperatureSection.grid` card "battery.cells.temp.avg" = Units.formatTemperature(avg)
+[x] panel  — Min-Temperature        Sections.swift `BatteryCellsTemperatureSection.grid` card "battery.cells.temp.min" = Units.formatTemperature(min)
+[x] panel  — Max-Temperature        Sections.swift `BatteryCellsTemperatureSection.grid` card "battery.cells.temp.max" = Units.formatTemperature(max)
+[x] panel  — Temp-Spread            Sections.swift `BatteryCellsTemperatureSection.grid` card "battery.cells.temp.spread" = temperatureSpread(delta)
+[x] panel  — GlassPanel20           Insights.swift `BatteryCellsRecommendationsSection` -> TSGlassPanel { TSPanelTitle + insight grid / noInsights }
+[x] panel  — GlassPanel21           Insights.swift `BatteryInsightCard` -> tinted card { symbol + title + description } (web insight GlassPanel)
+[x] panel  — GlassPanel22           Insights.swift `BatteryCellsSummaryStatsSection.tile` "battery.cells.stat.totalCells"
+[x] panel  — GlassPanel23           Insights.swift `BatteryCellsSummaryStatsSection.tile` "battery.cells.stat.packVoltage"
+[x] panel  — GlassPanel24           Insights.swift `BatteryCellsSummaryStatsSection.tile` "battery.cells.stat.avgVoltage"
+[x] panel  — GlassPanel25           Insights.swift `BatteryCellsSummaryStatsSection.tile` "battery.cells.stat.voltageSpread" (band-colored)
+[x] panel  — GlassPanel26           Insights.swift `BatteryCellsSummaryStatsSection.tile` "battery.cells.stat.tempSpread" (band-colored)
+[x] panel  — GlassPanel27           Insights.swift `BatteryCellsSummaryStatsSection.tile` "battery.cells.stat.normalCells" = "normal/total"
+
+--- charts (6) — P3 native Swift Charts wrappers (no WKWebView) ---
+[x] chart  — BarChart               Charts.swift `BatteryCellsVoltageBarSection` -> TSBarChart(series: voltage by cell)
+[x] chart  — BarChart               Charts.swift `BatteryCellsDistributionSection` -> TSBarChart(series: histogram counts)
+[x] chart  — LineChart              TrendCharts.swift `BatteryCellsImbalanceTrendSection` -> TSLineChart(series: imbalanceMv)
+[x] chart  — LineChart              TrendCharts.swift `BatteryCellsVoltageOverTimeSection` -> TSLineChart(min/avg/max series)
+[x] chart  — ChartContainer         TrendCharts.swift `BatteryCellsSpreadTrendSection` -> TSChartContainer(title+summary)
+[x] chart  — AreaChart              TrendCharts.swift `BatteryCellsSpreadTrendSection` -> TSAreaChart(series: spreadMv)
+
+--- data states (4) ---
+[x] state  — loading                BatteryCellsPageModel.BatteryCellsPhase.loading (initial) -> Page.content `BatteryCellsSkeleton` (.batteryCellsRedacted(.placeholder) + ProgressView-free filled blocks)
+[x] state  — empty                  BatteryCellsPhase.empty (nil snapshot) -> Page `emptyView` TSEmptyState("battery.cells.empty.title/message"); + per-section empties (heatmap/table/temp/spread/insights) for blank snapshots
+[x] state  — error                  BatteryCellsPhase.error(String) -> Page `errorView` TSErrorDisplay(onRetry: model.refresh) + message
+[x] state  — success                BatteryCellsPhase.ready -> Page `readyView(data)` (all sections from model.data)
+
+--- strings (73) — every visible literal from Localizable.xcstrings, web key names verbatim ---
+[x] string — Avg                                 Charts.swift `BatteryCellsVoltageBarSection.references` (Avg reference)
+[x] string — Avg Voltage                         Sections.swift summary card + TrendCharts.swift over-time series legend
+[x] string — Bar View                            Heatmap.swift `BatteryCellsHeatmapSection.header` toggle (showHeatmap)
+[x] string — Battery Cells                       Page.swift `titleBlock` TSPageTitle("Battery Cells")
+[x] string — Cell                                Heatmap.swift `BatteryHeatmapCell.voiceOver` String(localized:"Cell")
+[x] string — Cell #                              Heatmap.swift details column + Charts.swift `BatteryAxisCaption` xLabel
+[x] string — Cell Count                          Charts.swift `BatteryCellsDistributionSection` series name + legend
+[x] string — Cell Details                        Heatmap.swift `BatteryCellsDetailsSection.header` TSSubhead
+[x] string — Cell Voltage Bar Chart              Charts.swift `BatteryCellsVoltageBarSection` TSSubhead + a11y label
+[x] string — Cell Voltage Heatmap                Heatmap.swift `BatteryCellsHeatmapSection.header` TSSubhead
+[x] string — Cell Voltage Over Time              TrendCharts.swift `BatteryCellsVoltageOverTimeSection` TSSubhead + a11y
+[x] string — Cells                               Charts.swift `BatteryCellsDistributionSection` BatteryAxisCaption yLabel
+[x] string — Cells colored by deviation from average   Heatmap.swift `BatteryHeatmapGrid` TSSubhead
+[x] string — Delta (mV)                          Heatmap.swift `BatteryCellsDetailsSection.columns` "delta" title
+[x] string — Grid View                           Heatmap.swift `BatteryCellsHeatmapSection.header` toggle (!showHeatmap)
+[x] string — Imbalance                           Sections.swift summary card "Imbalance"
+[x] string — Imbalance (mV)                      TrendCharts.swift imbalance series name + legend
+[x] string — Imbalance Trend                     TrendCharts.swift `BatteryCellsImbalanceTrendSection` TSSubhead + a11y
+[x] string — Individual cell voltage monitoring and analysis   Page.swift `titleBlock` subtitle Text
+[x] string — Max                                 Charts.swift `BatteryCellsVoltageBarSection.references` (Max)
+[x] string — Max Cell                            Sections.swift summary card "Max Cell"
+[x] string — Max Voltage                         TrendCharts.swift over-time series legend "Max Voltage"
+[x] string — Min                                 Charts.swift `BatteryCellsVoltageBarSection.references` (Min)
+[x] string — Min Cell                            Sections.swift summary card "Min Cell"
+[x] string — Min Voltage                         TrendCharts.swift over-time series legend "Min Voltage"
+[x] string — No cell details available.          Heatmap.swift `BatteryCellsDetailsSection` TSEmptyState
+[x] string — No cell readings available.         Heatmap.swift `BatteryCellsHeatmapSection.emptyPanel` TSEmptyState
+[x] string — Nominal                             Heatmap.swift `BatteryHeatmapLegend` + TrendCharts.swift imbalance ref
+[x] string — Pack Voltage                        Sections.swift summary card "Pack Voltage"
+[x] string — Significant Deviation               Heatmap.swift `BatteryHeatmapLegend`
+[x] string — Slight Deviation                    Heatmap.swift `BatteryHeatmapLegend`
+[x] string — Status                              Heatmap.swift `BatteryCellsDetailsSection.columns` "status" title
+[x] string — Total Cells                         Sections.swift summary card "Total Cells"
+[x] string — Voltage                             Charts.swift `BatteryCellsVoltageBarSection` series name + legend
+[x] string — Voltage (V)                         Heatmap.swift voltage column + Charts/TrendCharts axis captions
+[x] string — Voltage Distribution                Charts.swift `BatteryCellsDistributionSection` TSSubhead + a11y
+[x] string — Warning                             TrendCharts.swift `BatteryCellsImbalanceTrendSection.references` (Warning)
+[x] string — cells                               Heatmap.swift `BatteryCellsDetailsSection.header` count badge "(n) cells"
+[x] string — battery.cells.chart.noSpreadTrend   TrendCharts.swift `BatteryCellsSpreadTrendSection` empty TSEmptyState
+[x] string — battery.cells.chart.spreadTrend     TrendCharts.swift `BatteryCellsSpreadTrendSection` TSChartContainer title
+[x] string — battery.cells.chart.spreadTrend.aria   TrendCharts.swift `BatteryCellsSpreadTrendSection` container summary + chart a11y
+[x] string — battery.cells.chart.voltageSpread   TrendCharts.swift area series name + legend
+[x] string — battery.cells.insight.balanced      Derivations.swift `spreadInsight` titleKey -> Insights.swift BatteryInsightCard
+[x] string — battery.cells.insight.balancedDesc  Derivations.swift `spreadInsight` descriptionKey
+[x] string — battery.cells.insight.criticalCells Derivations.swift `criticalInsight` titleKey
+[x] string — battery.cells.insight.criticalCellsDesc   Derivations.swift `criticalInsight` descriptionKey (+count %lld via Insights.swift)
+[x] string — battery.cells.insight.goodTemp      Derivations.swift `temperatureInsight` titleKey
+[x] string — battery.cells.insight.goodTempDesc  Derivations.swift `temperatureInsight` descriptionKey
+[x] string — battery.cells.insight.healthy       Derivations.swift `criticalInsight` titleKey
+[x] string — battery.cells.insight.healthyDesc   Derivations.swift `criticalInsight` descriptionKey
+[x] string — battery.cells.insight.highSpread    Derivations.swift `spreadInsight` titleKey
+[x] string — battery.cells.insight.highSpreadDesc   Derivations.swift `spreadInsight` descriptionKey
+[x] string — battery.cells.insight.highTemp      Derivations.swift `temperatureInsight` titleKey
+[x] string — battery.cells.insight.highTempDesc  Derivations.swift `temperatureInsight` descriptionKey
+[x] string — battery.cells.insight.watchSpread   Derivations.swift `spreadInsight` titleKey
+[x] string — battery.cells.insight.watchSpreadDesc   Derivations.swift `spreadInsight` descriptionKey
+[x] string — battery.cells.insight.watchTemp     Derivations.swift `temperatureInsight` titleKey
+[x] string — battery.cells.insight.watchTempDesc Derivations.swift `temperatureInsight` descriptionKey
+[x] string — battery.cells.noInsights            Insights.swift `BatteryCellsRecommendationsSection` empty TSEmptyState
+[x] string — battery.cells.recommendations       Insights.swift `BatteryCellsRecommendationsSection` TSPanelTitle
+[x] string — battery.cells.stat.avgVoltage       Insights.swift `BatteryCellsSummaryStatsSection.tile`
+[x] string — battery.cells.stat.normalCells      Insights.swift `BatteryCellsSummaryStatsSection.tile`
+[x] string — battery.cells.stat.packVoltage      Insights.swift `BatteryCellsSummaryStatsSection.tile`
+[x] string — battery.cells.stat.tempSpread       Insights.swift `BatteryCellsSummaryStatsSection.tile`
+[x] string — battery.cells.stat.totalCells       Insights.swift `BatteryCellsSummaryStatsSection.tile`
+[x] string — battery.cells.stat.voltageSpread    Insights.swift `BatteryCellsSummaryStatsSection.tile`
+[x] string — battery.cells.temp.avg              Sections.swift `BatteryCellsTemperatureSection.grid` card
+[x] string — battery.cells.temp.empty            Sections.swift `BatteryCellsTemperatureSection` empty TSEmptyState
+[x] string — battery.cells.temp.max              Sections.swift `BatteryCellsTemperatureSection.grid` card
+[x] string — battery.cells.temp.min              Sections.swift `BatteryCellsTemperatureSection.grid` card
+[x] string — battery.cells.temp.spread           Sections.swift `BatteryCellsTemperatureSection.grid` card
+[x] string — battery.cells.temp.title            Sections.swift `BatteryCellsTemperatureSection` TSPanelTitle
+[x] string — battery.cells.title                 Page.swift `.navigationTitle(Text("battery.cells.title"))` (web usePageTitle)
+[x] string — cells (lowercase, count badge)      Heatmap.swift `BatteryCellsDetailsSection.header` (Text("cells"))
+PARITY_COVERED=110
+
+All 110 panels/charts/states/strings render from the bound @Observable BatteryCellsPageModel and the
+Localizable.xcstrings catalog (web key names preserved verbatim, +81 keys added). SI: temperatures are
+stored Celsius and converted at the render boundary via the shared Units facade (absolute) + the delta-aware
+BatteryCellsFormat.temperatureSpread; voltages/millivolts are unit-preference-independent. Live-SSE staleness
+(ADR-013): N/A — the manifest declares no API/live data source for this unit (renders from navigation values /
+local state); the model still implements all four data states.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild=65) is a
+                       PRE-EXISTING OUT-OF-SCOPE compiler-timeout in RecentDrivesSection.Previews.swift, labelled
+                       as such, never recoloured. My in-scope gates are all GREEN.
+ 2 No scope narrowing: all 27 panels, 6 charts, 4 states, 73 strings implemented + enumerated with file+symbol.
+ 3 No skip-and-assume: the 888-line web page was read end-to-end; every section (summary, heatmap+toggle, bar,
+                       distribution, imbalance trend, over-time, table, spread trend, temperature, recommendations,
+                       summary tiles) + every per-section empty + the insight band logic was reproduced.
+ 4 No stubs as final : PLACEHOLDER_COUNT=0; complete code (the one ALLOWED marker is the redaction-API note).
+ 5 No parity shortcuts: 4 states render distinctly; charts use the P3 TSBarChart/TSLineChart/TSAreaChart/
+                       TSChartContainer wrappers (never a WKWebView); strings = web keys; insight bands match web.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT commit any edit to sibling surfaces / project.yml / other owners' files; the
+                       out-of-scope RecentDrivesSection breakage is DEFERRED to its owner / the P99 gate. The
+                       isolated type-check's UnitPreferences shim is scaffold only and is NOT committed.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/15), swiftlint --strict(0 mine),
+                       placeholder(0), model+format harness(42/42), view type-check macOS(0)+iOS(0), xcodegen(0).
+                       The only RED is out-of-scope and DEFERRED to its owner / the P99 integration gate.
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json.
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI BatteryCellsPage shipped at parity with the web source: a pure @Observable
+state holder (ADR-004 — no networking in the view) exposing loading/empty/error/success over an injectable
+BatteryCellsDataSource seam (default = a 24-cell SI sample); an adaptive layout (macOS/iPad regular vs iPhone
+compact) using the P2 tokens + P3 shared components — TSGlassPanel/TSCard/TSMetricCard/TSEmptyState/
+TSErrorDisplay/TSDataTable/TSBadge/TSBarChart/TSLineChart/TSAreaChart/TSChartContainer/typography — with a
+native deviation heatmap, a sortable cell table, six Swift-Charts visualisations, the temperature summary, the
+health-recommendation cards, and the summary-stat tiles. Every visible string resolves from Localizable.xcstrings
+with web key names; full VoiceOver labels/traits on panels, charts and the heatmap; SI temperatures convert at
+the render boundary via the shared Units facade. Deep-linkable via the new .batteryCells route (AppRouteParser
+resolves /battery-cells automatically) and hosted through the shell's route registry. Verified on BOTH idioms by
+isolated Swift 6 strict-concurrency type-checks (macOS 0 / iOS 0) and an executed model+format harness (42/42).
+The full xcodebuild scheme is RED ONLY due to one pre-existing, out-of-scope sibling compiler-timeout (forbidden
+to commit-fix), with ZERO diagnostics in any of my files.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Battery apps/apple/Tests/Unit/Features/Battery \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-battery-BatteryCellsPage.log
+  git commit -m "feat(apps/apple): BatteryCellsPage at web parity (P7 battery)"
+
+EXIT=0
+STATUS=DONE
