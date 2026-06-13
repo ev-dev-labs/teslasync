@@ -5340,6 +5340,8 @@
   <string name="translation_routeEfficiency_trips">trips</string>
   <string name="translation_routeEfficiency_worst">Worst</string>
   <string name="translation_routeEfficiency_worstLabel">Worst Efficiency</string>
+  <string name="translation_route_noLocationData">No location data</string>
+  <string name="translation_route_roundTrip">round trip</string>
   <string name="translation_safety_buckled">Buckled</string>
   <string name="translation_safety_distanceAutopilot">%1$s (autopilot)</string>
   <string name="translation_safety_distanceSinceReset">Distance Since Reset</string>
