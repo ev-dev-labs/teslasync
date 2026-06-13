@@ -546,3 +546,4 @@ p3-android/feature-views/A-0299-TirePressureSection.prompt.md
 p3-android/feature-views/A-0302-VehicleCard.prompt.md
 p3-android/feature-views/A-0301-VehicleHeader.prompt.md
 p3-android/feature-views/A-0296-RecentChargesSection.prompt.md
+p3-android/feature-views/A-0300-VehicleConfigSection.prompt.md
